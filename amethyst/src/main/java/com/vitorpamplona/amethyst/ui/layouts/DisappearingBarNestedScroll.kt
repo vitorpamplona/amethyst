@@ -43,6 +43,10 @@ import androidx.compose.ui.unit.Velocity
  *  - onPostFling snaps a mid-way bar to the nearest edge, using the fling's remaining
  *    velocity as the spring's initial velocity so the settle feels continuous. No velocity
  *    is returned upward to avoid phantom scrolls on parent containers.
+ *  - Hiding tracks the finger 1:1, but revealing is damped by [REVEAL_SENSITIVITY]. Once the
+ *    bars are hidden, the small reverse drag a finger naturally makes when it catches/stops a
+ *    fast scroll would otherwise be enough to snap the chrome (and the OS status bar) back.
+ *    Damping the reveal direction makes bringing the bars back a more deliberate gesture.
  */
 class DisappearingBarNestedScroll(
     private val state: DisappearingBarState,
@@ -86,7 +90,19 @@ class DisappearingBarNestedScroll(
     private fun applyDelta(deltaY: Float) {
         val topLimit = state.topHeightLimit
         val bottomLimit = state.bottomHeightLimit
-        state.topHeightOffset = (state.topHeightOffset + deltaY).coerceIn(-topLimit, 0f)
-        state.bottomHeightOffset = (state.bottomHeightOffset + deltaY).coerceIn(-bottomLimit, 0f)
+        // Positive delta reveals the bars; negative delta hides them. Hiding stays 1:1 with the
+        // finger, while revealing is damped so a stray reverse drag doesn't bring the chrome back.
+        val effectiveDelta = if (deltaY > 0f) deltaY * REVEAL_SENSITIVITY else deltaY
+        state.topHeightOffset = (state.topHeightOffset + effectiveDelta).coerceIn(-topLimit, 0f)
+        state.bottomHeightOffset = (state.bottomHeightOffset + effectiveDelta).coerceIn(-bottomLimit, 0f)
+    }
+
+    companion object {
+        /**
+         * Fraction of scroll distance applied when revealing the bars (1.0 = same rate as hiding).
+         * Lower values require a more deliberate downward scroll to bring the chrome back, so the
+         * tiny reverse movement of a finger stopping a fast scroll no longer pops the bars open.
+         */
+        const val REVEAL_SENSITIVITY = 0.5f
     }
 }

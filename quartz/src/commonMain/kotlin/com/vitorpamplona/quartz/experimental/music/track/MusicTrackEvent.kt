@@ -59,13 +59,7 @@ class MusicTrackEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
-    override fun indexableContent(): String =
-        buildString {
-            append("title: ").append(title().orEmpty()).append('\n')
-            append("artist: ").append(artist().orEmpty()).append('\n')
-            album()?.let { append("album: ").append(it).append('\n') }
-            append(content)
-        }
+    override fun indexableContent(): String = listOfNotNull(title(), artist(), album(), content).joinToString("\n")
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

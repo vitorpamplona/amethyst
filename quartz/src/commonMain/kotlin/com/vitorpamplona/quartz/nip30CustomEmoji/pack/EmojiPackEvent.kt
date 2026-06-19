@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
@@ -46,7 +47,10 @@ class EmojiPackEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(titleOrName(), description(), content).joinToString("\n")
+
     @Deprecated("NIP-51 has deprecated name. Use title instead", ReplaceWith("title()"))
     fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
 

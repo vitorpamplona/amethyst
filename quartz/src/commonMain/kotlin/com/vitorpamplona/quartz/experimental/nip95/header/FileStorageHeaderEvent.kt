@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.toETag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
@@ -55,7 +56,12 @@ class FileStorageHeaderEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // Only the summary tag is indexed; the file payload is base64 binary stored
+    // in a separate FileStorageEvent and is intentionally never indexed.
+    override fun indexableContent() = listOfNotNull(summary()).joinToString("\n")
+
     fun dataEvent() = tags.mapNotNull(ETag::parse)
 
     fun dataEventIds() = tags.mapNotNull(ETag::parseId)

@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags.AuthorTag
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags.DescriptionTag
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags.ImageTag
@@ -53,7 +54,10 @@ class PodcastMetadataEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)

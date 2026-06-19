@@ -33,10 +33,13 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.removeAny
 import com.vitorpamplona.quartz.nip51Lists.removeIgnoreCase
+import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -49,7 +52,16 @@ class InterestSetEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // Public title/description plus the public-interest hashtags. Private
+    // hashtags live in NIP-44 encrypted content and are never indexed.
+    override fun indexableContent() = (listOfNotNull(title(), description()) + publicHashtags()).joinToString("\n")
+
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+
+    fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
+
     fun publicHashtags() = tags.mapNotNull(HashtagTag::parse)
 
     suspend fun privateHashtags(signer: NostrSigner) = privateTags(signer)?.mapNotNull(HashtagTag::parse)

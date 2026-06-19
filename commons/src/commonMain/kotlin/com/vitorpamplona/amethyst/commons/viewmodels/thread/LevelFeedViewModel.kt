@@ -24,6 +24,7 @@ import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewModelScope
@@ -55,6 +56,24 @@ abstract class LevelFeedViewModel(
     var llState: LazyListState by mutableStateOf(LazyListState(0, 0))
 
     val hasDragged = mutableStateOf(false)
+
+    /**
+     * Reply notes (by id hex) the user has collapsed in the thread view. A collapsed note
+     * renders only a short preview of itself and hides all of its descendants. Backed by a
+     * snapshot map so reads in composition recompose when the set changes.
+     */
+    val collapsedReplies = mutableStateMapOf<String, Boolean>()
+
+    fun isCollapsed(idHex: String): Boolean = collapsedReplies[idHex] == true
+
+    fun toggleCollapsed(idHex: String) {
+        if (collapsedReplies.remove(idHex) == null) {
+            collapsedReplies[idHex] = true
+        }
+        // Collapsing is an explicit interaction, so stop the thread from auto-scrolling
+        // to the focused note afterwards.
+        hasDragged.value = true
+    }
 
     val selectedIDHex =
         llState.interactionSource.interactions

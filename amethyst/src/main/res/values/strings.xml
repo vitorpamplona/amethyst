@@ -18,6 +18,10 @@
         <item quantity="one">%1$d asset bundled</item>
         <item quantity="other">%1$d assets bundled</item>
     </plurals>
+    <plurals name="thread_collapsed_reply_count">
+        <item quantity="one">+%1$d\nreply</item>
+        <item quantity="other">+%1$d\nreplies</item>
+    </plurals>
     <string name="post_not_found">Event is loading or can\'t be found in your relay list</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Channel Image</string>
@@ -1438,7 +1442,14 @@
     <string name="always_on_notif_channel_name" translatable="false">Relay Connection Service</string>
     <string name="always_on_notif_channel_description">Keeps connections to your inbox relays active for real-time notifications</string>
     <string name="always_on_notif_title">Amethyst Notifications Active</string>
-    <string name="always_on_notif_connected">Connected to %1$d inbox relays</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">Connected to %1$d inbox relay</item>
+        <item quantity="other">Connected to %1$d inbox relays</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">Connected to %1$d relay</item>
+        <item quantity="other">Connected to %1$d relays</item>
+    </plurals>
     <string name="always_on_notif_connecting">Connecting to inbox relays\u2026</string>
     <string name="always_on_notif_setting_title">Always-on notification service</string>
     <string name="always_on_notif_setting_description">Keeps a persistent connection to your inbox relays for instant notification delivery. Shows an ongoing notification. Uses more battery but ensures you never miss a message.</string>
@@ -3434,6 +3445,25 @@
         <item quantity="one">%1$s +%2$d more</item>
         <item quantity="other">%1$s +%2$d more</item>
     </plurals>
+    <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
+    <string name="road_event_police">Police</string>
+    <string name="road_event_speed_camera">Speed camera</string>
+    <string name="road_event_traffic_jam">Traffic jam</string>
+    <string name="road_event_accident">Accident</string>
+    <string name="road_event_road_closure">Road closure</string>
+    <string name="road_event_construction">Construction</string>
+    <string name="road_event_hazard">Hazard</string>
+    <string name="road_event_road_condition">Road condition</string>
+    <string name="road_event_pothole">Pothole</string>
+    <string name="road_event_fog">Fog</string>
+    <string name="road_event_ice">Ice</string>
+    <string name="road_event_animal">Animal on the road</string>
+    <string name="road_event_other">Road event</string>
+    <string name="road_event_unknown">Road event</string>
+    <string name="road_event_confirmed">Still there</string>
+    <string name="road_event_denied">No longer there</string>
+    <string name="road_event_confirms_report">Confirms a road report</string>
+    <string name="road_event_denies_report">Reports a road event cleared</string>
     <string name="goal_amount_label">Goal amount (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Describe your goal</string>

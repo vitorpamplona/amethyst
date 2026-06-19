@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.LiveStreamLike
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.CurrentParticipantsTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.EndsTag
@@ -62,7 +63,10 @@ class LiveActivitiesEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     PubKeyHintProvider,
-    LiveStreamLike {
+    LiveStreamLike,
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
+
     override fun eventHints(): List<EventIdHint> {
         val pinnedEvents = pinned()
         if (pinnedEvents.isEmpty()) return emptyList()

@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
+import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -57,6 +59,8 @@ val PostsByGeohashKinds =
         PodcastEpisodeEvent.KIND,
         PodcastMetadataEvent.KIND,
         WikiNoteEvent.KIND,
+        RoadEventReportEvent.KIND,
+        RoadEventConfirmationEvent.KIND,
     )
 
 fun filterPostsByGeohash(

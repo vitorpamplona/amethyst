@@ -442,6 +442,7 @@ private fun printUsage() {
         |  store sweep-expired                        delete events past their NIP-40 expiration
         |  store scrub                                rebuild idx/ from canonical events (after edits / crashes)
         |  store compact                              drop dangling idx entries (canonical gone)
+        |  store reindex-fts                          rebuild the NIP-50 search index (after a searchable-kinds change)
         """.trimMargin(),
     )
 }

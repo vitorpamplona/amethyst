@@ -32,6 +32,13 @@
 #   amy-1.08.0-linux-x64.tar.gz
 #   amy-1.08.0-linux-x64.deb
 #   amy-1.08.0-linux-x64.rpm
+#
+# One CLI asset breaks the family/arch shape on purpose: the no-JRE jar bundle
+# for Homebrew-core is pure JVM bytecode (no bundled runtime), so a single
+# platform-independent artifact serves every OS:
+#   amy-1.08.0-jvm.tar.gz
+# It is packaged inline in create-release.yml (linux leg), not via the helpers
+# below, since it has no <family>/<arch> dimension.
 
 set -euo pipefail
 

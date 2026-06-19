@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -41,7 +42,14 @@ class PollEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    RootScope {
+    RootScope,
+    SearchableEvent {
+    override fun indexableContent() =
+        buildString {
+            append(content)
+            options().forEach { append('\n').append(it.label) }
+        }
+
     fun options() = tags.options()
 
     fun relays() = tags.relays()

@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip34Git.repository.tags.MaintainersTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.NameTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.RelaysTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.WebTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -49,7 +50,10 @@ class GitRepositoryEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(name(), description(), content).joinToString("\n")
+
     fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
 
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)

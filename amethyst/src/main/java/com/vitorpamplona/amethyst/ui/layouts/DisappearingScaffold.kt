@@ -270,6 +270,14 @@ private fun ResetBarsOnResume(state: DisappearingBarState) {
 private const val STATUS_BAR_HIDE_THRESHOLD = 0.999f
 
 /**
+ * Fraction the chrome must fall back below before the OS status bar reappears. Lower than
+ * [STATUS_BAR_HIDE_THRESHOLD] on purpose: this hysteresis gap means the finger that stops a fast
+ * scroll — which makes a tiny reverse reveal — does not immediately pop the status bar back. The
+ * user has to deliberately scroll the chrome back by ~30% before the status bar returns.
+ */
+private const val STATUS_BAR_SHOW_THRESHOLD = 0.7f
+
+/**
  * Hides the OS status bar once the tracked in-app bar has settled into the hidden edge, and shows it
  * the moment it starts coming back. The OS status bar is binary (cannot slide), so it is driven off
  * the collapse fraction with a near-1 threshold, which means it toggles on settle rather than
@@ -295,16 +303,27 @@ private fun ImmersiveStatusBarEffect(state: DisappearingBarState) {
 
     LaunchedEffect(controller, state) {
         controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        var statusBarHidden = false
         snapshotFlow {
-            val fraction =
-                if (state.topHeightLimit > 0f) state.topCollapsedFraction else state.bottomCollapsedFraction
-            fraction >= STATUS_BAR_HIDE_THRESHOLD
+            if (state.topHeightLimit > 0f) state.topCollapsedFraction else state.bottomCollapsedFraction
         }.distinctUntilChanged()
-            .collect { shouldHide ->
-                if (shouldHide) {
-                    controller.hide(WindowInsetsCompat.Type.statusBars())
-                } else {
-                    controller.show(WindowInsetsCompat.Type.statusBars())
+            .collect { fraction ->
+                // Hysteresis: hide once fully settled, but only show again after the chrome has
+                // been pulled back past STATUS_BAR_SHOW_THRESHOLD. Between the two thresholds the
+                // status bar keeps its current state, so a stray reverse reveal can't flip it.
+                val shouldHide =
+                    when {
+                        fraction >= STATUS_BAR_HIDE_THRESHOLD -> true
+                        fraction <= STATUS_BAR_SHOW_THRESHOLD -> false
+                        else -> statusBarHidden
+                    }
+                if (shouldHide != statusBarHidden) {
+                    statusBarHidden = shouldHide
+                    if (shouldHide) {
+                        controller.hide(WindowInsetsCompat.Type.statusBars())
+                    } else {
+                        controller.show(WindowInsetsCompat.Type.statusBars())
+                    }
                 }
             }
     }

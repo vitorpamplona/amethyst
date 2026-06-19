@@ -1311,7 +1311,6 @@
     <string name="call_settings_turn_credential">योग्यता प्रमाण</string>
     <string name="always_on_notif_channel_description">आपके आगतपेटिका पुनःप्रसारकों के साथ संयोजन सक्रिय रखता है तत्काल सूचनाओं के लिए</string>
     <string name="always_on_notif_title">अमेथिस्ट सूचनाएँ सक्रिय</string>
-    <string name="always_on_notif_connected">संयोजित %1$d आगतपेटिका पुनःप्रसारकों के साथ</string>
     <string name="always_on_notif_connecting">आगतपेटिका पुनःप्रसारकों के साथ संयोजन किया जा रहा है \u2026</string>
     <string name="always_on_notif_setting_title">सदैव सक्रिय सूचना सेवा</string>
     <string name="always_on_notif_setting_description">अनवरत संयोजन बनाए रखता है आपके आगतपेटिका पुनःप्रसारकों के साथ तत्काल सूचना वितरण के लिए। एक स्थायी सूचना दिखाता है। विद्युत्कोष का अधिक उपयोग करता है पर निश्चित करता है कि आप कभी भी सन्देश नहीं खोएँगे।</string>
@@ -3033,6 +3032,7 @@
         <item quantity="one">%1$s सं॰ %2$d अधिक</item>
         <item quantity="other">%1$s सं॰ %2$d अधिक</item>
     </plurals>
+    <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <string name="goal_amount_label">उद्देश्य मात्रा (साट्स)</string>
     <string name="goal_amount_placeholder">१०००००</string>
     <string name="goal_description_label">आपके उद्देश्य का विवरण करें</string>

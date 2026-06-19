@@ -103,21 +103,34 @@ class NostrClientRepeatSubTest : RelayClientTest() {
 
             coroutineScope {
                 launch {
-                    withTimeoutOrNull(30000) {
-                        var eoseCount = 0
-                        while (eoseCount < 2) {
-                            Log.d("Test") { "Processing message ${events.size}" }
-                            // simulates an update in the middle of the sub
-                            if (events.size == 1) {
-                                client.subscribe(mySubId, filtersShouldIgnore)
-                            }
-                            if (events.size == 5) {
-                                client.subscribe(mySubId, filtersShouldSendAfterEOSE)
-                            }
-                            val msg = resultChannel.receive()
-                            events.add(msg)
-                            if (msg == "EOSE") eoseCount++
+                    // Drain every message the relay sends. Re-subscribing on the
+                    // same id mid-stream lets the relay collapse the superseded
+                    // subscription *without* an EOSE — NIP-01 says a re-REQ
+                    // silently replaces the previous one (see
+                    // RelaySession.handleReq, which cancels the running query).
+                    // So the number of EOSEs that actually arrive is
+                    // timing-dependent: anywhere from 1 (only the final filter
+                    // survives to EOSE) to 3. We must not assume a fixed count;
+                    // instead we drain until the relay goes quiet and check the
+                    // invariants that hold for every interleaving.
+                    while (true) {
+                        Log.d("Test") { "Processing message ${events.size}" }
+                        // simulates updates in the middle of the sub
+                        if (events.size == 1) {
+                            client.subscribe(mySubId, filtersShouldIgnore)
                         }
+                        if (events.size == 5) {
+                            client.subscribe(mySubId, filtersShouldSendAfterEOSE)
+                        }
+                        // Once every (collapsed) subscription has finished its
+                        // historical replay the relay only holds a live tail, and
+                        // nothing is being inserted, so receive() would block
+                        // forever. A short idle gap is the deterministic
+                        // "stream finished" signal — far longer than the
+                        // sub-millisecond gaps of in-process delivery, so it never
+                        // fires mid-stream.
+                        val msg = withTimeoutOrNull(IDLE_DRAIN_MS) { resultChannel.receive() } ?: break
+                        events.add(msg)
                     }
                 }
 
@@ -129,24 +142,32 @@ class NostrClientRepeatSubTest : RelayClientTest() {
             client.unsubscribe(mySubId)
             client.removeConnectionListener(listener)
 
-            // The split between the three subscriptions is inherently racy:
-            // the consumer fires resub1 (filtersShouldIgnore) at events.size==1
-            // and resub2 (filtersShouldSendAfterEOSE) at events.size==5, but
-            // those four receive() calls give resub1 enough wall-clock time on
-            // a slow machine to actually reach the relay and start streaming
-            // events before resub2 replaces it. Verify only the structural
-            // invariants: two EOSEs, the loop stopped on the second one, and
-            // every non-EOSE entry is a valid 64-char event id.
-            val firstEose = events.indexOf("EOSE")
-            val lastEose = events.lastIndexOf("EOSE")
+            // The split between the three subscriptions is inherently racy: the
+            // consumer fires resub1 (filtersShouldIgnore) at events.size==1 and
+            // resub2 (filtersShouldSendAfterEOSE) at events.size==5, and the relay
+            // may collapse either earlier subscription before it reaches EOSE.
+            // Verify only invariants that hold for every interleaving.
             val eoseCount = events.count { it == "EOSE" }
+            val nonEose = events.filter { it != "EOSE" }
 
-            assertEquals(2, eoseCount)
-            assertEquals(events.size - 1, lastEose)
-            assertEquals(true, firstEose in 0 until lastEose)
-            assertEquals(true, events.filter { it != "EOSE" }.all { it.length == 64 })
-            // Upper bound: original (100) + filtersShouldIgnore (50) + filtersShouldSendAfterEOSE (10) + 2 EOSEs,
-            // plus a small allowance for relays that overshoot their limit by one.
-            assertEquals(true, events.size <= 165)
+            // The final filter (filtersShouldSendAfterEOSE) is never superseded,
+            // so its EOSE always reaches the client.
+            assertEquals(true, eoseCount >= 1)
+            // Every non-EOSE entry is a valid 64-char event id.
+            assertEquals(true, nonEose.all { it.length == 64 })
+            // The mid-stream re-REQ actually switched filters: the final
+            // advertised-relay-list subscription streamed its events (seeded at
+            // 100_000+). Without the switch we'd only ever see kind-0 ids (<=150).
+            assertEquals(true, nonEose.any { (it.trimStart('0').toLongOrNull() ?: 0L) >= 100_000L })
+            // Upper bound: metadata (<=100) + filtersShouldIgnore (<=50) +
+            // filtersShouldSendAfterEOSE (<=10) + up to 3 EOSEs, plus a small
+            // allowance for relays that overshoot their limit.
+            assertEquals(true, events.size <= 175)
         }
+
+    companion object {
+        // No message arrives more than this long after the previous one once the
+        // relay is still streaming, so this idle gap reliably marks end-of-stream.
+        private const val IDLE_DRAIN_MS = 5_000L
+    }
 }

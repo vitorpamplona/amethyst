@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip71Video.tags.DurationTag
 import com.vitorpamplona.quartz.nip71Video.tags.SegmentTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -48,7 +49,10 @@ abstract class AddressableVideoEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig),
     PublishedAtProvider,
     VideoEvent,
-    RootScope {
+    RootScope,
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
+
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
     var iMetas: List<VideoMeta>? = null

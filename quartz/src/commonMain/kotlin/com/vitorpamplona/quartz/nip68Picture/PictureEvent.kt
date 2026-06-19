@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip68Picture.tags.LocationTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
@@ -45,7 +46,10 @@ class PictureEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    RootScope {
+    RootScope,
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
+
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
     var iMetas: List<PictureMeta>? = null

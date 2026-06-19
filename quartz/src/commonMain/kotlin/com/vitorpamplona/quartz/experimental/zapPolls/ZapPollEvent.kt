@@ -63,7 +63,11 @@ class ZapPollEvent(
     AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
-    override fun indexableContent() = content + pollOptionsArray().map { "\nOption: " + it.descriptor }
+    override fun indexableContent() =
+        buildString {
+            append(content)
+            pollOptionsArray().forEach { append('\n').append(it.descriptor) }
+        }
 
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(MarkedETag::parseAsHint)

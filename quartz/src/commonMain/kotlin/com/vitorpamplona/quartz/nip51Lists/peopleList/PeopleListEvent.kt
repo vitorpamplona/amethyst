@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
@@ -57,7 +58,12 @@ class PeopleListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    // Only the public label/description is indexed; members can live in NIP-44
+    // encrypted content and are intentionally never indexed.
+    override fun indexableContent() = listOfNotNull(titleOrName(), description()).joinToString("\n")
+
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)

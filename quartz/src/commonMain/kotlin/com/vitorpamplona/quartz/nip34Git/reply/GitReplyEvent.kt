@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
@@ -62,7 +63,10 @@ class GitReplyEvent(
 ) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
     EventHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = content
+
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(ETag::parseAsHint)
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)

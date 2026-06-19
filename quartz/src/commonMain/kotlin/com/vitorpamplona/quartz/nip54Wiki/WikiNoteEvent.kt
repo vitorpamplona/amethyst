@@ -78,7 +78,7 @@ class WikiNoteEvent(
     IForkableEvent,
     RootScope,
     SearchableEvent {
-    override fun indexableContent() = "title: " + title() + "\nsummary: " + summary() + "\n" + content
+    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(MarkedETag::parseAsHint)

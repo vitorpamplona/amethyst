@@ -28,13 +28,16 @@ import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.IndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
+import com.vitorpamplona.quartz.utils.EventFactory
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -492,6 +495,106 @@ open class FsEventStore(
                 }
             }
         }
+
+    /**
+     * Wipe and rebuild only the `idx/fts/` tree from the stored events.
+     * See [IEventStore.reindexFullTextSearch] for when to call this.
+     *
+     * Unlike [scrub] (which rebuilds every index tree from a full
+     * `events/` walk), this touches nothing but FTS and reads only the
+     * events whose kind is searchable today: it drives the walk from
+     * `idx/kind/<k>/`, which already lists exactly the live canonical
+     * events per kind, and skips kind directories that don't map to a
+     * [SearchableEvent]. The bulk of non-searchable events (reactions,
+     * zaps, follow lists, …) is never opened.
+     */
+    override suspend fun reindexFullTextSearch() =
+        lockManager.withWriteLock {
+            deleteRecursively(layout.idxFts)
+            Files.createDirectories(layout.idxFts)
+
+            if (!Files.isDirectory(layout.idxKind)) return@withWriteLock
+            Files.list(layout.idxKind).use { kindDirs ->
+                for (kindDir in kindDirs) {
+                    val kind = kindDir.fileName.toString().toIntOrNull() ?: continue
+                    if (!isSearchableKind(kind)) continue
+                    Files.list(kindDir).use { entries ->
+                        for (entry in entries) {
+                            val id = FsLayout.parseEntry(entry.fileName.toString())?.second ?: continue
+                            val event = readEvent(id) ?: continue
+                            indexer.linkFts(event, layout.canonical(id))
+                        }
+                    }
+                }
+            }
+        }
+
+    /**
+     * Resumable, additive FTS rebuild. See
+     * [IEventStore.reindexFullTextSearch] for the loop contract.
+     *
+     * The cursor is the next searchable kind to process, so the store is
+     * walked one `idx/kind/<k>/` directory at a time — that keeps the
+     * scan linear (each directory is listed once, never re-sorted) at the
+     * cost of pausing only between kinds: a single huge kind is processed
+     * in one batch. [batchSize] is a soft floor — whole kinds are
+     * processed until at least that many events have been (re)linked,
+     * then the call yields. Linking is idempotent ([FsIndexer.linkFts]
+     * ignores an existing hardlink), so nothing is wiped and search stays
+     * usable throughout; replaying a kind after a crash is harmless.
+     */
+    override suspend fun reindexFullTextSearch(
+        resumeFrom: String?,
+        batchSize: Int,
+    ): FtsReindexProgress =
+        lockManager.withWriteLock {
+            if (!Files.isDirectory(layout.idxKind)) {
+                return@withWriteLock FtsReindexProgress(cursor = null, processedThisBatch = 0, done = true)
+            }
+            Files.createDirectories(layout.idxFts)
+
+            val resumeKind = resumeFrom?.toIntOrNull()
+            val target = batchSize.coerceAtLeast(1)
+            val pending =
+                Files
+                    .list(layout.idxKind)
+                    .use { dirs -> dirs.map { it.fileName.toString() }.toList() }
+                    .mapNotNull { it.toIntOrNull() }
+                    .filter { isSearchableKind(it) && (resumeKind == null || it >= resumeKind) }
+                    .sorted()
+
+            var processed = 0
+            var index = 0
+            while (index < pending.size) {
+                val kind = pending[index]
+                Files.list(layout.kindDir(kind)).use { entries ->
+                    for (entry in entries) {
+                        val id = FsLayout.parseEntry(entry.fileName.toString())?.second ?: continue
+                        val event = readEvent(id) ?: continue
+                        indexer.linkFts(event, layout.canonical(id))
+                        processed++
+                    }
+                }
+                index++
+                if (processed >= target) break
+            }
+
+            val done = index >= pending.size
+            FtsReindexProgress(
+                cursor = if (done) null else pending[index].toString(),
+                processedThisBatch = processed,
+                done = done,
+            )
+        }
+
+    /**
+     * True when [kind] currently parses to a [SearchableEvent]. Kind
+     * alone selects the event class in [EventFactory], so a single probe
+     * per kind is authoritative. The id is non-blank so kinds that lazily
+     * hash a missing id (NIP-17 chat) skip that work — only the runtime
+     * type matters here.
+     */
+    private fun isSearchableKind(kind: Int): Boolean = EventFactory.create<Event>("0", "0", 0L, kind, emptyArray(), "", "") is SearchableEvent
 
     private fun deleteRecursively(p: java.nio.file.Path) {
         if (!Files.exists(p)) return
