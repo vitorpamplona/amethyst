@@ -337,6 +337,9 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
 
+    // Hardened WebView host for sandboxed napplet/nsite rendering (origin-restricted message bridge).
+    implementation(libs.androidx.webkit)
+
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)

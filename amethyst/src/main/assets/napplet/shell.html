@@ -1,0 +1,42 @@
+<!doctype html>
+<!--
+  Trusted napplet shell page (served from app assets at https://napplet.local/__shell__).
+  It hosts the untrusted applet in an opaque-origin sandboxed iframe and relays capability
+  messages between the applet (window.postMessage) and the native bridge (__nappletBridge),
+  which is origin-restricted to this page only. The applet iframe can never reach the bridge.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <title>Napplet</title>
+    <style>
+      html, body, iframe { margin: 0; padding: 0; border: 0; width: 100%; height: 100%; background: #fff; }
+    </style>
+  </head>
+  <body>
+    <iframe id="app" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
+    <script>
+      (function () {
+        var iframe = document.getElementById('app');
+        var bridge = window.__nappletBridge;
+
+        // applet -> native: only forward messages that came from our applet iframe.
+        window.addEventListener('message', function (e) {
+          if (e.source !== iframe.contentWindow) return;
+          if (typeof e.data !== 'string') return;
+          if (bridge) bridge.postMessage(e.data);
+        });
+
+        // native -> applet: hand the broker's reply down into the iframe.
+        if (bridge) {
+          bridge.onmessage = function (e) {
+            iframe.contentWindow.postMessage(e.data, '*');
+          };
+        }
+
+        iframe.src = 'https://napplet.local/app/';
+      })();
+    </script>
+  </body>
+</html>

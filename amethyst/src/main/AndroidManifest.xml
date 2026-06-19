@@ -402,6 +402,29 @@
             android:name=".service.call.CallNotificationReceiver"
             android:exported="false" />
 
+        <!-- Sandboxed napplet/nsite host. Runs in an isolated process that holds no keys. -->
+        <activity
+            android:name=".napplet.NappletHostActivity"
+            android:process=":napplet"
+            android:exported="false"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.Amethyst" />
+
+        <!-- Capability-consent dialog. Runs in the main process (the only side trusted to grant). -->
+        <activity
+            android:name=".napplet.NappletConsentActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- Main-process broker: holds the signer and brokers capabilities for the sandbox. -->
+        <service
+            android:name=".napplet.NappletBrokerService"
+            android:exported="false" />
+
     </application>
 
 

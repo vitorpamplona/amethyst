@@ -1,7 +1,7 @@
 # Napplet / nsite sandbox host — design
 
 **Date:** 2026-06-19
-**Status:** Draft — core (commons) implemented + tested; Android host specified, not yet built
+**Status:** Core (commons) implemented + tested; Android host (`:napplet` process, WebView, broker IPC, consent, DataStore) implemented and compiling — needs on-device verification
 **Companion:** `quartz/plans/2026-06-19-napplet-nip5a-resolver.md` (the bottom half — manifest parsing + verified Blossom resolution — already landed in `quartz`).
 
 ## Goal
@@ -190,9 +190,36 @@ Deferred to v2; v1 nails the single-applet boundary first.
 
 ## Phasing (within the "full napplet" milestone)
 
-1. **Core (commons, tested)** — protocol + capability model + ledger + broker. ✅ verifiable now.
-2. **Android host** — `:napplet` process + WebView + asset loader rendering a
-   static, no-capability applet (proves sandbox + verified blob serving).
-3. **Broker IPC + `identity`** — getPublicKey/signEvent + consent UI.
-4. **`relay` + `value` + `storage`** capabilities.
-5. **Inter-applet** (v2).
+1. **Core (commons, tested)** — protocol + capability model + ledger + broker. ✅ done.
+2. **Android host** — `:napplet` process + WebView + verified-blob serving via
+   `shouldInterceptRequest` + CSP. ✅ implemented (`NappletHostActivity`).
+3. **Broker IPC + `identity` + `relay`** — Messenger broker
+   (`NappletBrokerService`), `window.napplet.*` shim, consent UI
+   (`NappletConsentActivity`), DataStore ledger. ✅ implemented.
+4. **`value` + `storage` + `net`** capabilities — protocol-defined; broker
+   currently answers `Unsupported`. ⏳ next.
+5. **Inter-applet** (v2). ⏳
+
+### Implemented Android components (amethyst `…/napplet/`)
+
+| File | Process | Role |
+|---|---|---|
+| `NappletHostActivity` | `:napplet` | WebView host: hardened settings, opaque-origin iframe, verified-blob `shouldInterceptRequest`, CSP, `window.napplet` shim, Messenger client |
+| `NappletBrokerService` | main | Bound Messenger service; runs the commons `NappletBroker` against the live account; `exported=false` + UID check |
+| `NappletConsentActivity` / `NappletConsentCoordinator` | main | Capability-consent dialog + suspend bridge to the broker |
+| `DataStoreNappletPermissionStore` | main | Persistent grant store (`NappletPermissionStore` actual) |
+| `NappletProtocolJson` / `NappletIpc` | both | JSON codec + Messenger wire contract |
+| `NappletLauncher` | caller | Packs a verified manifest into the host Intent |
+| `assets/napplet/shell.html` | `:napplet` | Trusted shell page that sandboxes the applet iframe and relays messages |
+
+### Remaining before user-facing ship
+
+- **On-device verification (needs emulator/device):** opaque-origin iframe really
+  excludes the bridge; CSP `connect-src 'none'` blocks fetch/XHR/WebSocket; a real
+  napplet renders and round-trips a `getPublicKey` / `signEvent` through consent.
+- **UI entry point:** wire `NappletLauncher.launch(...)` into navigation (a napplet
+  list/detail screen). Today the host is reachable only programmatically.
+- **Privacy:** the host's `OkHttpClient` for blob fetches ignores the user's
+  Tor/proxy settings — route it through the app's configured client.
+- **Consent UX:** reuse `commons/.../ui/signing` styling; show the manifest title
+  and a per-capability rationale; batch-grant on first run.
