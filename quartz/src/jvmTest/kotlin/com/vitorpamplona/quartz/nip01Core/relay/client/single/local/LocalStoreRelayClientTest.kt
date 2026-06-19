@@ -20,10 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.single.local
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.RelayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -32,16 +31,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * End-to-end: drive a real [NostrClient] against a [LocalStoreRelayClient]
@@ -87,39 +83,13 @@ class LocalStoreRelayClientTest {
                 }
             val client = NostrClient(NoSocket, scope, relayBuilder)
 
-            val events = mutableListOf<Event>()
-            val eose = CompletableDeferred<Unit>()
-            val listener =
-                object : SubscriptionListener {
-                    override fun onEvent(
-                        event: Event,
-                        isLive: Boolean,
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?,
-                    ) {
-                        events.add(event)
-                    }
-
-                    override fun onEose(
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?,
-                    ) {
-                        eose.complete(Unit)
-                    }
-                }
-
             try {
-                // Ask only for kind 0 — the note (kind 1) must be filtered out.
-                client.subscribe(
-                    subId = "test",
-                    filters = mapOf(localUrl to listOf(Filter(kinds = listOf(0)))),
-                    listener = listener,
-                )
-
-                withTimeout(5_000) { eose.await() }
+                // fetchAll subscribes, collects until EOSE, then unsubscribes — exactly the
+                // REQ -> EVENT* -> EOSE -> CLOSE round-trip our relay must support. Ask only
+                // for kind 0, so the note (kind 1) must be filtered out by the store query.
+                val events = client.fetchAll(localUrl, Filter(kinds = listOf(0)), timeoutMs = 5_000)
 
                 assertEquals(listOf(profile.id), events.map { it.id }, "Only the kind-0 profile should match")
-                assertTrue(eose.isCompleted, "EOSE must arrive")
             } finally {
                 client.close()
                 scope.cancel()
