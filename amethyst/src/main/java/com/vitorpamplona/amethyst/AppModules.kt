@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.service.crashreports.UnexpectedCrashSaver
+import com.vitorpamplona.amethyst.service.eventCache.MemoryPressureMonitor
 import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
@@ -651,6 +652,20 @@ class AppModules(
             MemoryTrimmingService(cache)
         }
 
+    // Foreground heap watchdog. Android 15+ (API 35) deprecated the foreground onTrimMemory levels
+    // (TRIM_MEMORY_RUNNING_* / UI_HIDDEN), so a foreground app scrolling its feed no longer receives
+    // a system trim callback and the LocalCache can grow until the process OOMs. This restores a
+    // foreground trim trigger driven by actual heap usage, reusing the same trimmingService.
+    val memoryPressureMonitor by
+        lazy {
+            MemoryPressureMonitor(
+                onPressure = {
+                    val loggedIn = accountsCache.accounts.value.values
+                    trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts())
+                },
+            )
+        }
+
     // as new accounts are loaded, updates the state of the TorRelaySettings, which produces new TorRelayEvaluator
     // and reconnects relays if the configuration has been changed.
     val accountsTorStateConnector = AccountsTorStateConnector(accountsCache, torEvaluatorFlow, applicationIOScope)
@@ -736,6 +751,12 @@ class AppModules(
                 delay(5 * 60 * 1000L)
                 dnsStore.save()
             }
+        }
+
+        // Trim the event cache before the heap fills up. Needed because Android 15+ no longer
+        // delivers foreground onTrimMemory callbacks (see MemoryPressureMonitor).
+        applicationIOScope.launch {
+            memoryPressureMonitor.run()
         }
 
         applicationIOScope.launch {
