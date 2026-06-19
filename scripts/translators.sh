@@ -185,8 +185,7 @@ fi
 if [ "$SEED" = "1" ]; then
   before="$(jq '(.mappings // {}) | length' "$MAPPING")"
   merged="$(jq -n --slurpfile cur "$MAPPING" --argjson rep "$report" \
-    --arg tag "$LAST_TAG" --arg since "$DATE_FROM" \
-    --arg updated "$(date -u +%Y-%m-%dT%H:%M:%S+00:00)" '
+    --arg tag "$LAST_TAG" --arg since "$DATE_FROM" '
     ($cur[0]) as $file
     | [ ($rep.data // $rep)[] | {
           user: (.user.username // (.user.id|tostring)),
@@ -198,7 +197,7 @@ if [ "$SEED" = "1" ]; then
           then . else . + { ($u): "" } end) ) as $mappings
     | $file
       + { mappings: $mappings }
-      + { sinceLastTag: { tag: $tag, since: $since, updated: $updated,
+      + { sinceLastTag: { tag: $tag, since: $since,
                           translators: $contribs } }
   ')"
   echo "$merged" > "$MAPPING"
