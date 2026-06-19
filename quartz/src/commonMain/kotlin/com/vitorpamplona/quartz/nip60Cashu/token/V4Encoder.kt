@@ -27,12 +27,11 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
- * Inverse of [com.vitorpamplona.quartz.nip60Cashu.token.V4Token] parsing:
- * encode a list of NIP-60 proofs into a `cashuB` token string suitable for
- * sending out-of-band.
+ * Inverse of [CashuTokenB64Parser.parseCashuB]: encodes a list of NIP-60
+ * proofs into a `cashuB` token string suitable for sending out-of-band.
  *
  * V4 (NUT-00) wire format:
- *   "cashuB" + Base64URL(CBOR(V4Token { m, u, d?, t: [V4T { i, p: [V4Proof] }] }))
+ *   "cashuB" + Base64URL(CBOR([V4Token] { m, u, d?, t: [V4T { i, p: [V4Proof] }] }))
  */
 object V4Encoder {
     @OptIn(ExperimentalSerializationApi::class, ExperimentalEncodingApi::class)
@@ -71,7 +70,7 @@ object V4Encoder {
                 t = groups.toTypedArray(),
             )
 
-        val bytes = CashuV4Cbor.encodeToByteArray(token)
+        val bytes = cashuV4Cbor.encodeToByteArray(token)
         val base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT).encode(bytes)
         return "cashuB$base64"
     }

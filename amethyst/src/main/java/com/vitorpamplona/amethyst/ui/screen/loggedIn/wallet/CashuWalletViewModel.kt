@@ -839,7 +839,7 @@ class CashuWalletViewModel : ViewModel() {
             return
         }
 
-        if (!trimmed.startsWith(CashuTokenB64Parser.CashuAPrefix) && !trimmed.startsWith(CashuTokenB64Parser.CashuBPrefix)) {
+        if (!trimmed.startsWith(CashuTokenB64Parser.cashuAPrefix) && !trimmed.startsWith(CashuTokenB64Parser.cashuBPrefix)) {
             _redeemState.value =
                 CashuRedeemFlowState.Error("Not a Cashu token (must start with cashuA or cashuB)")
             return

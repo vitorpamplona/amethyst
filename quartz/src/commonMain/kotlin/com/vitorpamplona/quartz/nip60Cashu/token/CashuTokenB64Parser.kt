@@ -35,7 +35,7 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * Parses NUT-00 out-of-band cashu token strings into [CashuToken]s — the
  * inverse of [V4Encoder].
  *
- *  - `cashuA` (v3): standard-Base64-encoded JSON.
+ *  - `cashuA` (v3): Base64-encoded JSON (standard or url-safe alphabet).
  *  - `cashuB` (v4): Base64URL-encoded CBOR (shares the [V4Token] wire models).
  *
  * Returns null on any malformed input — callers decide how to surface the
@@ -44,12 +44,16 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * (one [CashuToken] per mint/keyset group).
  */
 object CashuTokenB64Parser {
-    /** Both "cashuA" and "cashuB" prefixes are 6 chars. */
+    /**
+     * Both "cashuA" and "cashuB" prefixes are 6 chars. The prefix is stripped
+     * with `drop()` rather than `removePrefix()` so it stays consistent with
+     * the case-insensitive dispatch in [parse].
+     */
     private const val PREFIX_LENGTH = 6
 
     /** Precomputed dual-case prefixes so dispatch avoids per-call case folding. */
-    val CashuAPrefix = DualCase("cashuA")
-    val CashuBPrefix = DualCase("cashuB")
+    val cashuAPrefix = DualCase("cashuA")
+    val cashuBPrefix = DualCase("cashuB")
 
     private val json =
         Json {
@@ -59,31 +63,23 @@ object CashuTokenB64Parser {
 
     fun parse(token: String): List<CashuToken>? =
         when {
-            token.startsWith(CashuAPrefix) -> parseCashuA(token)
-            token.startsWith(CashuBPrefix) -> parseCashuB(token)
+            token.startsWith(cashuAPrefix) -> parseCashuA(token)
+            token.startsWith(cashuBPrefix) -> parseCashuB(token)
             else -> null
         }
 
     @OptIn(ExperimentalEncodingApi::class)
     fun parseCashuA(token: String): List<CashuToken>? =
         try {
-            // drop() rather than removePrefix() so the case-insensitive
-            // dispatch above stays consistent with prefix stripping.
-            val payload = token.drop(PREFIX_LENGTH)
-            val decoded = decodeStandardOrUrlSafe(payload).decodeToString()
+            val decoded = decodeStandardOrUrlSafe(token.drop(PREFIX_LENGTH)).decodeToString()
             val parsed = json.decodeFromString(V3TokenJson.serializer(), decoded)
             parsed.token?.map { entry ->
-                val proofs =
-                    entry.proofs.map {
-                        CashuProof(id = it.id, amount = it.amount, secret = it.secret, c = it.c)
-                    }
-                CashuToken(
+                buildToken(
                     token = token,
                     mint = entry.mint,
-                    totalAmount = proofs.sumOf { it.amount },
-                    proofs = proofs,
+                    proofs = entry.proofs.map { CashuProof(id = it.id, amount = it.amount, secret = it.secret, c = it.c) },
                     unit = parsed.unit,
-                    memo = parsed.memo?.takeIf { it.isNotBlank() },
+                    memo = parsed.memo,
                 )
             }
         } catch (e: Exception) {
@@ -94,31 +90,41 @@ object CashuTokenB64Parser {
     @OptIn(ExperimentalEncodingApi::class, ExperimentalSerializationApi::class)
     fun parseCashuB(token: String): List<CashuToken>? =
         try {
-            val payload = token.drop(PREFIX_LENGTH)
             val bytes =
                 Base64.UrlSafe
                     .withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
-                    .decode(payload)
-            val parsed = CashuV4Cbor.decodeFromByteArray<V4Token>(bytes)
+                    .decode(token.drop(PREFIX_LENGTH))
+            val parsed = cashuV4Cbor.decodeFromByteArray<V4Token>(bytes)
             parsed.t?.map { group ->
                 val keysetId = group.i.toHexKey()
-                val proofs =
-                    group.p.map {
-                        CashuProof(id = keysetId, amount = it.a.toLong(), secret = it.s, c = it.c.toHexKey())
-                    }
-                CashuToken(
+                buildToken(
                     token = token,
                     mint = parsed.m,
-                    totalAmount = proofs.sumOf { it.amount },
-                    proofs = proofs,
+                    proofs = group.p.map { CashuProof(id = keysetId, amount = it.a.toLong(), secret = it.s, c = it.c.toHexKey()) },
                     unit = parsed.u,
-                    memo = parsed.d?.takeIf { it.isNotBlank() },
+                    memo = parsed.d,
                 )
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             null
         }
+
+    /** Assembles a [CashuToken], deriving the total and normalising a blank memo to null. */
+    private fun buildToken(
+        token: String,
+        mint: String,
+        proofs: List<CashuProof>,
+        unit: String?,
+        memo: String?,
+    ) = CashuToken(
+        token = token,
+        mint = mint,
+        totalAmount = proofs.sumOf { it.amount },
+        proofs = proofs,
+        unit = unit,
+        memo = memo?.takeIf { it.isNotBlank() },
+    )
 
     /**
      * NUT-00 v3 specifies base64-urlsafe, but historical encoders (and older

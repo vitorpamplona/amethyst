@@ -31,7 +31,7 @@ import kotlinx.serialization.cbor.Cbor
  * [CashuTokenB64Parser] instead of allocating one per call.
  */
 @OptIn(ExperimentalSerializationApi::class)
-internal val CashuV4Cbor: Cbor = Cbor { ignoreUnknownKeys = true }
+internal val cashuV4Cbor: Cbor = Cbor { ignoreUnknownKeys = true }
 
 @Serializable
 class V4Token(
