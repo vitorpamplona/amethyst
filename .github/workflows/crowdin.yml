@@ -43,6 +43,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          # Need tags so the script can resolve the last v* release tag for the
+          # "since last tag" window.
+          fetch-depth: 0
 
       - name: Seed translator placeholders from Crowdin
         run: bash scripts/translators.sh --seed

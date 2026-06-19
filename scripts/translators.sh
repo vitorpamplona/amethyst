@@ -12,25 +12,29 @@
 #   scripts/translators.sh --from <date|tag> [--to <date|tag>]
 #
 #   --from / --to   A date (YYYY-MM-DD) or a git tag/ref. Tags are resolved to
-#                   their commit date. --to defaults to now if omitted.
+#                   their commit date. --from defaults to the most recent v* tag
+#                   ("since the last release"); --to defaults to now.
 #   --mapping PATH  Override mapping file (default docs/changelog/translators.json).
 #   --raw           Also dump the raw per-member report rows (for debugging /
 #                   discovering Crowdin usernames to add to the mapping).
-#   --seed          Instead of printing credits, merge every contributor in the
-#                   window into translators.json with a blank npub (existing
-#                   entries kept). --from defaults to two months ago. Fill in the
-#                   npubs afterwards.
+#   --seed          Instead of printing credits, update translators.json from the
+#                   window (see the two lists below). Fill in any blank npubs
+#                   afterwards.
 #
 # Environment (same names crowdin.yml already uses):
 #   CROWDIN_PROJECT_ID       Crowdin numeric project id.
 #   CROWDIN_PERSONAL_TOKEN   Crowdin personal access token (needs report scope).
 #
-# Crowdin contributors are joined against docs/changelog/translators.json, a
-# Crowdin-username/id -> npub mapping kept alongside the changelogs. Anyone
-# Crowdin reports who isn't in the mapping is printed under UNMAPPED so you can
-# credit them by hand and backfill the JSON. The contribution window for "between
-# two versions" is the commit date of the previous tag -> the commit date of the
-# new tag.
+# docs/changelog/translators.json (kept alongside the changelogs) holds two lists:
+#   mappings      A forever-growing Crowdin-username/id -> npub registry. --seed
+#                 appends new contributors with a blank npub and never deletes or
+#                 overwrites existing entries.
+#   sinceLastTag  A rolling snapshot of who has translated since the last release
+#                 tag, refreshed on every --seed run.
+#
+# When printing credits, contributors are grouped by language and resolved to
+# npubs via mappings; anyone without an npub is listed under UNMAPPED so you can
+# credit them by hand and backfill the registry.
 #
 # Requires: bash, curl, jq, git.
 #
@@ -58,16 +62,25 @@ while [ $# -gt 0 ]; do
     --mapping) MAPPING="${2:?--mapping needs a value}"; shift 2 ;;
     --raw)     RAW=1; shift ;;
     --seed)    SEED=1; shift ;;
-    -h|--help) sed -n '2,36p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,38p' "$0"; exit 0 ;;
     *)         die "unknown argument: $1" ;;
   esac
 done
 
 command -v jq   >/dev/null || die "jq not found"
 command -v curl >/dev/null || die "curl not found"
-# --from defaults to two months ago (handy for --seed; explicit tags are better
-# for generating a release's credits).
-[ -n "$FROM" ] || FROM="$(date -u -d '2 months ago' +%Y-%m-%d 2>/dev/null || date -u -v-2m +%Y-%m-%d)"
+# The window is "since the last release": --from defaults to the most recent v*
+# tag (falling back to two months ago if no tag is reachable — e.g. a shallow CI
+# checkout without tags). The tag name, when found, is recorded in the file's
+# sinceLastTag block.
+LAST_TAG="$(git -C "$REPO_ROOT" describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
+if [ -z "$FROM" ]; then
+  if [ -n "$LAST_TAG" ]; then
+    FROM="$LAST_TAG"
+  else
+    FROM="$(date -u -d '2 months ago' +%Y-%m-%d 2>/dev/null || date -u -v-2m +%Y-%m-%d)"
+  fi
+fi
 [ -n "${CROWDIN_PROJECT_ID:-}" ]     || die "CROWDIN_PROJECT_ID is not set"
 [ -n "${CROWDIN_PERSONAL_TOKEN:-}" ] || die "CROWDIN_PERSONAL_TOKEN is not set"
 [ -f "$MAPPING" ] || die "mapping file not found: $MAPPING"
@@ -119,22 +132,33 @@ if [ "$RAW" = "1" ]; then
   echo "$report" | jq '(.data // .)' >&2
 fi
 
-# 4a) --seed: merge every contributor in the window into translators.json with an
-#     empty npub (keeping existing mappings), so the file is pre-loaded and you
-#     only have to fill in the npubs. Matching is case-insensitive on username.
+# 4a) --seed: update translators.json from the window. Two lists are maintained:
+#       - mappings   : the forever-growing username -> npub registry. New
+#                      contributors are appended with a blank npub; existing
+#                      entries (and their npubs) are never touched or removed.
+#                      Matching is case-insensitive on username.
+#       - sinceLastTag : a rolling snapshot of who has translated since the last
+#                      release tag. Fully replaced each run.
 if [ "$SEED" = "1" ]; then
   before="$(jq '(.mappings // {}) | length' "$MAPPING")"
-  merged="$(jq -n --slurpfile cur "$MAPPING" --argjson rep "$report" '
+  merged="$(jq -n --slurpfile cur "$MAPPING" --argjson rep "$report" \
+    --arg tag "$LAST_TAG" --arg since "$DATE_FROM" \
+    --arg updated "$(date -u +%Y-%m-%dT%H:%M:%S+00:00)" '
     ($cur[0]) as $file
-    | [ ($rep.data // $rep)[] | .user | { key: (.username // (.id|tostring)) } ]
-    | reduce .[] as $u (($file.mappings // {});
-        if ( [keys_unsorted[] | ascii_downcase] | index($u.key | ascii_downcase) )
-        then . else . + { ($u.key): "" } end)
-    | $file + { mappings: . }
+    | [ ($rep.data // $rep)[] | .user | (.username // (.id|tostring)) ] as $contributors
+    | ( reduce $contributors[] as $u (($file.mappings // {});
+          if ( [keys_unsorted[] | ascii_downcase] | index($u | ascii_downcase) )
+          then . else . + { ($u): "" } end) ) as $mappings
+    | $file
+      + { mappings: $mappings }
+      + { sinceLastTag: { tag: $tag, since: $since, updated: $updated,
+                          translators: ($contributors | unique) } }
   ')"
   echo "$merged" > "$MAPPING"
   after="$(jq '(.mappings // {}) | length' "$MAPPING")"
-  echo "# Seeded $MAPPING: $before -> $after entries (added $((after - before)) new, npubs left blank)." >&2
+  active="$(jq '(.sinceLastTag.translators // []) | length' "$MAPPING")"
+  echo "# Seeded $MAPPING: mappings $before -> $after (added $((after - before)) new, npubs blank);" >&2
+  echo "#   sinceLastTag = $active contributor(s) since ${LAST_TAG:-$DATE_FROM}." >&2
   exit 0
 fi
 

@@ -1,15 +1,27 @@
 {
   "_comment": [
-    "Crowdin username (or numeric user id) -> Nostr npub.",
-    "Used by tools/translators/translators.sh to turn a Crowdin 'Top Members'",
-    "report for a release window into the changelog '## Translations' section.",
-    "Keys are matched case-insensitively against the Crowdin username; a numeric",
-    "key is matched against the Crowdin user id. Add a row whenever a new",
-    "translator gives you their npub. Contributors with no entry here are listed",
-    "by the script under 'UNMAPPED' so you can credit them by hand and backfill.",
-    "Example shape (replace with real Crowdin usernames):",
+    "Translator credits source for the changelog, kept by scripts/translators.sh.",
+    "",
+    "mappings: a forever-growing Crowdin-username (or numeric id) -> Nostr npub",
+    "  registry. Entries are never deleted. The --seed run appends new",
+    "  contributors with a blank npub; fill those in as translators share theirs.",
+    "  Keys match case-insensitively against the Crowdin username; a numeric key",
+    "  matches the Crowdin user id.",
+    "",
+    "sinceLastTag: a rolling snapshot of who has translated since the last release",
+    "  tag. Refreshed on every --seed run; do not hand-edit. At release time the",
+    "  changelog '## Translations' block is generated from this window and",
+    "  resolved to npubs via mappings (anyone still blank is flagged UNMAPPED).",
+    "",
+    "Example mapping (replace with a real Crowdin username):",
     "  \"vitorpamplona\": \"npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z\""
   ],
   "mappings": {
+  },
+  "sinceLastTag": {
+    "tag": "",
+    "since": "",
+    "updated": "",
+    "translators": []
   }
 }
