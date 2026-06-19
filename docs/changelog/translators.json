@@ -1,0 +1,15 @@
+{
+  "_comment": [
+    "Crowdin username (or numeric user id) -> Nostr npub.",
+    "Used by tools/translators/translators.sh to turn a Crowdin 'Top Members'",
+    "report for a release window into the changelog '## Translations' section.",
+    "Keys are matched case-insensitively against the Crowdin username; a numeric",
+    "key is matched against the Crowdin user id. Add a row whenever a new",
+    "translator gives you their npub. Contributors with no entry here are listed",
+    "by the script under 'UNMAPPED' so you can credit them by hand and backfill.",
+    "Example shape (replace with real Crowdin usernames):",
+    "  \"vitorpamplona\": \"npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z\""
+  ],
+  "mappings": {
+  }
+}
