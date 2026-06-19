@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -45,11 +47,15 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import com.vitorpamplona.amethyst.commons.relays.health.LatencyMetric
 import com.vitorpamplona.amethyst.commons.relays.health.RelayHealthStore
 import com.vitorpamplona.amethyst.commons.relays.health.RelayListKind
 import com.vitorpamplona.amethyst.commons.relays.health.RelayListMutator
 import com.vitorpamplona.amethyst.commons.relays.health.RelayRemovalResult
+import com.vitorpamplona.amethyst.commons.relays.health.SlowReason
 import com.vitorpamplona.amethyst.commons.relays.health.ui.UnhealthyRelayRow
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.launch
 
@@ -66,6 +72,7 @@ fun UnhealthyRelaysPopup(
     onShowMessage: (String) -> Unit = {},
 ) {
     val unhealthy by store.unhealthy.collectAsState()
+    val slowRelays by store.slowRelays.collectAsState()
     val coScope = rememberCoroutineScope()
 
     Popup(
@@ -147,7 +154,98 @@ fun UnhealthyRelaysPopup(
                     )
                     HorizontalDivider()
                 }
+
+                // Slow relays section — relays that respond, but slower than 2× cohort median.
+                // Disjoint from the unresponsive list in practice (a slow relay is, by definition,
+                // still responding).
+                if (slowRelays.isNotEmpty()) {
+                    Text(
+                        text = "Slow relays",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                    Text(
+                        text =
+                            "These relays' median response is more than 2× the typical relay you're " +
+                                "connected to. Open the dashboard for per-metric detail.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    slowRelays.forEach { (url, reason) ->
+                        SlowRelayPopupRow(
+                            url = url,
+                            reason = reason,
+                            onOpenDashboard = {
+                                onDismiss()
+                                onOpenDashboard()
+                            },
+                            onSnooze = {
+                                store.snooze(url)
+                                onShowMessage("Snoozed for 7 days")
+                            },
+                        )
+                        HorizontalDivider()
+                    }
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun SlowRelayPopupRow(
+    url: NormalizedRelayUrl,
+    reason: SlowReason,
+    onOpenDashboard: () -> Unit,
+    onSnooze: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = url.displayUrl(),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            val metricLabel =
+                when (reason.metric) {
+                    LatencyMetric.OK_ACK -> "OK ACK"
+                    LatencyMetric.EOSE -> "EOSE"
+                    LatencyMetric.FIRST_RESULT -> "First result"
+                    LatencyMetric.PING -> "Ping"
+                }
+            Text(
+                text = "$metricLabel ${reason.relayP50Ms} ms vs cohort ${reason.cohortP50Ms} ms",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        AssistChip(
+            onClick = {},
+            enabled = false,
+            label = {
+                Text(
+                    "Slow ${String.format("%.1f", reason.multiplier)}×",
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            },
+            colors =
+                AssistChipDefaults.assistChipColors(
+                    disabledLabelColor = MaterialTheme.colorScheme.error,
+                    disabledContainerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                ),
+            border = null,
+        )
+        TextButton(onClick = onOpenDashboard) {
+            Text("Dashboard", style = MaterialTheme.typography.labelMedium)
+        }
+        TextButton(onClick = onSnooze) {
+            Text("Snooze 7d", style = MaterialTheme.typography.labelMedium)
         }
     }
 }

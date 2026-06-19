@@ -48,13 +48,18 @@ fun UnhealthyRelayBannerHost(
     val mutator = LocalRelayListMutator.current ?: return
 
     val unhealthy by store.unhealthy.collectAsState()
+    val slowRelays by store.slowRelays.collectAsState()
     val countText by remember {
         derivedStateOf {
-            val n = unhealthy.size
-            if (n == 1) {
-                "1 relay unresponsive — Review"
-            } else {
-                "$n relays unresponsive — Review"
+            val dead = unhealthy.size
+            val slow = slowRelays.size
+            when {
+                dead == 0 && slow == 0 -> ""
+                dead == 0 && slow == 1 -> "1 slow relay — Review"
+                dead == 0 -> "$slow slow relays — Review"
+                slow == 0 && dead == 1 -> "1 relay unresponsive — Review"
+                slow == 0 -> "$dead relays unresponsive — Review"
+                else -> "${dead + slow} relays need attention — Review"
             }
         }
     }
@@ -63,7 +68,7 @@ fun UnhealthyRelayBannerHost(
 
     Box(modifier = modifier) {
         UnhealthyRelayBanner(
-            visible = unhealthy.isNotEmpty(),
+            visible = unhealthy.isNotEmpty() || slowRelays.isNotEmpty(),
             text = countText,
             onClick = { popupOpen = true },
         )

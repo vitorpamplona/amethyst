@@ -31,11 +31,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.relays.health.LatencyMetric
+import com.vitorpamplona.amethyst.commons.relays.health.RelayLatencySnapshot
+import com.vitorpamplona.amethyst.commons.relays.health.SlowReason
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 
 @Composable
 fun RelayDetailPanel(
     nip11: Nip11RelayInformation?,
+    latency: RelayLatencySnapshot? = null,
+    slowReason: SlowReason? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -43,7 +48,7 @@ fun RelayDetailPanel(
     ) {
         HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
 
-        if (nip11 == null) {
+        if (nip11 == null && latency == null) {
             Text(
                 "Relay info unavailable",
                 style = MaterialTheme.typography.bodySmall,
@@ -52,28 +57,67 @@ fun RelayDetailPanel(
             return@Column
         }
 
-        // Description
-        nip11.description?.let { desc ->
-            Text(desc, style = MaterialTheme.typography.bodySmall)
+        nip11?.let { info ->
+            // Description
+            info.description?.let { desc ->
+                Text(desc, style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // Software + version
+            info.software?.let { sw ->
+                val version = info.version?.let { " v$it" } ?: ""
+                DetailRow("Software", "$sw$version")
+            }
+
+            // Supported NIPs
+            info.supported_nips?.let { nips ->
+                if (nips.isNotEmpty()) {
+                    DetailRow("NIPs", nips.joinToString(", "))
+                }
+            }
+
+            // Payment status
+            val paymentRequired = info.limitation?.payment_required == true
+            DetailRow("Payment", if (paymentRequired) "Paid" else "Free")
+        }
+
+        if (latency != null && latency.samples.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
-        }
-
-        // Software + version
-        nip11.software?.let { sw ->
-            val version = nip11.version?.let { " v$it" } ?: ""
-            DetailRow("Software", "$sw$version")
-        }
-
-        // Supported NIPs
-        nip11.supported_nips?.let { nips ->
-            if (nips.isNotEmpty()) {
-                DetailRow("NIPs", nips.joinToString(", "))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            Text(
+                "Latency (rolling last 50 samples)",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(4.dp))
+            LatencyMetric.entries.forEach { metric ->
+                val sample = latency.samples[metric] ?: return@forEach
+                val label =
+                    when (metric) {
+                        LatencyMetric.OK_ACK -> "OK ACK (publish→OK)"
+                        LatencyMetric.EOSE -> "EOSE (REQ→EOSE)"
+                        LatencyMetric.FIRST_RESULT -> "First result (REQ→1st event)"
+                        LatencyMetric.PING -> "Ping (connect)"
+                    }
+                val multiplier =
+                    if (slowReason?.metric == metric) {
+                        " — ${String.format("%.1f", slowReason.multiplier)}× cohort median"
+                    } else {
+                        ""
+                    }
+                DetailRow(label, "${sample.p50Ms} ms (${sample.count} samples)$multiplier")
+            }
+            if (slowReason?.metric == LatencyMetric.FIRST_RESULT) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "First-result depends on filter content (popular pubkey ≠ quiet pubkey) — " +
+                        "treat as a coarse signal alongside OK ACK / EOSE.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
-
-        // Payment status
-        val paymentRequired = nip11.limitation?.payment_required == true
-        DetailRow("Payment", if (paymentRequired) "Paid" else "Free")
     }
 }
 

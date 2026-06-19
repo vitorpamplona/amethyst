@@ -27,11 +27,16 @@ import kotlin.concurrent.Volatile
  * Snapshot persisted to disk. Decoupled from the in-memory store so the same
  * persistence backend can swap (e.g. Android AccountSettings JSON vs Desktop
  * java.util.prefs.Preferences) without rippling into commons.
+ *
+ * [latencySamples] is populated only when a [RelayLatencyTracker] is wired into the store
+ * (Desktop today; Android follow-up). Persistence backends should treat the field as
+ * optional — older saved snapshots without it round-trip cleanly to empty maps.
  */
 data class RelayHealthSnapshot(
     val records: Map<NormalizedRelayUrl, RelayHealthRecord> = emptyMap(),
     val firstScanAt: Long = 0,
     val lastSeenAny: Long = 0,
+    val latencySamples: Map<NormalizedRelayUrl, Map<LatencyMetric, IntArray>> = emptyMap(),
 )
 
 /**
