@@ -24,32 +24,29 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
-import java.io.File
 
 /**
- * `amy nsite fetch` — resolve a single path of a NIP-5A static website / napplet
- * over Nostr + Blossom, **verifying** the content against the signed manifest.
+ * `amy nsite fetch` — resolve a single path of a NIP-5A static website over
+ * Nostr + Blossom, **verifying** the content against the signed manifest.
  *
  * The manifest (`RootSiteEvent` kind 15128, or `NamedSiteEvent` kind 35128 with
  * `--d`) pins each path to a sha256. This command fetches the manifest from
  * relays, then downloads the requested path's blob from the manifest's Blossom
  * servers and accepts the first copy whose recomputed sha256 matches the pin — an
- * untrusted server that substitutes or corrupts the blob is skipped. This is the
- * same trust boundary a napplet shell relies on, exercised end-to-end so the
- * resolver can be checked against real-world manifests (interop / agents).
+ * untrusted server that substitutes or corrupts the blob is skipped.
  *
- * Thin-assembly only: all resolution + verification lives in quartz
- * (`StaticSiteResolver`) and the byte fetch in commons (`BlossomClient.download`).
+ * For NIP-5D napplets (kinds 5129/15129/35129, with aggregate-hash + capability
+ * verification) use `amy napplet fetch`.
+ *
+ * Thin-assembly only: resolution + verification live in quartz (`StaticSiteResolver`),
+ * the byte fetch in commons (`BlossomClient.download`), shared via [StaticSiteFetch].
  */
 object NsiteCommands {
     suspend fun dispatch(
@@ -75,8 +72,8 @@ object NsiteCommands {
         val outFile = args.flag("out")
         val timeoutSecs = args.longFlag("timeout", 8L)
         val maxInlineBytes = args.longFlag("max-inline-bytes", 65_536L)
-        val extraServers = commaList(args.flag("server"))
-        val extraRelays = commaList(args.flag("relay"))
+        val extraServers = StaticSiteFetch.commaList(args.flag("server"))
+        val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
 
         val ctx = Context.open(dataDir)
         try {
@@ -102,86 +99,23 @@ object NsiteCommands {
                 )
             }
 
-            val paths = manifest.paths
             // Manifest servers first (author intent), then any --server fallbacks; keep order, dedupe.
-            val servers = (manifest.servers + extraServers).distinct()
-            if (servers.isEmpty()) {
-                return Output.error("no_servers", "manifest lists no Blossom servers; pass --server URL")
-            }
-
-            val blossom = BlossomClient()
-            val resolution =
-                StaticSiteResolver.resolve(
-                    requestPath = requestPath,
-                    paths = paths,
-                    servers = servers,
-                    fetch = { url -> blossom.download(url) },
-                )
-
-            return when (resolution) {
-                is StaticSiteResolution.PathNotInManifest ->
-                    Output.error(
-                        "path_not_found",
-                        "manifest declares no such path",
-                        mapOf(
-                            "path" to requestPath,
-                            "available_paths" to paths.map { it.path },
-                        ),
-                    )
-
-                is StaticSiteResolution.Unresolvable ->
-                    Output.error(
-                        "unresolvable",
-                        "no server returned a blob matching the manifest hash",
-                        mapOf(
-                            "path" to requestPath,
-                            "sha256" to resolution.hash,
-                            "servers" to servers,
-                        ),
-                    )
-
-                is StaticSiteResolution.Resolved -> {
-                    emitResolved(resolution, requestPath, manifest, identifier, outFile, maxInlineBytes)
-                    0
-                }
-            }
+            return StaticSiteFetch.resolveAndEmit(
+                requestPath = requestPath,
+                paths = manifest.paths,
+                servers = (manifest.servers + extraServers).distinct(),
+                manifestFields =
+                    mapOf(
+                        "kind" to manifest.kind,
+                        "manifest_event_id" to manifest.id,
+                        "d" to identifier,
+                    ),
+                outFile = outFile,
+                maxInlineBytes = maxInlineBytes,
+            )
         } finally {
             ctx.close()
         }
-    }
-
-    private fun emitResolved(
-        resolved: StaticSiteResolution.Resolved,
-        requestPath: String,
-        manifest: SiteManifest,
-        identifier: String?,
-        outFile: String?,
-        maxInlineBytes: Long,
-    ) {
-        val base =
-            linkedMapOf<String, Any?>(
-                "found" to true,
-                "verified" to true,
-                "request_path" to requestPath,
-                "manifest_path" to resolved.path,
-                "sha256" to resolved.hash,
-                "content_type" to resolved.contentType,
-                "size" to resolved.bytes.size,
-                "server" to resolved.server,
-                "manifest_event_id" to manifest.id,
-                "d" to identifier,
-            )
-
-        if (outFile != null) {
-            File(outFile).writeBytes(resolved.bytes)
-            base["out"] = outFile
-        } else if (isTextual(resolved.contentType) && resolved.bytes.size <= maxInlineBytes) {
-            base["content"] = resolved.bytes.decodeToString()
-        } else {
-            base["note"] = "binary or large blob not inlined; pass --out FILE to save it"
-        }
-
-        Output.emit(base)
     }
 
     /**
@@ -223,37 +157,25 @@ object NsiteCommands {
         when (event) {
             is NamedSiteEvent ->
                 if (event.identifier() == identifier) {
-                    SiteManifest(event.id, event.createdAt, event.paths(), event.servers())
+                    SiteManifest(event.kind, event.id, event.createdAt, event.paths(), event.servers())
                 } else {
                     null
                 }
             is RootSiteEvent ->
                 if (identifier == null) {
-                    SiteManifest(event.id, event.createdAt, event.paths(), event.servers())
+                    SiteManifest(event.kind, event.id, event.createdAt, event.paths(), event.servers())
                 } else {
                     null
                 }
             else -> null
         }
 
-    private fun commaList(value: String?): List<String> =
-        value
-            ?.split(',')
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
-            ?: emptyList()
-
-    private fun isTextual(contentType: String): Boolean =
-        contentType.startsWith("text/") ||
-            contentType.startsWith("application/json") ||
-            contentType.startsWith("application/xml") ||
-            contentType.startsWith("image/svg")
-
     /**
      * Flattened view of either manifest event type (`RootSiteEvent` /
      * `NamedSiteEvent`) so the rest of the command doesn't branch on Root vs Named.
      */
     private class SiteManifest(
+        val kind: Int,
         val id: String,
         val createdAt: Long,
         val paths: List<PathTag>,

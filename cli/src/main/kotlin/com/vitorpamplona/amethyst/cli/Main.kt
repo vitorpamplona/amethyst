@@ -166,6 +166,10 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.nsite(dataDir, tail)
         }
 
+        "napplet" -> {
+            Commands.napplet(dataDir, tail)
+        }
+
         "store" -> {
             Commands.store(dataDir, tail)
         }
@@ -362,12 +366,20 @@ private fun printUsage() {
         |             [--since TS] [--until TS]
         |             [--timeout SECS]
         |
-        |Static websites / napplets (NIP-5A kind:15128/35128):
+        |Static websites (NIP-5A kind:15128/35128):
         |  nsite fetch AUTHOR [--d ID] [--path P]      resolve one path over Nostr + Blossom and
         |        [--server URL[,URL]] [--relay URL[,URL]]  VERIFY it against the manifest's sha256 pin
         |        [--out FILE] [--timeout SECS]          (AUTHOR: npub|nprofile|hex|name@domain;
         |        [--max-inline-bytes N]                 --d selects a kind:35128 named site, else the
         |                                                kind:15128 root site; --path defaults to /)
+        |
+        |Napplets (NIP-5D kind:5129/15129/35129):
+        |  napplet fetch AUTHOR [--d ID] [--path P]    like `nsite fetch`, plus NIP-5D verification:
+        |        [--server URL[,URL]] [--relay URL[,URL]]  recompute + check the `x` aggregate hash and
+        |        [--out FILE] [--timeout SECS]          report the napplet's `requires` capabilities
+        |        [--max-inline-bytes N]                 (--d selects a kind:35129 named napplet, else
+        |  napplet fetch --snapshot EVENT-ID            the kind:15129 root; --snapshot pins a kind:5129
+        |        [--path P] …                            immutable snapshot by event id)
         |
         |Contacts (NIP-02 kind:3):
         |  follow USER [--timeout SECS]               add USER to your contact list
