@@ -266,6 +266,7 @@
     <string name="upload_file">Upload File</string>
     <string name="take_a_picture">Take a picture</string>
     <string name="record_a_video">Record a video</string>
+    <string name="no_camera_app_found">No camera app found on this device</string>
     <string name="record_a_message">Record a message</string>
     <string name="record_a_message_title">Record a message</string>
     <string name="record_a_message_description">Click and hold to record a message</string>
