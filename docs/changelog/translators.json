@@ -9,9 +9,9 @@
     "  matches the Crowdin user id.",
     "",
     "sinceLastTag: a rolling snapshot of who has translated since the last release",
-    "  tag. Refreshed on every --seed run; do not hand-edit. At release time the",
-    "  changelog '## Translations' block is generated from this window and",
-    "  resolved to npubs via mappings (anyone still blank is flagged UNMAPPED).",
+    "  tag. Each entry is { user, languages }. Refreshed on every --seed run; do",
+    "  not hand-edit. The changelog '## Translations' block is generated offline",
+    "  from this list and resolved to npubs via mappings (blanks flagged UNMAPPED).",
     "",
     "Example mapping (replace with a real Crowdin username):",
     "  \"vitorpamplona\": \"npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z\""

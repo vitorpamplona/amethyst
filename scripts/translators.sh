@@ -1,27 +1,31 @@
 #!/usr/bin/env bash
 #
-# Build the changelog "## Translations" section for a release window.
+# Build the changelog "## Translations" section, or keep its data file seeded.
 #
-# Pulls a Crowdin "Top Members" report for a date range (the gap between two
-# releases), joins each Crowdin contributor against docs/changelog/translators.json
-# (Crowdin username/id -> npub), and prints a ready-to-paste credit block grouped
-# by language. Contributors with no npub mapping are listed under UNMAPPED so you
-# can credit them by hand and backfill translators.json.
+# Default (no flags): OFFLINE. Generate the ready-to-paste credit block straight
+# from docs/changelog/translators.json — no token, no network. This is the
+# release-time command: it reads the sinceLastTag snapshot (kept fresh by CI,
+# with each translator's languages) and resolves npubs via the mappings registry,
+# grouping by language. Anyone without an npub is listed under UNMAPPED.
 #
-# Usage:
-#   scripts/translators.sh --from <date|tag> [--to <date|tag>]
+#   scripts/translators.sh                 # print the block for the current cycle
 #
-#   --from / --to   A date (YYYY-MM-DD) or a git tag/ref. Tags are resolved to
-#                   their commit date. --from defaults to the most recent v* tag
-#                   ("since the last release"); --to defaults to now.
-#   --mapping PATH  Override mapping file (default docs/changelog/translators.json).
-#   --raw           Also dump the raw per-member report rows (for debugging /
-#                   discovering Crowdin usernames to add to the mapping).
-#   --seed          Instead of printing credits, update translators.json from the
-#                   window (see the two lists below). Fill in any blank npubs
-#                   afterwards.
+# --seed: ONLINE. Query Crowdin's "Top Members" report for the window and update
+# translators.json (see the two lists below). Used by CI; needs a token.
 #
-# Environment (same names crowdin.yml already uses):
+#   scripts/translators.sh --seed
+#
+# Flags:
+#   --seed          Refresh translators.json from Crowdin (online). Window is
+#                   --from..--to.
+#   --raw           Dump the raw per-member report rows to stderr (online; for
+#                   discovering Crowdin usernames). Implies an API call.
+#   --from / --to   Window for --seed/--raw. A date (YYYY-MM-DD) or a git tag/ref
+#                   (resolved to its commit date). --from defaults to the most
+#                   recent v* tag ("since the last release"); --to defaults to now.
+#   --mapping PATH  Override the data file (default docs/changelog/translators.json).
+#
+# Environment (only needed for --seed/--raw; same names crowdin.yml uses):
 #   CROWDIN_PROJECT_ID       Crowdin numeric project id.
 #   CROWDIN_PERSONAL_TOKEN   Crowdin personal access token (needs report scope).
 #
@@ -30,18 +34,15 @@
 #                 appends new contributors with a blank npub and never deletes or
 #                 overwrites existing entries.
 #   sinceLastTag  A rolling snapshot of who has translated since the last release
-#                 tag, refreshed on every --seed run.
+#                 tag — each entry is { user, languages } — refreshed on every
+#                 --seed run. The offline credit block is generated from this.
 #
-# When printing credits, contributors are grouped by language and resolved to
-# npubs via mappings; anyone without an npub is listed under UNMAPPED so you can
-# credit them by hand and backfill the registry.
+# Requires: bash, jq (always); curl, git (only for --seed/--raw).
 #
-# Requires: bash, curl, jq, git.
-#
-# NOTE: This talks to the live Crowdin REST API (api.crowdin.com). The JSON field
-# paths for the downloaded "top-members" report are documented at
+# NOTE: --seed/--raw talk to the live Crowdin REST API (api.crowdin.com). The JSON
+# field paths for the "top-members" report are documented at
 # https://developer.crowdin.com/api/v2/#operation/api.projects.reports.post and
-# can be adjusted in the jq block below if Crowdin changes the schema.
+# can be adjusted in the jq blocks below if Crowdin changes the schema.
 
 set -euo pipefail
 
@@ -62,17 +63,58 @@ while [ $# -gt 0 ]; do
     --mapping) MAPPING="${2:?--mapping needs a value}"; shift 2 ;;
     --raw)     RAW=1; shift ;;
     --seed)    SEED=1; shift ;;
-    -h|--help) sed -n '2,38p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,45p' "$0"; exit 0 ;;
     *)         die "unknown argument: $1" ;;
   esac
 done
 
-command -v jq   >/dev/null || die "jq not found"
+command -v jq >/dev/null || die "jq not found"
+[ -f "$MAPPING" ] || die "mapping file not found: $MAPPING"
+
+# Render the "## Translations" block from a {langs, unmapped} accumulator. Shared
+# by the offline and online paths so they produce byte-identical output.
+RENDER_BLOCK='
+  "## Translations\n"
+  + ( [ .langs | to_entries[] | "- \(.key) by " + (.value | sort | join(" and ")) ] | sort | join("\n") )
+  + ( if (.unmapped|length) > 0
+      then "\n\n# UNMAPPED (no npub in translators.json — add it under mappings):\n"
+           + ( [ .unmapped | unique[] | "#   - " + . ] | join("\n") )
+      else "" end )'
+
+# ---------------------------------------------------------------------------
+# Default (offline): generate the credits straight from the committed file.
+# This is the release-time command — no token, no network. It reads the
+# sinceLastTag snapshot (which CI keeps fresh, with each translator's languages)
+# and resolves npubs via the forever-growing mappings registry.
+# ---------------------------------------------------------------------------
+if [ "$SEED" = "0" ] && [ "$RAW" = "0" ]; then
+  jq -r "
+    (.mappings // {}) as \$map
+    | ( \$map | with_entries(.key |= ascii_downcase) ) as \$byname
+    | ( (.sinceLastTag.translators // [])
+        | map(if type == \"object\" then . else { user: ., languages: [] } end) ) as \$list
+    | reduce \$list[] as \$t ({ langs: {}, unmapped: [] };
+        (\$t.user) as \$u
+        | ( \$byname[\$u | ascii_downcase] // \$map[\$u] ) as \$npub
+        | ( if (\$t.languages | length) > 0 then \$t.languages else [\"(unknown language)\"] end ) as \$langs
+        | if (\$npub | type) == \"string\" and (\$npub | length) > 0 then
+            reduce \$langs[] as \$l (.; .langs[\$l] = ((.langs[\$l] // []) + [\"@\(\$npub)\"] | unique))
+          else
+            .unmapped += [\$u]
+          end
+      )
+    | $RENDER_BLOCK
+  " "$MAPPING"
+  exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# Online (--seed / --raw): query Crowdin's Top Members report for the window.
+# ---------------------------------------------------------------------------
 command -v curl >/dev/null || die "curl not found"
 # The window is "since the last release": --from defaults to the most recent v*
 # tag (falling back to two months ago if no tag is reachable — e.g. a shallow CI
-# checkout without tags). The tag name, when found, is recorded in the file's
-# sinceLastTag block.
+# checkout without tags). The tag name, when found, is recorded in sinceLastTag.
 LAST_TAG="$(git -C "$REPO_ROOT" describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
 if [ -z "$FROM" ]; then
   if [ -n "$LAST_TAG" ]; then
@@ -83,7 +125,6 @@ if [ -z "$FROM" ]; then
 fi
 [ -n "${CROWDIN_PROJECT_ID:-}" ]     || die "CROWDIN_PROJECT_ID is not set"
 [ -n "${CROWDIN_PERSONAL_TOKEN:-}" ] || die "CROWDIN_PERSONAL_TOKEN is not set"
-[ -f "$MAPPING" ] || die "mapping file not found: $MAPPING"
 
 # Resolve a date (YYYY-MM-DD) or a git ref to an ISO-8601 timestamp.
 resolve_ts() {
@@ -132,57 +173,37 @@ if [ "$RAW" = "1" ]; then
   echo "$report" | jq '(.data // .)' >&2
 fi
 
-# 4a) --seed: update translators.json from the window. Two lists are maintained:
-#       - mappings   : the forever-growing username -> npub registry. New
+# 4) --seed: update translators.json from the window. Two lists are maintained:
+#      - mappings    : the forever-growing username -> npub registry. New
 #                      contributors are appended with a blank npub; existing
 #                      entries (and their npubs) are never touched or removed.
 #                      Matching is case-insensitive on username.
-#       - sinceLastTag : a rolling snapshot of who has translated since the last
-#                      release tag. Fully replaced each run.
+#      - sinceLastTag : a rolling snapshot of who has translated since the last
+#                      release tag, with each contributor's languages, so the
+#                      offline credits can be generated without re-querying.
+#                      Fully replaced each run.
 if [ "$SEED" = "1" ]; then
   before="$(jq '(.mappings // {}) | length' "$MAPPING")"
   merged="$(jq -n --slurpfile cur "$MAPPING" --argjson rep "$report" \
     --arg tag "$LAST_TAG" --arg since "$DATE_FROM" \
     --arg updated "$(date -u +%Y-%m-%dT%H:%M:%S+00:00)" '
     ($cur[0]) as $file
-    | [ ($rep.data // $rep)[] | .user | (.username // (.id|tostring)) ] as $contributors
-    | ( reduce $contributors[] as $u (($file.mappings // {});
+    | [ ($rep.data // $rep)[] | {
+          user: (.user.username // (.user.id|tostring)),
+          languages: ([ (.languages // [])[] | .name ] | unique)
+        } ] as $contribs
+    | ( $contribs | map(.user) ) as $names
+    | ( reduce $names[] as $u (($file.mappings // {});
           if ( [keys_unsorted[] | ascii_downcase] | index($u | ascii_downcase) )
           then . else . + { ($u): "" } end) ) as $mappings
     | $file
       + { mappings: $mappings }
       + { sinceLastTag: { tag: $tag, since: $since, updated: $updated,
-                          translators: ($contributors | unique) } }
+                          translators: $contribs } }
   ')"
   echo "$merged" > "$MAPPING"
   after="$(jq '(.mappings // {}) | length' "$MAPPING")"
   active="$(jq '(.sinceLastTag.translators // []) | length' "$MAPPING")"
   echo "# Seeded $MAPPING: mappings $before -> $after (added $((after - before)) new, npubs blank);" >&2
   echo "#   sinceLastTag = $active contributor(s) since ${LAST_TAG:-$DATE_FROM}." >&2
-  exit 0
 fi
-
-# 4b) Join report members against the npub mapping, grouped by language.
-#    Mapping keys are lower-cased; we match by username (lower) or numeric id.
-echo "$report" | jq -r --slurpfile m "$MAPPING" '
-  ($m[0].mappings // {}) as $map
-  | ( $map | with_entries(.key |= ascii_downcase) ) as $byname
-  | (.data // .) as $members
-  | reduce $members[] as $mem ({langs:{}, unmapped:[]};
-      ($mem.user // {}) as $u
-      | ( ($u.username // "") | ascii_downcase ) as $uname
-      | ( $byname[$uname] // $map[($u.id|tostring)] ) as $npub
-      | if $npub == null then
-          .unmapped += [ ($u.fullName // $u.username // ("id " + ($u.id|tostring))) ]
-        else
-          reduce ( ($mem.languages // []) | if length>0 then . else [{name:"(unknown language)"}] end | .[] ) as $l (.;
-            .langs[$l.name] = ((.langs[$l.name] // []) + ["@\($npub)"] | unique))
-        end
-    )
-  | "## Translations\n"
-    + ( [ .langs | to_entries[] | "- \(.key) by " + (.value | sort | join(" and ")) ] | sort | join("\n") )
-    + ( if (.unmapped|length)>0
-        then "\n\n# UNMAPPED (no npub in translators.json — credit by hand, then add them):\n"
-             + ( [ .unmapped | unique[] | "#   - " + . ] | join("\n") )
-        else "" end )
-'
