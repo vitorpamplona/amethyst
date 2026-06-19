@@ -1,6 +1,7 @@
 import de.undercouch.gradle.tasks.download.Download
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import java.nio.file.Files
+import java.util.zip.ZipFile
 
 plugins {
     alias(libs.plugins.jetbrainsKotlinJvm)
@@ -272,4 +273,77 @@ val createReleaseAppImage by tasks.registering(Exec::class) {
     // Bypass FUSE requirement on CI runners (ubuntu-latest lacks libfuse.so.2).
     // AppImage standard env var: extracts + runs without mounting.
     environment("APPIMAGE_EXTRACT_AND_RUN", "1")
+}
+
+// ============================================================================
+// Native lib regression guard
+// ============================================================================
+// `pt.davidafsilva.apple:jkeychain` ships its `osxkeychain.so` native library
+// as a resource at the JAR root, and `OSXKeychain.loadSharedObject()` reaches
+// it with `getResourceAsStream("/osxkeychain.so")`. If a future ProGuard
+// upgrade, dep swap, or build-config change strips this resource from the
+// release distributable, every macOS user is forced back to the login screen
+// on every cold boot (the Keychain backend can't load, `SecureKeyStorage`
+// falls back to its password-prompted encrypted file, which never prompts
+// in a GUI cold boot → keys silently null → bunker / nsec / NWC unrecoverable).
+//
+// As of the current build the resource DOES survive ProGuard (it ships in the
+// proguarded jkeychain-1.1.0-*.jar with all 117 KB intact), so this task is
+// a regression guard, not a workaround. It's wired onto every release task so
+// it fails the build immediately if the .so disappears.
+val verifyJkeychainNativeSurvivesProguard by tasks.registering {
+    description = "Fail the release build if osxkeychain.so is stripped from proguarded output (would break macOS Keychain at runtime)"
+    group = "verification"
+    dependsOn("proguardReleaseJars")
+    val proguardDir = layout.buildDirectory.dir("compose/tmp/main-release/proguard")
+    inputs.dir(proguardDir).withPropertyName("proguardOutput").withPathSensitivity(PathSensitivity.RELATIVE)
+    val marker = layout.buildDirectory.file("verify-jkeychain-native.ok")
+    outputs.file(marker)
+    doLast {
+        val dir = proguardDir.get().asFile
+        require(dir.isDirectory) { "ProGuard output dir missing: $dir" }
+        val jars = dir.listFiles { f -> f.extension == "jar" } ?: emptyArray()
+        require(jars.isNotEmpty()) { "No proguarded jars under $dir" }
+        val foundIn = jars.firstOrNull { jar ->
+            val zip = ZipFile(jar)
+            try {
+                val entries = zip.entries()
+                var found = false
+                while (entries.hasMoreElements()) {
+                    if (entries.nextElement().name == "osxkeychain.so") {
+                        found = true
+                        break
+                    }
+                }
+                found
+            } finally {
+                zip.close()
+            }
+        }
+        require(foundIn != null) {
+            "REGRESSION: osxkeychain.so missing from every proguarded jar in $dir.\n" +
+                "OSXKeychain.loadSharedObject() calls getResourceAsStream(\"/osxkeychain.so\") — if this\n" +
+                "resource is not at classpath root in the release distributable, every macOS user is\n" +
+                "forced to re-log-in on every cold boot of the release DMG."
+        }
+        marker.get().asFile.writeText("verified osxkeychain.so survived ProGuard in ${foundIn.name}\n")
+        println("verifyJkeychainNativeSurvivesProguard: osxkeychain.so present in ${foundIn.name}")
+    }
+}
+
+// Gate every release-packaging task on the verification so a stripped .so
+// never reaches a release artifact.
+listOf(
+    "packageReleaseDmg",
+    "packageReleaseMsi",
+    "packageReleaseDeb",
+    "packageReleaseRpm",
+    "packageReleaseDistributionForCurrentOS",
+    "packageReleaseUberJarForCurrentOS",
+    "createReleaseDistributable",
+    "runReleaseDistributable",
+).forEach { name ->
+    tasks.matching { it.name == name }.configureEach {
+        dependsOn(verifyJkeychainNativeSurvivesProguard)
+    }
 }

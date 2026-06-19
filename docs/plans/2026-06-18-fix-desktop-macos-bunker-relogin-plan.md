@@ -19,16 +19,28 @@ origin: docs/brainstorms/2026-06-18-fix-macos-bunker-relogin-brainstorm.md
 **Reverted in PR 1:**
 - ❌ ProGuard keep-rule change — the hypothesis it was based on is refuted by binary PoW; the original `pt.davidafsilva.apple.**` keep is correct and stays in place.
 
-**Open — actual root cause still unidentified.** Working hypotheses:
-- **H2 — Hardened runtime blocks unsigned dylib load.** `OSXKeychain.loadSharedObject()` extracts `libosxkeychain.dylib` to `/tmp` and `System.load()`s it. Hardened-runtime + Gatekeeper on a notarized DMG **rejects loading an unsigned dylib at runtime** unless the app entitlements include `com.apple.security.cs.disable-library-validation`. Dev `./gradlew :desktopApp:run` doesn't apply hardened runtime — explains the dev-works / release-fails split.
-- **H4 — jpackage strips the dylib resource.** Compose-Multiplatform's jpackage path could re-pack jars without preserving `META-INF/native/*` or resource-style `.dylib` files. Worth examining the DMG bundle structure.
-- **H5 — pre-hardening accounts.json.enc migration gap.** If user installed `v1.11.0` then upgraded, the migration from `bunker_uri.txt` → `accounts.json.enc` (commit `46caa4d79`) might leave the bunker entry missing. But this would not happen "every restart, always" — it would happen ONCE post-upgrade. Lower likelihood.
+**Open — actual root cause still unidentified after three refuted hypotheses.**
 
-**Verification plan (still needs a Mac + ideally the affected user):**
-- `./gradlew :desktopApp:packageReleaseDmg` locally, install, log in with bunker, quit, relaunch — DOES the bug reproduce on a locally-built (unsigned) DMG?
-- If reproduces on unsigned DMG → not hardened runtime, look at jpackage stripping.
-- If only reproduces on signed/notarized DMG → H2 is the answer; fix is `--mac-entitlements` or `--mac-hardened-runtime` flag config.
-- `codesign --display --entitlements - /Applications/Amethyst.app` on the affected user's installed DMG to see what entitlements were actually applied.
+### PoW logs from 2026-06-18 / 06-19 investigation
+
+| # | Hypothesis | Test | Result |
+|---|------------|------|--------|
+| H1 | ProGuard strips macOS keychain backend classes | `javap` on `OsxKeychainBackend.class` + `ModernOsxKeychainBackend.class` in proguarded vs unshrunk jar | **REFUTED** — bytecode identical, all native methods preserved |
+| H1b | ProGuard strips `osxkeychain.so` native resource | `unzip -l desktopApp/build/compose/tmp/main-release/proguard/jkeychain-1.1.0-*.jar` | **REFUTED** — file present, 117016 bytes |
+| H2 | Hardened runtime + Library Validation blocks unsigned dylib load | `codesign -d --entitlements -` on locally-built `Amethyst.app` | **REFUTED** — `com.apple.security.cs.disable-library-validation = true` is present in default entitlements |
+| — | `Keyring.create()` + `setPassword` + `getPassword` round-trip on macOS Keychain | Java program run with `java -cp <proguarded jars> KeychainTest` | **PASS** — round-trip succeeds against proguarded classpath on this host |
+| — | Locally-built release distributable launches | `./Amethyst.app/Contents/MacOS/Amethyst` foreground for 10s | **OK** — only unrelated VLC plugin-cache warnings on stderr |
+
+**What this means:** the bug cannot be reproduced on a locally-built (unsigned, adhoc-signed) release distributable on this Apple Silicon Mac. Either:
+- The bug requires the actual CI-built release DMG (something in CI's environment / jpackage runtime differs from local)
+- Or the bug is environment-specific to the affected user (macOS version, prior Keychain state, quarantine xattrs, an upgrade path we haven't replicated)
+- Or there's a different code path (not keychain) that breaks on cold boot for bunker accounts specifically
+
+**Next investigation steps need a Mac + the affected user:**
+- Affected user: `Console.app` filter "Amethyst", attempt bunker login, force-quit, relaunch — share log lines.
+- Affected user: `security find-generic-password -s amethyst-desktop` immediately after first bunker login — does the entry exist?
+- Affected user: `ls -la ~/.amethyst/` — does `accounts.json.enc` contain a bunker entry after first login?
+- Mac reviewer: download the *signed/notarized* GitHub release DMG, install, repro on a clean macOS user account.
 
 # 🐛 fix(desktop): macOS forced re-login on cold boot — ProGuard strips java-keyring backend
 
