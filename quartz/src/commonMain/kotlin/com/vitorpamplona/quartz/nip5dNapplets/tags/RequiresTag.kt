@@ -18,24 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip5aStaticWebsites
+package com.vitorpamplona.quartz.nip5dNapplets.tags
 
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.DescriptionTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.ServerTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.SourceTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.TitleTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.XTag
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-fun TagArray.sitePaths() = mapNotNull(PathTag::parse)
+/**
+ * NIP-5D capability-requirement tag: `["requires", "<nap-name>"]`.
+ *
+ * Each value is a bare NAP domain the napplet needs from its shell — e.g.
+ * `relay`, `identity`, `storage` — never the `NAP-RELAY` spec name. A shell uses
+ * these to decide which capabilities to broker (and which to deny) before running
+ * the napplet.
+ */
+class RequiresTag {
+    companion object {
+        const val TAG_NAME = "requires"
 
-fun TagArray.siteServers() = mapNotNull(ServerTag::parse)
+        fun parse(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
 
-fun TagArray.siteTitle() = firstNotNullOfOrNull(TitleTag::parse)
+        fun assemble(napName: String) = arrayOf(TAG_NAME, napName)
 
-fun TagArray.siteDescription() = firstNotNullOfOrNull(DescriptionTag::parse)
-
-fun TagArray.siteSource() = firstNotNullOfOrNull(SourceTag::parse)
-
-fun TagArray.siteAggregateHash() = firstNotNullOfOrNull(XTag::parse)
+        fun assemble(napNames: List<String>) = napNames.map { assemble(it) }
+    }
+}
