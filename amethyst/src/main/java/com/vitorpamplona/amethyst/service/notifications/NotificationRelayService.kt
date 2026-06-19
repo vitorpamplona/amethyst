@@ -132,7 +132,6 @@ class NotificationRelayService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var relayServiceCollectorJob: Job? = null
     private var connectedRelayCount = 0
-    private var foregroundStarted = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -140,7 +139,7 @@ class NotificationRelayService : Service() {
         super.onCreate()
         Log.d(TAG, "Service created")
         createNotificationChannel()
-        initializeForeground()
+        ensureForeground()
     }
 
     override fun onStartCommand(
@@ -149,13 +148,16 @@ class NotificationRelayService : Service() {
         startId: Int,
     ): Int {
         Log.d(TAG, "Starting service")
-        // Safety: also call startForeground from onStartCommand in case
-        // onCreate didn't complete before onStartCommand fired (ntfy #1520)
-        initializeForeground()
-        // If we couldn't promote to the foreground, initializeForeground() already
-        // called stopSelf(); don't spin up relay coroutines on a service that's
-        // tearing itself down.
-        if (!foregroundStarted) return START_NOT_STICKY
+        // Every startForegroundService() call re-arms Android's "must call
+        // startForeground() within the timeout" requirement — including the repeated
+        // calls MainActivity.onResume fires on each resume, even when the service is
+        // already running and already foregrounded. We therefore call startForeground()
+        // on EVERY start command, not just the first. Skipping it on later starts (the
+        // old `if (foregroundStarted) return` guard) left the re-armed requirement
+        // unsatisfied and triggered ForegroundServiceDidNotStartInTimeException, which
+        // crashes the whole app. startForeground() is idempotent — repeated calls just
+        // refresh the existing notification.
+        if (!ensureForeground()) return START_NOT_STICKY
         startRelayConnection()
         return START_STICKY
     }
@@ -210,10 +212,20 @@ class NotificationRelayService : Service() {
         super.onDestroy()
     }
 
-    private fun initializeForeground() {
-        if (foregroundStarted) return
+    /**
+     * Promotes the service to the foreground. Called on creation AND on every
+     * [onStartCommand], because each [Context.startForegroundService] re-arms the
+     * "must call startForeground() within the timeout" requirement and the old code's
+     * early-return-when-already-started skipped it, crashing the app with
+     * ForegroundServiceDidNotStartInTimeException. Calling startForeground() repeatedly
+     * is safe — it just refreshes the existing notification.
+     *
+     * Returns true if the service is foregrounded, false if promotion failed (in which
+     * case the service has already been told to stop).
+     */
+    private fun ensureForeground(): Boolean {
         try {
-            val notification = buildNotification(0)
+            val notification = buildNotification(connectedRelayCount)
             ServiceCompat.startForeground(
                 this,
                 NOTIFICATION_ID,
@@ -224,14 +236,14 @@ class NotificationRelayService : Service() {
                     0
                 },
             )
-            foregroundStarted = true
+            return true
         } catch (e: Exception) {
             // Any failure to promote to the foreground leaves the service in a
             // "started but not foregrounded" zombie state. Once startForegroundService()
-            // has been called, Android expects startForeground() within ~10s; if it never
-            // lands it fires ForegroundServiceDidNotStartInTimeException and crashes the
-            // whole app. Tearing the service down clears the OS's fgRequired flag, which
-            // cancels that pending timeout, so we must stopSelf() on EVERY failure path —
+            // has been called, Android expects startForeground() within the timeout; if it
+            // never lands it fires ForegroundServiceDidNotStartInTimeException and crashes
+            // the whole app. Tearing the service down clears the OS's fgRequired flag,
+            // which cancels that pending timeout, so we stopSelf() on EVERY failure path —
             // not just ForegroundServiceStartNotAllowedException. Other causes include
             // OEM-specific RemoteException/IllegalStateException and resource lookup
             // failures while building the notification.
@@ -243,6 +255,7 @@ class NotificationRelayService : Service() {
                 Log.e(TAG, "Failed to start foreground, stopping self", e)
             }
             stopSelf()
+            return false
         }
     }
 
