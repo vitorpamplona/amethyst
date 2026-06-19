@@ -9,7 +9,7 @@
 # can credit them by hand and backfill translators.json.
 #
 # Usage:
-#   tools/translators/translators.sh --from <date|tag> --to <date|tag>
+#   scripts/translators.sh --from <date|tag> [--to <date|tag>]
 #
 #   --from / --to   A date (YYYY-MM-DD) or a git tag/ref. Tags are resolved to
 #                   their commit date. --to defaults to now if omitted.
@@ -21,6 +21,13 @@
 #   CROWDIN_PROJECT_ID       Crowdin numeric project id.
 #   CROWDIN_PERSONAL_TOKEN   Crowdin personal access token (needs report scope).
 #
+# Crowdin contributors are joined against docs/changelog/translators.json, a
+# Crowdin-username/id -> npub mapping kept alongside the changelogs. Anyone
+# Crowdin reports who isn't in the mapping is printed under UNMAPPED so you can
+# credit them by hand and backfill the JSON. The contribution window for "between
+# two versions" is the commit date of the previous tag -> the commit date of the
+# new tag.
+#
 # Requires: bash, curl, jq, git.
 #
 # NOTE: This talks to the live Crowdin REST API (api.crowdin.com). The JSON field
@@ -30,7 +37,7 @@
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 API="https://api.crowdin.com/api/v2"
 MAPPING="$REPO_ROOT/docs/changelog/translators.json"
 FROM=""
@@ -45,7 +52,7 @@ while [ $# -gt 0 ]; do
     --to)      TO="${2:?--to needs a value}"; shift 2 ;;
     --mapping) MAPPING="${2:?--mapping needs a value}"; shift 2 ;;
     --raw)     RAW=1; shift ;;
-    -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,36p' "$0"; exit 0 ;;
     *)         die "unknown argument: $1" ;;
   esac
 done

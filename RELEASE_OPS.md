@@ -44,6 +44,19 @@ workflow.
    e.g. `v1.12.01.md`) and add it to `docs/changelog/README.md`. Follow the
    house style: plain text, short verb-first sentences.
 
+   For the `## Translations` section, generate the credits from Crowdin instead
+   of writing them by hand:
+   ```bash
+   export CROWDIN_PROJECT_ID=... CROWDIN_PERSONAL_TOKEN=...
+   scripts/translators.sh --from <prev-tag> --to <this-tag>
+   ```
+   It pulls a Crowdin *Top Members* report for the window between the two tags,
+   joins each contributor against `docs/changelog/translators.json` (a
+   Crowdin-username/id → npub map kept next to the changelogs), and prints the
+   `## Translations` block grouped by language. Contributors with no npub yet are
+   listed under `UNMAPPED` — credit them by hand, then add their npub to
+   `translators.json` so the next release picks them up automatically.
+
 3. **Publish the release-notes note on Nostr** with Amethyst's account and paste
    its event id into `amethyst/build.gradle.kts`:
    ```kotlin
