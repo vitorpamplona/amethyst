@@ -109,6 +109,8 @@ fun String.startsWithAny(terms: List<DualCase>): Boolean {
     return terms.any { startsWithIgnoreCase(it.lowercase, it.uppercase) }
 }
 
+fun String.startsWith(prefix: DualCase): Boolean = startsWithIgnoreCase(prefix.lowercase, prefix.uppercase)
+
 class DualCase(
     val lowercase: String,
     val uppercase: String,

@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.nip60Cashu.token
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.DualCase
+import com.vitorpamplona.quartz.utils.startsWith
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromByteArray
@@ -45,6 +47,10 @@ object CashuTokenB64Parser {
     /** Both "cashuA" and "cashuB" prefixes are 6 chars. */
     private const val PREFIX_LENGTH = 6
 
+    /** Precomputed dual-case prefixes so dispatch avoids per-call case folding. */
+    val CashuAPrefix = DualCase("cashuA")
+    val CashuBPrefix = DualCase("cashuB")
+
     private val json =
         Json {
             ignoreUnknownKeys = true
@@ -53,8 +59,8 @@ object CashuTokenB64Parser {
 
     fun parse(token: String): List<CashuToken>? =
         when {
-            token.startsWith("cashuA", ignoreCase = true) -> parseCashuA(token)
-            token.startsWith("cashuB", ignoreCase = true) -> parseCashuB(token)
+            token.startsWith(CashuAPrefix) -> parseCashuA(token)
+            token.startsWith(CashuBPrefix) -> parseCashuB(token)
             else -> null
         }
 

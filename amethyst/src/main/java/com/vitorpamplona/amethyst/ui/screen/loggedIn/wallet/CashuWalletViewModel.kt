@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenB64Parser
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.startsWith
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -838,7 +839,7 @@ class CashuWalletViewModel : ViewModel() {
             return
         }
 
-        if (!trimmed.startsWith("cashuA", ignoreCase = true) && !trimmed.startsWith("cashuB", ignoreCase = true)) {
+        if (!trimmed.startsWith(CashuTokenB64Parser.CashuAPrefix) && !trimmed.startsWith(CashuTokenB64Parser.CashuBPrefix)) {
             _redeemState.value =
                 CashuRedeemFlowState.Error("Not a Cashu token (must start with cashuA or cashuB)")
             return
