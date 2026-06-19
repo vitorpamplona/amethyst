@@ -27,14 +27,11 @@ import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.model.nip60Cashu.MintQuoteStarted
 import com.vitorpamplona.amethyst.model.nip60Cashu.TokenEntry
 import com.vitorpamplona.amethyst.model.nip60Cashu.describeMintError
-import com.vitorpamplona.amethyst.service.cashu.v3.V3Parser
-import com.vitorpamplona.amethyst.service.cashu.v4.V4Parser
-import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
-import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenB64Parser
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -841,54 +838,20 @@ class CashuWalletViewModel : ViewModel() {
             return
         }
 
-        val (mintUrl, proofs) =
-            when {
-                trimmed.startsWith("cashuB") -> {
-                    when (val parsed = V4Parser.parseCashuB(trimmed)) {
-                        is GenericLoadable.Loaded -> {
-                            val tok = parsed.loaded.firstOrNull()
-                            if (tok == null) {
-                                _redeemState.value = CashuRedeemFlowState.Error("Token has no proofs")
-                                return
-                            }
-                            tok.mint to tok.proofs.map { CashuProof(it.id, it.amount.toLong(), it.secret, it.C) }
-                        }
-                        is GenericLoadable.Error -> {
-                            _redeemState.value = CashuRedeemFlowState.Error(parsed.errorMessage)
-                            return
-                        }
-                        else -> {
-                            _redeemState.value = CashuRedeemFlowState.Error("Could not parse token")
-                            return
-                        }
-                    }
-                }
-                trimmed.startsWith("cashuA") -> {
-                    when (val parsed = V3Parser.parseCashuA(trimmed)) {
-                        is GenericLoadable.Loaded -> {
-                            val tok = parsed.loaded.firstOrNull()
-                            if (tok == null) {
-                                _redeemState.value = CashuRedeemFlowState.Error("Token has no proofs")
-                                return
-                            }
-                            tok.mint to tok.proofs.map { CashuProof(it.id, it.amount.toLong(), it.secret, it.C) }
-                        }
-                        is GenericLoadable.Error -> {
-                            _redeemState.value = CashuRedeemFlowState.Error(parsed.errorMessage)
-                            return
-                        }
-                        else -> {
-                            _redeemState.value = CashuRedeemFlowState.Error("Could not parse token")
-                            return
-                        }
-                    }
-                }
-                else -> {
-                    _redeemState.value =
-                        CashuRedeemFlowState.Error("Not a Cashu token (must start with cashuA or cashuB)")
+        if (!trimmed.startsWith("cashuA", ignoreCase = true) && !trimmed.startsWith("cashuB", ignoreCase = true)) {
+            _redeemState.value =
+                CashuRedeemFlowState.Error("Not a Cashu token (must start with cashuA or cashuB)")
+            return
+        }
+
+        val parsedToken =
+            CashuTokenB64Parser.parse(trimmed)?.firstOrNull()
+                ?: run {
+                    _redeemState.value = CashuRedeemFlowState.Error("Could not parse token")
                     return
                 }
-            }
+        val mintUrl = parsedToken.mint
+        val proofs = parsedToken.proofs
 
         if (mintUrl !in mints.value) {
             _redeemState.value =

@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.service.cashu
 
 import android.util.LruCache
-import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuToken
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import kotlinx.collections.immutable.ImmutableList
 
 object CachedCashuParser {

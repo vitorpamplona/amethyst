@@ -18,20 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.cashu.v3
+package com.vitorpamplona.quartz.nip60Cashu.token
 
-import com.vitorpamplona.amethyst.commons.model.nip60Cashu.Proof
-import kotlinx.serialization.Serializable
+import androidx.compose.runtime.Immutable
 
-@Serializable
-class V3Token(
-    val unit: String?,
-    val memo: String?,
-    val token: List<V3T>?,
-)
-
-@Serializable
-class V3T(
+/**
+ * A NUT-00 out-of-band cashu token (`cashuA` v3 / `cashuB` v4) decoded from its
+ * string form, ready to display or redeem.
+ *
+ * Distinct from [TokenContent], which models the NIP-60 kind:7375 *wallet*
+ * token stored inside an encrypted event. This type is what a user receives
+ * pasted into a note or DM. Produced by [CashuTokenB64Parser] and serialised
+ * back out by [V4Encoder].
+ */
+@Immutable
+data class CashuToken(
+    val token: String,
     val mint: String,
-    val proofs: List<Proof>,
+    val totalAmount: Long,
+    val proofs: List<CashuProof>,
+    /** NUT-00 currency unit ("sat" when absent). Non-sat units are denominated in minor units (e.g. usd = cents). */
+    val unit: String? = null,
+    /** Free-text memo the sender attached to the token. */
+    val memo: String? = null,
 )
