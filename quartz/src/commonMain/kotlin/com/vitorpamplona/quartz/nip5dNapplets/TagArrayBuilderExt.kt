@@ -18,24 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip5aStaticWebsites
+package com.vitorpamplona.quartz.nip5dNapplets
 
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.DescriptionTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.ServerTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.SourceTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.TitleTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.XTag
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip5dNapplets.tags.RequiresTag
 
-fun TagArray.sitePaths() = mapNotNull(PathTag::parse)
-
-fun TagArray.siteServers() = mapNotNull(ServerTag::parse)
-
-fun TagArray.siteTitle() = firstNotNullOfOrNull(TitleTag::parse)
-
-fun TagArray.siteDescription() = firstNotNullOfOrNull(DescriptionTag::parse)
-
-fun TagArray.siteSource() = firstNotNullOfOrNull(SourceTag::parse)
-
-fun TagArray.siteAggregateHash() = firstNotNullOfOrNull(XTag::parse)
+fun <T : Event> TagArrayBuilder<T>.nappletRequires(napNames: List<String>) = addAll(RequiresTag.assemble(napNames))

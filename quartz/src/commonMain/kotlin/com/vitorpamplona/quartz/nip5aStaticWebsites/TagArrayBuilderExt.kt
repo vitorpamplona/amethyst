@@ -21,12 +21,14 @@
 package com.vitorpamplona.quartz.nip5aStaticWebsites
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.ServerTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.SourceTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.TitleTag
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.XTag
 
 fun <T : Event> TagArrayBuilder<T>.sitePaths(paths: List<PathTag>) = addAll(PathTag.assemble(paths))
 
@@ -37,3 +39,8 @@ fun <T : Event> TagArrayBuilder<T>.siteTitle(title: String) = addUnique(TitleTag
 fun <T : Event> TagArrayBuilder<T>.siteDescription(description: String) = addUnique(DescriptionTag.assemble(description))
 
 fun <T : Event> TagArrayBuilder<T>.siteSource(url: String) = addUnique(SourceTag.assemble(url))
+
+fun <T : Event> TagArrayBuilder<T>.siteAggregateHash(aggregateHash: HexKey) = addUnique(XTag.assemble(aggregateHash))
+
+/** Computes the NIP-5A aggregate hash from [paths] and adds it as the `x` tag. */
+fun <T : Event> TagArrayBuilder<T>.siteAggregateHash(paths: List<PathTag>) = siteAggregateHash(SiteAggregateHash.compute(paths))

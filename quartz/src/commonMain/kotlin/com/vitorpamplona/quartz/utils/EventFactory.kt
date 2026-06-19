@@ -197,6 +197,9 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -498,6 +501,9 @@ class EventFactory {
                 TokenListEvent.KIND -> TokenListEvent(id, pubKey, createdAt, tags, content, sig)
                 TokenRemovalEvent.KIND -> TokenRemovalEvent(id, pubKey, createdAt, tags, content, sig)
                 NamedSiteEvent.KIND -> NamedSiteEvent(id, pubKey, createdAt, tags, content, sig)
+                NappletSnapshotEvent.KIND -> NappletSnapshotEvent(id, pubKey, createdAt, tags, content, sig)
+                RootNappletEvent.KIND -> RootNappletEvent(id, pubKey, createdAt, tags, content, sig)
+                NamedNappletEvent.KIND -> NamedNappletEvent(id, pubKey, createdAt, tags, content, sig)
                 NNSEvent.KIND -> NNSEvent(id, pubKey, createdAt, tags, content, sig)
                 NipTextEvent.KIND -> NipTextEvent(id, pubKey, createdAt, tags, content, sig)
                 NutzapEvent.KIND -> NutzapEvent(id, pubKey, createdAt, tags, content, sig)

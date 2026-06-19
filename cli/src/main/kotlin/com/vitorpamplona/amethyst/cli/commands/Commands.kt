@@ -91,6 +91,16 @@ object Commands {
         tail: Array<String>,
     ): Int = NotesCommands.dispatch(dataDir, tail)
 
+    suspend fun nsite(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = NsiteCommands.dispatch(dataDir, tail)
+
+    suspend fun napplet(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = NappletCommands.dispatch(dataDir, tail)
+
     suspend fun store(
         dataDir: DataDir,
         tail: Array<String>,
