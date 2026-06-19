@@ -224,9 +224,19 @@ private fun EmojiGrid(
     pack: OwnedEmojiPack,
     onLongPress: (EmojiUrlTag, Boolean) -> Unit,
 ) {
+    // Collapse to one cell per (shortcode, visibility). A pack can carry
+    // duplicate shortcodes: NIP-30 puts no uniqueness constraint on emoji
+    // tags, so foreign packs may repeat them, and our own addEmoji appends
+    // without a duplicate guard. Two same-code cells in the same visibility
+    // bucket are indistinguishable to the user and share one delete path
+    // (removeEmoji deletes by shortcode, so it would drop both), and their
+    // identical keys would crash the LazyGrid. distinctBy keeps the first.
+    // Dedup on code + visibility so a legit public/private pair of the same
+    // shortcode (told apart by the lock badge, deleted separately) survives.
     val allEmojis =
         remember(pack) {
-            pack.publicEmojis.map { it to false } + pack.privateEmojis.map { it to true }
+            (pack.publicEmojis.map { it to false } + pack.privateEmojis.map { it to true })
+                .distinctBy { (emoji, isPrivate) -> emoji.code to isPrivate }
         }
 
     LazyVerticalGrid(
