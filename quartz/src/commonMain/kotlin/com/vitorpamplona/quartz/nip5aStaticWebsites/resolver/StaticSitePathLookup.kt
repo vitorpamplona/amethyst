@@ -22,11 +22,11 @@ package com.vitorpamplona.quartz.nip5aStaticWebsites.resolver
 
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 
-/**
+/*
  * Request-path lookup for NIP-5A static-website / napplet manifests.
  *
  * A manifest (`RootSiteEvent` kind 15128 / `NamedSiteEvent` kind 35128) maps request
- * paths to content-addressed blobs through `path` tags ([PathTag] = request path + the
+ * paths to content-addressed blobs through `path` tags (`PathTag` = request path + the
  * blob's lowercase sha256). The same event shape backs both nsites and napplets
  * (NIP-5D web projection), so the lookup here is deliberately runtime-agnostic.
  *

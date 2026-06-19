@@ -82,6 +82,30 @@ open class BlossomClient(
         }
 
     /**
+     * Download a blob from an absolute URL — typically a Blossom GET endpoint
+     * `<server>/<sha256>`. Returns the raw bytes, or `null` when the server
+     * responds with a non-2xx status. Connection-level failures (DNS, refused,
+     * timeout) propagate as [java.io.IOException] so the caller can try the next
+     * server.
+     *
+     * This does NOT verify the blob's hash — content-addressed verification is
+     * the caller's responsibility (see quartz `StaticSiteResolver.verify`), since
+     * a Blossom server is untrusted and may return a substituted blob.
+     */
+    open suspend fun download(url: String): ByteArray? =
+        withContext(Dispatchers.IO) {
+            val request =
+                Request
+                    .Builder()
+                    .url(url)
+                    .get()
+                    .build()
+            okHttpClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) response.body.bytes() else null
+            }
+        }
+
+    /**
      * Upload raw bytes (e.g. encrypted blobs) to a Blossom server.
      */
     open suspend fun upload(
