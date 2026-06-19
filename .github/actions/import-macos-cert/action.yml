@@ -24,6 +24,15 @@ outputs:
       Compose's macOS signing, whose certificate lookup doesn't resolve the
       search list reliably on CI runners the way bare `codesign` does.
     value: ${{ steps.import.outputs.keychain }}
+  identity:
+    description: >
+      The imported certificate's full "Developer ID Application: NAME (TEAMID)"
+      common name, resolved from the keychain (empty when signing=false or if it
+      could not be parsed). `codesign` accepts a SHA-1 hash or a CN substring,
+      but Compose's MacSigner runs `security find-certificate -c <identity>`
+      after prepending "Developer ID Application: " — so it only works with the
+      exact common name. Feed this to Compose's `signing.identity`.
+    value: ${{ steps.import.outputs.identity }}
 
 runs:
   using: composite
@@ -62,5 +71,20 @@ runs:
         # explicit keychain can read the `keychain` output below.
         security default-keychain -d user -s "$KEYCHAIN"
         rm -f "$CERT_PATH"
+        # Resolve the certificate's exact common name. Compose's MacSigner maps
+        # its identity to a cert via `security find-certificate -c <name>` (after
+        # prepending "Developer ID Application: " when absent), so it needs the
+        # full CN — a SHA-1 hash or partial name in the secret signs fine with
+        # bare `codesign` but yields "Could not find certificate ...". Pull the
+        # canonical name straight from the keychain so the caller is independent
+        # of whatever form the MAC_SIGN_IDENTITY secret takes.
+        IDENTITY_NAME="$(security find-identity -v -p codesigning "$KEYCHAIN" \
+          | grep -o '"Developer ID Application:[^"]*"' | head -1 | tr -d '"' || true)"
         echo "signing=true" >> "$GITHUB_OUTPUT"
         echo "keychain=$KEYCHAIN" >> "$GITHUB_OUTPUT"
+        echo "identity=$IDENTITY_NAME" >> "$GITHUB_OUTPUT"
+        if [[ -n "$IDENTITY_NAME" ]]; then
+          echo "::notice::Resolved signing identity: $IDENTITY_NAME"
+        else
+          echo "::warning::Could not resolve a 'Developer ID Application' identity from the keychain; callers will fall back to the MAC_SIGN_IDENTITY secret."
+        fi

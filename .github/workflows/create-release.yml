@@ -119,8 +119,13 @@ jobs:
         env:
           # Empty on non-macOS legs and on the macOS leg when no cert is
           # configured — the gradle macOS{} block skips signing when the
-          # identity is blank.
-          AMETHYST_MAC_SIGN_IDENTITY: ${{ steps.mac_keychain.outputs.signing == 'true' && secrets.MAC_SIGN_IDENTITY || '' }}
+          # identity is blank. Prefer the full common name resolved from the
+          # keychain over the raw secret: Compose's signer maps the identity via
+          # `security find-certificate` and only matches the exact "Developer ID
+          # Application: …" CN, whereas the secret may be a hash or partial name
+          # (which bare codesign accepts but Compose does not). Fall back to the
+          # secret if resolution failed.
+          AMETHYST_MAC_SIGN_IDENTITY: ${{ steps.mac_keychain.outputs.signing == 'true' && (steps.mac_keychain.outputs.identity || secrets.MAC_SIGN_IDENTITY) || '' }}
           # Explicit keychain for Compose's MacSigner. Its `security
           # find-certificate` lookup doesn't resolve the imported cert via the
           # search list on these runners ("Could not find certificate ... in
