@@ -16,6 +16,10 @@
 #   --mapping PATH  Override mapping file (default docs/changelog/translators.json).
 #   --raw           Also dump the raw per-member report rows (for debugging /
 #                   discovering Crowdin usernames to add to the mapping).
+#   --seed          Instead of printing credits, merge every contributor in the
+#                   window into translators.json with a blank npub (existing
+#                   entries kept). --from defaults to two months ago. Fill in the
+#                   npubs afterwards.
 #
 # Environment (same names crowdin.yml already uses):
 #   CROWDIN_PROJECT_ID       Crowdin numeric project id.
@@ -43,6 +47,7 @@ MAPPING="$REPO_ROOT/docs/changelog/translators.json"
 FROM=""
 TO=""
 RAW=0
+SEED=0
 
 die() { echo "error: $*" >&2; exit 1; }
 
@@ -52,6 +57,7 @@ while [ $# -gt 0 ]; do
     --to)      TO="${2:?--to needs a value}"; shift 2 ;;
     --mapping) MAPPING="${2:?--mapping needs a value}"; shift 2 ;;
     --raw)     RAW=1; shift ;;
+    --seed)    SEED=1; shift ;;
     -h|--help) sed -n '2,36p' "$0"; exit 0 ;;
     *)         die "unknown argument: $1" ;;
   esac
@@ -59,7 +65,9 @@ done
 
 command -v jq   >/dev/null || die "jq not found"
 command -v curl >/dev/null || die "curl not found"
-[ -n "$FROM" ] || die "--from is required"
+# --from defaults to two months ago (handy for --seed; explicit tags are better
+# for generating a release's credits).
+[ -n "$FROM" ] || FROM="$(date -u -d '2 months ago' +%Y-%m-%d 2>/dev/null || date -u -v-2m +%Y-%m-%d)"
 [ -n "${CROWDIN_PROJECT_ID:-}" ]     || die "CROWDIN_PROJECT_ID is not set"
 [ -n "${CROWDIN_PERSONAL_TOKEN:-}" ] || die "CROWDIN_PERSONAL_TOKEN is not set"
 [ -f "$MAPPING" ] || die "mapping file not found: $MAPPING"
@@ -111,7 +119,26 @@ if [ "$RAW" = "1" ]; then
   echo "$report" | jq '(.data // .)' >&2
 fi
 
-# 4) Join report members against the npub mapping, grouped by language.
+# 4a) --seed: merge every contributor in the window into translators.json with an
+#     empty npub (keeping existing mappings), so the file is pre-loaded and you
+#     only have to fill in the npubs. Matching is case-insensitive on username.
+if [ "$SEED" = "1" ]; then
+  before="$(jq '(.mappings // {}) | length' "$MAPPING")"
+  merged="$(jq -n --slurpfile cur "$MAPPING" --argjson rep "$report" '
+    ($cur[0]) as $file
+    | [ ($rep.data // $rep)[] | .user | { key: (.username // (.id|tostring)) } ]
+    | reduce .[] as $u (($file.mappings // {});
+        if ( [keys_unsorted[] | ascii_downcase] | index($u.key | ascii_downcase) )
+        then . else . + { ($u.key): "" } end)
+    | $file + { mappings: . }
+  ')"
+  echo "$merged" > "$MAPPING"
+  after="$(jq '(.mappings // {}) | length' "$MAPPING")"
+  echo "# Seeded $MAPPING: $before -> $after entries (added $((after - before)) new, npubs left blank)." >&2
+  exit 0
+fi
+
+# 4b) Join report members against the npub mapping, grouped by language.
 #    Mapping keys are lower-cased; we match by username (lower) or numeric id.
 echo "$report" | jq -r --slurpfile m "$MAPPING" '
   ($m[0].mappings // {}) as $map
