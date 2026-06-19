@@ -17,6 +17,13 @@ outputs:
   signing:
     description: "'true' if a certificate was imported, else 'false'"
     value: ${{ steps.import.outputs.signing }}
+  keychain:
+    description: >
+      Absolute path of the throwaway keychain holding the imported cert (empty
+      when signing=false). Pass to tools that need an explicit keychain — e.g.
+      Compose's macOS signing, whose certificate lookup doesn't resolve the
+      search list reliably on CI runners the way bare `codesign` does.
+    value: ${{ steps.import.outputs.keychain }}
 
 runs:
   using: composite
@@ -48,5 +55,12 @@ runs:
         # Prepend our keychain to the user search list so codesign sees it.
         security list-keychains -d user -s "$KEYCHAIN" \
           $(security list-keychains -d user | sed -e 's/[\"[:space:]]//g')
+        # Also make it the default keychain. Bare `codesign` resolves identities
+        # via the search list, but some tools (Compose's MacSigner runs
+        # `security find-certificate` to map the identity to a cert) don't find
+        # it on the search list alone on these runners. Callers that need an
+        # explicit keychain can read the `keychain` output below.
+        security default-keychain -d user -s "$KEYCHAIN"
         rm -f "$CERT_PATH"
         echo "signing=true" >> "$GITHUB_OUTPUT"
+        echo "keychain=$KEYCHAIN" >> "$GITHUB_OUTPUT"

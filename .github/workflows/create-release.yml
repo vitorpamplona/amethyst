@@ -121,6 +121,11 @@ jobs:
           # configured — the gradle macOS{} block skips signing when the
           # identity is blank.
           AMETHYST_MAC_SIGN_IDENTITY: ${{ steps.mac_keychain.outputs.signing == 'true' && secrets.MAC_SIGN_IDENTITY || '' }}
+          # Explicit keychain for Compose's MacSigner. Its `security
+          # find-certificate` lookup doesn't resolve the imported cert via the
+          # search list on these runners ("Could not find certificate ... in
+          # keychain []"), so point it at the throwaway keychain directly.
+          AMETHYST_MAC_SIGN_KEYCHAIN: ${{ steps.mac_keychain.outputs.signing == 'true' && steps.mac_keychain.outputs.keychain || '' }}
           AMETHYST_NOTARY_APPLE_ID: ${{ secrets.MAC_NOTARY_APPLE_ID }}
           AMETHYST_NOTARY_PASSWORD: ${{ secrets.MAC_NOTARY_PASSWORD }}
           AMETHYST_NOTARY_TEAM_ID: ${{ secrets.MAC_NOTARY_TEAM_ID }}

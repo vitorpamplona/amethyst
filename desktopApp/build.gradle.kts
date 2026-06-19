@@ -159,6 +159,16 @@ compose.desktop {
                     signing {
                         sign.set(true)
                         identity.set(macSignIdentity)
+                        // Compose's MacSigner maps the identity to a certificate via
+                        // `security find-certificate`, which doesn't reliably resolve
+                        // the CI-imported cert through the keychain search list (fails
+                        // with "Could not find certificate ... in keychain []"). When
+                        // the workflow exports the throwaway keychain path, point the
+                        // lookup straight at it. Empty/unset on local builds — Compose
+                        // then falls back to the default search list as before.
+                        System.getenv("AMETHYST_MAC_SIGN_KEYCHAIN")
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { keychain.set(it) }
                     }
                     notarization {
                         appleID.set(System.getenv("AMETHYST_NOTARY_APPLE_ID"))
