@@ -844,26 +844,27 @@ class CashuWalletViewModel : ViewModel() {
             return
         }
 
-        val parsedToken =
-            CashuTokenB64Parser.parse(trimmed)?.firstOrNull()
+        // A single token string can carry proofs from more than one mint;
+        // redeem every group rather than just the first.
+        val parsedTokens =
+            CashuTokenB64Parser.parse(trimmed)?.takeIf { it.isNotEmpty() }
                 ?: run {
                     _redeemState.value = CashuRedeemFlowState.Error("Could not parse token")
                     return
                 }
-        val mintUrl = parsedToken.mint
-        val proofs = parsedToken.proofs
 
-        if (mintUrl !in mints.value) {
+        val unknownMint = parsedTokens.firstOrNull { it.mint !in mints.value }?.mint
+        if (unknownMint != null) {
             _redeemState.value =
-                CashuRedeemFlowState.Error("Token mint ($mintUrl) is not in your wallet. Add it first.")
+                CashuRedeemFlowState.Error("Token mint ($unknownMint) is not in your wallet. Add it first.")
             return
         }
 
         _redeemState.value = CashuRedeemFlowState.Redeeming
         vm.launchSigner {
             try {
-                val result = ops.redeemToken(trimmed, proofs, mintUrl)
-                _redeemState.value = CashuRedeemFlowState.Completed(result.amount)
+                val total = parsedTokens.sumOf { ops.redeemToken(trimmed, it.proofs, it.mint).amount }
+                _redeemState.value = CashuRedeemFlowState.Completed(total)
             } catch (e: Exception) {
                 _redeemState.value = CashuRedeemFlowState.Error(describeMintError(e))
             }

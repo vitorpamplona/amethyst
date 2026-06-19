@@ -64,11 +64,7 @@ object CashuTokenB64Parser {
             // drop() rather than removePrefix() so the case-insensitive
             // dispatch above stays consistent with prefix stripping.
             val payload = token.drop(PREFIX_LENGTH)
-            val decoded =
-                Base64.Default
-                    .withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
-                    .decode(payload)
-                    .decodeToString()
+            val decoded = decodeStandardOrUrlSafe(payload).decodeToString()
             val parsed = json.decodeFromString(V3TokenJson.serializer(), decoded)
             parsed.token?.map { entry ->
                 val proofs =
@@ -116,6 +112,21 @@ object CashuTokenB64Parser {
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             null
+        }
+
+    /**
+     * NUT-00 v3 specifies base64-urlsafe, but historical encoders (and older
+     * Amethyst builds) emitted standard base64. Standard and url-safe only
+     * differ in two characters, so an all-alphanumeric payload decodes the
+     * same under either; try standard first and fall back to url-safe so both
+     * encodings round-trip.
+     */
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun decodeStandardOrUrlSafe(payload: String): ByteArray =
+        try {
+            Base64.Default.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL).decode(payload)
+        } catch (_: IllegalArgumentException) {
+            Base64.UrlSafe.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL).decode(payload)
         }
 }
 

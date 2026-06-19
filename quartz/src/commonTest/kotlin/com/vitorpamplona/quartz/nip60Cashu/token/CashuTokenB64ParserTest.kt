@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip60Cashu.token
 
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -124,6 +126,29 @@ class CashuTokenB64ParserTest {
     fun dispatchesByPrefix() {
         assertTrue(CashuTokenB64Parser.parse(cashuTokenA)!!.isNotEmpty())
         assertTrue(CashuTokenB64Parser.parse(cashuTokenB1)!!.isNotEmpty())
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    @Test
+    fun parsesBothBase64Alphabets() {
+        // NUT-00 v3 specifies base64-urlsafe, but legacy encoders used standard
+        // base64. The "????????" memo forces the two alphabets to diverge
+        // (index-63 sextets render as '/' vs '_'), so both paths are exercised.
+        val jsonBody =
+            """{"token":[{"mint":"https://m.example","proofs":[{"amount":1,"id":"009a1f293253e41e","secret":"s","C":"02bc"}]}],"unit":"sat","memo":"????????"}"""
+        val bytes = jsonBody.encodeToByteArray()
+        val standard = "cashuA" + Base64.Default.withPadding(Base64.PaddingOption.ABSENT).encode(bytes)
+        val urlSafe = "cashuA" + Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT).encode(bytes)
+
+        assertTrue(standard.contains('/'), "expected standard alphabet payload to contain '/'")
+        assertTrue(urlSafe.contains('_'), "expected url-safe alphabet payload to contain '_'")
+
+        val fromStandard = CashuTokenB64Parser.parse(standard)!![0]
+        val fromUrlSafe = CashuTokenB64Parser.parse(urlSafe)!![0]
+
+        assertEquals("https://m.example", fromStandard.mint)
+        assertEquals(fromStandard.mint, fromUrlSafe.mint)
+        assertEquals("????????", fromUrlSafe.memo)
     }
 
     @Test
