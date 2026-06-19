@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.service.upload
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
-import java.util.Base64
 
 object BlossomAuth {
     suspend fun createUploadAuth(
@@ -31,13 +30,7 @@ object BlossomAuth {
         size: Long,
         alt: String,
         signer: NostrSigner,
-    ): String {
-        val event = BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer)
-        return encodeAuthHeader(event)
-    }
+    ): String = BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer).toAuthorizationHeader()
 
-    fun encodeAuthHeader(event: BlossomAuthorizationEvent): String {
-        val b64 = Base64.getEncoder().encodeToString(event.toJson().toByteArray())
-        return "Nostr $b64"
-    }
+    fun encodeAuthHeader(event: BlossomAuthorizationEvent): String = event.toAuthorizationHeader()
 }
