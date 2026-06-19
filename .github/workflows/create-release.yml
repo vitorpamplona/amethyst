@@ -326,7 +326,12 @@ jobs:
           set -euo pipefail
           IMG="cli/build/amy-image/amy"
           ENTITLEMENTS="cli/packaging/macos/amy.entitlements"
-          # Sign every Mach-O binary in the bundled JRE. Each is signed
+          # First sign the macOS Mach-O natives buried INSIDE the bundled jars
+          # (secp256k1/jna/sqlite/skiko/jkeychain/mediaplayer). The loose-file
+          # loop below can't see them, but Apple's notary recurses into jars and
+          # rejects any unsigned Mach-O — so this must run before notarize.
+          SIGN_IDENTITY="$SIGN_IDENTITY" scripts/sign-macos-jar-natives.sh "$IMG"
+          # Sign every loose Mach-O binary in the bundled JRE. Each is signed
           # independently (no enclosing .app seals them), so order is irrelevant.
           # Executables get the hardened-runtime entitlements; dylibs don't.
           while IFS= read -r f; do
@@ -341,10 +346,10 @@ jobs:
           done < <(find "$IMG" -type f)
           codesign --verify --strict --verbose=2 "$IMG/runtime/bin/java"
           # Notarize: zip the signed image, submit, wait for Apple's verdict.
-          # The notary service recursively inspects the lib/*.jar files, so any
-          # unsigned Mach-O embedded in them (secp256k1/jna/sqlite/skiko natives)
-          # can come back Invalid. Surface the per-file log so the first real run
-          # is diagnostic rather than a bare failure.
+          # The notary service recursively inspects the lib/*.jar files; their
+          # embedded Mach-O natives are signed by sign-macos-jar-natives.sh
+          # above. Surface the per-file log on any non-Accepted verdict so a
+          # regression is diagnostic rather than a bare failure.
           ZIP="$RUNNER_TEMP/amy-notarize.zip"
           OUT="$RUNNER_TEMP/notary-submit.json"
           ditto -c -k --keepParent "$IMG" "$ZIP"

@@ -355,3 +355,39 @@ listOf(
         dependsOn(verifyJkeychainNativeSurvivesProguard)
     }
 }
+
+// macOS notarization: the bundled jars (secp256k1, jna, sqlite-bundled, skiko,
+// jkeychain, kdroidFilter mediaplayer) carry Mach-O natives that Compose's
+// .app codesign never reaches — codesign doesn't descend into jars, but Apple's
+// notary service does and rejects any unsigned Mach-O ("Invalid"). Sign those
+// natives inside the *proguarded* jars (the exact artifacts Compose then copies
+// into the .app) so the subsequent bundle signing seals already-signed code.
+// Runs only on macOS with the Developer ID identity exported — a no-op on every
+// other leg and on unsigned local/PR builds.
+val signMacJarNatives by tasks.registering {
+    description = "Codesign macOS Mach-O natives embedded in bundled jars before the .app is sealed + notarized"
+    group = "build"
+    dependsOn("proguardReleaseJars")
+    val proguardDir = layout.buildDirectory.dir("compose/tmp/main-release/proguard")
+    val script = rootProject.file("scripts/sign-macos-jar-natives.sh")
+    val identity = providers.environmentVariable("AMETHYST_MAC_SIGN_IDENTITY")
+    val isMac = System.getProperty("os.name").lowercase().contains("mac")
+    onlyIf { isMac && !identity.orNull.isNullOrBlank() }
+    doLast {
+        val proc =
+            ProcessBuilder("bash", script.absolutePath, proguardDir.get().asFile.absolutePath)
+                .redirectErrorStream(true)
+                .also { it.environment()["SIGN_IDENTITY"] = identity.get() }
+                .start()
+        proc.inputStream.bufferedReader().forEachLine { println(it) }
+        val code = proc.waitFor()
+        if (code != 0) throw GradleException("sign-macos-jar-natives.sh failed with exit code $code")
+    }
+}
+
+// Must run after ProGuard writes the jars and before Compose assembles + signs
+// the .app, so wire it onto createReleaseDistributable (which the DMG packaging
+// depends on transitively).
+tasks.matching { it.name == "createReleaseDistributable" }.configureEach {
+    dependsOn(signMacJarNatives)
+}
