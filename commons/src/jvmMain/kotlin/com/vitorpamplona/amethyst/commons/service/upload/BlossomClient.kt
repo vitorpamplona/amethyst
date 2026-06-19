@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.service.upload
 
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -50,7 +51,7 @@ open class BlossomClient(
         authHeader: String?,
     ): BlossomUploadResult =
         withContext(Dispatchers.IO) {
-            val apiUrl = serverBaseUrl.removeSuffix("/") + "/upload"
+            val apiUrl = BlossomServerUrl.upload(serverBaseUrl)
             val requestBody =
                 object : RequestBody() {
                     override fun contentType() = contentType.toMediaType()
@@ -73,7 +74,7 @@ open class BlossomClient(
             val response = okHttpClient.newCall(requestBuilder.build()).execute()
             response.use {
                 if (!it.isSuccessful) {
-                    val reason = it.headers["X-Reason"] ?: it.code.toString()
+                    val reason = it.headers[BlossomServerUrl.REASON_HEADER] ?: it.code.toString()
                     throw RuntimeException("Upload failed ($serverBaseUrl): $reason")
                 }
                 val body = it.body.string().ifBlank { throw RuntimeException("Upload to $serverBaseUrl returned no body") }
@@ -115,7 +116,7 @@ open class BlossomClient(
         authHeader: String?,
     ): BlossomUploadResult =
         withContext(Dispatchers.IO) {
-            val apiUrl = serverBaseUrl.removeSuffix("/") + "/upload"
+            val apiUrl = BlossomServerUrl.upload(serverBaseUrl)
             val requestBody = bytes.toRequestBody(contentType.toMediaType())
 
             val requestBuilder =
@@ -129,7 +130,7 @@ open class BlossomClient(
             val response = okHttpClient.newCall(requestBuilder.build()).execute()
             response.use {
                 if (!it.isSuccessful) {
-                    val reason = it.headers["X-Reason"] ?: it.code.toString()
+                    val reason = it.headers[BlossomServerUrl.REASON_HEADER] ?: it.code.toString()
                     throw RuntimeException("Upload failed ($serverBaseUrl): $reason")
                 }
                 val body = it.body.string().ifBlank { throw RuntimeException("Upload to $serverBaseUrl returned no body") }

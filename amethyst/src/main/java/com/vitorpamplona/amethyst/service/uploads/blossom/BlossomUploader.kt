@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.sha256.sha256StreamWithCount
@@ -52,7 +53,6 @@ import okio.ForwardingSource
 import okio.source
 import java.io.File
 import java.io.InputStream
-import java.util.Base64
 
 class BlossomUploader {
     fun Context.getFileName(uri: Uri): String? =
@@ -120,11 +120,6 @@ class BlossomUploader {
             }.mergeLocalMetadata(localMetadata)
     }
 
-    fun encodeAuth(event: BlossomAuthorizationEvent): String {
-        val encodedNIP98Event = Base64.getEncoder().encodeToString(event.toJson().toByteArray())
-        return "Nostr $encodedNIP98Event"
-    }
-
     suspend fun upload(
         inputStream: InputStream,
         hash: HexKey,
@@ -147,7 +142,7 @@ class BlossomUploader {
                 MimeTypeMap.getSingleton().getExtensionFromMimeType(it) ?: extensionFromMimeType(it)
             } ?: ""
 
-        val apiUrl = serverBaseUrl.removeSuffix("/") + "/upload"
+        val apiUrl = BlossomServerUrl.upload(serverBaseUrl)
 
         val client = okHttpClient(apiUrl)
         val requestBuilder = Request.Builder()
@@ -187,7 +182,7 @@ class BlossomUploader {
             }
 
         httpAuth(hash, length, alt?.let { "Uploading $it" } ?: "Uploading $fileName")?.let {
-            requestBuilder.addHeader("Authorization", encodeAuth(it))
+            requestBuilder.addHeader("Authorization", it.toAuthorizationHeader())
         }
 
         contentType?.let { requestBuilder.addHeader("Content-Type", it) }
@@ -206,7 +201,7 @@ class BlossomUploader {
                         convertToMediaResult(parseResults(body.string()))
                     }
                 } else {
-                    val errorMessage = response.headers.get("X-Reason")
+                    val errorMessage = response.headers.get(BlossomServerUrl.REASON_HEADER)
 
                     val explanation = HttpStatusMessages.resourceIdFor(response.code)
                     if (errorMessage != null) {
@@ -253,12 +248,12 @@ class BlossomUploader {
         val requestBuilder = Request.Builder()
 
         httpAuth(hash, "Deleting $hash")?.let {
-            requestBuilder.addHeader("Authorization", encodeAuth(it))
+            requestBuilder.addHeader("Authorization", it.toAuthorizationHeader())
         }
 
         val request =
             requestBuilder
-                .url(apiUrl.removeSuffix("/") + "/$hash.$extension")
+                .url(BlossomServerUrl.blob(apiUrl, hash, extension))
                 .delete()
                 .build()
 
