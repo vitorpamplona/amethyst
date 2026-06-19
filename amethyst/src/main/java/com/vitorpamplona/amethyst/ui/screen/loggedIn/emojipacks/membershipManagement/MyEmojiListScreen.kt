@@ -104,7 +104,11 @@ private fun MyEmojiListView(
             selectionNote,
             accountViewModel,
         ) { event ->
-            event?.emojiPacks() ?: emptyList()
+            // The kind 10030 selection event can carry the same `a` tag more than once (e.g. a pack
+            // added twice). The grid below keys items by `address.toValue()`, so duplicates would
+            // throw an IllegalArgumentException ("Key ... was already used"). Dedupe on the same
+            // value used as the key.
+            event?.emojiPacks()?.distinctBy { it.toValue() } ?: emptyList()
         }
 
         Column(
