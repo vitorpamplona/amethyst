@@ -649,8 +649,11 @@ class UrlDetector(
         // if the url is valid and greater then 0
         if (state == ReadEndState.ValidUrl && buffer.isNotEmpty()) {
             var url = buffer.toString()
-            if (url.lastOrNull() in CANNOT_END_URLS_WITH) url = url.dropLast(1)
-            urlList.add(currentUrlMarker.createUrl(url))
+            val last = url.lastOrNull()
+            if (last != null && last in CANNOT_END_URLS_WITH && !url.endsOnBalancedCloser(last)) {
+                url = url.dropLast(1)
+            }
+            if (url.isNotEmpty()) urlList.add(currentUrlMarker.createUrl(url))
         }
 
         // clear out the buffer.
@@ -665,6 +668,37 @@ class UrlDetector(
 
         // return true if valid.
         return state == ReadEndState.ValidUrl
+    }
+
+    /**
+     * Decides whether a trailing closing delimiter ([last]) should be kept as part of the URL.
+     *
+     * Closing parenthesis, braces and brackets are common inside real URLs (e.g. Wikipedia's
+     * `…/Bitcoin_(disambiguation)`), so we keep a trailing closer when the URL also contains its
+     * matching opener — i.e. the delimiters are balanced. When the closer is unbalanced it is
+     * almost always wrapping/sentence punctuation (e.g. `(see example.com)` or `http://test.com)`)
+     * and is stripped. Any opening delimiter or other punctuation is never balanced, so it falls
+     * through to the normal trailing strip.
+     */
+    private fun String.endsOnBalancedCloser(last: Char): Boolean {
+        val opener =
+            when (last) {
+                ')' -> '('
+                '}' -> '{'
+                ']' -> '['
+                else -> return false
+            }
+
+        var depth = 0
+        for (c in this) {
+            if (c == opener) {
+                depth++
+            } else if (c == last) {
+                depth--
+            }
+        }
+        // depth >= 0 means every closer (including the trailing one) has a matching opener.
+        return depth >= 0
     }
 
     companion object {
@@ -694,6 +728,7 @@ class UrlDetector(
                 '!',
                 ')',
                 '}',
+                ']',
                 '(',
                 '{',
                 '\u3002',
@@ -711,6 +746,7 @@ class UrlDetector(
                 ':',
                 ')',
                 '}',
+                ']',
                 '(',
                 '{',
                 '\u3002',
