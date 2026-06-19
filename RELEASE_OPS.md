@@ -44,6 +44,23 @@ workflow.
    e.g. `v1.12.01.md`) and add it to `docs/changelog/README.md`. Follow the
    house style: plain text, short verb-first sentences.
 
+   For the `## Translations` section, generate the credits instead of writing
+   them by hand — no token needed:
+   ```bash
+   scripts/translators.sh
+   ```
+   This runs offline. It reads `docs/changelog/translators.json` (kept next to
+   the changelogs), which CI keeps fresh: the Crowdin sync workflow's
+   `seed-translators` job records everyone who has translated since the last `v*`
+   tag, with their languages, in the file's `sinceLastTag` list, and accumulates
+   their npubs in the forever-growing `mappings` registry. The script resolves
+   that list to npubs and prints the `## Translations` block grouped by language.
+   Contributors with no npub yet are listed under `UNMAPPED` — credit them by
+   hand, then add their npub under `mappings` so future releases pick them up
+   automatically. (To re-query Crowdin live as a sanity check, run
+   `scripts/translators.sh --seed` with `CROWDIN_PROJECT_ID` /
+   `CROWDIN_PERSONAL_TOKEN` set, which refreshes the file.)
+
 3. **Publish the release-notes note on Nostr** with Amethyst's account and paste
    its event id into `amethyst/build.gradle.kts`:
    ```kotlin

@@ -1,0 +1,27 @@
+{
+  "_comment": [
+    "Translator credits source for the changelog, kept by scripts/translators.sh.",
+    "",
+    "mappings: a forever-growing Crowdin-username (or numeric id) -> Nostr npub",
+    "  registry. Entries are never deleted. The --seed run appends new",
+    "  contributors with a blank npub; fill those in as translators share theirs.",
+    "  Keys match case-insensitively against the Crowdin username; a numeric key",
+    "  matches the Crowdin user id.",
+    "",
+    "sinceLastTag: a rolling snapshot of who has translated since the last release",
+    "  tag. Each entry is { user, languages }. Refreshed on every --seed run; do",
+    "  not hand-edit. The changelog '## Translations' block is generated offline",
+    "  from this list and resolved to npubs via mappings (blanks flagged UNMAPPED).",
+    "",
+    "Example mapping (replace with a real Crowdin username):",
+    "  \"vitorpamplona\": \"npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z\""
+  ],
+  "mappings": {
+  },
+  "sinceLastTag": {
+    "tag": "",
+    "since": "",
+    "updated": "",
+    "translators": []
+  }
+}

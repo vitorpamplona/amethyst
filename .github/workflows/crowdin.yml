@@ -32,3 +32,41 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+  # Keep docs/changelog/translators.json seeded with everyone who has translated
+  # recently, so the per-release `## Translations` credits (scripts/translators.sh)
+  # can resolve them to npubs. Runs independently of the sync job above and only
+  # opens/updates a PR when a genuinely new contributor appears.
+  seed-translators:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          # Need tags so the script can resolve the last v* release tag for the
+          # "since last tag" window.
+          fetch-depth: 0
+
+      - name: Seed translator placeholders from Crowdin
+        run: bash scripts/translators.sh --seed
+        env:
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+      - name: Open or update the seed PR
+        # peter-evans/create-pull-request is MIT-licensed CI-only tooling (not
+        # linked into any shipped artifact). It no-ops when there is no diff.
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: main
+          branch: chore/seed-translators
+          add-paths: docs/changelog/translators.json
+          commit-message: 'chore: seed translator npub placeholders from Crowdin'
+          title: 'Seed translator npub placeholders'
+          body: |
+            New Crowdin contributors were added to `docs/changelog/translators.json`
+            with blank npubs. Fill in the npubs you have so the next release's
+            `## Translations` credits generate automatically via
+            `scripts/translators.sh --from <prev-tag> --to <this-tag>`.
