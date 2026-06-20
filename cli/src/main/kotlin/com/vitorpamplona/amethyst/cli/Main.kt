@@ -365,6 +365,10 @@ private fun printUsage() {
         |             [--limit N]                       --following: every contact-list pubkey)
         |             [--since TS] [--until TS]
         |             [--timeout SECS]
+        |  notes home [--limit N]                      home feed: top-level posts/reposts from
+        |             [--since TS] [--until TS]         everyone you follow (full HomeNewThread
+        |             [--timeout SECS]                  kind set, muted authors/threads removed)
+        |             [--watch [--duration SECS]]       --watch: stream live events as JSONL
         |
         |Static websites (NIP-5A kind:15128/35128):
         |  nsite fetch AUTHOR [--d ID] [--path P]      resolve one path over Nostr + Blossom and

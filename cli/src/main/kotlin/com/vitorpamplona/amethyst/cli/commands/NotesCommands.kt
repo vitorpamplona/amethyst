@@ -33,11 +33,12 @@ object NotesCommands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "notes <post|feed> …")
+        if (tail.isEmpty()) return Output.error("bad_args", "notes <post|feed|home> …")
         val rest = tail.drop(1).toTypedArray()
         return when (tail[0]) {
             "post" -> PostCommand.run(dataDir, rest)
             "feed" -> FeedCommand.run(dataDir, rest)
+            "home" -> HomeFeedCommand.run(dataDir, rest)
             else -> Output.error("bad_args", "notes ${tail[0]}")
         }
     }

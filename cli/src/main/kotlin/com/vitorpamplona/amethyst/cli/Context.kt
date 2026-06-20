@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.coroutines.CompletableDeferred
@@ -312,6 +313,90 @@ class Context(
     }
 
     /**
+     * Live counterpart to [drain]. Subscribes across [filters] and invokes
+     * [onEvent] for every verified+stored event as it arrives — including those
+     * that land *after* EOSE, which [drain] returns too early to see. [onEose]
+     * fires once, when every relay has signalled EOSE (i.e. the historical
+     * backfill is exhausted and everything after is genuinely live).
+     *
+     * Unlike [drain] this never returns at EOSE: it keeps the subscription open
+     * and pumps events until [timeoutMs] elapses (or the coroutine is
+     * cancelled, e.g. SIGINT). This is the primitive a non-interactive feed
+     * "tail" is built on — the CLI cannot redraw an in-place list, so it draws
+     * each event once, in arrival order, via [Output.emitLine].
+     */
+    suspend fun stream(
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
+        timeoutMs: Long,
+        onEose: suspend () -> Unit = {},
+        onEvent: suspend (NormalizedRelayUrl, Event) -> Unit,
+    ) {
+        if (filters.isEmpty()) return
+        val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
+        val doneChannel = Channel<NormalizedRelayUrl>(UNLIMITED)
+        val remaining = filters.keys.toMutableSet()
+        var eosed = false
+        val subId = newSubId()
+        val listener =
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    eventChannel.trySend(relay to event)
+                }
+
+                override fun onEose(
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    doneChannel.trySend(relay)
+                }
+
+                override fun onClosed(
+                    message: String,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    doneChannel.trySend(relay)
+                }
+
+                override fun onCannotConnect(
+                    relay: NormalizedRelayUrl,
+                    message: String,
+                    forFilters: List<Filter>?,
+                ) {
+                    doneChannel.trySend(relay)
+                }
+            }
+        try {
+            client.subscribe(subId, filters, listener)
+            withTimeoutOrNull(timeoutMs) {
+                while (true) {
+                    select {
+                        eventChannel.onReceive { (relay, event) ->
+                            if (verifyAndStore(event)) onEvent(relay, event)
+                        }
+                        doneChannel.onReceive { r ->
+                            remaining.remove(r)
+                            if (!eosed && remaining.isEmpty()) {
+                                eosed = true
+                                onEose()
+                            }
+                        }
+                    }
+                }
+            }
+        } finally {
+            client.unsubscribe(subId)
+            eventChannel.close()
+            doneChannel.close()
+        }
+    }
+
+    /**
      * Publish [request] to [relays], then wait for the FIRST event matching [responseFilter]
      * — a live reply that arrives after our own EOSE, which [drain] would miss (it returns at
      * EOSE). Verifies and stores the reply. Returns it, or null on timeout; always tears the
@@ -406,6 +491,18 @@ class Context(
             .query<Event>(
                 Filter(authors = listOf(pubKey), kinds = listOf(ContactListEvent.KIND), limit = 1),
             ).firstOrNull() as? ContactListEvent
+
+    /**
+     * Latest known kind:10000 mute list (NIP-51) for [pubKey], or `null` if
+     * Amy has never observed one. Used by the home feed to drop muted authors
+     * and muted threads. Public mutes read straight off the tags; private
+     * mutes require decryption with [signer] (callers pass it explicitly).
+     */
+    suspend fun muteListOf(pubKey: HexKey): MuteListEvent? =
+        store
+            .query<Event>(
+                Filter(authors = listOf(pubKey), kinds = listOf(MuteListEvent.KIND), limit = 1),
+            ).firstOrNull() as? MuteListEvent
 
     /**
      * Latest known kind:10050 chat-message (NIP-17 DM) inbox relay list

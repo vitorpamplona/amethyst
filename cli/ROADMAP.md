@@ -50,6 +50,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | `await` polling (KP / group / member / admin / message / rename / epoch) | ✅ | `AwaitCommands` |
 | NIP-01 note publish (`amy notes post TEXT`) | ✅ | `PostCommand` — outbox via `RelayCommands` configured set. |
 | NIP-01 feed read (`amy notes feed [--following \| --author NPUB]`) | ✅ | `FeedCommand`. Hashtag / community feeds still pending. |
+| Home feed (`amy notes home [--watch]`) | ✅ | `HomeFeedCommand`. Full `HomeNewThreadFeedFilter` kind set + mutes, shared via `commons/.../ui/feeds/home/`. Snapshot + opt-in live JSONL tail. Plan: [`cli/plans/2026-06-19-home-feed.md`](./plans/2026-06-19-home-feed.md). Followed-hashtag/geo/community parity + repost-collapse still pending. |
 | NIP-02 follow list add / remove / list | 🆕 | Logic in `amethyst/model/nip02FollowLists/`. |
 | NIP-09 event deletion | 🆕 | Builder exists in quartz. |
 | NIP-17 DMs send / list / await | ✅ | `DmCommands` — reuses Quartz `NIP17Factory` + `RecipientRelayFetcher`; filter extracted to `commons/relayClient/nip17Dm/`. Plan: [`cli/plans/2026-04-23-nip17-dm.md`](./plans/2026-04-23-nip17-dm.md). |
@@ -86,8 +87,9 @@ move anything, re-audit — you're probably duplicating logic.
    smallest end-to-end write+read loop outside Marmot. Post + feed
    ✅ shipped; `notes show` and outer-event `react` still pending.
 3. **`amy notes feed home|profile|hashtag|thread`** reading through the
-   renderer. `--following` and `--author NPUB` ✅; hashtag/thread
-   variants still pending.
+   renderer. `--following` and `--author NPUB` ✅; `home` (full
+   `HomeNewThreadFeedFilter` parity, snapshot + `--watch` live tail) ✅;
+   hashtag/thread variants still pending.
 4. **`amy follow add|remove|list`** (NIP-02) — proves extraction of
    list-building logic from `amethyst/model/`.
 5. **`amy dm send|list`** (NIP-17) — ✅ shipped. Reuses the gift-wrap

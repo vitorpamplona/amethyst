@@ -60,6 +60,47 @@ object Output {
         }
     }
 
+    /**
+     * Streaming sibling of [emit]: writes ONE record per line, so a command can
+     * draw an unbounded live stream (e.g. `notes home --watch`) that arrives
+     * event-by-event. In [Mode.JSON] this is JSONL — one compact JSON object per
+     * line, a distinct contract from [emit]'s single object. In [Mode.TEXT] it
+     * renders a compact one-line summary keyed off the common note fields.
+     *
+     * Each line is flushed immediately so consumers (`jq`, `tail -f`-style
+     * pipes) see events as they land rather than at process exit.
+     */
+    fun emitLine(record: Map<String, Any?>) {
+        when (mode) {
+            Mode.JSON -> println(mapper.writeValueAsString(record))
+            Mode.TEXT -> println(renderLine(record))
+        }
+        System.out.flush()
+    }
+
+    /**
+     * Compact single-line render for [emitLine] in text mode:
+     * `<iso-time>  <pubkey8>  k<kind>  <content-oneline>`, with an optional
+     * leading `[phase]` tag (backfill / live). Best-effort — text shape is not
+     * a contract.
+     */
+    private fun renderLine(record: Map<String, Any?>): String {
+        val color = Ansi.forStream(isStderr = false)
+        val createdAt = (record["created_at"] as? Number)?.toLong()
+        val time = createdAt?.let { ISO_FORMAT.format(Instant.ofEpochSecond(it)) } ?: "?"
+        val pubkey = record["pubkey"]?.toString()?.take(8) ?: "????????"
+        val kind = record["kind"]?.toString()?.let { "k$it" } ?: ""
+        val phase = record["phase"]?.toString()
+        val content =
+            record["content"]
+                ?.toString()
+                ?.replace('\n', ' ')
+                ?.trim()
+                ?.take(120) ?: ""
+        val phaseTag = if (phase != null) color.dim("[$phase] ") else ""
+        return "$phaseTag${color.dim(time)}  ${color.bold(pubkey)}  ${color.yellow(kind)}  $content"
+    }
+
     fun error(
         code: String,
         detail: String? = null,

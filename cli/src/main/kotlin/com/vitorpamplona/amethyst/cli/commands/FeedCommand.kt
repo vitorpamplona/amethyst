@@ -151,7 +151,7 @@ object FeedCommand {
             else -> ctx.outboxRelays().ifEmpty { ctx.bootstrapRelays() }
         }
 
-    private suspend fun resolveFollowing(
+    internal suspend fun resolveFollowing(
         ctx: Context,
         timeoutMs: Long,
     ): List<HexKey> {

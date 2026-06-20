@@ -79,6 +79,19 @@ rejected_by: (none)
 `amy notes feed` reads recent kind:1 notes from your follows; `--limit N`
 caps the count, `--author npub1…` narrows to one user.
 
+`amy notes home` is the full Amethyst home feed: top-level posts and reposts
+from everyone you follow, across the whole `HomeNewThreadFeedFilter` kind set,
+with muted authors and threads removed. By default it prints a snapshot page
+(one JSON object). Because relay events arrive at any time and a terminal can't
+re-sort lines it has already printed, the live view is opt-in: `--watch` prints
+the backfill page oldest-first and then streams each new event as its own JSONL
+line (`tail -f`-style) until `--duration SECS` elapses (default 60) or you
+Ctrl-C.
+
+```text
+amy --json notes home --watch --duration 120 | jq -r '.content'
+```
+
 ### 2. Send a direct message
 
 ```text
@@ -213,6 +226,7 @@ $ amy relay publish-lists      # broadcast updated kind:10002/10050/10051
 |---|---|
 | `amy notes post TEXT [--relay URL]` | Publish a kind:1 short text note. |
 | `amy notes feed [--author USER \| --following] [--limit N]` | Read recent kind:1 notes (yours, one user's, or your follow set). |
+| `amy notes home [--limit N] [--watch [--duration SECS]]` | Amethyst home feed: top-level posts/reposts from your follows (full kind set, mutes removed). Snapshot by default; `--watch` streams live events as JSONL. |
 | `amy profile show [USER]` | Print kind:0 metadata. USER accepts npub/nprofile/hex/NIP-05; defaults to self. |
 | `amy profile edit --name … --about … --picture URL …` | Patch and re-publish your kind:0. |
 

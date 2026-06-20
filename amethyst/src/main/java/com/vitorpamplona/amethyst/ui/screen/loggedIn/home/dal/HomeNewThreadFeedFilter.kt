@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal
 
-import com.vitorpamplona.amethyst.commons.ui.feeds.isRenderableRepost
+import com.vitorpamplona.amethyst.commons.ui.feeds.home.isHomeFeedRenderableKind
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -32,29 +32,17 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
-import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
-import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
-import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
-import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
-import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
-import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
-import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 class HomeNewThreadFeedFilter(
@@ -124,33 +112,7 @@ class HomeNewThreadFeedFilter(
         filterParams: FilterByListParams,
     ): Boolean {
         val noteEvent = it.event
-        return (
-            noteEvent is TextNoteEvent ||
-                noteEvent is ClassifiedsEvent ||
-                noteEvent is FundraiserEvent ||
-                noteEvent is BirdexEvent ||
-                noteEvent.isRenderableRepost() ||
-                (noteEvent is LongTextNoteEvent && noteEvent.content.isNotEmpty()) ||
-                (noteEvent is WikiNoteEvent && noteEvent.content.isNotEmpty()) ||
-                noteEvent is ZapPollEvent ||
-                noteEvent is PollEvent ||
-                noteEvent is HighlightEvent ||
-                noteEvent is InteractiveStoryPrologueEvent ||
-                noteEvent is CommentEvent ||
-                noteEvent is AudioTrackEvent ||
-                noteEvent is MusicTrackEvent ||
-                noteEvent is MusicPlaylistEvent ||
-                noteEvent is PodcastEpisodeEvent ||
-                noteEvent is PodcastMetadataEvent ||
-                noteEvent is VoiceEvent ||
-                noteEvent is AudioHeaderEvent ||
-                noteEvent is ChessGameEvent ||
-                noteEvent is LiveChessGameEndEvent ||
-                noteEvent is AttestationEvent ||
-                noteEvent is AttestationRequestEvent ||
-                noteEvent is AttestorRecommendationEvent ||
-                noteEvent is AttestorProficiencyEvent
-        ) &&
+        return noteEvent.isHomeFeedRenderableKind() &&
             filterParams.match(noteEvent, it.relays) &&
             it.isNewThread()
     }
