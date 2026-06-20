@@ -41,8 +41,9 @@ import com.vitorpamplona.amethyst.ui.stringRes
  * file, image URL. The copy-to-clipboard options stay in the 3-dot menu, so
  * they are intentionally NOT part of this shared element.
  *
- * Callers only render this for non-private notes, since each row publishes an
- * e-tag of the note (a browser link / an uploaded image referencing it).
+ * Callers only render these for non-private notes: every option exposes the
+ * note publicly (a shareable web link, or an image of it), which must never
+ * happen for a private gift-wrapped rumor.
  */
 @Composable
 fun ShareActionRows(
@@ -51,6 +52,9 @@ fun ShareActionRows(
     onDismiss: () -> Unit,
 ) {
     val actContext = LocalContext.current
+    // AddressableNotes are shared by their replaceable address; everything else
+    // by event id. The two image routes resolve the note from this same id.
+    val shareId = if (note is AddressableNote) note.address.toValue() else note.idHex
 
     M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.quick_action_share)) {
         val sendIntent =
@@ -65,12 +69,10 @@ fun ShareActionRows(
         onDismiss()
     }
     M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(R.string.share_as_image)) {
-        val shareId = if (note is AddressableNote) note.address.toValue() else note.idHex
         nav.nav(Route.ShareNoteAsImageFile(shareId))
         onDismiss()
     }
     M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(R.string.share_as_image_url)) {
-        val shareId = if (note is AddressableNote) note.address.toValue() else note.idHex
         nav.nav(Route.ShareNoteAsImage(shareId))
         onDismiss()
     }
