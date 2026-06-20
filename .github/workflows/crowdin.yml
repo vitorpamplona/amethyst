@@ -10,12 +10,21 @@ permissions:
   pull-requests: write
 
 jobs:
+  # Single job so the Crowdin translation sync and the translator-placeholder seed
+  # land in ONE pull request instead of two. The Crowdin action only downloads into
+  # the working tree (push_translations/create_pull_request disabled); the seed
+  # script then edits translators.json; finally one create-pull-request step opens a
+  # single PR with both sets of changes (and no-ops when there is no diff).
   synchronize-with-crowdin:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          # Need tags so scripts/translators.sh can resolve the last v* release tag
+          # for the "since last tag" window.
+          fetch-depth: 0
 
       - name: crowdin action
         uses: crowdin/github-action@v2
@@ -23,50 +32,42 @@ jobs:
           upload_sources: true
           upload_translations: true
           download_translations: true
-          localization_branch_name: l10n_crowdin_translations
-          create_pull_request: true
-          pull_request_title: 'New Crowdin Translations'
-          pull_request_body: 'New Crowdin translations by [Crowdin GH Action](https://github.com/crowdin/github-action)'
-          pull_request_base_branch_name: 'main'
+          # Let the downloaded translations stay in the working tree; the single
+          # create-pull-request step below opens the combined PR.
+          push_translations: false
+          create_pull_request: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
 
-  # Keep docs/changelog/translators.json seeded with everyone who has translated
-  # recently, so the per-release `## Translations` credits (scripts/translators.sh)
-  # can resolve them to npubs. Runs independently of the sync job above and only
-  # opens/updates a PR when a genuinely new contributor appears.
-  seed-translators:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          # Need tags so the script can resolve the last v* release tag for the
-          # "since last tag" window.
-          fetch-depth: 0
-
+      # Keep docs/changelog/translators.json seeded with everyone who has translated
+      # recently, so the per-release `## Translations` credits (scripts/translators.sh)
+      # can resolve them to npubs. Only adds rows when a genuinely new contributor
+      # appears.
       - name: Seed translator placeholders from Crowdin
         run: bash scripts/translators.sh --seed
         env:
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
 
-      - name: Open or update the seed PR
+      - name: Open or update the combined Crowdin PR
         # peter-evans/create-pull-request is MIT-licensed CI-only tooling (not
         # linked into any shipped artifact). It no-ops when there is no diff.
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: main
-          branch: chore/seed-translators
-          add-paths: docs/changelog/translators.json
-          commit-message: 'chore: seed translator npub placeholders from Crowdin'
-          title: 'Seed translator npub placeholders'
+          branch: l10n_crowdin_translations
+          add-paths: |
+            amethyst/src/main/res/**/strings.xml
+            docs/changelog/translators.json
+          commit-message: 'chore: sync Crowdin translations and seed translator npub placeholders'
+          title: 'New Crowdin Translations'
           body: |
-            New Crowdin contributors were added to `docs/changelog/translators.json`
+            New Crowdin translations by [Crowdin GH Action](https://github.com/crowdin/github-action).
+
+            Any new Crowdin contributors were added to `docs/changelog/translators.json`
             with blank npubs. Fill in the npubs you have so the next release's
             `## Translations` credits generate automatically via
             `scripts/translators.sh --from <prev-tag> --to <this-tag>`.
