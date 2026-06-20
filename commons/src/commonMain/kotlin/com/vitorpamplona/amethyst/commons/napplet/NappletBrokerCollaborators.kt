@@ -78,11 +78,38 @@ interface NappletStorage {
 }
 
 /**
- * Bridges the broker to the user's wallet for the [NappletCapability.WALLET] capability. A
- * `null` gateway makes wallet requests answer with `Unsupported` — there is intentionally no
+ * Bridges the broker to the user's wallet for the [NappletCapability.VALUE] capability. A
+ * `null` gateway makes value requests answer with `Unsupported` — there is intentionally no
  * default payment path, since a money-moving bridge must be verified end-to-end before it ships.
  */
 fun interface NappletWalletGateway {
     /** Pays a BOLT-11 [invoice] and returns the preimage on success, or `null` if unconfirmed. */
     suspend fun payInvoice(invoice: String): String?
+}
+
+/** A fetched resource: its [bytes] and best-effort [contentType]. */
+class NappletResource(
+    val bytes: ByteArray,
+    val contentType: String,
+)
+
+/**
+ * Bridges the broker to sandboxed resource fetching for [NappletCapability.RESOURCE]
+ * (`resource.bytes`). The host fetches https/blossom/nostr/data URLs on the applet's behalf —
+ * the applet itself has no direct network (CSP `connect-src 'none'`). Returns `null` for an
+ * unsupported scheme or a failed fetch.
+ */
+fun interface NappletResourceGateway {
+    suspend fun fetch(url: String): NappletResource?
+}
+
+/**
+ * Bridges the broker to Blossom upload for [NappletCapability.UPLOAD]. Returns the URL the blob
+ * can be fetched from, or `null` on failure. A `null` gateway answers with `Unsupported`.
+ */
+fun interface NappletUploadGateway {
+    suspend fun upload(
+        bytes: ByteArray,
+        contentType: String,
+    ): String?
 }

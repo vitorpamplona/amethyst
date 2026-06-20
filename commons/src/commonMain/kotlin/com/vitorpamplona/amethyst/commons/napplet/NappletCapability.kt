@@ -21,38 +21,48 @@
 package com.vitorpamplona.amethyst.commons.napplet
 
 /**
- * The capability classes a napplet shell can broker, each gating a set of dangerous
- * operations behind the trust boundary. A napplet declares the NAP domains it needs
- * via `requires` tags (`NappletManifest.requires()`); [fromNapDomain] maps each bare
- * domain string to the capability the broker enforces.
+ * The capability classes a napplet shell can broker, aligned with the upstream NAP domains
+ * (`napplet/naps`, `@napplet/web`). A napplet declares the domains it needs via `requires` tags;
+ * [fromNapDomain] maps each bare domain string to the capability the broker enforces.
  *
- * The mapping is intentionally **default-deny**: an unrecognized NAP domain maps to
- * `null` and the shell must surface it as unknown rather than silently granting it.
+ * The mapping is **default-deny**: an unrecognized NAP domain maps to `null` and the shell must
+ * surface it as unknown rather than silently granting it. Domains we don't yet broker
+ * (`inc`, `intent`, `theme`, `notify`, `media`, `config`, `outbox`, `ifc`, `cvm`) therefore
+ * resolve to `null` for now.
  */
 enum class NappletCapability {
-    /** Read the active pubkey, sign events, and NIP-04/44 encrypt/decrypt as the user. */
+    /** `shell` — capability negotiation (`shell.supports`). Always available; needs no consent. */
+    SHELL,
+
+    /** `identity` — read-only identity queries (`getPublicKey`, `onChanged`). */
     IDENTITY,
 
-    /** Publish events to, and read events from, the user's relays. */
+    /** `keys` — sign events and NIP-04/44 encrypt/decrypt as the user. */
+    KEYS,
+
+    /** `relay` — publish, query, and subscribe to the user's relays. */
     RELAY,
 
-    /** Request NIP-57 zaps / Lightning invoices (and, behind a stricter grant, NWC pay). */
-    WALLET,
-
-    /** A per-applet sandboxed key-value store, namespaced by [NappletIdentity] — never app storage. */
+    /** `storage` — a per-applet sandboxed key-value store, namespaced by applet identity. */
     STORAGE,
 
-    /** Direct outbound network to user-approved origins (widens the applet's CSP `connect-src`). */
-    NET,
+    /** `value` — shell-mediated value transfer / zaps / invoice payment. */
+    VALUE,
+
+    /** `resource` — sandboxed fetching of https/blossom/nostr/data resources. */
+    RESOURCE,
+
+    /** `upload` — shell-mediated blob upload (Blossom). */
+    UPLOAD,
     ;
 
     /**
-     * Whether the user must confirm **every single use** of this capability — i.e. no standing
-     * auto-approval is ever honored or offered. True for [WALLET]: a payment always prompts, with
-     * the amount shown, so an applet can never silently move money.
+     * Whether the user must confirm **every single use** — no standing auto-approval. True for
+     * [VALUE]: a payment always prompts with the amount shown, so a napplet can never silently
+     * move money.
      */
     val requiresPerUseConsent: Boolean
-        get() = this == WALLET
+        get() = this == VALUE
 
     /** Whether a persistent "always allow" grant may be offered for, and kept for, this capability. */
     val canGrantAlways: Boolean
@@ -64,17 +74,20 @@ enum class NappletCapability {
 
     companion object {
         /**
-         * Maps a bare NAP domain (e.g. `identity`, `relay`, `storage`) to the capability the
-         * broker enforces, case-insensitively. Returns `null` for any domain the shell does
-         * not recognize — callers MUST treat that as "unknown, do not grant".
+         * Maps a bare NAP domain to the capability the broker enforces, case-insensitively.
+         * Returns `null` for any domain the shell does not recognize — callers MUST treat that as
+         * "unknown, do not grant".
          */
         fun fromNapDomain(domain: String): NappletCapability? =
             when (domain.trim().lowercase()) {
-                "identity", "sign", "signer" -> IDENTITY
+                "shell" -> SHELL
+                "identity" -> IDENTITY
+                "keys", "sign", "signer", "nip04", "nip44" -> KEYS
                 "relay", "relays" -> RELAY
-                "value", "wallet", "zap", "payments" -> WALLET
                 "storage" -> STORAGE
-                "net", "network", "fetch" -> NET
+                "value", "wallet", "zap", "zaps", "payments" -> VALUE
+                "resource", "fetch", "net", "network" -> RESOURCE
+                "upload" -> UPLOAD
                 else -> null
             }
     }

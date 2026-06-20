@@ -29,30 +29,35 @@ import kotlin.test.assertTrue
 class NappletCapabilityTest {
     @Test
     fun mapsKnownDomainsCaseInsensitively() {
+        assertEquals(NappletCapability.SHELL, NappletCapability.fromNapDomain("shell"))
         assertEquals(NappletCapability.IDENTITY, NappletCapability.fromNapDomain("identity"))
-        assertEquals(NappletCapability.IDENTITY, NappletCapability.fromNapDomain("  IDENTITY  "))
+        assertEquals(NappletCapability.KEYS, NappletCapability.fromNapDomain("keys"))
         assertEquals(NappletCapability.RELAY, NappletCapability.fromNapDomain("Relay"))
-        assertEquals(NappletCapability.WALLET, NappletCapability.fromNapDomain("value"))
-        assertEquals(NappletCapability.STORAGE, NappletCapability.fromNapDomain("storage"))
-        assertEquals(NappletCapability.NET, NappletCapability.fromNapDomain("net"))
+        assertEquals(NappletCapability.VALUE, NappletCapability.fromNapDomain("value"))
+        assertEquals(NappletCapability.STORAGE, NappletCapability.fromNapDomain("  STORAGE  "))
+        assertEquals(NappletCapability.RESOURCE, NappletCapability.fromNapDomain("resource"))
+        assertEquals(NappletCapability.UPLOAD, NappletCapability.fromNapDomain("upload"))
     }
 
     @Test
     fun unknownDomainMapsToNullNotAFallbackGrant() {
+        // Domains we don't broker yet must stay unknown (default-deny), not fall through.
+        assertNull(NappletCapability.fromNapDomain("inc"))
+        assertNull(NappletCapability.fromNapDomain("intent"))
+        assertNull(NappletCapability.fromNapDomain("cvm"))
         assertNull(NappletCapability.fromNapDomain("filesystem"))
         assertNull(NappletCapability.fromNapDomain(""))
-        assertNull(NappletCapability.fromNapDomain("nostr"))
     }
 
     @Test
     fun resolveSeparatesKnownFromUnknownAndFlags() {
-        val resolved = resolveRequiredCapabilities(listOf("identity", "relay", "filesystem", "value"))
+        val resolved = resolveRequiredCapabilities(listOf("identity", "relay", "intent", "value"))
 
         assertEquals(
-            setOf(NappletCapability.IDENTITY, NappletCapability.RELAY, NappletCapability.WALLET),
+            setOf(NappletCapability.IDENTITY, NappletCapability.RELAY, NappletCapability.VALUE),
             resolved.capabilities,
         )
-        assertEquals(listOf(UnknownNapDomain("filesystem")), resolved.unknown)
+        assertEquals(listOf(UnknownNapDomain("intent")), resolved.unknown)
         assertTrue(resolved.hasUnknown)
     }
 

@@ -115,14 +115,14 @@ class NappletPermissionLedgerTest {
             ledger.record(applet, NappletCapability.IDENTITY, GrantState.ALLOW_ALWAYS)
             ledger.record(applet, NappletCapability.RELAY, GrantState.DENY)
             ledger.record(applet, NappletCapability.STORAGE, GrantState.ALLOW_SESSION) // not persisted
-            ledger.record(other, NappletCapability.WALLET, GrantState.DENY)
+            ledger.record(other, NappletCapability.VALUE, GrantState.DENY)
 
             val all = ledger.allPersistedGrants()
             assertEquals(
                 mapOf(NappletCapability.IDENTITY to GrantState.ALLOW_ALWAYS, NappletCapability.RELAY to GrantState.DENY),
                 all[applet.coordinate],
             )
-            assertEquals(mapOf(NappletCapability.WALLET to GrantState.DENY), all[other.coordinate])
+            assertEquals(mapOf(NappletCapability.VALUE to GrantState.DENY), all[other.coordinate])
         }
 
     @Test

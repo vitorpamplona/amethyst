@@ -31,6 +31,7 @@ import android.os.Message
 import android.os.Messenger
 import android.os.Process
 import android.os.RemoteException
+import android.util.Base64
 import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -39,6 +40,8 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayGateway
+import com.vitorpamplona.amethyst.commons.napplet.NappletResource
+import com.vitorpamplona.amethyst.commons.napplet.NappletResourceGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletWalletGateway
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
@@ -58,7 +61,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.net.URLDecoder
 
 /**
  * The trust boundary's main-process endpoint. The untrusted `:napplet` process binds this
@@ -109,9 +118,10 @@ class NappletBrokerService : Service() {
             )
         val declared = parseDeclared(data.getString(NappletIpc.KEY_DECLARED))
 
+        val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: "napplet"
         scope.launch {
             val response = process(identity, declared, payload)
-            reply(replyTo, requestId, NappletProtocolJson.encodeResponse(response))
+            reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, response))
         }
         return true
     }
@@ -161,7 +171,67 @@ class NappletBrokerService : Service() {
 
         val wallet = NappletWalletGateway { invoice -> payInvoiceViaNwc(account, invoice) }
 
-        return NappletBroker(account.signer, ledger, consent, relay, storage, wallet)
+        val resource = NappletResourceGateway { url -> fetchResource(account, url) }
+
+        // upload is intentionally not provided yet: a correct Blossom upload needs a content Uri,
+        // a signed authorization event, and server selection — wired end-to-end (protocol/shim) but
+        // the Android gateway is a follow-up that needs on-device verification.
+        return NappletBroker(account.signer, ledger, consent, relay, storage, wallet, resource, upload = null)
+    }
+
+    /** Fetches an https/data resource on the applet's behalf (it has no direct network). */
+    private suspend fun fetchResource(
+        account: Account,
+        url: String,
+    ): NappletResource? =
+        withContext(Dispatchers.IO) {
+            when {
+                url.startsWith("data:") -> decodeDataUrl(url)
+                url.startsWith("https://") -> {
+                    val port = account.let { Amethyst.instance.torManager.activePortOrNull.value } ?: -1
+                    val client =
+                        if (port > 0) {
+                            OkHttpClient.Builder().proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port))).build()
+                        } else {
+                            OkHttpClient()
+                        }
+                    runCatching {
+                        client
+                            .newCall(
+                                Request
+                                    .Builder()
+                                    .url(url)
+                                    .get()
+                                    .build(),
+                            ).execute()
+                            .use { r ->
+                                if (!r.isSuccessful) return@withContext null
+                                val body = r.body.bytes()
+                                val type = r.header("Content-Type") ?: "application/octet-stream"
+                                NappletResource(body, type)
+                            }
+                    }.getOrNull()
+                }
+                // blossom: / nostr: schemes are a follow-up.
+                else -> null
+            }
+        }
+
+    /** Parses a `data:[<mediatype>][;base64],<data>` URL into bytes + content type. */
+    private fun decodeDataUrl(url: String): NappletResource? {
+        val comma = url.indexOf(',')
+        if (comma < 0) return null
+        val meta = url.substring("data:".length, comma)
+        val data = url.substring(comma + 1)
+        val isBase64 = meta.endsWith(";base64")
+        val contentType = meta.removeSuffix(";base64").ifEmpty { "text/plain" }
+        val bytes =
+            if (isBase64) {
+                runCatching { Base64.decode(data, Base64.DEFAULT) }.getOrNull() ?: return null
+            } else {
+                URLDecoder.decode(data, "UTF-8").encodeToByteArray()
+            }
+        return NappletResource(bytes, contentType)
     }
 
     /** Bounded live relay fetch (EOSE/timeout) merged with the local cache, newest-first. */
@@ -252,6 +322,10 @@ class NappletBrokerService : Service() {
                     getString(R.string.napplet_consent_pay)
                 }
             }
+            is NappletRequest.ResourceBytes -> getString(R.string.napplet_consent_resource)
+            is NappletRequest.UploadBlob -> getString(R.string.napplet_consent_upload)
+            // Negotiation is resolved in the broker before consent; never shown to the user.
+            is NappletRequest.ShellSupports -> ""
         }
 
     private fun reply(

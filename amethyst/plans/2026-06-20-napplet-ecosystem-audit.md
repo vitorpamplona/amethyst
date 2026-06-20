@@ -110,7 +110,40 @@ should keep them.
 6. Lower priority / app-specific: `theme`, `notify`, `media`, `config`, `outbox`,
    `intent`, `inc`, `ifc`, `cvm`.
 
-## Verdict
+## Update (2026-06-20): ecosystem alignment landed
+
+Acted on #1–#5. The dialect mismatch is resolved:
+
+- **Envelope** is now `{type:"<domain>.<action>", id}` → `{type:"…​.result", id, ok, …}`,
+  matching upstream (codec + host shuttle + shim rewritten; round-trip unit-tested).
+- **Namespaced `window.napplet.*`** shim: `shell.supports`, `identity.getPublicKey`
+  (+`onChanged` stub), `keys.{signEvent,nip04*,nip44*}`, `relay.{publish,query,subscribe}`,
+  `storage.{get,set,remove}`, `value.payInvoice`, `resource.{bytes,bytesAsObjectURL}`,
+  `upload.blob`. The applet's own SDK-targeted code now runs unchanged.
+- **`shell.supports(domain)`** implemented (no consent; reflects declared+brokered domains).
+- **Capabilities split** to the domain model: `SHELL`, `IDENTITY`, `KEYS`, `RELAY`,
+  `STORAGE`, `VALUE`, `RESOURCE`, `UPLOAD` (was `IDENTITY/RELAY/WALLET/STORAGE/NET`).
+- **`resource.bytes`** implemented for `https`/`data` (broker-fetched, Tor-routed,
+  consent-gated); `blossom:`/`nostr:` are a follow-up.
+
+Still open (documented, not blocking basic napplets):
+- **`upload`** — wired end-to-end (protocol/shim/capability) but the Android Blossom
+  gateway is unprovided (`Unsupported`): a correct upload needs a content Uri + signed
+  auth event + server selection, which needs on-device verification.
+- **Live push** — `relay.subscribe` returns initial matches via `query`; a live tail and
+  `identity.onChanged`/`inc.on` need a push channel over the existing reply proxy.
+- **Underspecified domains** — `inc`, `intent`, `theme`, `notify`, `media`, `config`,
+  `outbox`, `ifc`, `cvm` remain unknown→denied (no method spec available to build to).
+- **Method-name fidelity** — `relay.*`/`storage.*`/`shell.supports`/`identity.getPublicKey`
+  are confirmed from upstream; `keys.*`, `value.*`, `upload.*`, `resource.*` are best-guess
+  names that should be checked against the `@napplet/web` source before release.
+- **On-device verification** of the whole round-trip with a real playground napplet.
+
+Revised ecosystem-compatibility estimate: **~70%** (was ~25%) — real request/response
+napplets that use identity/keys/relay/storage/value/resource + `shell.supports` now run;
+gaps are upload, live subscriptions, the niche domains, and device verification.
+
+## Verdict (original assessment, pre-update)
 
 - **As a secure NIP-5A/5D renderer + broker:** ~85% — the hard, security-critical
   parts are done and tested; gaps are on-device verification and breadth of ops.

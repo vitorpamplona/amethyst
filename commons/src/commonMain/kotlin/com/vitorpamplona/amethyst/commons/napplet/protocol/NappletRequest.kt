@@ -43,6 +43,13 @@ sealed interface NappletRequest {
         override val capability get() = NappletCapability.IDENTITY
     }
 
+    /** `shell.supports(domain)` — capability negotiation; always answerable, needs no consent. */
+    data class ShellSupports(
+        val domain: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.SHELL
+    }
+
     /**
      * Build and sign an event **as the active user**. The applet supplies only the template
      * fields; the broker sets `pubkey` from the real signer and stamps `created_at`, so the
@@ -53,7 +60,7 @@ sealed interface NappletRequest {
         val tags: Array<Array<String>>,
         val content: String,
     ) : NappletRequest {
-        override val capability get() = NappletCapability.IDENTITY
+        override val capability get() = NappletCapability.KEYS
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -77,28 +84,28 @@ sealed interface NappletRequest {
         val peerPubKey: HexKey,
         val plaintext: String,
     ) : NappletRequest {
-        override val capability get() = NappletCapability.IDENTITY
+        override val capability get() = NappletCapability.KEYS
     }
 
     data class Nip04Decrypt(
         val peerPubKey: HexKey,
         val ciphertext: String,
     ) : NappletRequest {
-        override val capability get() = NappletCapability.IDENTITY
+        override val capability get() = NappletCapability.KEYS
     }
 
     data class Nip44Encrypt(
         val peerPubKey: HexKey,
         val plaintext: String,
     ) : NappletRequest {
-        override val capability get() = NappletCapability.IDENTITY
+        override val capability get() = NappletCapability.KEYS
     }
 
     data class Nip44Decrypt(
         val peerPubKey: HexKey,
         val ciphertext: String,
     ) : NappletRequest {
-        override val capability get() = NappletCapability.IDENTITY
+        override val capability get() = NappletCapability.KEYS
     }
 
     /**
@@ -140,10 +147,33 @@ sealed interface NappletRequest {
         override val capability get() = NappletCapability.STORAGE
     }
 
-    /** Pay a BOLT-11 invoice from the user's wallet. */
+    /** Pay a BOLT-11 invoice from the user's wallet (`value` domain). */
     data class PayInvoice(
         val invoice: String,
     ) : NappletRequest {
-        override val capability get() = NappletCapability.WALLET
+        override val capability get() = NappletCapability.VALUE
+    }
+
+    /** Fetch the bytes of an https/blossom/nostr/data resource (`resource.bytes`). */
+    data class ResourceBytes(
+        val url: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.RESOURCE
+    }
+
+    /** Upload a blob to the user's Blossom server (`upload`). */
+    data class UploadBlob(
+        val bytes: ByteArray,
+        val contentType: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.UPLOAD
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is UploadBlob) return false
+            return contentType == other.contentType && bytes.contentEquals(other.bytes)
+        }
+
+        override fun hashCode(): Int = 31 * contentType.hashCode() + bytes.contentHashCode()
     }
 }

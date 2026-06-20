@@ -332,9 +332,12 @@ private fun resolveTitle(
 
 private fun NappletCapability.symbol(): MaterialSymbol =
     when (this) {
-        NappletCapability.IDENTITY -> MaterialSymbols.Key
+        NappletCapability.SHELL -> MaterialSymbols.Tune
+        NappletCapability.IDENTITY -> MaterialSymbols.AccountCircle
+        NappletCapability.KEYS -> MaterialSymbols.Key
         NappletCapability.RELAY -> MaterialSymbols.Public
-        NappletCapability.WALLET -> MaterialSymbols.Bolt
         NappletCapability.STORAGE -> MaterialSymbols.Storage
-        NappletCapability.NET -> MaterialSymbols.Language
+        NappletCapability.VALUE -> MaterialSymbols.Bolt
+        NappletCapability.RESOURCE -> MaterialSymbols.Language
+        NappletCapability.UPLOAD -> MaterialSymbols.Upload
     }

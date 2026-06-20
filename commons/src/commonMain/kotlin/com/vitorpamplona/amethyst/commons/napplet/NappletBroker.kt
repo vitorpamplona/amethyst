@@ -63,6 +63,8 @@ class NappletBroker(
     private val relay: NappletRelayGateway? = null,
     private val storage: NappletStorage? = null,
     private val wallet: NappletWalletGateway? = null,
+    private val resource: NappletResourceGateway? = null,
+    private val upload: NappletUploadGateway? = null,
 ) {
     /**
      * Authorizes and runs [request] on behalf of [identity]. [declared] is the capability set the
@@ -76,6 +78,12 @@ class NappletBroker(
         declared: Set<NappletCapability>,
     ): NappletResponse {
         val capability = request.capability
+
+        // shell.supports is capability negotiation: always answerable, no declaration/consent.
+        if (request is NappletRequest.ShellSupports) {
+            val cap = NappletCapability.fromNapDomain(request.domain)
+            return NappletResponse.Supported(cap != null && cap in declared)
+        }
 
         if (capability !in declared) {
             return NappletResponse.Denied(capability, "This napplet did not declare the '${capability.name.lowercase()}' capability.")
@@ -110,8 +118,8 @@ class NappletBroker(
         }
     }
 
-    /** Identity ops are gated by us only when we hold the key; remote/external signers gate themselves. */
-    private fun signerSelfGates(capability: NappletCapability): Boolean = capability == NappletCapability.IDENTITY && signer !is NostrSignerInternal
+    /** Identity/key ops are gated by us only when we hold the key; remote/external signers gate themselves. */
+    private fun signerSelfGates(capability: NappletCapability): Boolean = (capability == NappletCapability.IDENTITY || capability == NappletCapability.KEYS) && signer !is NostrSignerInternal
 
     /** Downgrades a grant to one-shot when the capability forbids persisting that scope (e.g. payments). */
     private fun effectiveGrant(
@@ -129,6 +137,9 @@ class NappletBroker(
         request: NappletRequest,
     ): NappletResponse =
         when (request) {
+            // Negotiation is resolved in handle(); execute() is never reached for it.
+            is NappletRequest.ShellSupports -> NappletResponse.Supported(true)
+
             is NappletRequest.GetPublicKey -> NappletResponse.PublicKey(signer.pubKey)
 
             is NappletRequest.SignEvent -> {
@@ -174,8 +185,20 @@ class NappletBroker(
             }
 
             is NappletRequest.PayInvoice -> {
-                val gateway = wallet ?: return NappletResponse.Unsupported("payInvoice")
+                val gateway = wallet ?: return NappletResponse.Unsupported("value.payInvoice")
                 NappletResponse.Paid(gateway.payInvoice(request.invoice))
+            }
+
+            is NappletRequest.ResourceBytes -> {
+                val gateway = resource ?: return NappletResponse.Unsupported("resource.bytes")
+                val fetched = gateway.fetch(request.url) ?: return NappletResponse.Failed("Could not fetch the resource.")
+                NappletResponse.Bytes(fetched.bytes, fetched.contentType)
+            }
+
+            is NappletRequest.UploadBlob -> {
+                val gateway = upload ?: return NappletResponse.Unsupported("upload")
+                val url = gateway.upload(request.bytes, request.contentType) ?: return NappletResponse.Failed("Upload failed.")
+                NappletResponse.Uploaded(url)
             }
         }
 

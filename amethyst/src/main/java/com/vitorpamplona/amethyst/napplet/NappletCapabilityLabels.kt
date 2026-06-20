@@ -28,20 +28,26 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 @StringRes
 fun NappletCapability.labelRes(): Int =
     when (this) {
+        NappletCapability.SHELL -> R.string.napplet_cap_shell
         NappletCapability.IDENTITY -> R.string.napplet_cap_identity
+        NappletCapability.KEYS -> R.string.napplet_cap_keys
         NappletCapability.RELAY -> R.string.napplet_cap_relay
-        NappletCapability.WALLET -> R.string.napplet_cap_wallet
         NappletCapability.STORAGE -> R.string.napplet_cap_storage
-        NappletCapability.NET -> R.string.napplet_cap_net
+        NappletCapability.VALUE -> R.string.napplet_cap_value
+        NappletCapability.RESOURCE -> R.string.napplet_cap_resource
+        NappletCapability.UPLOAD -> R.string.napplet_cap_upload
     }
 
 /** Localized one-line description of what a capability lets a napplet do. */
 @StringRes
 fun NappletCapability.descriptionRes(): Int =
     when (this) {
+        NappletCapability.SHELL -> R.string.napplet_cap_shell_desc
         NappletCapability.IDENTITY -> R.string.napplet_cap_identity_desc
+        NappletCapability.KEYS -> R.string.napplet_cap_keys_desc
         NappletCapability.RELAY -> R.string.napplet_cap_relay_desc
-        NappletCapability.WALLET -> R.string.napplet_cap_wallet_desc
         NappletCapability.STORAGE -> R.string.napplet_cap_storage_desc
-        NappletCapability.NET -> R.string.napplet_cap_net_desc
+        NappletCapability.VALUE -> R.string.napplet_cap_value_desc
+        NappletCapability.RESOURCE -> R.string.napplet_cap_resource_desc
+        NappletCapability.UPLOAD -> R.string.napplet_cap_upload_desc
     }

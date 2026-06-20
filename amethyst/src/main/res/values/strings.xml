@@ -747,16 +747,22 @@
     <string name="napplet_webview_too_old">This device\'s WebView is too old to run napplets safely.</string>
     <string name="napplet_fallback_title">Napplet %1$s…</string>
     <!-- Napplet capability names -->
+    <string name="napplet_cap_shell">Shell</string>
     <string name="napplet_cap_identity">Identity</string>
+    <string name="napplet_cap_keys">Signing</string>
     <string name="napplet_cap_relay">Relays</string>
-    <string name="napplet_cap_wallet">Wallet</string>
     <string name="napplet_cap_storage">Storage</string>
-    <string name="napplet_cap_net">Network</string>
-    <string name="napplet_cap_identity_desc">Sign and encrypt as you</string>
+    <string name="napplet_cap_value">Payments</string>
+    <string name="napplet_cap_resource">Network</string>
+    <string name="napplet_cap_upload">Uploads</string>
+    <string name="napplet_cap_shell_desc">Ask which capabilities are available</string>
+    <string name="napplet_cap_identity_desc">Read your public key</string>
+    <string name="napplet_cap_keys_desc">Sign and encrypt as you</string>
     <string name="napplet_cap_relay_desc">Read and publish your events</string>
-    <string name="napplet_cap_wallet_desc">Pay Lightning invoices</string>
     <string name="napplet_cap_storage_desc">Its own private storage</string>
-    <string name="napplet_cap_net_desc">Direct network access</string>
+    <string name="napplet_cap_value_desc">Pay Lightning invoices</string>
+    <string name="napplet_cap_resource_desc">Fetch web and Blossom resources</string>
+    <string name="napplet_cap_upload_desc">Upload files to your media server</string>
     <!-- Napplet consent dialog -->
     <string name="napplet_consent_capability">Capability: %1$s</string>
     <string name="napplet_consent_allow_always">Always allow</string>
@@ -772,6 +778,8 @@
     <string name="napplet_consent_query">This napplet wants to read events from your relays.</string>
     <string name="napplet_consent_storage">This napplet wants to use its private storage.</string>
     <string name="napplet_consent_pay">This napplet wants to pay a Lightning invoice.</string>
+    <string name="napplet_consent_resource">This napplet wants to fetch a web resource.</string>
+    <string name="napplet_consent_upload">This napplet wants to upload a file to your media server.</string>
     <plurals name="napplet_consent_pay_amount">
         <item quantity="one">This napplet wants to pay a Lightning invoice for %1$d sat.</item>
         <item quantity="other">This napplet wants to pay a Lightning invoice for %1$d sats.</item>

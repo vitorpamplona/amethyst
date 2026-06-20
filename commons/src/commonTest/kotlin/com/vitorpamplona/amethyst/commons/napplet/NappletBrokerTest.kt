@@ -355,7 +355,7 @@ class NappletBrokerTest {
             assertEquals(2, prompt.calls) // every payment prompts
             assertEquals(2, wallet.calls)
             // ALLOW_ALWAYS must not have been persisted for a per-use capability.
-            assertEquals(PermissionDecision.ASK, ledger.decide(applet, NappletCapability.WALLET))
+            assertEquals(PermissionDecision.ASK, ledger.decide(applet, NappletCapability.VALUE))
         }
 
     @Test
@@ -383,5 +383,26 @@ class NappletBrokerTest {
                     .handle(applet, NappletRequest.GetPublicKey, allDeclared)
 
             assertIs<NappletResponse.Denied>(response)
+        }
+
+    @Test
+    fun shellSupportsReflectsDeclaredCapabilitiesWithoutConsent() =
+        runTest {
+            // The DENY prompt would block anything that reached consent; supports must not.
+            val broker = broker(ScriptedPrompt(GrantState.DENY))
+            val declared = setOf(NappletCapability.RELAY)
+
+            assertEquals(NappletResponse.Supported(true), broker.handle(applet, NappletRequest.ShellSupports("relay"), declared))
+            assertEquals(NappletResponse.Supported(false), broker.handle(applet, NappletRequest.ShellSupports("storage"), declared))
+            // Unknown/unbrokered domain.
+            assertEquals(NappletResponse.Supported(false), broker.handle(applet, NappletRequest.ShellSupports("cvm"), declared))
+        }
+
+    @Test
+    fun resourceAndUploadAreUnsupportedWithoutGateways() =
+        runTest {
+            val broker = broker(ScriptedPrompt(GrantState.ALLOW_ONCE))
+            assertIs<NappletResponse.Unsupported>(broker.handle(applet, NappletRequest.ResourceBytes("https://x"), allDeclared))
+            assertIs<NappletResponse.Unsupported>(broker.handle(applet, NappletRequest.UploadBlob(ByteArray(0), "image/png"), allDeclared))
         }
 }

@@ -53,9 +53,33 @@ sealed interface NappletResponse {
         val events: List<Event>,
     ) : NappletResponse
 
+    /** Result of `shell.supports(domain)`. */
+    data class Supported(
+        val supported: Boolean,
+    ) : NappletResponse
+
     /** Result of a storage read; [value] is null when the key is absent. */
     data class StorageValue(
         val value: String?,
+    ) : NappletResponse
+
+    /** Result of a `resource.bytes` fetch. */
+    data class Bytes(
+        val bytes: ByteArray,
+        val contentType: String,
+    ) : NappletResponse {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Bytes) return false
+            return contentType == other.contentType && bytes.contentEquals(other.bytes)
+        }
+
+        override fun hashCode(): Int = 31 * contentType.hashCode() + bytes.contentHashCode()
+    }
+
+    /** Result of an `upload`; [url] is where the blob can be fetched. */
+    data class Uploaded(
+        val url: String,
     ) : NappletResponse
 
     /** Result of a successful invoice payment; [preimage] is null when unconfirmed. */

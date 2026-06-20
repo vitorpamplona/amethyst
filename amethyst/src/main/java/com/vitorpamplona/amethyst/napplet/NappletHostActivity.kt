@@ -321,9 +321,10 @@ class NappletHostActivity : ComponentActivity() {
         bridgeReplyProxy = replyProxy
 
         val raw = message.data ?: return
+        // The applet sends a full upstream envelope {type, id, ...}; we forward it verbatim and
+        // correlate on its id. The broker reads `type` to decode and to build the .result reply.
         val envelope = runCatching { JSONObject(raw) }.getOrNull() ?: return
         val id = envelope.optString("id").ifEmpty { return }
-        val payload = envelope.optString("payload").ifEmpty { return }
 
         val msg =
             Message.obtain(null, NappletIpc.MSG_REQUEST).apply {
@@ -331,7 +332,7 @@ class NappletHostActivity : ComponentActivity() {
                 data =
                     Bundle().apply {
                         putString(NappletIpc.KEY_REQUEST_ID, id)
-                        putString(NappletIpc.KEY_PAYLOAD, payload)
+                        putString(NappletIpc.KEY_PAYLOAD, raw)
                         putString(NappletIpc.KEY_AUTHOR, author)
                         putString(NappletIpc.KEY_IDENTIFIER, identifier)
                         putString(NappletIpc.KEY_AGGREGATE_HASH, aggregateHash)
@@ -361,12 +362,10 @@ class NappletHostActivity : ComponentActivity() {
         val id = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return true
         val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
 
-        val envelope =
-            JSONObject().apply {
-                put("id", id)
-                put("response", payload)
-            }
-        bridgeReplyProxy?.postMessage(envelope.toString())
+        // payload is the broker's {type:"...result", ok, ...}; inject the correlation id for the shim.
+        val result = runCatching { JSONObject(payload) }.getOrNull() ?: JSONObject()
+        result.put("id", id)
+        bridgeReplyProxy?.postMessage(result.toString())
         return true
     }
 
@@ -414,15 +413,20 @@ class NappletHostActivity : ComponentActivity() {
                 "media-src 'self' https://napplet.local blob: data:; " +
                 "connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
 
+        // Namespaced window.napplet.* matching the upstream @napplet/web SDK, over the
+        // {type:"domain.action", id} envelope. The applet's own code (built against that SDK)
+        // therefore runs unchanged on this shell.
         private const val SHIM_JS = """
 (function(){
   if (window.__nappletShimInstalled) return; window.__nappletShimInstalled = true;
   var seq = 0, pending = {};
-  function call(payload){
-    return new Promise(function(resolve){
+  function call(type, fields){
+    return new Promise(function(resolve, reject){
       var id = 'r' + (seq++);
-      pending[id] = resolve;
-      parent.postMessage(JSON.stringify({ id: id, payload: JSON.stringify(payload) }), '*');
+      pending[id] = { resolve: resolve, reject: reject };
+      var env = { type: type, id: id };
+      if (fields) for (var k in fields) env[k] = fields[k];
+      parent.postMessage(JSON.stringify(env), '*');
     });
   }
   window.addEventListener('message', function(e){
@@ -430,35 +434,57 @@ class NappletHostActivity : ComponentActivity() {
     if (typeof e.data !== 'string') return;
     var msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
     if (!msg || !msg.id) return;
-    var cb = pending[msg.id]; if (!cb) return; delete pending[msg.id];
-    var resp; try { resp = JSON.parse(msg.response); } catch (_) { resp = { type: 'failed', reason: 'bad response' }; }
-    cb(resp);
+    var p = pending[msg.id]; if (!p) return; delete pending[msg.id];
+    if (msg.ok) p.resolve(msg);
+    else { var err = new Error(msg.reason || msg.operation || msg.error || 'napplet error'); err.napplet = msg; p.reject(err); }
   });
-  function fail(r){ var e = new Error((r && r.reason) || (r && r.type) || 'napplet error'); e.napplet = r; throw e; }
-  function pubkey(r){ if (r.type === 'publicKey') return r.pubkey; fail(r); }
-  function evt(r){ if (r.type === 'signedEvent') return r.event; fail(r); }
-  function text(r){ if (r.type === 'text') return r.value; fail(r); }
-  function published(r){ if (r.type === 'published') return r.relays; fail(r); }
-  function events(r){ if (r.type === 'events') return r.events; fail(r); }
-  function storageValue(r){ if (r.type === 'storageValue') return r.value; fail(r); }
-  function paid(r){ if (r.type === 'paid') return r.preimage; fail(r); }
-  function done(r){ if (r.type === 'done') return true; fail(r); }
-  window.napplet = Object.freeze({
-    getPublicKey: function(){ return call({ op: 'getPublicKey' }).then(pubkey); },
-    signEvent: function(t){ return call({ op: 'signEvent', kind: t.kind, tags: t.tags || [], content: t.content || '' }).then(evt); },
-    nip04Encrypt: function(peer, plaintext){ return call({ op: 'nip04Encrypt', peer: peer, plaintext: plaintext }).then(text); },
-    nip04Decrypt: function(peer, ciphertext){ return call({ op: 'nip04Decrypt', peer: peer, ciphertext: ciphertext }).then(text); },
-    nip44Encrypt: function(peer, plaintext){ return call({ op: 'nip44Encrypt', peer: peer, plaintext: plaintext }).then(text); },
-    nip44Decrypt: function(peer, ciphertext){ return call({ op: 'nip44Decrypt', peer: peer, ciphertext: ciphertext }).then(text); },
-    publish: function(ev){ return call({ op: 'publish', event: ev }).then(published); },
-    queryEvents: function(filter){ return call({ op: 'queryEvents', filter: filter || {} }).then(events); },
-    storage: Object.freeze({
-      get: function(key){ return call({ op: 'storageGet', key: key }).then(storageValue); },
-      set: function(key, value){ return call({ op: 'storageSet', key: key, value: value }).then(done); },
-      remove: function(key){ return call({ op: 'storageRemove', key: key }).then(done); }
-    }),
-    payInvoice: function(invoice){ return call({ op: 'payInvoice', invoice: invoice }).then(paid); }
-  });
+  function field(promise, name){ return promise.then(function(m){ return m[name]; }); }
+  function normFilters(filters){ return Array.isArray(filters) ? { filters: filters } : { filter: filters || {} }; }
+  function b64ToBytes(b64){ var bin = atob(b64); var u = new Uint8Array(bin.length); for (var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u; }
+  function bytesToB64(bytes){ var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); var s=''; for (var i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return btoa(s); }
+  var napplet = {
+    shell: {
+      supports: function(domain){ return field(call('shell.supports', { domain: domain }), 'supported'); }
+    },
+    identity: {
+      getPublicKey: function(){ return field(call('identity.getPublicKey'), 'pubkey'); },
+      onChanged: function(handler){ /* live identity-change events are a follow-up */ }
+    },
+    keys: {
+      signEvent: function(t){ return field(call('keys.signEvent', { kind: t.kind, tags: t.tags || [], content: t.content || '' }), 'event'); },
+      nip04Encrypt: function(peer, plaintext){ return field(call('keys.nip04Encrypt', { peer: peer, plaintext: plaintext }), 'value'); },
+      nip04Decrypt: function(peer, ciphertext){ return field(call('keys.nip04Decrypt', { peer: peer, ciphertext: ciphertext }), 'value'); },
+      nip44Encrypt: function(peer, plaintext){ return field(call('keys.nip44Encrypt', { peer: peer, plaintext: plaintext }), 'value'); },
+      nip44Decrypt: function(peer, ciphertext){ return field(call('keys.nip44Decrypt', { peer: peer, ciphertext: ciphertext }), 'value'); }
+    },
+    relay: {
+      publish: function(ev){ return field(call('relay.publish', { event: ev }), 'relays'); },
+      query: function(filters){ return field(call('relay.query', normFilters(filters)), 'events'); },
+      // subscribe currently delivers the initial matches; a live tail is a follow-up.
+      subscribe: function(filters, onEvent){
+        return napplet.relay.query(filters).then(function(events){
+          if (typeof onEvent === 'function') events.forEach(function(ev){ onEvent(ev); });
+          return { close: function(){} };
+        });
+      }
+    },
+    storage: {
+      get: function(key){ return field(call('storage.get', { key: key }), 'value'); },
+      set: function(key, value){ return call('storage.set', { key: key, value: value }).then(function(){ return true; }); },
+      remove: function(key){ return call('storage.remove', { key: key }).then(function(){ return true; }); }
+    },
+    value: {
+      payInvoice: function(invoice){ return field(call('value.payInvoice', { invoice: invoice }), 'preimage'); }
+    },
+    resource: {
+      bytes: function(url){ return call('resource.bytes', { url: url }).then(function(m){ return b64ToBytes(m.bytes); }); },
+      bytesAsObjectURL: function(url){ return call('resource.bytes', { url: url }).then(function(m){ return URL.createObjectURL(new Blob([b64ToBytes(m.bytes)], { type: m.contentType || '' })); }); }
+    },
+    upload: {
+      blob: function(bytes, contentType){ return field(call('upload', { bytes: bytesToB64(bytes), contentType: contentType }), 'url'); }
+    }
+  };
+  window.napplet = Object.freeze(napplet);
 })();
 """
     }
