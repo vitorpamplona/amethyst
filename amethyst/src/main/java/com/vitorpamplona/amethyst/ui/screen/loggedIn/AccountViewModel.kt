@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.annotation.SuppressLint
+import android.app.NotificationManager
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -30,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -69,6 +71,7 @@ import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.ui.actions.Dao
@@ -1609,6 +1612,7 @@ class AccountViewModel(
     fun loadAndMarkAsRead(
         routeForLastRead: String,
         createdAt: Long?,
+        dismissNotificationId: HexKey? = null,
     ): Boolean {
         if (createdAt == null) return false
 
@@ -1619,10 +1623,19 @@ class AccountViewModel(
         if (onIsNew) {
             viewModelScope.launch(Dispatchers.IO) {
                 account.markAsRead(routeForLastRead, createdAt)
+                // The user is now looking at this event in-app, so clear any tray
+                // notification that was posted for it while the app was backgrounded.
+                dismissNotificationId?.let { dismissTrayNotificationFor(it) }
             }
         }
 
         return onIsNew
+    }
+
+    private fun dismissTrayNotificationFor(eventId: HexKey) {
+        ContextCompat
+            .getSystemService(Amethyst.instance.appContext, NotificationManager::class.java)
+            ?.dismissNotificationForEvent(eventId)
     }
 
     fun markAllChatNotesAsRead(notes: List<Note>) {

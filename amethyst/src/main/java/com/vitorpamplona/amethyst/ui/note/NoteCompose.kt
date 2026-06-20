@@ -240,6 +240,7 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -528,6 +529,7 @@ fun calculateBackgroundColor(
     routeForLastRead: String? = null,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    dismissNotificationId: HexKey? = null,
 ): MutableState<Color> {
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
@@ -540,7 +542,7 @@ fun calculateBackgroundColor(
 
     val isNew =
         remember(createdAt, routeForLastRead) {
-            routeForLastRead != null && accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
+            routeForLastRead != null && accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt, dismissNotificationId)
         }
 
     val bgColor =
@@ -589,6 +591,7 @@ private fun CheckNewAndRenderNote(
             routeForLastRead,
             parentBackgroundColor,
             accountViewModel,
+            dismissNotificationId = baseNote.idHex,
         )
 
     InnerNoteWithReactions(
