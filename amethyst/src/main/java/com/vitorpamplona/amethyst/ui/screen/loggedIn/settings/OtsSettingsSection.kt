@@ -55,9 +55,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsSettings
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 
 /**
@@ -121,7 +123,7 @@ fun OtsSettingsSection(
                         modifier = Modifier.size(16.dp),
                     )
                     Spacer(Modifier.width(4.dp))
-                    Text("Reset to auto-select")
+                    Text(stringRes(R.string.ots_reset_to_auto_select))
                 }
             }
         }
@@ -269,7 +271,7 @@ private fun CustomExplorerInput(
                     input = it
                     validationError = null
                 },
-                label = { Text("Explorer API base URL") },
+                label = { Text(stringRes(R.string.ots_explorer_api_label)) },
                 placeholder = { Text("https://mempool.space/api/") },
                 singleLine = true,
                 isError = validationError != null,
@@ -286,7 +288,7 @@ private fun CustomExplorerInput(
                             }) {
                                 Icon(
                                     MaterialSymbols.Clear,
-                                    contentDescription = "Clear",
+                                    contentDescription = stringRes(R.string.clear),
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
@@ -312,7 +314,7 @@ private fun CustomExplorerInput(
                 onClick = { trySave() },
                 modifier = Modifier.padding(top = 6.dp),
             ) {
-                Text("Save")
+                Text(stringRes(R.string.save))
             }
         }
     }

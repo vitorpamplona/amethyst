@@ -441,9 +441,9 @@ fun DvmPaymentActions(
                 }
 
             if (amountInInvoice != null) {
-                Text(text = "Pay $amountInInvoice sats to the DVM")
+                Text(text = stringRes(R.string.dvm_pay_amount_to_dvm, amountInInvoice.toString()))
             } else {
-                Text(text = "Pay Invoice from the DVM")
+                Text(text = stringRes(R.string.dvm_pay_invoice_from_dvm))
             }
         }
     } else if (amount != null) {

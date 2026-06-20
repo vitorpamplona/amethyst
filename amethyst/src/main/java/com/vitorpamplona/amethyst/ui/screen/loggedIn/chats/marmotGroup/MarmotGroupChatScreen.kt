@@ -35,8 +35,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -45,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.DisplayUserSetAsSubject
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,7 +76,7 @@ fun MarmotGroupChatScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringRes(R.string.back),
                         )
                     }
                 },
@@ -102,11 +105,11 @@ fun MarmotGroupChatScreen(
                                     accountViewModel = accountViewModel,
                                 )
                             } else {
-                                Text("Marmot Group")
+                                Text(stringRes(R.string.marmot_group_default_name))
                             }
                             if (memberCount > 0) {
                                 Text(
-                                    text = "$memberCount members",
+                                    text = pluralStringResource(R.plurals.marmot_member_count, memberCount, memberCount),
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
@@ -117,7 +120,7 @@ fun MarmotGroupChatScreen(
                     IconButton(onClick = { nav.nav(Route.MarmotGroupInfo(nostrGroupId)) }) {
                         Icon(
                             symbol = MaterialSymbols.GroupAdd,
-                            contentDescription = "Add Member",
+                            contentDescription = stringRes(R.string.marmot_add_member_action),
                         )
                     }
                 },

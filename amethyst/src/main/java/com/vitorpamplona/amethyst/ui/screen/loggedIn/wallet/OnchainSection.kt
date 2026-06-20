@@ -372,7 +372,7 @@ private fun ActionRow(
                 modifier = Modifier.size(14.dp),
             )
             Spacer(modifier = Modifier.width(4.dp))
-            Text("Copy", style = MaterialTheme.typography.bodySmall)
+            Text(stringRes(R.string.copy), style = MaterialTheme.typography.bodySmall)
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -393,7 +393,7 @@ private fun ActionRow(
                 modifier = Modifier.size(14.dp),
             )
             Spacer(modifier = Modifier.width(4.dp))
-            Text("Send", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+            Text(stringRes(R.string.send), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
         }
     }
 

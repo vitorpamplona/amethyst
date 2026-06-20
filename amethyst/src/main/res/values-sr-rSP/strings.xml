@@ -15,8 +15,6 @@
     <string name="spam">Спам</string>
     <string name="impersonation">лажно представљање</string>
     <string name="illegal_behavior">Незаконито понашање</string>
-    <string name="unknown">Непознат</string>
-    <string name="relay_icon">Икона релеја</string>
     <string name="unknown_author">Непознати аутор</string>
     <string name="copy_text">Копирај текст</string>
     <string name="copy_user_pubkey">Копирај ИД аутора</string>
@@ -27,7 +25,6 @@
     <string name="block_hide_user"><![CDATA[Блокирај и сакриј корисника]]></string>
     <string name="report_spam_scam">Пријави нежељену пошту/превару</string>
     <string name="report_impersonation">Пријавите лажно представљање</string>
-    <string name="report_explicit_content">Пријавите експлицитни садржај</string>
     <string name="report_illegal_behaviour">Пријавите незаконито понашање</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Користите јавни кључ и јавни кључеви су само за читање. Пријавите се са приватним кључем да бисте могли да одговорите</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Користите јавни кључ и јавни кључеви су само за читање. Пријавите се са приватним кључем да бисте могли да појачате постове</string>

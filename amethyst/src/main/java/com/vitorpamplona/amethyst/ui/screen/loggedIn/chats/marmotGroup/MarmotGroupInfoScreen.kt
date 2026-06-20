@@ -62,10 +62,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
@@ -80,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestio
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.MediumRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
@@ -137,16 +140,16 @@ fun MarmotGroupInfoScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringRes(R.string.back),
                         )
                     }
                 },
-                title = { Text("Group Info") },
+                title = { Text(stringRes(R.string.marmot_group_info_title)) },
                 actions = {
                     IconButton(onClick = { nav.nav(Route.MarmotGroupEditInfo(nostrGroupId)) }) {
                         Icon(
                             symbol = MaterialSymbols.Edit,
-                            contentDescription = "Edit Group Info",
+                            contentDescription = stringRes(R.string.marmot_edit_group_info),
                         )
                     }
                     IconButton(
@@ -155,7 +158,7 @@ fun MarmotGroupInfoScreen(
                     ) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ExitToApp,
-                            contentDescription = "Leave Group",
+                            contentDescription = stringRes(R.string.marmot_leave_group),
                             tint = MaterialTheme.colorScheme.error,
                         )
                     }
@@ -180,7 +183,7 @@ fun MarmotGroupInfoScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = displayName ?: "Group ${nostrGroupId.take(8)}...",
+                            text = displayName ?: stringRes(R.string.marmot_group_fallback_name, nostrGroupId.take(8)),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                         )
@@ -193,7 +196,7 @@ fun MarmotGroupInfoScreen(
                             )
                         }
                         Text(
-                            text = "${members.size} members",
+                            text = pluralStringResource(R.plurals.marmot_member_count, members.size, members.size),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp),
@@ -226,7 +229,7 @@ fun MarmotGroupInfoScreen(
 
                 item {
                     Text(
-                        text = "Members",
+                        text = stringRes(R.string.members),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -285,7 +288,7 @@ fun MarmotGroupInfoScreen(
                 onAdd = { user ->
                     isAdding = true
                     isAddError = false
-                    addStatus = "Adding ${user.toBestDisplayName()}..."
+                    addStatus = stringRes(context, R.string.marmot_adding_user, user.toBestDisplayName())
                     val targetPubkey = user.pubkeyHex
                     val targetName = user.toBestDisplayName()
                     scope.launch(Dispatchers.IO) {
@@ -297,11 +300,11 @@ fun MarmotGroupInfoScreen(
                                 addSearchInput = ""
                                 userSuggestions.reset()
                             } else {
-                                addStatus = "Failed to add $targetName: ${result.removePrefix("Error: ")}"
+                                addStatus = stringRes(context, R.string.marmot_failed_to_add_user, targetName, result.removePrefix("Error: "))
                                 isAddError = true
                             }
                         } catch (e: Exception) {
-                            addStatus = "Failed to add $targetName: ${e.message ?: "unknown error"}"
+                            addStatus = stringRes(context, R.string.marmot_failed_to_add_user, targetName, e.message ?: stringRes(context, R.string.marmot_unknown_error))
                             isAddError = true
                         } finally {
                             isAdding = false
@@ -314,7 +317,7 @@ fun MarmotGroupInfoScreen(
 
     if (showLeaveDialog) {
         LeaveGroupDialog(
-            groupName = displayName ?: "this group",
+            groupName = displayName ?: stringRes(R.string.marmot_this_group),
             onConfirm = {
                 showLeaveDialog = false
                 isLeaving = true
@@ -328,7 +331,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    "Failed to leave group: ${e.message}",
+                                    stringRes(context, R.string.marmot_failed_to_leave_group, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }
@@ -350,7 +353,7 @@ fun MarmotGroupInfoScreen(
                         accountViewModel.removeMarmotGroupMember(nostrGroupId, member.leafIndex)
                         launch(Dispatchers.Main) {
                             Toast
-                                .makeText(context, "Member removed", Toast.LENGTH_SHORT)
+                                .makeText(context, stringRes(context, R.string.marmot_member_removed), Toast.LENGTH_SHORT)
                                 .show()
                         }
                     } catch (e: Exception) {
@@ -358,7 +361,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    "Failed to remove member: ${e.message}",
+                                    stringRes(context, R.string.marmot_failed_to_remove_member, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }
@@ -380,7 +383,7 @@ fun MarmotGroupInfoScreen(
                         accountViewModel.grantMarmotGroupAdmin(nostrGroupId, member.pubkey)
                         launch(Dispatchers.Main) {
                             Toast
-                                .makeText(context, "Admin privileges granted", Toast.LENGTH_SHORT)
+                                .makeText(context, stringRes(context, R.string.marmot_admin_granted), Toast.LENGTH_SHORT)
                                 .show()
                         }
                     } catch (e: Exception) {
@@ -388,7 +391,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    "Failed to grant admin: ${e.message}",
+                                    stringRes(context, R.string.marmot_failed_to_grant_admin, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }
@@ -410,7 +413,7 @@ fun MarmotGroupInfoScreen(
                         accountViewModel.revokeMarmotGroupAdmin(nostrGroupId, member.pubkey)
                         launch(Dispatchers.Main) {
                             Toast
-                                .makeText(context, "Admin privileges revoked", Toast.LENGTH_SHORT)
+                                .makeText(context, stringRes(context, R.string.marmot_admin_revoked), Toast.LENGTH_SHORT)
                                 .show()
                         }
                     } catch (e: Exception) {
@@ -418,7 +421,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    "Failed to revoke admin: ${e.message}",
+                                    stringRes(context, R.string.marmot_failed_to_revoke_admin, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }
@@ -451,7 +454,7 @@ private fun AddMemberInline(
                 modifier = SuggestionListDefaultHeightChat,
                 onEmpty = {
                     Text(
-                        "They must have published a KeyPackage (kind:30443) to be added.",
+                        stringRes(R.string.marmot_keypackage_required),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -461,7 +464,7 @@ private fun AddMemberInline(
                     IconButton(onClick = { onAdd(user) }) {
                         Icon(
                             symbol = MaterialSymbols.PersonAdd,
-                            contentDescription = "Add to group",
+                            contentDescription = stringRes(R.string.marmot_add_to_group),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
@@ -487,8 +490,8 @@ private fun AddMemberInline(
         OutlinedTextField(
             value = searchInput,
             onValueChange = onSearchInputChange,
-            label = { Text("Add member") },
-            placeholder = { Text("Name, npub, or NIP-05") },
+            label = { Text(stringRes(R.string.marmot_add_member)) },
+            placeholder = { Text(stringRes(R.string.marmot_add_member_placeholder)) },
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -530,11 +533,13 @@ fun MemberRow(
         )
         Column(modifier = Modifier.weight(1f)) {
             LoadUser(baseUserHex = member.pubkey, accountViewModel = accountViewModel) { user ->
-                val displayName = user?.toBestDisplayName() ?: "${member.pubkey.take(16)}..."
+                val displayName = user?.toBestDisplayName() ?: stringRes(R.string.marmot_user_fallback_name, member.pubkey.take(16))
+                val youSuffix = stringRes(R.string.marmot_member_suffix_you)
+                val adminSuffix = stringRes(R.string.marmot_member_suffix_admin)
                 val suffix =
                     buildString {
-                        if (isMe) append(" (you)")
-                        if (isAdmin) append(" - admin")
+                        if (isMe) append(youSuffix)
+                        if (isAdmin) append(adminSuffix)
                     }
                 Text(
                     text = "$displayName$suffix",
@@ -549,7 +554,7 @@ fun MemberRow(
             IconButton(onClick = onPromoteClick) {
                 Icon(
                     symbol = MaterialSymbols.StarBorder,
-                    contentDescription = "Grant admin privileges",
+                    contentDescription = stringRes(R.string.marmot_grant_admin_privileges),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
@@ -557,7 +562,7 @@ fun MemberRow(
             IconButton(onClick = onDemoteClick) {
                 Icon(
                     symbol = MaterialSymbols.Star,
-                    contentDescription = "Revoke admin privileges",
+                    contentDescription = stringRes(R.string.marmot_revoke_admin_privileges),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
@@ -566,7 +571,7 @@ fun MemberRow(
             IconButton(onClick = onRemoveClick) {
                 Icon(
                     symbol = MaterialSymbols.PersonRemove,
-                    contentDescription = "Remove Member",
+                    contentDescription = stringRes(R.string.marmot_remove_member),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }
@@ -582,18 +587,18 @@ fun LeaveGroupDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Leave Group") },
+        title = { Text(stringRes(R.string.marmot_leave_group)) },
         text = {
-            Text("Are you sure you want to leave \"$groupName\"? You will no longer receive messages from this group.")
+            Text(stringRes(R.string.marmot_leave_group_confirm, groupName))
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Leave", color = MaterialTheme.colorScheme.error)
+                Text(stringRes(R.string.leave), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringRes(R.string.cancel))
             }
         },
     )
@@ -608,21 +613,21 @@ private fun ConfirmRemoveMemberDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Remove Member") },
+        title = { Text(stringRes(R.string.marmot_remove_member)) },
         text = {
             LoadUser(baseUserHex = memberPubkey, accountViewModel = accountViewModel) { user ->
-                val name = user?.toBestDisplayName() ?: "${memberPubkey.take(16)}..."
-                Text("Are you sure you want to remove \"$name\" from this group?")
+                val name = user?.toBestDisplayName() ?: stringRes(R.string.marmot_user_fallback_name, memberPubkey.take(16))
+                Text(stringRes(R.string.marmot_remove_member_confirm, name))
             }
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Remove", color = MaterialTheme.colorScheme.error)
+                Text(stringRes(R.string.remove), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringRes(R.string.cancel))
             }
         },
     )
@@ -637,24 +642,21 @@ private fun ConfirmGrantAdminDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Grant Admin Privileges") },
+        title = { Text(stringRes(R.string.marmot_grant_admin_title)) },
         text = {
             LoadUser(baseUserHex = memberPubkey, accountViewModel = accountViewModel) { user ->
-                val name = user?.toBestDisplayName() ?: "${memberPubkey.take(16)}..."
-                Text(
-                    "Make \"$name\" an admin of this group? Admins can add or remove members, " +
-                        "change group info, and grant admin privileges to other members.",
-                )
+                val name = user?.toBestDisplayName() ?: stringRes(R.string.marmot_user_fallback_name, memberPubkey.take(16))
+                Text(stringRes(R.string.marmot_grant_admin_confirm, name))
             }
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Grant")
+                Text(stringRes(R.string.marmot_grant))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringRes(R.string.cancel))
             }
         },
     )
@@ -669,21 +671,21 @@ private fun ConfirmRevokeAdminDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Revoke Admin Privileges") },
+        title = { Text(stringRes(R.string.marmot_revoke_admin_title)) },
         text = {
             LoadUser(baseUserHex = memberPubkey, accountViewModel = accountViewModel) { user ->
-                val name = user?.toBestDisplayName() ?: "${memberPubkey.take(16)}..."
-                Text("Revoke admin privileges from \"$name\"? They will remain a member of the group.")
+                val name = user?.toBestDisplayName() ?: stringRes(R.string.marmot_user_fallback_name, memberPubkey.take(16))
+                Text(stringRes(R.string.marmot_revoke_admin_confirm, name))
             }
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Revoke", color = MaterialTheme.colorScheme.error)
+                Text(stringRes(R.string.marmot_revoke), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringRes(R.string.cancel))
             }
         },
     )
@@ -817,7 +819,7 @@ fun RelayHealthSection(
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "Relays",
+            text = stringRes(R.string.marmot_relays_header),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -854,9 +856,9 @@ private fun RelayHealthRow(
         }
     val subtitle =
         if (lastSeen == null) {
-            "no events yet"
+            stringRes(R.string.marmot_relay_no_events)
         } else {
-            "last event${timeAgo(lastSeen, context)}"
+            stringRes(R.string.marmot_relay_last_event, timeAgo(lastSeen, context))
         }
     Row(
         modifier =
