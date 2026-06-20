@@ -93,25 +93,31 @@ fun ProfileAppRecommendationsScreen(
     // relays so the list below has candidates while this screen is open.
     ProfileAppRecommendationsFilterAssemblerSubscription(accountViewModel)
 
-    // Kind 31990 app definitions, kept live. observeNotes seeds with what is
+    // Kind 31990 app definitions, kept live. observeNotes seeds with the notes
     // already cached and re-emits as new definitions are inserted, so the
     // candidate list below derives straight from these notes — no manual tick or
-    // full-cache rescan. (Per-row metadata changes are watched by AppRow itself,
-    // which is why an in-place addressable replacement not re-emitting here is
-    // fine.) The initial value is the current cache snapshot so the first frame
-    // matches the seeded emission instead of flashing empty.
+    // full-cache rescan.
+    //
+    // Caveat: observeNotes does NOT re-emit when an already-listed addressable is
+    // replaced in place, so the list isn't re-filtered/re-sorted on a kind-31990
+    // update (a blank app that later gains a name, or a newer createdAt changing
+    // the tier order). That's acceptable here: membership rarely flips on an
+    // update, each row's own content stays live via AppRow's observeNoteEvent, and
+    // the list recomputes anyway as the recommendation/follow lists stream in.
+    //
+    // The initial value is the current cache snapshot so the first frame matches
+    // the seeded emission instead of flashing empty.
+    val cachedAppDefinitions =
+        remember {
+            LocalCache.addressables
+                .filterIntoSet(AppDefinitionEvent.KIND) { _, _ -> true }
+                .toList()
+        }
     val appDefinitionNotes by remember {
         LocalCache
             .observeNotes(Filter(kinds = listOf(AppDefinitionEvent.KIND)))
             .flowOn(Dispatchers.IO)
-    }.collectAsStateWithLifecycle(
-        initialValue =
-            remember {
-                LocalCache.addressables
-                    .filterIntoSet(AppDefinitionEvent.KIND) { _, _ -> true }
-                    .toList()
-            },
-    )
+    }.collectAsStateWithLifecycle(initialValue = cachedAppDefinitions)
 
     val myRecommendationEvents by accountViewModel.account.appRecommendations.flow
         .collectAsStateWithLifecycle()
