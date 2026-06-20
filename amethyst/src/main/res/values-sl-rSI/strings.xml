@@ -20,6 +20,12 @@
         <item quantity="few">%1$d sredstva v paketu</item>
         <item quantity="other">%1$d sredstev v paketu</item>
     </plurals>
+    <plurals name="thread_collapsed_reply_count">
+        <item quantity="one">+%1$d\nodgovor</item>
+        <item quantity="two">+%1$d\nodgovora</item>
+        <item quantity="few">+%1$d\nodgovorov</item>
+        <item quantity="other">+%1$d\nodgovorov</item>
+    </plurals>
     <string name="post_not_found">Dogodek se nalaga ali pa ni najden v tvojih relejih</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Slika kanala</string>
@@ -264,6 +270,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="upload_file">Naloži datoteko</string>
     <string name="take_a_picture">Zajemi sliko</string>
     <string name="record_a_video">Posnemi video</string>
+    <string name="no_camera_app_found">Na tej napravi ni nameščene nobene aplikacije za kamero</string>
     <string name="record_a_message">Posnemi sporočilo</string>
     <string name="record_a_message_title">Posnemi sporočilo</string>
     <string name="record_a_message_description">Klikni in drži za snemanje sporočila</string>
@@ -1359,6 +1366,18 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="call_settings_turn_credential">Akreditivi</string>
     <string name="always_on_notif_channel_description">Ohranja aktivne povezave z vašimi releji za obvestila v realnem času</string>
     <string name="always_on_notif_title">Amethyst obvestila so aktivna</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">Povezano z %1$d vhodnimi releji</item>
+        <item quantity="two">Povezano z %1$d vhodnima relejema</item>
+        <item quantity="few">Povezano z %1$d vhodnimi releji</item>
+        <item quantity="other">Povezano z %1$d vhodnimi releji</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">Povezano z %1$d relejem</item>
+        <item quantity="two">Povezano z %1$d relejema</item>
+        <item quantity="few">Povezano z %1$d releji</item>
+        <item quantity="other">Povezano z %1$d releji</item>
+    </plurals>
     <string name="always_on_notif_connecting">Povezovanje vhodnih relejev\u2026</string>
     <string name="always_on_notif_setting_title">Vedno aktivna obvestila</string>
     <string name="always_on_notif_setting_description">Ohranja stalno povezavo z vašimi releji za takojšnjo dostavo obvestil. Prikazuje trajno obvestilo. Porabi več baterije, a zagotavlja, da ne zamudite nobenega sporočila.</string>
@@ -3187,6 +3206,24 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
         <item quantity="other">%1$s in še %2$d drugih</item>
     </plurals>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
+    <string name="road_event_police">Policija</string>
+    <string name="road_event_speed_camera">Hitrostna kamera</string>
+    <string name="road_event_traffic_jam">Zastoj</string>
+    <string name="road_event_accident">Nesreča</string>
+    <string name="road_event_road_closure">Cesta zaprta</string>
+    <string name="road_event_construction">Delo na cesti</string>
+    <string name="road_event_hazard">Nevernost</string>
+    <string name="road_event_road_condition">Stanje cest</string>
+    <string name="road_event_pothole">Udarna jama</string>
+    <string name="road_event_fog">Megla</string>
+    <string name="road_event_ice">Led</string>
+    <string name="road_event_animal">Žival na cestišču</string>
+    <string name="road_event_other">Dogodek na cesti</string>
+    <string name="road_event_unknown">Dogodek na cesti</string>
+    <string name="road_event_confirmed">Še vedno tam</string>
+    <string name="road_event_denied">Ni več tam</string>
+    <string name="road_event_confirms_report">Potrdi prometno poročilo</string>
+    <string name="road_event_denies_report">Označi kot odstranjeno</string>
     <string name="goal_amount_label">Ciljni znesek (sat)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Opiši svoj cilj</string>

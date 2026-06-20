@@ -20,6 +20,12 @@
         <item quantity="many">%1$d zestawów aktywów</item>
         <item quantity="other">%1$d zestawy aktywów</item>
     </plurals>
+    <plurals name="thread_collapsed_reply_count">
+        <item quantity="one">+%1$d\nodpowiedź</item>
+        <item quantity="few">+%1$d\nodpowiedzi</item>
+        <item quantity="many">+%1$d\nOdpowiedzi</item>
+        <item quantity="other">+%1$d\nodpowiedzi</item>
+    </plurals>
     <string name="post_not_found">Wydarzenie jest wczytywane lub nie można go znaleźć na liście transmiterów</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Zdjęcie kanału</string>
@@ -253,6 +259,7 @@
     <string name="upload_file">Prześlij plik</string>
     <string name="take_a_picture">Zrób zdjęcie</string>
     <string name="record_a_video">Nagraj film</string>
+    <string name="no_camera_app_found">Nie znaleziono aplikacji kamery na tym urządzeniu</string>
     <string name="record_a_message">Nagraj wiadomość</string>
     <string name="record_a_message_title">Nagrywanie wiadomości</string>
     <string name="record_a_message_description">Kliknij i przytrzymaj aby nagrać wiadomość</string>
@@ -444,6 +451,7 @@
     <string name="quick_action_share_browser_link">Udostępnij link przeglądarki</string>
     <string name="quick_action_share">Przekaż</string>
     <string name="share_as_image">Udostępnij jako obrazek</string>
+    <string name="share_as_image_url">Udostępnij jako adres Url obrazu</string>
     <string name="share_as_image_generating">Generowanie podglądu…</string>
     <string name="share_as_image_watermark">Udostępnione przez Ametyst</string>
     <string name="quick_action_copy_user_id">ID autora</string>
@@ -1345,6 +1353,18 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="call_settings_turn_credential">Uwierzytelnienie</string>
     <string name="always_on_notif_channel_description">Utrzymuje aktywne połączenia z transmiterami skrzynki odbiorczej, umożliwiając otrzymywanie powiadomień w czasie rzeczywistym</string>
     <string name="always_on_notif_title">Powiadomienia Ametyst Aktywne</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">Połączono z %1$d transmiterem odbiorczym</item>
+        <item quantity="few">Połączono z %1$d transmiterami odbiorczymi</item>
+        <item quantity="many">Połączono z %1$d transmiterami odbiorczymi</item>
+        <item quantity="other">Połączono z %1$d transmiterami odbiorczymi</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">Podłączono do %1$d transmitera</item>
+        <item quantity="few">Podłączono do %1$d transmiterów</item>
+        <item quantity="many">Podłączono do %1$d transmiterów</item>
+        <item quantity="other">Podłączono do %1$d transmiterów</item>
+    </plurals>
     <string name="always_on_notif_connecting">Łączenie z transmiterami odbiorczymi\u2026</string>
     <string name="always_on_notif_setting_title">Usługa powiadomień zawsze włączona</string>
     <string name="always_on_notif_setting_description">Utrzymuje stałe połączenie z transmiterami odbiorczymi, aby zapewnić natychmiastowe dostarczanie powiadomień. Wyświetla bieżące powiadomienia. Zużywa więcej baterii, ale gwarantuje, że nigdy nie przegapisz żadnej wiadomości.</string>
@@ -1627,6 +1647,22 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="music_track_uploading">Wgrywanie…</string>
     <string name="music_track_uploading_banner">Wgraj miniaturę i plik audio, a następnie opublikuj. Proces ten będzie kontynuowany nawet po opuszczeniu ekranu.</string>
     <string name="music_track_upload_failed">Błąd wgrywania: %1$s</string>
+    <string name="edit_music_playlist">Edytuj playlistę</string>
+    <string name="music_playlist_edit_action">Edytuj playlistę</string>
+    <string name="music_playlist_title_label">Tytuł</string>
+    <string name="music_playlist_description_label">Opis (opcjonalnie)</string>
+    <string name="music_playlist_notes_label">Uwagi (opcjonalne)</string>
+    <string name="music_playlist_cover_upload_cta">Wgraj miniaturkę</string>
+    <string name="music_playlist_cover_upload_hint">Wybierz kwadratowe zdjęcie, które posłuży jako grafika tej playlisty.</string>
+    <string name="music_playlist_private_hint">Ukryj tę playlistę w swoim publicznym profilu.</string>
+    <string name="music_playlist_collaborative_hint">Pozwól innym dodawać utwory do tej playlisty.</string>
+    <string name="music_playlist_delete">Usuń tę playlistę</string>
+    <string name="music_playlist_delete_confirm">Publikować usunięcie NIP-09 dla tej playlisty?</string>
+    <string name="music_playlist_uploading_banner">Wgrywanie okładki i publikacja. Proces ten będzie kontynuowany nawet po opuszczeniu ekranu.</string>
+    <string name="music_playlist_no_tracks_hint">Brak utworów. Dodaj utwory z listy utworów, korzystając z opcji „Dodaj do listy odtwarzania”.</string>
+    <string name="music_playlist_move_track_up">Przesuń utwór w górę</string>
+    <string name="music_playlist_move_track_down">Przenieś utwór w dół</string>
+    <string name="music_playlist_remove_track">Usuń utwór z playlisty</string>
     <string name="loading_location">Pobieranie lokalizacji</string>
     <string name="lack_location_permissions">Brak dostępu do lokalizacji</string>
     <string name="add_sensitive_content_explainer">Dodaje ostrzeżenie o wrażliwych treściach przed wyświetleniem treści. Jest to idealne dla dowolnych treści NSFW lub treści, które niektóre osoby mogą uznać za obraźliwe lub przeszkadzające</string>
@@ -1946,6 +1982,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="cashu_mints">Minty</string>
     <string name="cashu_mint_url">Adres Minta</string>
     <string name="cashu_remove_mint">Usuń Minta</string>
+    <string name="cashu_add_mint">Dodaj mint</string>
     <string name="cashu_history">Historia</string>
     <string name="cashu_edit_wallet">Edytuj portfel</string>
     <string name="cashu_p2pk_section">Klucz Nutzap (zaawansowany)</string>
@@ -1991,6 +2028,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="cashu_settings_edit_wallet">Edytuj szczegóły portfela</string>
     <string name="cashu_settings_edit_wallet_subtitle">Minty, klucz nutzap</string>
     <string name="cashu_settings_my_recommendations">Moje rekomendacje Minta</string>
+    <string name="cashu_settings_recommendations_subtitle">Publicznie rekomenduj minty, którym ufasz, i wycofuj rekomendacje.</string>
     <string name="cashu_settings_no_recommendations">Nie poleciłeś jeszcze żadnego Minta. Kliknij ikonę kciuka w górę obok Minta, aby publicznie go polecić.</string>
     <string name="cashu_settings_delete_recommendation">Usuń rekomendację</string>
     <string name="cashu_settings_delete_confirm_title">Wycofać rekomendację?</string>
@@ -2001,6 +2039,25 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="cashu_settings_restore_running">Skanowanie Mintów…</string>
     <string name="cashu_settings_restore_nothing_found">Nie znaleziono odzyskiwalnych dowodów.</string>
     <string name="cashu_settings_restore_result">Odzyskano %1$s satoszy w ramach %2$s dowodów.</string>
+    <string name="cashu_settings_stop_nutzaps">Zatrzymaj otrzymywanie nutzapów</string>
+    <string name="cashu_settings_stop_nutzaps_subtitle">Wycofaj swój „kind:10019”, aby inni nie mogli już wysyłać Ci „nutzapów”. Twój portfel i saldo pozostaną bez zmian.</string>
+    <string name="cashu_settings_stop_nutzaps_confirm_title">Zatrzymaj otrzymywanie nutzapów?</string>
+    <string name="cashu_settings_stop_nutzaps_confirm_body">Zastąpimy Twoje zdarzenie „nutzap-info” pustym zdarzeniem i zgłosimy prośbę o jego usunięcie. Użytkownicy nie będą już mogli wysyłać Ci „nutzapów”. Możesz ponownie włączyć tę funkcję, edytując swój portfel. Nie ma to wpływu na Twoje saldo.</string>
+    <string name="cashu_settings_recreate_key">Odtwórz klucz nutzap</string>
+    <string name="cashu_settings_recreate_key_subtitle">Wygeneruj zupełnie nowy klucz do odbierania nutzapów. Jest to rzadko konieczne — zazwyczaj tylko wtedy, gdy Twój obecny klucz został ujawniony. Nutzapy wysłane już na Twój stary klucz, ale jeszcze nie zrealizowane, zostaną utracone.</string>
+    <string name="cashu_settings_recreate_key_confirm_title">Odtworzyć klucz Nutzap?</string>
+    <string name="cashu_settings_recreate_key_confirm_body">Zostanie wygenerowany nowy klucz P2PK i opublikowany w twoich wpisach o typach kind:10019 oraz kind:17375, przy zachowaniu dotychczasowych emisji. Nadawcy zaczną przypisywać nutzapy do nowego klucza. Wszelkie nutzapy wysłane już na twój stary klucz, których jeszcze nie zrealizowałeś, staną się nieodwracalnie utracone. Jest to rzadko wymagane.</string>
+    <string name="cashu_settings_recreate_key_action">Odtwórz klucz</string>
+    <string name="cashu_settings_import_key">Importuj klucz Nutzap</string>
+    <string name="cashu_settings_import_key_subtitle">Zastąp swój klucz Nutzap kluczem wklejonym — np. w celu przywrócenia portfela z kopii zapasowej. Jest to rzadko potrzebne. Nutzapy przypisane do starego klucza nie będą już możliwe do zrealizowania.</string>
+    <string name="cashu_settings_import_key_confirm_title">Importować klucz nutzap?</string>
+    <string name="cashu_settings_import_key_confirm_body">Wklej klucz prywatny P2PK (hex), którego chcesz używać do odbierania nutzapów. Twoje kind:10019 i kind:17375 zostaną ponownie opublikowane z tym kluczem, przy zachowaniu dotychczasowych emisji. Nutzapy zablokowane na Twoim obecnym kluczu nie będą już możliwe do zrealizowania, chyba że klucz ten będzie zgodny. Jest to rzadko potrzebne.</string>
+    <string name="cashu_settings_import_key_field">Klucz prywatny P2PK (hex)</string>
+    <string name="cashu_settings_import_key_action">Importuj klucz</string>
+    <string name="cashu_settings_delete_wallet">Usuń portfel</string>
+    <string name="cashu_settings_delete_wallet_subtitle">Usuń portfel i wyłącz usługę Nutzaps. Ewentualne pozostałe środki mogą stać się nieodzyskiwalne.</string>
+    <string name="cashu_settings_delete_wallet_confirm_title">Usunąć ten portfel?</string>
+    <string name="cashu_settings_delete_wallet_confirm_body">Niniejsza operacja powoduje usunięcie Twojego portfela typu:17375 oraz danych dotyczących nutzapów typu:10019. Twoje dowody ecash nie zostaną usunięte z mintów, jednak wraz z utratą klucza do portfela wszelkie pozostałe salda i niewykorzystane nutzapy mogą stać się nieodzyskiwalne. Upewnij się, że najpierw wydałeś lub przeniosłeś swoje środki. Czynności tej nie można cofnąć.</string>
     <string name="cashu_pay_invoice">Opłać fakturę</string>
     <string name="cashu_get_quote">Pobierz ofertę</string>
     <string name="cashu_getting_quote">Proszę Minta o wycenę…</string>
@@ -2019,6 +2076,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="cashu_done">Gotowe</string>
     <string name="cashu_requesting_invoice">Proszę o wystawienie faktury…</string>
     <string name="cashu_waiting_for_payment">Czekam na opłacenie faktury…</string>
+    <string name="cashu_checking_mint">Sprawdzanie minta…</string>
     <string name="cashu_completing_mint">Tworzenie dowodów…</string>
     <string name="cashu_paying_invoice">Płatność przez Mint…</string>
     <string name="cashu_building_token">Wymiana dowodów…</string>
@@ -2993,6 +3051,25 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     </plurals>
     <string name="cashu_pending_quotes_subtitle">Kliknij, aby wznowić i sprawdzić status.</string>
     <string name="cashu_pending_quotes_resume">Wznów</string>
+    <plurals name="cashu_untrusted_mint_title">
+        <item quantity="one">Środki zgromadzone w %1$d mint, z których nie korzystasz</item>
+        <item quantity="few">Środki przechowywane na %1$d mintach, których nie używasz</item>
+        <item quantity="many">Środki przechowywane na %1$d mintach, których nie używasz</item>
+        <item quantity="other">Środki przechowywane na %1$d mintach, których nie używasz</item>
+    </plurals>
+    <string name="cashu_untrusted_mint_subtitle">Te monety pochodzą z serwisu Nutzap. Przenieś je do zaufanego minta lub wypłać do sieci Lightning, aby zapewnić im bezpieczeństwo.</string>
+    <string name="cashu_untrusted_mint_badge">Nie w Twoim portfelu</string>
+    <string name="cashu_untrusted_mint_move">Przenieś</string>
+    <string name="cashu_move_coins_title">Wyprowadź monety</string>
+    <string name="cashu_move_coins_body">%2$s satoszy leżało w mincie, którego nie używasz (%1$s). Przenieś je do bardziej bezpiecznego miejsca.</string>
+    <string name="cashu_move_coins_to_mint">Przenieś do zaufanego minta</string>
+    <string name="cashu_move_coins_move">Przenieś</string>
+    <string name="cashu_move_coins_fee_hint">Z tej transakcji pobierana jest niewielka opłata Lightning, więc może być konieczne wysłanie kwoty nieco niższej niż pełne saldo.</string>
+    <string name="cashu_move_coins_no_trusted">Dodaj mint do swojego portfela, aby przenosić te monety między mintami, lub skorzystaj z poniższych opcji.</string>
+    <string name="cashu_move_coins_withdraw_ln">Wypłać przez sieć Lightning…</string>
+    <string name="cashu_move_coins_export_token">Eksportuj jako token Cashu…</string>
+    <string name="cashu_move_coins_working">Przenoszenie monet…</string>
+    <string name="cashu_move_coins_done">Przeniesiono %1$s do %2$s.</string>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Łączenie</string>
     <string name="event_sync_status_downloading">Pobieranie</string>
@@ -3113,6 +3190,24 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="other">%1$s +%2$d więcej</item>
     </plurals>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
+    <string name="road_event_police">Policja</string>
+    <string name="road_event_speed_camera">Fotoradar</string>
+    <string name="road_event_traffic_jam">Korek</string>
+    <string name="road_event_accident">Wypadek</string>
+    <string name="road_event_road_closure">Droga zamknięta</string>
+    <string name="road_event_construction">Roboty drogowe</string>
+    <string name="road_event_hazard">Zagrożenie</string>
+    <string name="road_event_road_condition">Uszkodzenie nawierzchni</string>
+    <string name="road_event_pothole">Wyboje</string>
+    <string name="road_event_fog">Mgła</string>
+    <string name="road_event_ice">Oblodzenie</string>
+    <string name="road_event_animal">Zwierzęta na drodze</string>
+    <string name="road_event_other">Wydarzenie drogowe</string>
+    <string name="road_event_unknown">Wydarzenie drogowe</string>
+    <string name="road_event_confirmed">Wciąż tam</string>
+    <string name="road_event_denied">Już tam nie ma</string>
+    <string name="road_event_confirms_report">Potwierdzenie zgłoszenia drogowego</string>
+    <string name="road_event_denies_report">Zgłasza, że wypadek został usunięty</string>
     <string name="goal_amount_label">Kwota zbiorki (w satoszach)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Opisz cel zbiórki</string>
