@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
@@ -66,6 +67,10 @@ fun NappletsScreen(
     nav: INav,
 ) {
     val context = LocalContext.current
+
+    // Pull napplet manifests from the user's relays into LocalCache while this screen is open.
+    NappletsFilterAssemblerSubscription(accountViewModel)
+
     val napplets by remember {
         Amethyst.instance.cache.observeEvents<Event>(
             Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND)),

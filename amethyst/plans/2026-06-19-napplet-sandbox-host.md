@@ -225,9 +225,9 @@ Deferred to v2; v1 nails the single-applet boundary first.
 - ✅ **Privacy:** the host routes blob fetches through the user's Tor SOCKS proxy
   when active; the port is passed in by the launcher (main process) so the sandbox
   process never touches the account-bound HTTP stack.
-- **Relay discovery:** `NappletsScreen` reads only what's already in `LocalCache` —
-  no dedicated subscription fetches napplet manifests yet, so the list is empty
-  until one arrives via another feed. A `NappletsFilterAssemblerSubscription` is the
-  next step.
+- ✅ **Relay discovery:** `NappletsFilterAssembler` (registered in
+  `RelaySubscriptionsCoordinator`, invoked by `NappletsScreen`) REQs kinds
+  15129/35129 from the user's read relays while the screen is open, so manifests
+  flow into `LocalCache` for the list to render.
 - **Consent UX:** reuse `commons/.../ui/signing` styling; show the manifest title
   and a per-capability rationale; batch-grant on first run.
