@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -95,14 +96,16 @@ fun ProfileAppRecommendationsScreen(
     // relays so the list below has candidates while this screen is open.
     ProfileAppRecommendationsFilterAssemblerSubscription(accountViewModel)
 
-    // Ticks whenever LocalCache emits a bundle with a new app definition, so
-    // the candidate snapshot below recomputes.
+    // Ticks whenever a new app definition (kind 31990) is inserted into the
+    // cache, so the candidate snapshot below recomputes. observeNewEvents lets
+    // the cache index do the kind narrowing instead of scanning the global
+    // firehose of every new event.
     var appDefinitionsTick by remember { mutableIntStateOf(0) }
     LaunchedEffect(myPubkey) {
         launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect { bundle ->
-                if (bundle.any { it.event is AppDefinitionEvent }) appDefinitionsTick++
-            }
+            LocalCache
+                .observeNewEvents<AppDefinitionEvent>(Filter(kinds = listOf(AppDefinitionEvent.KIND)))
+                .collect { appDefinitionsTick++ }
         }
     }
 
