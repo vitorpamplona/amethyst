@@ -147,6 +147,49 @@ class NotificationFeedFilter(
                 VoiceReplyEvent.KIND,
             ) + ADDRESSABLE_KINDS
 
+        // How deep to walk a public chat reply chain looking for one of the
+        // user's own messages. Bounds the cost on very long threads and the
+        // visited-set guards against malformed cyclic replyTo links.
+        private const val PUBLIC_CHAT_ANCESTOR_SCAN_LIMIT = 30
+
+        /**
+         * Public chats (NIP-28, kind 42) routinely reply to a user without
+         * adding a `p` tag, so the normal mention gate ([Event.isTaggedUser])
+         * misses them. Treat a channel message as "for me" when one of my own
+         * messages appears in its reply chain — a direct reply to my message
+         * (the common case the user described as "the previous message was
+         * mine") or a later message in a thread I'm already part of ("an
+         * active thread"). Reactions/zaps/reposts target via `replyTo` and are
+         * handled by the generic rules below; this is scoped to channel
+         * messages only.
+         *
+         * Cache-only (reads [Note.replyTo] + author, never the account), so the
+         * push dispatcher and the in-app feed can both call it to relax the
+         * p-tag gate without loading the account or decrypting anything.
+         */
+        fun isNotifiablePublicChatReply(
+            note: Note,
+            authorHex: HexKey,
+        ): Boolean {
+            if (note.event !is ChannelMessageEvent) return false
+
+            var scanned = 0
+            val seen = HashSet<HexKey>()
+            val toVisit = ArrayDeque<Note>()
+            note.replyTo?.let { toVisit.addAll(it) }
+
+            while (toVisit.isNotEmpty() && scanned < PUBLIC_CHAT_ANCESTOR_SCAN_LIMIT) {
+                val ancestor = toVisit.removeFirst()
+                if (!seen.add(ancestor.idHex)) continue
+                scanned++
+
+                if (ancestor.author?.pubkeyHex == authorHex) return true
+                ancestor.replyTo?.let { toVisit.addAll(it) }
+            }
+
+            return false
+        }
+
         // Shared with EventNotificationConsumer so push notifications and the
         // in-app feed apply the same per-kind "is this event for me" rule.
         fun tagsAnEventByUser(
@@ -154,6 +197,11 @@ class NotificationFeedFilter(
             authorHex: HexKey,
         ): Boolean {
             val event = note.event
+
+            // Public chat replies into my messages, even without a p-tag.
+            if (isNotifiablePublicChatReply(note, authorHex)) {
+                return true
+            }
 
             if (event is GitIssueEvent || event is GitPatchEvent) {
                 return true
@@ -355,10 +403,20 @@ class NotificationFeedFilter(
         // follow/list modes) also applies the per-kind relevance heuristics.
         val isRawGlobal = followList() is TopFilter.Global
 
+        // Channel messages may reply to one of my messages without a p-tag
+        // (common in NIP-28 clients), so the p-tag gate is OR'd with the
+        // public-chat reply check. tagsAnEventByUser below (also gated for
+        // Selected/follow modes) returns true for exactly the same events, so
+        // unrelated channel chatter never leaks through — even in Global mode,
+        // where it is the only relevance check.
+        val isTaggedOrPublicChatReply =
+            noteEvent?.isTaggedUser(loggedInUserHex) == true ||
+                isNotifiablePublicChatReply(it, loggedInUserHex)
+
         return noteEvent?.kind in NOTIFICATION_KINDS &&
             (noteEvent is LnZapEvent || notifAuthor != loggedInUserHex) &&
             (isChessEvent || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
-            noteEvent?.isTaggedUser(loggedInUserHex) ?: false &&
+            isTaggedOrPublicChatReply &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&
             (isRawGlobal || tagsAnEventByUser(it, loggedInUserHex))

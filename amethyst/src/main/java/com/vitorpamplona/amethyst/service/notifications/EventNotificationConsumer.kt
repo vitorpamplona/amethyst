@@ -174,7 +174,13 @@ class EventNotificationConsumer(
 
                 val accountHex = npubToHexOrNull(savedAccount.npub) ?: return@forEach
                 if (matchingNote != null) {
-                    if (!event.isTaggedUser(accountHex)) return@forEach
+                    // Public chat replies into my messages often omit the `p`
+                    // tag; relax the gate for them (tagsAnEventByUser keeps it
+                    // scoped to messages actually replying to me).
+                    val taggedOrPublicChatReply =
+                        event.isTaggedUser(accountHex) ||
+                            NotificationFeedFilter.isNotifiablePublicChatReply(matchingNote, accountHex)
+                    if (!taggedOrPublicChatReply) return@forEach
                     if (!NotificationFeedFilter.tagsAnEventByUser(matchingNote, accountHex)) return@forEach
                 }
 
@@ -251,12 +257,13 @@ class EventNotificationConsumer(
 
             is CommentEvent -> notify(event, account)
 
+            is ChannelMessageEvent -> notify(event, account)
+
             is PictureEvent,
             is VideoNormalEvent,
             is VideoShortEvent,
             is VideoHorizontalEvent,
             is VideoVerticalEvent,
-            is ChannelMessageEvent,
             is PollEvent,
             is GitPatchEvent,
             is GitIssueEvent,
@@ -863,6 +870,32 @@ class EventNotificationConsumer(
                 ?: event.id
 
         notifyReply(event, account, parentContent, threadRoot)
+    }
+
+    private suspend fun notify(
+        event: ChannelMessageEvent,
+        account: Account,
+    ) {
+        Log.d(TAG, "New Public Chat Message to Notify")
+        // Age + self-author gates run centrally in dispatchForAccount.
+        val note = LocalCache.getNoteIfExists(event.id) ?: return
+
+        // A reply into one of my messages in this channel — even when the
+        // sender didn't p-tag me. Render it as a reply (threaded + inline
+        // reply action) grouped by channel so a busy room collapses into one
+        // notification instead of spamming. Falls back to a plain mention when
+        // I'm only p-tagged (a citation, not a reply to my message).
+        if (NotificationFeedFilter.isNotifiablePublicChatReply(note, account.signer.pubKey)) {
+            val parentContent =
+                note.replyTo
+                    ?.lastOrNull()
+                    ?.event
+                    ?.content
+            val threadRoot = event.channelId() ?: event.id
+            notifyReply(event, account, parentContent, threadRoot)
+        } else {
+            notifyMention(event, account)
+        }
     }
 
     private suspend fun notifyReply(
