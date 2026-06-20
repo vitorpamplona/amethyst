@@ -24,126 +24,137 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import org.json.JSONArray
-import org.json.JSONObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
+import kotlinx.serialization.json.put
 
 /**
  * Marshals the KMP-pure [NappletRequest] / [NappletResponse] types to and from the JSON the
  * applet exchanges over `window.napplet.*`. This is the only place the boundary parses applet
- * input, so it is deliberately strict: unknown ops decode to `null` (the broker rejects them)
- * and a malformed body throws rather than guessing.
+ * input, so it is deliberately strict: an unrecognized `op` decodes to `null` (the broker
+ * rejects it) and a malformed/short body throws (the broker wraps it into a `Failed`).
  *
  * The host process only ever *shuttles* these strings; decoding/encoding happens in the
  * main-process broker so a compromised host cannot fabricate a typed request that skips a field.
+ * Uses kotlinx.serialization (a pure-JVM JSON impl) so it is unit-testable off-device.
  */
 object NappletProtocolJson {
+    private val json = Json { ignoreUnknownKeys = true }
+
     /** Parses an applet request. Returns `null` for an unrecognized `op` so the broker can deny it. */
-    fun decodeRequest(json: String): NappletRequest? {
-        val o = JSONObject(json)
-        return when (o.getString("op")) {
+    fun decodeRequest(jsonText: String): NappletRequest? {
+        val o = json.parseToJsonElement(jsonText).jsonObject
+        return when (o.str("op")) {
             "getPublicKey" -> NappletRequest.GetPublicKey
             "signEvent" ->
                 NappletRequest.SignEvent(
-                    kind = o.getInt("kind"),
-                    tags = decodeTags(o.optJSONArray("tags")),
-                    content = o.optString("content", ""),
+                    kind = o.getValue("kind").jsonPrimitive.int,
+                    tags = decodeTags(o),
+                    content = o.str("content") ?: "",
                 )
-            "nip04Encrypt" -> NappletRequest.Nip04Encrypt(o.getString("peer"), o.getString("plaintext"))
-            "nip04Decrypt" -> NappletRequest.Nip04Decrypt(o.getString("peer"), o.getString("ciphertext"))
-            "nip44Encrypt" -> NappletRequest.Nip44Encrypt(o.getString("peer"), o.getString("plaintext"))
-            "nip44Decrypt" -> NappletRequest.Nip44Decrypt(o.getString("peer"), o.getString("ciphertext"))
-            "publish" -> NappletRequest.Publish(Event.fromJson(o.getJSONObject("event").toString()))
-            "queryEvents" -> NappletRequest.QueryEvents(decodeFilter(o.getJSONObject("filter")))
-            "storageGet" -> NappletRequest.StorageGet(o.getString("key"))
-            "storageSet" -> NappletRequest.StorageSet(o.getString("key"), o.getString("value"))
-            "storageRemove" -> NappletRequest.StorageRemove(o.getString("key"))
-            "payInvoice" -> NappletRequest.PayInvoice(o.getString("invoice"))
+            "nip04Encrypt" -> NappletRequest.Nip04Encrypt(o.req("peer"), o.req("plaintext"))
+            "nip04Decrypt" -> NappletRequest.Nip04Decrypt(o.req("peer"), o.req("ciphertext"))
+            "nip44Encrypt" -> NappletRequest.Nip44Encrypt(o.req("peer"), o.req("plaintext"))
+            "nip44Decrypt" -> NappletRequest.Nip44Decrypt(o.req("peer"), o.req("ciphertext"))
+            "publish" -> NappletRequest.Publish(Event.fromJson(o.getValue("event").jsonObject.toString()))
+            "queryEvents" -> NappletRequest.QueryEvents(decodeFilter(o.getValue("filter").jsonObject))
+            "storageGet" -> NappletRequest.StorageGet(o.req("key"))
+            "storageSet" -> NappletRequest.StorageSet(o.req("key"), o.req("value"))
+            "storageRemove" -> NappletRequest.StorageRemove(o.req("key"))
+            "payInvoice" -> NappletRequest.PayInvoice(o.req("invoice"))
             else -> null
         }
     }
 
-    fun encodeResponse(response: NappletResponse): String {
-        val o = JSONObject()
-        when (response) {
-            is NappletResponse.PublicKey -> {
-                o.put("type", "publicKey")
-                o.put("pubkey", response.pubkey)
+    fun encodeResponse(response: NappletResponse): String =
+        buildJsonObject {
+            when (response) {
+                is NappletResponse.PublicKey -> {
+                    put("type", "publicKey")
+                    put("pubkey", response.pubkey)
+                }
+                is NappletResponse.SignedEvent -> {
+                    put("type", "signedEvent")
+                    put("event", json.parseToJsonElement(response.event.toJson()))
+                }
+                is NappletResponse.Text -> {
+                    put("type", "text")
+                    put("value", response.value)
+                }
+                is NappletResponse.Published -> {
+                    put("type", "published")
+                    put("relays", buildJsonArray { response.relays.forEach { add(it) } })
+                }
+                is NappletResponse.Events -> {
+                    put("type", "events")
+                    put("events", buildJsonArray { response.events.forEach { add(json.parseToJsonElement(it.toJson())) } })
+                }
+                is NappletResponse.StorageValue -> {
+                    put("type", "storageValue")
+                    put("value", response.value)
+                }
+                is NappletResponse.Paid -> {
+                    put("type", "paid")
+                    put("preimage", response.preimage)
+                }
+                is NappletResponse.Done -> {
+                    put("type", "done")
+                }
+                is NappletResponse.Denied -> {
+                    put("type", "denied")
+                    put("capability", response.capability.name)
+                    put("reason", response.reason)
+                }
+                is NappletResponse.Unsupported -> {
+                    put("type", "unsupported")
+                    put("operation", response.operation)
+                }
+                is NappletResponse.Failed -> {
+                    put("type", "failed")
+                    put("reason", response.reason)
+                }
             }
-            is NappletResponse.SignedEvent -> {
-                o.put("type", "signedEvent")
-                o.put("event", JSONObject(response.event.toJson()))
-            }
-            is NappletResponse.Text -> {
-                o.put("type", "text")
-                o.put("value", response.value)
-            }
-            is NappletResponse.Published -> {
-                o.put("type", "published")
-                o.put("relays", JSONArray(response.relays))
-            }
-            is NappletResponse.Events -> {
-                o.put("type", "events")
-                o.put("events", JSONArray(response.events.map { JSONObject(it.toJson()) }))
-            }
-            is NappletResponse.StorageValue -> {
-                o.put("type", "storageValue")
-                o.put("value", response.value ?: JSONObject.NULL)
-            }
-            is NappletResponse.Paid -> {
-                o.put("type", "paid")
-                o.put("preimage", response.preimage ?: JSONObject.NULL)
-            }
-            is NappletResponse.Done -> {
-                o.put("type", "done")
-            }
-            is NappletResponse.Denied -> {
-                o.put("type", "denied")
-                o.put("capability", response.capability.name)
-                o.put("reason", response.reason)
-            }
-            is NappletResponse.Unsupported -> {
-                o.put("type", "unsupported")
-                o.put("operation", response.operation)
-            }
-            is NappletResponse.Failed -> {
-                o.put("type", "failed")
-                o.put("reason", response.reason)
-            }
-        }
-        return o.toString()
-    }
+        }.toString()
 
     /** Parses a standard Nostr filter object (kinds/authors/ids/since/until/limit/search + `#x` tags). */
-    private fun decodeFilter(o: JSONObject): Filter {
-        fun strList(name: String): List<String>? = o.optJSONArray(name)?.let { a -> List(a.length()) { a.getString(it) } }
-
-        fun intList(name: String): List<Int>? = o.optJSONArray(name)?.let { a -> List(a.length()) { a.getInt(it) } }
-
+    private fun decodeFilter(o: JsonObject): Filter {
         val tags = mutableMapOf<String, List<String>>()
-        for (key in o.keys()) {
+        for ((key, value) in o) {
             if (key.startsWith("#") && key.length == 2) {
-                val arr = o.optJSONArray(key) ?: continue
-                tags[key.substring(1)] = List(arr.length()) { arr.getString(it) }
+                tags[key.substring(1)] = value.jsonArray.map { it.jsonPrimitive.content }
             }
         }
 
         return Filter(
-            ids = strList("ids"),
-            authors = strList("authors"),
-            kinds = intList("kinds"),
+            ids = o.strList("ids"),
+            authors = o.strList("authors"),
+            kinds = o["kinds"]?.jsonArray?.map { it.jsonPrimitive.int },
             tags = tags.ifEmpty { null },
-            since = if (o.has("since")) o.getLong("since") else null,
-            until = if (o.has("until")) o.getLong("until") else null,
-            limit = if (o.has("limit")) o.getInt("limit") else null,
-            search = if (o.has("search")) o.getString("search") else null,
+            since = o["since"]?.jsonPrimitive?.long,
+            until = o["until"]?.jsonPrimitive?.long,
+            limit = o["limit"]?.jsonPrimitive?.int,
+            search = o.str("search"),
         )
     }
 
-    private fun decodeTags(array: JSONArray?): Array<Array<String>> {
-        if (array == null) return emptyArray()
-        return Array(array.length()) { i ->
-            val inner = array.getJSONArray(i)
-            Array(inner.length()) { j -> inner.getString(j) }
-        }
+    private fun decodeTags(o: JsonObject): Array<Array<String>> {
+        val tags = o["tags"]?.jsonArray ?: return emptyArray()
+        return tags
+            .map { inner -> inner.jsonArray.map { it.jsonPrimitive.content }.toTypedArray() }
+            .toTypedArray()
     }
+
+    private fun JsonObject.str(key: String): String? = this[key]?.jsonPrimitive?.content
+
+    private fun JsonObject.req(key: String): String = getValue(key).jsonPrimitive.content
+
+    private fun JsonObject.strList(key: String): List<String>? = this[key]?.jsonArray?.map { it.jsonPrimitive.content }
 }
