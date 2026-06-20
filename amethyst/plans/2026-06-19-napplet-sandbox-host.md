@@ -196,9 +196,17 @@ Deferred to v2; v1 nails the single-applet boundary first.
 3. **Broker IPC + `identity` + `relay`** — Messenger broker
    (`NappletBrokerService`), `window.napplet.*` shim, consent UI
    (`NappletConsentActivity`), DataStore ledger. ✅ implemented.
-4. **`value` + `storage` + `net`** capabilities — protocol-defined; broker
-   currently answers `Unsupported`. ⏳ next.
-5. **Inter-applet** (v2). ⏳
+4. **Capabilities beyond identity/publish:**
+   - **`relay` read** — `QueryEvents` one-shot query against `LocalCache`. ✅
+   - **`storage`** — per-applet sandboxed KV store (`DataStoreNappletStorage`). ✅
+   - **`value`/`wallet`** — protocol + `NappletWalletGateway` interface in place;
+     broker answers `Unsupported` until a verified payment path is wired. ⏳
+   - **`net`** — CSP widening to approved origins. ⏳
+5. **Capability enforcement** — the broker refuses any request whose capability is
+   not in the manifest's `requires` (passed host→broker as `declared`), before any
+   consent prompt. ✅
+6. **Live relay query** (vs cache-only), **inter-applet messaging**,
+   **install-style up-front capability grant UI**. ⏳ (v2)
 
 ### Implemented Android components (amethyst `…/napplet/`)
 

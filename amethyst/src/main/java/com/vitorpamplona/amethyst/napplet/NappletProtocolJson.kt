@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.napplet
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -52,6 +53,11 @@ object NappletProtocolJson {
             "nip44Encrypt" -> NappletRequest.Nip44Encrypt(o.getString("peer"), o.getString("plaintext"))
             "nip44Decrypt" -> NappletRequest.Nip44Decrypt(o.getString("peer"), o.getString("ciphertext"))
             "publish" -> NappletRequest.Publish(Event.fromJson(o.getJSONObject("event").toString()))
+            "queryEvents" -> NappletRequest.QueryEvents(decodeFilter(o.getJSONObject("filter")))
+            "storageGet" -> NappletRequest.StorageGet(o.getString("key"))
+            "storageSet" -> NappletRequest.StorageSet(o.getString("key"), o.getString("value"))
+            "storageRemove" -> NappletRequest.StorageRemove(o.getString("key"))
+            "payInvoice" -> NappletRequest.PayInvoice(o.getString("invoice"))
             else -> null
         }
     }
@@ -75,6 +81,21 @@ object NappletProtocolJson {
                 o.put("type", "published")
                 o.put("relays", JSONArray(response.relays))
             }
+            is NappletResponse.Events -> {
+                o.put("type", "events")
+                o.put("events", JSONArray(response.events.map { JSONObject(it.toJson()) }))
+            }
+            is NappletResponse.StorageValue -> {
+                o.put("type", "storageValue")
+                o.put("value", response.value ?: JSONObject.NULL)
+            }
+            is NappletResponse.Paid -> {
+                o.put("type", "paid")
+                o.put("preimage", response.preimage ?: JSONObject.NULL)
+            }
+            is NappletResponse.Done -> {
+                o.put("type", "done")
+            }
             is NappletResponse.Denied -> {
                 o.put("type", "denied")
                 o.put("capability", response.capability.name)
@@ -90,6 +111,32 @@ object NappletProtocolJson {
             }
         }
         return o.toString()
+    }
+
+    /** Parses a standard Nostr filter object (kinds/authors/ids/since/until/limit/search + `#x` tags). */
+    private fun decodeFilter(o: JSONObject): Filter {
+        fun strList(name: String): List<String>? = o.optJSONArray(name)?.let { a -> List(a.length()) { a.getString(it) } }
+
+        fun intList(name: String): List<Int>? = o.optJSONArray(name)?.let { a -> List(a.length()) { a.getInt(it) } }
+
+        val tags = mutableMapOf<String, List<String>>()
+        for (key in o.keys()) {
+            if (key.startsWith("#") && key.length == 2) {
+                val arr = o.optJSONArray(key) ?: continue
+                tags[key.substring(1)] = List(arr.length()) { arr.getString(it) }
+            }
+        }
+
+        return Filter(
+            ids = strList("ids"),
+            authors = strList("authors"),
+            kinds = intList("kinds"),
+            tags = tags.ifEmpty { null },
+            since = if (o.has("since")) o.getLong("since") else null,
+            until = if (o.has("until")) o.getLong("until") else null,
+            limit = if (o.has("limit")) o.getInt("limit") else null,
+            search = if (o.has("search")) o.getString("search") else null,
+        )
     }
 
     private fun decodeTags(array: JSONArray?): Array<Array<String>> {

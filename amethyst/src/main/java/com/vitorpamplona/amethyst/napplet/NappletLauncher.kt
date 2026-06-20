@@ -24,13 +24,14 @@ import android.content.Context
 import android.content.Intent
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 
 /**
  * Opens a napplet/nsite in the sandboxed [NappletHostActivity] (the `:napplet` process). Only
  * the verified manifest data the host needs to render and broker for the applet is passed —
- * the declared `path → hash` map, the Blossom servers, the applet's identity coordinate, and a
- * display title. No account state crosses into the sandbox process.
+ * the declared `path → hash` map, the Blossom servers, the applet's identity coordinate, the
+ * declared capabilities, and a display title. No account state crosses into the sandbox process.
  */
 object NappletLauncher {
     const val EXTRA_PATHS = "napplet_paths"
@@ -41,28 +42,54 @@ object NappletLauncher {
     const val EXTRA_AGGREGATE_HASH = "napplet_aggregate_hash"
     const val EXTRA_TITLE = "napplet_title"
 
+    /** Bare NAP capability domains the manifest declared (empty for a plain nsite). */
+    const val EXTRA_REQUIRES = "napplet_requires"
+
     /** SOCKS proxy port to route blob fetches through, or -1 for a direct connection. */
     const val EXTRA_PROXY_PORT = "napplet_proxy_port"
 
+    /** Opens a NIP-5D napplet, forwarding its declared capabilities to the broker. */
     fun launch(
         context: Context,
         manifest: NappletManifest,
         authorPubKey: HexKey,
         identifier: String,
+    ) = launch(
+        context = context,
+        paths = manifest.paths(),
+        servers = manifest.servers(),
+        authorPubKey = authorPubKey,
+        identifier = identifier,
+        aggregateHash = manifest.declaredAggregateHash() ?: manifest.computeAggregateHash(),
+        title = manifest.title() ?: identifier.ifBlank { "Napplet" },
+        requires = manifest.requires(),
+    )
+
+    /**
+     * Opens any NIP-5A static site (nsite or napplet). [requires] is empty for a plain nsite —
+     * the broker then refuses every capability, so the site renders as inert static content.
+     */
+    fun launch(
+        context: Context,
+        paths: List<PathTag>,
+        servers: List<String>,
+        authorPubKey: HexKey,
+        identifier: String,
+        aggregateHash: HexKey?,
+        title: String,
+        requires: List<String>,
     ) {
-        val pathTags = manifest.paths()
-        // Resolved here in the main process (which knows the user's Tor settings) and passed in,
-        // so the sandbox process never needs the app's account-bound HTTP stack.
         val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
         val intent =
             Intent(context, NappletHostActivity::class.java).apply {
-                putExtra(EXTRA_PATHS, ArrayList(pathTags.map { it.path }))
-                putExtra(EXTRA_HASHES, ArrayList(pathTags.map { it.hash }))
-                putExtra(EXTRA_SERVERS, ArrayList(manifest.servers()))
+                putExtra(EXTRA_PATHS, ArrayList(paths.map { it.path }))
+                putExtra(EXTRA_HASHES, ArrayList(paths.map { it.hash }))
+                putExtra(EXTRA_SERVERS, ArrayList(servers))
                 putExtra(EXTRA_AUTHOR, authorPubKey)
                 putExtra(EXTRA_IDENTIFIER, identifier)
-                putExtra(EXTRA_AGGREGATE_HASH, manifest.declaredAggregateHash() ?: manifest.computeAggregateHash())
-                putExtra(EXTRA_TITLE, manifest.title() ?: identifier.ifBlank { "Napplet" })
+                putExtra(EXTRA_AGGREGATE_HASH, aggregateHash)
+                putExtra(EXTRA_TITLE, title)
+                putExtra(EXTRA_REQUIRES, ArrayList(requires))
                 putExtra(EXTRA_PROXY_PORT, proxyPort)
                 if (context !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }

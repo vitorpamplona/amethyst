@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.napplet.protocol
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 /**
  * A capability request from a napplet, after it has crossed the postMessage + IPC edge
@@ -108,5 +109,41 @@ sealed interface NappletRequest {
         val event: Event,
     ) : NappletRequest {
         override val capability get() = NappletCapability.RELAY
+    }
+
+    /** Read events matching [filter] (from the cache and/or a bounded relay fetch). */
+    data class QueryEvents(
+        val filter: Filter,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.RELAY
+    }
+
+    /** Read a value from this napplet's sandboxed key-value store. */
+    data class StorageGet(
+        val key: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.STORAGE
+    }
+
+    /** Write a value to this napplet's sandboxed key-value store. */
+    data class StorageSet(
+        val key: String,
+        val value: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.STORAGE
+    }
+
+    /** Remove a value from this napplet's sandboxed key-value store. */
+    data class StorageRemove(
+        val key: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.STORAGE
+    }
+
+    /** Pay a BOLT-11 invoice from the user's wallet. */
+    data class PayInvoice(
+        val invoice: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.WALLET
     }
 }

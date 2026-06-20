@@ -26,16 +26,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -56,6 +59,7 @@ fun RenderRootSiteEvent(
     nav: INav,
 ) {
     val event = baseNote.event as? RootSiteEvent ?: return
+    val context = LocalContext.current
 
     RenderStaticWebsite(
         title = event.title(),
@@ -63,6 +67,23 @@ fun RenderRootSiteEvent(
         source = event.source(),
         servers = event.servers(),
         identifier = null,
+        onOpen =
+            if (event.paths().isNotEmpty()) {
+                {
+                    NappletLauncher.launch(
+                        context = context,
+                        paths = event.paths(),
+                        servers = event.servers(),
+                        authorPubKey = event.pubKey,
+                        identifier = "",
+                        aggregateHash = null,
+                        title = event.title() ?: "nsite",
+                        requires = emptyList(),
+                    )
+                }
+            } else {
+                null
+            },
     )
 }
 
@@ -73,6 +94,7 @@ fun RenderNamedSiteEvent(
     nav: INav,
 ) {
     val event = baseNote.event as? NamedSiteEvent ?: return
+    val context = LocalContext.current
 
     RenderStaticWebsite(
         title = event.title(),
@@ -80,6 +102,23 @@ fun RenderNamedSiteEvent(
         source = event.source(),
         servers = event.servers(),
         identifier = event.identifier(),
+        onOpen =
+            if (event.paths().isNotEmpty()) {
+                {
+                    NappletLauncher.launch(
+                        context = context,
+                        paths = event.paths(),
+                        servers = event.servers(),
+                        authorPubKey = event.pubKey,
+                        identifier = event.identifier(),
+                        aggregateHash = null,
+                        title = event.title() ?: event.identifier(),
+                        requires = emptyList(),
+                    )
+                }
+            } else {
+                null
+            },
     )
 }
 
@@ -90,6 +129,7 @@ private fun RenderStaticWebsite(
     source: String?,
     servers: List<String>,
     identifier: String?,
+    onOpen: (() -> Unit)? = null,
 ) {
     Row(
         modifier =
@@ -157,6 +197,15 @@ private fun RenderStaticWebsite(
                             )
                         }
                     }
+                }
+            }
+
+            onOpen?.let {
+                Button(
+                    onClick = it,
+                    modifier = Modifier.fillMaxWidth().padding(top = Size5dp),
+                ) {
+                    Text(stringRes(id = R.string.nsite_open))
                 }
             }
         }

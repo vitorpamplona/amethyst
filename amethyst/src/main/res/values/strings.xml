@@ -2774,6 +2774,7 @@
     <string name="nsite_root_site">Root Site</string>
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
+    <string name="nsite_open">Open</string>
 <string name="existed_since">OTS: %1$s</string>
 
     <string name="ots_info_title">Timestamp Proof</string>

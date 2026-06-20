@@ -23,16 +23,13 @@ package com.vitorpamplona.amethyst.commons.napplet
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 /**
  * Asks the user to decide a capability the napplet does not yet have a standing grant for.
  * The implementation drives the consent UI (on Android, an Activity in the **main** process)
  * and suspends until the user answers. Returning [GrantState.DENY] (or any non-allowing
  * state) blocks the in-flight request.
- *
- * It receives the concrete [request] as well as the [capability] so the prompt can describe
- * exactly what the applet is asking to do (e.g. the kind of event it wants signed), not just
- * the broad capability class.
  */
 fun interface NappletConsentPrompt {
     suspend fun request(
@@ -43,12 +40,49 @@ fun interface NappletConsentPrompt {
 }
 
 /**
- * Bridges the broker to the user's relays for the [NappletCapability.RELAY] capability.
- * Supplied by the host (an OkHttp/NostrClient-backed implementation in `amethyst`); kept as
- * an interface so the broker stays platform-agnostic and testable. A `null` gateway makes the
- * broker answer relay requests with [com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse.Unsupported].
+ * Bridges the broker to the user's relays for the [NappletCapability.RELAY] capability —
+ * publishing the user's events and reading events back. Supplied by the host (an
+ * OkHttp/NostrClient-backed implementation in `amethyst`); kept as an interface so the broker
+ * stays platform-agnostic and testable. A `null` gateway makes the broker answer relay
+ * requests with [com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse.Unsupported].
  */
-fun interface NappletRelayGateway {
+interface NappletRelayGateway {
     /** Publishes [event] and returns the relay URLs that accepted it (empty = nowhere reached). */
     suspend fun publish(event: Event): List<String>
+
+    /** Returns events matching [filter] (e.g. from the local cache and/or a bounded relay fetch). */
+    suspend fun query(filter: Filter): List<Event>
+}
+
+/**
+ * A per-applet sandboxed key-value store for the [NappletCapability.STORAGE] capability. The
+ * broker namespaces every call by the applet's coordinate, so one napplet can never read or
+ * overwrite another's data — and none of it is the app's own storage.
+ */
+interface NappletStorage {
+    suspend fun get(
+        coordinate: String,
+        key: String,
+    ): String?
+
+    suspend fun set(
+        coordinate: String,
+        key: String,
+        value: String,
+    )
+
+    suspend fun remove(
+        coordinate: String,
+        key: String,
+    )
+}
+
+/**
+ * Bridges the broker to the user's wallet for the [NappletCapability.WALLET] capability. A
+ * `null` gateway makes wallet requests answer with `Unsupported` — there is intentionally no
+ * default payment path, since a money-moving bridge must be verified end-to-end before it ships.
+ */
+fun interface NappletWalletGateway {
+    /** Pays a BOLT-11 [invoice] and returns the preimage on success, or `null` if unconfirmed. */
+    suspend fun payInvoice(invoice: String): String?
 }

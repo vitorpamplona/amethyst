@@ -42,6 +42,7 @@ import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.BlobFetcher
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
@@ -76,6 +77,9 @@ class NappletHostActivity : ComponentActivity() {
     private var author: String = ""
     private var identifier: String = ""
     private var aggregateHash: String? = null
+
+    // Capability names (comma-separated) the manifest declared; the broker refuses anything else.
+    private var declared: String = ""
 
     private var proxyPort: Int = -1
     private val http by lazy { buildHttpClient(proxyPort) }
@@ -172,6 +176,10 @@ class NappletHostActivity : ComponentActivity() {
         aggregateHash = intent.getStringExtra(NappletLauncher.EXTRA_AGGREGATE_HASH)
         title = intent.getStringExtra(NappletLauncher.EXTRA_TITLE).orEmpty()
         proxyPort = intent.getIntExtra(NappletLauncher.EXTRA_PROXY_PORT, -1)
+
+        val requires = intent.getStringArrayListExtra(NappletLauncher.EXTRA_REQUIRES) ?: emptyList()
+        declared = resolveRequiredCapabilities(requires).capabilities.joinToString(",") { it.name }
+
         return author.isNotEmpty()
     }
 
@@ -307,6 +315,7 @@ class NappletHostActivity : ComponentActivity() {
                         putString(NappletIpc.KEY_AUTHOR, author)
                         putString(NappletIpc.KEY_IDENTIFIER, identifier)
                         putString(NappletIpc.KEY_AGGREGATE_HASH, aggregateHash)
+                        putString(NappletIpc.KEY_DECLARED, declared)
                     }
             }
 
@@ -410,6 +419,10 @@ class NappletHostActivity : ComponentActivity() {
   function evt(r){ if (r.type === 'signedEvent') return r.event; fail(r); }
   function text(r){ if (r.type === 'text') return r.value; fail(r); }
   function published(r){ if (r.type === 'published') return r.relays; fail(r); }
+  function events(r){ if (r.type === 'events') return r.events; fail(r); }
+  function storageValue(r){ if (r.type === 'storageValue') return r.value; fail(r); }
+  function paid(r){ if (r.type === 'paid') return r.preimage; fail(r); }
+  function done(r){ if (r.type === 'done') return true; fail(r); }
   window.napplet = Object.freeze({
     getPublicKey: function(){ return call({ op: 'getPublicKey' }).then(pubkey); },
     signEvent: function(t){ return call({ op: 'signEvent', kind: t.kind, tags: t.tags || [], content: t.content || '' }).then(evt); },
@@ -417,7 +430,14 @@ class NappletHostActivity : ComponentActivity() {
     nip04Decrypt: function(peer, ciphertext){ return call({ op: 'nip04Decrypt', peer: peer, ciphertext: ciphertext }).then(text); },
     nip44Encrypt: function(peer, plaintext){ return call({ op: 'nip44Encrypt', peer: peer, plaintext: plaintext }).then(text); },
     nip44Decrypt: function(peer, ciphertext){ return call({ op: 'nip44Decrypt', peer: peer, ciphertext: ciphertext }).then(text); },
-    publish: function(ev){ return call({ op: 'publish', event: ev }).then(published); }
+    publish: function(ev){ return call({ op: 'publish', event: ev }).then(published); },
+    queryEvents: function(filter){ return call({ op: 'queryEvents', filter: filter || {} }).then(events); },
+    storage: Object.freeze({
+      get: function(key){ return call({ op: 'storageGet', key: key }).then(storageValue); },
+      set: function(key, value){ return call({ op: 'storageSet', key: key, value: value }).then(done); },
+      remove: function(key){ return call({ op: 'storageRemove', key: key }).then(done); }
+    }),
+    payInvoice: function(invoice){ return call({ op: 'payInvoice', invoice: invoice }).then(paid); }
   });
 })();
 """

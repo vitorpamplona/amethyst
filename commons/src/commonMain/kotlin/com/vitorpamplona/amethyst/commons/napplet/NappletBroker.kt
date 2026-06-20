@@ -33,33 +33,41 @@ import kotlin.coroutines.cancellation.CancellationException
 /**
  * The trust boundary, expressed as code. The broker is the **only** component that holds a
  * [NostrSigner] and turns an untrusted napplet's [NappletRequest] into a [NappletResponse],
- * gating every dangerous operation through the [ledger] (and, when no standing grant exists,
- * the [consentPrompt]). On Android it runs in the main process behind an IPC boundary; the
- * applet's process never sees this object, the signer, or any key material.
+ * gating every dangerous operation through three checks, in order:
  *
- * Security invariants enforced here (not trusted from the applet):
- * - The signing identity is always the host's signer — an applet can never sign or publish as
- *   someone else, and [NappletRequest.SignEvent] sets `created_at` from the host clock.
- * - A response never contains private key bytes (see [NappletResponse]).
- * - Every request is authorized against the ledger before it touches the signer or relays.
+ * 1. **Declaration** — the request's capability must appear in the manifest's `requires`
+ *    (`declared`). An applet cannot use a capability it never asked for up front.
+ * 2. **Ledger** — a standing grant/denial decides without prompting.
+ * 3. **Consent** — when no standing decision exists, the user is asked.
+ *
+ * Security invariants enforced here (never trusted from the applet): the signing identity is
+ * always the host's signer; [NappletRequest.SignEvent] stamps `created_at` from the host clock;
+ * a response never contains private key bytes; storage is namespaced per applet coordinate.
  */
 class NappletBroker(
     private val signer: NostrSigner,
     private val ledger: NappletPermissionLedger,
     private val consentPrompt: NappletConsentPrompt,
     private val relay: NappletRelayGateway? = null,
+    private val storage: NappletStorage? = null,
+    private val wallet: NappletWalletGateway? = null,
 ) {
     /**
-     * Authorizes and runs [request] on behalf of [identity]. Re-throws
-     * [CancellationException] (e.g. the host tore the applet down mid-prompt) and converts any
-     * other failure into [NappletResponse.Failed] — a thrown exception must never cross back to
-     * the applet process carrying host internals.
+     * Authorizes and runs [request] on behalf of [identity]. [declared] is the capability set the
+     * manifest's `requires` resolved to; a request outside it is refused before any prompt.
+     * Re-throws [CancellationException]; converts any other failure into [NappletResponse.Failed]
+     * so host internals never cross back to the applet process.
      */
     suspend fun handle(
         identity: NappletIdentity,
         request: NappletRequest,
+        declared: Set<NappletCapability>,
     ): NappletResponse {
         val capability = request.capability
+
+        if (capability !in declared) {
+            return NappletResponse.Denied(capability, "This napplet did not declare the '${capability.name.lowercase()}' capability.")
+        }
 
         val authorized =
             when (ledger.decide(identity, capability)) {
@@ -76,7 +84,7 @@ class NappletBroker(
         if (!authorized) return NappletResponse.Denied(capability, "The user declined.")
 
         return try {
-            execute(request)
+            execute(identity, request)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -84,7 +92,10 @@ class NappletBroker(
         }
     }
 
-    private suspend fun execute(request: NappletRequest): NappletResponse =
+    private suspend fun execute(
+        identity: NappletIdentity,
+        request: NappletRequest,
+    ): NappletResponse =
         when (request) {
             is NappletRequest.GetPublicKey -> NappletResponse.PublicKey(signer.pubKey)
 
@@ -107,6 +118,33 @@ class NappletBroker(
                 NappletResponse.Text(signer.nip44Decrypt(request.ciphertext, request.peerPubKey))
 
             is NappletRequest.Publish -> publish(request.event)
+
+            is NappletRequest.QueryEvents -> {
+                val gateway = relay ?: return NappletResponse.Unsupported("query")
+                NappletResponse.Events(gateway.query(request.filter))
+            }
+
+            is NappletRequest.StorageGet -> {
+                val store = storage ?: return NappletResponse.Unsupported("storage.get")
+                NappletResponse.StorageValue(store.get(identity.coordinate, request.key))
+            }
+
+            is NappletRequest.StorageSet -> {
+                val store = storage ?: return NappletResponse.Unsupported("storage.set")
+                store.set(identity.coordinate, request.key, request.value)
+                NappletResponse.Done
+            }
+
+            is NappletRequest.StorageRemove -> {
+                val store = storage ?: return NappletResponse.Unsupported("storage.remove")
+                store.remove(identity.coordinate, request.key)
+                NappletResponse.Done
+            }
+
+            is NappletRequest.PayInvoice -> {
+                val gateway = wallet ?: return NappletResponse.Unsupported("payInvoice")
+                NappletResponse.Paid(gateway.payInvoice(request.invoice))
+            }
         }
 
     private suspend fun publish(event: Event): NappletResponse {

@@ -41,4 +41,8 @@ object NappletIpc {
     const val KEY_AUTHOR = "author"
     const val KEY_IDENTIFIER = "identifier"
     const val KEY_AGGREGATE_HASH = "aggregateHash"
+
+    /** Capability names (comma-separated) the manifest's `requires` resolved to. The broker
+     *  refuses any request outside this set, regardless of consent state. */
+    const val KEY_DECLARED = "declared"
 }

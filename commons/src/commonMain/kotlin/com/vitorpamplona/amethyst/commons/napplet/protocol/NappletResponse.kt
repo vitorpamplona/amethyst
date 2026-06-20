@@ -48,6 +48,24 @@ sealed interface NappletResponse {
         val relays: List<String>,
     ) : NappletResponse
 
+    /** Result of a [com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest.QueryEvents]. */
+    data class Events(
+        val events: List<Event>,
+    ) : NappletResponse
+
+    /** Result of a storage read; [value] is null when the key is absent. */
+    data class StorageValue(
+        val value: String?,
+    ) : NappletResponse
+
+    /** Result of a successful invoice payment; [preimage] is null when unconfirmed. */
+    data class Paid(
+        val preimage: String?,
+    ) : NappletResponse
+
+    /** A successful operation with no return value (e.g. a storage write/remove). */
+    data object Done : NappletResponse
+
     /** The user (or a standing DENY) refused the [capability]. */
     data class Denied(
         val capability: NappletCapability,

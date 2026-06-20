@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -64,6 +65,9 @@ class NappletBrokerService : Service() {
 
     // One ledger for the whole service lifetime: persistent grants on disk, session grants in RAM.
     private val ledger by lazy { NappletPermissionLedger(DataStoreNappletPermissionStore(applicationContext)) }
+
+    // Per-applet sandboxed key-value store (namespaced by coordinate inside the impl).
+    private val storage by lazy { DataStoreNappletStorage(applicationContext) }
 
     private val incoming by lazy { Messenger(Handler(Looper.getMainLooper(), ::handleMessage)) }
 
@@ -92,16 +96,25 @@ class NappletBrokerService : Service() {
                 identifier = data.getString(NappletIpc.KEY_IDENTIFIER).orEmpty(),
                 aggregateHash = data.getString(NappletIpc.KEY_AGGREGATE_HASH),
             )
+        val declared = parseDeclared(data.getString(NappletIpc.KEY_DECLARED))
 
         scope.launch {
-            val response = process(identity, payload)
+            val response = process(identity, declared, payload)
             reply(replyTo, requestId, NappletProtocolJson.encodeResponse(response))
         }
         return true
     }
 
+    private fun parseDeclared(value: String?): Set<NappletCapability> =
+        value
+            ?.split(',')
+            ?.mapNotNull { name -> runCatching { NappletCapability.valueOf(name.trim()) }.getOrNull() }
+            ?.toSet()
+            ?: emptySet()
+
     private suspend fun process(
         identity: NappletIdentity,
+        declared: Set<NappletCapability>,
         payload: String,
     ): NappletResponse {
         val request =
@@ -109,7 +122,7 @@ class NappletBrokerService : Service() {
                 ?: return NappletResponse.Failed("Malformed or unsupported request.")
 
         val broker = buildBroker() ?: return NappletResponse.Failed("No account is signed in.")
-        return broker.handle(identity, request)
+        return broker.handle(identity, request, declared)
     }
 
     /** Builds a broker bound to the *currently* signed-in account, so account switches are honored. */
@@ -117,10 +130,16 @@ class NappletBrokerService : Service() {
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return null
 
         val relay =
-            NappletRelayGateway { event: Event ->
-                val relays = account.computeRelayListToBroadcast(event)
-                account.client.publish(event, relays)
-                relays.map { it.url }
+            object : NappletRelayGateway {
+                override suspend fun publish(event: Event): List<String> {
+                    val relays = account.computeRelayListToBroadcast(event)
+                    account.client.publish(event, relays)
+                    return relays.map { it.url }
+                }
+
+                // Reads what the device already knows. The screen-level subscription keeps the
+                // cache warm; arbitrary live relay fetches per applet filter are a follow-up.
+                override suspend fun query(filter: Filter): List<Event> = account.cache.filter(filter).mapNotNull { it.event }
             }
 
         val consent =
@@ -131,7 +150,8 @@ class NappletBrokerService : Service() {
                 )
             }
 
-        return NappletBroker(account.signer, ledger, consent, relay)
+        // wallet is intentionally null: no payment path ships until it is verified end-to-end.
+        return NappletBroker(account.signer, ledger, consent, relay, storage)
     }
 
     private fun consentInfo(
@@ -155,6 +175,10 @@ class NappletBrokerService : Service() {
             is NappletRequest.Nip04Encrypt, is NappletRequest.Nip44Encrypt -> "This napplet wants to encrypt a message as you."
             is NappletRequest.Nip04Decrypt, is NappletRequest.Nip44Decrypt -> "This napplet wants to decrypt a message addressed to you."
             is NappletRequest.Publish -> "This napplet wants to publish an event to your relays."
+            is NappletRequest.QueryEvents -> "This napplet wants to read events from your relays."
+            is NappletRequest.StorageGet, is NappletRequest.StorageSet, is NappletRequest.StorageRemove ->
+                "This napplet wants to use its private storage."
+            is NappletRequest.PayInvoice -> "This napplet wants to pay a Lightning invoice."
         }
 
     private fun reply(
