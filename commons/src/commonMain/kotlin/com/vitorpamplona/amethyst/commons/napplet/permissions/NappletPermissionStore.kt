@@ -41,6 +41,15 @@ interface NappletPermissionStore {
     )
 
     suspend fun clear(coordinate: String)
+
+    /** All persisted grants, keyed by coordinate — used by the permissions-management UI. */
+    suspend fun all(): Map<String, Map<NappletCapability, GrantState>>
+
+    /** Removes a single persisted grant (revoking one capability for one napplet). */
+    suspend fun remove(
+        coordinate: String,
+        capability: NappletCapability,
+    )
 }
 
 /** A thread-safe in-memory [NappletPermissionStore] for tests and ephemeral sessions. */
@@ -66,4 +75,14 @@ class InMemoryNappletPermissionStore : NappletPermissionStore {
             data.remove(coordinate)
             Unit
         }
+
+    override suspend fun all(): Map<String, Map<NappletCapability, GrantState>> = lock.withLock { data.mapValues { it.value.toMap() } }
+
+    override suspend fun remove(
+        coordinate: String,
+        capability: NappletCapability,
+    ) = lock.withLock {
+        data[coordinate]?.remove(capability)
+        Unit
+    }
 }

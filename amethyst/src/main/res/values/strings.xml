@@ -734,6 +734,13 @@
     <string name="software_apps">Apps</string>
     <string name="route_software_apps">Apps</string>
     <string name="napplets">Napplets</string>
+    <string name="napplet_permissions">Napplet permissions</string>
+    <string name="napplet_manage_permissions">Manage permissions</string>
+    <string name="napplet_permissions_empty">No napplet permissions yet</string>
+    <string name="napplet_permissions_empty_subtitle">Permissions you grant to napplets will appear here.</string>
+    <string name="napplet_permissions_forget">Forget this napplet</string>
+    <string name="napplet_permissions_blocked">Blocked</string>
+    <string name="napplet_permissions_revoke">Revoke</string>
     <string name="nip82_repository_label">Source: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Download</string>

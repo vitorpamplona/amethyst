@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -45,9 +46,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.topbars.MyExtensibleTopAppBar
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -78,7 +83,17 @@ fun NappletsScreen(
     }.collectAsStateWithLifecycle(emptyList())
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringResource(R.string.napplets), nav) },
+        topBar = {
+            MyExtensibleTopAppBar(
+                title = { Text(stringResource(R.string.napplets)) },
+                navigationIcon = { IconButton(onClick = { nav.popBack() }) { ArrowBackIcon() } },
+                actions = {
+                    IconButton(onClick = { nav.nav(Route.NappletPermissions) }) {
+                        Icon(MaterialSymbols.Tune, contentDescription = stringResource(R.string.napplet_manage_permissions))
+                    }
+                },
+            )
+        },
     ) { padding ->
         if (napplets.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {

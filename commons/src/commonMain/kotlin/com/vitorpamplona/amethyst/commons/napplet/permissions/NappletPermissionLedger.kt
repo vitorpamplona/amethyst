@@ -88,6 +88,18 @@ class NappletPermissionLedger(
         }
     }
 
+    /** All persisted standing grants, keyed by coordinate — for the permissions-management UI. */
+    suspend fun allPersistedGrants(): Map<String, Map<NappletCapability, GrantState>> = store.all()
+
+    /** Forgets a single capability grant for [identity] — both persisted and in-session. */
+    suspend fun revoke(
+        identity: NappletIdentity,
+        capability: NappletCapability,
+    ) {
+        lock.withLock { session[identity.coordinate]?.remove(capability) }
+        store.remove(identity.coordinate, capability)
+    }
+
     /** Forgets all grants for [identity] — both the persisted and the in-session ones. */
     suspend fun revokeAll(identity: NappletIdentity) {
         lock.withLock { session.remove(identity.coordinate) }

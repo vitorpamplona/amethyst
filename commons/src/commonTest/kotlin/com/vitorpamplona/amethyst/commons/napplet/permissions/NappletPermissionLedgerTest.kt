@@ -109,6 +109,36 @@ class NappletPermissionLedgerTest {
         }
 
     @Test
+    fun allPersistedGrantsListsPersistedDecisionsByCoordinate() =
+        runTest {
+            val ledger = ledger()
+            ledger.record(applet, NappletCapability.IDENTITY, GrantState.ALLOW_ALWAYS)
+            ledger.record(applet, NappletCapability.RELAY, GrantState.DENY)
+            ledger.record(applet, NappletCapability.STORAGE, GrantState.ALLOW_SESSION) // not persisted
+            ledger.record(other, NappletCapability.WALLET, GrantState.DENY)
+
+            val all = ledger.allPersistedGrants()
+            assertEquals(
+                mapOf(NappletCapability.IDENTITY to GrantState.ALLOW_ALWAYS, NappletCapability.RELAY to GrantState.DENY),
+                all[applet.coordinate],
+            )
+            assertEquals(mapOf(NappletCapability.WALLET to GrantState.DENY), all[other.coordinate])
+        }
+
+    @Test
+    fun revokeForgetsOnlyThatCapability() =
+        runTest {
+            val ledger = ledger()
+            ledger.record(applet, NappletCapability.IDENTITY, GrantState.ALLOW_ALWAYS)
+            ledger.record(applet, NappletCapability.RELAY, GrantState.ALLOW_ALWAYS)
+
+            ledger.revoke(applet, NappletCapability.IDENTITY)
+
+            assertEquals(PermissionDecision.ASK, ledger.decide(applet, NappletCapability.IDENTITY))
+            assertEquals(PermissionDecision.ALLOW, ledger.decide(applet, NappletCapability.RELAY))
+        }
+
+    @Test
     fun aggregateHashDoesNotAffectTheLedgerKey() =
         runTest {
             val ledger = ledger()
