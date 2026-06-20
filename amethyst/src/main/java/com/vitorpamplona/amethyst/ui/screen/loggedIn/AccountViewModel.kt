@@ -1747,7 +1747,6 @@ class AccountViewModel(
         nostrGroupId: String,
         url: String,
         imeta: com.vitorpamplona.quartz.nip92IMeta.IMetaTag,
-        caption: String? = null,
     ) {
         val template =
             eventTemplate(

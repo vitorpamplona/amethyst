@@ -44,13 +44,13 @@ class MarmotFileSender(
                     dimensions = upload.dimensions,
                     blurhash = upload.blurhash,
                     thumbhash = upload.thumbhash,
+                    alt = upload.caption,
                 )
 
             accountViewModel.sendMarmotGroupMediaMessage(
                 nostrGroupId = nostrGroupId,
                 url = upload.url,
                 imeta = imeta,
-                caption = upload.caption,
             )
         }
     }

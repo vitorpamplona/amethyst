@@ -20,22 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip31Alts
 
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
-class AltTag {
-    companion object {
-        const val TAG_NAME = "alt"
-
-        fun match(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
-
-        fun parse(tag: Array<String>): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1]
-        }
-
-        fun assemble(altDescriptor: String) = arrayOf(TAG_NAME, altDescriptor)
-    }
-}
+/**
+ * Writes an `alt` tag. The generic NIP-31 "alt" client-hint is deprecated, so do
+ * NOT use this to add a boilerplate description of the event kind. It remains only
+ * for file-metadata events (e.g. NIP-94 kind 1063, NIP-17 encrypted file headers)
+ * where the `alt` tag is the accessibility description of the file itself, and only
+ * when the user actually provided one.
+ */
+fun <T : Event> TagArrayBuilder<T>.alt(altDescriptor: String) = addUnique(AltTag.assemble(altDescriptor))

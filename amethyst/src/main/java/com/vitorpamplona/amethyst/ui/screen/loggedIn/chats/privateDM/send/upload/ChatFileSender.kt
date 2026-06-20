@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
@@ -65,6 +66,11 @@ class ChatFileSender(
                 blurhash = result.fileHeader.blurHash?.blurhash,
                 thumbhash = result.fileHeader.thumbHash?.thumbhash,
             ) {
+                // NIP-94 accessibility description of the file (kept; the deprecated
+                // generic NIP-31 boilerplate alt is not written).
+                if (!caption.isNullOrEmpty()) {
+                    alt(caption)
+                }
                 contentWarningReason?.let { contentWarning(it) }
             },
         )
