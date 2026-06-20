@@ -405,18 +405,18 @@ class NotificationFeedFilter(
 
         // Channel messages may reply to one of my messages without a p-tag
         // (common in NIP-28 clients), so the p-tag gate is OR'd with the
-        // public-chat reply check. tagsAnEventByUser below (also gated for
+        // public-chat reply check. Kept inline (not a pre-computed val) so the
+        // cheap `kind in NOTIFICATION_KINDS` check short-circuits ahead of it —
+        // otherwise the tag scan + reply-chain walk would run on every note in
+        // the cache. Within the OR, the cheaper tag scan runs before the
+        // reply-chain walk. tagsAnEventByUser below (also gated for
         // Selected/follow modes) returns true for exactly the same events, so
         // unrelated channel chatter never leaks through — even in Global mode,
         // where it is the only relevance check.
-        val isTaggedOrPublicChatReply =
-            noteEvent?.isTaggedUser(loggedInUserHex) == true ||
-                isNotifiablePublicChatReply(it, loggedInUserHex)
-
         return noteEvent?.kind in NOTIFICATION_KINDS &&
             (noteEvent is LnZapEvent || notifAuthor != loggedInUserHex) &&
             (isChessEvent || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
-            isTaggedOrPublicChatReply &&
+            (noteEvent?.isTaggedUser(loggedInUserHex) == true || isNotifiablePublicChatReply(it, loggedInUserHex)) &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&
             (isRawGlobal || tagsAnEventByUser(it, loggedInUserHex))
