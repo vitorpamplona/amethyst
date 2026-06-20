@@ -706,6 +706,8 @@
     <string name="workout_sets">Sets</string>
     <string name="workout_reps">Reps</string>
     <string name="workout_weight">Weight</string>
+    <string name="workout_exercises">Exercises</string>
+    <string name="workout_volume">Volume</string>
     <string name="workout_notes">Notes</string>
     <string name="workout_hours">Hours</string>
     <string name="workout_minutes">Minutes</string>
@@ -731,6 +733,9 @@
     <string name="exercise_meditation">Meditation</string>
     <string name="exercise_diet">Diet</string>
     <string name="exercise_fasting">Fasting</string>
+    <string name="exercise_circuit">Circuit</string>
+    <string name="exercise_emom">EMOM</string>
+    <string name="exercise_amrap">AMRAP</string>
     <string name="software_apps">Apps</string>
     <string name="route_software_apps">Apps</string>
     <string name="nip82_repository_label">Source: %1$s</string>

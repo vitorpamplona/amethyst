@@ -26,7 +26,9 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DistanceTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DurationTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ElevationGainTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ElevationLossTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseSetTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.MaxHeartRateTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.RepsTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SetsTag
@@ -35,7 +37,11 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SplitTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.StepsTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.TitleTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WeightTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutCompletedTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutEndTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutStartTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutStartTimeTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutTypeTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
 fun TagArray.title() = firstNotNullOfOrNull(TitleTag::parse)
@@ -71,3 +77,23 @@ fun TagArray.weight() = firstNotNullOfOrNull(WeightTag::parse)
 fun TagArray.workoutSource() = firstNotNullOfOrNull(SourceTag::parse)
 
 fun TagArray.workoutStartTime() = firstNotNullOfOrNull(WorkoutStartTimeTag::parse)
+
+// --- POWR / NIP-101e strength dialect ---
+
+fun TagArray.workoutTypeCode() = firstNotNullOfOrNull(WorkoutTypeTag::parse)
+
+fun TagArray.workoutType() = workoutTypeCode()?.let(ExerciseType::parse)
+
+fun TagArray.workoutStart() = firstNotNullOfOrNull(WorkoutStartTag::parse)
+
+fun TagArray.workoutEnd() = firstNotNullOfOrNull(WorkoutEndTag::parse)
+
+fun TagArray.workoutCompleted() = firstNotNullOfOrNull(WorkoutCompletedTag::parse)
+
+fun TagArray.exerciseSets() = mapNotNull(ExerciseSetTag::parse)
+
+/** The client name from a `["client", name, ...]` tag (RUNSTR and POWR both emit this). */
+fun TagArray.clientName() =
+    firstNotNullOfOrNull { tag ->
+        if (tag.size > 1 && tag[0] == "client" && tag[1].isNotEmpty()) tag[1] else null
+    }

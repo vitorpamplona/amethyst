@@ -87,6 +87,38 @@ class WorkoutRecordEvent(
 
     fun workoutStartTime() = tags.workoutStartTime()
 
+    // --- POWR / NIP-101e strength dialect ---
+
+    fun workoutTypeCode() = tags.workoutTypeCode()
+
+    fun workoutType() = tags.workoutType()
+
+    fun workoutStart() = tags.workoutStart()
+
+    fun workoutEnd() = tags.workoutEnd()
+
+    fun workoutCompleted() = tags.workoutCompleted()
+
+    fun exerciseSets() = tags.exerciseSets()
+
+    fun exerciseGroups() = groupExerciseSets(exerciseSets())
+
+    fun client() = tags.clientName()
+
+    /** Activity type, preferring the POWR `type` tag and falling back to the RUNSTR `exercise` verb. */
+    fun activityType() = workoutType() ?: exerciseType()
+
+    /**
+     * Duration in seconds: the explicit `duration` tag if present (RUNSTR),
+     * otherwise derived from the POWR `start`/`end` session timestamps.
+     */
+    fun effectiveDurationSeconds(): Long? {
+        durationSeconds()?.let { return it }
+        val start = workoutStart()
+        val end = workoutEnd()
+        return if (start != null && end != null && end > start) end - start else null
+    }
+
     companion object {
         const val KIND = 1301
         const val ALT_DESCRIPTION = "Workout record"
