@@ -189,9 +189,12 @@ fun RenderSoftwareApplication(
 
 /**
  * Looks up the latest NIP-82 [SoftwareReleaseEvent] for [app] from
- * [LocalCache] and exposes the version string. Recomputes on event identity
- * change; relay-driven recompositions of the surrounding feed will pick up
- * newer releases via re-keying.
+ * [LocalCache] and exposes the version string. Releases (kind 30063) are
+ * separate events that point back to the app via an `i` tag, so they are not
+ * indexed as replies to the app note and never ping its flows. We therefore
+ * re-scan on every [LocalCache.live] new-event bundle so a newer release that
+ * arrives while the card is visible updates the version chip without a manual
+ * refresh.
  */
 @Composable
 fun produceLatestReleaseVersion(app: SoftwareApplicationEvent) =
@@ -200,6 +203,16 @@ fun produceLatestReleaseVersion(app: SoftwareApplicationEvent) =
             withContext(Dispatchers.Default) {
                 findLatestNip82Release(app)?.version()
             }
+
+        LocalCache.live.newEventBundles.collect {
+            val newVersion =
+                withContext(Dispatchers.Default) {
+                    findLatestNip82Release(app)?.version()
+                }
+            if (newVersion != value) {
+                value = newVersion
+            }
+        }
     }
 
 fun findLatestNip82Release(app: SoftwareApplicationEvent): SoftwareReleaseEvent? {
