@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -43,6 +44,7 @@ import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -790,5 +792,36 @@ object NotificationUtils {
     /** Cancels all notifications. */
     fun NotificationManager.cancelNotifications() {
         cancelAll()
+    }
+
+    /**
+     * Dismisses the tray notification posted for [eventId] — used to auto-clear a
+     * notification once the user reads the underlying event in-app.
+     *
+     * Per-event notifications are keyed by `id.hashCode()` (see [sendNotification]
+     * and [sendDMNotificationStyled]), so hashing the same event id targets exactly
+     * the notification posted for it. Cancelling an id that isn't currently shown is
+     * a harmless no-op. After removing the child, any group summary left without
+     * children is cancelled too so the tray doesn't keep an empty summary around.
+     */
+    fun NotificationManager.dismissNotificationForEvent(eventId: HexKey) {
+        val notId = eventId.hashCode()
+
+        // Most events the user reads never had a tray notification (regular feed
+        // items), so bail out before touching anything when nothing is posted for it.
+        if (activeNotifications.none { it.id == notId }) return
+
+        cancel(notId)
+        cancelChildlessGroupSummaries()
+    }
+
+    private fun NotificationManager.cancelChildlessGroupSummaries() {
+        val active = activeNotifications
+        for (summary in active) {
+            if (summary.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0) continue
+            val group = summary.notification.group ?: continue
+            val hasChildren = active.any { it.id != summary.id && it.notification.group == group }
+            if (!hasChildren) cancel(summary.id)
+        }
     }
 }
