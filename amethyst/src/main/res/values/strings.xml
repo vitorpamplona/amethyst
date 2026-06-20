@@ -1281,6 +1281,8 @@
 
     <string name="split_notifications_setting_title">Split notifications by Follows</string>
     <string name="split_notifications_setting_description">Show two notification tabs — Following (people you follow) and Everyone. The unread indicator glows only for activity from people you follow.</string>
+    <string name="show_messages_in_notifications_setting_title">Show Messages</string>
+    <string name="show_messages_in_notifications_setting_description">Include direct and group messages on the Notification tab. Turn off to keep messages only in the Messages tab.</string>
     <string name="notification_tab_following">Following</string>
     <string name="notification_tab_everyone">Everyone</string>
 

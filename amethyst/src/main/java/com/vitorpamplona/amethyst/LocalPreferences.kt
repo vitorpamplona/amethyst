@@ -152,6 +152,7 @@ private object PrefKeys {
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
     const val ALWAYS_ON_NOTIFICATION_SERVICE = "always_on_notification_service"
     const val SPLIT_NOTIFICATIONS_ENABLED = "split_notifications_enabled"
+    const val SHOW_MESSAGES_IN_NOTIFICATIONS = "show_messages_in_notifications"
 
     // One-shot stamp: set once an account has gone through the notifications
     // Global -> Selected (Curated) migration (or was created after it shipped).
@@ -467,6 +468,7 @@ object LocalPreferences {
                     putBoolean(PrefKeys.CALLS_ENABLED, settings.callsEnabled.value)
                     putBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, settings.alwaysOnNotificationService.value)
                     putBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, settings.splitNotificationsEnabled.value)
+                    putBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, settings.showMessagesInNotifications.value)
                     // Any account that reaches a save has its notification filter in its
                     // post-split meaning, so stamp it as migrated. This keeps the one-shot
                     // Global -> Selected rewrite from ever touching it again and preserves a
@@ -582,6 +584,7 @@ object LocalPreferences {
                     val callsEnabled = getBoolean(PrefKeys.CALLS_ENABLED, true)
                     val alwaysOnNotificationService = getBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, false)
                     val splitNotificationsEnabled = getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)
+                    val showMessagesInNotifications = getBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, true)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
                     val dismissedPollNoteIds = getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null) ?: setOf()
                     val viewedPollResultNoteIdsStr = getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)
@@ -742,6 +745,7 @@ object LocalPreferences {
                         hideNIP17WarningDialog = hideNIP17WarningDialog,
                         alwaysOnNotificationService = MutableStateFlow(alwaysOnNotificationService),
                         splitNotificationsEnabled = MutableStateFlow(splitNotificationsEnabled),
+                        showMessagesInNotifications = MutableStateFlow(showMessagesInNotifications),
                         backupUserMetadata = latestUserMetadata.await(),
                         backupContactList = latestContactList.await(),
                         backupNIP65RelayList = latestNip65RelayList.await(),
