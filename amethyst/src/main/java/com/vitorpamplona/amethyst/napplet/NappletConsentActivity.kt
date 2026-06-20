@@ -111,10 +111,12 @@ private fun NappletConsentDialog(
         },
         confirmButton = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                TextButton(
-                    onClick = { onDecision(GrantState.ALLOW_ALWAYS) },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                ) { Text("Always allow") }
+                if (info.allowAlways) {
+                    TextButton(
+                        onClick = { onDecision(GrantState.ALLOW_ALWAYS) },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                    ) { Text("Always allow") }
+                }
                 TextButton(
                     onClick = { onDecision(GrantState.ALLOW_ONCE) },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),

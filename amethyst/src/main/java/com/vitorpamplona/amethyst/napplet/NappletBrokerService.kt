@@ -221,13 +221,20 @@ class NappletBrokerService : Service() {
             coordinate = identity.coordinate,
             capabilityLabel = capability.name.lowercase(),
             operationSummary = summaryFor(request),
+            allowAlways = capability.canGrantAlways,
         )
     }
 
     private fun summaryFor(request: NappletRequest): String =
         when (request) {
             is NappletRequest.GetPublicKey -> "This napplet wants to read your public key."
-            is NappletRequest.SignEvent -> "This napplet wants to sign an event (kind ${request.kind}) as you."
+            is NappletRequest.SignEvent -> {
+                val preview = request.content.take(160).trim()
+                buildString {
+                    append("This napplet wants to sign a kind ${request.kind} event as you")
+                    if (preview.isNotEmpty()) append(":\n“$preview”") else append(".")
+                }
+            }
             is NappletRequest.Nip04Encrypt, is NappletRequest.Nip44Encrypt -> "This napplet wants to encrypt a message as you."
             is NappletRequest.Nip04Decrypt, is NappletRequest.Nip44Decrypt -> "This napplet wants to decrypt a message addressed to you."
             is NappletRequest.Publish -> "This napplet wants to publish an event to your relays."

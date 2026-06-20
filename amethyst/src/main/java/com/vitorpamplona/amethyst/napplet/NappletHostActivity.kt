@@ -156,6 +156,25 @@ class NappletHostActivity : ComponentActivity() {
         webView.loadUrl(SHELL_URL)
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (this::webView.isInitialized) {
+            webView.onResume()
+            webView.resumeTimers()
+        }
+    }
+
+    override fun onPause() {
+        // Foreground-only: stop the applet's JS/timers in the background so it cannot fire a
+        // sign/decrypt/pay request whose consent prompt would surface over (and be confused with)
+        // Amethyst's own UI. Requests only happen while the user is looking at this napplet.
+        if (this::webView.isInitialized) {
+            webView.onPause()
+            webView.pauseTimers()
+        }
+        super.onPause()
+    }
+
     override fun onDestroy() {
         runCatching { unbindService(brokerConnection) }
         if (this::webView.isInitialized) {

@@ -46,6 +46,22 @@ enum class NappletCapability {
     NET,
     ;
 
+    /**
+     * Whether the user must confirm **every single use** of this capability — i.e. no standing
+     * auto-approval is ever honored or offered. True for [WALLET]: a payment always prompts, with
+     * the amount shown, so an applet can never silently move money.
+     */
+    val requiresPerUseConsent: Boolean
+        get() = this == WALLET
+
+    /** Whether a persistent "always allow" grant may be offered for, and kept for, this capability. */
+    val canGrantAlways: Boolean
+        get() = !requiresPerUseConsent
+
+    /** Whether a session-long allow may be kept for this capability. */
+    val canGrantSession: Boolean
+        get() = !requiresPerUseConsent
+
     companion object {
         /**
          * Maps a bare NAP domain (e.g. `identity`, `relay`, `storage`) to the capability the

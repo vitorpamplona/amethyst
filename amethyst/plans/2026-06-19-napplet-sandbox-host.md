@@ -143,6 +143,24 @@ Consent UI reuses the signer-prompt design
 (`amethyst/plans/2026-05-25-appfunctions-signer-prompts.md`) and
 `commons/.../ui/signing`.
 
+### Capability-aware consent policy
+
+The uniform "once / session / always / deny" is refined per capability:
+
+- **Payments (`WALLET`)** — `requiresPerUseConsent = true`: every `payInvoice`
+  re-prompts with the decoded sats amount; the dialog never offers "Always allow"
+  and a stray always/session grant is downgraded to one-shot so nothing persists.
+- **Identity (`IDENTITY`)** — gated by us **only when Amethyst holds the key**
+  (`NostrSignerInternal`). For remote (NIP-46) / external (NIP-55) signers the
+  broker defers to the signer's own per-request consent (no double-prompt), while
+  still honoring a standing per-napplet `DENY` and the `requires` declaration. The
+  sign prompt shows a kind + content preview.
+- **Foreground-only execution** — the napplet WebView's JS/timers are paused when
+  the host isn't resumed (`onPause`/`onResume`), so a backgrounded applet cannot
+  fire a sign/decrypt/pay request whose prompt would surface over — and be
+  confused with — Amethyst's own UI. This is the precondition that makes deferring
+  identity to an external signer safe.
+
 ## Module placement
 
 - **`quartz`** — protocol done. (Optional later: a canonical `NapDomain` constant

@@ -23,14 +23,19 @@ package com.vitorpamplona.amethyst.commons.napplet
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.napplet.permissions.PermissionDecision
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -78,6 +83,60 @@ class NappletBrokerTest {
         override suspend fun query(filter: Filter): List<Event> = queryResult
     }
 
+    private class RecordingWallet(
+        private val preimage: String? = "preimage",
+    ) : NappletWalletGateway {
+        var calls = 0
+            private set
+
+        override suspend fun payInvoice(invoice: String): String? {
+            calls++
+            return preimage
+        }
+    }
+
+    /** A non-internal signer that stands in for a remote (NIP-46) / external (NIP-55) signer. */
+    private class FakeExternalSigner(
+        pubKey: HexKey,
+    ) : NostrSigner(pubKey) {
+        override fun isWriteable() = true
+
+        override suspend fun <T : Event> sign(
+            createdAt: Long,
+            kind: Int,
+            tags: Array<Array<String>>,
+            content: String,
+        ): T = throw NotImplementedError()
+
+        override suspend fun nip04Encrypt(
+            plaintext: String,
+            toPublicKey: HexKey,
+        ): String = throw NotImplementedError()
+
+        override suspend fun nip04Decrypt(
+            ciphertext: String,
+            fromPublicKey: HexKey,
+        ): String = throw NotImplementedError()
+
+        override suspend fun nip44Encrypt(
+            plaintext: String,
+            toPublicKey: HexKey,
+        ): String = throw NotImplementedError()
+
+        override suspend fun nip44Decrypt(
+            ciphertext: String,
+            fromPublicKey: HexKey,
+        ): String = throw NotImplementedError()
+
+        override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = throw NotImplementedError()
+
+        override suspend fun deriveKey(nonce: HexKey): HexKey = throw NotImplementedError()
+
+        override suspend fun signPsbt(psbtHex: String): String = throw NotImplementedError()
+
+        override fun hasForegroundSupport() = true
+    }
+
     private class MapStorage : NappletStorage {
         val data = mutableMapOf<String, String>()
 
@@ -111,8 +170,10 @@ class NappletBrokerTest {
         prompt: NappletConsentPrompt,
         relay: NappletRelayGateway? = null,
         storage: NappletStorage? = null,
+        wallet: NappletWalletGateway? = null,
+        signer: NostrSigner = this.signer,
         ledger: NappletPermissionLedger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
-    ) = NappletBroker(signer, ledger, prompt, relay, storage)
+    ) = NappletBroker(signer, ledger, prompt, relay, storage, wallet)
 
     @Test
     fun getPublicKeyReturnsTheUsersKeyWhenAllowed() =
@@ -278,5 +339,49 @@ class NappletBrokerTest {
                     .handle(applet, NappletRequest.PayInvoice("lnbc1..."), allDeclared)
             assertIs<NappletResponse.Unsupported>(response)
             assertNull((response as? NappletResponse.Paid)?.preimage)
+        }
+
+    @Test
+    fun walletConfirmsEveryPaymentEvenAfterAllowAlways() =
+        runTest {
+            val prompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS) // user keeps tapping "always"
+            val wallet = RecordingWallet()
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore())
+            val broker = broker(prompt, wallet = wallet, ledger = ledger)
+
+            broker.handle(applet, NappletRequest.PayInvoice("lnbc1"), allDeclared)
+            broker.handle(applet, NappletRequest.PayInvoice("lnbc1"), allDeclared)
+
+            assertEquals(2, prompt.calls) // every payment prompts
+            assertEquals(2, wallet.calls)
+            // ALLOW_ALWAYS must not have been persisted for a per-use capability.
+            assertEquals(PermissionDecision.ASK, ledger.decide(applet, NappletCapability.WALLET))
+        }
+
+    @Test
+    fun externalSignerDefersIdentityWithoutPrompting() =
+        runTest {
+            val prompt = ScriptedPrompt(GrantState.DENY) // would block if we asked
+            val external = FakeExternalSigner("dd".repeat(32))
+
+            val response =
+                broker(prompt, signer = external).handle(applet, NappletRequest.GetPublicKey, allDeclared)
+
+            assertEquals(NappletResponse.PublicKey(external.pubKey), response)
+            assertEquals(0, prompt.calls) // deferred to the external signer; we did not prompt
+        }
+
+    @Test
+    fun externalSignerStillHonorsAStandingDeny() =
+        runTest {
+            val external = FakeExternalSigner("dd".repeat(32))
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore())
+            ledger.record(applet, NappletCapability.IDENTITY, GrantState.DENY)
+
+            val response =
+                broker(ScriptedPrompt(GrantState.ALLOW_ONCE), signer = external, ledger = ledger)
+                    .handle(applet, NappletRequest.GetPublicKey, allDeclared)
+
+            assertIs<NappletResponse.Denied>(response)
         }
 }
