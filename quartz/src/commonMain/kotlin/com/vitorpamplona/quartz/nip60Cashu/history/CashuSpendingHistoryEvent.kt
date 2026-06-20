@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -110,7 +109,6 @@ class CashuSpendingHistoryEvent(
 
     companion object {
         const val KIND = 7376
-        const val ALT_DESCRIPTION = "Cashu spending history"
 
         suspend fun build(
             direction: SpendingDirection,
@@ -121,7 +119,6 @@ class CashuSpendingHistoryEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CashuSpendingHistoryEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             // Unencrypted "e" tags for redeemed markers
             tokenReferences
                 .filter { it.marker == TokenReference.MARKER_REDEEMED }

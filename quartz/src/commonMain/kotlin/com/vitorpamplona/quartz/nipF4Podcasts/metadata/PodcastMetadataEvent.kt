@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags.AuthorTag
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags.DescriptionTag
@@ -76,7 +75,6 @@ class PodcastMetadataEvent(
 
     companion object {
         const val KIND = 10154
-        const val ALT_DESCRIPTION = "Podcast metadata"
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
 
@@ -91,8 +89,6 @@ class PodcastMetadataEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<PodcastMetadataEvent>.() -> Unit = {},
         ) = eventTemplate<PodcastMetadataEvent>(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
-
             title(title)
             image(image)
             description(description)

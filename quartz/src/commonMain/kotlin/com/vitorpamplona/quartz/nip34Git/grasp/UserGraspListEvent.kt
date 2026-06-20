@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.grasp.tags.GraspTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -55,7 +54,6 @@ class UserGraspListEvent(
 
     companion object {
         const val KIND = 10317
-        const val ALT = "Preferred grasp servers for Git over Nostr"
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
@@ -64,7 +62,6 @@ class UserGraspListEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<UserGraspListEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             grasps.forEach { add(GraspTag.assemble(it)) }
             initializer()
         }
@@ -74,7 +71,6 @@ class UserGraspListEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<UserGraspListEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             grasps.forEach { add(GraspTag.assemble(it)) }
             initializer()
         }

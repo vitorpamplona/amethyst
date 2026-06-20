@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.inviteCode
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -45,7 +44,6 @@ class JoinRequestEvent(
 
     companion object {
         const val KIND = 9021
-        const val ALT_DESCRIPTION = "Group join request"
 
         fun build(
             groupId: String,
@@ -54,7 +52,6 @@ class JoinRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<JoinRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, reason, createdAt) {
-            alt(ALT_DESCRIPTION)
             groupId(groupId)
             inviteCode?.let { inviteCode(it) }
             initializer()

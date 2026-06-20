@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -48,7 +47,6 @@ class NutzapInfoEvent(
 
     companion object {
         const val KIND = 10019
-        const val ALT_DESCRIPTION = "Nutzap receiving preferences"
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, BaseReplaceableEvent.FIXED_D_TAG)
 
@@ -59,7 +57,6 @@ class NutzapInfoEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NutzapInfoEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             mints(mints)
             relays(relays)
             p2pkPubkey(p2pkPubkey)
@@ -67,8 +64,8 @@ class NutzapInfoEvent(
         }
 
         /**
-         * Build an empty kind:10019 — no mints, no relays, no P2PK pubkey,
-         * just the alt tag. Publishing this replaces a prior nutzap-info
+         * Build an empty kind:10019 — no mints, no relays, no P2PK pubkey.
+         * Publishing this replaces a prior nutzap-info
          * event and signals to other clients that this user no longer
          * advertises any way to receive nutzaps: a reader has no shared mint
          * and no pubkey to lock proofs against, so it cannot build a nutzap.
@@ -81,7 +78,6 @@ class NutzapInfoEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NutzapInfoEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

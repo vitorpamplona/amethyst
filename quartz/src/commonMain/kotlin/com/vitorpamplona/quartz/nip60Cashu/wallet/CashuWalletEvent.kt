@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -72,7 +71,6 @@ class CashuWalletEvent(
 
     companion object {
         const val KIND = 17375
-        const val ALT_DESCRIPTION = "Cashu wallet"
         const val FIXED_D_TAG = ""
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
@@ -84,7 +82,6 @@ class CashuWalletEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CashuWalletEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             initializer()
         }.let { template ->
             val privateTags =

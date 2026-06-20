@@ -39,7 +39,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -92,7 +91,6 @@ class MusicPlaylistEvent(
 
     companion object {
         const val KIND = 34139
-        const val ALT_DESCRIPTION_PREFIX = "Playlist"
         const val CATEGORY_TAG = "playlist"
 
         @OptIn(ExperimentalUuidApi::class)
@@ -111,7 +109,6 @@ class MusicPlaylistEvent(
             initializer: TagArrayBuilder<MusicPlaylistEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
             dTag(dTag)
-            alt("$ALT_DESCRIPTION_PREFIX: $title")
 
             title(title)
             hashtag(CATEGORY_TAG)
@@ -172,7 +169,6 @@ class MusicPlaylistEvent(
             val newTags =
                 earlierVersion.tags.builder<MusicPlaylistEvent> {
                     title(title)
-                    alt("$ALT_DESCRIPTION_PREFIX: $title")
                     setOrRemove(image, ImageTag.TAG_NAME, ::image)
                     setOrRemove(description, DescriptionTag.TAG_NAME, ::description)
 

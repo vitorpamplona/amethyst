@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteAggregateHash
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteDescription
@@ -59,7 +58,6 @@ class NamedNappletEvent(
 
     companion object {
         const val KIND = 35129
-        const val ALT_DESCRIPTION = "Named Napplet"
 
         fun build(
             identifier: String,
@@ -72,7 +70,6 @@ class NamedNappletEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NamedNappletEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(identifier)
             sitePaths(paths)
             siteAggregateHash(paths)

@@ -35,7 +35,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.StatusTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -63,8 +62,6 @@ class InteractiveStoryReadingStateEvent(
 
     companion object {
         const val KIND = 30298
-        const val ALT1 = "Interactive Story Reading state"
-        const val ALT2 = "The reading state of "
 
         fun createAddress(
             pubKey: HexKey,
@@ -125,7 +122,6 @@ class InteractiveStoryReadingStateEvent(
                 }
 
             dTag(rootTag.toTag())
-            alt(root.event.title()?.let { ALT2 + it } ?: ALT1)
 
             rootScene(rootTag)
             currentScene(sceneTag)

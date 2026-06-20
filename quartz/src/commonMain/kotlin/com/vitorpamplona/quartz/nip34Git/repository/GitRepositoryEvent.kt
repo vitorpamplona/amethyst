@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.repository.tags.CloneTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.EucTag
@@ -94,7 +93,6 @@ class GitRepositoryEvent(
 
     companion object {
         const val KIND = 30617
-        const val ALT_DESCRIPTION = "Git Repository"
         const val PERSONAL_FORK = "personal-fork"
 
         @OptIn(ExperimentalUuidApi::class)
@@ -107,7 +105,6 @@ class GitRepositoryEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GitRepositoryEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(dTag)
             name(name)
             description?.let { description(it) }
@@ -131,7 +128,6 @@ class GitRepositoryEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GitRepositoryEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(dTag)
             name(name)
             description?.let { description(it) }

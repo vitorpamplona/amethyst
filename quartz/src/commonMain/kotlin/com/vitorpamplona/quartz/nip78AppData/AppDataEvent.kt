@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -52,7 +51,6 @@ class AppDataEvent(
 
     companion object {
         const val KIND = 78
-        const val ALT = "Arbitrary app data"
 
         fun build(
             content: String,
@@ -60,7 +58,6 @@ class AppDataEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<AppDataEvent>.() -> Unit = {},
         ) = eventTemplate<AppDataEvent>(KIND, content, createdAt) {
-            alt(ALT)
             dTag?.let { addUnique(DTag.assemble(it)) }
             initializer()
         }

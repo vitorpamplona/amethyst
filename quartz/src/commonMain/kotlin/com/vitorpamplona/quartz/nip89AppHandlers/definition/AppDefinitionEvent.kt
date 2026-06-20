@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.tags.PlatformLinkTag
@@ -119,7 +118,6 @@ class AppDefinitionEvent(
 
     companion object {
         const val KIND = 31990
-        const val ALT_DESCRIPTION = "App definition event"
 
         // ["web", "https://..../a/<bech32>", "nevent"]
         class PlatformLink(
@@ -141,7 +139,6 @@ class AppDefinitionEvent(
             initializer: TagArrayBuilder<AppDefinitionEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, details.toJson(), createdAt) {
             dTag(dTag)
-            alt(ALT_DESCRIPTION)
             kinds(supportedKinds)
             links(links)
             initializer()

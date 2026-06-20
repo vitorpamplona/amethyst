@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -45,11 +44,9 @@ open class BaseVoiceEvent(
         fun <T : BaseVoiceEvent> build(
             voiceMessage: AudioMeta,
             kind: Int,
-            alt: String,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<T>.() -> Unit = {},
         ) = eventTemplate(kind, voiceMessage.url, createdAt) {
-            alt(alt)
             audioIMeta(voiceMessage)
             initializer()
         }

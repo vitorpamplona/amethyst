@@ -35,7 +35,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.toETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -103,9 +102,6 @@ class OnchainZapEvent(
     companion object {
         const val KIND = 8333
 
-        /** NIP-31 human-readable fallback. Includes the amount, as in the NIP-BC example. */
-        fun altDescription(amountInSats: Long) = "Onchain zap: $amountInSats sats"
-
         /**
          * Build an onchain zap that targets a specific event.
          */
@@ -118,7 +114,6 @@ class OnchainZapEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<OnchainZapEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
-            alt(altDescription(amountInSats))
             txid(txid)
             recipient(recipientPubKey)
             amountInSats(amountInSats)
@@ -141,7 +136,6 @@ class OnchainZapEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<OnchainZapEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
-            alt(altDescription(amountInSats))
             txid(txid)
             recipient(recipientPubKey)
             amountInSats(amountInSats)

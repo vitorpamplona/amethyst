@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParamAll
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputText
@@ -52,7 +51,6 @@ class NIP90EventCountRequestEvent(
 
     companion object {
         const val KIND = 5400
-        const val ALT = "NIP90 Event Count request"
 
         fun build(
             inputs: List<String> = emptyList(),
@@ -62,7 +60,6 @@ class NIP90EventCountRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90EventCountRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, filterJson, createdAt) {
-            alt(ALT)
             inputs.forEach { inputText(it) }
             relays.forEach { param("relay", it) }
             groups.forEach { param("group", it) }

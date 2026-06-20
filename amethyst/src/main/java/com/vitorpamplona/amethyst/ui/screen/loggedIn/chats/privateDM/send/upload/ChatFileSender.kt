@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
@@ -66,10 +65,6 @@ class ChatFileSender(
                 blurhash = result.fileHeader.blurHash?.blurhash,
                 thumbhash = result.fileHeader.thumbHash?.thumbhash,
             ) {
-                if (!caption.isNullOrEmpty()) {
-                    alt(caption)
-                }
-
                 contentWarningReason?.let { contentWarning(it) }
             },
         )
@@ -89,9 +84,6 @@ class ChatFileSender(
             ChatMessageEvent.build(result.url, toUsers) {
                 references(listOf(result.url))
 
-                if (!caption.isNullOrEmpty()) {
-                    alt(caption)
-                }
                 contentWarningReason?.let { contentWarning(it) }
 
                 imetas(iMetaAttachments.filterIsIn(setOf(result.url)))

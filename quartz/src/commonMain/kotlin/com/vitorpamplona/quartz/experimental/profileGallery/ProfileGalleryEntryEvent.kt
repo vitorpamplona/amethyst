@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -99,7 +98,6 @@ class ProfileGalleryEntryEvent(
 
     companion object {
         const val KIND = 1163
-        const val ALT_DESCRIPTION = "Profile Gallery Entry"
 
         fun build(
             url: String,
@@ -107,7 +105,6 @@ class ProfileGalleryEntryEvent(
             initializer: TagArrayBuilder<ProfileGalleryEntryEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             url(url)
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

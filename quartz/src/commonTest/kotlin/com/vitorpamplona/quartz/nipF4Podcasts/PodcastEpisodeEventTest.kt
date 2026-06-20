@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.utils.nsecToKeyPair
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class PodcastEpisodeEventTest {
     private val signer =
@@ -97,20 +96,5 @@ class PodcastEpisodeEventTest {
         assertEquals("audio/mpeg", audios[0].mediaType)
         assertEquals("audio/opus", audios[1].mediaType)
         assertNull(audios[2].mediaType)
-    }
-
-    @Test
-    fun `alt tag includes title`() {
-        val template =
-            PodcastEpisodeEvent.build(
-                title = "Ep Title",
-                description = "x",
-                audios = listOf(AudioTag("https://example.com/x.mp3")),
-            )
-        val event = signer.sign<PodcastEpisodeEvent>(template)
-
-        val alt = event.tags.first { it[0] == "alt" }
-        assertTrue(alt[1].endsWith("Ep Title"))
-        assertTrue(alt[1].startsWith(PodcastEpisodeEvent.ALT_DESCRIPTION_PREFIX))
     }
 }

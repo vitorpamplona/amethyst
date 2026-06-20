@@ -34,7 +34,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip58Badges.accepted.tags.AcceptedBadge
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -71,7 +70,6 @@ class AcceptedBadgeSetEvent(
     companion object {
         const val KIND = 30008
         private const val STANDARD_D_TAG = "profile_badges"
-        const val ALT_DESCRIPTION = "List of accepted badges by the author"
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, STANDARD_D_TAG)
 
@@ -88,7 +86,6 @@ class AcceptedBadgeSetEvent(
             val prefix =
                 tagArray<AcceptedBadgeSetEvent> {
                     dTag(STANDARD_D_TAG)
-                    alt(ALT_DESCRIPTION)
                     initializer()
                 }
             val pairs = AcceptedBadge.assemble(acceptedBadges).toTypedArray()

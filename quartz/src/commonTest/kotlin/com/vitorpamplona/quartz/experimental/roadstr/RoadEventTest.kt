@@ -152,7 +152,6 @@ class RoadEventTest {
         assertEquals("48.8566140", template.tags.first { it[0] == "lat" }[1])
         assertEquals("2.3522219", template.tags.first { it[0] == "lon" }[1])
         assertEquals((createdAt + RoadEventReportEvent.RELAY_TTL_SECONDS).toString(), template.tags.first { it[0] == "expiration" }[1])
-        assertEquals("Roadstr: speed_camera report", template.tags.first { it[0] == "alt" }[1])
     }
 
     @Test
@@ -161,7 +160,6 @@ class RoadEventTest {
 
         assertEquals(reportId, template.tags.first { it[0] == "e" }[1])
         assertEquals("still_there", template.tags.first { it[0] == "status" }[1])
-        assertEquals("Roadstr: event confirmed", template.tags.first { it[0] == "alt" }[1])
         assertTrue(template.tags.none { it[0] == "g" || it[0] == "lat" || it[0] == "lon" })
     }
 

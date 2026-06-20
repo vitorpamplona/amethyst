@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.tags.CheckType
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.tags.TimeoutTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -63,7 +62,6 @@ class RelayMonitorEvent(
 
     companion object {
         const val KIND = 10166
-        const val ALT_DESCRIPTION = "Relay monitor announcement"
 
         fun build(
             frequencySeconds: Long,
@@ -73,7 +71,6 @@ class RelayMonitorEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RelayMonitorEvent>.() -> Unit = {},
         ) = eventTemplate<RelayMonitorEvent>(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             frequency(frequencySeconds)
             checks(checks)
             timeouts(timeouts)

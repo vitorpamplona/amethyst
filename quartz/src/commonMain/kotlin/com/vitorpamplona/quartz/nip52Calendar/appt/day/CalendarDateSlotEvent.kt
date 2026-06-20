@@ -34,7 +34,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.LocationTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -77,7 +76,6 @@ class CalendarDateSlotEvent(
 
     companion object {
         const val KIND = 31922
-        const val ALT = "Full-day calendar event"
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
@@ -93,7 +91,6 @@ class CalendarDateSlotEvent(
             titleDay(title)
             startDate(start)
             end?.let { endDate(it) }
-            alt(ALT)
             initializer()
         }
     }

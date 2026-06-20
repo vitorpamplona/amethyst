@@ -35,7 +35,5 @@ class AltTag {
             ensure(tag[1].isNotEmpty()) { return null }
             return tag[1]
         }
-
-        fun assemble(altDescriptor: String) = arrayOf(TAG_NAME, altDescriptor)
     }
 }

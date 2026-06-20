@@ -25,13 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
@@ -65,7 +62,6 @@ class MuteListEvent(
     companion object {
         const val KIND = 10000
         const val FIXED_D_TAG = ""
-        const val ALT = "Mute List"
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
 
@@ -168,12 +164,7 @@ class MuteListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): MuteListEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, content)
         }
@@ -199,7 +190,6 @@ class MuteListEvent(
             description = PrivateTagsInContent.encryptNip44(privateMutes.map { it.toTagArray() }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
-            alt(ALT)
             mutes(publicMutes)
 
             initializer()

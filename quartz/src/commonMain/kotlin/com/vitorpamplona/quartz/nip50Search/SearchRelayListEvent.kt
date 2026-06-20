@@ -30,8 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
@@ -58,8 +56,6 @@ class SearchRelayListEvent(
 
     companion object {
         const val KIND = 10007
-        val ALT = "Relay list to use for Search"
-        val ALT_TAG = arrayOf(AltTag.assemble(ALT))
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey)
 
@@ -87,7 +83,7 @@ class SearchRelayListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): SearchRelayListEvent {
-            val publicTagArray = relays.map { RelayTag.assemble(it) }.plus(ALT_TAG).toTypedArray()
+            val publicTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
             return signer.signNip51List(createdAt, KIND, publicTagArray, emptyArray())
         }
 
@@ -96,7 +92,7 @@ class SearchRelayListEvent(
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
         ): SearchRelayListEvent {
-            val publicTagArray = relays.map { RelayTag.assemble(it) }.plus(ALT_TAG).toTypedArray()
+            val publicTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
             return signer.signNip51List(createdAt, KIND, publicTagArray, emptyArray())
         }
 
@@ -111,7 +107,6 @@ class SearchRelayListEvent(
             description = PrivateTagsInContent.encryptNip44(privateRelays.map { RelayTag.assemble(it) }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
-            alt(ALT)
             searchRelays(publicRelays)
 
             initializer()

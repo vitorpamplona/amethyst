@@ -41,7 +41,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
 import com.vitorpamplona.quartz.nip39ExtIdentities.claims
 import com.vitorpamplona.quartz.nip39ExtIdentities.githubClaim
@@ -127,8 +126,6 @@ class MetadataEvent(
             val content = Json.encodeToString(JsonObject.serializer(), newJsonObject)
 
             return eventTemplate(KIND, content, createdAt) {
-                alt("User profile for $name")
-
                 updateOrDeleteTagNames(metadata)
 
                 initializer()
@@ -175,8 +172,6 @@ class MetadataEvent(
             val content = Json.encodeToString(JsonObject.serializer(), newJsonObject)
 
             return eventTemplate(KIND, content, createdAt) {
-                alt("User profile for ${currentMetadata["name"]?.text ?: "Anonymous"}")
-
                 // For https://github.com/nostr-protocol/nips/pull/1770
                 updateOrDeleteTagNames(currentMetadata)
 
@@ -233,8 +228,6 @@ class MetadataEvent(
 
             val tags =
                 latest.tags.builder {
-                    alt("User profile for ${currentMetadata["name"]?.text ?: "Anonymous"}")
-
                     updateOrDeleteTagNames(currentMetadata)
 
                     val newClaims = latest.replaceClaims(twitter, mastodon, github)

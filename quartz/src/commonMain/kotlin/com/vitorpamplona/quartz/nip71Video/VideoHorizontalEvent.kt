@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -44,7 +43,6 @@ class VideoHorizontalEvent(
     RootScope {
     companion object {
         const val KIND = 34235
-        const val ALT_DESCRIPTION = "Horizontal Video"
 
         fun build(
             video: VideoMeta,
@@ -75,7 +73,6 @@ class VideoHorizontalEvent(
             initializer: TagArrayBuilder<VideoHorizontalEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description, createdAt) {
             dTag(dTag)
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

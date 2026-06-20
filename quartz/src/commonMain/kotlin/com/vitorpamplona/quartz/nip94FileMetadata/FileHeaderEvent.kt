@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -92,7 +91,6 @@ class FileHeaderEvent(
 
     companion object {
         const val KIND = 1063
-        const val ALT_DESCRIPTION = "Verifiable file url"
 
         fun build(
             url: String,
@@ -101,7 +99,6 @@ class FileHeaderEvent(
             initializer: TagArrayBuilder<FileHeaderEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, caption ?: "", createdAt) {
             url(url)
-            caption?.ifBlank { null }?.let { alt(caption) } ?: alt(ALT_DESCRIPTION)
             initializer()
         }
 
@@ -121,7 +118,6 @@ class FileHeaderEvent(
             initializer: TagArrayBuilder<FileHeaderEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, caption ?: "", createdAt) {
             url(url)
-            caption?.ifBlank { null }?.let { alt(caption) } ?: alt(ALT_DESCRIPTION)
 
             hash?.let { hash(it) }
             size?.let { fileSize(it) }

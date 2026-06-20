@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.FiatAmountTag
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.OrderStatus
@@ -78,7 +77,6 @@ class P2POrderEvent(
 
     companion object {
         const val KIND = 38383
-        const val ALT_DESCRIPTION = "P2P Order"
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
@@ -122,7 +120,6 @@ class P2POrderEvent(
             makerName?.let { makerName(it) }
             geohash?.let { geohash(it) }
             bond?.let { bond(it) }
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

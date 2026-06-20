@@ -39,7 +39,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
@@ -93,7 +92,6 @@ class RepostEvent(
 
     companion object {
         const val KIND = 6
-        const val ALT = "Repost event"
 
         fun build(
             eventHint: EventHintBundle<Event>,
@@ -101,8 +99,6 @@ class RepostEvent(
             initializer: TagArrayBuilder<RepostEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, eventHint.event.toJson(), createdAt) {
             val boostedPost = eventHint.event
-
-            alt(ALT)
 
             pTag(PTag(boostedPost.pubKey, eventHint.authorHomeRelay))
             eTag(ETag(boostedPost.id, eventHint.relay, boostedPost.pubKey))

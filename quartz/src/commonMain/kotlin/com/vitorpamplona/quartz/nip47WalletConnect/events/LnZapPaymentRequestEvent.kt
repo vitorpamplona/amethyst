@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -58,7 +57,6 @@ class LnZapPaymentRequestEvent(
 
     companion object {
         const val KIND = 23194
-        const val ALT = "NWC request"
 
         suspend fun create(
             lnInvoice: String,
@@ -84,9 +82,9 @@ class LnZapPaymentRequestEvent(
 
             val tags =
                 if (useNip44) {
-                    arrayOf(arrayOf("p", walletServicePubkey), AltTag.assemble(ALT), arrayOf("encryption", "nip44_v2"))
+                    arrayOf(arrayOf("p", walletServicePubkey), arrayOf("encryption", "nip44_v2"))
                 } else {
-                    arrayOf(arrayOf("p", walletServicePubkey), AltTag.assemble(ALT))
+                    arrayOf(arrayOf("p", walletServicePubkey))
                 }
 
             val encrypted =

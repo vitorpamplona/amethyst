@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -40,14 +39,12 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 object GitStatusBuilders {
     fun <E : GitStatusEvent, T : Event> buildStatus(
         kind: Int,
-        altDescriptor: String,
         content: String,
         target: EventHintBundle<T>,
         notify: List<PTag> = emptyList(),
         createdAt: Long = TimeUtils.now(),
         initializer: TagArrayBuilder<E>.() -> Unit = {},
     ) = eventTemplate<E>(kind, content, createdAt) {
-        alt(altDescriptor)
         add(
             MarkedETag.assemble(
                 target.event.id,

@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -63,7 +62,6 @@ class WebBookmarkEvent(
 
     companion object {
         const val KIND = 39701
-        const val ALT_DESCRIPTION = "Web Bookmark"
 
         fun urlToDTag(url: String): String =
             url
@@ -80,7 +78,6 @@ class WebBookmarkEvent(
             initializer: TagArrayBuilder<WebBookmarkEvent>.() -> Unit = {},
         ) = eventTemplate<WebBookmarkEvent>(KIND, description, createdAt) {
             dTag(urlToDTag(url))
-            alt(ALT_DESCRIPTION)
             bookmarkTitle?.let { title(it) }
             publishedAt(createdAt)
             hashtags(tags)

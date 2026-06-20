@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -42,7 +41,6 @@ class ExternalIdentitiesEvent(
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 10011
-        const val ALT_DESCRIPTION = "External Identities"
         const val FIXED_D_TAG = ""
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
@@ -57,7 +55,6 @@ class ExternalIdentitiesEvent(
             initializer: TagArrayBuilder<ExternalIdentitiesEvent>.() -> Unit = {},
         ): EventTemplate<ExternalIdentitiesEvent> =
             eventTemplate(KIND, "", createdAt) {
-                alt(ALT_DESCRIPTION)
                 twitter?.let { twitterClaim(it) }
                 mastodon?.let { mastodonClaim(it) }
                 github?.let { githubClaim(it) }
@@ -74,7 +71,6 @@ class ExternalIdentitiesEvent(
         ): EventTemplate<ExternalIdentitiesEvent> {
             val tags =
                 latest.tags.builder {
-                    alt(ALT_DESCRIPTION)
                     val newClaims = latest.replaceClaims(twitter, mastodon, github)
                     remove(IdentityClaimTag.TAG_NAME)
                     claims(newClaims)

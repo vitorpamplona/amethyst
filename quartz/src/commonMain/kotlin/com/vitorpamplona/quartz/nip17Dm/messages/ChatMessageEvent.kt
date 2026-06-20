@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -50,7 +49,6 @@ class ChatMessageEvent(
 
     companion object {
         const val KIND = 14
-        const val ALT_DESCRIPTION = "Direct message"
 
         fun build(
             msg: String,
@@ -58,7 +56,6 @@ class ChatMessageEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChatMessageEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, msg, createdAt) {
-            alt(ALT_DESCRIPTION)
             group(to)
             initializer()
         }
@@ -69,7 +66,6 @@ class ChatMessageEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChatMessageEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, msg, createdAt) {
-            alt(ALT_DESCRIPTION)
             reply(reply)
             group((reply.event.recipients() + reply.toPTag()).distinctBy { it.pubKey })
             initializer()

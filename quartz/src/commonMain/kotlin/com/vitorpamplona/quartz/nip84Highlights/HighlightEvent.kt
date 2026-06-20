@@ -46,7 +46,6 @@ import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip84Highlights.tags.CommentTag
 import com.vitorpamplona.quartz.nip84Highlights.tags.ContextTag
@@ -132,12 +131,11 @@ class HighlightEvent(
 
     companion object {
         const val KIND = 9802
-        const val ALT = "Highlight/quote event"
 
         suspend fun create(
             msg: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): HighlightEvent = signer.sign(createdAt, KIND, arrayOf(AltTag.assemble(ALT)), msg)
+        ): HighlightEvent = signer.sign(createdAt, KIND, emptyArray(), msg)
     }
 }

@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -74,7 +73,6 @@ class CodeSnippetEvent(
 
     companion object {
         const val KIND = 1337
-        const val ALT_DESCRIPTION = "Code snippet"
 
         fun build(
             code: String,
@@ -89,7 +87,6 @@ class CodeSnippetEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CodeSnippetEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, code, createdAt) {
-            alt(ALT_DESCRIPTION)
             language?.let { language(it) }
             extension?.let { extension(it) }
             name?.let { snippetName(it) }

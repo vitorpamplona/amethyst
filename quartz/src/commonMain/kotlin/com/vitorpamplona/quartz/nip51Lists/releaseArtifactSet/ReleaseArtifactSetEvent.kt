@@ -25,14 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
@@ -74,7 +71,6 @@ class ReleaseArtifactSetEvent(
 
     companion object {
         const val KIND = 30063
-        const val ALT = "Release Artifact Set"
 
         fun createAddress(
             pubKey: HexKey,
@@ -113,12 +109,7 @@ class ReleaseArtifactSetEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): ReleaseArtifactSetEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, content)
         }
@@ -152,7 +143,6 @@ class ReleaseArtifactSetEvent(
             createdAt = createdAt,
         ) {
             dTag(dTag)
-            alt(ALT)
             title(title)
             artifacts(items)
 

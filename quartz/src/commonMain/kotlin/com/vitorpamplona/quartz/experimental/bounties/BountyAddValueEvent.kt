@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.toMarkedETag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -40,7 +39,6 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 class BountyAddValueEvent {
     companion object {
         const val KIND = 1
-        const val ALT_DESCRIPTION = "Add Value to Bounty"
 
         const val BOUNTY_HASH_TAG = "bounty-added-reward"
 
@@ -54,7 +52,6 @@ class BountyAddValueEvent {
             tags.markedETag(bountyRoot.toMarkedETag(MarkedETag.MARKER.ROOT))
             tags.hashtag(BOUNTY_HASH_TAG)
             tags.pTag(bountyRootAuthor)
-            tags.alt(ALT_DESCRIPTION)
             return EventTemplate(createdAt, KIND, tags.build(), amount.toString())
         }
     }

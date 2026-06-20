@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -87,12 +86,9 @@ class RoadEventReportEvent(
 
     companion object {
         const val KIND = 1315
-        const val ALT_PREFIX = "Roadstr: "
 
         /** Fixed relay-side NIP-40 window (14 days) for both report and confirmation events. */
         const val RELAY_TTL_SECONDS = 1_209_600L
-
-        fun altDescription(type: RoadEventType) = "$ALT_PREFIX${type.code} report"
 
         fun build(
             type: RoadEventType,
@@ -106,7 +102,6 @@ class RoadEventReportEvent(
             roadGeohashes(latitude, longitude)
             coordinates(latitude, longitude)
             expiration(createdAt + RELAY_TTL_SECONDS)
-            alt(altDescription(type))
             initializer()
         }
     }

@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTagIds
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallTypeTag
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
@@ -60,7 +59,6 @@ class CallOfferEvent(
 
     companion object {
         const val KIND = 25050
-        const val ALT_DESCRIPTION = "WebRTC call offer"
 
         fun build(
             sdpOffer: String,
@@ -69,7 +67,6 @@ class CallOfferEvent(
             type: CallType,
             initializer: TagArrayBuilder<CallOfferEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, sdpOffer) {
-            alt(ALT_DESCRIPTION)
             pTag(calleePubKey)
             callId(callId)
             callType(type)
@@ -83,7 +80,6 @@ class CallOfferEvent(
             type: CallType,
             initializer: TagArrayBuilder<CallOfferEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, sdpOffer) {
-            alt(ALT_DESCRIPTION)
             pTagIds(calleePubKeys)
             callId(callId)
             callType(type)

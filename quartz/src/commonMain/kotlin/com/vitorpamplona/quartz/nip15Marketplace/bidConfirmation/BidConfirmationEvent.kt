@@ -34,7 +34,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
 import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -71,7 +70,6 @@ class BidConfirmationEvent(
 
     companion object {
         const val KIND = 1022
-        const val ALT_DESCRIPTION = "Bid confirmation"
 
         const val STATUS_ACCEPTED = "accepted"
         const val STATUS_REJECTED = "rejected"
@@ -85,7 +83,6 @@ class BidConfirmationEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<BidConfirmationEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, JsonMapper.toJson(confirmation), createdAt) {
-            alt(ALT_DESCRIPTION)
             bid(bid)
             auction(auction)
             notifyBidder(bid)
