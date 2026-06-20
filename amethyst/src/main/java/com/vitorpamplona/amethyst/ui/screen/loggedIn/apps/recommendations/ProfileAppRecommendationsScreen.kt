@@ -24,6 +24,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -31,11 +32,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,11 +68,15 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
+import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.types.ByAuthorChip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.datasource.ProfileAppRecommendationsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -156,6 +166,25 @@ fun ProfileAppRecommendationsScreen(
                 .map { LocalCache.getOrCreateAddressableNote(it) }
         }
 
+    // Local, in-memory text filter over the apps already loaded into the list.
+    // Matches the app name and description; the kind-31990-less missing rows
+    // have nothing searchable, so they only show when the query is blank.
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredApps =
+        remember(apps, searchQuery) {
+            val query = searchQuery.trim()
+            if (query.isEmpty()) {
+                apps
+            } else {
+                apps.filter { note ->
+                    val metadata = (note.event as? AppDefinitionEvent)?.appMetaData()
+                    metadata?.anyName()?.contains(query, ignoreCase = true) == true ||
+                        metadata?.about?.contains(query, ignoreCase = true) == true
+                }
+            }
+        }
+    val visibleMissing = if (searchQuery.isBlank()) missingRecommended else emptyList()
+
     Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(id = R.string.profile_app_recommendations_title), nav)
@@ -168,11 +197,24 @@ fun ProfileAppRecommendationsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
             )
+
+            if (apps.isNotEmpty() || searchQuery.isNotBlank()) {
+                AppSearchField(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                )
+            }
+
             HorizontalDivider()
 
-            if (apps.isEmpty() && missingRecommended.isEmpty()) {
+            if (visibleMissing.isEmpty() && filteredApps.isEmpty()) {
                 Text(
-                    text = stringRes(R.string.profile_app_recommendations_empty),
+                    text =
+                        if (searchQuery.isBlank()) {
+                            stringRes(R.string.profile_app_recommendations_empty)
+                        } else {
+                            stringRes(R.string.profile_app_recommendations_search_empty, searchQuery)
+                        },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(20.dp),
@@ -180,7 +222,7 @@ fun ProfileAppRecommendationsScreen(
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(
-                        items = missingRecommended + apps,
+                        items = visibleMissing + filteredApps,
                         key = { it.idHex },
                     ) { appNote ->
                         AppRow(
@@ -196,6 +238,43 @@ fun ProfileAppRecommendationsScreen(
             }
         }
     }
+}
+
+@Composable
+private fun AppSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+) {
+    TextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .defaultMinSize(minHeight = 20.dp),
+        shape = RoundedCornerShape(25.dp),
+        leadingIcon = { SearchIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText) },
+        placeholder = {
+            Text(
+                text = stringRes(R.string.profile_app_recommendations_search_hint),
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    ClearTextIcon()
+                }
+            }
+        },
+        singleLine = true,
+        colors =
+            TextFieldDefaults.colors(
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+            ),
+    )
 }
 
 @Composable

@@ -678,6 +678,8 @@
     <string name="profile_app_recommendations_title">Recommended apps</string>
     <string name="profile_app_recommendations_description">Choose which Nostr apps you publicly recommend. Recommendations appear on your profile and help others discover apps for content this client can\'t open.</string>
     <string name="profile_app_recommendations_empty">No apps found yet. Apps will appear here as they are discovered on your relays.</string>
+    <string name="profile_app_recommendations_search_hint">Search apps</string>
+    <string name="profile_app_recommendations_search_empty">No apps match \"%1$s\".</string>
     <string name="app_definition_untitled">Unnamed app</string>
     <string name="app_definition_no_supported_kinds">Doesn\'t announce what content it handles</string>
     <string name="app_definition_recommend">Recommend</string>
