@@ -287,7 +287,7 @@ private fun MarmotGroupFileUploadDialog(
                 remember(nostrGroupId) {
                     accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
                 }
-            Text(chatroom.displayName.value ?: "Marmot Group")
+            Text(chatroom.displayName.value ?: stringRes(R.string.marmot_group_default_name))
         },
         upload = {
             scope.launch(Dispatchers.IO) {
@@ -297,7 +297,7 @@ private fun MarmotGroupFileUploadDialog(
                         Toast
                             .makeText(
                                 context,
-                                "Not a member of this group",
+                                stringRes(context, R.string.marmot_not_a_member),
                                 Toast.LENGTH_SHORT,
                             ).show()
                     }

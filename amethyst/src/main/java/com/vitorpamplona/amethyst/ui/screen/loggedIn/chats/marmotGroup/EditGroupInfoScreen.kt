@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -87,7 +88,7 @@ fun EditGroupInfoScreen(
                             )
                             launch(Dispatchers.Main) {
                                 Toast
-                                    .makeText(context, "Group info updated", Toast.LENGTH_SHORT)
+                                    .makeText(context, stringRes(context, R.string.marmot_group_info_updated), Toast.LENGTH_SHORT)
                                     .show()
                             }
                             nav.popBack()
@@ -97,7 +98,7 @@ fun EditGroupInfoScreen(
                                 Toast
                                     .makeText(
                                         context,
-                                        "Failed to update: ${e.message}",
+                                        stringRes(context, R.string.marmot_failed_to_update, e.message),
                                         Toast.LENGTH_LONG,
                                     ).show()
                             }
@@ -121,8 +122,8 @@ fun EditGroupInfoScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Group name") },
-                placeholder = { Text("Enter group name") },
+                label = { Text(stringRes(R.string.marmot_group_name)) },
+                placeholder = { Text(stringRes(R.string.marmot_group_name_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !isSaving,
@@ -133,8 +134,8 @@ fun EditGroupInfoScreen(
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Description") },
-                placeholder = { Text("Enter group description (optional)") },
+                label = { Text(stringRes(R.string.description)) },
+                placeholder = { Text(stringRes(R.string.marmot_group_description_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 maxLines = 5,
@@ -144,7 +145,7 @@ fun EditGroupInfoScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Changes will be committed to the group via MLS and propagated to all members.",
+                text = stringRes(R.string.marmot_edit_info_footer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
