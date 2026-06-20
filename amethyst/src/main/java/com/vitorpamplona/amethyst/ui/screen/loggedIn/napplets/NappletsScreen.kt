@@ -98,7 +98,7 @@ fun NappletsScreen(
         if (napplets.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    "No napplets found yet.",
+                    stringResource(R.string.napplet_none_found),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -138,7 +138,7 @@ private fun NappletRow(
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(
-            text = manifest.title()?.ifBlank { null } ?: "Untitled napplet",
+            text = manifest.title()?.ifBlank { null } ?: stringResource(R.string.napplet_untitled),
             style = MaterialTheme.typography.titleMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

@@ -33,7 +33,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
@@ -98,7 +100,7 @@ private fun NappletConsentDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(info.operationSummary)
                 Text(
-                    "Capability: ${info.capabilityLabel}",
+                    stringResource(R.string.napplet_consent_capability, info.capabilityLabel),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -115,12 +117,12 @@ private fun NappletConsentDialog(
                     TextButton(
                         onClick = { onDecision(GrantState.ALLOW_ALWAYS) },
                         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                    ) { Text("Always allow") }
+                    ) { Text(stringResource(R.string.napplet_consent_allow_always)) }
                 }
                 TextButton(
                     onClick = { onDecision(GrantState.ALLOW_ONCE) },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                ) { Text("Allow once") }
+                ) { Text(stringResource(R.string.napplet_consent_allow_once)) }
             }
         },
         dismissButton = {
@@ -128,11 +130,11 @@ private fun NappletConsentDialog(
                 TextButton(
                     onClick = { onDecision(GrantState.DENY) },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                ) { Text("Never allow") }
+                ) { Text(stringResource(R.string.napplet_consent_deny_always)) }
                 TextButton(
                     onClick = { onDecision(GrantState.ASK) },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                ) { Text("Not now") }
+                ) { Text(stringResource(R.string.napplet_consent_not_now)) }
             }
         },
     )

@@ -68,6 +68,8 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
+import com.vitorpamplona.amethyst.napplet.descriptionRes
+import com.vitorpamplona.amethyst.napplet.labelRes
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -93,12 +95,13 @@ fun NappletPermissionsScreen(
 ) {
     val context = LocalContext.current
     val ledger = remember { NappletPermissionLedger(DataStoreNappletPermissionStore(context)) }
+    val untitled = stringResource(R.string.napplet_untitled)
 
     var items by remember { mutableStateOf<List<NappletGrantsUi>?>(null) }
     var reload by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(reload) {
-        items = withContext(Dispatchers.Default) { loadGrants(ledger) }
+        items = withContext(Dispatchers.Default) { loadGrants(ledger, untitled) }
     }
 
     val scope = rememberCoroutineScope()
@@ -255,9 +258,9 @@ private fun CapabilityRow(
         )
         Spacer(Modifier.size(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(capability.label(), style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(capability.labelRes()), style = MaterialTheme.typography.bodyLarge)
             Text(
-                capability.description(),
+                stringResource(capability.descriptionRes()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -289,7 +292,10 @@ private fun CapabilityRow(
     }
 }
 
-private suspend fun loadGrants(ledger: NappletPermissionLedger): List<NappletGrantsUi> =
+private suspend fun loadGrants(
+    ledger: NappletPermissionLedger,
+    untitled: String,
+): List<NappletGrantsUi> =
     ledger
         .allPersistedGrants()
         .map { (coordinate, caps) ->
@@ -297,15 +303,16 @@ private suspend fun loadGrants(ledger: NappletPermissionLedger): List<NappletGra
             val identifier = coordinate.substringAfter(':', "")
             NappletGrantsUi(
                 identity = NappletIdentity(authorPubKey = author, identifier = identifier),
-                title = resolveTitle(author, identifier),
+                title = resolveTitle(author, identifier, untitled),
                 capabilities = caps.entries.sortedBy { it.key.ordinal }.map { it.key to it.value },
             )
         }.sortedBy { it.title.lowercase() }
 
-/** Best-effort human title from a cached manifest; falls back to the d-identifier. */
+/** Best-effort human title from a cached manifest; falls back to the d-identifier or [untitled]. */
 private fun resolveTitle(
     author: String,
     identifier: String,
+    untitled: String,
 ): String {
     val events =
         Amethyst.instance.cache
@@ -320,26 +327,8 @@ private fun resolveTitle(
             }
         }
     return (match as? NappletManifest)?.title()?.ifBlank { null }
-        ?: identifier.ifBlank { "Napplet" }
+        ?: identifier.ifBlank { untitled }
 }
-
-private fun NappletCapability.label(): String =
-    when (this) {
-        NappletCapability.IDENTITY -> "Identity"
-        NappletCapability.RELAY -> "Relays"
-        NappletCapability.WALLET -> "Wallet"
-        NappletCapability.STORAGE -> "Storage"
-        NappletCapability.NET -> "Network"
-    }
-
-private fun NappletCapability.description(): String =
-    when (this) {
-        NappletCapability.IDENTITY -> "Sign and encrypt as you"
-        NappletCapability.RELAY -> "Read and publish your events"
-        NappletCapability.WALLET -> "Pay Lightning invoices"
-        NappletCapability.STORAGE -> "Its own private storage"
-        NappletCapability.NET -> "Direct network access"
-    }
 
 private fun NappletCapability.symbol(): MaterialSymbol =
     when (this) {

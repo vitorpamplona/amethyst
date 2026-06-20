@@ -42,6 +42,7 @@ import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.BlobFetcher
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
@@ -128,13 +129,13 @@ class NappletHostActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         if (!readManifestExtras()) {
-            Toast.makeText(this, "Invalid napplet.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.napplet_invalid), Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-            Toast.makeText(this, "This device's WebView is too old to run napplets safely.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.napplet_webview_too_old), Toast.LENGTH_LONG).show()
             finish()
             return
         }

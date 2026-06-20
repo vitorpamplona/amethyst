@@ -33,6 +33,7 @@ import android.os.Process
 import android.os.RemoteException
 import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
@@ -43,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
@@ -215,11 +217,11 @@ class NappletBrokerService : Service() {
         capability: NappletCapability,
         request: NappletRequest,
     ): NappletConsentInfo {
-        val title = identity.identifier.ifBlank { "Napplet ${identity.authorPubKey.take(8)}…" }
+        val title = identity.identifier.ifBlank { getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8)) }
         return NappletConsentInfo(
             appletTitle = title,
             coordinate = identity.coordinate,
-            capabilityLabel = capability.name.lowercase(),
+            capabilityLabel = getString(capability.labelRes()),
             operationSummary = summaryFor(request),
             allowAlways = capability.canGrantAlways,
         )
@@ -227,26 +229,27 @@ class NappletBrokerService : Service() {
 
     private fun summaryFor(request: NappletRequest): String =
         when (request) {
-            is NappletRequest.GetPublicKey -> "This napplet wants to read your public key."
+            is NappletRequest.GetPublicKey -> getString(R.string.napplet_consent_get_pubkey)
             is NappletRequest.SignEvent -> {
                 val preview = request.content.take(160).trim()
-                buildString {
-                    append("This napplet wants to sign a kind ${request.kind} event as you")
-                    if (preview.isNotEmpty()) append(":\n“$preview”") else append(".")
+                if (preview.isEmpty()) {
+                    getString(R.string.napplet_consent_sign, request.kind)
+                } else {
+                    getString(R.string.napplet_consent_sign_preview, request.kind) + "\n“$preview”"
                 }
             }
-            is NappletRequest.Nip04Encrypt, is NappletRequest.Nip44Encrypt -> "This napplet wants to encrypt a message as you."
-            is NappletRequest.Nip04Decrypt, is NappletRequest.Nip44Decrypt -> "This napplet wants to decrypt a message addressed to you."
-            is NappletRequest.Publish -> "This napplet wants to publish an event to your relays."
-            is NappletRequest.QueryEvents -> "This napplet wants to read events from your relays."
+            is NappletRequest.Nip04Encrypt, is NappletRequest.Nip44Encrypt -> getString(R.string.napplet_consent_encrypt)
+            is NappletRequest.Nip04Decrypt, is NappletRequest.Nip44Decrypt -> getString(R.string.napplet_consent_decrypt)
+            is NappletRequest.Publish -> getString(R.string.napplet_consent_publish)
+            is NappletRequest.QueryEvents -> getString(R.string.napplet_consent_query)
             is NappletRequest.StorageGet, is NappletRequest.StorageSet, is NappletRequest.StorageRemove ->
-                "This napplet wants to use its private storage."
+                getString(R.string.napplet_consent_storage)
             is NappletRequest.PayInvoice -> {
                 val sats = runCatching { LnInvoiceUtil.getAmountInSats(request.invoice).toLong() }.getOrNull()
                 if (sats != null) {
-                    "This napplet wants to pay a Lightning invoice for $sats sats."
+                    pluralStringRes(this, R.plurals.napplet_consent_pay_amount, sats.toInt(), sats)
                 } else {
-                    "This napplet wants to pay a Lightning invoice."
+                    getString(R.string.napplet_consent_pay)
                 }
             }
         }
