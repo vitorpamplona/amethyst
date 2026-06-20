@@ -442,44 +442,57 @@ class NappletHostActivity : ComponentActivity() {
   function normFilters(filters){ return Array.isArray(filters) ? { filters: filters } : { filter: filters || {} }; }
   function b64ToBytes(b64){ var bin = atob(b64); var u = new Uint8Array(bin.length); for (var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u; }
   function bytesToB64(bytes){ var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); var s=''; for (var i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return btoa(s); }
+  var actionSeq = 0;
   var napplet = {
     shell: {
-      supports: function(domain){ return field(call('shell.supports', { domain: domain }), 'supported'); }
+      // supports() is synchronous in @napplet/shim; we expose a sync proxy backed by an async check.
+      supports: function(domain, protocol){ return field(call('shell.supports', { domain: domain, protocol: protocol }), 'supported'); },
+      ready: function(){ return Promise.resolve({}); },
+      onReady: function(cb){ if (typeof cb === 'function') cb({}); return { close: function(){} }; },
+      services: []
     },
     identity: {
       getPublicKey: function(){ return field(call('identity.getPublicKey'), 'pubkey'); },
-      onChanged: function(handler){ /* live identity-change events are a follow-up */ }
+      // Live identity-change events and the rich read API (getProfile/getRelays/...) are a follow-up.
+      onChanged: function(handler){ return { close: function(){} }; }
     },
+    // keys = keyboard / command action binding (NOT signing). Signing is shell-only via relay.publish.
+    // Not yet wired to the host keyboard, so these are client-side no-ops that keep applets from crashing.
     keys: {
-      signEvent: function(t){ return field(call('keys.signEvent', { kind: t.kind, tags: t.tags || [], content: t.content || '' }), 'event'); },
-      nip04Encrypt: function(peer, plaintext){ return field(call('keys.nip04Encrypt', { peer: peer, plaintext: plaintext }), 'value'); },
-      nip04Decrypt: function(peer, ciphertext){ return field(call('keys.nip04Decrypt', { peer: peer, ciphertext: ciphertext }), 'value'); },
-      nip44Encrypt: function(peer, plaintext){ return field(call('keys.nip44Encrypt', { peer: peer, plaintext: plaintext }), 'value'); },
-      nip44Decrypt: function(peer, ciphertext){ return field(call('keys.nip44Decrypt', { peer: peer, ciphertext: ciphertext }), 'value'); }
+      registerAction: function(action){ return Promise.resolve({ actionId: 'a' + (actionSeq++) }); },
+      unregisterAction: function(actionId){},
+      onAction: function(actionId, cb){ return { close: function(){} }; }
     },
     relay: {
-      publish: function(ev){ return field(call('relay.publish', { event: ev }), 'relays'); },
+      // publish takes an UNSIGNED template; the shell signs it and resolves to the signed event.
+      publish: function(template, options){ return field(call('relay.publish', { template: template, options: options }), 'event'); },
+      publishEncrypted: function(template, recipient, encryption){ return field(call('relay.publishEncrypted', { template: template, recipient: recipient, encryption: encryption || 'nip44' }), 'event'); },
       query: function(filters){ return field(call('relay.query', normFilters(filters)), 'events'); },
       // subscribe currently delivers the initial matches; a live tail is a follow-up.
-      subscribe: function(filters, onEvent){
-        return napplet.relay.query(filters).then(function(events){
+      subscribe: function(filters, onEvent, onEose, options){
+        call('relay.subscribe', normFilters(filters)).then(function(m){
+          var events = m.events || [];
           if (typeof onEvent === 'function') events.forEach(function(ev){ onEvent(ev); });
-          return { close: function(){} };
+          if (typeof onEose === 'function') onEose();
         });
+        return { close: function(){} };
       }
     },
     storage: {
-      get: function(key){ return field(call('storage.get', { key: key }), 'value'); },
-      set: function(key, value){ return call('storage.set', { key: key, value: value }).then(function(){ return true; }); },
-      remove: function(key){ return call('storage.remove', { key: key }).then(function(){ return true; }); }
+      getItem: function(key){ return field(call('storage.getItem', { key: key }), 'value'); },
+      setItem: function(key, value){ return call('storage.setItem', { key: key, value: value }).then(function(){}); },
+      removeItem: function(key){ return call('storage.removeItem', { key: key }).then(function(){}); },
+      keys: function(){ return field(call('storage.keys'), 'values'); }
     },
+    // value.payInvoice is an Amethyst-specific extension (not part of @napplet/shim).
     value: {
       payInvoice: function(invoice){ return field(call('value.payInvoice', { invoice: invoice }), 'preimage'); }
     },
     resource: {
-      bytes: function(url){ return call('resource.bytes', { url: url }).then(function(m){ return b64ToBytes(m.bytes); }); },
-      bytesAsObjectURL: function(url){ return call('resource.bytes', { url: url }).then(function(m){ return URL.createObjectURL(new Blob([b64ToBytes(m.bytes)], { type: m.contentType || '' })); }); }
+      bytes: function(url){ return call('resource.bytes', { url: url }).then(function(m){ return new Blob([b64ToBytes(m.bytes)], { type: m.mime || '' }); }); },
+      bytesAsObjectURL: function(url){ return call('resource.bytes', { url: url }).then(function(m){ return URL.createObjectURL(new Blob([b64ToBytes(m.bytes)], { type: m.mime || '' })); }); }
     },
+    // upload.blob is an Amethyst-specific extension (not part of @napplet/shim).
     upload: {
       blob: function(bytes, contentType){ return field(call('upload', { bytes: bytesToB64(bytes), contentType: contentType }), 'url'); }
     }

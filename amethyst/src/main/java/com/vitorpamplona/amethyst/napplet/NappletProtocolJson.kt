@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -58,23 +57,28 @@ object NappletProtocolJson {
     fun decodeRequest(envelopeJson: String): NappletRequest? {
         val o = json.parseToJsonElement(envelopeJson).jsonObject
         return when (o.str("type")) {
-            "shell.supports" -> NappletRequest.ShellSupports(o.req("domain"))
+            "shell.supports" -> NappletRequest.ShellSupports(o.req("domain"), o.str("protocol"))
             "identity.getPublicKey" -> NappletRequest.GetPublicKey
-            "keys.signEvent" ->
-                NappletRequest.SignEvent(
-                    kind = o.getValue("kind").jsonPrimitive.int,
-                    tags = decodeTags(o),
-                    content = o.str("content") ?: "",
+            "relay.publish" -> {
+                val t = o.template()
+                NappletRequest.Publish(kind = t.kindOf(), tags = decodeTags(t), content = t.str("content") ?: "")
+            }
+            "relay.publishEncrypted" -> {
+                val t = o.template()
+                NappletRequest.PublishEncrypted(
+                    kind = t.kindOf(),
+                    tags = decodeTags(t),
+                    content = t.str("content") ?: "",
+                    recipient = o.req("recipient"),
+                    encryption = o.str("encryption") ?: "nip44",
                 )
-            "keys.nip04Encrypt" -> NappletRequest.Nip04Encrypt(o.req("peer"), o.req("plaintext"))
-            "keys.nip04Decrypt" -> NappletRequest.Nip04Decrypt(o.req("peer"), o.req("ciphertext"))
-            "keys.nip44Encrypt" -> NappletRequest.Nip44Encrypt(o.req("peer"), o.req("plaintext"))
-            "keys.nip44Decrypt" -> NappletRequest.Nip44Decrypt(o.req("peer"), o.req("ciphertext"))
-            "relay.publish" -> NappletRequest.Publish(Event.fromJson(o.getValue("event").jsonObject.toString()))
+            }
             "relay.query" -> NappletRequest.QueryEvents(decodeFilter(o))
-            "storage.get" -> NappletRequest.StorageGet(o.req("key"))
-            "storage.set" -> NappletRequest.StorageSet(o.req("key"), o.req("value"))
-            "storage.remove" -> NappletRequest.StorageRemove(o.req("key"))
+            "relay.subscribe" -> NappletRequest.Subscribe(decodeFilter(o))
+            "storage.getItem" -> NappletRequest.StorageGet(o.req("key"))
+            "storage.setItem" -> NappletRequest.StorageSet(o.req("key"), o.req("value"))
+            "storage.removeItem" -> NappletRequest.StorageRemove(o.req("key"))
+            "storage.keys" -> NappletRequest.StorageKeys
             "value.payInvoice" -> NappletRequest.PayInvoice(o.req("invoice"))
             "resource.bytes" -> NappletRequest.ResourceBytes(o.req("url"))
             "upload" -> NappletRequest.UploadBlob(Base64.getDecoder().decode(o.req("bytes")), o.req("contentType"))
@@ -94,16 +98,11 @@ object NappletProtocolJson {
                     put("ok", true)
                     put("pubkey", response.pubkey)
                 }
-                is NappletResponse.SignedEvent -> {
+                is NappletResponse.Published -> {
+                    // Upstream resolves publish() to the signed NostrEvent; relays are an extra.
                     put("ok", true)
                     put("event", json.parseToJsonElement(response.event.toJson()))
-                }
-                is NappletResponse.Text -> {
-                    put("ok", true)
-                    put("value", response.value)
-                }
-                is NappletResponse.Published -> {
-                    put("ok", true)
+                    put("eventId", response.event.id)
                     put("relays", buildJsonArray { response.relays.forEach { add(it) } })
                 }
                 is NappletResponse.Events -> {
@@ -118,10 +117,14 @@ object NappletProtocolJson {
                     put("ok", true)
                     put("value", response.value)
                 }
+                is NappletResponse.Strings -> {
+                    put("ok", true)
+                    put("values", buildJsonArray { response.values.forEach { add(it) } })
+                }
                 is NappletResponse.Bytes -> {
                     put("ok", true)
                     put("bytes", Base64.getEncoder().encodeToString(response.bytes))
-                    put("contentType", response.contentType)
+                    put("mime", response.contentType)
                 }
                 is NappletResponse.Uploaded -> {
                     put("ok", true)
@@ -188,4 +191,9 @@ object NappletProtocolJson {
     private fun JsonObject.req(key: String): String = getValue(key).jsonPrimitive.content
 
     private fun JsonObject.strList(key: String): List<String>? = this[key]?.jsonArray?.map { it.jsonPrimitive.content }
+
+    /** The unsigned event template, taken from a `template` field if present, else the envelope itself. */
+    private fun JsonObject.template(): JsonObject = this["template"]?.jsonObject ?: this
+
+    private fun JsonObject.kindOf(): Int = getValue("kind").jsonPrimitive.int
 }

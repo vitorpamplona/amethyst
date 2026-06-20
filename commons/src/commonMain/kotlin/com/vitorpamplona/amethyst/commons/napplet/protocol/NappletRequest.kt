@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.napplet.protocol
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
@@ -38,33 +37,44 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 sealed interface NappletRequest {
     val capability: NappletCapability
 
+    /**
+     * Whether executing this request **signs an event as the user**. The shell — never the napplet
+     * — holds the key and does the signing (matching `@napplet/shim`, which has no `sign()`). This
+     * flag lets the broker defer the per-signature prompt to a remote/external signer that runs its
+     * own consent UI, instead of double-prompting.
+     */
+    val signsAsUser: Boolean get() = false
+
     /** Read the active user's public key. */
     data object GetPublicKey : NappletRequest {
         override val capability get() = NappletCapability.IDENTITY
     }
 
-    /** `shell.supports(domain)` — capability negotiation; always answerable, needs no consent. */
+    /** `shell.supports(domain, protocol?)` — capability negotiation; always answerable, no consent. */
     data class ShellSupports(
         val domain: String,
+        val protocol: String? = null,
     ) : NappletRequest {
         override val capability get() = NappletCapability.SHELL
     }
 
     /**
-     * Build and sign an event **as the active user**. The applet supplies only the template
-     * fields; the broker sets `pubkey` from the real signer and stamps `created_at`, so the
-     * applet can never sign as another identity nor backdate.
+     * Publish an event built from an **unsigned template**. The napplet supplies only `kind`,
+     * `tags`, and `content`; the shell sets `pubkey` from the real signer, stamps `created_at`,
+     * signs, and broadcasts — so a napplet can never sign as another identity, backdate, nor
+     * obtain a raw signature. This is the *only* signing path exposed to napplets.
      */
-    data class SignEvent(
+    data class Publish(
         val kind: Int,
         val tags: Array<Array<String>>,
         val content: String,
     ) : NappletRequest {
-        override val capability get() = NappletCapability.KEYS
+        override val capability get() = NappletCapability.RELAY
+        override val signsAsUser get() = true
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (other !is SignEvent) return false
+            if (other !is Publish) return false
             if (kind != other.kind) return false
             if (content != other.content) return false
             if (tags.size != other.tags.size) return false
@@ -80,42 +90,41 @@ sealed interface NappletRequest {
         }
     }
 
-    data class Nip04Encrypt(
-        val peerPubKey: HexKey,
-        val plaintext: String,
-    ) : NappletRequest {
-        override val capability get() = NappletCapability.KEYS
-    }
-
-    data class Nip04Decrypt(
-        val peerPubKey: HexKey,
-        val ciphertext: String,
-    ) : NappletRequest {
-        override val capability get() = NappletCapability.KEYS
-    }
-
-    data class Nip44Encrypt(
-        val peerPubKey: HexKey,
-        val plaintext: String,
-    ) : NappletRequest {
-        override val capability get() = NappletCapability.KEYS
-    }
-
-    data class Nip44Decrypt(
-        val peerPubKey: HexKey,
-        val ciphertext: String,
-    ) : NappletRequest {
-        override val capability get() = NappletCapability.KEYS
-    }
-
     /**
-     * Publish an already-signed [event] to the user's relays. The broker verifies the
-     * signature and that the event belongs to the active user before publishing.
+     * Encrypt [content] to [recipient] with [encryption] (`"nip44"`, default, or `"nip04"`), then
+     * build, sign, and publish the event. The shell holds the key and performs both the encryption
+     * and the signing; the napplet supplies only plaintext.
      */
-    data class Publish(
-        val event: Event,
+    data class PublishEncrypted(
+        val kind: Int,
+        val tags: Array<Array<String>>,
+        val content: String,
+        val recipient: HexKey,
+        val encryption: String,
     ) : NappletRequest {
         override val capability get() = NappletCapability.RELAY
+        override val signsAsUser get() = true
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is PublishEncrypted) return false
+            if (kind != other.kind) return false
+            if (content != other.content) return false
+            if (recipient != other.recipient) return false
+            if (encryption != other.encryption) return false
+            if (tags.size != other.tags.size) return false
+            for (i in tags.indices) if (!tags[i].contentEquals(other.tags[i])) return false
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = kind
+            result = 31 * result + content.hashCode()
+            result = 31 * result + recipient.hashCode()
+            result = 31 * result + encryption.hashCode()
+            result = 31 * result + tags.sumOf { it.contentHashCode() }
+            return result
+        }
     }
 
     /** Read events matching [filter] (from the cache and/or a bounded relay fetch). */
@@ -125,14 +134,24 @@ sealed interface NappletRequest {
         override val capability get() = NappletCapability.RELAY
     }
 
-    /** Read a value from this napplet's sandboxed key-value store. */
+    /**
+     * Subscribe to events matching [filter]. The shell currently answers with the initial matches
+     * (like a query); a live tail over the existing reply channel is a follow-up.
+     */
+    data class Subscribe(
+        val filter: Filter,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.RELAY
+    }
+
+    /** Read a value from this napplet's sandboxed key-value store (`storage.getItem`). */
     data class StorageGet(
         val key: String,
     ) : NappletRequest {
         override val capability get() = NappletCapability.STORAGE
     }
 
-    /** Write a value to this napplet's sandboxed key-value store. */
+    /** Write a value to this napplet's sandboxed key-value store (`storage.setItem`). */
     data class StorageSet(
         val key: String,
         val value: String,
@@ -140,14 +159,24 @@ sealed interface NappletRequest {
         override val capability get() = NappletCapability.STORAGE
     }
 
-    /** Remove a value from this napplet's sandboxed key-value store. */
+    /** Remove a value from this napplet's sandboxed key-value store (`storage.removeItem`). */
     data class StorageRemove(
         val key: String,
     ) : NappletRequest {
         override val capability get() = NappletCapability.STORAGE
     }
 
-    /** Pay a BOLT-11 invoice from the user's wallet (`value` domain). */
+    /** List the keys this napplet has stored (`storage.keys`). */
+    data object StorageKeys : NappletRequest {
+        override val capability get() = NappletCapability.STORAGE
+    }
+
+    /**
+     * Pay a BOLT-11 invoice from the user's wallet (`value.payInvoice`). This is an
+     * **Amethyst-specific extension** — the upstream `value` domain models zaps/value-transfer
+     * differently — kept because a real napplet built against `@napplet/shim` never calls it, so
+     * it cannot conflict.
+     */
     data class PayInvoice(
         val invoice: String,
     ) : NappletRequest {

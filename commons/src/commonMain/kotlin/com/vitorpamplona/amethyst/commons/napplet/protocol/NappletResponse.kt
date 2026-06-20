@@ -35,16 +35,13 @@ sealed interface NappletResponse {
         val pubkey: HexKey,
     ) : NappletResponse
 
-    data class SignedEvent(
-        val event: Event,
-    ) : NappletResponse
-
-    /** Result of an encrypt/decrypt operation. */
-    data class Text(
-        val value: String,
-    ) : NappletResponse
-
+    /**
+     * Result of `relay.publish` / `relay.publishEncrypted`: the [event] the shell signed on the
+     * napplet's behalf and the [relays] that accepted it. Matches the upstream contract, where
+     * `publish(template)` resolves to the signed `NostrEvent`.
+     */
     data class Published(
+        val event: Event,
         val relays: List<String>,
     ) : NappletResponse
 
@@ -61,6 +58,11 @@ sealed interface NappletResponse {
     /** Result of a storage read; [value] is null when the key is absent. */
     data class StorageValue(
         val value: String?,
+    ) : NappletResponse
+
+    /** Result of `storage.keys` (and other string-list reads). */
+    data class Strings(
+        val values: List<String>,
     ) : NappletResponse
 
     /** Result of a `resource.bytes` fetch. */

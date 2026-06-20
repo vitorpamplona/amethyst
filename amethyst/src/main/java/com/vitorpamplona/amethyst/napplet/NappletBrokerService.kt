@@ -300,19 +300,17 @@ class NappletBrokerService : Service() {
     private fun summaryFor(request: NappletRequest): String =
         when (request) {
             is NappletRequest.GetPublicKey -> getString(R.string.napplet_consent_get_pubkey)
-            is NappletRequest.SignEvent -> {
+            is NappletRequest.Publish -> {
                 val preview = request.content.take(160).trim()
                 if (preview.isEmpty()) {
-                    getString(R.string.napplet_consent_sign, request.kind)
+                    getString(R.string.napplet_consent_publish, request.kind)
                 } else {
-                    getString(R.string.napplet_consent_sign_preview, request.kind) + "\n“$preview”"
+                    getString(R.string.napplet_consent_publish_preview, request.kind) + "\n“$preview”"
                 }
             }
-            is NappletRequest.Nip04Encrypt, is NappletRequest.Nip44Encrypt -> getString(R.string.napplet_consent_encrypt)
-            is NappletRequest.Nip04Decrypt, is NappletRequest.Nip44Decrypt -> getString(R.string.napplet_consent_decrypt)
-            is NappletRequest.Publish -> getString(R.string.napplet_consent_publish)
-            is NappletRequest.QueryEvents -> getString(R.string.napplet_consent_query)
-            is NappletRequest.StorageGet, is NappletRequest.StorageSet, is NappletRequest.StorageRemove ->
+            is NappletRequest.PublishEncrypted -> getString(R.string.napplet_consent_publish_encrypted)
+            is NappletRequest.QueryEvents, is NappletRequest.Subscribe -> getString(R.string.napplet_consent_query)
+            is NappletRequest.StorageGet, is NappletRequest.StorageSet, is NappletRequest.StorageRemove, is NappletRequest.StorageKeys ->
                 getString(R.string.napplet_consent_storage)
             is NappletRequest.PayInvoice -> {
                 val sats = runCatching { LnInvoiceUtil.getAmountInSats(request.invoice).toLong() }.getOrNull()

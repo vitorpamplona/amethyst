@@ -126,6 +126,52 @@ Acted on #1–#5. The dialect mismatch is resolved:
 - **`resource.bytes`** implemented for `https`/`data` (broker-fetched, Tor-routed,
   consent-gated); `blossom:`/`nostr:` are a follow-up.
 
+## Update (2026-06-20, later): verified against `@napplet/shim@0.16.0` and corrected
+
+Pulled the authoritative SDK (`@napplet/shim` v0.16.0, npm/unpkg) and corrected the
+implementation to its real contract. Commit `5ca44e27` had carried several wrong guesses; the
+verified surface is:
+
+| Namespace | Verified methods (v0.16.0) |
+|---|---|
+| `shell` | `supports(domain, protocol?)` (sync), `ready()`, `onReady(cb)`, `services` |
+| `identity` | `getPublicKey()`, `onChanged(h)`, + read API (`getRelays/getProfile/getFollows/getList/getZaps/getMutes/getBlocked/getBadges`) |
+| `keys` | **keyboard/command actions** — `registerAction/unregisterAction/onAction` (NOT signing) |
+| `relay` | `publish(template, options?)` → signed `NostrEvent`, `publishEncrypted(template, recipient, encryption?)`, `query(filters)`, `subscribe(filters, onEvent, onEose, options?)` |
+| `storage` | `getItem/setItem/removeItem/keys` (512 KB quota; `instance.*` variant) |
+| `resource` | `bytes(url)` → `Blob`, `bytesAsObjectURL(url)` |
+| `inc` | `emit(topic, extraTags?, content?)`, `on(topic, cb)` |
+
+Crucial design fact, quoted: **"signing and encryption are mediated by the shell via
+`relay.publish()` and `relay.publishEncrypted()`"** and *"no cryptographic dependencies — the
+shim sends JSON envelope messages and the shell handles identity"*. **There is no `sign()` and no
+raw nip04/44 in the napplet surface.** There is **no `value` or `upload` domain** in v0.16.0.
+
+Corrections landed (this commit):
+
+- **Signing model fixed (the big one).** Dropped the bogus `keys.signEvent` / `keys.nip04*` /
+  `keys.nip44*` napplet ops. `relay.publish` now takes an **unsigned template** (`kind/tags/content`)
+  and the broker signs it as the user and returns the signed event — exactly the upstream contract.
+  Added `relay.publishEncrypted` (broker encrypts to recipient with nip44/nip04, then signs +
+  publishes). The broker still defers the per-signature prompt to remote/external signers
+  (`signsAsUser` + non-internal signer) and honors standing DENY.
+- **`keys` re-pointed to keyboard actions** (`registerAction/unregisterAction/onAction`),
+  implemented as client-side no-op stubs (not yet wired to the host keyboard) so action-using
+  napplets don't crash. They never cross the broker boundary.
+- **`storage` renamed** to `getItem/setItem/removeItem` and **`storage.keys`** added end-to-end
+  (protocol + broker + DataStore + shim), matching upstream.
+- **`resource.bytes` now returns a `Blob`** (shim builds it from `{bytes, mime}`); wire field
+  renamed `contentType`→`mime`.
+- **`shell.supports(domain, protocol?)`** gained the optional protocol arg; added `shell.ready()`,
+  `onReady`, `services` stubs.
+- **`relay.subscribe`** wired (initial matches; live tail still a follow-up).
+- `value.payInvoice` and `upload.blob` are **kept as clearly-marked Amethyst-specific extensions**
+  (no upstream equivalent in v0.16.0) — a real `@napplet/shim` napplet never calls them, so they
+  can't conflict.
+
+Verified off-device: `commons:jvmTest` (broker + capability + ledger) and the amethyst codec
+round-trip test (`NappletProtocolJsonTest`) both green.
+
 Still open (documented, not blocking basic napplets):
 - **`upload`** — wired end-to-end (protocol/shim/capability) but the Android Blossom
   gateway is unprovided (`Unsupported`): a correct upload needs a content Uri + signed
@@ -134,14 +180,17 @@ Still open (documented, not blocking basic napplets):
   `identity.onChanged`/`inc.on` need a push channel over the existing reply proxy.
 - **Underspecified domains** — `inc`, `intent`, `theme`, `notify`, `media`, `config`,
   `outbox`, `ifc`, `cvm` remain unknown→denied (no method spec available to build to).
-- **Method-name fidelity** — `relay.*`/`storage.*`/`shell.supports`/`identity.getPublicKey`
-  are confirmed from upstream; `keys.*`, `value.*`, `upload.*`, `resource.*` are best-guess
-  names that should be checked against the `@napplet/web` source before release.
+- **Method-name fidelity** — ✅ resolved. All standard method names/shapes are now confirmed
+  against `@napplet/shim@0.16.0` (see the later update above), not guessed.
+- **Identity read API** — `getProfile/getRelays/getFollows/...` and `identity.onChanged` are not
+  yet implemented (need account-data wiring + on-device verification of the return shapes); the
+  shim exposes `getPublicKey` + an `onChanged` no-op for now.
 - **On-device verification** of the whole round-trip with a real playground napplet.
 
-Revised ecosystem-compatibility estimate: **~70%** (was ~25%) — real request/response
-napplets that use identity/keys/relay/storage/value/resource + `shell.supports` now run;
-gaps are upload, live subscriptions, the niche domains, and device verification.
+Revised ecosystem-compatibility estimate: **~80%** — real request/response napplets using
+identity(getPublicKey)/relay(publish/publishEncrypted/query/subscribe)/storage/resource +
+`shell.supports` now run against the *verified* contract; remaining gaps are the identity read
+API, keyboard-action wiring, live subscription tails, the niche domains, and device verification.
 
 ## Verdict (original assessment, pre-update)
 

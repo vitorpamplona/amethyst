@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.PermissionDecision
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -43,18 +42,20 @@ import kotlin.coroutines.cancellation.CancellationException
  * 3. **Consent** — when no standing decision exists, the user is asked.
  *
  * Two capability-specific policies refine step 2/3:
- * - **Per-use capabilities** ([NappletCapability.requiresPerUseConsent], i.e. [NappletCapability.WALLET])
+ * - **Per-use capabilities** ([NappletCapability.requiresPerUseConsent], i.e. [NappletCapability.VALUE])
  *   never auto-approve from a prior grant — every payment is confirmed afresh, with the amount shown.
- * - **Signer self-gating**: [NappletCapability.IDENTITY] is gated here only when the key lives in
- *   Amethyst (a [NostrSignerInternal]). Remote (NIP-46) and external (NIP-55) signers run their own
- *   per-request consent UI, so we defer to them rather than double-prompt. A standing DENY is still
- *   honored, and the applet must still have *declared* `identity`. This is safe only because the
- *   napplet host runs foreground-only, so the signer's prompt appears in the clear context of the
- *   user interacting with that napplet (it can't be fired from the background).
+ * - **Signer self-gating**: an identity read or a sign-as-user op ([NappletRequest.signsAsUser])
+ *   is gated here only when the key lives in Amethyst (a [NostrSignerInternal]). Remote (NIP-46) and
+ *   external (NIP-55) signers run their own per-request consent UI, so we defer to them rather than
+ *   double-prompt. A standing DENY is still honored, and the applet must still have *declared* the
+ *   capability. This is safe only because the napplet host runs foreground-only, so the signer's
+ *   prompt appears in the clear context of the user interacting with that napplet (it can't be
+ *   fired from the background).
  *
  * Security invariants enforced here (never trusted from the applet): the signing identity is
- * always the host's signer; [NappletRequest.SignEvent] stamps `created_at` from the host clock;
- * a response never contains private key bytes; storage is namespaced per applet coordinate.
+ * always the host's signer; the napplet only ever supplies an unsigned template — the shell signs
+ * it and stamps `created_at` from the host clock; a response never contains private key bytes;
+ * storage is namespaced per applet coordinate.
  */
 class NappletBroker(
     private val signer: NostrSigner,
@@ -96,8 +97,8 @@ class NappletBroker(
 
         val authorized =
             when {
-                // Remote/external signers run their own per-request consent UI — defer identity to them.
-                signerSelfGates(capability) -> true
+                // Remote/external signers run their own per-request consent UI — defer to them.
+                signerSelfGates(request) -> true
                 // A standing allow short-circuits, except for per-use capabilities (e.g. payments).
                 ledger.decide(identity, capability) == PermissionDecision.ALLOW && !capability.requiresPerUseConsent -> true
                 else -> {
@@ -118,8 +119,8 @@ class NappletBroker(
         }
     }
 
-    /** Identity/key ops are gated by us only when we hold the key; remote/external signers gate themselves. */
-    private fun signerSelfGates(capability: NappletCapability): Boolean = (capability == NappletCapability.IDENTITY || capability == NappletCapability.KEYS) && signer !is NostrSignerInternal
+    /** Identity reads and sign-as-user ops are gated by us only when we hold the key; remote/external signers gate themselves. */
+    private fun signerSelfGates(request: NappletRequest): Boolean = (request.capability == NappletCapability.IDENTITY || request.signsAsUser) && signer !is NostrSignerInternal
 
     /** Downgrades a grant to one-shot when the capability forbids persisting that scope (e.g. payments). */
     private fun effectiveGrant(
@@ -142,46 +143,50 @@ class NappletBroker(
 
             is NappletRequest.GetPublicKey -> NappletResponse.PublicKey(signer.pubKey)
 
-            is NappletRequest.SignEvent -> {
-                // created_at comes from the host, never the applet, so it cannot backdate.
-                val signed: Event = signer.sign(TimeUtils.now(), request.kind, request.tags, request.content)
-                NappletResponse.SignedEvent(signed)
+            // The napplet supplies an unsigned template; the shell signs and publishes it.
+            // created_at comes from the host, never the applet, so it cannot backdate.
+            is NappletRequest.Publish -> signAndPublish(request.kind, request.tags, request.content)
+
+            is NappletRequest.PublishEncrypted -> {
+                val ciphertext =
+                    when (request.encryption.trim().lowercase()) {
+                        "nip04" -> signer.nip04Encrypt(request.content, request.recipient)
+                        else -> signer.nip44Encrypt(request.content, request.recipient)
+                    }
+                signAndPublish(request.kind, withRecipientTag(request.tags, request.recipient), ciphertext)
             }
 
-            is NappletRequest.Nip04Encrypt ->
-                NappletResponse.Text(signer.nip04Encrypt(request.plaintext, request.peerPubKey))
-
-            is NappletRequest.Nip04Decrypt ->
-                NappletResponse.Text(signer.nip04Decrypt(request.ciphertext, request.peerPubKey))
-
-            is NappletRequest.Nip44Encrypt ->
-                NappletResponse.Text(signer.nip44Encrypt(request.plaintext, request.peerPubKey))
-
-            is NappletRequest.Nip44Decrypt ->
-                NappletResponse.Text(signer.nip44Decrypt(request.ciphertext, request.peerPubKey))
-
-            is NappletRequest.Publish -> publish(request.event)
-
             is NappletRequest.QueryEvents -> {
-                val gateway = relay ?: return NappletResponse.Unsupported("query")
+                val gateway = relay ?: return NappletResponse.Unsupported("relay.query")
+                NappletResponse.Events(gateway.query(request.filter))
+            }
+
+            // Live tailing is a follow-up; for now subscribe returns the initial matches.
+            is NappletRequest.Subscribe -> {
+                val gateway = relay ?: return NappletResponse.Unsupported("relay.subscribe")
                 NappletResponse.Events(gateway.query(request.filter))
             }
 
             is NappletRequest.StorageGet -> {
-                val store = storage ?: return NappletResponse.Unsupported("storage.get")
+                val store = storage ?: return NappletResponse.Unsupported("storage.getItem")
                 NappletResponse.StorageValue(store.get(identity.coordinate, request.key))
             }
 
             is NappletRequest.StorageSet -> {
-                val store = storage ?: return NappletResponse.Unsupported("storage.set")
+                val store = storage ?: return NappletResponse.Unsupported("storage.setItem")
                 store.set(identity.coordinate, request.key, request.value)
                 NappletResponse.Done
             }
 
             is NappletRequest.StorageRemove -> {
-                val store = storage ?: return NappletResponse.Unsupported("storage.remove")
+                val store = storage ?: return NappletResponse.Unsupported("storage.removeItem")
                 store.remove(identity.coordinate, request.key)
                 NappletResponse.Done
+            }
+
+            is NappletRequest.StorageKeys -> {
+                val store = storage ?: return NappletResponse.Unsupported("storage.keys")
+                NappletResponse.Strings(store.keys(identity.coordinate))
             }
 
             is NappletRequest.PayInvoice -> {
@@ -202,17 +207,29 @@ class NappletBroker(
             }
         }
 
-    private suspend fun publish(event: Event): NappletResponse {
-        val gateway = relay ?: return NappletResponse.Unsupported("publish")
-
-        // An applet may only publish as the active user, and only validly-signed events.
-        if (event.pubKey != signer.pubKey) {
-            return NappletResponse.Failed("Refusing to publish an event for a different identity.")
-        }
-        if (!event.verify()) {
-            return NappletResponse.Failed("Refusing to publish an event with an invalid signature.")
-        }
-
-        return NappletResponse.Published(gateway.publish(event))
+    /**
+     * Signs a napplet-supplied template **as the active user** and publishes it. The applet never
+     * sees a key, can never sign as another identity (the signer fixes `pubkey`), and cannot
+     * backdate (`created_at` is the host clock).
+     */
+    private suspend fun signAndPublish(
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+    ): NappletResponse {
+        val gateway = relay ?: return NappletResponse.Unsupported("relay.publish")
+        val signed: Event = signer.sign(TimeUtils.now(), kind, tags, content)
+        return NappletResponse.Published(signed, gateway.publish(signed))
     }
+
+    /** Ensures the encrypted event addresses [recipient] with a `p` tag, without duplicating one. */
+    private fun withRecipientTag(
+        tags: Array<Array<String>>,
+        recipient: String,
+    ): Array<Array<String>> =
+        if (tags.any { it.size >= 2 && it[0] == "p" && it[1] == recipient }) {
+            tags
+        } else {
+            tags + arrayOf(arrayOf("p", recipient))
+        }
 }

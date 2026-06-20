@@ -37,10 +37,14 @@ enum class NappletCapability {
     /** `identity` — read-only identity queries (`getPublicKey`, `onChanged`). */
     IDENTITY,
 
-    /** `keys` — sign events and NIP-04/44 encrypt/decrypt as the user. */
+    /**
+     * `keys` — keyboard / command action binding (`registerAction`, `onAction`). This is **not**
+     * signing: the upstream `@napplet/shim` deliberately has no `sign()` method, and napplets never
+     * get direct key access. Signing happens only inside the shell via [RELAY] `publish`.
+     */
     KEYS,
 
-    /** `relay` — publish, query, and subscribe to the user's relays. */
+    /** `relay` — publish (shell-signed), query, and subscribe to the user's relays. */
     RELAY,
 
     /** `storage` — a per-applet sandboxed key-value store, namespaced by applet identity. */
@@ -82,11 +86,11 @@ enum class NappletCapability {
             when (domain.trim().lowercase()) {
                 "shell" -> SHELL
                 "identity" -> IDENTITY
-                "keys", "sign", "signer", "nip04", "nip44" -> KEYS
+                "keys" -> KEYS
                 "relay", "relays" -> RELAY
                 "storage" -> STORAGE
-                "value", "wallet", "zap", "zaps", "payments" -> VALUE
-                "resource", "fetch", "net", "network" -> RESOURCE
+                "value" -> VALUE
+                "resource" -> RESOURCE
                 "upload" -> UPLOAD
                 else -> null
             }

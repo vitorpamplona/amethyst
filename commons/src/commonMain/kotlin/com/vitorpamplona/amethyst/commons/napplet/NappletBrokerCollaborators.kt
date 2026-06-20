@@ -75,6 +75,9 @@ interface NappletStorage {
         coordinate: String,
         key: String,
     )
+
+    /** Lists the keys this applet (identified by [coordinate]) has stored. */
+    suspend fun keys(coordinate: String): List<String>
 }
 
 /**

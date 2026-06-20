@@ -47,9 +47,6 @@ class NappletBrokerTest {
     private val userPriv = "0000000000000000000000000000000000000000000000000000000000000007"
     private val signer = NostrSignerInternal(KeyPair(userPriv.hexToByteArray()))
 
-    private val strangerPriv = "0000000000000000000000000000000000000000000000000000000000000019"
-    private val stranger = NostrSignerInternal(KeyPair(strangerPriv.hexToByteArray()))
-
     private val applet = NappletIdentity(authorPubKey = "aa".repeat(32), identifier = "demo")
 
     private val allDeclared = NappletCapability.entries.toSet()
@@ -164,6 +161,8 @@ class NappletBrokerTest {
         ) {
             data.remove(k(coordinate, key))
         }
+
+        override suspend fun keys(coordinate: String): List<String> = data.keys.filter { it.startsWith("$coordinate::") }.map { it.removePrefix("$coordinate::") }
     }
 
     private fun broker(
@@ -228,66 +227,42 @@ class NappletBrokerTest {
         }
 
     @Test
-    fun signEventProducesAValidlySignedEventAsTheUser() =
+    fun publishSignsTheTemplateAsTheUserAndSends() =
         runTest {
-            val request = NappletRequest.SignEvent(kind = 1, tags = arrayOf(arrayOf("t", "napplet")), content = "gm")
-            val response = broker(ScriptedPrompt(GrantState.ALLOW_ONCE)).handle(applet, request, allDeclared)
+            val relay = RecordingRelay()
+            val request = NappletRequest.Publish(kind = 1, tags = arrayOf(arrayOf("t", "napplet")), content = "gm")
 
-            assertIs<NappletResponse.SignedEvent>(response)
+            val response = broker(ScriptedPrompt(GrantState.ALLOW_ONCE), relay = relay).handle(applet, request, allDeclared)
+
+            // The shell signs the unsigned template and resolves to the signed event + relays.
+            assertIs<NappletResponse.Published>(response)
             val event = response.event
-            assertEquals(signer.pubKey, event.pubKey) // applet cannot sign as anyone but the user
+            assertEquals(signer.pubKey, event.pubKey) // applet supplied no pubkey; the shell fixed it to the user
             assertEquals(1, event.kind)
             assertEquals("gm", event.content)
             assertTrue(event.verify()) // id + signature are real
+            assertEquals(listOf("wss://relay.example"), response.relays)
+            assertEquals(1, relay.published.size)
+            assertEquals(event.id, relay.published.first().id)
         }
 
     @Test
     fun publishWithoutAGatewayIsUnsupported() =
         runTest {
-            val event: Event = signer.sign(1L, 1, emptyArray(), "hi")
             val response =
                 broker(ScriptedPrompt(GrantState.ALLOW_ONCE), relay = null)
-                    .handle(applet, NappletRequest.Publish(event), allDeclared)
+                    .handle(applet, NappletRequest.Publish(1, emptyArray(), "hi"), allDeclared)
             assertIs<NappletResponse.Unsupported>(response)
-        }
-
-    @Test
-    fun publishRefusesAnEventFromAnotherIdentity() =
-        runTest {
-            val foreign: Event = stranger.sign(1L, 1, emptyArray(), "not yours")
-            val relay = RecordingRelay()
-
-            val response =
-                broker(ScriptedPrompt(GrantState.ALLOW_ONCE), relay = relay)
-                    .handle(applet, NappletRequest.Publish(foreign), allDeclared)
-
-            assertIs<NappletResponse.Failed>(response)
-            assertTrue(relay.published.isEmpty()) // nothing left the broker
-        }
-
-    @Test
-    fun publishSendsAValidUserEventThroughTheGateway() =
-        runTest {
-            val event: Event = signer.sign(1L, 1, emptyArray(), "ship it")
-            val relay = RecordingRelay()
-
-            val response =
-                broker(ScriptedPrompt(GrantState.ALLOW_ONCE), relay = relay)
-                    .handle(applet, NappletRequest.Publish(event), allDeclared)
-
-            assertEquals(NappletResponse.Published(listOf("wss://relay.example")), response)
-            assertEquals(1, relay.published.size)
         }
 
     @Test
     fun relayDenyDoesNotReachTheGateway() =
         runTest {
-            val event: Event = signer.sign(1L, 1, emptyArray(), "blocked")
             val relay = RecordingRelay()
 
             val response =
                 broker(ScriptedPrompt(GrantState.DENY), relay = relay)
-                    .handle(applet, NappletRequest.Publish(event), allDeclared)
+                    .handle(applet, NappletRequest.Publish(1, emptyArray(), "blocked"), allDeclared)
 
             assertIs<NappletResponse.Denied>(response)
             assertTrue(relay.published.isEmpty())
@@ -320,6 +295,22 @@ class NappletBrokerTest {
 
             assertEquals(NappletResponse.Done, broker.handle(applet, NappletRequest.StorageRemove("k"), allDeclared))
             assertEquals(NappletResponse.StorageValue(null), broker.handle(applet, NappletRequest.StorageGet("k"), allDeclared))
+        }
+
+    @Test
+    fun storageKeysListsOnlyThisAppletsKeys() =
+        runTest {
+            val storage = MapStorage()
+            val broker = broker(ScriptedPrompt(GrantState.ALLOW_ALWAYS), storage = storage)
+            val other = NappletIdentity(authorPubKey = "bb".repeat(32), identifier = "other")
+
+            broker.handle(applet, NappletRequest.StorageSet("a", "1"), allDeclared)
+            broker.handle(applet, NappletRequest.StorageSet("b", "2"), allDeclared)
+            broker.handle(other, NappletRequest.StorageSet("c", "3"), allDeclared)
+
+            val response = broker.handle(applet, NappletRequest.StorageKeys, allDeclared)
+            assertIs<NappletResponse.Strings>(response)
+            assertEquals(setOf("a", "b"), response.values.toSet()) // never sees the other applet's "c"
         }
 
     @Test

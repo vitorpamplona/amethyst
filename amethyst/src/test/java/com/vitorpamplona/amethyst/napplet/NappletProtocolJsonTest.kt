@@ -78,27 +78,23 @@ class NappletProtocolJsonTest {
     }
 
     @Test
-    fun decodesSignEventUnderKeysDomain() {
-        val req = NappletProtocolJson.decodeRequest("""{"type":"keys.signEvent","id":"1","kind":1,"tags":[["t","x"]],"content":"gm"}""")
-        assertEquals(NappletRequest.SignEvent(1, arrayOf(arrayOf("t", "x")), "gm"), req)
+    fun decodesPublishFromAnUnsignedTemplate() {
+        // The napplet supplies only kind/tags/content — never id/pubkey/sig. The shell signs it.
+        val req = NappletProtocolJson.decodeRequest("""{"type":"relay.publish","id":"1","template":{"kind":1,"tags":[["t","x"]],"content":"gm"}}""")
+        assertEquals(NappletRequest.Publish(1, arrayOf(arrayOf("t", "x")), "gm"), req)
     }
 
     @Test
-    fun decodesEncryptDecryptUnderKeysDomain() {
-        assertEquals(NappletRequest.Nip04Encrypt("pk", "hi"), NappletProtocolJson.decodeRequest("""{"type":"keys.nip04Encrypt","peer":"pk","plaintext":"hi"}"""))
-        assertEquals(NappletRequest.Nip44Decrypt("pk", "ct"), NappletProtocolJson.decodeRequest("""{"type":"keys.nip44Decrypt","peer":"pk","ciphertext":"ct"}"""))
+    fun decodesPublishEncrypted() {
+        val req =
+            NappletProtocolJson.decodeRequest(
+                """{"type":"relay.publishEncrypted","id":"1","template":{"kind":4,"tags":[],"content":"hi"},"recipient":"pk","encryption":"nip04"}""",
+            )
+        assertEquals(NappletRequest.PublishEncrypted(4, emptyArray(), "hi", "pk", "nip04"), req)
     }
 
     @Test
-    fun decodesPublishPreservingTheEvent() {
-        val ev = sampleEvent()
-        val req = NappletProtocolJson.decodeRequest("""{"type":"relay.publish","id":"1","event":${ev.toJson()}}""") as NappletRequest.Publish
-        assertEquals(ev.id, req.event.id)
-        assertEquals("hello", req.event.content)
-    }
-
-    @Test
-    fun decodesQueryFromFilterObjectOrFiltersArray() {
+    fun decodesQueryAndSubscribeFromFilterObjectOrFiltersArray() {
         val single = NappletProtocolJson.decodeRequest("""{"type":"relay.query","filter":{"kinds":[1],"#t":["nostr"],"limit":5}}""") as NappletRequest.QueryEvents
         assertEquals(listOf(1), single.filter.kinds)
         assertEquals(listOf("nostr"), single.filter.tags?.get("t"))
@@ -106,13 +102,17 @@ class NappletProtocolJsonTest {
 
         val array = NappletProtocolJson.decodeRequest("""{"type":"relay.query","filters":[{"authors":["aa"]}]}""") as NappletRequest.QueryEvents
         assertEquals(listOf("aa"), array.filter.authors)
+
+        val sub = NappletProtocolJson.decodeRequest("""{"type":"relay.subscribe","filter":{"kinds":[1]}}""") as NappletRequest.Subscribe
+        assertEquals(listOf(1), sub.filter.kinds)
     }
 
     @Test
     fun decodesStorageOps() {
-        assertEquals(NappletRequest.StorageGet("k"), NappletProtocolJson.decodeRequest("""{"type":"storage.get","key":"k"}"""))
-        assertEquals(NappletRequest.StorageSet("k", "v"), NappletProtocolJson.decodeRequest("""{"type":"storage.set","key":"k","value":"v"}"""))
-        assertEquals(NappletRequest.StorageRemove("k"), NappletProtocolJson.decodeRequest("""{"type":"storage.remove","key":"k"}"""))
+        assertEquals(NappletRequest.StorageGet("k"), NappletProtocolJson.decodeRequest("""{"type":"storage.getItem","key":"k"}"""))
+        assertEquals(NappletRequest.StorageSet("k", "v"), NappletProtocolJson.decodeRequest("""{"type":"storage.setItem","key":"k","value":"v"}"""))
+        assertEquals(NappletRequest.StorageRemove("k"), NappletProtocolJson.decodeRequest("""{"type":"storage.removeItem","key":"k"}"""))
+        assertEquals(NappletRequest.StorageKeys, NappletProtocolJson.decodeRequest("""{"type":"storage.keys"}"""))
     }
 
     @Test
@@ -128,13 +128,16 @@ class NappletProtocolJsonTest {
     @Test
     fun unknownTypeDecodesToNull() {
         assertNull(NappletProtocolJson.decodeRequest("""{"type":"inc.emit","id":"1"}"""))
+        // keys.* (keyboard actions) are handled client-side and never cross the boundary.
+        assertNull(NappletProtocolJson.decodeRequest("""{"type":"keys.signEvent","id":"1"}"""))
+        assertNull(NappletProtocolJson.decodeRequest("""{"type":"keys.registerAction","id":"1"}"""))
         assertNull(NappletProtocolJson.decodeRequest("""{"foo":"bar"}"""))
     }
 
     @Test
     fun malformedOrMissingFieldThrows() {
         assertThrowsAny { NappletProtocolJson.decodeRequest("not json") }
-        assertThrowsAny { NappletProtocolJson.decodeRequest("""{"type":"keys.signEvent","content":"x"}""") }
+        assertThrowsAny { NappletProtocolJson.decodeRequest("""{"type":"relay.publish","template":{"content":"x"}}""") }
     }
 
     @Test
@@ -160,40 +163,46 @@ class NappletProtocolJsonTest {
     }
 
     @Test
-    fun encodesSignedEventAndEvents() {
-        val signed = json.parseToJsonElement(NappletProtocolJson.encodeResponse("keys.signEvent", NappletResponse.SignedEvent(sampleEvent()))).jsonObject
+    fun encodesPublishedEventAndEvents() {
+        // relay.publish resolves to the signed event (matching upstream NostrEvent return).
+        val published = json.parseToJsonElement(NappletProtocolJson.encodeResponse("relay.publish", NappletResponse.Published(sampleEvent(), listOf("wss://r")))).jsonObject
         assertEquals(
             "a".repeat(64),
-            signed["event"]
+            published["event"]
                 ?.jsonObject
                 ?.get("id")
                 ?.jsonPrimitive
                 ?.content,
         )
+        assertEquals("a".repeat(64), published["eventId"]?.jsonPrimitive?.content)
+        assertEquals(1, published["relays"]?.jsonArray?.size)
 
         val events = json.parseToJsonElement(NappletProtocolJson.encodeResponse("relay.query", NappletResponse.Events(listOf(sampleEvent())))).jsonObject
         assertEquals(1, events["events"]?.jsonArray?.size)
     }
 
     @Test
-    fun encodesStorageNullAsJsonNull() {
-        val absent = json.parseToJsonElement(NappletProtocolJson.encodeResponse("storage.get", NappletResponse.StorageValue(null))).jsonObject
+    fun encodesStorageNullAsJsonNullAndKeysAsArray() {
+        val absent = json.parseToJsonElement(NappletProtocolJson.encodeResponse("storage.getItem", NappletResponse.StorageValue(null))).jsonObject
         assertEquals(JsonNull, absent["value"])
+
+        val keys = json.parseToJsonElement(NappletProtocolJson.encodeResponse("storage.keys", NappletResponse.Strings(listOf("a", "b")))).jsonObject
+        assertEquals(2, keys["values"]?.jsonArray?.size)
     }
 
     @Test
-    fun encodesBytesAsBase64() {
+    fun encodesBytesAsBase64WithMime() {
         val o = json.parseToJsonElement(NappletProtocolJson.encodeResponse("resource.bytes", NappletResponse.Bytes("Hi".encodeToByteArray(), "text/plain"))).jsonObject
         assertEquals("SGk=", o["bytes"]?.jsonPrimitive?.content)
-        assertEquals("text/plain", o["contentType"]?.jsonPrimitive?.content)
+        assertEquals("text/plain", o["mime"]?.jsonPrimitive?.content)
     }
 
     @Test
     fun encodesErrorsWithOkFalse() {
-        val denied = json.parseToJsonElement(NappletProtocolJson.encodeResponse("keys.signEvent", NappletResponse.Denied(NappletCapability.KEYS, "no"))).jsonObject
+        val denied = json.parseToJsonElement(NappletProtocolJson.encodeResponse("relay.publish", NappletResponse.Denied(NappletCapability.RELAY, "no"))).jsonObject
         assertFalse(denied["ok"]!!.jsonPrimitive.boolean)
         assertEquals("denied", denied["error"]?.jsonPrimitive?.content)
-        assertEquals("KEYS", denied["capability"]?.jsonPrimitive?.content)
+        assertEquals("RELAY", denied["capability"]?.jsonPrimitive?.content)
 
         val unsupported = json.parseToJsonElement(NappletProtocolJson.encodeResponse("upload", NappletResponse.Unsupported("upload"))).jsonObject
         assertFalse(unsupported["ok"]!!.jsonPrimitive.boolean)
