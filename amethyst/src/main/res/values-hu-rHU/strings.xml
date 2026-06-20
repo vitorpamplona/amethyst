@@ -2939,6 +2939,7 @@
     <string name="nowhere_link_card_drop">Nowhere drop</string>
     <string name="nowhere_link_card_art">Nowhere alkotás</string>
     <string name="nowhere_link_card_forum">Nowhere fórum</string>
+    <!-- Marmot (MLS) group chats -->
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">A kedvezményezett lightning-szolgáltatása ennél: %1$s nem érhető el. A(z) „%2$s” lightning-cím lett kiszámítva. Hiba: %3$s. Ellenőrizze, hogy a kiszolgáló működik-e, és hogy a lightning-cím helyes-e</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Nem sikerült megoldani a következőt: %1$s. Ellenőrizze, hogy kapcsolódik-e, vagy működik-e a kiszolgáló, és hogy a(z) %2$s lightning-cím helyes-e.\n\nKivéve: %3$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Hiba történt a JSON elemzésekor a(z) %1$s számlahívásából. Ellenőrizze a felhasználó lightning-beállításait</string>

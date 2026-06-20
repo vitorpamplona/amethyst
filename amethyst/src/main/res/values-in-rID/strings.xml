@@ -396,5 +396,6 @@ Seharusnya %3$s</string>
     <!-- Emoji packs -->
     <!-- NIP-9B community rules composer-side validation. -->
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <!-- Marmot (MLS) group chats -->
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Layanan Lightning penerima di %1$s tidak tersedia. Itu dihitung dari alamat Lightning \"%2$s\". Kesalahan: %3$s. Periksa apakah server aktif dan apakah alamat petir sudah benar</string>
 </resources>

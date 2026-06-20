@@ -2848,6 +2848,7 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Konst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
+    <!-- Marmot (MLS) group chats -->
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Mottagarens Lightning-tjänst på %1$s är inte tillgänglig. Den beräknades från Lightning Address \"%2$s\". Fel: %3$s. Kontrollera om servern är uppe och om Lightning Addressen är korrekt</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Kunde inte lösa %1$s. Kontrollera om du är ansluten, om servern är uppe och om Lightning Addressen %2$s är korrekt.\n\nUndantag var: %3$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Fel vid tolkning av JSON från %1$ss fakturahämtning. Kontrollera användarens blixtkonfiguration</string>

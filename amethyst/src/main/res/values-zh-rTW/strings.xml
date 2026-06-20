@@ -602,6 +602,7 @@
     <!-- Emoji packs -->
     <!-- NIP-9B community rules composer-side validation. -->
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <!-- Marmot (MLS) group chats -->
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s 的接收方閃電服務不可用。它是根據閃電地址“%2$s”計算的。錯誤：%3$s。請檢查伺服器是否已上線，閃電地址是否正確</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">無法解析 %1$s。請檢查你是否已連接，服務器是否啓動，以及閃電地址 %2$s 是否正確。\n\n異常爲：%3$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">從 %1$s 的閃電發票獲取解析 JSON 發生錯誤。請檢查用戶的閃電設置</string>

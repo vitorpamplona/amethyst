@@ -2670,6 +2670,7 @@
     <string name="nowhere_link_card_drop">Nowhere-drop</string>
     <string name="nowhere_link_card_art">Nowhere-kunst</string>
     <string name="nowhere_link_card_forum">Nowhere-forum</string>
+    <!-- Marmot (MLS) group chats -->
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">De Lightning-service van de ontvanger op %1$s is niet beschikbaar. Dit werd berekend vanuit Lightning-adres \"%2$s\". Fout: %3$s. Controleer of de server online is en het adres correct is.</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Kon %1$s niet oplossen. Controleer je verbinding, of de server online is en of Lightning-adres %2$s correct is.\n\nUitzondering: %3$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Fout bij verwerken JSON van invoice van %1$s. Controleer de Lightning-instellingen van de gebruiker.</string>
