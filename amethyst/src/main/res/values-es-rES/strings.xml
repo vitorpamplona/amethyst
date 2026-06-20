@@ -1348,6 +1348,7 @@
     <!-- Emoji packs -->
     <!-- NIP-9B community rules composer-side validation. -->
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <!-- Marmot (MLS) group chats -->
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">El servicio de Lightning del destinatario en %1$s no está disponible. Se calculó a partir de la dirección de Lightning \"%2$s\". Error: %3$s. Comprueba si el servidor está activo y si la dirección de Lightning es correcta.</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">No se pudo resolver %1$s. Comprueba si tienes conexión, si el servidor está activo y si la dirección de Lightning \"%2$s\" es correcta..\n\nLa excepción fue: %3$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Error al analizar JSON desde la recuperación de factura de %1$s. Comprueba la configuración de Lightning del usuario.</string>
