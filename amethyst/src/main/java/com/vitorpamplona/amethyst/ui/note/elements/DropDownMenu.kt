@@ -26,7 +26,9 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -38,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
@@ -48,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
+import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -57,6 +61,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun MoreOptionsButton(
@@ -107,6 +113,23 @@ fun NoteDropDownMenu(
 ) {
     var reportDialogShowing by remember { mutableStateOf(false) }
     var addLabelDialogShowing by remember { mutableStateOf(false) }
+    var showShareSheet by remember { mutableStateOf(false) }
+
+    // Tapping "Share" hands the note's share options off to the shared Share
+    // drawer (ShareOptionsBottomSheet). We render it INSTEAD of the menu dialog
+    // — not on top of it — so the menu doesn't sit dimmed behind the sheet;
+    // dismissing the drawer closes the whole menu.
+    if (showShareSheet) {
+        ShareOptionsBottomSheet(
+            note = note,
+            nav = nav,
+            onDismiss = {
+                showShareSheet = false
+                onDismiss()
+            },
+        )
+        return
+    }
 
     val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
         DropDownParams(
@@ -148,6 +171,9 @@ fun NoteDropDownMenu(
         title = stringRes(R.string.note_actions_dialog_title),
         onDismiss = onDismiss,
     ) {
+        val clipboardManager = LocalClipboard.current
+        val scope = rememberCoroutineScope()
+
         // Unsealed rumors (private replies/posts received in gift wraps) are
         // unsigned and must never be referenced by a public event: hide every
         // action that would publish an e-tag of this note (broadcast, edit,
@@ -176,16 +202,49 @@ fun NoteDropDownMenu(
             }
         }
 
-        // Copy & Share section
+        // Copy & Share section. The copy-to-clipboard rows live here (and only
+        // here); the "Share" row hands off to the shared Share drawer.
         M3ActionSection {
-            ShareCopyActionRows(
-                note = note,
-                isPrivateRumor = isPrivateRumor,
-                editState = editState,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                onDismiss = onDismiss,
-            )
+            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_text)) {
+                val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
+                accountViewModel.decrypt(lastNoteVersion) {
+                    scope.launch {
+                        clipboardManager.setText(it)
+                    }
+                }
+                onDismiss()
+            }
+            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_user_pubkey)) {
+                note.author?.let {
+                    scope.launch(Dispatchers.IO) {
+                        clipboardManager.setText("nostr:${it.pubkeyNpub()}")
+                        onDismiss()
+                    }
+                }
+            }
+            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_note_id)) {
+                scope.launch(Dispatchers.IO) {
+                    clipboardManager.setText(note.toNostrUri())
+                    onDismiss()
+                }
+            }
+            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_raw_json)) {
+                val event = note.event
+                if (event != null) {
+                    scope.launch {
+                        val json = withContext(Dispatchers.Default) { JacksonMapper.toJsonPretty(event) }
+                        clipboardManager.setText(json)
+                        onDismiss()
+                    }
+                } else {
+                    onDismiss()
+                }
+            }
+            if (!isPrivateRumor) {
+                M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.quick_action_share)) {
+                    showShareSheet = true
+                }
+            }
         }
 
         // Edit & Broadcast section

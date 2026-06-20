@@ -318,8 +318,6 @@ private fun InnerReactionRow(
                     if (!isPrivateRumor) {
                         ShareReaction(
                             note = baseNote,
-                            editState = editState,
-                            accountViewModel = accountViewModel,
                             nav = nav,
                             grayTint = MaterialTheme.colorScheme.placeholderText,
                         )
@@ -341,8 +339,6 @@ private fun InnerReactionRow(
 @Composable
 fun ShareReaction(
     note: Note,
-    editState: State<GenericLoadable<EditState>>?,
-    accountViewModel: AccountViewModel,
     nav: INav,
     grayTint: Color,
     barChartModifier: Modifier = Size19Modifier,
@@ -359,11 +355,6 @@ fun ShareReaction(
     if (showShareSheet) {
         ShareOptionsBottomSheet(
             note = note,
-            // The reaction-row Share button is only rendered for non-private
-            // notes, so the image/link share rows are always offered here.
-            isPrivateRumor = false,
-            editState = editState,
-            accountViewModel = accountViewModel,
             nav = nav,
             onDismiss = { showShareSheet = false },
         )

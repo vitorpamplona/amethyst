@@ -29,31 +29,24 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.types.EditState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
- * Bottom drawer opened from the reaction-row Share button. Surfaces the same
- * Copy & Share options as the note's 3-dot menu via the shared
- * [ShareCopyActionRows], so both entry points stay in sync.
+ * Bottom drawer that offers the note's Share options ([ShareActionRows]).
+ * Opened from the reaction-row Share button and from the note's 3-dot menu,
+ * so both entry points share the exact same list.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShareOptionsBottomSheet(
     note: Note,
-    isPrivateRumor: Boolean,
-    editState: State<GenericLoadable<EditState>>?,
-    accountViewModel: AccountViewModel,
     nav: INav,
     onDismiss: () -> Unit,
 ) {
@@ -67,7 +60,7 @@ fun ShareOptionsBottomSheet(
                     .padding(bottom = 12.dp),
         ) {
             Text(
-                text = stringRes(R.string.note_actions_dialog_title),
+                text = stringRes(R.string.quick_action_share),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -77,11 +70,8 @@ fun ShareOptionsBottomSheet(
                         .padding(horizontal = 20.dp, vertical = 8.dp),
             )
             M3ActionSection {
-                ShareCopyActionRows(
+                ShareActionRows(
                     note = note,
-                    isPrivateRumor = isPrivateRumor,
-                    editState = editState,
-                    accountViewModel = accountViewModel,
                     nav = nav,
                     onDismiss = onDismiss,
                 )
