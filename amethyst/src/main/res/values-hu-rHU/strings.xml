@@ -253,6 +253,7 @@
     <string name="upload_file">Fájl feltöltése</string>
     <string name="take_a_picture">Kép készítése</string>
     <string name="record_a_video">Videó rögzítése</string>
+    <string name="no_camera_app_found">Ezen az eszközön nem található kameraalkalmazás</string>
     <string name="record_a_message">Hangüzenet rögzítése</string>
     <string name="record_a_message_title">Hangüzenet rögzítése</string>
     <string name="record_a_message_description">Hangüzenet rögzítéséhez kattintson és tartsa lenyomva a gombot</string>

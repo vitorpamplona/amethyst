@@ -250,6 +250,7 @@
     <string name="upload_file">上传文件</string>
     <string name="take_a_picture">拍照</string>
     <string name="record_a_video">录制视频</string>
+    <string name="no_camera_app_found">此设备上没有找到相机应用</string>
     <string name="record_a_message">录制消息</string>
     <string name="record_a_message_title">录制消息</string>
     <string name="record_a_message_description">点按以录制消息</string>
