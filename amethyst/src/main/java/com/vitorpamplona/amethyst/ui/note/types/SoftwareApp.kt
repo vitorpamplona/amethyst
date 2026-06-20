@@ -92,6 +92,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAss
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.SoftwareReleaseEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.asSoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.AppIdTag
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import kotlinx.collections.immutable.toImmutableList
@@ -198,10 +199,15 @@ fun RenderSoftwareApplication(
  * Releases (kind 30063) are separate events that point back to the app via an
  * `i` tag rather than an `a` tag, so they are never indexed as replies to the
  * app note and never ping its flows. Instead we register an index-driven
- * [LocalCache.observeNotes] observer keyed on kind-30063 / author, so a newer
- * release arriving while the card is visible updates the version chip without
- * a manual refresh. The observer only wakes on matching insertions, so it is
- * far cheaper than re-scanning the cache on every new-event bundle.
+ * [LocalCache.observeNotes] observer, so a newer release arriving while the
+ * card is visible updates the version chip without a manual refresh.
+ *
+ * The filter narrows on the release's `i` tag (the app id), not just the
+ * author, so the observer only ever loads *this* app's releases — an author
+ * with many apps would otherwise pull every release they ever published into
+ * the observer's working set. A blind `limit` is deliberately avoided:
+ * [LocalCache.filter] applies `take(limit)` before sorting by `created_at`,
+ * so it could drop the very release we are looking for.
  */
 @Composable
 fun produceLatestReleaseVersion(app: SoftwareApplicationEvent): State<String?> {
@@ -211,6 +217,7 @@ fun produceLatestReleaseVersion(app: SoftwareApplicationEvent): State<String?> {
                 Filter(
                     kinds = listOf(SoftwareReleaseEvent.KIND),
                     authors = listOf(app.pubKey),
+                    tags = mapOf(AppIdTag.TAG_NAME to listOf(app.appId())),
                 )
             LocalCache
                 .observeNotes(filter)
