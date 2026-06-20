@@ -87,6 +87,8 @@ sealed class Route {
 
     @Serializable object SoftwareApps : Route()
 
+    @Serializable object Napplets : Route()
+
     @Serializable data class SoftwareAppDetail(
         val kind: Int,
         val pubKeyHex: HexKey,

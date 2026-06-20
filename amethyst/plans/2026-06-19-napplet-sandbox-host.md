@@ -217,9 +217,17 @@ Deferred to v2; v1 nails the single-applet boundary first.
 - **On-device verification (needs emulator/device):** opaque-origin iframe really
   excludes the bridge; CSP `connect-src 'none'` blocks fetch/XHR/WebSocket; a real
   napplet renders and round-trips a `getPublicKey` / `signEvent` through consent.
-- **UI entry point:** wire `NappletLauncher.launch(...)` into navigation (a napplet
-  list/detail screen). Today the host is reachable only programmatically.
-- **Privacy:** the host's `OkHttpClient` for blob fetches ignores the user's
-  Tor/proxy settings — route it through the app's configured client.
+- ✅ **UI entry point:** a "Napplets" drawer item → `NappletsScreen` that lists
+  cached napplet manifests (kinds 15129/35129) and launches the host.
+- ✅ **Process isolation:** `Amethyst.onCreate` now skips `AppModules` entirely in
+  the `:napplet` process, so the account/signer are never loaded there. (Previously
+  `initiate()` loaded the account in every process — a real hole, now closed.)
+- ✅ **Privacy:** the host routes blob fetches through the user's Tor SOCKS proxy
+  when active; the port is passed in by the launcher (main process) so the sandbox
+  process never touches the account-bound HTTP stack.
+- **Relay discovery:** `NappletsScreen` reads only what's already in `LocalCache` —
+  no dedicated subscription fetches napplet manifests yet, so the list is empty
+  until one arrives via another feed. A `NappletsFilterAssemblerSubscription` is the
+  next step.
 - **Consent UX:** reuse `commons/.../ui/signing` styling; show the manifest title
   and a per-capability rationale; batch-grant on first run.

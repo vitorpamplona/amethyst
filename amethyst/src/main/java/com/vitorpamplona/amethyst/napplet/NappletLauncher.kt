@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import android.content.Intent
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 
@@ -40,6 +41,9 @@ object NappletLauncher {
     const val EXTRA_AGGREGATE_HASH = "napplet_aggregate_hash"
     const val EXTRA_TITLE = "napplet_title"
 
+    /** SOCKS proxy port to route blob fetches through, or -1 for a direct connection. */
+    const val EXTRA_PROXY_PORT = "napplet_proxy_port"
+
     fun launch(
         context: Context,
         manifest: NappletManifest,
@@ -47,6 +51,9 @@ object NappletLauncher {
         identifier: String,
     ) {
         val pathTags = manifest.paths()
+        // Resolved here in the main process (which knows the user's Tor settings) and passed in,
+        // so the sandbox process never needs the app's account-bound HTTP stack.
+        val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
         val intent =
             Intent(context, NappletHostActivity::class.java).apply {
                 putExtra(EXTRA_PATHS, ArrayList(pathTags.map { it.path }))
@@ -56,6 +63,7 @@ object NappletLauncher {
                 putExtra(EXTRA_IDENTIFIER, identifier)
                 putExtra(EXTRA_AGGREGATE_HASH, manifest.declaredAggregateHash() ?: manifest.computeAggregateHash())
                 putExtra(EXTRA_TITLE, manifest.title() ?: identifier.ifBlank { "Napplet" })
+                putExtra(EXTRA_PROXY_PORT, proxyPort)
                 if (context !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         context.startActivity(intent)

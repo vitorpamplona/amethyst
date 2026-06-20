@@ -95,6 +95,9 @@ private fun PreloadFor(
 
         NavBarItem.SOFTWARE_APPS -> SoftwareAppsFilterAssemblerSubscription(accountViewModel)
 
+        // Napplets read directly from the local cache; no dedicated relay subscription yet.
+        NavBarItem.NAPPLETS -> {}
+
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
         -> CalendarsFilterAssemblerSubscription(accountViewModel)

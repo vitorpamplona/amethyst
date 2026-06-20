@@ -52,6 +52,7 @@ enum class NavBarItem {
     PICTURES,
     WORKOUTS,
     SOFTWARE_APPS,
+    NAPPLETS,
     CALENDARS,
     CALENDAR_COLLECTIONS,
     SHORTS,
@@ -221,6 +222,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Apps,
                 resolveRoute = { Route.SoftwareApps },
             ),
+        NavBarItem.NAPPLETS to
+            NavBarItemDef(
+                id = NavBarItem.NAPPLETS,
+                labelRes = R.string.napplets,
+                icon = MaterialSymbols.Apps,
+                resolveRoute = { Route.Napplets },
+            ),
         NavBarItem.CALENDARS to
             NavBarItemDef(
                 id = NavBarItem.CALENDARS,
@@ -384,6 +392,7 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.PICTURES,
         NavBarItem.WORKOUTS,
         NavBarItem.SOFTWARE_APPS,
+        NavBarItem.NAPPLETS,
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
         NavBarItem.SHORTS,

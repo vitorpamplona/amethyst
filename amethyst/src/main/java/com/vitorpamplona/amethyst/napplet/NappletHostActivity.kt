@@ -51,6 +51,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
+import java.net.InetSocketAddress
+import java.net.Proxy
 
 /**
  * Hosts a napplet/nsite WebView in the isolated `:napplet` process — a process that holds **no**
@@ -75,7 +77,8 @@ class NappletHostActivity : ComponentActivity() {
     private var identifier: String = ""
     private var aggregateHash: String? = null
 
-    private val http = OkHttpClient()
+    private var proxyPort: Int = -1
+    private val http by lazy { buildHttpClient(proxyPort) }
     private val fetch: BlobFetcher = { url ->
         try {
             http
@@ -168,6 +171,7 @@ class NappletHostActivity : ComponentActivity() {
         identifier = intent.getStringExtra(NappletLauncher.EXTRA_IDENTIFIER).orEmpty()
         aggregateHash = intent.getStringExtra(NappletLauncher.EXTRA_AGGREGATE_HASH)
         title = intent.getStringExtra(NappletLauncher.EXTRA_TITLE).orEmpty()
+        proxyPort = intent.getIntExtra(NappletLauncher.EXTRA_PROXY_PORT, -1)
         return author.isNotEmpty()
     }
 
@@ -336,6 +340,17 @@ class NappletHostActivity : ComponentActivity() {
         bridgeReplyProxy?.postMessage(envelope.toString())
         return true
     }
+
+    /** Routes blob fetches through the user's Tor SOCKS proxy when one is active (port > 0). */
+    private fun buildHttpClient(port: Int): OkHttpClient =
+        if (port > 0) {
+            OkHttpClient
+                .Builder()
+                .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port)))
+                .build()
+        } else {
+            OkHttpClient()
+        }
 
     private fun notFound(): WebResourceResponse = WebResourceResponse("text/plain", "utf-8", 404, "Not Found", emptyMap(), ByteArrayInputStream(ByteArray(0)))
 

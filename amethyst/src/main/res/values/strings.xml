@@ -733,6 +733,7 @@
     <string name="exercise_fasting">Fasting</string>
     <string name="software_apps">Apps</string>
     <string name="route_software_apps">Apps</string>
+    <string name="napplets">Napplets</string>
     <string name="nip82_repository_label">Source: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Download</string>
