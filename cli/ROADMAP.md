@@ -68,7 +68,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | NIP-46 bunker signer | 🆕 | Needs a signers abstraction in Amy. |
 | Profile view (`amy profile show NPUB`) + edit | ✅ | `ProfileCommands`. Cache-first; `--refresh` forces a relay drain. |
 | Thread view (`amy thread show EVENT_ID`) | ⚠️ | Same. |
-| Notifications feed | 🆕 | |
+| Notifications feed (`amy notifications [--watch]`) | ✅ | `NotificationsCommand`. Global mode: `#p=[me]` over the full notification kind set, self + mutes removed; shared via `commons/.../ui/feeds/notifications/`. Snapshot + opt-in live JSONL tail. Plan: [`cli/plans/2026-06-19-notifications.md`](./plans/2026-06-19-notifications.md). Selected-mode `tagsAnEventByUser` relevance (Note-graph) still pending. |
 | Search (NIP-50) | 🆕 | |
 
 ---

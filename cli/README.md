@@ -92,6 +92,17 @@ Ctrl-C.
 amy --json notes home --watch --duration 120 | jq -r '.content'
 ```
 
+`amy notifications` (alias `notifs`) is the Notifications feed: every event
+that p-tags you — reactions, reposts, zaps, replies, mentions, comments —
+across the full notification kind set, minus your own (zaps excepted) and muted
+authors. It reproduces Amethyst's *Global* notification mode with one
+`{"#p":[you], "kinds":[…]}` query against your inbox relays. Same snapshot /
+`--watch` model as `notes home`.
+
+```text
+amy --json notifications --watch --duration 300 | jq -r '"\(.kind)\t\(.pubkey)"'
+```
+
 ### 2. Send a direct message
 
 ```text
@@ -227,6 +238,7 @@ $ amy relay publish-lists      # broadcast updated kind:10002/10050/10051
 | `amy notes post TEXT [--relay URL]` | Publish a kind:1 short text note. |
 | `amy notes feed [--author USER \| --following] [--limit N]` | Read recent kind:1 notes (yours, one user's, or your follow set). |
 | `amy notes home [--limit N] [--watch [--duration SECS]]` | Amethyst home feed: top-level posts/reposts from your follows (full kind set, mutes removed). Snapshot by default; `--watch` streams live events as JSONL. |
+| `amy notifications [--limit N] [--watch [--duration SECS]]` | Notifications feed: events that p-tag you (reactions, reposts, zaps, replies, mentions). Snapshot by default; `--watch` streams live events as JSONL. Alias: `notifs`. |
 | `amy profile show [USER]` | Print kind:0 metadata. USER accepts npub/nprofile/hex/NIP-05; defaults to self. |
 | `amy profile edit --name … --about … --picture URL …` | Patch and re-publish your kind:0. |
 

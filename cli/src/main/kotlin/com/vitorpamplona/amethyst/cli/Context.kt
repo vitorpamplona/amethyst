@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.marmot.ingest
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.quartz.marmot.MarmotFilters
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
@@ -48,6 +49,8 @@ import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.coroutines.CompletableDeferred
@@ -503,6 +506,42 @@ class Context(
             .query<Event>(
                 Filter(authors = listOf(pubKey), kinds = listOf(MuteListEvent.KIND), limit = 1),
             ).firstOrNull() as? MuteListEvent
+
+    /**
+     * The account's mute/block state as a [LiveHiddenUsers], from its NIP-51
+     * kind:10000 list — public mutes plus private mutes (Amy holds the signer
+     * so it can decrypt them). Cache-first; falls back to a one-shot relay
+     * drain if the list isn't local yet. Best-effort: an absent list yields
+     * empty mutes (nothing hidden). Shared by the home and notification feeds.
+     */
+    suspend fun hiddenUsers(timeoutMs: Long): LiveHiddenUsers {
+        val self = identity.pubKeyHex
+        var mute = muteListOf(self)
+        if (mute == null) {
+            val relays = outboxRelays().ifEmpty { bootstrapRelays() }
+            if (relays.isNotEmpty()) {
+                val filter = Filter(kinds = listOf(MuteListEvent.KIND), authors = listOf(self), limit = 1)
+                mute =
+                    drain(relays.associateWith { listOf(filter) }, timeoutMs)
+                        .mapNotNull { it.second as? MuteListEvent }
+                        .maxByOrNull { it.createdAt }
+            }
+        }
+        val empty =
+            LiveHiddenUsers(
+                showSensitiveContent = null,
+                hiddenWordsCase = emptyList(),
+                hiddenUsersHashCodes = emptySet(),
+                spammersHashCodes = emptySet(),
+            )
+        if (mute == null) return empty
+
+        val tags = mute.publicMutes() + (runCatching { mute.privateMutes(signer) }.getOrNull() ?: emptyList())
+        return empty.copy(
+            hiddenUsers = tags.filterIsInstance<UserTag>().mapTo(HashSet()) { it.pubKey },
+            mutedThreads = tags.filterIsInstance<EventTag>().mapTo(HashSet()) { it.eventId },
+        )
+    }
 
     /**
      * Latest known kind:10050 chat-message (NIP-17 DM) inbox relay list

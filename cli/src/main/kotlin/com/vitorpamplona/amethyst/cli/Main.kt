@@ -162,6 +162,10 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.notes(dataDir, tail)
         }
 
+        "notifications", "notifs" -> {
+            Commands.notifications(dataDir, tail)
+        }
+
         "nsite" -> {
             Commands.nsite(dataDir, tail)
         }
@@ -368,6 +372,12 @@ private fun printUsage() {
         |  notes home [--limit N]                      home feed: top-level posts/reposts from
         |             [--since TS] [--until TS]         everyone you follow (full HomeNewThread
         |             [--timeout SECS]                  kind set, muted authors/threads removed)
+        |             [--watch [--duration SECS]]       --watch: stream live events as JSONL
+        |
+        |Notifications:
+        |  notifications [--limit N]                   events that p-tag you: reactions, reposts,
+        |             [--since TS] [--until TS]         zaps, replies, mentions (Global mode;
+        |             [--timeout SECS]                  your own + muted authors removed)
         |             [--watch [--duration SECS]]       --watch: stream live events as JSONL
         |
         |Static websites (NIP-5A kind:15128/35128):

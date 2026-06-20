@@ -91,6 +91,11 @@ object Commands {
         tail: Array<String>,
     ): Int = NotesCommands.dispatch(dataDir, tail)
 
+    suspend fun notifications(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = NotificationsCommand.run(dataDir, tail)
+
     suspend fun nsite(
         dataDir: DataDir,
         tail: Array<String>,
