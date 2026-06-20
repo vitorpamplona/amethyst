@@ -45,7 +45,6 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -83,31 +82,36 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.flowOn
 
 @Composable
 fun ProfileAppRecommendationsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val myPubkey = accountViewModel.userProfile().pubkeyHex
-
     // Pull my kind 31989 events plus recent kind 31990 app definitions from
     // relays so the list below has candidates while this screen is open.
     ProfileAppRecommendationsFilterAssemblerSubscription(accountViewModel)
 
-    // Ticks whenever a new app definition (kind 31990) is inserted into the
-    // cache, so the candidate snapshot below recomputes. observeNewEvents lets
-    // the cache index do the kind narrowing instead of scanning the global
-    // firehose of every new event.
-    var appDefinitionsTick by remember { mutableIntStateOf(0) }
-    LaunchedEffect(myPubkey) {
-        launch(Dispatchers.IO) {
-            LocalCache
-                .observeNewEvents<AppDefinitionEvent>(Filter(kinds = listOf(AppDefinitionEvent.KIND)))
-                .collect { appDefinitionsTick++ }
-        }
-    }
+    // Kind 31990 app definitions, kept live. observeNotes seeds with what is
+    // already cached and re-emits as new definitions are inserted, so the
+    // candidate list below derives straight from these notes — no manual tick or
+    // full-cache rescan. (Per-row metadata changes are watched by AppRow itself,
+    // which is why an in-place addressable replacement not re-emitting here is
+    // fine.) The initial value is the current cache snapshot so the first frame
+    // matches the seeded emission instead of flashing empty.
+    val appDefinitionNotes by remember {
+        LocalCache
+            .observeNotes(Filter(kinds = listOf(AppDefinitionEvent.KIND)))
+            .flowOn(Dispatchers.IO)
+    }.collectAsStateWithLifecycle(
+        initialValue =
+            remember {
+                LocalCache.addressables
+                    .filterIntoSet(AppDefinitionEvent.KIND) { _, _ -> true }
+                    .toList()
+            },
+    )
 
     val myRecommendationEvents by accountViewModel.account.appRecommendations.flow
         .collectAsStateWithLifecycle()
@@ -140,10 +144,11 @@ fun ProfileAppRecommendationsScreen(
     }
 
     val apps =
-        remember(appDefinitionsTick, pinnedRecommended, pinnedFollows) {
-            LocalCache.addressables
-                .filterIntoSet(AppDefinitionEvent.KIND) { _, note ->
-                    val event = note.event as? AppDefinitionEvent ?: return@filterIntoSet false
+        remember(appDefinitionNotes, pinnedRecommended, pinnedFollows) {
+            appDefinitionNotes
+                .filterIsInstance<AddressableNote>()
+                .filter { note ->
+                    val event = note.event as? AppDefinitionEvent ?: return@filter false
                     // Unnamed apps are poor recommendation candidates; keep them
                     // only when already recommended, so they can be turned off.
                     note.address in pinnedRecommended ||
