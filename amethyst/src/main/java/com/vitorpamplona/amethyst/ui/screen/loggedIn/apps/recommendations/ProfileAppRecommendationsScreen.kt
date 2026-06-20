@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -67,7 +68,9 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.types.ByAuthorChip
@@ -166,28 +169,36 @@ fun ProfileAppRecommendationsScreen(
                 .map { LocalCache.getOrCreateAddressableNote(it) }
         }
 
-    // Local, in-memory text filter over the apps already loaded into the list.
-    // Matches the app name and description; the kind-31990-less missing rows
-    // have nothing searchable, so they only show when the query is blank.
+    // The shared top-nav feed filter, resolved to an author/tag matcher. Only the
+    // author dimension is meaningful for app definitions, so the matchAuthor side
+    // does the work (Follows lists narrow to apps by those authors); the
+    // hashtag/relay/community variants leave matchAuthor == true and act as no-ops.
+    val navFilter by accountViewModel.account.liveAppRecommendationsFollowLists
+        .collectAsStateWithLifecycle()
+
+    // Local, in-memory text filter over the apps already loaded into the list,
+    // applied on top of the author filter. Matches the app name and description;
+    // the kind-31990-less missing rows have nothing searchable, so they only show
+    // when the query is blank.
     var searchQuery by remember { mutableStateOf("") }
     val filteredApps =
-        remember(apps, searchQuery) {
+        remember(apps, searchQuery, navFilter) {
             val query = searchQuery.trim()
-            if (query.isEmpty()) {
-                apps
-            } else {
-                apps.filter { note ->
-                    val metadata = (note.event as? AppDefinitionEvent)?.appMetaData()
-                    metadata?.anyName()?.contains(query, ignoreCase = true) == true ||
-                        metadata?.about?.contains(query, ignoreCase = true) == true
-                }
+            apps.filter { note ->
+                if (!navFilter.matchAuthor(note.address.pubKeyHex)) return@filter false
+                if (query.isEmpty()) return@filter true
+                val metadata = (note.event as? AppDefinitionEvent)?.appMetaData()
+                metadata?.anyName()?.contains(query, ignoreCase = true) == true ||
+                    metadata?.about?.contains(query, ignoreCase = true) == true
             }
         }
+    // Apps I recommend stay visible regardless of the author filter so they can
+    // always be turned off; they only hide while a text search is active.
     val visibleMissing = if (searchQuery.isBlank()) missingRecommended else emptyList()
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.profile_app_recommendations_title), nav)
+            AppRecommendationsTopBar(accountViewModel, nav)
         },
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
@@ -210,10 +221,13 @@ fun ProfileAppRecommendationsScreen(
             if (visibleMissing.isEmpty() && filteredApps.isEmpty()) {
                 Text(
                     text =
-                        if (searchQuery.isBlank()) {
-                            stringRes(R.string.profile_app_recommendations_empty)
-                        } else {
-                            stringRes(R.string.profile_app_recommendations_search_empty, searchQuery)
+                        when {
+                            searchQuery.isNotBlank() ->
+                                stringRes(R.string.profile_app_recommendations_search_empty, searchQuery)
+                            // There are apps in cache, but the author filter hid them all.
+                            apps.isNotEmpty() ->
+                                stringRes(R.string.profile_app_recommendations_filter_empty)
+                            else -> stringRes(R.string.profile_app_recommendations_empty)
                         },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -238,6 +252,37 @@ fun ProfileAppRecommendationsScreen(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppRecommendationsTopBar(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    ShorterTopAppBar(
+        navigationIcon = {
+            if (nav.canPop()) {
+                IconButton(nav::popBack) {
+                    ArrowBackIcon()
+                }
+            }
+        },
+        title = {
+            val listName by accountViewModel.account.settings.defaultAppRecommendationsFollowList
+                .collectAsStateWithLifecycle()
+            val options by accountViewModel.feedStates.feedListOptions.kind3GlobalPeople
+                .collectAsStateWithLifecycle()
+
+            FeedFilterSpinner(
+                placeholderCode = listName,
+                explainer = stringRes(R.string.select_list_to_filter),
+                options = options,
+                onSelect = accountViewModel.account.settings::changeDefaultAppRecommendationsFollowList,
+                accountViewModel = accountViewModel,
+            )
+        },
+    )
 }
 
 @Composable

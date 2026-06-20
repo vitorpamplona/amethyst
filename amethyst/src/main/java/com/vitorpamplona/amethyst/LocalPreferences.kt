@@ -123,6 +123,7 @@ private object PrefKeys {
     const val DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST = "defaultBrowseEmojiSetsFollowList"
     const val DEFAULT_COMMUNITIES_FOLLOW_LIST = "defaultCommunitiesFollowList"
     const val DEFAULT_FOLLOW_PACKS_FOLLOW_LIST = "defaultFollowPacksFollowList"
+    const val DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST = "defaultAppRecommendationsFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer" // legacy, kept for migration
     const val NWC_WALLETS = "nwcWallets"
     const val DEFAULT_NWC_WALLET_ID = "defaultNwcWalletId" // legacy, migrated into DEFAULT_PAYMENT_SOURCE_ID
@@ -406,6 +407,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBrowseEmojiSetsFollowList.value))
                     putString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCommunitiesFollowList.value))
                     putString(PrefKeys.DEFAULT_FOLLOW_PACKS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultFollowPacksFollowList.value))
+                    putString(PrefKeys.DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultAppRecommendationsFollowList.value))
 
                     val walletEntries = settings.nwcWallets.value.mapNotNull { it.denormalize() }
                     if (walletEntries.isNotEmpty()) {
@@ -727,6 +729,7 @@ object LocalPreferences {
                         defaultBrowseEmojiSetsFollowList = MutableStateFlow(followListPrefs.browseEmojiSets),
                         defaultCommunitiesFollowList = MutableStateFlow(followListPrefs.communities),
                         defaultFollowPacksFollowList = MutableStateFlow(followListPrefs.followPacks),
+                        defaultAppRecommendationsFollowList = MutableStateFlow(followListPrefs.appRecommendations),
                         nwcWallets = MutableStateFlow(nwcWalletsLoaded.await().first),
                         clinkDebitWallets = MutableStateFlow(clinkDebitsLoaded.await()),
                         // Prefer the new unified default; migrate from the legacy NWC default;
@@ -815,6 +818,7 @@ object LocalPreferences {
         val browseEmojiSets: TopFilter,
         val communities: TopFilter,
         val followPacks: TopFilter,
+        val appRecommendations: TopFilter,
     )
 
     /**
@@ -867,6 +871,7 @@ object LocalPreferences {
             browseEmojiSets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, null), TopFilter.Global),
             communities = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, null), TopFilter.AllFollows),
             followPacks = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_FOLLOW_PACKS_FOLLOW_LIST, null), TopFilter.Global),
+            appRecommendations = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST, null), TopFilter.Global),
         )
 
     private inline fun <reified T : Any> parseOrNull(value: String?): T? {
