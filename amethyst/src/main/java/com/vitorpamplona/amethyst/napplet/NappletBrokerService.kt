@@ -38,16 +38,25 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayGateway
+import com.vitorpamplona.amethyst.commons.napplet.NappletWalletGateway
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 /**
  * The trust boundary's main-process endpoint. The untrusted `:napplet` process binds this
@@ -137,9 +146,7 @@ class NappletBrokerService : Service() {
                     return relays.map { it.url }
                 }
 
-                // Reads what the device already knows. The screen-level subscription keeps the
-                // cache warm; arbitrary live relay fetches per applet filter are a follow-up.
-                override suspend fun query(filter: Filter): List<Event> = account.cache.filter(filter).mapNotNull { it.event }
+                override suspend fun query(filter: Filter): List<Event> = queryEvents(account, filter)
             }
 
         val consent =
@@ -150,8 +157,57 @@ class NappletBrokerService : Service() {
                 )
             }
 
-        // wallet is intentionally null: no payment path ships until it is verified end-to-end.
-        return NappletBroker(account.signer, ledger, consent, relay, storage)
+        val wallet = NappletWalletGateway { invoice -> payInvoiceViaNwc(account, invoice) }
+
+        return NappletBroker(account.signer, ledger, consent, relay, storage, wallet)
+    }
+
+    /** Bounded live relay fetch (EOSE/timeout) merged with the local cache, newest-first. */
+    private suspend fun queryEvents(
+        account: Account,
+        filter: Filter,
+    ): List<Event> {
+        val relays = account.homeRelays.flow.value
+        val fromRelays =
+            if (relays.isEmpty()) {
+                emptyList()
+            } else {
+                runCatching {
+                    account.client.fetchAll(filters = relays.associateWith { listOf(filter) }, timeoutMs = QUERY_TIMEOUT_MS)
+                }.getOrDefault(emptyList())
+            }
+        val fromCache = account.cache.filter(filter).mapNotNull { it.event }
+
+        val merged =
+            (fromRelays + fromCache)
+                .distinctBy { it.id }
+                .sortedByDescending { it.createdAt }
+        return filter.limit?.let { merged.take(it) } ?: merged
+    }
+
+    /**
+     * Pays [invoice] via the user's connected NWC wallet, returning the preimage on success.
+     * Throws (→ `Failed`) when no wallet is connected, the wallet reports an error, or it does not
+     * respond in time — so the applet never silently believes a payment succeeded.
+     */
+    private suspend fun payInvoiceViaNwc(
+        account: Account,
+        invoice: String,
+    ): String? {
+        if (account.nip47SignerState.defaultWalletUri.value == null) {
+            throw IllegalStateException("No Lightning wallet is connected.")
+        }
+
+        val result = CompletableDeferred<String?>()
+        account.sendZapPaymentRequestFor(invoice, null) { response ->
+            when (response) {
+                is PayInvoiceSuccessResponse -> result.complete(response.result?.preimage)
+                is PayInvoiceErrorResponse -> result.completeExceptionally(RuntimeException(response.error?.message ?: "Payment failed."))
+                is NwcErrorResponse -> result.completeExceptionally(RuntimeException(response.error?.message ?: "Wallet error."))
+                else -> result.completeExceptionally(RuntimeException("Unexpected wallet response."))
+            }
+        }
+        return withTimeout(WALLET_TIMEOUT_MS) { result.await() }
     }
 
     private fun consentInfo(
@@ -178,7 +234,14 @@ class NappletBrokerService : Service() {
             is NappletRequest.QueryEvents -> "This napplet wants to read events from your relays."
             is NappletRequest.StorageGet, is NappletRequest.StorageSet, is NappletRequest.StorageRemove ->
                 "This napplet wants to use its private storage."
-            is NappletRequest.PayInvoice -> "This napplet wants to pay a Lightning invoice."
+            is NappletRequest.PayInvoice -> {
+                val sats = runCatching { LnInvoiceUtil.getAmountInSats(request.invoice).toLong() }.getOrNull()
+                if (sats != null) {
+                    "This napplet wants to pay a Lightning invoice for $sats sats."
+                } else {
+                    "This napplet wants to pay a Lightning invoice."
+                }
+            }
         }
 
     private fun reply(
@@ -199,5 +262,10 @@ class NappletBrokerService : Service() {
         } catch (e: RemoteException) {
             Log.w("NappletBrokerService", "Applet host went away before reply could be delivered", e)
         }
+    }
+
+    companion object {
+        private const val QUERY_TIMEOUT_MS = 8_000L
+        private const val WALLET_TIMEOUT_MS = 60_000L
     }
 }

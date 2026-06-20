@@ -197,16 +197,19 @@ Deferred to v2; v1 nails the single-applet boundary first.
    (`NappletBrokerService`), `window.napplet.*` shim, consent UI
    (`NappletConsentActivity`), DataStore ledger. ✅ implemented.
 4. **Capabilities beyond identity/publish:**
-   - **`relay` read** — `QueryEvents` one-shot query against `LocalCache`. ✅
+   - **`relay` read** — `QueryEvents`: bounded live relay fetch (`fetchAll`,
+     EOSE/timeout) merged with `LocalCache`, newest-first. ✅
    - **`storage`** — per-applet sandboxed KV store (`DataStoreNappletStorage`). ✅
-   - **`value`/`wallet`** — protocol + `NappletWalletGateway` interface in place;
-     broker answers `Unsupported` until a verified payment path is wired. ⏳
+   - **`value`/`wallet`** — `PayInvoice` wired to the user's NWC wallet
+     (`sendZapPaymentRequestFor`); consent shows the decoded sats amount; throws
+     (→ `Failed`) on no-wallet/error/timeout. ✅ (needs on-device verification)
    - **`net`** — CSP widening to approved origins. ⏳
 5. **Capability enforcement** — the broker refuses any request whose capability is
    not in the manifest's `requires` (passed host→broker as `declared`), before any
    consent prompt. ✅
-6. **Live relay query** (vs cache-only), **inter-applet messaging**,
-   **install-style up-front capability grant UI**. ⏳ (v2)
+6. **Inter-applet (NAP-INC / NAP-INTENT)** — deferred; design + prerequisites in
+   `2026-06-20-napplet-inter-applet.md`. **`net`** capability and an install-style
+   up-front capability grant UI also remain. ⏳
 
 ### Implemented Android components (amethyst `…/napplet/`)
 
