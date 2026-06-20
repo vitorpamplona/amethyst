@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,19 +51,23 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseGroup
+import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DistanceTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DurationTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.Elevation
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WeightTag
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import kotlin.math.abs
 import kotlin.math.round
 
@@ -372,7 +377,7 @@ fun WorkoutDisplay(
         WorkoutStatsGrid(secondaryStats)
 
         if (info.exerciseGroups.isNotEmpty()) {
-            ExerciseBreakdown(info.exerciseGroups, miles)
+            ExerciseBreakdown(info.exerciseGroups, miles, accountViewModel)
         }
 
         // Route the note (event content) through the same kind-1 pipeline: rich text with
@@ -527,27 +532,64 @@ private fun WorkoutStatsGrid(
 private fun ExerciseBreakdown(
     groups: List<ExerciseGroup>,
     miles: Boolean,
+    accountViewModel: AccountViewModel,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         groups.forEach { group ->
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                Text(
-                    text = group.displayName() ?: "—",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = group.summaryLine(miles),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.placeholderText,
-                )
-            }
+            ExerciseRow(group, miles, accountViewModel)
         }
+    }
+}
+
+@Composable
+private fun ExerciseRow(
+    group: ExerciseGroup,
+    miles: Boolean,
+    accountViewModel: AccountViewModel,
+) {
+    val fallback = group.displayName() ?: "—"
+    val address = remember(group.reference) { Address.parse(group.reference) }
+
+    if (address == null) {
+        ExerciseRowContent(fallback, group.summaryLine(miles))
+        return
+    }
+
+    // Resolve the kind-33401 template to show its real title; falls back to the slug
+    // until the template is fetched (the workout event's relay hints drive the fetch).
+    LoadAddressableNote(address, accountViewModel) { templateNote ->
+        val name =
+            if (templateNote != null) {
+                val templateEvent by observeNoteEvent<ExerciseTemplateEvent>(templateNote, accountViewModel)
+                templateEvent?.title() ?: fallback
+            } else {
+                fallback
+            }
+        ExerciseRowContent(name, group.summaryLine(miles))
+    }
+}
+
+@Composable
+private fun ExerciseRowContent(
+    name: String,
+    summary: String,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = summary,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
     }
 }
 

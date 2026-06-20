@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SetsTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SourceTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SplitTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.StepsTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.TemplateTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.TitleTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WeightTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutCompletedTag
@@ -91,6 +92,14 @@ fun TagArray.workoutEnd() = firstNotNullOfOrNull(WorkoutEndTag::parse)
 fun TagArray.workoutCompleted() = firstNotNullOfOrNull(WorkoutCompletedTag::parse)
 
 fun TagArray.exerciseSets() = mapNotNull(ExerciseSetTag::parse)
+
+fun TagArray.exerciseSetAddressIds() = mapNotNull(ExerciseSetTag::parseAddressId)
+
+fun TagArray.exerciseSetHints() = mapNotNull(ExerciseSetTag::parseAsHint)
+
+fun TagArray.templateAddressId() = firstNotNullOfOrNull(TemplateTag::parseAddressId)
+
+fun TagArray.templateHint() = firstNotNullOfOrNull(TemplateTag::parseAsHint)
 
 /** The client name from a `["client", name, ...]` tag (RUNSTR and POWR both emit this). */
 fun TagArray.clientName() =

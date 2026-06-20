@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip31Alts.alt
@@ -50,8 +51,20 @@ class WorkoutRecordEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
-    SearchableEvent {
+    SearchableEvent,
+    AddressHintProvider {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
+
+    // POWR / NIP-101e workouts reference kind-33401 exercise templates (and a kind-33402
+    // workout template) by coordinate + relay hint, so the templates can be fetched and
+    // rendered with real names. RUNSTR workouts carry none of these and contribute nothing.
+    override fun addressHints() =
+        buildList {
+            addAll(tags.exerciseSetHints())
+            tags.templateHint()?.let { add(it) }
+        }
+
+    override fun linkedAddressIds() = (tags.exerciseSetAddressIds() + listOfNotNull(tags.templateAddressId())).distinct()
 
     fun title() = tags.title()
 

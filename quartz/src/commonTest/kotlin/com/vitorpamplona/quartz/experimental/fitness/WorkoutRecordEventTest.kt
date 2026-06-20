@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.fitness
 
+import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.calories
 import com.vitorpamplona.quartz.experimental.fitness.workout.distance
@@ -192,6 +193,64 @@ class WorkoutRecordEventTest {
         assertEquals(84.0, groups[0].topWeightKg())
         assertEquals("Seated Calf Raise Machine", groups[1].displayName())
         assertNull(groups[1].totalVolumeKg()) // no weights logged
+    }
+
+    @Test
+    fun exposesPowrTemplateReferencesAsHints() {
+        val backSquat = "33401:0bdd91e8a30d87d041eafd1871f17d426fa415c69a9a822eccad49017bac59e7:back-squat-bb"
+        val deadlift = "33401:0bdd91e8a30d87d041eafd1871f17d426fa415c69a9a822eccad49017bac59e7:deadlift-bb"
+        val template = "33402:0bdd91e8a30d87d041eafd1871f17d426fa415c69a9a822eccad49017bac59e7:novice-hyp-day2-lower-a"
+        val relay = "wss://relay.powr.build"
+        val event =
+            parse(
+                arrayOf(
+                    arrayOf("type", "strength"),
+                    arrayOf("template", template, relay),
+                    arrayOf("exercise", backSquat, relay, "84", "8", "8", "normal", "1"),
+                    arrayOf("exercise", backSquat, relay, "84", "8", "8", "normal", "2"),
+                    arrayOf("exercise", deadlift, relay, "100", "5", "8", "normal", "1"),
+                ),
+            ) as WorkoutRecordEvent
+
+        // Each referenced template is exposed once for fetching (deduped), incl. the 33402 template.
+        val linked = event.linkedAddressIds()
+        assertEquals(setOf(backSquat, deadlift, template), linked.toSet())
+        assertEquals(3, linked.size)
+
+        // Relay hints let Amethyst fetch the templates from where POWR published them.
+        val hints = event.addressHints()
+        assertEquals(setOf(backSquat, deadlift, template), hints.map { it.addressId }.toSet())
+        assertTrue(hints.all { it.relay.url == "wss://relay.powr.build/" })
+    }
+
+    @Test
+    fun parsesExerciseTemplate() {
+        val event: Event =
+            EventFactory.create(
+                id = "a".repeat(64),
+                pubKey = "b".repeat(64),
+                createdAt = 1718000000L,
+                kind = ExerciseTemplateEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("d", "back-squat-bb"),
+                        arrayOf("title", "Back Squat (Barbell)"),
+                        arrayOf("format", "weight", "reps", "rpe", "set_type"),
+                        arrayOf("format_units", "kg", "count", "0-10", "enum"),
+                        arrayOf("equipment", "barbell"),
+                        arrayOf("difficulty", "intermediate"),
+                    ),
+                content = "Keep a neutral spine.",
+                sig = "c".repeat(128),
+            )
+
+        assertTrue(event is ExerciseTemplateEvent)
+        assertEquals("back-squat-bb", event.dTag())
+        assertEquals("Back Squat (Barbell)", event.title())
+        assertEquals(listOf("weight", "reps", "rpe", "set_type"), event.format())
+        assertEquals(listOf("kg", "count", "0-10", "enum"), event.formatUnits())
+        assertEquals("barbell", event.equipment())
+        assertEquals("intermediate", event.difficulty())
     }
 
     @Test

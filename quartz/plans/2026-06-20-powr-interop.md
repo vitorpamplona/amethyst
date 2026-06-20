@@ -41,14 +41,28 @@ the RUNSTR-canonical form (no POWR writer) — this is rendering interop.
   verb), `effectiveDurationSeconds()` (duration tag, else `end - start`),
   `exerciseGroups()`, `client()`, `workoutCompleted()`.
 
+### Exercise-template resolution (kind 33401)
+- `ExerciseTemplateEvent.kt` (kind 33401, addressable) + tag accessors
+  (`title`, `format`, `format_units`, `equipment`, `difficulty`); registered
+  in `EventFactory`.
+- `WorkoutRecordEvent` implements `AddressHintProvider`: `linkedAddressIds()`
+  (deduped 33401 + 33402 coordinates) seed the gatherer so the card re-renders
+  when a template arrives; `addressHints()` feed the relay-hint index with the
+  `relay.powr.build` hints from each `exercise`/`template` tag — without these
+  the fetch would only hit the viewer's own relays and usually miss.
+- `ExerciseSetTag.parseAsHint` / `TemplateTag.parseAsHint` build the hints.
+
 ### Amethyst (`WorkoutDisplay.kt`)
 - Activity label/icon come from `activityType()`; coordinate never leaks.
 - Hero = derived duration; secondary stats add Exercises / Sets / Volume.
-- New `ExerciseBreakdown` lists each exercise with its sets, e.g.
+- `ExerciseBreakdown` lists each exercise with its sets, e.g.
   `Back Squat Bb → 3 × 8 × 84 kg`, in the viewer's preferred unit (kg↔lbs).
+- Each row resolves its 33401 template via `LoadAddressableNote` +
+  `observeNoteEvent<ExerciseTemplateEvent>` (fetch-on-demand), showing the
+  template's real `title()` once it arrives and the slug until then.
 
 ## Not done (possible follow-ups)
-- Fetch 33401 templates to show real exercise titles / equipment / media
-  instead of the slug, and 33402 to show the planned-vs-done template.
+- Render 33402 (the planned template) to show planned-vs-done.
 - A POWR-dialect writer (would need exercise-template authoring — large).
-- Surface `rpe` / `set_type` (warmup/drop/failure) per set in the breakdown.
+- Surface `rpe` / `set_type` (warmup/drop/failure) per set, and the template's
+  `equipment` as a per-exercise icon.

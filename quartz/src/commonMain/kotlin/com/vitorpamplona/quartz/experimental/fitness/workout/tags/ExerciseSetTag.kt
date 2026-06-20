@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.experimental.fitness.workout.tags
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -75,6 +77,24 @@ class ExerciseSetTag(
         fun isCoordinate(value: String): Boolean {
             val parts = value.split(":", limit = 3)
             return parts.size == 3 && parts[0].toIntOrNull() != null && parts[1].length == 64
+        }
+
+        /** The referenced exercise-template coordinate, when the tag is the POWR set form. */
+        fun parseAddressId(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(isCoordinate(tag[1])) { return null }
+            return tag[1]
+        }
+
+        /** The relay hint for the referenced exercise template, so it can be fetched. */
+        fun parseAsHint(tag: Array<String>): AddressHint? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(isCoordinate(tag[1])) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2]) ?: return null
+            return AddressHint(tag[1], relayHint)
         }
 
         fun parse(tag: Array<String>): ExerciseSetTag? {
