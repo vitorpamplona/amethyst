@@ -43,6 +43,11 @@ class UrlId(
 
         fun toScope(url: String) = Rfc3986.normalizeAndRemoveFragment(url)
 
+        fun toScopeOrNull(url: String) =
+            runCatching { toScope(url) }
+                .getOrNull()
+                ?.takeIf { parse(it) != null }
+
         fun toKind(url: String) = KIND
 
         fun match(
