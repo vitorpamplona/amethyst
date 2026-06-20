@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelDataNorm
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -97,7 +96,6 @@ class ChannelCreateEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChannelCreateEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, data.toContent(), createdAt) {
-            alt("Public chat creation event ${data.name?.let { "about $it" }}")
             initializer()
         }
     }

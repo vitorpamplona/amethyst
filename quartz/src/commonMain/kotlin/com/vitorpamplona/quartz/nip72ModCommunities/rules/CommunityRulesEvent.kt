@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.MaxEventSizeTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.MinRulesCreatedAtTag
@@ -101,7 +100,6 @@ class CommunityRulesEvent(
     companion object {
         const val KIND = 34551
         const val KIND_STR = "34551"
-        const val ALT_DESCRIPTION = "Community rules"
 
         fun build(
             dTag: String,
@@ -114,8 +112,6 @@ class CommunityRulesEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CommunityRulesEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
-
             dTag(dTag)
             add(communityAddress.toATagArray())
 

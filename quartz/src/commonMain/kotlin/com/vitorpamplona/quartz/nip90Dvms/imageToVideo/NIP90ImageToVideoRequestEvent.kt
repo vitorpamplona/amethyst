@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.firstInputByType
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputUrl
@@ -47,14 +46,12 @@ class NIP90ImageToVideoRequestEvent(
 
     companion object {
         const val KIND = 5202
-        const val ALT = "NIP90 Image-to-Video request"
 
         fun build(
             imageUrl: String,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90ImageToVideoRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             inputUrl(imageUrl)
             initializer()
         }

@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class AppSpecificDataEvent(
@@ -42,7 +41,6 @@ class AppSpecificDataEvent(
 
     companion object {
         const val KIND = 30078
-        const val ALT = "Arbitrary app data"
 
         fun createAddress(
             pubKey: HexKey,
@@ -60,7 +58,6 @@ class AppSpecificDataEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<AppSpecificDataEvent>.() -> Unit = {},
         ) = eventTemplate<AppSpecificDataEvent>(KIND, description, createdAt) {
-            alt(ALT)
             dTag(dTag)
             initializer()
         }

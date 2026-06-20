@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
@@ -84,7 +83,6 @@ class EmojiPackEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<EmojiPackEvent>.() -> Unit = {},
         ) = eventTemplate<EmojiPackEvent>(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(dTag)
             title(name)
             initializer()

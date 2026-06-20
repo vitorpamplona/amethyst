@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.toETag
 import com.vitorpamplona.quartz.nip03Timestamp.tags.TargetEventTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.io.encoding.Base64
 
@@ -60,7 +59,6 @@ class OtsEvent(
 
     companion object {
         const val KIND = 1040
-        const val ALT = "Opentimestamps Attestation"
 
         /**
          * Stamp is used to save OTS requests locally while we want for the bitcoin
@@ -102,7 +100,6 @@ class OtsEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<OtsEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, encodeOtsState(otsState), createdAt) {
-            alt(ALT)
             targetEvent(TargetEventTag(eventId))
 
             initializer()
@@ -114,8 +111,6 @@ class OtsEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<OtsEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, encodeOtsState(otsState), createdAt) {
-            alt(ALT)
-
             targetEvent(event.toETag())
             targetKind(event.event.kind)
 

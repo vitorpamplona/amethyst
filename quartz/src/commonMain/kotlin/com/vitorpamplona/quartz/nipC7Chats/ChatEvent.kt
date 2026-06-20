@@ -39,7 +39,6 @@ import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -88,14 +87,12 @@ class ChatEvent(
 
     companion object {
         const val KIND = 9
-        const val ALT_DESCRIPTION = "Chat message"
 
         fun build(
             message: String,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChatEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, message, createdAt) {
-            alt(ALT_DESCRIPTION)
             initializer()
         }
 
@@ -105,7 +102,6 @@ class ChatEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChatEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, message, createdAt) {
-            alt(ALT_DESCRIPTION)
             quote(QEventTag(replyTo.event.id, replyTo.relay, replyTo.event.pubKey))
             initializer()
         }

@@ -28,8 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
@@ -66,8 +64,6 @@ class RelaySetEvent(
 
     companion object {
         const val KIND = 30002
-        const val ALT = "Relay list"
-        val ALT_TAG = arrayOf(AltTag.assemble(ALT))
 
         suspend fun updateRelayList(
             earlierVersion: RelaySetEvent,
@@ -90,7 +86,7 @@ class RelaySetEvent(
             createdAt: Long = TimeUtils.now(),
         ): RelaySetEvent {
             val privateTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
-            return signer.signNip51List(createdAt, KIND, ALT_TAG, privateTagArray)
+            return signer.signNip51List(createdAt, KIND, emptyArray(), privateTagArray)
         }
 
         suspend fun create(
@@ -99,7 +95,7 @@ class RelaySetEvent(
             createdAt: Long = TimeUtils.now(),
         ): RelaySetEvent {
             val privateTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
-            return signer.signNip51List(createdAt, KIND, ALT_TAG, privateTagArray)
+            return signer.signNip51List(createdAt, KIND, emptyArray(), privateTagArray)
         }
 
         suspend fun build(
@@ -113,7 +109,6 @@ class RelaySetEvent(
             description = PrivateTagsInContent.encryptNip44(privateRelays.map { RelayTag.assemble(it) }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
-            alt(ALT)
             relaySet(publicRelays)
 
             initializer()

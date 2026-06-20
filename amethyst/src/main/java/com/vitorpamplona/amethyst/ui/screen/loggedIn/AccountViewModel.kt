@@ -137,7 +137,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
@@ -1761,7 +1760,6 @@ class AccountViewModel(
         nostrGroupId: String,
         url: String,
         imeta: com.vitorpamplona.quartz.nip92IMeta.IMetaTag,
-        caption: String? = null,
     ) {
         val template =
             eventTemplate(
@@ -1769,9 +1767,6 @@ class AccountViewModel(
                 description = url,
             ) {
                 imeta(imeta)
-                if (!caption.isNullOrEmpty()) {
-                    alt(caption)
-                }
             }
         // MIP-03: inner events MUST remain unsigned (no `sig`) so a leaked
         // plaintext can't be replayed as a valid public kind:9. Authorship

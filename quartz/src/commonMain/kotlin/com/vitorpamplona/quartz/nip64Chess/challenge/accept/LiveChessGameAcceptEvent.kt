@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -54,7 +53,6 @@ class LiveChessGameAcceptEvent(
 
     companion object {
         const val KIND = 30065
-        const val ALT_DESCRIPTION = "Chess game acceptance"
 
         fun build(
             gameId: String,
@@ -65,7 +63,6 @@ class LiveChessGameAcceptEvent(
             dTag(gameId)
             challenge(challengeEvent)
             challenger(challengeEvent)
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

@@ -24,10 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
@@ -58,7 +56,6 @@ class FavoritePodcastsListEvent(
 
     companion object {
         const val KIND = 10054
-        const val ALT = "Favorite podcasts list"
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, "")
 
@@ -157,14 +154,6 @@ class FavoritePodcastsListEvent(
             tags: TagArray,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): FavoritePodcastsListEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
-            return signer.sign(createdAt, KIND, newTags, content)
-        }
+        ): FavoritePodcastsListEvent = signer.sign(createdAt, KIND, tags, content)
     }
 }

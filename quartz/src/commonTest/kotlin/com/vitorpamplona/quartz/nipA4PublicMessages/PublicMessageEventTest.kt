@@ -45,11 +45,6 @@ class PublicMessageEventTest {
     }
 
     @Test
-    fun `verify alt description`() {
-        assertEquals("Public Message", PublicMessageEvent.ALT_DESCRIPTION)
-    }
-
-    @Test
     fun `build with single receiver`() {
         val receiver = ReceiverTag(receiverPubKey, null)
         val template = PublicMessageEvent.build(receiver, "Hello!")
@@ -58,7 +53,6 @@ class PublicMessageEventTest {
         assertEquals(24, event.kind)
         assertEquals("Hello!", event.content)
         assertTrue(event.tags.any { it[0] == "p" && it[1] == receiverPubKey })
-        assertTrue(event.tags.any { it[0] == "alt" && it[1] == "Public Message" })
     }
 
     @Test

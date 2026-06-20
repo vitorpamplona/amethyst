@@ -45,7 +45,6 @@ class OnchainZapEventTest {
         val tags = template.tags
 
         // Required NIP-BC tags, exact values.
-        assertEquals(listOf("alt", "Onchain zap: 25000 sats"), tags.tag("alt")?.toList())
         assertEquals(listOf("i", "bitcoin:tx:$txid"), tags.tag("i")?.toList())
         assertEquals(listOf("p", recipient), tags.tag("p")?.toList())
         assertEquals(listOf("amount", "25000"), tags.tag("amount")?.toList())
@@ -75,7 +74,6 @@ class OnchainZapEventTest {
         assertEquals(listOf("i", "bitcoin:tx:$txid"), tags.tag("i")?.toList())
         assertEquals(listOf("p", recipient), tags.tag("p")?.toList())
         assertEquals(listOf("amount", "21000"), tags.tag("amount")?.toList())
-        assertEquals("Onchain zap: 21000 sats", tags.tag("alt")?.get(1))
 
         // The zapped event is referenced by an `e` tag and its kind by a `k` tag.
         val eTag = tags.tag("e")

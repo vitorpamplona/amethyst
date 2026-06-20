@@ -38,7 +38,6 @@ import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.tags.ReceiverTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -93,13 +92,11 @@ class PublicMessageEvent(
 
     companion object {
         const val KIND = 24
-        const val ALT_DESCRIPTION = "Public Message"
 
         fun build(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<PublicMessageEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             initializer()
             remove("e") // NIP-A4: e tags must not be used
         }
@@ -110,7 +107,6 @@ class PublicMessageEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<PublicMessageEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, msg, createdAt) {
-            alt(ALT_DESCRIPTION)
             toUser(to)
             initializer()
             remove("e") // NIP-A4: e tags must not be used
@@ -122,7 +118,6 @@ class PublicMessageEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<PublicMessageEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, msg, createdAt) {
-            alt(ALT_DESCRIPTION)
             toGroup(to)
             initializer()
             remove("e") // NIP-A4: e tags must not be used

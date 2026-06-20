@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
 import com.vitorpamplona.quartz.nip90Dvms.tags.firstInputByType
@@ -57,7 +56,6 @@ class NIP90ContentSearchRequestEvent(
 
     companion object {
         const val KIND = 5302
-        const val ALT = "NIP90 Content Search request"
 
         fun build(
             searchQuery: String,
@@ -68,7 +66,6 @@ class NIP90ContentSearchRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90ContentSearchRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             inputText(searchQuery)
             users?.let { param("users", it) }
             since?.let { param("since", it.toString()) }

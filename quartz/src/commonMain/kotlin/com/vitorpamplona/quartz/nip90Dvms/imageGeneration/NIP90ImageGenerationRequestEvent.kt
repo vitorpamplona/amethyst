@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
 import com.vitorpamplona.quartz.nip90Dvms.tags.firstInputByType
@@ -62,7 +61,6 @@ class NIP90ImageGenerationRequestEvent(
 
     companion object {
         const val KIND = 5100
-        const val ALT = "NIP90 Image Generation request"
 
         fun build(
             prompt: String,
@@ -75,7 +73,6 @@ class NIP90ImageGenerationRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90ImageGenerationRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             sourceImageUrl?.let { inputUrl(it) }
             inputText(prompt)
             model?.let { param("model", it) }

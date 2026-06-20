@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.serialization.SerialName
@@ -99,7 +98,6 @@ class CashuMintQuoteEvent(
 
     companion object {
         const val KIND = 7374
-        const val ALT_DESCRIPTION = "Cashu mint quote"
         const val TWO_WEEKS_SECONDS = 14 * 24 * 60 * 60L
 
         suspend fun build(
@@ -119,7 +117,6 @@ class CashuMintQuoteEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CashuMintQuoteEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             expiration(expirationTimestamp)
             add(arrayOf("mint", mintUrl))
             initializer()

@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -67,7 +66,6 @@ class DraftWrapEvent(
 
     companion object {
         const val KIND = 31234
-        const val ALT_DESCRIPTION = "Draft Event"
 
         fun createAddress(
             pubKey: HexKey,
@@ -90,7 +88,6 @@ class DraftWrapEvent(
             description = signer.nip44Encrypt(draft.toJson(), signer.pubKey),
             createdAt = createdAt,
         ) {
-            alt(ALT_DESCRIPTION)
             dTag(dTag)
             kind(draft.kind)
             expiration(TimeUtils.ninetyDaysFromNow())
@@ -111,7 +108,6 @@ class DraftWrapEvent(
             description = "",
             createdAt = createdAt,
         ) {
-            alt(ALT_DESCRIPTION)
             expiration(TimeUtils.oneMinuteFromNow())
             dTag(dTag)
             initializer()

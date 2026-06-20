@@ -61,7 +61,6 @@ class LiveActivitiesEventBuildTest {
         assertEquals("live", tagsByName["status"]?.single()?.get(1))
         assertEquals("42", tagsByName["current_participants"]?.single()?.get(1))
         assertEquals("100", tagsByName["total_participants"]?.single()?.get(1))
-        assertEquals(LiveActivitiesEvent.ALT, tagsByName["alt"]?.single()?.get(1))
 
         // Per NIP-53, role lives at index 3 of the p-tag; a missing relay must be
         // represented as an empty string placeholder, not dropped.

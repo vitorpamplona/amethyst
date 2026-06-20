@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.AudioTag
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.DescriptionTag
@@ -62,7 +61,6 @@ class PodcastEpisodeEvent(
 
     companion object {
         const val KIND = 54
-        const val ALT_DESCRIPTION_PREFIX = "Podcast episode"
 
         fun build(
             title: String,
@@ -73,8 +71,6 @@ class PodcastEpisodeEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<PodcastEpisodeEvent>.() -> Unit = {},
         ) = eventTemplate<PodcastEpisodeEvent>(KIND, markdownContent, createdAt) {
-            alt("$ALT_DESCRIPTION_PREFIX: $title")
-
             title(title)
             description(description)
             image?.let { image(it) }

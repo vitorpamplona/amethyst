@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -39,14 +38,12 @@ class FhirResourceEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 82
-        const val ALT_DESCRIPTION = "Medical data"
 
         fun build(
             fhirPayload: String,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<FhirResourceEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, fhirPayload, createdAt) {
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

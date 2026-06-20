@@ -31,8 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.EndpointUrlTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.RelayListTag
@@ -133,13 +131,12 @@ class MeetingSpaceEvent(
 
     companion object Companion {
         const val KIND = 30312
-        const val ALT = "Interactive room event"
 
         suspend fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): MeetingSpaceEvent {
-            val tags = arrayOf(AltTag.assemble(ALT))
+            val tags = emptyArray<Array<String>>()
             return signer.sign(createdAt, KIND, tags, "")
         }
 
@@ -158,7 +155,6 @@ class MeetingSpaceEvent(
             status(status)
             service(service)
             participant(host.pubKey, host.relayHint, host.role, host.proof)
-            alt(ALT)
             initializer()
         }
     }

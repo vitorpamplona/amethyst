@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -102,7 +101,6 @@ class NestsServersEvent(
 
     companion object {
         const val KIND = 10112
-        const val ALT = "Audio-room (nests) MoQ servers used by the author"
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
@@ -113,7 +111,6 @@ class NestsServersEvent(
         fun createTagArray(servers: List<NestsServer>): Array<Array<String>> =
             servers
                 .map { arrayOf("server", it.relay, it.auth) }
-                .plusElement(AltTag.assemble(ALT))
                 .toTypedArray()
 
         suspend fun updateRelayList(

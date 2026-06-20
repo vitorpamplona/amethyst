@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -85,7 +84,6 @@ class KeyPackageEvent(
 
     companion object {
         const val KIND = 30443
-        const val ALT_DESCRIPTION = "MLS KeyPackage"
 
         fun build(
             keyPackageBase64: String,
@@ -97,7 +95,6 @@ class KeyPackageEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<KeyPackageEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, keyPackageBase64, createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(dTagSlot)
             mlsProtocolVersion()
             mlsCiphersuite(ciphersuite)

@@ -25,10 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -54,7 +52,6 @@ class PinListEvent(
 
     companion object {
         const val KIND = 10001
-        const val ALT = "Pinned Notes"
 
         fun createPinAddress(pubKey: HexKey) = Address(KIND, pubKey, "")
 
@@ -63,7 +60,7 @@ class PinListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): PinListEvent {
-            val tags = arrayOf(pin.toTagArray(), AltTag.assemble(ALT))
+            val tags = arrayOf(pin.toTagArray())
             return signer.sign(createdAt, KIND, tags, "")
         }
 
@@ -96,12 +93,7 @@ class PinListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): PinListEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, "")
         }

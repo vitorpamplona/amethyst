@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteAggregateHash
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteDescription
@@ -56,7 +55,6 @@ class RootNappletEvent(
 
     companion object {
         const val KIND = 15129
-        const val ALT_DESCRIPTION = "Napplet"
 
         fun build(
             paths: List<PathTag>,
@@ -68,7 +66,6 @@ class RootNappletEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RootNappletEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             sitePaths(paths)
             siteAggregateHash(paths)
             if (servers.isNotEmpty()) siteServers(servers)

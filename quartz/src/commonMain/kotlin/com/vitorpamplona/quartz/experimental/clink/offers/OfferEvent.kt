@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -91,7 +90,6 @@ class OfferEvent(
 
     companion object {
         const val KIND = 21001
-        const val ALT = "CLINK offer"
 
         /** Builds a request event (payer side) addressed to the offer service. */
         suspend fun createRequest(
@@ -105,7 +103,6 @@ class OfferEvent(
                 eventTemplate(KIND, encrypted, createdAt) {
                     pTag(servicePubKey, null)
                     clinkVersion()
-                    alt(ALT)
                 },
             )
         }
@@ -124,7 +121,6 @@ class OfferEvent(
                     pTag(payerPubKey, null)
                     add(ETag.assemble(requestEvent.id, null, null))
                     clinkVersion()
-                    alt(ALT)
                 },
             )
         }
@@ -147,7 +143,6 @@ class OfferEvent(
                     pTag(payerPubKey, null)
                     add(ETag.assemble(requestEvent.id, null, null))
                     clinkVersion()
-                    alt(ALT)
                 },
             )
         }

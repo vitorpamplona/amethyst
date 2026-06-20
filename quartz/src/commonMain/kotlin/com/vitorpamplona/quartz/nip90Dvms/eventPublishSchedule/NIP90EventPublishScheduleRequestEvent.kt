@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParamValues
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputText
@@ -50,7 +49,6 @@ class NIP90EventPublishScheduleRequestEvent(
 
     companion object {
         const val KIND = 5905
-        const val ALT = "NIP90 Event Publish Schedule request"
 
         fun build(
             eventJson: String,
@@ -58,7 +56,6 @@ class NIP90EventPublishScheduleRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90EventPublishScheduleRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             inputText(eventJson)
             if (relays.isNotEmpty()) {
                 param("relays", *relays.toTypedArray())

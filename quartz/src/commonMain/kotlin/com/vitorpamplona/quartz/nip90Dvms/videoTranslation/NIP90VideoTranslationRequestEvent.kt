@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParamValues
@@ -59,7 +58,6 @@ class NIP90VideoTranslationRequestEvent(
 
     companion object {
         const val KIND = 5201
-        const val ALT = "NIP90 Video Translation request"
 
         fun build(
             videoUrl: String,
@@ -71,7 +69,6 @@ class NIP90VideoTranslationRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90VideoTranslationRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             inputUrl(videoUrl)
             param("language", language)
             subtitle?.let { param("subtitle", it) }

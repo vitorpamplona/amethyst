@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -87,7 +86,6 @@ class DebitEvent(
 
     companion object {
         const val KIND = 21002
-        const val ALT = "CLINK debit"
 
         /** Builds a request event (requestor side) addressed to the debit service. */
         suspend fun createRequest(
@@ -101,7 +99,6 @@ class DebitEvent(
                 eventTemplate(KIND, encrypted, createdAt) {
                     pTag(servicePubKey, null)
                     clinkVersion()
-                    alt(ALT)
                 },
             )
         }
@@ -120,7 +117,6 @@ class DebitEvent(
                     pTag(requestorPubKey, null)
                     add(ETag.assemble(requestEvent.id, null, null))
                     clinkVersion()
-                    alt(ALT)
                 },
             )
         }

@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip28PublicChat.base.BasePublicChatEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.channel
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -52,7 +51,6 @@ class ChannelMuteUserEvent(
 
     companion object {
         const val KIND = 44
-        const val ALT = "Mute user instruction for public chats"
 
         fun build(
             reason: String,
@@ -61,7 +59,6 @@ class ChannelMuteUserEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChannelMuteUserEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, reason, createdAt) {
-            alt(ALT)
             channel(channel)
             pTags(usersToMute)
             initializer()

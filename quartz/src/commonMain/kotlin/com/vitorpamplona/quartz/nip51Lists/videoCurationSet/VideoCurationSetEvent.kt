@@ -25,15 +25,12 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
@@ -82,7 +79,6 @@ class VideoCurationSetEvent(
 
     companion object {
         const val KIND = 30005
-        const val ALT = "Video Curation Set"
 
         fun createAddress(
             pubKey: HexKey,
@@ -154,16 +150,7 @@ class VideoCurationSetEvent(
             tags: TagArray,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): VideoCurationSetEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
-
-            return signer.sign(createdAt, KIND, newTags, content)
-        }
+        ): VideoCurationSetEvent = signer.sign(createdAt, KIND, tags, content)
 
         @OptIn(ExperimentalUuidApi::class)
         suspend fun create(
@@ -199,7 +186,6 @@ class VideoCurationSetEvent(
             createdAt = createdAt,
         ) {
             dTag(dTag)
-            alt(ALT)
             title(title)
             bookmarks(publicItems)
 

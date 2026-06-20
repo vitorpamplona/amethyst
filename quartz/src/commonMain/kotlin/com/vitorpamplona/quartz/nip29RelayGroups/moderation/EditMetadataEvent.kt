@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -44,7 +43,6 @@ class EditMetadataEvent(
 
     companion object {
         const val KIND = 9002
-        const val ALT_DESCRIPTION = "Group edit metadata"
 
         fun build(
             groupId: String,
@@ -56,7 +54,6 @@ class EditMetadataEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<EditMetadataEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             groupId(groupId)
             name?.let { add(arrayOf("name", it)) }
             about?.let { add(arrayOf("about", it)) }

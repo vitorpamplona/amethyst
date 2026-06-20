@@ -55,7 +55,6 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -173,7 +172,6 @@ class WikiNoteEvent(
         ): EventTemplate<WikiNoteEvent> =
             eventTemplate(KIND, description, createdAt) {
                 dTag(dTag)
-                alt("Wiki entry: $title")
 
                 title(title)
                 summary?.let { summary(it) }

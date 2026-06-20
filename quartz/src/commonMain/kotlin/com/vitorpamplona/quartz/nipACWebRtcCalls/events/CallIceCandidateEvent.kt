@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.int
@@ -64,7 +63,6 @@ class CallIceCandidateEvent(
 
     companion object {
         const val KIND = 25052
-        const val ALT_DESCRIPTION = "WebRTC ICE candidate"
 
         fun serializeCandidate(
             sdp: String,
@@ -82,7 +80,6 @@ class CallIceCandidateEvent(
             callId: String,
             initializer: TagArrayBuilder<CallIceCandidateEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, candidateJson) {
-            alt(ALT_DESCRIPTION)
             pTag(peerPubKey)
             callId(callId)
             initializer()

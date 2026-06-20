@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -66,7 +65,6 @@ class BadgeAwardEvent(
 
     companion object {
         const val KIND = 8
-        const val ALT_DESCRIPTION = "Badge award"
 
         fun build(
             awardDefinition: ATag,
@@ -74,7 +72,6 @@ class BadgeAwardEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<BadgeAwardEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             awardDefinition(awardDefinition)
             awardees(awardees)
             initializer()

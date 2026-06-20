@@ -27,12 +27,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.removeParsing
@@ -53,7 +50,6 @@ class EphemeralChatListEvent(
 
     companion object {
         const val KIND = 10023
-        const val ALT = "Ephemeral Chat List"
         const val FIXED_D_TAG = ""
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
@@ -136,16 +132,7 @@ class EphemeralChatListEvent(
             tags: TagArray,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): EphemeralChatListEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
-
-            return signer.sign(createdAt, KIND, newTags, content)
-        }
+        ): EphemeralChatListEvent = signer.sign(createdAt, KIND, tags, content)
 
         suspend fun create(
             publicRooms: List<RoomId> = emptyList(),
@@ -168,7 +155,6 @@ class EphemeralChatListEvent(
             description = PrivateTagsInContent.encryptNip44(privateRooms.map { it.toTagArray() }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
-            alt(ALT)
             rooms(publicRooms)
 
             initializer()

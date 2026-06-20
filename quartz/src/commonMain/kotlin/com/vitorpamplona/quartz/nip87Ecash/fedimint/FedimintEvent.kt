@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip87Ecash.NetworkType
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -48,7 +47,6 @@ class FedimintEvent(
 
     companion object {
         const val KIND = 38173
-        const val ALT_DESCRIPTION = "Fedimint Announcement"
 
         fun build(
             federationId: String,
@@ -59,7 +57,6 @@ class FedimintEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<FedimintEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, metadata, createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(federationId)
             inviteCodes(inviteCodes)
             modules(modules)

@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.MeetingSpaceTag
@@ -67,7 +66,6 @@ class MeetingRoomPresenceEvent(
 
     companion object Companion {
         const val KIND = 10312
-        const val ALT = "Room Presence tag"
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
@@ -81,8 +79,6 @@ class MeetingRoomPresenceEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<MeetingRoomPresenceEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(root.title() ?: ALT)
-
             roomMeeting(MeetingSpaceTag(root.address(), root.relays().firstOrNull()))
 
             handRaised?.let {
@@ -106,8 +102,6 @@ class MeetingRoomPresenceEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<MeetingRoomPresenceEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(root.room() ?: ALT)
-
             roomMeeting(MeetingSpaceTag(root.address(), root.relays().firstOrNull()))
 
             handRaised?.let { handRaised(it) }
