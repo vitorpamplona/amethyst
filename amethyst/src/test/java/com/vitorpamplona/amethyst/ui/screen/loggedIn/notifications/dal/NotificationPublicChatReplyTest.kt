@@ -78,13 +78,17 @@ class NotificationPublicChatReplyTest {
     }
 
     @Test
-    fun `reply deeper in a thread i posted in is notifiable`() {
+    fun `reply two hops above me in a thread i posted in is notifiable`() {
         // root(other) <- myMessage(me) <- someoneElse(other) <- newReply(other)
+        // newReply's immediate parent is `other`, so a single-hop check would
+        // miss me — this only passes if the walk climbs to the grandparent.
         val root = channelMessage("d".repeat(64), other, emptyList())
         val myMessage = channelMessage("e".repeat(64), me, listOf(root))
         val someoneElse = channelMessage("9".repeat(64), other, listOf(myMessage))
         val newReply = channelMessage("8".repeat(64), other, listOf(someoneElse))
 
+        // Sanity: the immediate parent is not me, so this is a true multi-hop hit.
+        assertFalse(newReply.replyTo?.any { it.author?.pubkeyHex == me } == true)
         assertTrue(NotificationFeedFilter.isNotifiablePublicChatReply(newReply, me))
     }
 
