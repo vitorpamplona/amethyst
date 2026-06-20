@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.ImageCompressionStore
 import com.vitorpamplona.amethyst.desktop.account.AccountState
+import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadTracker
 import com.vitorpamplona.amethyst.desktop.ui.compose.ComposeRelayPicker
@@ -84,6 +85,7 @@ import com.vitorpamplona.amethyst.desktop.ui.media.QualitySelectorChip
 import com.vitorpamplona.amethyst.desktop.ui.media.buildPreview
 import com.vitorpamplona.amethyst.desktop.ui.media.cleanupPreviewTemps
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
@@ -97,6 +99,8 @@ import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.isClient
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -805,22 +809,38 @@ private suspend fun publishNote(
         }
 
         val template =
-            TextNoteEvent.build(content) {
-                if (replyTo != null) {
-                    val etag = ETag(replyTo.id)
-                    etag.relay = null
-                    etag.author = replyTo.pubKey
-                    eTag(etag)
-                    pTag(PTag(replyTo.pubKey, relayHint = null))
+            if (replyTo is TextNoteEvent && replyTo.isNewThread() && replyTo.isClient(DesktopIAccount.CLIENT_TAG_NAME)) {
+                // NIP-22: replying to a brand-new Amethyst kind-1 thread root produces
+                // a kind 1111 Comment instead of a kind 1 reply.
+                CommentEvent.replyBuilder(content, EventHintBundle(replyTo)) {
+                    if (quoteOf != null) {
+                        quote(QEventTag(quoteOf.id, relayHint = null, authorPubKeyHex = quoteOf.pubKey))
+                        pTag(PTag(quoteOf.pubKey, relayHint = null))
+                    }
+                    hashtags(findHashtags(content))
+                    references(findURLs(content))
+                    for (imeta in imetaTags) {
+                        add(imeta.toTagArray())
+                    }
                 }
-                if (quoteOf != null) {
-                    quote(QEventTag(quoteOf.id, relayHint = null, authorPubKeyHex = quoteOf.pubKey))
-                    pTag(PTag(quoteOf.pubKey, relayHint = null))
-                }
-                hashtags(findHashtags(content))
-                references(findURLs(content))
-                for (imeta in imetaTags) {
-                    add(imeta.toTagArray())
+            } else {
+                TextNoteEvent.build(content) {
+                    if (replyTo != null) {
+                        val etag = ETag(replyTo.id)
+                        etag.relay = null
+                        etag.author = replyTo.pubKey
+                        eTag(etag)
+                        pTag(PTag(replyTo.pubKey, relayHint = null))
+                    }
+                    if (quoteOf != null) {
+                        quote(QEventTag(quoteOf.id, relayHint = null, authorPubKeyHex = quoteOf.pubKey))
+                        pTag(PTag(quoteOf.pubKey, relayHint = null))
+                    }
+                    hashtags(findHashtags(content))
+                    references(findURLs(content))
+                    for (imeta in imetaTags) {
+                        add(imeta.toTagArray())
+                    }
                 }
             }
 
