@@ -23,3 +23,6 @@ package com.vitorpamplona.quartz.nip89AppHandlers.clientTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
 fun TagArray.client() = this.mapNotNull(ClientTag::parse)
+
+/** True when any client tag (NIP-89) names [name] (case-insensitive). */
+fun TagArray.isClient(name: String) = this.any { ClientTag.isTag(it) && it[1].equals(name, ignoreCase = true) }

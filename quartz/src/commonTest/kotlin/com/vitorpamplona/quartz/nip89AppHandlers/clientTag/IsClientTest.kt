@@ -20,9 +20,44 @@
  */
 package com.vitorpamplona.quartz.nip89AppHandlers.clientTag
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
-fun Event.client() = tags.client()
+class IsClientTest {
+    @Test
+    fun matchesClientTagByName() {
+        val tags = arrayOf(arrayOf("client", "Amethyst"))
+        assertTrue(tags.isClient("Amethyst"))
+    }
 
-/** True when this event was published by the client named [name] (NIP-89, case-insensitive). */
-fun Event.isClient(name: String) = tags.isClient(name)
+    @Test
+    fun matchesIgnoringCase() {
+        val tags = arrayOf(arrayOf("client", "amethyst"))
+        assertTrue(tags.isClient("Amethyst"))
+    }
+
+    @Test
+    fun matchesWithAddressAndRelayHint() {
+        val tags = arrayOf(arrayOf("client", "Amethyst", "31990:abc123:amethyst", "wss://relay.example.com"))
+        assertTrue(tags.isClient("Amethyst"))
+    }
+
+    @Test
+    fun doesNotMatchDifferentClient() {
+        val tags = arrayOf(arrayOf("client", "OtherClient"))
+        assertFalse(tags.isClient("Amethyst"))
+    }
+
+    @Test
+    fun doesNotMatchWhenNoClientTag() {
+        val tags = arrayOf(arrayOf("e", "abc"), arrayOf("p", "def"))
+        assertFalse(tags.isClient("Amethyst"))
+    }
+
+    @Test
+    fun doesNotMatchEmptyClientName() {
+        val tags = arrayOf(arrayOf("client", ""))
+        assertFalse(tags.isClient("Amethyst"))
+    }
+}

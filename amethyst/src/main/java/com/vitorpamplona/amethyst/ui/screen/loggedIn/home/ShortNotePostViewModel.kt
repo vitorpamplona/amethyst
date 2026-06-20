@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.service.ai.MockWritingAssistant
 import com.vitorpamplona.amethyst.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
@@ -113,6 +114,7 @@ import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
@@ -132,6 +134,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.isClient
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
@@ -1090,6 +1093,38 @@ open class ShortNotePostViewModel :
                 emojis(emojis)
                 imetas(usedAttachments)
             }
+        } else if (shouldReplyAsComment()) {
+            // NIP-22: replies to a brand-new Amethyst kind-1 thread root are sent as
+            // kind 1111 Comments instead of kind 1 replies.
+            val eventHint = originalNote?.toEventHint<Event>() ?: return null
+
+            CommentEvent.replyBuilder(tagger.message, eventHint) {
+                tagger.pTags?.let { userList ->
+                    val tags =
+                        userList.map {
+                            val tag = it.toPTag()
+                            if (tag.relayHint == null) {
+                                tag.copy(relayHint = LocalCache.relayHints.hintsForKey(it.pubkeyHex).firstOrNull())
+                            } else {
+                                tag
+                            }
+                        }
+                    notify(tags)
+                }
+
+                hashtags(findHashtags(tagger.message))
+                references(findURLs(tagger.message))
+                quotes(findNostrUris(tagger.message))
+
+                geoHash?.let { geohash(it) }
+                localZapRaiserAmount?.let { zapraiser(it) }
+                zapReceiver?.let { zapSplits(it) }
+                contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
+
+                emojis(emojis)
+                imetas(usedAttachments)
+            }
         } else {
             TextNoteEvent.build(tagger.message) {
                 val replyingTo = originalNote?.toEventHint<TextNoteEvent>()
@@ -1147,6 +1182,19 @@ open class ShortNotePostViewModel :
                 imetas(usedAttachments)
             }
         }
+    }
+
+    /**
+     * NIP-22: a reply should be a kind 1111 Comment (instead of a kind 1 reply) when
+     * the note being replied to is a kind 1 [TextNoteEvent], is the root of a new
+     * thread, and was itself posted from Amethyst. Forks keep using kind 1.
+     */
+    private fun shouldReplyAsComment(): Boolean {
+        if (forkedFromNote != null) return false
+        val replyingToEvent = originalNote?.event ?: return false
+        return replyingToEvent is TextNoteEvent &&
+            replyingToEvent.isNewThread() &&
+            replyingToEvent.isClient(AccountCacheState.CLIENT_TAG_NAME)
     }
 
     fun findEmoji(
