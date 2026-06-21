@@ -94,8 +94,10 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `filter` | `amy filter` | ✅ | stateless — assemble + print a filter JSON. |
 | `blossom` | `amy blossom` | ✅ | upload/download/list/delete (reuses commons `BlossomClient`). |
 | `kind` / `nip` | `amy kind` / `amy nip` | 🆕 | reference lookups (needs a kind registry — only remaining Tier-1 gap). |
-| `sync` | `amy relay sync` | 🆕 (tier 2) | NIP-77 Negentropy. |
-| `bunker` / `serve` / `admin` / `wallet` / `git` / `podcast` / `mcp` / `fs` / `spell` | — | 🆕 (tier 2/3) | larger/niche; some pull new deps. |
+| `sync` | `amy sync` | ✅ | NIP-77 Negentropy reconcile with the local store (down/up/both). |
+| `git` | `amy git` | ✅ in part | NIP-34 repo announce/list/show/issue. clone/push (packfile transport) out of scope. |
+| `podcast` | `amy podcast` | ✅ | NIP-F4 show metadata (10154) + episode publish (54) + list. |
+| `bunker` / `serve` / `admin` / `wallet` / `mcp` / `fs` / `spell` | — | 🆕 (tier 2/3) | larger/niche; some pull new deps. |
 
 **Tier 1 status:** shipped — `decode`, `encode`, `verify`, `key`, `event`,
 `publish`, `fetch`, `subscribe`, `count`, `encrypt`, `decrypt`, `gift`,

@@ -234,6 +234,7 @@ Filter flags are shared by `fetch` and `subscribe`: `--kind K[,K]`, `--author U[
 | `amy subscribe [filter flags] [--timeout SECS]` | Live stream — print each matching event as it arrives (NDJSON under `--json`). Runs until `--timeout` SECS or until interrupted. |
 | `amy count [filter flags] [--timeout SECS]` | NIP-45 COUNT — per-relay match counts, no event download. |
 | `amy outbox USER [--refresh] [--timeout SECS]` | Show USER's NIP-65 read/write relays (outbox model). Cache-first; `--refresh` forces a relay drain. |
+| `amy sync --relay URL [filter flags] [--down] [--up]` | NIP-77 Negentropy reconcile between the local store and a relay. `--down` (default) pulls events we lack; `--up` pushes events the relay lacks; both for bidirectional. |
 
 ### Encryption
 

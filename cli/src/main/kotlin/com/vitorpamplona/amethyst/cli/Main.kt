@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.cli.commands.RelayCommands
 import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.StoreCommands
 import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
+import com.vitorpamplona.amethyst.cli.commands.SyncCommand
 import com.vitorpamplona.amethyst.cli.commands.UseCommand
 import com.vitorpamplona.amethyst.cli.commands.VerifyCommand
 import com.vitorpamplona.amethyst.cli.commands.ZapCommand
@@ -207,6 +208,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "gift" -> GiftCommands.dispatch(dataDir, tail)
         "outbox" -> OutboxCommand.run(dataDir, tail)
         "blossom" -> BlossomCommands.dispatch(dataDir, tail)
+        "sync" -> SyncCommand.run(dataDir, tail)
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -391,6 +393,9 @@ private fun printUsage() {
         |         [--relay URL[,URL…]] [--timeout SECS]  (NDJSON). Runs until --timeout or interrupt.
         |  count  [<same filter flags as fetch>]        NIP-45 COUNT: per-relay match counts, no
         |         [--relay URL[,URL…]] [--timeout SECS]  event download.
+        |  sync   --relay URL [<filter flags>]          NIP-77 Negentropy reconcile with the local
+        |         [--down] [--up] [--timeout SECS]       store (--down default; --up to push ours;
+        |                                                both for bidirectional).
         |
         |Encryption (active account's key):
         |  encrypt --to USER [TEXT] [--nip04]           NIP-44 (default) or NIP-04 encrypt. Reads
