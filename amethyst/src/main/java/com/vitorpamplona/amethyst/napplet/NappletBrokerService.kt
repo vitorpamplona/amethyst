@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayGateway
+import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.NappletResource
 import com.vitorpamplona.amethyst.commons.napplet.NappletResourceGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletUploadGateway
@@ -163,33 +164,20 @@ class NappletBrokerService : Service() {
 
         val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: "napplet"
         scope.launch {
-            // Fire-and-forget edge ops that don't go through the broker.
-            when (requestType) {
-                "relay.close" -> {
-                    runCatching { NappletProtocolJson.readSubId(payload) }.getOrNull()?.let { closeLiveSubscription(it) }
-                    reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Done))
-                    return@launch
-                }
-                "resource.cancel" -> {
-                    reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Done))
-                    return@launch
-                }
+            // The shared, host-agnostic router owns decode → broker → encode and the subscribe-vs-reply
+            // decision (it stays wire-identical with the future desktop host). This service only supplies
+            // the broker, the Messenger transport, and the live relay subscription each Outcome implies.
+            val broker = broker()
+            if (broker == null) {
+                reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("No account is signed in.")))
+                return@launch
             }
-
-            val response = process(identity, declared, payload)
-
-            // A subscription is answered with relay.event/relay.eose/relay.closed pushes keyed by
-            // subId (matching @napplet/shim) — the host opens a live relay subscription once the
-            // broker authorizes it. A non-authorized subscription closes immediately with an EOSE.
-            val subId = if (requestType == "relay.subscribe") runCatching { NappletProtocolJson.readSubId(payload) }.getOrNull() else null
-            if (subId != null) {
-                if (response is NappletResponse.Subscribed) {
-                    openLiveSubscription(subId, payload, replyTo)
-                } else {
-                    push(replyTo, NappletProtocolJson.encodeRelayEose(subId))
-                }
-            } else {
-                reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, response))
+            when (val outcome = NappletRequestRouter.route(broker, identity, declared, payload)) {
+                is NappletRequestRouter.Outcome.Ignore -> {}
+                is NappletRequestRouter.Outcome.Reply -> reply(replyTo, requestId, outcome.payload)
+                is NappletRequestRouter.Outcome.OpenSubscription -> openLiveSubscription(outcome.subId, outcome.filters, replyTo)
+                is NappletRequestRouter.Outcome.CloseSubscription -> closeLiveSubscription(outcome.subId)
+                is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
             }
         }
         return true
@@ -201,19 +189,6 @@ class NappletBrokerService : Service() {
             ?.mapNotNull { name -> runCatching { NappletCapability.valueOf(name.trim()) }.getOrNull() }
             ?.toSet()
             ?: emptySet()
-
-    private suspend fun process(
-        identity: NappletIdentity,
-        declared: Set<NappletCapability>,
-        payload: String,
-    ): NappletResponse {
-        val request =
-            runCatching { NappletProtocolJson.decodeRequest(payload) }.getOrNull()
-                ?: return NappletResponse.Failed("Malformed or unsupported request.")
-
-        val broker = broker() ?: return NappletResponse.Failed("No account is signed in.")
-        return broker.handle(identity, request, declared)
-    }
 
     /**
      * The broker for the *currently* signed-in account, cached and rebuilt only when the account
@@ -501,11 +476,10 @@ class NappletBrokerService : Service() {
      */
     private fun openLiveSubscription(
         nappletSubId: String,
-        payload: String,
+        filters: List<Filter>,
         replyTo: Messenger,
     ) {
         val account = Amethyst.instance.sessionManager.loggedInAccount()
-        val filters = runCatching { NappletProtocolJson.decodeFilterList(payload) }.getOrDefault(emptyList())
         val relays = account?.homeRelays?.flow?.value ?: emptySet()
         if (account == null || filters.isEmpty() || relays.isEmpty()) {
             push(replyTo, NappletProtocolJson.encodeRelayEose(nappletSubId))

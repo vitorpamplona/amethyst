@@ -46,14 +46,16 @@ the envelope/push contract. See "Shared web assets" below for how to share them.
 
 ## Recommended shared extractions (do as part of, or just before, desktop work)
 
-These reduce desktop reimplementation and prevent drift. None are done yet:
+These reduce desktop reimplementation and prevent drift:
 
-- **`NappletRequestRouter` (commons/jvmAndroid).** Today the orchestration (readType → `relay.close`
+- **DONE: `NappletRequestRouter` (commons/jvmAndroid).** The orchestration (readType → `relay.close`
   / `resource.cancel` short-circuit → decode → `broker.handle` → encode reply / detect
-  `Subscribed`) lives in Android's `NappletBrokerService.handleMessage`. Extract it into a pure
-  router returning a small `Outcome` (`Reply(payload)` / `OpenSubscription(subId, filters)` /
-  `CloseSubscription(subId)`), so both hosts share the brain and only supply transport + relay
-  client. It's unit-testable in commons.
+  `Subscribed`) used to live in Android's `NappletBrokerService.handleMessage`. It is now a pure
+  router returning a small `Outcome` (`Ignore` / `Reply(payload)` / `OpenSubscription(subId, filters)` /
+  `CloseSubscription(subId)` / `Push(payloads)`), so both hosts share the brain and only supply the
+  broker + transport + live relay subscription. Unit-tested in `commons/jvmTest`
+  (`NappletRequestRouterTest`); Android's service consumes it via a `when (outcome)` dispatch. The
+  desktop host will route the exact same way.
 - **Shared web assets.** Move `shell.html` + `shim.js` into `commons/commonMain/composeResources/files/napplet/`
   and read them via the generated `Res.readBytes("files/napplet/...")` on both platforms (the
   Material Symbols font already lives in commons composeResources). This makes the web contract
