@@ -2883,6 +2883,7 @@
     <string name="event_sync_step1">Download all events you authored and send them to your outbox relays.</string>
     <string name="event_sync_step2">Download all events that mention you and send them to your inbox relays.</string>
     <string name="event_sync_step3">Download all direct messages addressed to you and send them to your DM relays.</string>
+    <string name="event_sync_step4">Copy authored, mentioned, and direct-message events to local archive relays and restore missing events from them.</string>
     <string name="event_sync_wifi_warning">⚠ You appear to be on a metered or mobile connection. This operation can transfer a very large amount of data. Connect to Wi-Fi before starting.</string>
     <string name="event_sync_mobile_data_dialog_title">Use Mobile Data?</string>
     <string name="event_sync_start">Start Sync</string>
@@ -2899,6 +2900,7 @@
     <string name="event_sync_outbox_relays">Outbox</string>
     <string name="event_sync_inbox_relays">Inbox</string>
     <string name="event_sync_dm_relays">DMs</string>
+    <string name="event_sync_local_relays">Local archive</string>
     <string name="event_sync_activity_log">Currently Checking (%1$d relays)</string>
     <string name="event_sync_activity_log_finished">Finished (%1$d relays)</string>
     <string name="event_sync_log_sent">sent %1$s</string>

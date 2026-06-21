@@ -139,7 +139,8 @@ fun EventScreenBody(
         // ---- Live relay activity (shown during and after sync) ----
         if (liveActivity.outboxTargets.isNotEmpty() ||
             liveActivity.inboxTargets.isNotEmpty() ||
-            liveActivity.dmTargets.isNotEmpty()
+            liveActivity.dmTargets.isNotEmpty() ||
+            liveActivity.localTargets.isNotEmpty()
         ) {
             item {
                 Spacer(Modifier.height(16.dp))
@@ -267,6 +268,8 @@ private fun ExplanationCard(
             StepRow(number = "2", text = stringRes(R.string.event_sync_step2))
             Spacer(Modifier.height(4.dp))
             StepRow(number = "3", text = stringRes(R.string.event_sync_step3))
+            Spacer(Modifier.height(4.dp))
+            StepRow(number = "4", text = stringRes(R.string.event_sync_step4))
             Spacer(Modifier.height(10.dp))
 
             // ---- WiFi warning ----
@@ -516,6 +519,17 @@ private fun DestinationRelaysCard(activity: EventSync.LiveSyncActivity) {
                     label = stringRes(R.string.event_sync_dm_relays),
                     relays = activity.dmTargets.values,
                     color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
+
+            if (activity.localTargets.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(10.dp))
+                DestinationSection(
+                    label = stringRes(R.string.event_sync_local_relays),
+                    relays = activity.localTargets.values,
+                    color = MaterialTheme.colorScheme.error,
                 )
             }
         }
@@ -887,6 +901,10 @@ private val previewActivity =
             listOf(
                 EventSync.LiveSyncActivity.DestinationRelayInfo(NormalizedRelayUrl("wss://dm.nostr.com"), 15, 10),
             ),
+        localTargets =
+            listOf(
+                EventSync.LiveSyncActivity.DestinationRelayInfo(NormalizedRelayUrl("ws://localhost:4869"), 2139, 2139),
+            ),
     )
 
 // -------------------------------------------------------------------------
@@ -965,7 +983,7 @@ fun EventScreenBodyPreview() {
     ThemeComparisonRow {
         EventScreenBody(
             EventSync.SyncState.Idle,
-            EventSync.LiveSyncActivity(emptyList(), emptyList(), emptyList(), emptyList(), emptyList()),
+            EventSync.LiveSyncActivity(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList()),
         )
     }
 }

@@ -81,6 +81,7 @@ class EventSync(
     private val outboxTargets: () -> Set<NormalizedRelayUrl>,
     private val inboxTargets: () -> Set<NormalizedRelayUrl>,
     private val dmTargets: () -> Set<NormalizedRelayUrl>,
+    private val localTargets: () -> Set<NormalizedRelayUrl>,
     private val clientBuilder: () -> INostrClient,
     private val scope: CoroutineScope,
 ) {
@@ -147,6 +148,7 @@ class EventSync(
      * @param outboxTargets  Relays receiving events authored by the user.
      * @param inboxTargets  Relays receiving events that mention the user.
      * @param dmTargets  Relays receiving DMs addressed to the user.
+     * @param localTargets  Personal archive relays receiving all three event categories.
      */
     @Stable
     data class LiveSyncActivity(
@@ -155,6 +157,7 @@ class EventSync(
         val outboxTargets: Map<NormalizedRelayUrl, DestinationRelayInfo> = emptyMap(),
         val inboxTargets: Map<NormalizedRelayUrl, DestinationRelayInfo> = emptyMap(),
         val dmTargets: Map<NormalizedRelayUrl, DestinationRelayInfo> = emptyMap(),
+        val localTargets: Map<NormalizedRelayUrl, DestinationRelayInfo> = emptyMap(),
     ) {
         val sortedCompletedRelays =
             completedRelays.values.let {
@@ -178,12 +181,14 @@ class EventSync(
             outboxTargets: List<DestinationRelayInfo>,
             inboxTargets: List<DestinationRelayInfo>,
             dmTargets: List<DestinationRelayInfo>,
+            localTargets: List<DestinationRelayInfo>,
         ) : this(
             runningRelays.associateBy { it.relay },
             completedRelays.associateBy { it.relay },
             outboxTargets.associateBy { it.relay },
             inboxTargets.associateBy { it.relay },
             dmTargets.associateBy { it.relay },
+            localTargets.associateBy { it.relay },
         )
 
         sealed interface ConnectionStatus {
@@ -250,6 +255,7 @@ class EventSync(
         liveOutboxTargets: Set<NormalizedRelayUrl> = emptySet(),
         liveInboxTargets: Set<NormalizedRelayUrl> = emptySet(),
         liveDmTargets: Set<NormalizedRelayUrl> = emptySet(),
+        liveLocalTargets: Set<NormalizedRelayUrl> = emptySet(),
     ) {
         _liveActivity.value =
             LiveSyncActivity(
@@ -289,6 +295,14 @@ class EventSync(
                     },
                 dmTargets =
                     liveDmTargets.associateWith { relay ->
+                        LiveSyncActivity.DestinationRelayInfo(
+                            relay = relay,
+                            eventsSent = MutableStateFlow<Int>(0),
+                            eventsAccepted = MutableStateFlow<Int>(0),
+                        )
+                    },
+                localTargets =
+                    liveLocalTargets.associateWith { relay ->
                         LiveSyncActivity.DestinationRelayInfo(
                             relay = relay,
                             eventsSent = MutableStateFlow<Int>(0),
@@ -336,7 +350,8 @@ class EventSync(
 
         val myPubKey = accountPubKey
 
-        val relaysToProcess = relayDb()
+        val localTargets = localTargets()
+        val relaysToProcess = (relayDb() + localTargets).distinct()
 
         if (relaysToProcess.isEmpty()) {
             _syncState.value =
@@ -352,18 +367,20 @@ class EventSync(
 
         val defaultFilters =
             buildList {
-                if (outboxTargets.isNotEmpty()) add(Filter(authors = listOf(myPubKey), since = filterSince, until = filterUntil))
-                if (inboxTargets.isNotEmpty() || dmTargets.isNotEmpty()) {
+                if (outboxTargets.isNotEmpty() || localTargets.isNotEmpty()) {
+                    add(Filter(authors = listOf(myPubKey), since = filterSince, until = filterUntil))
+                }
+                if (inboxTargets.isNotEmpty() || dmTargets.isNotEmpty() || localTargets.isNotEmpty()) {
                     add(Filter(tags = mapOf("p" to listOf(myPubKey)), since = filterSince, until = filterUntil))
                 }
             }
 
         if (defaultFilters.isEmpty()) {
-            _syncState.value = SyncState.Error("No outbox, inbox, or DM relays configured.", filterSince, filterUntil)
+            _syncState.value = SyncState.Error("No outbox, inbox, DM, or local relays configured.", filterSince, filterUntil)
             return
         }
 
-        val usersRelays = outboxTargets + inboxTargets + dmTargets
+        val usersRelays = outboxTargets + inboxTargets + dmTargets + localTargets
 
         val perRelayFilters =
             relaysToProcess.associateWith {
@@ -385,6 +402,7 @@ class EventSync(
             outboxTargets,
             inboxTargets,
             dmTargets,
+            localTargets,
         )
 
         // Thread-safe dedup sets — prevent the same event from being forwarded twice when
@@ -392,6 +410,7 @@ class EventSync(
         val outboxDedup = ConcurrentHashMap.newKeySet<String>()
         val inboxDedup = ConcurrentHashMap.newKeySet<String>()
         val dmDedup = ConcurrentHashMap.newKeySet<String>()
+        val localDedup = ConcurrentHashMap.newKeySet<String>()
 
         val sourceRelayOfEvent = ConcurrentHashMap<HexKey, NormalizedRelayUrl>()
 
@@ -447,6 +466,12 @@ class EventSync(
                                 ?.update { it + 1 }
                             hasSent = true
                         }
+                        if (localDedup.contains(cmd.event.id)) {
+                            liveActivity.value.localTargets[relay.url]
+                                ?.eventsSent
+                                ?.update { it + 1 }
+                            hasSent = true
+                        }
 
                         if (hasSent) {
                             runningState.eventsSent.update { it + 1 }
@@ -489,6 +514,13 @@ class EventSync(
                         }
                         if (inboxDedup.contains(msg.eventId)) {
                             val relayTarget = liveActivity.value.inboxTargets[relay.url]
+                            if (relayTarget != null) {
+                                relayTarget.eventsAccepted.update { it + 1 }
+                                runningState.eventsAccepted.update { it + 1 }
+                            }
+                        }
+                        if (localDedup.contains(msg.eventId)) {
+                            val relayTarget = liveActivity.value.localTargets[relay.url]
                             if (relayTarget != null) {
                                 relayTarget.eventsAccepted.update { it + 1 }
                                 runningState.eventsAccepted.update { it + 1 }
@@ -539,6 +571,13 @@ class EventSync(
                         if (mentionsMe && !isDmKind && inboxTargets.isNotEmpty()) {
                             if (inboxDedup.add(event.id)) {
                                 client.publish(event, inboxTargets)
+                                newEvent = true
+                            }
+                            matchesAtLeastOneFilter = true
+                        }
+                        if ((isMyEvent || mentionsMe) && localTargets.isNotEmpty()) {
+                            if (localDedup.add(event.id)) {
+                                client.publish(event, localTargets - sourceRelay)
                                 newEvent = true
                             }
                             matchesAtLeastOneFilter = true

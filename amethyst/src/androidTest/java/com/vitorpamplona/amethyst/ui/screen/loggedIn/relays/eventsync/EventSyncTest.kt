@@ -67,6 +67,7 @@ class EventSyncTest {
                     outboxTargets = { setOf(vitor) },
                     inboxTargets = { setOf(vitor) },
                     dmTargets = { setOf(vitor) },
+                    localTargets = { emptySet() },
                     clientBuilder = {
                         NostrClient(socketBuilder, appScope)
                     },
@@ -86,6 +87,7 @@ class EventSyncTest {
                     outboxTargets = { setOf(vitor) },
                     inboxTargets = { setOf(vitor) },
                     dmTargets = { setOf(vitor) },
+                    localTargets = { emptySet() },
                     clientBuilder = {
                         val newClient = NostrClient(socketBuilder, appScope)
                         val logger = RelayLogger(newClient, debugSending = true, debugReceiving = false)
