@@ -214,6 +214,14 @@ Army-knife verbs that operate purely on their arguments. They never touch
 | `amy key generate` | Mint a fresh keypair (`nsec` + `npub` + hex). Does not persist — use `init`/`login` for that. |
 | `amy key public NSEC\|HEX` | Derive the public key from a secret key. |
 
+### Raw events
+
+| Command | What it does |
+|---|---|
+| `amy event --kind N [--content TEXT] [--tags JSON] [--created-at TS]` | Build + sign an arbitrary event with the active account. Prints the signed event. `--tags` is a JSON array-of-arrays, e.g. `'[["t","nostr"],["e","<id>"]]'`. |
+| `amy event … --publish` / `--relay URL[,URL…]` | As above, then broadcast (to the outbox, or to the given relays). |
+| `amy publish [EVENT-JSON] [--relay URL[,URL…]]` | Broadcast a pre-made signed event (verified first). Reads stdin when the argument is omitted or `-`. |
+
 ### Identity
 
 | Command | What it does |

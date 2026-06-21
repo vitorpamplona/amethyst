@@ -216,6 +216,14 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.debit(dataDir, tail)
         }
 
+        "event" -> {
+            Commands.event(dataDir, tail)
+        }
+
+        "publish" -> {
+            Commands.publish(dataDir, tail)
+        }
+
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -397,6 +405,14 @@ private fun printUsage() {
         |             [--limit N]                       --following: every contact-list pubkey)
         |             [--since TS] [--until TS]
         |             [--timeout SECS]
+        |
+        |Raw events (build / sign / broadcast):
+        |  event --kind N [--content TEXT]             build + sign an arbitrary event with the active
+        |        [--tags JSON] [--created-at TS]        account. Prints the signed event; add --publish
+        |        [--publish] [--relay URL[,URL…]]       (or --relay) to broadcast. --tags takes a JSON
+        |                                                array-of-arrays, e.g. '[["t","nostr"]]'.
+        |  publish [EVENT-JSON] [--relay URL[,URL…]]   broadcast a pre-made signed event (verified
+        |                                                first; reads stdin when the arg is omitted/`-`)
         |
         |Static websites (NIP-5A kind:15128/35128):
         |  nsite fetch AUTHOR [--d ID] [--path P]      resolve one path over Nostr + Blossom and

@@ -82,8 +82,8 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `encode` | `amy encode` | ✅ | npub/nsec/note/nevent/nprofile/naddr. |
 | `verify` / `validate` | `amy verify` | ✅ | id-hash + signature, reported separately. |
 | `key` | `amy key generate\|public` | ✅ in part · 🆕 | generate + derive done; NIP-49 encrypt/decrypt pending. |
-| `event` | `amy event` | 🆕 | build/sign an arbitrary event, optional `--publish`. |
-| `publish` | `amy publish` | 🆕 | broadcast a pre-made event JSON. |
+| `event` | `amy event` | ✅ | build/sign an arbitrary event, optional `--publish`/`--relay`. |
+| `publish` | `amy publish` | ✅ | broadcast a pre-made event JSON (verified first). |
 | `req` (one-shot) | `amy fetch` | 🆕 | filter → collect-until-EOSE. |
 | `req` (stream) | `amy subscribe` | 🆕 | filter → live stream to stdout. |
 | `count` | `amy count` | 🆕 | NIP-45. |

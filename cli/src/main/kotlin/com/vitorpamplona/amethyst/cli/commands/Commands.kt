@@ -135,4 +135,14 @@ object Commands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int = DebitCommands.dispatch(dataDir, tail)
+
+    suspend fun event(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = EventCommand.run(dataDir, tail)
+
+    suspend fun publish(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = PublishCommand.run(dataDir, tail)
 }
