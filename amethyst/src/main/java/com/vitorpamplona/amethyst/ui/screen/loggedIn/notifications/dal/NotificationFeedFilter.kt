@@ -246,7 +246,7 @@ class NotificationFeedFilter(
         }
     }
 
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code + "-" + account.settings.showMessagesInNotifications.value
 
     fun followList(): TopFilter = modeOverride ?: account.settings.defaultNotificationFollowList.value
 
@@ -299,6 +299,10 @@ class NotificationFeedFilter(
     ): Boolean {
         val loggedInUserHex = account.userProfile().pubkeyHex
 
+        // When the user opts out of seeing Messages on the Notification tab, drop
+        // direct/group message events (DMs and Marmot group chats) entirely.
+        val showMessages = account.settings.showMessagesInNotifications.value
+
         // Marmot group messages are only acceptable if the gathering chatroom is
         // actually in the current account's group list. Notes are stored in the
         // global LocalCache and accumulate a gatherer reference from every
@@ -308,6 +312,7 @@ class NotificationFeedFilter(
         // instance held by this account's list.
         val marmotGatherers = it.inGatherers?.filterIsInstance<MarmotGroupChatroom>()
         if (!marmotGatherers.isNullOrEmpty()) {
+            if (!showMessages) return false
             val inCurrentAccount =
                 marmotGatherers.any { room ->
                     account.marmotGroupList.rooms.get(room.nostrGroupId) === room
@@ -317,6 +322,16 @@ class NotificationFeedFilter(
         }
 
         val noteEvent = it.event
+
+        if (!showMessages &&
+            (
+                noteEvent is ChatMessageEvent ||
+                    noteEvent is ChatMessageEncryptedFileHeaderEvent ||
+                    noteEvent is PrivateDmEvent
+            )
+        ) {
+            return false
+        }
         val notifAuthor =
             if (noteEvent is LnZapEvent) {
                 val zapRequest = noteEvent.zapRequest

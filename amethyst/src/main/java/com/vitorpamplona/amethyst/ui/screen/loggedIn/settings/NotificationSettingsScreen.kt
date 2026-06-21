@@ -115,6 +115,8 @@ private fun DeliverySection(accountViewModel: AccountViewModel) {
 private fun DisplaySection(accountViewModel: AccountViewModel) {
     val splitByFollows by accountViewModel.account.settings.splitNotificationsEnabled
         .collectAsStateWithLifecycle()
+    val showMessages by accountViewModel.account.settings.showMessagesInNotifications
+        .collectAsStateWithLifecycle()
 
     SettingsSection(R.string.notification_settings_section_display) {
         SettingsSwitchTile(
@@ -123,6 +125,14 @@ private fun DisplaySection(accountViewModel: AccountViewModel) {
             description = R.string.split_notifications_setting_description,
             checked = splitByFollows,
             onCheckedChange = { accountViewModel.account.settings.toggleSplitNotificationsEnabled() },
+        )
+        SettingsDivider()
+        SettingsSwitchTile(
+            icon = MaterialSymbols.Mail,
+            title = R.string.show_messages_in_notifications_setting_title,
+            description = R.string.show_messages_in_notifications_setting_description,
+            checked = showMessages,
+            onCheckedChange = { accountViewModel.account.settings.toggleShowMessagesInNotifications() },
         )
     }
 }
