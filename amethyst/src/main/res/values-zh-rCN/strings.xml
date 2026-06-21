@@ -1163,6 +1163,8 @@
     <string name="always_on_notif_setting_description">保持与收件箱中继的持续连接以便即时发送通知。 显示正在进行的通知。使用更多电量，但确保您永远不会错过消息。</string>
     <string name="split_notifications_setting_title">根据关注拆分通知</string>
     <string name="split_notifications_setting_description">显示两个通知选项卡 — — 关注(你关注的人) 和所有人。未读的指示器只为你关注的人的活动发出微光。</string>
+    <string name="show_messages_in_notifications_setting_title">显示消息</string>
+    <string name="show_messages_in_notifications_setting_description">在通知选项卡上包含私信和群消息。如关闭只在消息选项卡中保留消息。</string>
     <string name="notification_tab_following">关注</string>
     <string name="notification_tab_everyone">所有人</string>
     <string name="battery_optimization_title">电池优化已启用</string>
