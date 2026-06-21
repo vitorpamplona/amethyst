@@ -77,6 +77,17 @@ object NappletProtocolJson {
             put("subId", subId)
         }.toString()
 
+    /** A `relay.closed` push: a relay (or the shell) ended the subscription [subId]. */
+    fun encodeRelayClosed(
+        subId: String,
+        reason: String,
+    ): String =
+        buildJsonObject {
+            put("type", "relay.closed")
+            put("subId", subId)
+            put("reason", reason)
+        }.toString()
+
     /**
      * The `shell.init` handshake reply (`@napplet/core`): the capability environment the napplet
      * caches and answers `shell.supports()` from. [domains] is the set of NAP domains this shell
@@ -115,8 +126,8 @@ object NappletProtocolJson {
                     encryption = o.str("encryption") ?: "nip44",
                 )
             }
-            "relay.query" -> NappletRequest.QueryEvents(decodeFilter(o))
-            "relay.subscribe" -> NappletRequest.Subscribe(decodeFilter(o))
+            "relay.query" -> NappletRequest.QueryEvents(decodeFilterList(o))
+            "relay.subscribe" -> NappletRequest.Subscribe(decodeFilterList(o))
             "storage.get" -> NappletRequest.StorageGet(o.req("key"))
             "storage.set" -> NappletRequest.StorageSet(o.req("key"), o.req("value"))
             "storage.remove" -> NappletRequest.StorageRemove(o.req("key"))
@@ -220,6 +231,10 @@ object NappletProtocolJson {
                 is NappletResponse.Done -> {
                     put("ok", true)
                 }
+                // Subscribe is acknowledged here, but the host streams pushes instead of sending this.
+                is NappletResponse.Subscribed -> {
+                    put("ok", true)
+                }
                 is NappletResponse.Denied -> {
                     put("ok", false)
                     put("error", "denied")
@@ -239,10 +254,16 @@ object NappletProtocolJson {
             }
         }.toString()
 
-    /** Parses a Nostr filter from `filter` (object) or the first of `filters` (array). */
-    private fun decodeFilter(o: JsonObject): Filter {
-        val f = o["filter"]?.jsonObject ?: o["filters"]?.jsonArray?.firstOrNull()?.jsonObject ?: JsonObject(emptyMap())
+    /** Parses every Nostr filter from a `filters` array (each entry) or a single `filter` object. */
+    fun decodeFilterList(envelopeJson: String): List<Filter> = decodeFilterList(json.parseToJsonElement(envelopeJson).jsonObject)
 
+    private fun decodeFilterList(o: JsonObject): List<Filter> {
+        o["filters"]?.jsonArray?.let { arr -> return arr.map { decodeFilterObject(it.jsonObject) } }
+        o["filter"]?.jsonObject?.let { return listOf(decodeFilterObject(it)) }
+        return emptyList()
+    }
+
+    private fun decodeFilterObject(f: JsonObject): Filter {
         val tags = mutableMapOf<String, List<String>>()
         for ((key, value) in f) {
             if (key.startsWith("#") && key.length == 2) {

@@ -56,7 +56,9 @@ import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
@@ -83,6 +85,8 @@ import java.io.ByteArrayInputStream
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.URLDecoder
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * The trust boundary's main-process endpoint. The untrusted `:napplet` process binds this
@@ -106,6 +110,10 @@ class NappletBrokerService : Service() {
 
     private val incoming by lazy { Messenger(Handler(Looper.getMainLooper(), ::handleMessage)) }
 
+    // Live relay subscriptions: applet subId -> client subId, so relay.close (and teardown) can stop them.
+    private val liveSubs = ConcurrentHashMap<String, String>()
+    private val liveSeq = AtomicInteger(0)
+
     override fun onBind(intent: Intent?): IBinder? {
         // Defense in depth on top of exported=false: only our own UID may bind.
         if (Binder.getCallingUid() != Process.myUid()) return null
@@ -113,6 +121,12 @@ class NappletBrokerService : Service() {
     }
 
     override fun onDestroy() {
+        val client =
+            Amethyst.instance.sessionManager
+                .loggedInAccount()
+                ?.client
+        liveSubs.values.forEach { runCatching { client?.unsubscribe(it) } }
+        liveSubs.clear()
         scope.cancel()
         super.onDestroy()
     }
@@ -135,23 +149,31 @@ class NappletBrokerService : Service() {
 
         val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: "napplet"
         scope.launch {
-            // Unsubscribe is fire-and-forget: snapshot subscriptions have no live tail to cancel.
-            if (requestType == "relay.close") {
-                reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Done))
-                return@launch
+            // Fire-and-forget edge ops that don't go through the broker.
+            when (requestType) {
+                "relay.close" -> {
+                    runCatching { NappletProtocolJson.readSubId(payload) }.getOrNull()?.let { closeLiveSubscription(it) }
+                    reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Done))
+                    return@launch
+                }
+                "resource.cancel" -> {
+                    reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Done))
+                    return@launch
+                }
             }
 
             val response = process(identity, declared, payload)
 
-            // A subscription is answered with relay.event/relay.eose pushes (keyed by subId), not a
-            // .result — matching @napplet/shim. Today it delivers the initial matches then EOSE; a
-            // live tail is a follow-up.
+            // A subscription is answered with relay.event/relay.eose/relay.closed pushes keyed by
+            // subId (matching @napplet/shim) — the host opens a live relay subscription once the
+            // broker authorizes it. A non-authorized subscription closes immediately with an EOSE.
             val subId = if (requestType == "relay.subscribe") runCatching { NappletProtocolJson.readSubId(payload) }.getOrNull() else null
             if (subId != null) {
-                if (response is NappletResponse.Events) {
-                    response.events.forEach { push(replyTo, NappletProtocolJson.encodeRelayEvent(subId, it)) }
+                if (response is NappletResponse.Subscribed) {
+                    openLiveSubscription(subId, payload, replyTo)
+                } else {
+                    push(replyTo, NappletProtocolJson.encodeRelayEose(subId))
                 }
-                push(replyTo, NappletProtocolJson.encodeRelayEose(subId))
             } else {
                 reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, response))
             }
@@ -191,7 +213,7 @@ class NappletBrokerService : Service() {
                     return relays.map { it.url }
                 }
 
-                override suspend fun query(filter: Filter): List<Event> = queryEvents(account, filter)
+                override suspend fun query(filters: List<Filter>): List<Event> = queryEvents(account, filters)
             }
 
         val consent =
@@ -416,27 +438,86 @@ class NappletBrokerService : Service() {
         return NappletResource(bytes, contentType)
     }
 
-    /** Bounded live relay fetch (EOSE/timeout) merged with the local cache, newest-first. */
+    /** Bounded live relay fetch (EOSE/timeout) for all [filters], merged with the local cache, newest-first. */
     private suspend fun queryEvents(
         account: Account,
-        filter: Filter,
+        filters: List<Filter>,
     ): List<Event> {
+        if (filters.isEmpty()) return emptyList()
         val relays = account.homeRelays.flow.value
         val fromRelays =
             if (relays.isEmpty()) {
                 emptyList()
             } else {
                 runCatching {
-                    account.client.fetchAll(filters = relays.associateWith { listOf(filter) }, timeoutMs = QUERY_TIMEOUT_MS)
+                    account.client.fetchAll(filters = relays.associateWith { filters }, timeoutMs = QUERY_TIMEOUT_MS)
                 }.getOrDefault(emptyList())
             }
-        val fromCache = account.cache.filter(filter).mapNotNull { it.event }
+        val fromCache = filters.flatMap { filter -> account.cache.filter(filter).mapNotNull { it.event } }
 
         val merged =
             (fromRelays + fromCache)
                 .distinctBy { it.id }
                 .sortedByDescending { it.createdAt }
-        return filter.limit?.let { merged.take(it) } ?: merged
+        val limit = filters.mapNotNull { it.limit }.maxOrNull()
+        return limit?.let { merged.take(it) } ?: merged
+    }
+
+    /**
+     * Opens a live relay subscription for [nappletSubId], streaming `relay.event`/`relay.eose`/
+     * `relay.closed` pushes to the applet as events arrive. Replaces any existing subscription for
+     * the same id. Reached only after the broker authorized the subscription (RELAY consent).
+     */
+    private fun openLiveSubscription(
+        nappletSubId: String,
+        payload: String,
+        replyTo: Messenger,
+    ) {
+        val account = Amethyst.instance.sessionManager.loggedInAccount()
+        val filters = runCatching { NappletProtocolJson.decodeFilterList(payload) }.getOrDefault(emptyList())
+        val relays = account?.homeRelays?.flow?.value ?: emptySet()
+        if (account == null || filters.isEmpty() || relays.isEmpty()) {
+            push(replyTo, NappletProtocolJson.encodeRelayEose(nappletSubId))
+            return
+        }
+
+        closeLiveSubscription(nappletSubId)
+        val clientSubId = "napplet-$nappletSubId-${liveSeq.incrementAndGet()}"
+        liveSubs[nappletSubId] = clientSubId
+
+        val listener =
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) = push(replyTo, NappletProtocolJson.encodeRelayEvent(nappletSubId, event))
+
+                override fun onEose(
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) = push(replyTo, NappletProtocolJson.encodeRelayEose(nappletSubId))
+
+                override fun onClosed(
+                    message: String,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) = push(replyTo, NappletProtocolJson.encodeRelayClosed(nappletSubId, message))
+            }
+
+        runCatching { account.client.subscribe(clientSubId, relays.associateWith { filters }, listener) }
+    }
+
+    /** Stops the live subscription for [nappletSubId], if any. */
+    private fun closeLiveSubscription(nappletSubId: String) {
+        val clientSubId = liveSubs.remove(nappletSubId) ?: return
+        runCatching {
+            Amethyst.instance.sessionManager
+                .loggedInAccount()
+                ?.client
+                ?.unsubscribe(clientSubId)
+        }
     }
 
     /**

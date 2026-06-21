@@ -79,14 +79,15 @@ class NappletSdkConformanceTest {
 
     @Test
     fun relayQueryAndSubscribeReadTheFiltersArray() {
-        // RelayQueryMessage: { type:'relay.query', id, filters: NostrFilter[] }
-        val q = NappletProtocolJson.decodeRequest("""{"type":"relay.query","id":"1","filters":[{"kinds":[1],"authors":["aa"]}]}""") as NappletRequest.QueryEvents
-        assertEquals(listOf(1), q.filter.kinds)
-        assertEquals(listOf("aa"), q.filter.authors)
+        // RelayQueryMessage: { type:'relay.query', id, filters: NostrFilter[] } — all filters honored.
+        val q = NappletProtocolJson.decodeRequest("""{"type":"relay.query","id":"1","filters":[{"kinds":[1]},{"authors":["aa"]}]}""") as NappletRequest.QueryEvents
+        assertEquals(2, q.filters.size)
+        assertEquals(listOf(1), q.filters[0].kinds)
+        assertEquals(listOf("aa"), q.filters[1].authors)
 
         // RelaySubscribeMessage: { type:'relay.subscribe', id, subId, filters, relay? }
         val s = NappletProtocolJson.decodeRequest("""{"type":"relay.subscribe","id":"1","subId":"s1","filters":[{"kinds":[7]}]}""") as NappletRequest.Subscribe
-        assertEquals(listOf(7), s.filter.kinds)
+        assertEquals(listOf(7), s.filters.first().kinds)
         // The subId the pushes are keyed by is read from the raw envelope by the service.
         assertEquals("s1", NappletProtocolJson.readSubId("""{"type":"relay.subscribe","id":"1","subId":"s1","filters":[{}]}"""))
     }
@@ -133,6 +134,12 @@ class NappletSdkConformanceTest {
         val eose = json.parseToJsonElement(NappletProtocolJson.encodeRelayEose("s1")).jsonObject
         assertEquals("relay.eose", eose["type"]?.jsonPrimitive?.content)
         assertEquals("s1", eose["subId"]?.jsonPrimitive?.content)
+
+        // RelayClosedMessage (PUSH): { type:'relay.closed', subId, reason }
+        val closed = json.parseToJsonElement(NappletProtocolJson.encodeRelayClosed("s1", "done")).jsonObject
+        assertEquals("relay.closed", closed["type"]?.jsonPrimitive?.content)
+        assertEquals("s1", closed["subId"]?.jsonPrimitive?.content)
+        assertEquals("done", closed["reason"]?.jsonPrimitive?.content)
     }
 
     // ---------- identity (Identity*Message) ----------

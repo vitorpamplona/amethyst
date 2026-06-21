@@ -140,19 +140,19 @@ sealed interface NappletRequest {
         }
     }
 
-    /** Read events matching [filter] (from the cache and/or a bounded relay fetch). */
+    /** Read events matching [filters] (from the cache and/or a bounded relay fetch). */
     data class QueryEvents(
-        val filter: Filter,
+        val filters: List<Filter>,
     ) : NappletRequest {
         override val capability get() = NappletCapability.RELAY
     }
 
     /**
-     * Subscribe to events matching [filter]. The shell currently answers with the initial matches
-     * (like a query); a live tail over the existing reply channel is a follow-up.
+     * Subscribe to events matching [filters]. The shell opens a live relay subscription and pushes
+     * `relay.event`/`relay.eose`/`relay.closed` keyed by the applet's `subId`.
      */
     data class Subscribe(
-        val filter: Filter,
+        val filters: List<Filter>,
     ) : NappletRequest {
         override val capability get() = NappletCapability.RELAY
     }

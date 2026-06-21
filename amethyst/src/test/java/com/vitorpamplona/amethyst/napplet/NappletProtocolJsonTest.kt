@@ -96,15 +96,24 @@ class NappletProtocolJsonTest {
     @Test
     fun decodesQueryAndSubscribeFromFilterObjectOrFiltersArray() {
         val single = NappletProtocolJson.decodeRequest("""{"type":"relay.query","filter":{"kinds":[1],"#t":["nostr"],"limit":5}}""") as NappletRequest.QueryEvents
-        assertEquals(listOf(1), single.filter.kinds)
-        assertEquals(listOf("nostr"), single.filter.tags?.get("t"))
-        assertEquals(5, single.filter.limit)
+        assertEquals(listOf(1), single.filters.first().kinds)
+        assertEquals(
+            listOf("nostr"),
+            single.filters
+                .first()
+                .tags
+                ?.get("t"),
+        )
+        assertEquals(5, single.filters.first().limit)
 
-        val array = NappletProtocolJson.decodeRequest("""{"type":"relay.query","filters":[{"authors":["aa"]}]}""") as NappletRequest.QueryEvents
-        assertEquals(listOf("aa"), array.filter.authors)
+        // Multiple filters are all honored, not just the first.
+        val array = NappletProtocolJson.decodeRequest("""{"type":"relay.query","filters":[{"authors":["aa"]},{"kinds":[7]}]}""") as NappletRequest.QueryEvents
+        assertEquals(2, array.filters.size)
+        assertEquals(listOf("aa"), array.filters[0].authors)
+        assertEquals(listOf(7), array.filters[1].kinds)
 
         val sub = NappletProtocolJson.decodeRequest("""{"type":"relay.subscribe","filter":{"kinds":[1]}}""") as NappletRequest.Subscribe
-        assertEquals(listOf(1), sub.filter.kinds)
+        assertEquals(listOf(1), sub.filters.first().kinds)
     }
 
     @Test

@@ -26,9 +26,18 @@ All four conformance breakers below are fixed (codec pinned by `NappletSdkConfor
    request `Blob` as base64 so it survives the bridge; the gateway uploads via the app's
    `BlossomUploader` to the user's kind:10063 server with a signed auth event.
 
-Still open (◐): multi-`filters` queries, identity `getList`/`getZaps`/`getBadges` + `onChanged`,
-`resource` `nostr:` + `cancel`, `relay.closed` + live subscription tail, and `inc`/`intent`/the
-niche domains. Plus **on-device verification** of the host/shell behavior.
+Also now implemented (the ◐ follow-ups):
+- **Live subscription tail** — `relay.subscribe` opens a real `client.subscribe` whose listener
+  streams `relay.event` (stored + live), `relay.eose`, and `relay.closed` pushes by `subId`;
+  `relay.close` unsubscribes (tracked in `liveSubs`, torn down in `onDestroy`).
+- **Multi-`filters`** — `relay.query`/`subscribe` honor every filter in the `filters[]` array,
+  not just the first (`decodeFilterList`, gateway `query(List<Filter>)`).
+- **`resource.cancel`** — accepted at the host edge as a no-op `Done`.
+
+Still open: identity `getList`/`getZaps`/`getBadges` + `onChanged` (object shapes / list-type
+semantics underspecified), the `keys.action` push (needs a host command-palette UI to *trigger*
+actions — registration already conforms), the `resource` `nostr:` scheme (unspecified bytes),
+`inc`/`intent`/the niche domains, and **on-device verification** of the host/shell behavior.
 
 ## Base envelope & error convention (verified)
 

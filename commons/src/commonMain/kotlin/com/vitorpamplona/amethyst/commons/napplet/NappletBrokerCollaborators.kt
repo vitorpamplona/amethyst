@@ -50,8 +50,8 @@ interface NappletRelayGateway {
     /** Publishes [event] and returns the relay URLs that accepted it (empty = nowhere reached). */
     suspend fun publish(event: Event): List<String>
 
-    /** Returns events matching [filter] (e.g. from the local cache and/or a bounded relay fetch). */
-    suspend fun query(filter: Filter): List<Event>
+    /** Returns events matching any of [filters] (e.g. from the local cache and/or a bounded relay fetch). */
+    suspend fun query(filters: List<Filter>): List<Event>
 }
 
 /**

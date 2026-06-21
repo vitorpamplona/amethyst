@@ -511,10 +511,11 @@ class NappletHostActivity : ComponentActivity() {
     var msg; if (typeof e.data === 'string') { try { msg = JSON.parse(e.data); } catch (_) { return; } } else { msg = e.data; }
     if (!msg) return;
     // Subscription pushes are keyed by subId, not a request id.
-    if (msg.type === 'relay.event' || msg.type === 'relay.eose') {
+    if (msg.type === 'relay.event' || msg.type === 'relay.eose' || msg.type === 'relay.closed') {
       var sub = subs[msg.subId]; if (!sub) return;
       if (msg.type === 'relay.event') { if (sub.onEvent) sub.onEvent(msg.event); }
-      else { if (sub.onEose) sub.onEose(); }
+      else if (msg.type === 'relay.eose') { if (sub.onEose) sub.onEose(); }
+      else { delete subs[msg.subId]; if (sub.onClosed) sub.onClosed(msg.reason); }
       return;
     }
     // keys.action push: the shell triggers a registered keyboard/command action.

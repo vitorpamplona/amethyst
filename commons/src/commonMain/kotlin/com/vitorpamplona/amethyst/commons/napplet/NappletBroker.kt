@@ -168,13 +168,14 @@ class NappletBroker(
 
             is NappletRequest.QueryEvents -> {
                 val gateway = relay ?: return NappletResponse.Unsupported("relay.query")
-                NappletResponse.Events(gateway.query(request.filter))
+                NappletResponse.Events(gateway.query(request.filters))
             }
 
-            // Live tailing is a follow-up; for now subscribe returns the initial matches.
+            // The broker only authorizes the subscription (consent + declaration); the host opens the
+            // live relay subscription and streams relay.event/relay.eose/relay.closed by subId.
             is NappletRequest.Subscribe -> {
-                val gateway = relay ?: return NappletResponse.Unsupported("relay.subscribe")
-                NappletResponse.Events(gateway.query(request.filter))
+                relay ?: return NappletResponse.Unsupported("relay.subscribe")
+                NappletResponse.Subscribed
             }
 
             is NappletRequest.StorageGet -> {

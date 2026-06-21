@@ -77,7 +77,7 @@ class NappletBrokerTest {
             return listOf("wss://relay.example")
         }
 
-        override suspend fun query(filter: Filter): List<Event> = queryResult
+        override suspend fun query(filters: List<Filter>): List<Event> = queryResult
     }
 
     private class RecordingWallet(
@@ -276,7 +276,7 @@ class NappletBrokerTest {
 
             val response =
                 broker(ScriptedPrompt(GrantState.ALLOW_ONCE), relay = relay)
-                    .handle(applet, NappletRequest.QueryEvents(Filter(kinds = listOf(1))), allDeclared)
+                    .handle(applet, NappletRequest.QueryEvents(listOf(Filter(kinds = listOf(1)))), allDeclared)
 
             assertEquals(NappletResponse.Events(listOf(cached)), response)
         }

@@ -60,6 +60,9 @@ sealed interface NappletResponse {
         val actionId: String,
     ) : NappletResponse
 
+    /** `relay.subscribe` was authorized; the host now streams `relay.event`/`relay.eose` pushes. */
+    data object Subscribed : NappletResponse
+
     /** Result of a storage read; [value] is null when the key is absent. */
     data class StorageValue(
         val value: String?,
