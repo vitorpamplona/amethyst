@@ -138,6 +138,17 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "key" ->
             return com.vitorpamplona.amethyst.cli.commands.KeyCommands
                 .dispatch(tail)
+        "filter" ->
+            return com.vitorpamplona.amethyst.cli.commands.FilterCommand
+                .run(tail)
+    }
+
+    // `relay info URL` is a stateless NIP-11 fetch — no account needed. The
+    // rest of `relay …` (add/list/publish-lists) operates on the account and
+    // falls through to the normal path below.
+    if (head == "relay" && tail.firstOrNull() == "info") {
+        return com.vitorpamplona.amethyst.cli.commands.RelayCommands
+            .info(tail.drop(1).toTypedArray())
     }
 
     val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
@@ -246,6 +257,10 @@ private suspend fun dispatch(argv: Array<String>): Int {
 
         "gift" -> {
             Commands.gift(dataDir, tail)
+        }
+
+        "outbox" -> {
+            Commands.outbox(dataDir, tail)
         }
 
         else -> {
@@ -396,6 +411,8 @@ private fun printUsage() {
         |                                (reads stdin when the arg is omitted or `-`)
         |  key generate                 mint a fresh keypair (nsec + npub + hex)
         |  key public NSEC|HEX          derive the public key from a secret key
+        |  filter [--kind …] [--author …]   assemble + print a NIP-01 filter JSON from the
+        |         [--id …] [--tag …] …        same flags fetch/subscribe use (no query sent)
         |
         |Identity:
         |  init [--nsec NSEC]           create or import a bare identity (no defaults published)
@@ -407,6 +424,9 @@ private fun printUsage() {
         |  relay add URL [--type T]      T=nip65|inbox|key_package|all (default all)
         |  relay list                    print configured relays
         |  relay publish-lists           publish kind:10002 + kind:10050
+        |  relay info URL                fetch + print a relay's NIP-11 info document
+        |  outbox USER [--refresh]       show USER's NIP-65 read/write relays (outbox model)
+        |        [--timeout SECS]         (USER: npub|nprofile|hex|name@domain)
         |
         |Profile (NIP-01 kind:0):
         |  profile show [USER] [--timeout SECS]       fetch latest kind:0 metadata

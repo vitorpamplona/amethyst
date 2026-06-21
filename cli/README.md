@@ -213,6 +213,8 @@ Army-knife verbs that operate purely on their arguments. They never touch
 | `amy verify [EVENT-JSON]` | Check an event's id hash and signature. Reads stdin when the argument is omitted or `-`. Reports `id_ok` + `signature_ok` separately. |
 | `amy key generate` | Mint a fresh keypair (`nsec` + `npub` + hex). Does not persist — use `init`/`login` for that. |
 | `amy key public NSEC\|HEX` | Derive the public key from a secret key. |
+| `amy filter [filter flags]` | Assemble and print a NIP-01 filter JSON from the same flags `fetch`/`subscribe` use — no query is sent. |
+| `amy relay info URL` | Fetch and print a relay's NIP-11 information document. |
 
 ### Raw events
 
@@ -231,6 +233,7 @@ Filter flags are shared by `fetch` and `subscribe`: `--kind K[,K]`, `--author U[
 | `amy fetch [filter flags] [--timeout SECS]` | One-shot query — collect until every relay sends EOSE (or `--timeout`, default 8s), dedupe, sort newest-first, print and exit. `--limit` defaults to 100. |
 | `amy subscribe [filter flags] [--timeout SECS]` | Live stream — print each matching event as it arrives (NDJSON under `--json`). Runs until `--timeout` SECS or until interrupted. |
 | `amy count [filter flags] [--timeout SECS]` | NIP-45 COUNT — per-relay match counts, no event download. |
+| `amy outbox USER [--refresh] [--timeout SECS]` | Show USER's NIP-65 read/write relays (outbox model). Cache-first; `--refresh` forces a relay drain. |
 
 ### Encryption
 

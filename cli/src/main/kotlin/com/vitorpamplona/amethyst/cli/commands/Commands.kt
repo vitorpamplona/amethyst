@@ -175,4 +175,9 @@ object Commands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int = GiftCommands.dispatch(dataDir, tail)
+
+    suspend fun outbox(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = OutboxCommand.run(dataDir, tail)
 }

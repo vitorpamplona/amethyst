@@ -89,10 +89,11 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `count` | `amy count` | ✅ | NIP-45, per-relay counts. |
 | `encrypt` / `decrypt` | `amy encrypt\|decrypt` | ✅ | raw NIP-44 (default) / NIP-04. |
 | `gift` | `amy gift wrap\|unwrap` | ✅ | NIP-59 seal+wrap / unwrap+unseal. |
-| `relay` (NIP-11) | `amy relay info` | 🆕 | amy's `relay` is config today; add an `info` verb. |
-| `outbox` | `amy outbox` | 🆕 | NIP-65 relay discovery for a user. |
+| `relay` (NIP-11) | `amy relay info` | ✅ | stateless NIP-11 doc fetch. |
+| `outbox` | `amy outbox` | ✅ | NIP-65 read/write relays, cache-first. |
+| `filter` | `amy filter` | ✅ | stateless — assemble + print a filter JSON. |
 | `blossom` | `amy blossom` | 🆕 | upload/download/list/delete (client already used by `dm`/`nsite`). |
-| `kind` / `nip` | `amy kind` / `amy nip` | 🆕 | reference lookups. |
+| `kind` / `nip` | `amy kind` / `amy nip` | 🆕 | reference lookups (needs a kind registry). |
 | `sync` | `amy relay sync` | 🆕 | NIP-77 Negentropy. |
 | `bunker` / `serve` / `admin` / `wallet` / `git` / `podcast` / `mcp` / `fs` / `spell` | — | 🆕 (tier 2/3) | larger/niche; some pull new deps. |
 
