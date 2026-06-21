@@ -220,6 +220,8 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -3621,6 +3623,14 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is NamedSiteEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is RootNappletEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is NamedNappletEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 

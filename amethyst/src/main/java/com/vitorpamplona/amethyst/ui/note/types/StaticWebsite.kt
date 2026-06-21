@@ -51,6 +51,61 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+
+@Composable
+fun RenderRootNappletEvent(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = baseNote.event as? RootNappletEvent ?: return
+    val context = LocalContext.current
+
+    RenderStaticWebsite(
+        title = event.title(),
+        description = event.description(),
+        source = event.source(),
+        servers = event.servers(),
+        identifier = null,
+        titleRes = R.string.napplet_card_title,
+        requires = event.requires(),
+        // Tapping Open hands off to the sandboxed :napplet process; the card itself never executes code.
+        onOpen =
+            if (event.paths().isNotEmpty()) {
+                { NappletLauncher.launch(context = context, manifest = event, authorPubKey = event.pubKey, identifier = "") }
+            } else {
+                null
+            },
+    )
+}
+
+@Composable
+fun RenderNamedNappletEvent(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = baseNote.event as? NamedNappletEvent ?: return
+    val context = LocalContext.current
+
+    RenderStaticWebsite(
+        title = event.title(),
+        description = event.description(),
+        source = event.source(),
+        servers = event.servers(),
+        identifier = event.identifier(),
+        titleRes = R.string.napplet_card_title,
+        requires = event.requires(),
+        onOpen =
+            if (event.paths().isNotEmpty()) {
+                { NappletLauncher.launch(context = context, manifest = event, authorPubKey = event.pubKey, identifier = event.identifier()) }
+            } else {
+                null
+            },
+    )
+}
 
 @Composable
 fun RenderRootSiteEvent(
@@ -129,6 +184,8 @@ private fun RenderStaticWebsite(
     source: String?,
     servers: List<String>,
     identifier: String?,
+    titleRes: Int = R.string.nsite_title,
+    requires: List<String> = emptyList(),
     onOpen: (() -> Unit)? = null,
 ) {
     Row(
@@ -148,7 +205,7 @@ private fun RenderStaticWebsite(
                     ?: stringRes(id = R.string.nsite_root_site)
 
             Text(
-                text = stringRes(id = R.string.nsite_title, displayTitle),
+                text = stringRes(id = titleRes, displayTitle),
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -197,6 +254,22 @@ private fun RenderStaticWebsite(
                             )
                         }
                     }
+                }
+            }
+
+            if (requires.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
+                    Text(
+                        text = stringRes(id = R.string.napplet_card_permissions),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = StdHorzSpacer)
+                    Text(
+                        text = requires.joinToString(", "),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
 
