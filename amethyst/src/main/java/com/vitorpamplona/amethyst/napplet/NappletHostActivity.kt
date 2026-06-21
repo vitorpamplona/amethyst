@@ -43,6 +43,7 @@ import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.BlobFetcher
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution

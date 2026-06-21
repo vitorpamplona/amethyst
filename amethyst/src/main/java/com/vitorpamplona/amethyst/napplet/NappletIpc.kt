@@ -24,7 +24,7 @@ package com.vitorpamplona.amethyst.napplet
  * The Messenger wire contract between the untrusted `:napplet` process (the WebView host) and
  * the main-process [NappletBrokerService]. Kept tiny and string-only on purpose: nothing the
  * applet controls is ever interpreted as a Binder object, and the only payloads are JSON
- * strings ([NappletProtocolJson]) plus the applet's identity coordinate.
+ * strings (`NappletProtocolJson`, in commons) plus the applet's identity coordinate.
  */
 object NappletIpc {
     /** Host → broker: a capability request. Carries [KEY_REQUEST_ID], the identity keys, and [KEY_PAYLOAD]. */

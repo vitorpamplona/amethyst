@@ -18,10 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.commons.napplet.protocol
 
-import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
-import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.serialization.json.Json
@@ -42,12 +40,17 @@ import java.util.Base64
 /**
  * Marshals the KMP-pure [NappletRequest] / [NappletResponse] types to and from the wire the
  * applet exchanges over `window.napplet.*`. The envelope matches the upstream napplet SDK
- * (`@napplet/web`): requests are `{ "type": "<domain>.<action>", "id", ...fields }` and replies
- * are `{ "type": "<domain>.<action>.result", "id", "ok", ...fields }`.
+ * (`@napplet/shim` / `@napplet/nap`): requests are `{ "type": "<domain>.<action>", "id", ...fields }`
+ * and replies are `{ "type": "<domain>.<action>.result", "id", ...fields }`.
+ *
+ * Lives in `commons/jvmAndroid` (not in any single front end) because the wire contract is identical
+ * across hosts: the Android `:napplet` WebView host and a future desktop host both marshal through
+ * here. It depends only on `quartz` (Event/Filter), kotlinx.serialization, and `java.util.Base64`
+ * (available on Android API 26+ and the JVM) — no platform-UI or process APIs.
  *
  * This is the only place the boundary parses untrusted applet input, so it is deliberately
  * strict: an unrecognized `type` decodes to `null` (the broker denies it) and a malformed/short
- * body throws (the broker wraps it into a `Failed`). Uses kotlinx.serialization so it is
+ * body throws (the host wraps it into a `Failed`). Uses kotlinx.serialization so it is
  * unit-testable off-device.
  */
 object NappletProtocolJson {

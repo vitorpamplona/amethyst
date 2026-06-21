@@ -44,12 +44,11 @@ All compile; `commons:jvmTest` + the amethyst napplet suite stay green.
   `commonMain`. No app policy leaked in.
 - **commons (shared logic): mostly correct.** Broker, capability, identity, request/response,
   permissions ledger/store, and gateway interfaces are in `commonMain` — right home.
-- **Recommended move: `NappletProtocolJson` → `commons/jvmAndroid`.** It's pure wire-marshalling
-  (kotlinx.serialization + `java.util.Base64`) over the commons protocol types; commons already has
-  a `jvmAndroid` source set and depends on `kotlinx.serialization.json`. Moving it (and its test)
-  co-locates the codec with the protocol and lets a future **desktop** napplet host reuse it. Modest
-  churn (the test is JUnit4 → would move to commons `jvmTest`), no functional gain today, so it's a
-  *recommended*, not urgent, refactor. (Left in `amethyst/` for now.)
+- **DONE: `NappletProtocolJson` → `commons/jvmAndroid`.** Moved to
+  `commons/.../napplet/protocol/` (next to the types it marshals) so the future **desktop** host
+  reuses the exact wire codec. Its tests stay in `amethyst` (JUnit4) for now and still exercise it
+  via the commons dependency; converting them to `kotlin.test` and moving to commons `jvmTest` is a
+  small follow-up. See `desktopApp/plans/2026-06-21-napplet-desktop-host.md`.
 - **amethyst (Android-only): correctly platform-bound.** `NappletHostActivity` (WebView/process),
   `NappletBrokerService` (Service/Messenger/account), the gateway *implementations* (account,
   `BlossomUploader`, DataStore, NWC), `NappletLauncher`, consent UI, `NappletIpc`, and the screens

@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletUploadGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletUploadResult
 import com.vitorpamplona.amethyst.commons.napplet.NappletWalletGateway
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.model.Account
