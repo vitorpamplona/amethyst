@@ -40,6 +40,10 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
@@ -72,6 +76,16 @@ val UserProfilePostKinds2 =
         AttestationEvent.KIND,
     )
 
+// NIP-5A nsites (15128/35128) and NIP-5D napplets (15129/35129) the user publishes, surfaced in
+// the profile "Apps" tab. Fetching them only populates the cache; execution stays sandboxed.
+val UserProfileAppKinds =
+    listOf(
+        RootSiteEvent.KIND,
+        NamedSiteEvent.KIND,
+        RootNappletEvent.KIND,
+        NamedNappletEvent.KIND,
+    )
+
 fun filterUserProfilePosts(
     user: User,
     since: SincePerRelayMap?,
@@ -97,6 +111,16 @@ fun filterUserProfilePosts(
                 filter =
                     Filter(
                         kinds = UserProfilePostKinds2,
+                        authors = listOf(user.pubkeyHex),
+                        limit = 50,
+                        since = since?.get(relay)?.time,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = UserProfileAppKinds,
                         authors = listOf(user.pubkeyHex),
                         limit = 50,
                         since = since?.get(relay)?.time,

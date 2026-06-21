@@ -72,6 +72,8 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.apps.TabApps
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.apps.dal.UserProfileAppsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.BookmarkTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.TabBookmarks
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.dal.UserProfileBookmarksFeedViewModel
@@ -253,6 +255,16 @@ fun PrepareViewModels(
                 ),
         )
 
+    val appsFeedViewModel: UserProfileAppsFeedViewModel =
+        viewModel(
+            key = baseUser.pubkeyHex + "UserProfileAppsFeedViewModel",
+            factory =
+                UserProfileAppsFeedViewModel.Factory(
+                    baseUser,
+                    accountViewModel.account,
+                ),
+        )
+
     ProfileScreen(
         baseUser = baseUser,
         threadsViewModel,
@@ -267,6 +279,7 @@ fun PrepareViewModels(
         pinnedNotesFeedViewModel,
         galleryFeedViewModel,
         reportsFeedViewModel,
+        appsFeedViewModel,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -287,6 +300,7 @@ fun ProfileScreen(
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
+    appsFeedViewModel: UserProfileAppsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -304,6 +318,7 @@ fun ProfileScreen(
     WatchLifecycleAndUpdateModel(bookmarksFeedViewModel)
     WatchLifecycleAndUpdateModel(pinnedNotesFeedViewModel)
     WatchLifecycleAndUpdateModel(galleryFeedViewModel)
+    WatchLifecycleAndUpdateModel(appsFeedViewModel)
 
     UserProfileFilterAssemblerSubscription(
         user = baseUser,
@@ -352,6 +367,7 @@ fun ProfileScreen(
                     pinnedNotesFeedViewModel,
                     galleryFeedViewModel,
                     reportsFeedViewModel,
+                    appsFeedViewModel,
                     accountViewModel,
                     nav,
                 )
@@ -451,6 +467,7 @@ private fun RenderScreen(
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
+    appsFeedViewModel: UserProfileAppsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -465,6 +482,7 @@ private fun RenderScreen(
                 add(ProfileTab.Replies)
                 add(ProfileTab.Mutual)
                 add(ProfileTab.Gallery)
+                add(ProfileTab.Apps)
                 add(ProfileTab.Follows)
                 if (showFollowersTab) add(ProfileTab.Followers)
                 if (showZapsTab) add(ProfileTab.Zaps)
@@ -538,6 +556,7 @@ private fun RenderScreen(
                     pinnedNotesFeedViewModel,
                     galleryFeedViewModel,
                     reportsFeedViewModel,
+                    appsFeedViewModel,
                     accountViewModel,
                     nav,
                 )
@@ -551,6 +570,7 @@ private enum class ProfileTab {
     Replies,
     Mutual,
     Gallery,
+    Apps,
     Follows,
     Followers,
     Zaps,
@@ -578,6 +598,7 @@ private fun CreateAndRenderPages(
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
+    appsFeedViewModel: UserProfileAppsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -593,6 +614,7 @@ private fun CreateAndRenderPages(
         ProfileTab.Replies -> TabNotesConversations(repliesViewModel, accountViewModel, nav)
         ProfileTab.Mutual -> TabMutualConversations(mutualViewModel, accountViewModel, nav)
         ProfileTab.Gallery -> TabGallery(galleryFeedViewModel, accountViewModel, nav)
+        ProfileTab.Apps -> TabApps(appsFeedViewModel, accountViewModel, nav)
         ProfileTab.Follows -> TabFollows(followsFeedViewModel, accountViewModel, nav)
         ProfileTab.Followers -> TabFollowers(followersFeedViewModel, accountViewModel, nav)
         ProfileTab.Zaps -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
@@ -646,6 +668,7 @@ private fun CreateAndRenderTabs(
                     ProfileTab.Replies -> Text(text = stringRes(R.string.replies))
                     ProfileTab.Mutual -> Text(text = stringRes(R.string.mutual))
                     ProfileTab.Gallery -> Text(text = stringRes(R.string.gallery))
+                    ProfileTab.Apps -> Text(text = stringRes(R.string.profile_tab_apps))
                     ProfileTab.Follows -> FollowTabHeader(followsFeedViewModel, accountViewModel)
                     ProfileTab.Followers -> FollowersTabHeader(baseUser, followersFeedViewModel, accountViewModel)
                     ProfileTab.Zaps -> ZapTabHeader(zapFeedViewModel, accountViewModel)
