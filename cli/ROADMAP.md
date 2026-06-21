@@ -93,8 +93,8 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `outbox` | `amy outbox` | ✅ | NIP-65 read/write relays, cache-first. |
 | `filter` | `amy filter` | ✅ | stateless — assemble + print a filter JSON. |
 | `blossom` | `amy blossom` | ✅ | upload/download/list/delete/check/mirror (reuses commons `BlossomClient`). |
-| `nip` | `amy nip` | ✅ | repo-first lookup + Nostr wiki/long-form fallback; `nip list`. |
-| `kind` | `amy kind` | ✅ | quartz `KindNames` registry (kind → English label + NIP), ported from the Android relay view; number lookup + name search. |
+| `nip` | `amy nip` | ✅ | repo-first lookup + Nostr fallback (NipText kind:30817, wiki:30818, long-form:30023); `nip list`. |
+| `kind` | `amy kind` | ✅ | quartz `KindNames` registry (kind → English label + NIP) covering **every** event kind quartz defines (280 entries); number lookup + name search. |
 | `sync` | `amy sync` | ✅ | NIP-77 Negentropy reconcile with the local store (down/up/both). |
 | `git` | `amy git` | ✅ in part | NIP-34 repo announce/list/show/issue. clone/push (packfile transport) out of scope. |
 | `podcast` | `amy podcast` | ✅ | NIP-F4 show metadata (10154) + episode publish (54) + list. |

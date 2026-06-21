@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -42,8 +43,9 @@ import okhttp3.Request
  * accountless.
  *
  * Resolution order, per request: the canonical `nostr-protocol/nips` git repo
- * **first**, then a fallback search on Nostr (NIP-50 over wiki kind:30818 +
- * long-form kind:30023) for relays/clients that publish NIPs natively.
+ * **first**, then a fallback search on Nostr (NIP-50 over the NipText kind:30817,
+ * wiki kind:30818 and long-form kind:30023) for relays/clients that publish NIPs
+ * natively.
  *
  *   nip 46     fetch NIP-46 from the repo (falls back to Nostr on a miss)
  *   nip 7D     hex-suffixed NIPs work too (case-insensitive)
@@ -58,6 +60,9 @@ object NipCommand {
             .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
             .toSet()
 
+    // Quartz's canonical "NIP published on Nostr" kind (NipTextEvent), plus the
+    // wiki + long-form kinds clients also use to mirror NIP text.
+    private const val NIPTEXT_KIND = NipTextEvent.KIND
     private const val WIKI_KIND = 30818
     private const val LONGFORM_KIND = 30023
 
@@ -143,7 +148,7 @@ object NipCommand {
         if (SEARCH_RELAYS.isEmpty()) return emptyList()
         val okhttp = OkHttpClient.Builder().build()
         val client = NostrClient(websocketBuilder = BasicOkHttpWebSocket.Builder { okhttp })
-        val filter = Filter(kinds = listOf(WIKI_KIND, LONGFORM_KIND), search = "NIP-$slug", limit = 10)
+        val filter = Filter(kinds = listOf(NIPTEXT_KIND, WIKI_KIND, LONGFORM_KIND), search = "NIP-$slug", limit = 10)
         val subId = newSubId()
         val events = Channel<Event>(UNLIMITED)
         val done = Channel<NormalizedRelayUrl>(UNLIMITED)
