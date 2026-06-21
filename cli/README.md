@@ -231,7 +231,7 @@ Interop-tested against the real [`nak`](https://github.com/fiatjaf/nak) binary:
 - **bunker:// both directions** — `amy login bunker://` ⇄ `nak bunker`, and `nak event --sec bunker://` ⇄ `amy bunker`.
 - **nostrconnect:// client** — `amy login --nostrconnect` ⇄ `nak bunker connect` (amy signs, event authored by nak's key).
 
-Supports `connect` (secret-checked), `get_public_key`, `get_relays`, `sign_event`, `nip04_encrypt/decrypt`, `nip44_encrypt/decrypt`, `ping`. `auth_url` challenges are not implemented.
+Supports `connect` (secret-checked), `get_public_key`, `get_relays`, `sign_event`, `nip04_encrypt/decrypt`, `nip44_encrypt/decrypt`, `ping`. When a bunker answers with an `auth_url` challenge, amy prints the authorization URL to stderr and keeps waiting for the real response (open the URL in a browser to authorize).
 
 Example (two terminals, shared `$HOME`):
 

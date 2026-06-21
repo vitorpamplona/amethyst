@@ -41,6 +41,13 @@ class RemoteSignerManager(
     val remoteKey: String,
     val relayList: Set<NormalizedRelayUrl>,
     val maxRetries: Int = 1,
+    /**
+     * Invoked with the authorization URL when the bunker answers a request with
+     * a NIP-46 `auth_url` challenge. The caller should surface it (open a
+     * browser / print it) so the user can authorize; the manager keeps waiting
+     * for the real response on the same request id.
+     */
+    val onAuthUrl: ((String) -> Unit)? = null,
 ) {
     private val pending = LargeCache<String, Channel<BunkerResponse>>()
 
@@ -48,7 +55,10 @@ class RemoteSignerManager(
         val decryptedJson = signer.decrypt(responseEvent.content, remoteKey)
         val bunkerResponse = OptimizedJsonMapper.fromJsonTo<BunkerResponse>(decryptedJson)
 
-        val channel = pending.remove(bunkerResponse.id)
+        // Peek (don't remove): a request may receive an `auth_url` challenge
+        // followed by the real response under the same id. The waiting
+        // continuation removes the entry in its `finally`.
+        val channel = pending.get(bunkerResponse.id)
         if (channel == null) {
             Log.d("NIP46") { "no channel for bunker response id=${bunkerResponse.id} (duplicate, unknown, or late)" }
             return
@@ -89,13 +99,32 @@ class RemoteSignerManager(
                     signer = signer,
                 )
 
-            val channel = Channel<BunkerResponse>(capacity = 1)
+            // UNLIMITED so an `auth_url` challenge and the follow-up real
+            // response (same id) can both be buffered without dropping either.
+            val channel = Channel<BunkerResponse>(capacity = Channel.UNLIMITED)
             pending.put(attemptRequest.id, channel)
 
+            var announcedAuthUrl: String? = null
             val response =
                 try {
                     client.publish(event, relayList = relayList)
-                    withTimeoutOrNull(timeout) { channel.receive() }
+                    withTimeoutOrNull(timeout) {
+                        var real: BunkerResponse? = null
+                        while (real == null) {
+                            val r = channel.receive()
+                            if (r.result == BunkerResponse.RESULT_AUTH_URL) {
+                                // Surface the auth URL once and keep waiting for the real response.
+                                val url = r.error
+                                if (url != null && url != announcedAuthUrl) {
+                                    announcedAuthUrl = url
+                                    onAuthUrl?.invoke(url)
+                                }
+                            } else {
+                                real = r
+                            }
+                        }
+                        real
+                    }
                 } finally {
                     pending.remove(attemptRequest.id)
                     channel.close()

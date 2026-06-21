@@ -118,6 +118,8 @@ class Context(
                 relays = b.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet(),
                 client = client,
                 secret = b.connectSecret,
+                // Bunker requires web authorization: surface the URL; the request keeps waiting.
+                onAuthUrl = { url -> System.err.println("[nip46] authorize this request in a browser, then it will continue:\n  $url") },
             )
         } ?: NostrSignerInternal(identity.keyPair())
 

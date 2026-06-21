@@ -44,6 +44,14 @@ class BunkerResponseDeserializer : StdDeserializer<BunkerResponse>(BunkerRespons
         val result = jsonObject.get("result")?.asText()
         val error = jsonObject.get("error")?.asText()
 
+        // NIP-46 auth challenge: `{"result":"auth_url","error":"<url>"}`. It carries
+        // an `error` (the URL) but is NOT a failure — keep both fields so the client
+        // can surface the URL and keep waiting for the real response. Must precede the
+        // generic error branch below, which would otherwise drop the `auth_url` marker.
+        if (result == BunkerResponse.RESULT_AUTH_URL) {
+            return BunkerResponse(id, result, error)
+        }
+
         if (error != null) {
             return BunkerResponseError.parse(id, result, error)
         }
