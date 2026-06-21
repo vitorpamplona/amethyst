@@ -81,7 +81,7 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `decode` | `amy decode` | ✅ | NIP-19/21 → JSON. Quartz `Nip19Parser`. |
 | `encode` | `amy encode` | ✅ | npub/nsec/note/nevent/nprofile/naddr. |
 | `verify` / `validate` | `amy verify` | ✅ | id-hash + signature, reported separately. |
-| `key` | `amy key generate\|public` | ✅ in part · 🆕 | generate + derive done; NIP-49 encrypt/decrypt pending. |
+| `key` | `amy key generate\|public\|encrypt\|decrypt` | ✅ | generate/derive + NIP-49 encrypt/decrypt (bidirectionally nak-verified). `expand`/`combine`/`validate`/`default` still 🆕. |
 | `event` | `amy event` | ✅ | build/sign an arbitrary event, optional `--publish`/`--relay`. |
 | `publish` | `amy publish` | ✅ | broadcast a pre-made event JSON (verified first). |
 | `req` (one-shot) | `amy fetch` | ✅ | filter → collect-until-EOSE, dedupe, sort, cap. |
@@ -92,18 +92,41 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `relay` (NIP-11) | `amy relay info` | ✅ | stateless NIP-11 doc fetch. |
 | `outbox` | `amy outbox` | ✅ | NIP-65 read/write relays, cache-first. |
 | `filter` | `amy filter` | ✅ | stateless — assemble + print a filter JSON. |
-| `blossom` | `amy blossom` | ✅ | upload/download/list/delete (reuses commons `BlossomClient`). |
-| `kind` / `nip` | `amy kind` / `amy nip` | 🆕 | reference lookups (needs a kind registry — only remaining Tier-1 gap). |
+| `blossom` | `amy blossom` | ✅ | upload/download/list/delete/check/mirror (reuses commons `BlossomClient`). |
+| `nip` | `amy nip` | ✅ | repo-first lookup + Nostr wiki/long-form fallback; `nip list`. |
+| `kind` | `amy kind` | 🆕 | needs a kind→schema registry (nak embeds one); none in quartz today. |
 | `sync` | `amy sync` | ✅ | NIP-77 Negentropy reconcile with the local store (down/up/both). |
 | `git` | `amy git` | ✅ in part | NIP-34 repo announce/list/show/issue. clone/push (packfile transport) out of scope. |
 | `podcast` | `amy podcast` | ✅ | NIP-F4 show metadata (10154) + episode publish (54) + list. |
 | `bunker` | `amy bunker[ connect]` + `amy login bunker://`/`--nostrconnect` | ✅ | NIP-46 remote signer + login, both the `bunker://` and `nostrconnect://` flows, each direction, plus `auth_url` challenge handling (client surfaces the URL + keeps waiting). Interop-verified vs real `nak`. |
 | `serve` / `admin` / `wallet` / `mcp` / `fs` / `spell` | — | 🆕 (tier 2/3) | larger/niche; some pull new deps. |
 
-**Tier 1 status:** shipped — `decode`, `encode`, `verify`, `key`, `event`,
-`publish`, `fetch`, `subscribe`, `count`, `encrypt`, `decrypt`, `gift`,
-`filter`, `relay info`, `outbox`, `blossom`. Remaining: `kind` / `nip`
-(reference lookups, pending a kind registry).
+### Full nak comparison (introspected both binaries)
+
+nak has 34 functional commands. Coverage:
+
+- **Full / equivalent (18):** `event`, `req`(→`fetch`+`subscribe`), `filter`,
+  `count`, `decode`, `encode`, `verify`, `relay`, `bunker`(+nostrconnect+auth_url),
+  `encrypt`, `decrypt`, `gift`, `publish`, `sync`, `profile`, `podcast`, `nip`,
+  `blossom`. Protocol-sensitive ones (`bunker`, `sync`, `key` NIP-49,
+  `encode`/`decode`) are interop-verified against the real `nak` binary.
+- **Partial / adapted (4):** `key` (no `expand`/`combine`/`validate`/`default`),
+  `git` (NIP-34 events only — no packfile transport), `outbox` (shows NIP-65 vs
+  nak's hints DB), `fetch` (filter-based, not nip19-hint resolution).
+- **Missing (12):** `kind` (needs a kind-schema registry), `admin` (NIP-86),
+  `serve` (geode is a standalone relay), `dekey` (NIP-4E), `wallet` (NIP-60
+  Cashu), `mcp`, `curl` (NIP-98), `fs` (FUSE), `group`/`nip29` (NIP-29 — amy has
+  MLS/Marmot instead), `spell` (MuSig2/FROST), `validate` (RoK schema).
+
+**Design differences (not gaps):** amy is a *stateful client* (accounts,
+`~/.amy/`, shared event store) with a stable JSON contract; nak is a *stateless*
+per-invocation tool that prints bare values for shell substitution. amy also has
+a large surface nak lacks: Marmot/MLS, NIP-17 DMs, zaps, CLINK offer/debit,
+NIP-02 follow, NIP-50 search, napplets, profile edit, store management, account
+management.
+
+**Cheap remaining wins:** `kind` (needs a registry), the `key`
+`expand`/`combine`/`validate`/`default` sub-verbs.
 
 ---
 

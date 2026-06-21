@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.cli.commands.LoginCommand
 import com.vitorpamplona.amethyst.cli.commands.MarmotResetCommand
 import com.vitorpamplona.amethyst.cli.commands.MessageCommands
 import com.vitorpamplona.amethyst.cli.commands.NappletCommands
+import com.vitorpamplona.amethyst.cli.commands.NipCommand
 import com.vitorpamplona.amethyst.cli.commands.NotesCommands
 import com.vitorpamplona.amethyst.cli.commands.NsiteCommands
 import com.vitorpamplona.amethyst.cli.commands.OfferCommands
@@ -170,6 +171,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "verify" -> return VerifyCommand.run(tail)
         "key" -> return KeyCommands.dispatch(tail)
         "filter" -> return FilterCommand.run(tail)
+        "nip" -> return NipCommand.run(tail)
     }
 
     // `relay info URL` is a stateless NIP-11 fetch — no account needed. The
@@ -342,8 +344,12 @@ private fun printUsage() {
         |                                (reads stdin when the arg is omitted or `-`)
         |  key generate                 mint a fresh keypair (nsec + npub + hex)
         |  key public NSEC|HEX          derive the public key from a secret key
+        |  key encrypt NSEC|HEX --password X    NIP-49 encrypt to ncryptsec1…
+        |  key decrypt NCRYPTSEC --password X   NIP-49 decrypt back to a secret key
         |  filter [--kind …] [--author …]   assemble + print a NIP-01 filter JSON from the
         |         [--id …] [--tag …] …        same flags fetch/subscribe use (no query sent)
+        |  nip N                        show a NIP (repo first, then a Nostr wiki/long-form fallback)
+        |  nip list                     fetch the NIP index (README) from the repo
         |
         |Identity:
         |  init [--nsec NSEC]           create or import a bare identity (no defaults published)
@@ -429,6 +435,8 @@ private fun printUsage() {
         |  blossom download HASH --server URL            or a HASH plus --server.
         |  blossom list --server URL [USER]             list a user's blobs (defaults to self)
         |  blossom delete HASH --server URL             delete a blob you own
+        |  blossom check --server URL HASH[,HASH]       HEAD-check blobs exist (fails if any missing)
+        |  blossom mirror --server URL SOURCE-URL       ask the server to mirror a blob (BUD-04)
         |
         |Git (NIP-34):
         |  git announce --name N [--description D]      publish a kind:30617 repo announcement

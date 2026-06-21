@@ -30,8 +30,10 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.nio.file.Files
 
@@ -58,14 +60,93 @@ object BlossomCommands {
         route(
             "blossom",
             tail,
-            "blossom <upload|download|list|delete>",
+            "blossom <upload|download|list|delete|check|mirror>",
             mapOf(
                 "upload" to { rest -> upload(dataDir, rest) },
                 "download" to { rest -> download(dataDir, rest) },
                 "list" to { rest -> list(dataDir, rest) },
                 "delete" to { rest -> delete(dataDir, rest) },
+                "check" to { rest -> check(dataDir, rest) },
+                "mirror" to { rest -> mirror(dataDir, rest) },
             ),
         )
+
+    /** `blossom check --server URL HASH[,HASH]` — HEAD each blob; fail if any is missing (BUD-01). */
+    private suspend fun check(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val server = args.flag("server") ?: return Output.error("bad_args", "blossom check requires --server URL")
+        val hashes =
+            args
+                .positional(0, "sha256")
+                .split(',')
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+
+        Context.open(dataDir).use { _ ->
+            val http = OkHttpClient()
+            val results =
+                hashes.map { hash ->
+                    val req =
+                        Request
+                            .Builder()
+                            .url(BlossomServerUrl.blob(server, hash))
+                            .head()
+                            .build()
+                    val (found, status) =
+                        try {
+                            http.newCall(req).execute().use { it.isSuccessful to it.code }
+                        } catch (e: Exception) {
+                            false to -1
+                        }
+                    mapOf("sha256" to hash, "found" to found, "status" to status)
+                }
+            val allFound = results.all { it["found"] == true }
+            Output.emit(mapOf("server" to server, "all_found" to allFound, "results" to results))
+            return if (allFound) 0 else 1
+        }
+    }
+
+    /**
+     * `blossom mirror --server URL SOURCE-URL` — ask the server to mirror the
+     * blob at SOURCE-URL (BUD-04). The sha256 (last path segment of the source
+     * URL) is signed into the upload auth.
+     */
+    private suspend fun mirror(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val server = args.flag("server") ?: return Output.error("bad_args", "blossom mirror requires --server URL")
+        val sourceUrl = args.positional(0, "source-url")
+        val hash = sourceUrl.substringAfterLast('/').substringBefore('.')
+        if (hash.length != 64 || hash.any { it !in "0123456789abcdef" }) {
+            return Output.error("bad_args", "could not extract a sha256 from the source url '$sourceUrl'")
+        }
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val auth = BlossomAuthorizationEvent.createUploadAuth(hash, 0, "Mirror $hash", ctx.signer).toAuthorizationHeader()
+            val body = """{"url":${Output.mapper.writeValueAsString(sourceUrl)}}""".toRequestBody("application/json".toMediaType())
+            val req =
+                Request
+                    .Builder()
+                    .url(server.removeSuffix("/") + "/mirror")
+                    .header("Authorization", auth)
+                    .put(body)
+                    .build()
+            OkHttpClient().newCall(req).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return Output.error("http_error", "mirror failed: HTTP ${response.code} ${response.headers[BlossomServerUrl.REASON_HEADER] ?: ""}")
+                }
+                val node = Output.mapper.readTree(response.body.string())
+                Output.emit(mapOf("server" to server, "sha256" to hash, "blob" to node))
+            }
+            return 0
+        }
+    }
 
     private suspend fun upload(
         dataDir: DataDir,

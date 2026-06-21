@@ -213,7 +213,10 @@ Army-knife verbs that operate purely on their arguments. They never touch
 | `amy verify [EVENT-JSON]` | Check an event's id hash and signature. Reads stdin when the argument is omitted or `-`. Reports `id_ok` + `signature_ok` separately. |
 | `amy key generate` | Mint a fresh keypair (`nsec` + `npub` + hex). Does not persist — use `init`/`login` for that. |
 | `amy key public NSEC\|HEX` | Derive the public key from a secret key. |
+| `amy key encrypt NSEC\|HEX --password X` | NIP-49 encrypt a secret key to an `ncryptsec1…`. |
+| `amy key decrypt NCRYPTSEC --password X` | NIP-49 decrypt back to nsec/hex/npub. |
 | `amy filter [filter flags]` | Assemble and print a NIP-01 filter JSON from the same flags `fetch`/`subscribe` use — no query is sent. |
+| `amy nip N` / `amy nip list` | Look up a NIP — the `nostr-protocol/nips` repo first, then a Nostr wiki/long-form fallback. `list` fetches the index. |
 | `amy relay info URL` | Fetch and print a relay's NIP-11 information document. |
 
 ### Remote signing (NIP-46 bunker)
@@ -301,6 +304,8 @@ nak's `clone`/`push`/`pull` (git-packfile transport over relays/GRASP) are out o
 | `amy blossom download URL [--out FILE]` | Download a blob (public). Accepts a full URL, or a `HASH` plus `--server URL`. |
 | `amy blossom list --server URL [USER]` | List a user's blobs (BUD-04). USER defaults to the active account. |
 | `amy blossom delete HASH --server URL` | Delete a blob you own (BUD-02). |
+| `amy blossom check --server URL HASH[,HASH]` | HEAD-check the server has each blob; exit 1 if any is missing. |
+| `amy blossom mirror --server URL SOURCE-URL` | Ask the server to mirror a blob from SOURCE-URL (BUD-04). |
 
 ### Identity
 

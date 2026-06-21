@@ -24,6 +24,9 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Identity
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 
 /**
  * `amy key …` — standalone key utilities (nak's `key`). Local, no network,
@@ -32,21 +35,58 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
  *
  *   key generate                 mint a fresh keypair (prints nsec + npub + hex)
  *   key public <nsec|hex-priv>   derive the public key from a secret key
+ *   key encrypt <nsec|hex> --password X   NIP-49 encrypt to an ncryptsec1…
+ *   key decrypt <ncryptsec> --password X  NIP-49 decrypt back to a secret key
  *
  * Thin assembly only: key generation + bech32 derivation live in quartz
- * (reused here via [Identity], which wraps Quartz's `KeyPair`).
+ * (reused here via [Identity] / [Nip49]).
  */
 object KeyCommands {
     suspend fun dispatch(rest: Array<String>): Int =
         route(
             "key",
             rest,
-            "key <generate|public>",
+            "key <generate|public|encrypt|decrypt>",
             mapOf(
                 "generate" to { _ -> generate() },
                 "public" to { tail -> public(tail) },
+                "encrypt" to { tail -> encrypt(tail) },
+                "decrypt" to { tail -> decrypt(tail) },
             ),
         )
+
+    /** Read the private key (nsec or 64-hex) into hex, or null if unparseable. */
+    private fun privHexOrNull(input: String): String? =
+        when {
+            input.startsWith("nsec") -> runCatching { input.bechToBytes().toHexKey() }.getOrNull()
+            input.length == 64 && input.lowercase().all { it in "0123456789abcdef" } -> input.lowercase()
+            else -> null
+        }
+
+    private fun encrypt(rest: Array<String>): Int {
+        val args = Args(rest)
+        val priv = privHexOrNull(args.positional(0, "secret-key").trim()) ?: return Output.error("bad_args", "expected an nsec or 64-char hex secret key")
+        val password = args.flag("password") ?: args.flag("pw") ?: return Output.error("bad_args", "key encrypt requires --password")
+        val ncryptsec = Nip49().encrypt(priv, password)
+        Output.emit(mapOf("ncryptsec" to ncryptsec))
+        return 0
+    }
+
+    private fun decrypt(rest: Array<String>): Int {
+        val args = Args(rest)
+        val ncryptsec = args.positional(0, "ncryptsec").trim()
+        if (!ncryptsec.startsWith("ncryptsec")) return Output.error("bad_args", "expected an ncryptsec1… string")
+        val password = args.flag("password") ?: args.flag("pw") ?: return Output.error("bad_args", "key decrypt requires --password")
+        val privHex =
+            try {
+                Nip49().decrypt(ncryptsec, password)
+            } catch (e: Exception) {
+                return Output.error("decrypt_failed", e.message ?: "could not decrypt (wrong password?)")
+            }
+        val id = Identity.fromPrivateKey(privHex.hexToByteArray())
+        Output.emit(mapOf("nsec" to id.nsec, "npub" to id.npub, "private_key" to id.privKeyHex, "pubkey" to id.pubKeyHex))
+        return 0
+    }
 
     private fun generate(): Int {
         val id = Identity.create()
