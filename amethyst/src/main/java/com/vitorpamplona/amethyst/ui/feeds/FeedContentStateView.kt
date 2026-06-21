@@ -109,7 +109,10 @@ fun RenderFeedContentState(
         when (state) {
             is FeedState.Empty -> onEmpty()
             is FeedState.FeedError -> onError(state.errorMessage)
-            is FeedState.Loaded -> onLoaded(state)
+            is FeedState.Loaded -> {
+                PrefetchLoadedFeedMedia(state, listState, accountViewModel)
+                onLoaded(state)
+            }
             is FeedState.Loading -> onLoading()
         }
     }
