@@ -197,6 +197,23 @@ $ amy relay publish-lists      # broadcast updated kind:10002/10050/10051
 
 ## Commands
 
+### Primitives (stateless — no account or network)
+
+Army-knife verbs that operate purely on their arguments. They never touch
+`~/.amy/`, so they run with zero state — handy for scripting and piping
+(`amy decode … | jq`, `… | amy verify`).
+
+| Command | What it does |
+|---|---|
+| `amy decode ENTITY` | Decode a NIP-19/21 entity (`npub`/`nsec`/`note`/`nevent`/`nprofile`/`naddr`/`nrelay`/`nembed`) to JSON. Accepts an optional `nostr:` prefix. |
+| `amy encode npub HEX` / `nsec HEX` / `note ID` | Encode a single 32-byte hex value into the matching NIP-19 entity. |
+| `amy encode nevent ID [--author HEX] [--kind N] [--relay URL[,URL…]]` | Encode an event pointer with optional author/kind/relay hints. |
+| `amy encode nprofile HEX [--relay URL[,URL…]]` | Encode a profile pointer with optional relay hints. |
+| `amy encode naddr --kind N --pubkey HEX --identifier D [--relay URL[,URL…]]` | Encode an addressable-event (`a` tag) pointer. |
+| `amy verify [EVENT-JSON]` | Check an event's id hash and signature. Reads stdin when the argument is omitted or `-`. Reports `id_ok` + `signature_ok` separately. |
+| `amy key generate` | Mint a fresh keypair (`nsec` + `npub` + hex). Does not persist — use `init`/`login` for that. |
+| `amy key public NSEC\|HEX` | Derive the public key from a secret key. |
+
 ### Identity
 
 | Command | What it does |

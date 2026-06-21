@@ -70,6 +70,32 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | Notifications feed | 🆕 | |
 | Search (NIP-50) | 🆕 | |
 
+### `nak` parity — army-knife primitives
+
+Tracking [`fiatjaf/nak`](https://github.com/fiatjaf/nak)'s command surface. amy
+adapts the verbiage where its own conventions differ (`req` → one-shot `fetch`
+vs streaming `subscribe`). Stateless verbs run with no account or network.
+
+| nak command | amy verb | Status | Notes |
+|---|---|---|---|
+| `decode` | `amy decode` | ✅ | NIP-19/21 → JSON. Quartz `Nip19Parser`. |
+| `encode` | `amy encode` | ✅ | npub/nsec/note/nevent/nprofile/naddr. |
+| `verify` / `validate` | `amy verify` | ✅ | id-hash + signature, reported separately. |
+| `key` | `amy key generate\|public` | ✅ in part · 🆕 | generate + derive done; NIP-49 encrypt/decrypt pending. |
+| `event` | `amy event` | 🆕 | build/sign an arbitrary event, optional `--publish`. |
+| `publish` | `amy publish` | 🆕 | broadcast a pre-made event JSON. |
+| `req` (one-shot) | `amy fetch` | 🆕 | filter → collect-until-EOSE. |
+| `req` (stream) | `amy subscribe` | 🆕 | filter → live stream to stdout. |
+| `count` | `amy count` | 🆕 | NIP-45. |
+| `encrypt` / `decrypt` | `amy encrypt\|decrypt` | 🆕 | raw NIP-44 / NIP-04. |
+| `gift` | `amy gift wrap\|unwrap` | 🆕 | NIP-59 primitive (gift-wrap path already used by `dm`). |
+| `relay` (NIP-11) | `amy relay info` | 🆕 | amy's `relay` is config today; add an `info` verb. |
+| `outbox` | `amy outbox` | 🆕 | NIP-65 relay discovery for a user. |
+| `blossom` | `amy blossom` | 🆕 | upload/download/list/delete (client already used by `dm`/`nsite`). |
+| `kind` / `nip` | `amy kind` / `amy nip` | 🆕 | reference lookups. |
+| `sync` | `amy relay sync` | 🆕 | NIP-77 Negentropy. |
+| `bunker` / `serve` / `admin` / `wallet` / `git` / `podcast` / `mcp` / `fs` / `spell` | — | 🆕 (tier 2/3) | larger/niche; some pull new deps. |
+
 ---
 
 ## Order of operations

@@ -122,6 +122,24 @@ private suspend fun dispatch(argv: Array<String>): Int {
             .run(tail)
     }
 
+    // Stateless local primitives (nak-style army-knife verbs). They operate
+    // purely on their arguments — no identity, no relays, no `~/.amy/` — so
+    // they dispatch before account resolution and work with zero state.
+    when (head) {
+        "decode" ->
+            return com.vitorpamplona.amethyst.cli.commands.DecodeCommand
+                .run(tail)
+        "encode" ->
+            return com.vitorpamplona.amethyst.cli.commands.EncodeCommand
+                .run(tail)
+        "verify" ->
+            return com.vitorpamplona.amethyst.cli.commands.VerifyCommand
+                .run(tail)
+        "key" ->
+            return com.vitorpamplona.amethyst.cli.commands.KeyCommands
+                .dispatch(tail)
+    }
+
     val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
     val dataDir = DataDir.resolve(accountFlag = accountFlag, secrets = secrets)
 
@@ -332,6 +350,20 @@ private fun printUsage() {
         |  ncryptsec backend the passphrase is taken from --passphrase-file,
         |  then ${'$'}AMY_PASSPHRASE, then a TTY prompt. `plaintext` writes the
         |  private key directly into identity.json (still 0600) — dev only.
+        |
+        |Primitives (stateless — no account or network needed):
+        |  decode ENTITY                decode a NIP-19/21 entity (npub|nsec|note|nevent|
+        |                                nprofile|naddr|nrelay|nembed) to JSON
+        |  encode npub HEX              encode raw parts into a NIP-19 entity:
+        |  encode nsec HEX                 nevent/nprofile/naddr accept --relay URL[,URL…];
+        |  encode note ID                  nevent accepts --author HEX --kind N;
+        |  encode nevent ID [...]          naddr needs --kind N --pubkey HEX --identifier D
+        |  encode nprofile HEX [...]
+        |  encode naddr --kind N --pubkey HEX --identifier D [--relay URL[,URL…]]
+        |  verify [EVENT-JSON]          check an event's id hash + signature
+        |                                (reads stdin when the arg is omitted or `-`)
+        |  key generate                 mint a fresh keypair (nsec + npub + hex)
+        |  key public NSEC|HEX          derive the public key from a secret key
         |
         |Identity:
         |  init [--nsec NSEC]           create or import a bare identity (no defaults published)
