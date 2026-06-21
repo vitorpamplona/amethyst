@@ -92,10 +92,15 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `relay` (NIP-11) | `amy relay info` | ✅ | stateless NIP-11 doc fetch. |
 | `outbox` | `amy outbox` | ✅ | NIP-65 read/write relays, cache-first. |
 | `filter` | `amy filter` | ✅ | stateless — assemble + print a filter JSON. |
-| `blossom` | `amy blossom` | 🆕 | upload/download/list/delete (client already used by `dm`/`nsite`). |
-| `kind` / `nip` | `amy kind` / `amy nip` | 🆕 | reference lookups (needs a kind registry). |
-| `sync` | `amy relay sync` | 🆕 | NIP-77 Negentropy. |
+| `blossom` | `amy blossom` | ✅ | upload/download/list/delete (reuses commons `BlossomClient`). |
+| `kind` / `nip` | `amy kind` / `amy nip` | 🆕 | reference lookups (needs a kind registry — only remaining Tier-1 gap). |
+| `sync` | `amy relay sync` | 🆕 (tier 2) | NIP-77 Negentropy. |
 | `bunker` / `serve` / `admin` / `wallet` / `git` / `podcast` / `mcp` / `fs` / `spell` | — | 🆕 (tier 2/3) | larger/niche; some pull new deps. |
+
+**Tier 1 status:** shipped — `decode`, `encode`, `verify`, `key`, `event`,
+`publish`, `fetch`, `subscribe`, `count`, `encrypt`, `decrypt`, `gift`,
+`filter`, `relay info`, `outbox`, `blossom`. Remaining: `kind` / `nip`
+(reference lookups, pending a kind registry).
 
 ---
 

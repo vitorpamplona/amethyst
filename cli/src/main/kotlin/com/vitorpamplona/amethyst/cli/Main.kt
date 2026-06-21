@@ -263,6 +263,10 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.outbox(dataDir, tail)
         }
 
+        "blossom" -> {
+            Commands.blossom(dataDir, tail)
+        }
+
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -477,6 +481,14 @@ private fun printUsage() {
         |         [--relay URL[,URL…]]                   USER (add --relay to broadcast the wrap).
         |  gift unwrap [GIFTWRAP-JSON]                  decrypt + unseal a kind:1059 wrap addressed
         |                                                to the active account.
+        |
+        |Blossom blobs (NIP-B7 / BUD-01/02/04):
+        |  blossom upload --server URL FILE             upload a file (authed); prints the blob URL.
+        |          [--mime-type M]
+        |  blossom download URL [--out FILE]            download a blob (public). Accepts a full URL,
+        |  blossom download HASH --server URL            or a HASH plus --server.
+        |  blossom list --server URL [USER]             list a user's blobs (defaults to self)
+        |  blossom delete HASH --server URL             delete a blob you own
         |
         |Static websites (NIP-5A kind:15128/35128):
         |  nsite fetch AUTHOR [--d ID] [--path P]      resolve one path over Nostr + Blossom and

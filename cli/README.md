@@ -244,6 +244,15 @@ Filter flags are shared by `fetch` and `subscribe`: `--kind K[,K]`, `--author U[
 | `amy gift wrap --to USER [EVENT-JSON] [--relay …]` | NIP-59: seal a signed inner event for USER and wrap it in a kind:1059 gift wrap. Prints the wrap; `--relay` also broadcasts it. |
 | `amy gift unwrap [GIFTWRAP-JSON]` | Decrypt + unseal a kind:1059 wrap addressed to the active account; prints the inner event. |
 
+### Blossom blobs (NIP-B7)
+
+| Command | What it does |
+|---|---|
+| `amy blossom upload --server URL FILE [--mime-type M]` | Upload a file (BUD-01, authed). Prints the blob URL + sha256. |
+| `amy blossom download URL [--out FILE]` | Download a blob (public). Accepts a full URL, or a `HASH` plus `--server URL`. |
+| `amy blossom list --server URL [USER]` | List a user's blobs (BUD-04). USER defaults to the active account. |
+| `amy blossom delete HASH --server URL` | Delete a blob you own (BUD-02). |
+
 ### Identity
 
 | Command | What it does |

@@ -180,4 +180,9 @@ object Commands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int = OutboxCommand.run(dataDir, tail)
+
+    suspend fun blossom(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = BlossomCommands.dispatch(dataDir, tail)
 }
