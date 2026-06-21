@@ -21,12 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.lifecycle.ViewModel
+import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
+import com.vitorpamplona.amethyst.commons.cashu.ops.MintQuoteStarted
+import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
+import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletOps
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
-import com.vitorpamplona.amethyst.model.nip60Cashu.MintQuoteStarted
-import com.vitorpamplona.amethyst.model.nip60Cashu.TokenEntry
-import com.vitorpamplona.amethyst.model.nip60Cashu.describeMintError
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto

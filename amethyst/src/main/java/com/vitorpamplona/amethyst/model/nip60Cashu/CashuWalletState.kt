@@ -20,6 +20,13 @@
  */
 package com.vitorpamplona.amethyst.model.nip60Cashu
 
+import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
+import com.vitorpamplona.amethyst.commons.cashu.ops.MeltCompleted
+import com.vitorpamplona.amethyst.commons.cashu.ops.NutzapSent
+import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
+import com.vitorpamplona.amethyst.commons.cashu.ops.SendTokenCompleted
+import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
+import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletQueryState
 import com.vitorpamplona.amethyst.model.AccountSettings
