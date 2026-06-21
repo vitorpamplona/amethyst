@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.serialization)
     alias(libs.plugins.googleKsp)
+    alias(libs.plugins.roborazzi)
 }
 
 fun getCurrentBranch(workingDir: java.io.File): String =
@@ -276,6 +277,9 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // Robolectric (used by the Roborazzi screenshot tests) needs the merged
+        // Android resources/assets/manifest on the unit-test classpath.
+        unitTests.isIncludeAndroidResources = true
         // Lets TorArtiNativeIntegrationTest's System.loadLibrary("arti_android")
         // find the desktop-host build of our Arti JNI shim. The Android .so
         // variants live in src/main/jniLibs/{arm64-v8a,x86_64}/ and are loaded
@@ -495,6 +499,15 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    // Screenshot / GIF capture of Android composables, no emulator (Robolectric + Roborazzi).
+    // Renders shared/Android composables to PNGs and animated GIFs under build/screenshots/.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.junit)
