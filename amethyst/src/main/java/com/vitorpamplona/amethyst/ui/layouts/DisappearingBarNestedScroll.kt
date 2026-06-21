@@ -43,10 +43,16 @@ import androidx.compose.ui.unit.Velocity
  *  - onPostFling snaps a mid-way bar to the nearest edge, using the fling's remaining
  *    velocity as the spring's initial velocity so the settle feels continuous. No velocity
  *    is returned upward to avoid phantom scrolls on parent containers.
- *  - Hiding tracks the finger 1:1, but revealing is damped by [REVEAL_SENSITIVITY]. Once the
- *    bars are hidden, the small reverse drag a finger naturally makes when it catches/stops a
- *    fast scroll would otherwise be enough to snap the chrome (and the OS status bar) back.
- *    Damping the reveal direction makes bringing the bars back a more deliberate gesture.
+ *  - Both hiding and revealing track the finger 1:1. The bar offset must equal the content's
+ *    scroll offset so the bar's bottom edge stays glued to the first item's top edge; any
+ *    asymmetry (e.g. a damped reveal) leaves the bar lagging behind the content and opens a
+ *    blank band between the bar and the first item when the list returns to the top.
+ *
+ *    Making the reveal a *deliberate* gesture — so the tiny reverse drag a finger makes when it
+ *    catches/stops a fast scroll doesn't pop the chrome back — is handled without breaking that
+ *    1:1 invariant: a partial reveal that doesn't cross the halfway point is snapped back to the
+ *    hidden edge by [DisappearingBarState.settleToNearestEdge] on fling/lift, and the binary OS
+ *    status bar is debounced by the show/hide hysteresis in the scaffold.
  */
 class DisappearingBarNestedScroll(
     private val state: DisappearingBarState,
@@ -90,19 +96,9 @@ class DisappearingBarNestedScroll(
     private fun applyDelta(deltaY: Float) {
         val topLimit = state.topHeightLimit
         val bottomLimit = state.bottomHeightLimit
-        // Positive delta reveals the bars; negative delta hides them. Hiding stays 1:1 with the
-        // finger, while revealing is damped so a stray reverse drag doesn't bring the chrome back.
-        val effectiveDelta = if (deltaY > 0f) deltaY * REVEAL_SENSITIVITY else deltaY
-        state.topHeightOffset = (state.topHeightOffset + effectiveDelta).coerceIn(-topLimit, 0f)
-        state.bottomHeightOffset = (state.bottomHeightOffset + effectiveDelta).coerceIn(-bottomLimit, 0f)
-    }
-
-    companion object {
-        /**
-         * Fraction of scroll distance applied when revealing the bars (1.0 = same rate as hiding).
-         * Lower values require a more deliberate downward scroll to bring the chrome back, so the
-         * tiny reverse movement of a finger stopping a fast scroll no longer pops the bars open.
-         */
-        const val REVEAL_SENSITIVITY = 0.5f
+        // 1:1 in both directions: the bar offset mirrors the content scroll so the bar stays glued
+        // to the first item. Deliberate reveal is enforced on settle, not by damping the delta here.
+        state.topHeightOffset = (state.topHeightOffset + deltaY).coerceIn(-topLimit, 0f)
+        state.bottomHeightOffset = (state.bottomHeightOffset + deltaY).coerceIn(-bottomLimit, 0f)
     }
 }

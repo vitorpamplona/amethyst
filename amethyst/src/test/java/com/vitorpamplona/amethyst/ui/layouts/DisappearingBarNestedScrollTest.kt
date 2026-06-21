@@ -79,17 +79,17 @@ class DisappearingBarNestedScrollTest {
     }
 
     @Test
-    fun `scrolling content down reveals both bars from a hidden state, damped`() {
+    fun `scrolling content down reveals both bars from a hidden state`() {
         val state = state(topLimit = 100f, bottomLimit = 50f)
         state.topHeightOffset = -100f
         state.bottomHeightOffset = -50f
         val connection = nsc(state)
 
-        // Reveal is damped by REVEAL_SENSITIVITY (0.5), so a 30px drag only reveals 15px.
+        // Reveal tracks the finger 1:1, so a 30px drag reveals 30px.
         connection.onPostScroll(Offset(0f, 30f), Offset(0f, 0f), NestedScrollSource.UserInput)
 
-        assertEquals(-85f, state.topHeightOffset)
-        assertEquals(-35f, state.bottomHeightOffset)
+        assertEquals(-70f, state.topHeightOffset)
+        assertEquals(-20f, state.bottomHeightOffset)
     }
 
     @Test
@@ -100,26 +100,27 @@ class DisappearingBarNestedScrollTest {
         val connection = nsc(state)
 
         // The list consumed 20px of a 40px reveal drag; 20 more was left as overscroll.
-        // The bars should move by the total 40 (damped to 20 on reveal), not just one half.
+        // The bars should move by the total 40, not just one of the halves.
         connection.onPostScroll(Offset(0f, 20f), Offset(0f, 20f), NestedScrollSource.UserInput)
 
-        assertEquals(-30f, state.topHeightOffset)
-        assertEquals(-30f, state.bottomHeightOffset)
+        assertEquals(-10f, state.topHeightOffset)
+        assertEquals(-10f, state.bottomHeightOffset)
     }
 
     @Test
-    fun `revealing is less sensitive than hiding for the same drag distance`() {
+    fun `revealing tracks the finger 1 to 1, matching the hide rate so the bar stays glued to content`() {
         // Hiding a 40px drag moves the bars the full 40px...
         val hiding = state(topLimit = 100f, bottomLimit = 100f)
         nsc(hiding).onPostScroll(Offset(0f, -40f), Offset(0f, 0f), NestedScrollSource.UserInput)
         assertEquals(-40f, hiding.topHeightOffset)
 
-        // ...while revealing the same 40px from fully hidden only brings back 20px.
+        // ...and revealing the same 40px from fully hidden brings back the full 40px, so when the
+        // list returns to the top the bar is fully revealed with no blank band beneath it.
         val revealing = state(topLimit = 100f, bottomLimit = 100f)
         revealing.topHeightOffset = -100f
         revealing.bottomHeightOffset = -100f
         nsc(revealing).onPostScroll(Offset(0f, 40f), Offset(0f, 0f), NestedScrollSource.UserInput)
-        assertEquals(-80f, revealing.topHeightOffset)
+        assertEquals(-60f, revealing.topHeightOffset)
     }
 
     @Test
