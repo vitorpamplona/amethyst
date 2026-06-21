@@ -245,6 +245,25 @@ Filter flags are shared by `fetch` and `subscribe`: `--kind K[,K]`, `--author U[
 | `amy gift wrap --to USER [EVENT-JSON] [--relay …]` | NIP-59: seal a signed inner event for USER and wrap it in a kind:1059 gift wrap. Prints the wrap; `--relay` also broadcasts it. |
 | `amy gift unwrap [GIFTWRAP-JSON]` | Decrypt + unseal a kind:1059 wrap addressed to the active account; prints the inner event. |
 
+### Git (NIP-34)
+
+nak's `clone`/`push`/`pull` (git-packfile transport over relays/GRASP) are out of scope — these are the metadata + collaboration events.
+
+| Command | What it does |
+|---|---|
+| `amy git announce --name N [--description D] [--clone URL[,URL]] [--web URL[,URL]] [--relay URL[,URL]] [--maintainer HEX[,HEX]] [--hashtag T[,T]] [--earliest-commit C] [--d ID]` | Publish a kind:30617 repository announcement. |
+| `amy git list [USER]` | List a user's repo announcements (defaults to self). |
+| `amy git show NADDR\|kind:pubkey:id` | Print one repo announcement (cache-first). |
+| `amy git issue NADDR\|coords --subject S [BODY] [--hashtag T[,T]]` | Publish a kind:1621 issue against a repo. BODY from arg or stdin. |
+
+### Podcasts (NIP-F4)
+
+| Command | What it does |
+|---|---|
+| `amy podcast metadata --title T --image URL --description D [--website URL[,URL]]` | Publish kind:10154 show metadata (replaceable). |
+| `amy podcast publish --title T --description D --audio URL[,URL] [--audio-type MIME] [--image URL] [--content MD]` | Publish a kind:54 episode. |
+| `amy podcast list [USER] [--limit N]` | List a user's show metadata + episodes. |
+
 ### Blossom blobs (NIP-B7)
 
 | Command | What it does |

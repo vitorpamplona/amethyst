@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.cli.commands.FetchCommand
 import com.vitorpamplona.amethyst.cli.commands.FilterCommand
 import com.vitorpamplona.amethyst.cli.commands.FollowCommand
 import com.vitorpamplona.amethyst.cli.commands.GiftCommands
+import com.vitorpamplona.amethyst.cli.commands.GitCommands
 import com.vitorpamplona.amethyst.cli.commands.GroupCommands
 import com.vitorpamplona.amethyst.cli.commands.InitCommands
 import com.vitorpamplona.amethyst.cli.commands.KeyCommands
@@ -47,6 +48,7 @@ import com.vitorpamplona.amethyst.cli.commands.NotesCommands
 import com.vitorpamplona.amethyst.cli.commands.NsiteCommands
 import com.vitorpamplona.amethyst.cli.commands.OfferCommands
 import com.vitorpamplona.amethyst.cli.commands.OutboxCommand
+import com.vitorpamplona.amethyst.cli.commands.PodcastCommands
 import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
 import com.vitorpamplona.amethyst.cli.commands.PublishCommand
 import com.vitorpamplona.amethyst.cli.commands.RelayCommands
@@ -209,6 +211,8 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "outbox" -> OutboxCommand.run(dataDir, tail)
         "blossom" -> BlossomCommands.dispatch(dataDir, tail)
         "sync" -> SyncCommand.run(dataDir, tail)
+        "git" -> GitCommands.dispatch(dataDir, tail)
+        "podcast" -> PodcastCommands.dispatch(dataDir, tail)
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -413,6 +417,24 @@ private fun printUsage() {
         |  blossom download HASH --server URL            or a HASH plus --server.
         |  blossom list --server URL [USER]             list a user's blobs (defaults to self)
         |  blossom delete HASH --server URL             delete a blob you own
+        |
+        |Git (NIP-34):
+        |  git announce --name N [--description D]      publish a kind:30617 repo announcement
+        |      [--clone URL[,URL]] [--web URL[,URL]]     (--d sets the identifier; defaults to name)
+        |      [--relay URL[,URL]] [--maintainer HEX[,]]
+        |      [--hashtag T[,T]] [--earliest-commit C] [--d ID]
+        |  git list [USER]                              list a user's repo announcements (default self)
+        |  git show NADDR|kind:pubkey:id                print one repo announcement
+        |  git issue NADDR|coords --subject S [BODY]    publish a kind:1621 issue against a repo
+        |      [--hashtag T[,T]] [--relay URL[,URL]]     (BODY from arg or stdin)
+        |
+        |Podcasts (NIP-F4):
+        |  podcast metadata --title T --image URL        publish kind:10154 show metadata
+        |      --description D [--website URL[,URL]]
+        |  podcast publish --title T --description D     publish a kind:54 episode
+        |      --audio URL[,URL] [--audio-type MIME]
+        |      [--image URL] [--content MARKDOWN]
+        |  podcast list [USER] [--limit N]              list a user's metadata + episodes
         |
         |Static websites (NIP-5A kind:15128/35128):
         |  nsite fetch AUTHOR [--d ID] [--path P]      resolve one path over Nostr + Blossom and
