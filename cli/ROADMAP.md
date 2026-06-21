@@ -97,7 +97,8 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `sync` | `amy sync` | ✅ | NIP-77 Negentropy reconcile with the local store (down/up/both). |
 | `git` | `amy git` | ✅ in part | NIP-34 repo announce/list/show/issue. clone/push (packfile transport) out of scope. |
 | `podcast` | `amy podcast` | ✅ | NIP-F4 show metadata (10154) + episode publish (54) + list. |
-| `bunker` / `serve` / `admin` / `wallet` / `mcp` / `fs` / `spell` | — | 🆕 (tier 2/3) | larger/niche; some pull new deps. |
+| `bunker` | `amy bunker` + `amy login bunker://` | ✅ | NIP-46 remote signer (server) + bunker login (client). Two amy processes interop. |
+| `serve` / `admin` / `wallet` / `mcp` / `fs` / `spell` | — | 🆕 (tier 2/3) | larger/niche; some pull new deps. |
 
 **Tier 1 status:** shipped — `decode`, `encode`, `verify`, `key`, `event`,
 `publish`, `fetch`, `subscribe`, `count`, `encrypt`, `decrypt`, `gift`,

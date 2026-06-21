@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.cli
 
 import com.vitorpamplona.amethyst.cli.commands.AwaitCommands
 import com.vitorpamplona.amethyst.cli.commands.BlossomCommands
+import com.vitorpamplona.amethyst.cli.commands.BunkerCommand
 import com.vitorpamplona.amethyst.cli.commands.CountCommand
 import com.vitorpamplona.amethyst.cli.commands.CreateCommand
 import com.vitorpamplona.amethyst.cli.commands.DebitCommands
@@ -213,6 +214,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "sync" -> SyncCommand.run(dataDir, tail)
         "git" -> GitCommands.dispatch(dataDir, tail)
         "podcast" -> PodcastCommands.dispatch(dataDir, tail)
+        "bunker" -> BunkerCommand.run(dataDir, tail)
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -346,8 +348,14 @@ private fun printUsage() {
         |Identity:
         |  init [--nsec NSEC]           create or import a bare identity (no defaults published)
         |  create [--name NAME]            provision a full Amethyst-style account + publish bootstrap events
-        |  login KEY [--password X]     import (nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05)
+        |  login KEY [--password X]     import (nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05|bunker://)
         |  whoami                       print current identity
+        |
+        |Remote signing (NIP-46):
+        |  bunker [--relay URL[,URL…]]  run a remote signer for this (local-key) account; prints a
+        |    [--secret S] [--timeout SECS]  bunker:// uri and signs requests until interrupt/timeout
+        |  login bunker://PUBKEY?relay=…&secret=…       sign through a remote bunker (mints a local
+        |                                                transport key; the account acts as PUBKEY)
         |
         |Relays:
         |  relay add URL [--type T]      T=nip65|inbox|key_package|all (default all)

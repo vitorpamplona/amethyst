@@ -42,12 +42,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.coroutines.CompletableDeferred
@@ -93,14 +96,30 @@ class Context(
     val identity: Identity,
     val state: RunState,
 ) : AutoCloseable {
-    val signer = NostrSignerInternal(identity.keyPair())
-
     private val okhttp = OkHttpClient.Builder().build()
 
     val client: NostrClient =
         NostrClient(
             websocketBuilder = BasicOkHttpWebSocket.Builder { okhttp },
         )
+
+    /**
+     * The account's signer. For a local account this is a [NostrSignerInternal]
+     * over the stored key; for a NIP-46 bunker account it is a
+     * [NostrSignerRemote] that delegates signing/encryption to the remote
+     * signer over [client]. The remote signer's subscription + connect
+     * handshake are driven from [prepare].
+     */
+    val signer: NostrSigner =
+        identity.bunker?.let { b ->
+            NostrSignerRemote(
+                signer = NostrSignerInternal(identity.clientKeyPair()),
+                remotePubkey = b.remotePubkey,
+                relays = b.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet(),
+                client = client,
+                secret = b.connectSecret,
+            )
+        } ?: NostrSignerInternal(identity.keyPair())
 
     /**
      * NIP-05 resolver for turning `alice@damus.io`-style identifiers into pubkeys.
@@ -152,6 +171,12 @@ class Context(
         if (prepared) return
         marmot.restoreAll()
         client.connect()
+        // A bunker account must open its NIP-46 response subscription and run
+        // the connect handshake before any signing/encryption call.
+        (signer as? NostrSignerRemote)?.let {
+            it.openSubscription()
+            it.connect()
+        }
         prepared = true
     }
 
@@ -608,6 +633,12 @@ class Context(
 
     override fun close() {
         dataDir.saveRunState(state)
+        (signer as? NostrSignerRemote)?.let {
+            try {
+                it.closeSubscription()
+            } catch (_: Exception) {
+            }
+        }
         try {
             client.close()
         } catch (_: Exception) {

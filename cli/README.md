@@ -216,6 +216,27 @@ Army-knife verbs that operate purely on their arguments. They never touch
 | `amy filter [filter flags]` | Assemble and print a NIP-01 filter JSON from the same flags `fetch`/`subscribe` use — no query is sent. |
 | `amy relay info URL` | Fetch and print a relay's NIP-11 information document. |
 
+### Remote signing (NIP-46 bunker)
+
+Two amy processes can talk: one **hosts** a bunker with its local key; the other **logs in** through it and signs remotely (events come out authored by the host's key).
+
+| Command | What it does |
+|---|---|
+| `amy bunker [--relay URL[,URL…]] [--secret S] [--timeout SECS]` | Run a NIP-46 remote signer for the active local-key account. Prints a `bunker://…` URI, then services sign / nip04 / nip44 / get_public_key / ping requests until interrupted (or `--timeout`). |
+| `amy login bunker://PUBKEY?relay=…&secret=…` | Log in through a bunker. Mints a local transport keypair; the account then acts as PUBKEY and every signing/encryption call is delegated to the remote signer. |
+
+Example (two terminals, shared `$HOME`):
+
+```bash
+# terminal 1 — host alice's key as a bunker
+amy --account alice bunker --relay wss://relay.example --secret s3cret
+#   → bunker://<alice-pubkey>?relay=wss://relay.example/&secret=s3cret
+
+# terminal 2 — bob signs through it
+amy --account bob login 'bunker://<alice-pubkey>?relay=wss://relay.example/&secret=s3cret'
+amy --account bob event --kind 1 --content "signed remotely"   # authored by alice
+```
+
 ### Raw events
 
 | Command | What it does |
