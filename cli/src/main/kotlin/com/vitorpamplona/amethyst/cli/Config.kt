@@ -208,6 +208,7 @@ class DataDir(
     val identityFile = File(root, "identity.json")
     val stateFile = File(root, "state.json")
     val aliasesFile = File(root, "aliases.json")
+    val cashuFile = File(root, "cashu.json")
     val marmotDir = File(root, "marmot")
     val groupsDir = File(marmotDir, "groups")
     val keyPackageBundleFile = File(marmotDir, "keypackages.bundle")

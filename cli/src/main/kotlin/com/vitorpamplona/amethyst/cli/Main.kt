@@ -62,6 +62,8 @@ import com.vitorpamplona.amethyst.cli.commands.SyncCommand
 import com.vitorpamplona.amethyst.cli.commands.UseCommand
 import com.vitorpamplona.amethyst.cli.commands.VerifyCommand
 import com.vitorpamplona.amethyst.cli.commands.ZapCommand
+import com.vitorpamplona.amethyst.cli.commands.cashu.CashuCommands
+import com.vitorpamplona.amethyst.cli.commands.cashu.CashuMintCommands
 import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
 import kotlinx.coroutines.runBlocking
@@ -183,6 +185,12 @@ private suspend fun dispatch(argv: Array<String>): Int {
         return RelayCommands.info(tail.drop(1).toTypedArray())
     }
 
+    // `cashu mint ping|info URL` is a stateless NIP-60 /v1/info probe — no
+    // account, no relays. The rest of `cashu …` operates on the account.
+    if (head == "cashu" && tail.firstOrNull() == "mint") {
+        return CashuMintCommands.dispatch(tail.drop(1).toTypedArray())
+    }
+
     val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
     val dataDir = DataDir.resolve(accountFlag = accountFlag, secrets = secrets)
 
@@ -217,6 +225,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "blossom" -> BlossomCommands.dispatch(dataDir, tail)
         "sync" -> SyncCommand.run(dataDir, tail)
         "git" -> GitCommands.dispatch(dataDir, tail)
+        "cashu" -> CashuCommands.dispatch(dataDir, tail)
         "podcast" -> PodcastCommands.dispatch(dataDir, tail)
         "bunker" -> BunkerCommand.run(dataDir, tail)
         else -> {

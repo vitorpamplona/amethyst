@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.cli
 
+import com.vitorpamplona.amethyst.cli.stores.FileCashuKeysetCounterStore
 import com.vitorpamplona.amethyst.cli.stores.FileKeyPackageBundleStore
 import com.vitorpamplona.amethyst.cli.stores.FileMarmotMessageStore
 import com.vitorpamplona.amethyst.cli.stores.FileMlsGroupStateStore
+import com.vitorpamplona.amethyst.commons.cashu.CashuWalletReader
+import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
@@ -33,6 +36,7 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -52,7 +56,16 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
+import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
+import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
+import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
@@ -161,6 +174,82 @@ class Context(
 
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
     val marmot: MarmotManager = MarmotManager(signer, mlsStore, messageStore, keyPackageStore)
+
+    // ------------------------------------------------------------------
+    // Cashu (NIP-60 / NIP-61) — shared wallet code from commons
+    // ------------------------------------------------------------------
+
+    /** Durable NUT-13 counter store at `<data-dir>/cashu.json`. */
+    private val cashuCounters by lazy { FileCashuKeysetCounterStore(dataDir.cashuFile) }
+
+    @Volatile private var cachedCashuSeed: ByteArray? = null
+
+    /**
+     * Decrypt the wallet's NUT-13 seed once per run and cache it. The
+     * [DeterministicSecretFactory] thunk reads this synchronously, so any
+     * mint/swap op must warm it first (CashuWalletOps' seedWarmer does).
+     */
+    private suspend fun warmCashuSeed() {
+        if (cachedCashuSeed != null) return
+        val priv = cashuSnapshot().walletEvent?.let { runCatching { it.privkey(signer) }.getOrNull() } ?: return
+        cachedCashuSeed = CashuDeterministic.deriveWalletSeed(priv.hexToByteArray())
+    }
+
+    /**
+     * Wallet operations driven by the exact same `commons` [CashuWalletOps]
+     * the Android app uses. Wired to publish on the account's outbox relays,
+     * the shared OkHttp instance for mint HTTP, and the file-backed NUT-13
+     * counter store.
+     */
+    fun cashuOps(): CashuWalletOps =
+        CashuWalletOps(
+            signer = signer,
+            publish = { event -> publish(event, outboxRelays()) },
+            okHttpClient = { okhttp },
+            secretFactory =
+                DeterministicSecretFactory(
+                    seedProvider = { cachedCashuSeed },
+                    reserveCounters = { keysetId, count -> cashuCounters.reserve(keysetId, count) },
+                ),
+            seedWarmer = { warmCashuSeed() },
+            seedForRestore = {
+                warmCashuSeed()
+                cachedCashuSeed
+            },
+            peekCashuCounter = { keysetId -> cashuCounters.peek(keysetId) },
+            reserveCashuCounters = { keysetId, count -> cashuCounters.reserve(keysetId, count) },
+        )
+
+    /**
+     * Project this account's locally-stored NIP-60/61/87 events into a wallet
+     * snapshot via the shared [CashuWalletReader] — the same decrypt +
+     * del-rollover + pending-quote logic the Android holder runs. Reads the
+     * cache only; commands that need fresh state should [drain] first.
+     */
+    suspend fun cashuSnapshot(): CashuWalletReader.WalletSnapshot {
+        val pk = identity.pubKeyHex
+        val authored =
+            store.query<Event>(
+                Filter(
+                    authors = listOf(pk),
+                    kinds =
+                        listOf(
+                            CashuWalletEvent.KIND,
+                            NutzapInfoEvent.KIND,
+                            CashuTokenEvent.KIND,
+                            CashuSpendingHistoryEvent.KIND,
+                            CashuMintQuoteEvent.KIND,
+                            NutzapEvent.KIND,
+                            MintRecommendationEvent.KIND,
+                        ),
+                ),
+            )
+        val inboundNutzaps =
+            store.query<Event>(
+                Filter(kinds = listOf(NutzapEvent.KIND), tags = mapOf("p" to listOf(pk))),
+            )
+        return CashuWalletReader(signer).project(authored + inboundNutzaps)
+    }
 
     private var prepared = false
 

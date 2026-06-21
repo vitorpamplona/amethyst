@@ -63,6 +63,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | Long-form (NIP-23) publish / read | 🆕 | |
 | Live activities / chess (NIP-53 / NIP-64) | 🆕 | |
 | Blossom uploads (NIP-B7) | 🆕 | |
+| NIP-60 / 61 Cashu wallet + nutzaps | ✅ in part | `amy cashu wallet {create,show,export-key,destroy}`, `mint {ping,info}`, `balance` shipped — all on shared `commons` `CashuWalletOps` + `CashuWalletReader`. `receive`/`send`/`maintenance`/`mint-rec` (live-mint) pending. Plan: [`cli/plans/2026-05-28-cashu-cli.md`](./plans/2026-05-28-cashu-cli.md). |
 | NIP-47 Wallet Connect | 🆕 | |
 | NIP-46 bunker signer | 🆕 | Needs a signers abstraction in Amy. |
 | Profile view (`amy profile show NPUB`) + edit | ✅ | `ProfileCommands`. Cache-first; `--refresh` forces a relay drain. |
