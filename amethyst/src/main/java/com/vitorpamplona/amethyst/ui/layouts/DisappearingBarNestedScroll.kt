@@ -24,6 +24,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.unit.Velocity
+import kotlin.math.abs
 
 /**
  * Scroll-linked connection that hides/reveals the top and bottom bars together.
@@ -43,10 +44,16 @@ import androidx.compose.ui.unit.Velocity
  *  - onPostFling snaps a mid-way bar to the nearest edge, using the fling's remaining
  *    velocity as the spring's initial velocity so the settle feels continuous. No velocity
  *    is returned upward to avoid phantom scrolls on parent containers.
- *  - Hiding tracks the finger 1:1, but revealing is damped by [REVEAL_SENSITIVITY]. Once the
- *    bars are hidden, the small reverse drag a finger naturally makes when it catches/stops a
- *    fast scroll would otherwise be enough to snap the chrome (and the OS status bar) back.
- *    Damping the reveal direction makes bringing the bars back a more deliberate gesture.
+ *  - Both hiding and revealing track the finger 1:1. The bar offset must equal the content's
+ *    scroll offset so the bar's bottom edge stays glued to the first item's top edge; any
+ *    asymmetry (e.g. a damped reveal) leaves the bar lagging behind the content and opens a
+ *    blank band between the bar and the first item when the list returns to the top.
+ *
+ *    Making the reveal a *deliberate* gesture — so the tiny reverse drag a finger makes when it
+ *    catches/stops a fast scroll doesn't pop the chrome back — is handled without breaking that
+ *    1:1 invariant: a partial reveal that doesn't cross the halfway point is snapped back to the
+ *    hidden edge by [DisappearingBarState.settleToNearestEdge] on fling/lift, and the binary OS
+ *    status bar is debounced by the show/hide hysteresis in the scaffold.
  */
 class DisappearingBarNestedScroll(
     private val state: DisappearingBarState,
@@ -60,7 +67,10 @@ class DisappearingBarNestedScroll(
     ): Offset {
         if (!canScroll()) return Offset.Zero
         val totalY = consumed.y + available.y
-        if (totalY == 0f) return Offset.Zero
+        // Dead-zone: ignore sub-pixel jitter so the bars (and the binary status-bar toggle that
+        // tracks their collapse fraction) don't twitch on scroll noise. Kept symmetric and tiny so
+        // it never makes the reveal lag the content enough to open a visible gap.
+        if (abs(totalY) < MIN_SCROLL_DELTA) return Offset.Zero
 
         // If the list did not consume any scroll and the bars are fully visible, treat
         // this as a non-scrollable list and keep the bars in place. Without this, a tiny
@@ -90,19 +100,18 @@ class DisappearingBarNestedScroll(
     private fun applyDelta(deltaY: Float) {
         val topLimit = state.topHeightLimit
         val bottomLimit = state.bottomHeightLimit
-        // Positive delta reveals the bars; negative delta hides them. Hiding stays 1:1 with the
-        // finger, while revealing is damped so a stray reverse drag doesn't bring the chrome back.
-        val effectiveDelta = if (deltaY > 0f) deltaY * REVEAL_SENSITIVITY else deltaY
-        state.topHeightOffset = (state.topHeightOffset + effectiveDelta).coerceIn(-topLimit, 0f)
-        state.bottomHeightOffset = (state.bottomHeightOffset + effectiveDelta).coerceIn(-bottomLimit, 0f)
+        // 1:1 in both directions: the bar offset mirrors the content scroll so the bar stays glued
+        // to the first item. Deliberate reveal is enforced on settle, not by damping the delta here.
+        state.topHeightOffset = (state.topHeightOffset + deltaY).coerceIn(-topLimit, 0f)
+        state.bottomHeightOffset = (state.bottomHeightOffset + deltaY).coerceIn(-bottomLimit, 0f)
     }
 
     companion object {
         /**
-         * Fraction of scroll distance applied when revealing the bars (1.0 = same rate as hiding).
-         * Lower values require a more deliberate downward scroll to bring the chrome back, so the
-         * tiny reverse movement of a finger stopping a fast scroll no longer pops the bars open.
+         * Sub-pixel dead-zone: scroll attempts smaller than this are ignored so jitter doesn't nudge
+         * the bars. Tiny on purpose — large enough to swallow fractional noise, small enough that the
+         * bar offset never measurably lags the content scroll.
          */
-        const val REVEAL_SENSITIVITY = 0.5f
+        const val MIN_SCROLL_DELTA = 0.5f
     }
 }

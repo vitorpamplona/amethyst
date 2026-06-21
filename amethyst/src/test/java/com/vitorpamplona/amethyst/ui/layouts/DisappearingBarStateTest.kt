@@ -93,4 +93,49 @@ class DisappearingBarStateTest {
             assertTrue("top bar overshot to $peakTop", peakTop <= 0.5f)
             assertTrue("bottom bar overshot to $peakBottom", peakBottom <= 0.5f)
         }
+
+    @Test
+    fun `a partial collapse that never reached the hidden edge settles back into view`() =
+        runTest {
+            // The bar is past the halfway point but was only ever scrolled here from the top — it
+            // never reached -limit, so the content hasn't moved a full bar height. Snapping it fully
+            // hidden would expose a blank band, so it must settle back to visible instead.
+            val state = state(topLimit = 100f, bottomLimit = 50f)
+            state.topHeightOffset = -80f
+
+            peakOffsetsDuring(state) { state.settleToNearestEdge() }
+
+            assertEquals(0f, state.topHeightOffset, 0.01f)
+        }
+
+    @Test
+    fun `a small reveal after fully hiding settles back to hidden, not into view`() =
+        runTest {
+            // Drive the bar to its hidden edge first (content has now scrolled a full bar height),
+            // then nudge it back a little — the small reverse drag a finger makes catching a scroll.
+            // Because it genuinely reached the hidden edge, snapping back hidden leaves no gap, so a
+            // sub-halfway reveal must not pop the chrome back open.
+            val state = state(topLimit = 100f, bottomLimit = 50f)
+            state.topHeightOffset = -100f
+            state.topHeightOffset = -90f
+
+            peakOffsetsDuring(state) { state.settleToNearestEdge() }
+
+            assertEquals(-100f, state.topHeightOffset, 0.01f)
+        }
+
+    @Test
+    fun `returning fully into view re-arms the gap guard so the next near-top collapse settles open`() =
+        runTest {
+            // Hide fully (arms the latch), come all the way back to visible (disarms it), then do a
+            // small near-top collapse again. It must settle open, proving the latch resets at 0.
+            val state = state(topLimit = 100f, bottomLimit = 50f)
+            state.topHeightOffset = -100f
+            state.topHeightOffset = 0f
+            state.topHeightOffset = -80f
+
+            peakOffsetsDuring(state) { state.settleToNearestEdge() }
+
+            assertEquals(0f, state.topHeightOffset, 0.01f)
+        }
 }
