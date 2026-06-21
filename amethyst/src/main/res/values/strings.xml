@@ -2822,7 +2822,7 @@
     <string name="nsite_title">Static Website: %1$s</string>
     <string name="napplet_card_title">Napplet: %1$s</string>
     <string name="napplet_card_permissions">Permissions:</string>
-    <string name="profile_tab_apps">Apps</string>
+    <string name="profile_tab_apps">Apps &amp; Sites</string>
     <string name="nsite_root_site">Root Site</string>
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
