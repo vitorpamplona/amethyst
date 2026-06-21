@@ -32,7 +32,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -62,11 +64,15 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
+import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.types.ByAuthorChip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.datasource.ProfileAppRecommendationsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -156,6 +162,29 @@ fun ProfileAppRecommendationsScreen(
                 .map { LocalCache.getOrCreateAddressableNote(it) }
         }
 
+    // Full candidate list in display order; the search box filters this view.
+    val allApps =
+        remember(missingRecommended, apps) {
+            missingRecommended + apps
+        }
+
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Matches on the app's name; rows whose definition hasn't arrived yet have no
+    // name to match, so they only show when the search box is empty.
+    val visibleApps =
+        remember(allApps, searchQuery) {
+            val query = searchQuery.trim()
+            if (query.isEmpty()) {
+                allApps
+            } else {
+                allApps.filter { note ->
+                    val event = note.event as? AppDefinitionEvent
+                    event?.appMetaData()?.anyName()?.contains(query, ignoreCase = true) == true
+                }
+            }
+        }
+
     Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(id = R.string.profile_app_recommendations_title), nav)
@@ -168,11 +197,45 @@ fun ProfileAppRecommendationsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
             )
+
+            if (allApps.isNotEmpty()) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 4.dp),
+                    placeholder = {
+                        Text(
+                            text = stringRes(R.string.profile_app_recommendations_search),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    leadingIcon = { SearchIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                ClearTextIcon()
+                            }
+                        }
+                    },
+                    singleLine = true,
+                )
+            }
+
             HorizontalDivider()
 
-            if (apps.isEmpty() && missingRecommended.isEmpty()) {
+            if (allApps.isEmpty()) {
                 Text(
                     text = stringRes(R.string.profile_app_recommendations_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(20.dp),
+                )
+            } else if (visibleApps.isEmpty()) {
+                Text(
+                    text = stringRes(R.string.profile_app_recommendations_search_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(20.dp),
@@ -180,7 +243,7 @@ fun ProfileAppRecommendationsScreen(
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(
-                        items = missingRecommended + apps,
+                        items = visibleApps,
                         key = { it.idHex },
                     ) { appNote ->
                         AppRow(
