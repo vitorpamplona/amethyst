@@ -102,6 +102,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.nip05
+import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -897,7 +898,7 @@ private fun KindEntryCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val nameResId = kindDisplayName(kind)
-            val name = if (nameResId != -1) stringResource(nameResId) else ""
+            val name = if (nameResId != -1) stringResource(nameResId) else (KindNames.nameFor(kind) ?: "")
 
             Text(
                 "Kind $kind: $name",
