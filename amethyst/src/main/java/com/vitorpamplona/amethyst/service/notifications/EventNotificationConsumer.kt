@@ -756,7 +756,12 @@ class EventNotificationConsumer(
         // p-tag match already enforced by consumeFromCache; no redundant
         // isTaggedUser re-check needed.
 
-        val reactedPostId = event.originalPost().firstOrNull() ?: return
+        // NIP-25: when a reaction carries multiple `e` tags (e.g. both the
+        // thread root and the replied-to note), the LAST one is the event
+        // actually being reacted to. Using the first tag would surface the
+        // root in the tray when the like was really on a reply. This matches
+        // the in-app card, which resolves the target via replyTo.lastOrNull().
+        val reactedPostId = event.originalPost().lastOrNull() ?: return
         val reactedNote = LocalCache.checkGetOrCreateNote(reactedPostId)
 
         // Drop reactions on muted threads, hidden authors, etc.
