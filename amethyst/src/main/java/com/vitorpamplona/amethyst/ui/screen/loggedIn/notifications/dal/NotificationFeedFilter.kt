@@ -147,6 +147,51 @@ class NotificationFeedFilter(
                 VoiceReplyEvent.KIND,
             ) + ADDRESSABLE_KINDS
 
+        // How deep to walk a public chat reply chain looking for one of the
+        // user's own messages. Bounds the cost on very long threads; the
+        // visited-set guards against malformed cyclic replyTo links.
+        private const val PUBLIC_CHAT_ANCESTOR_SCAN_LIMIT = 30
+
+        /**
+         * Public chats (NIP-28, kind 42) routinely reply to a user without
+         * adding a `p` tag, so the normal mention gate ([Event.isTaggedUser])
+         * misses them. Treats a channel message as "for me" when one of my own
+         * messages appears in its reply chain — a direct reply to my message
+         * (the common case: "the previous message was mine") or a later message
+         * in a thread I'm already part of (an "active thread"). A kind-42
+         * `replyTo` holds only the immediate parent, so the chain is walked
+         * hop-by-hop through each cached ancestor.
+         *
+         * Cache-only (reads [Note.replyTo] + author, never the account), so the
+         * push dispatcher and the in-app feed can both relax their p-tag gate
+         * with it without loading the account or decrypting anything.
+         */
+        fun isNotifiablePublicChatReply(
+            note: Note,
+            authorHex: HexKey,
+        ): Boolean {
+            if (note.event !is ChannelMessageEvent) return false
+            // Top-level channel posts have no parent to reply to — bail before
+            // allocating the walk's scratch structures (the common case).
+            val parents = note.replyTo
+            if (parents.isNullOrEmpty()) return false
+
+            var scanned = 0
+            val seen = HashSet<HexKey>()
+            val toVisit = ArrayDeque(parents)
+
+            while (toVisit.isNotEmpty() && scanned < PUBLIC_CHAT_ANCESTOR_SCAN_LIMIT) {
+                val ancestor = toVisit.removeFirst()
+                if (!seen.add(ancestor.idHex)) continue
+                scanned++
+
+                if (ancestor.author?.pubkeyHex == authorHex) return true
+                ancestor.replyTo?.let { toVisit.addAll(it) }
+            }
+
+            return false
+        }
+
         // Shared with EventNotificationConsumer so push notifications and the
         // in-app feed apply the same per-kind "is this event for me" rule.
         fun tagsAnEventByUser(
@@ -154,6 +199,11 @@ class NotificationFeedFilter(
             authorHex: HexKey,
         ): Boolean {
             val event = note.event
+
+            // Public chat replies into my messages, even without a p-tag.
+            if (isNotifiablePublicChatReply(note, authorHex)) {
+                return true
+            }
 
             if (event is GitIssueEvent || event is GitPatchEvent) {
                 return true
@@ -370,10 +420,17 @@ class NotificationFeedFilter(
         // follow/list modes) also applies the per-kind relevance heuristics.
         val isRawGlobal = followList() is TopFilter.Global
 
+        // The p-tag gate is OR'd with isNotifiablePublicChatReply so channel
+        // replies into my messages still notify without a p-tag. Kept inline
+        // (not a pre-computed val) so the cheap kind check short-circuits ahead
+        // of the tag scan + reply walk, which is also why the cheaper tag scan
+        // is ordered first within the OR. In Global mode this is the only
+        // relevance check (tagsAnEventByUser is skipped below); it still scopes
+        // to genuine replies, so unrelated channel chatter never leaks through.
         return noteEvent?.kind in NOTIFICATION_KINDS &&
             (noteEvent is LnZapEvent || notifAuthor != loggedInUserHex) &&
             (isChessEvent || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
-            noteEvent?.isTaggedUser(loggedInUserHex) ?: false &&
+            (noteEvent?.isTaggedUser(loggedInUserHex) == true || isNotifiablePublicChatReply(it, loggedInUserHex)) &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&
             (isRawGlobal || tagsAnEventByUser(it, loggedInUserHex))

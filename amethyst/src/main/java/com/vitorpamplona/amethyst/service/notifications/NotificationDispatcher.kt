@@ -203,7 +203,14 @@ class NotificationDispatcher(
                             // always miss for replies into addressable posts.
                             val note = LocalCache.getNoteIfExists(event) ?: return@predicate false
                             pubkeys.any { pubkey ->
-                                event.isTaggedUser(pubkey) &&
+                                // Public chat replies into my own messages often
+                                // omit the `p` tag; relax the gate for them (the
+                                // tagsAnEventByUser check still scopes it to
+                                // messages actually replying to me).
+                                (
+                                    event.isTaggedUser(pubkey) ||
+                                        NotificationFeedFilter.isNotifiablePublicChatReply(note, pubkey)
+                                ) &&
                                     NotificationFeedFilter.tagsAnEventByUser(note, pubkey)
                             }
                         }
