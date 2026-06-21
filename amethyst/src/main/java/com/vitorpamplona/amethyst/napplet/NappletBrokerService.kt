@@ -199,8 +199,7 @@ class NappletBrokerService : Service() {
         argument: String?,
     ): String? =
         when (method) {
-            // The kind-0 content is itself the profile JSON object.
-            "getProfile" -> account.userMetadata.getUserMetadataEvent()?.content ?: "null"
+            "getProfile" -> profileJson(account)
             "getFollows" -> jsonStringArray(account.kind3FollowList.flow.value.authors)
             "getMutes" ->
                 jsonStringArray(
@@ -220,6 +219,21 @@ class NappletBrokerService : Service() {
         }
 
     private fun jsonStringArray(items: Iterable<String>): String = buildJsonArray { items.forEach { add(it) } }.toString()
+
+    /** Builds a `@napplet/nap` `ProfileData` object (note `displayName`, not `display_name`) from kind-0. */
+    private fun profileJson(account: Account): String {
+        val md = account.userMetadata.getUserMetadataEvent()?.contactMetaData() ?: return "null"
+        return buildJsonObject {
+            md.name?.let { put("name", it) }
+            md.displayName?.let { put("displayName", it) }
+            md.about?.let { put("about", it) }
+            md.picture?.let { put("picture", it) }
+            md.banner?.let { put("banner", it) }
+            md.nip05?.let { put("nip05", it) }
+            md.lud16?.let { put("lud16", it) }
+            md.website?.let { put("website", it) }
+        }.toString()
+    }
 
     /** Builds `{ "<relay url>": { "read": bool, "write": bool }, ... }` from the user's NIP-65 list. */
     private fun relaysJson(account: Account): String {

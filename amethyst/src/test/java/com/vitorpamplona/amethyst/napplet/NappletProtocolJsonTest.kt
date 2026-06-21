@@ -78,9 +78,9 @@ class NappletProtocolJsonTest {
     }
 
     @Test
-    fun decodesPublishFromAnUnsignedTemplate() {
-        // The napplet supplies only kind/tags/content — never id/pubkey/sig. The shell signs it.
-        val req = NappletProtocolJson.decodeRequest("""{"type":"relay.publish","id":"1","template":{"kind":1,"tags":[["t","x"]],"content":"gm"}}""")
+    fun decodesPublishFromAnUnsignedTemplateInTheEventField() {
+        // @napplet/shim carries the unsigned template in the `event` field. The shell signs it.
+        val req = NappletProtocolJson.decodeRequest("""{"type":"relay.publish","id":"1","event":{"kind":1,"tags":[["t","x"]],"content":"gm"}}""")
         assertEquals(NappletRequest.Publish(1, arrayOf(arrayOf("t", "x")), "gm"), req)
     }
 
@@ -88,7 +88,7 @@ class NappletProtocolJsonTest {
     fun decodesPublishEncrypted() {
         val req =
             NappletProtocolJson.decodeRequest(
-                """{"type":"relay.publishEncrypted","id":"1","template":{"kind":4,"tags":[],"content":"hi"},"recipient":"pk","encryption":"nip04"}""",
+                """{"type":"relay.publishEncrypted","id":"1","event":{"kind":4,"tags":[],"content":"hi"},"recipient":"pk","encryption":"nip04"}""",
             )
         assertEquals(NappletRequest.PublishEncrypted(4, emptyArray(), "hi", "pk", "nip04"), req)
     }
@@ -117,20 +117,44 @@ class NappletProtocolJsonTest {
     }
 
     @Test
-    fun encodesIdentityJsonResultVerbatim() {
-        val arr = json.parseToJsonElement(NappletProtocolJson.encodeResponse("identity.getFollows", NappletResponse.Json("""["aa","bb"]"""))).jsonObject
-        assertEquals(2, arr["result"]?.jsonArray?.size)
+    fun encodesIdentityJsonUnderMethodSpecificFields() {
+        // Field names must match @napplet/nap identity result messages, not a generic "result".
+        val follows = json.parseToJsonElement(NappletProtocolJson.encodeResponse("identity.getFollows", NappletResponse.Json("""["aa","bb"]"""))).jsonObject
+        assertEquals(2, follows["pubkeys"]?.jsonArray?.size)
+
+        val relays = json.parseToJsonElement(NappletProtocolJson.encodeResponse("identity.getRelays", NappletResponse.Json("""{"wss://r":{"read":true,"write":false}}"""))).jsonObject
+        assertEquals(
+            true,
+            relays["relays"]
+                ?.jsonObject
+                ?.get("wss://r")
+                ?.jsonObject
+                ?.get("read")
+                ?.jsonPrimitive
+                ?.boolean,
+        )
+
+        val profile = json.parseToJsonElement(NappletProtocolJson.encodeResponse("identity.getProfile", NappletResponse.Json("""{"name":"x"}"""))).jsonObject
+        assertEquals(
+            "x",
+            profile["profile"]
+                ?.jsonObject
+                ?.get("name")
+                ?.jsonPrimitive
+                ?.content,
+        )
 
         // A malformed payload degrades to a JSON null rather than throwing.
         val bad = json.parseToJsonElement(NappletProtocolJson.encodeResponse("identity.getProfile", NappletResponse.Json("not json"))).jsonObject
-        assertEquals(JsonNull, bad["result"])
+        assertEquals(JsonNull, bad["profile"])
     }
 
     @Test
     fun decodesStorageOps() {
-        assertEquals(NappletRequest.StorageGet("k"), NappletProtocolJson.decodeRequest("""{"type":"storage.getItem","key":"k"}"""))
-        assertEquals(NappletRequest.StorageSet("k", "v"), NappletProtocolJson.decodeRequest("""{"type":"storage.setItem","key":"k","value":"v"}"""))
-        assertEquals(NappletRequest.StorageRemove("k"), NappletProtocolJson.decodeRequest("""{"type":"storage.removeItem","key":"k"}"""))
+        // Wire types are storage.get/set/remove/keys (the SDK functions are getItem/setItem/removeItem/keys).
+        assertEquals(NappletRequest.StorageGet("k"), NappletProtocolJson.decodeRequest("""{"type":"storage.get","key":"k"}"""))
+        assertEquals(NappletRequest.StorageSet("k", "v"), NappletProtocolJson.decodeRequest("""{"type":"storage.set","key":"k","value":"v"}"""))
+        assertEquals(NappletRequest.StorageRemove("k"), NappletProtocolJson.decodeRequest("""{"type":"storage.remove","key":"k"}"""))
         assertEquals(NappletRequest.StorageKeys, NappletProtocolJson.decodeRequest("""{"type":"storage.keys"}"""))
     }
 
@@ -201,12 +225,13 @@ class NappletProtocolJsonTest {
     }
 
     @Test
-    fun encodesStorageNullAsJsonNullAndKeysAsArray() {
-        val absent = json.parseToJsonElement(NappletProtocolJson.encodeResponse("storage.getItem", NappletResponse.StorageValue(null))).jsonObject
+    fun encodesStorageNullAsJsonNullAndKeysUnderKeysField() {
+        val absent = json.parseToJsonElement(NappletProtocolJson.encodeResponse("storage.get", NappletResponse.StorageValue(null))).jsonObject
         assertEquals(JsonNull, absent["value"])
 
+        // storage.keys returns its array under `keys`, per @napplet/nap.
         val keys = json.parseToJsonElement(NappletProtocolJson.encodeResponse("storage.keys", NappletResponse.Strings(listOf("a", "b")))).jsonObject
-        assertEquals(2, keys["values"]?.jsonArray?.size)
+        assertEquals(2, keys["keys"]?.jsonArray?.size)
     }
 
     @Test

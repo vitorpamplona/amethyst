@@ -126,6 +126,40 @@ Acted on #1–#5. The dialect mismatch is resolved:
 - **`resource.bytes`** implemented for `https`/`data` (broker-fetched, Tor-routed,
   consent-gated); `blossom:`/`nostr:` are a follow-up.
 
+## Update (2026-06-21): return shapes verified against `@napplet/nap@0.15.0`
+
+Pulled the canonical message types (`@napplet/nap` `*/types.d.ts` + `value-types`) and corrected
+the result field names — several were wrong guesses. The authoritative wire:
+
+| Method | Request `type` | Result field(s) |
+|---|---|---|
+| `identity.getPublicKey` | `identity.getPublicKey` | `pubkey: string` |
+| `identity.getProfile` | `identity.getProfile` | `profile: ProfileData \| null` |
+| `identity.getRelays` | `identity.getRelays` | `relays: Record<url, {read,write}>` |
+| `identity.getFollows`/`getMutes`/`getBlocked` | same | `pubkeys: string[]` |
+| `identity.getList` | `identity.getList` | `entries: string[]` |
+| `identity.getZaps` / `getBadges` | same | `zaps[]` / `badges[]` |
+| `storage.getItem/setItem/removeItem/keys` | **`storage.get`/`set`/`remove`/`keys`** | `value` / — / — / `keys: string[]` |
+| `relay.publish` / `publishEncrypted` | same | template in the **`event`** field; result `{ok, event, eventId}` |
+| `relay.query` | `relay.query` | `events: NostrEvent[]` |
+| `resource.bytes` | `resource.bytes` | `blob: Blob`, `mime: string` |
+
+`ProfileData` is `{ name?, displayName?, about?, picture?, banner?, nip05?, lud16?, website? }` —
+note **`displayName`** (camelCase), so the shell maps kind-0 `display_name` → `displayName` rather
+than dumping raw content. Corrected in code: identity reads now emit method-specific fields;
+`storage.*` wire types fixed (the *function* is `getItem`, the *envelope* is `storage.get`);
+`storage.keys` returns `keys`; `relay.publish`/`publishEncrypted` read the template from `event`;
+`getProfile` builds a `ProfileData` object. Locked by `NappletProtocolJsonTest`.
+
+**Transport gap still open (the real blocker for stock napplets).** `@napplet/core` posts
+**structured-clone objects** (not JSON strings) via `target.postMessage(obj)` and validates
+cloneability — that is how `resource.bytes` returns a real `Blob`. Our shell relay
+(`shell.html`) only forwards `typeof e.data === 'string'` and posts replies back as strings, so a
+stock napplet's object messages are dropped today. Making the shell bridge object↔string (and
+converting the `resource.bytes` base64 reply into a real `Blob`), plus the `relay.subscribe`
+push channel (`relay.event`/`relay.eose`, no `.result`) and multi-`filters` queries, is the next
+focused pass — and it needs on-device verification.
+
 ## Update (2026-06-20, later): verified against `@napplet/shim@0.16.0` and corrected
 
 Pulled the authoritative SDK (`@napplet/shim` v0.16.0, npm/unpkg) and corrected the

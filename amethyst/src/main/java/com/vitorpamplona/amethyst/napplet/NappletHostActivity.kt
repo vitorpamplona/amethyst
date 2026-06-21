@@ -453,14 +453,14 @@ class NappletHostActivity : ComponentActivity() {
     },
     identity: {
       getPublicKey: function(){ return field(call('identity.getPublicKey'), 'pubkey'); },
-      getProfile: function(){ return field(call('identity.getProfile'), 'result'); },
-      getRelays: function(){ return field(call('identity.getRelays'), 'result'); },
-      getFollows: function(){ return field(call('identity.getFollows'), 'result'); },
-      getMutes: function(){ return field(call('identity.getMutes'), 'result'); },
-      getBlocked: function(){ return field(call('identity.getBlocked'), 'result'); },
-      getList: function(listType){ return field(call('identity.getList', { listType: listType }), 'result'); },
-      getZaps: function(){ return field(call('identity.getZaps'), 'result'); },
-      getBadges: function(){ return field(call('identity.getBadges'), 'result'); },
+      getProfile: function(){ return field(call('identity.getProfile'), 'profile'); },
+      getRelays: function(){ return field(call('identity.getRelays'), 'relays'); },
+      getFollows: function(){ return field(call('identity.getFollows'), 'pubkeys'); },
+      getMutes: function(){ return field(call('identity.getMutes'), 'pubkeys'); },
+      getBlocked: function(){ return field(call('identity.getBlocked'), 'pubkeys'); },
+      getList: function(listType){ return field(call('identity.getList', { listType: listType }), 'entries'); },
+      getZaps: function(){ return field(call('identity.getZaps'), 'zaps'); },
+      getBadges: function(){ return field(call('identity.getBadges'), 'badges'); },
       // Live identity-change push is a follow-up; onChanged is a no-op subscription for now.
       onChanged: function(handler){ return { close: function(){} }; }
     },
@@ -472,9 +472,10 @@ class NappletHostActivity : ComponentActivity() {
       onAction: function(actionId, cb){ return { close: function(){} }; }
     },
     relay: {
-      // publish takes an UNSIGNED template; the shell signs it and resolves to the signed event.
-      publish: function(template, options){ return field(call('relay.publish', { template: template, options: options }), 'event'); },
-      publishEncrypted: function(template, recipient, encryption){ return field(call('relay.publishEncrypted', { template: template, recipient: recipient, encryption: encryption || 'nip44' }), 'event'); },
+      // publish takes an UNSIGNED template (carried in the `event` field per @napplet/shim); the
+      // shell signs it and resolves to the signed event.
+      publish: function(template, options){ return field(call('relay.publish', { event: template, options: options }), 'event'); },
+      publishEncrypted: function(template, recipient, encryption){ return field(call('relay.publishEncrypted', { event: template, recipient: recipient, encryption: encryption || 'nip44' }), 'event'); },
       query: function(filters){ return field(call('relay.query', normFilters(filters)), 'events'); },
       // subscribe currently delivers the initial matches; a live tail is a follow-up.
       subscribe: function(filters, onEvent, onEose, options){
@@ -487,10 +488,11 @@ class NappletHostActivity : ComponentActivity() {
       }
     },
     storage: {
-      getItem: function(key){ return field(call('storage.getItem', { key: key }), 'value'); },
-      setItem: function(key, value){ return call('storage.setItem', { key: key, value: value }).then(function(){}); },
-      removeItem: function(key){ return call('storage.removeItem', { key: key }).then(function(){}); },
-      keys: function(){ return field(call('storage.keys'), 'values'); }
+      // SDK method names are getItem/setItem/removeItem/keys; the wire types are storage.get/set/remove/keys.
+      getItem: function(key){ return field(call('storage.get', { key: key }), 'value'); },
+      setItem: function(key, value){ return call('storage.set', { key: key, value: value }).then(function(){}); },
+      removeItem: function(key){ return call('storage.remove', { key: key }).then(function(){}); },
+      keys: function(){ return field(call('storage.keys'), 'keys'); }
     },
     // value.payInvoice is an Amethyst-specific extension (not part of @napplet/shim).
     value: {

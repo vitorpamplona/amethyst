@@ -61,11 +61,11 @@ object NappletProtocolJson {
             "shell.supports" -> NappletRequest.ShellSupports(o.req("domain"), o.str("protocol"))
             "identity.getPublicKey" -> NappletRequest.GetPublicKey
             "relay.publish" -> {
-                val t = o.template()
+                val t = o.eventTemplate()
                 NappletRequest.Publish(kind = t.kindOf(), tags = decodeTags(t), content = t.str("content") ?: "")
             }
             "relay.publishEncrypted" -> {
-                val t = o.template()
+                val t = o.eventTemplate()
                 NappletRequest.PublishEncrypted(
                     kind = t.kindOf(),
                     tags = decodeTags(t),
@@ -76,9 +76,9 @@ object NappletProtocolJson {
             }
             "relay.query" -> NappletRequest.QueryEvents(decodeFilter(o))
             "relay.subscribe" -> NappletRequest.Subscribe(decodeFilter(o))
-            "storage.getItem" -> NappletRequest.StorageGet(o.req("key"))
-            "storage.setItem" -> NappletRequest.StorageSet(o.req("key"), o.req("value"))
-            "storage.removeItem" -> NappletRequest.StorageRemove(o.req("key"))
+            "storage.get" -> NappletRequest.StorageGet(o.req("key"))
+            "storage.set" -> NappletRequest.StorageSet(o.req("key"), o.req("value"))
+            "storage.remove" -> NappletRequest.StorageRemove(o.req("key"))
             "storage.keys" -> NappletRequest.StorageKeys
             "value.payInvoice" -> NappletRequest.PayInvoice(o.req("invoice"))
             "resource.bytes" -> NappletRequest.ResourceBytes(o.req("url"))
@@ -129,12 +129,15 @@ object NappletProtocolJson {
                 }
                 is NappletResponse.Strings -> {
                     put("ok", true)
-                    put("values", buildJsonArray { response.values.forEach { add(it) } })
+                    // storage.keys returns `keys`; other string-list reads use `values`.
+                    val field = if (requestType == "storage.keys") "keys" else "values"
+                    put(field, buildJsonArray { response.values.forEach { add(it) } })
                 }
                 is NappletResponse.Json -> {
                     put("ok", true)
+                    // identity.* reads return method-specific fields (profile/relays/pubkeys/entries/...).
                     // The host already serialized the value; embed it (fall back to null if malformed).
-                    put("result", runCatching { json.parseToJsonElement(response.raw) }.getOrDefault(JsonNull))
+                    put(identityResultField(requestType), runCatching { json.parseToJsonElement(response.raw) }.getOrDefault(JsonNull))
                 }
                 is NappletResponse.Bytes -> {
                     put("ok", true)
@@ -207,8 +210,20 @@ object NappletProtocolJson {
 
     private fun JsonObject.strList(key: String): List<String>? = this[key]?.jsonArray?.map { it.jsonPrimitive.content }
 
-    /** The unsigned event template, taken from a `template` field if present, else the envelope itself. */
-    private fun JsonObject.template(): JsonObject = this["template"]?.jsonObject ?: this
+    /** The unsigned event template, carried in the `event` field (per `@napplet/shim`), else the envelope itself. */
+    private fun JsonObject.eventTemplate(): JsonObject = this["event"]?.jsonObject ?: this
 
     private fun JsonObject.kindOf(): Int = getValue("kind").jsonPrimitive.int
+
+    /** The result field a given identity read returns, matching `@napplet/nap` identity message types. */
+    private fun identityResultField(requestType: String): String =
+        when (requestType) {
+            "identity.getRelays" -> "relays"
+            "identity.getFollows", "identity.getMutes", "identity.getBlocked" -> "pubkeys"
+            "identity.getProfile" -> "profile"
+            "identity.getList" -> "entries"
+            "identity.getZaps" -> "zaps"
+            "identity.getBadges" -> "badges"
+            else -> "result"
+        }
 }
