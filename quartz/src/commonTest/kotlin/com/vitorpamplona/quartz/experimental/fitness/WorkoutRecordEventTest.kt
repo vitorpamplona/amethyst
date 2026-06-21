@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.quartz.experimental.fitness
 
+import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.calories
 import com.vitorpamplona.quartz.experimental.fitness.workout.distance
+import com.vitorpamplona.quartz.experimental.fitness.workout.slugToTitle
 import com.vitorpamplona.quartz.experimental.fitness.workout.source
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DurationTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
@@ -132,6 +134,130 @@ class WorkoutRecordEventTest {
         assertEquals(10, event.reps())
         assertEquals(165 * 0.45359237, event.weight()!!.toKilograms())
         assertNull(event.distance())
+    }
+
+    /** Tag layout as published by POWR (NIP-101e strength dialect: per-set `exercise` coordinates). */
+    @Test
+    fun parsesPowrDialect() {
+        val coord = "33401:0bdd91e8a30d87d041eafd1871f17d426fa415c69a9a822eccad49017bac59e7:back-squat-bb"
+        val relay = "wss://relay.powr.build"
+        val event =
+            parse(
+                arrayOf(
+                    arrayOf("title", "Novice Hypertrophy — Day 2"),
+                    arrayOf("type", "strength"),
+                    arrayOf("start", "1781969106"),
+                    arrayOf("end", "1781972319"),
+                    arrayOf("completed", "true"),
+                    arrayOf("template", "33402:0bdd91e8a30d87d041eafd1871f17d426fa415c69a9a822eccad49017bac59e7:novice-hyp-day2-lower-a", relay),
+                    arrayOf("exercise", coord, relay, "84", "8", "8", "normal", "1"),
+                    arrayOf("exercise", coord, relay, "84", "8", "8", "normal", "2"),
+                    arrayOf("exercise", coord, relay, "84", "8", "9", "normal", "3"),
+                    arrayOf("exercise", "33401:0bdd91e8a30d87d041eafd1871f17d426fa415c69a9a822eccad49017bac59e7:seated-calf-raise-machine", relay, "", "8", "", "normal", "1"),
+                    arrayOf("client", "POWR"),
+                ),
+            ) as WorkoutRecordEvent
+
+        // The activity type now comes from the `type` tag, not the coordinate-form `exercise` tag.
+        assertEquals(ExerciseType.STRENGTH, event.workoutType())
+        assertEquals(ExerciseType.STRENGTH, event.activityType())
+        assertNull(event.exercise()) // must not surface "33401:..." as a verb
+        assertNull(event.exerciseType())
+
+        assertEquals("Novice Hypertrophy — Day 2", event.title())
+        assertEquals(1781969106L, event.workoutStart())
+        assertEquals(1781972319L, event.workoutEnd())
+        assertEquals(true, event.workoutCompleted())
+        assertEquals("POWR", event.client())
+
+        // No `duration` tag: derived from start/end.
+        assertEquals(1781972319L - 1781969106L, event.effectiveDurationSeconds())
+
+        val sets = event.exerciseSets()
+        assertEquals(4, sets.size)
+        assertEquals(84.0, sets[0].weightKg)
+        assertEquals(8, sets[0].reps)
+        assertEquals(8.0, sets[0].rpe)
+        assertEquals("normal", sets[0].setType)
+        assertEquals(1, sets[0].setNumber)
+        assertEquals("back-squat-bb", sets[0].dTag())
+        // Bodyweight / machine set leaves weight empty.
+        assertNull(sets[3].weightKg)
+        assertEquals(8, sets[3].reps)
+
+        val groups = event.exerciseGroups()
+        assertEquals(2, groups.size)
+        assertEquals("Back Squat Bb", groups[0].displayName())
+        assertEquals(3, groups[0].sets.size)
+        assertEquals(84.0 * 8 * 3, groups[0].totalVolumeKg()) // 3 sets of 8 reps @ 84 kg (the 9 is RPE)
+        assertEquals(84.0, groups[0].topWeightKg())
+        assertEquals("Seated Calf Raise Machine", groups[1].displayName())
+        assertNull(groups[1].totalVolumeKg()) // no weights logged
+    }
+
+    @Test
+    fun exposesPowrTemplateReferencesAsHints() {
+        val backSquat = "33401:0bdd91e8a30d87d041eafd1871f17d426fa415c69a9a822eccad49017bac59e7:back-squat-bb"
+        val deadlift = "33401:0bdd91e8a30d87d041eafd1871f17d426fa415c69a9a822eccad49017bac59e7:deadlift-bb"
+        val template = "33402:0bdd91e8a30d87d041eafd1871f17d426fa415c69a9a822eccad49017bac59e7:novice-hyp-day2-lower-a"
+        val relay = "wss://relay.powr.build"
+        val event =
+            parse(
+                arrayOf(
+                    arrayOf("type", "strength"),
+                    arrayOf("template", template, relay),
+                    arrayOf("exercise", backSquat, relay, "84", "8", "8", "normal", "1"),
+                    arrayOf("exercise", backSquat, relay, "84", "8", "8", "normal", "2"),
+                    arrayOf("exercise", deadlift, relay, "100", "5", "8", "normal", "1"),
+                ),
+            ) as WorkoutRecordEvent
+
+        // Each referenced template is exposed once for fetching (deduped), incl. the 33402 template.
+        val linked = event.linkedAddressIds()
+        assertEquals(setOf(backSquat, deadlift, template), linked.toSet())
+        assertEquals(3, linked.size)
+
+        // Relay hints let Amethyst fetch the templates from where POWR published them.
+        val hints = event.addressHints()
+        assertEquals(setOf(backSquat, deadlift, template), hints.map { it.addressId }.toSet())
+        assertTrue(hints.all { it.relay.url == "wss://relay.powr.build/" })
+    }
+
+    @Test
+    fun parsesExerciseTemplate() {
+        val event: Event =
+            EventFactory.create(
+                id = "a".repeat(64),
+                pubKey = "b".repeat(64),
+                createdAt = 1718000000L,
+                kind = ExerciseTemplateEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("d", "back-squat-bb"),
+                        arrayOf("title", "Back Squat (Barbell)"),
+                        arrayOf("format", "weight", "reps", "rpe", "set_type"),
+                        arrayOf("format_units", "kg", "count", "0-10", "enum"),
+                        arrayOf("equipment", "barbell"),
+                        arrayOf("difficulty", "intermediate"),
+                    ),
+                content = "Keep a neutral spine.",
+                sig = "c".repeat(128),
+            )
+
+        assertTrue(event is ExerciseTemplateEvent)
+        assertEquals("back-squat-bb", event.dTag())
+        assertEquals("Back Squat (Barbell)", event.title())
+        assertEquals(listOf("weight", "reps", "rpe", "set_type"), event.format())
+        assertEquals(listOf("kg", "count", "0-10", "enum"), event.formatUnits())
+        assertEquals("barbell", event.equipment())
+        assertEquals("intermediate", event.difficulty())
+    }
+
+    @Test
+    fun slugToTitlePrettifiesDTags() {
+        assertEquals("Back Squat Bb", slugToTitle("back-squat-bb"))
+        assertEquals("Seated Calf Raise Machine", slugToTitle("seated-calf-raise-machine"))
+        assertEquals("Deadlift", slugToTitle("deadlift"))
     }
 
     @Test
