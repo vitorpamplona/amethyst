@@ -84,6 +84,12 @@ class NappletHostActivity : ComponentActivity() {
     // Capability names (comma-separated) the manifest declared; the broker refuses anything else.
     private var declared: String = ""
 
+    // NAP domain strings the shell advertises to the applet in the shell.init handshake.
+    private var declaredDomains: List<String> = emptyList()
+
+    // Correlation id for id-less fire-and-forget messages so they still reach the broker.
+    private var fireSeq = 0
+
     private var proxyPort: Int = -1
     private val http by lazy { buildHttpClient(proxyPort) }
     private val fetch: BlobFetcher = { url ->
@@ -200,7 +206,10 @@ class NappletHostActivity : ComponentActivity() {
         proxyPort = intent.getIntExtra(NappletLauncher.EXTRA_PROXY_PORT, -1)
 
         val requires = intent.getStringArrayListExtra(NappletLauncher.EXTRA_REQUIRES) ?: emptyList()
-        declared = resolveRequiredCapabilities(requires).capabilities.joinToString(",") { it.name }
+        val resolved = resolveRequiredCapabilities(requires)
+        declared = resolved.capabilities.joinToString(",") { it.name }
+        // shell is always available; the rest are the declared domains the broker will honor.
+        declaredDomains = (listOf("shell") + resolved.capabilities.map { it.name.lowercase() }).distinct()
 
         return author.isNotEmpty()
     }
@@ -353,7 +362,17 @@ class NappletHostActivity : ComponentActivity() {
         // The applet sends a full upstream envelope {type, id, ...}; we forward it verbatim and
         // correlate on its id. The broker reads `type` to decode and to build the .result reply.
         val envelope = runCatching { JSONObject(raw) }.getOrNull() ?: return
-        val id = envelope.optString("id").ifEmpty { return }
+
+        // Shell handshake: the SDK posts `shell.ready` (no id) and answers shell.supports() locally
+        // from the `shell.init` environment we send back here.
+        if (envelope.optString("type") == "shell.ready") {
+            runCatching { replyProxy.postMessage(NappletProtocolJson.encodeShellInit(declaredDomains, declaredDomains)) }
+            return
+        }
+
+        // Fire-and-forget messages (inc.emit, keys.unregisterAction) have no id; synthesize one so
+        // they still reach the broker. Any reply is harmless — the applet has nothing to correlate.
+        val id = envelope.optString("id").ifEmpty { "fire-${fireSeq++}" }
 
         val msg =
             Message.obtain(null, NappletIpc.MSG_REQUEST).apply {
@@ -476,7 +495,7 @@ class NappletHostActivity : ComponentActivity() {
         private const val SHIM_JS = """
 (function(){
   if (window.__nappletShimInstalled) return; window.__nappletShimInstalled = true;
-  var seq = 0, pending = {}, subs = {};
+  var seq = 0, pending = {}, subs = {}, actions = {};
   function send(env){ env.id = env.id || ('r' + (seq++)); parent.postMessage(JSON.stringify(env), '*'); return env.id; }
   function call(type, fields){
     return new Promise(function(resolve, reject){
@@ -498,6 +517,8 @@ class NappletHostActivity : ComponentActivity() {
       else { if (sub.onEose) sub.onEose(); }
       return;
     }
+    // keys.action push: the shell triggers a registered keyboard/command action.
+    if (msg.type === 'keys.action') { var cb = actions[msg.actionId]; if (cb) cb(); return; }
     if (!msg.id) return;
     var p = pending[msg.id]; if (!p) return; delete pending[msg.id];
     if (msg.ok) p.resolve(msg);
@@ -506,7 +527,6 @@ class NappletHostActivity : ComponentActivity() {
   function field(promise, name){ return promise.then(function(m){ return m[name]; }); }
   function normFilters(filters){ return Array.isArray(filters) ? { filters: filters } : { filter: filters || {} }; }
   function bytesToB64(bytes){ var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); var s=''; for (var i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return btoa(s); }
-  var actionSeq = 0;
   var napplet = {
     shell: {
       // supports() is synchronous in @napplet/shim; we expose a sync proxy backed by an async check.
@@ -528,12 +548,12 @@ class NappletHostActivity : ComponentActivity() {
       // Live identity-change push is a follow-up; onChanged is a no-op subscription for now.
       onChanged: function(handler){ return { close: function(){} }; }
     },
-    // keys = keyboard / command action binding (NOT signing). Signing is shell-only via relay.publish.
-    // Not yet wired to the host keyboard, so these are client-side no-ops that keep applets from crashing.
+    // keys = keyboard / command action binding (NOT signing). The shell acknowledges registration;
+    // the global-key binding + keys.action push is a follow-up, so onAction won't fire yet.
     keys: {
-      registerAction: function(action){ return Promise.resolve({ actionId: 'a' + (actionSeq++) }); },
-      unregisterAction: function(actionId){},
-      onAction: function(actionId, cb){ return { close: function(){} }; }
+      registerAction: function(action){ return call('keys.registerAction', { action: action }).then(function(m){ return { actionId: m.actionId, binding: m.binding }; }); },
+      unregisterAction: function(actionId){ post('keys.unregisterAction', { actionId: actionId }); },
+      onAction: function(actionId, cb){ actions[actionId] = cb; return { close: function(){ delete actions[actionId]; } }; }
     },
     relay: {
       // publish takes an UNSIGNED template (carried in the `event` field per @napplet/shim); the
@@ -567,9 +587,10 @@ class NappletHostActivity : ComponentActivity() {
       bytes: function(url){ return field(call('resource.bytes', { url: url }), 'blob'); },
       bytesAsObjectURL: function(url){ return field(call('resource.bytes', { url: url }), 'blob').then(function(blob){ return URL.createObjectURL(blob); }); }
     },
-    // upload.blob is an Amethyst-specific extension (not part of @napplet/shim).
     upload: {
-      blob: function(bytes, contentType){ return field(call('upload', { bytes: bytesToB64(bytes), contentType: contentType }), 'url'); }
+      // Sends the SDK's upload.upload; we inline the bytes as base64 (shell.html does the same for
+      // a Blob from a stock napplet). Resolves to the uploaded URL.
+      blob: function(bytes, contentType){ return field(call('upload.upload', { request: { dataBase64: bytesToB64(bytes), mimeType: contentType } }), 'url'); }
     }
   };
   window.napplet = Object.freeze(napplet);

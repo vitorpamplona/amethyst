@@ -162,18 +162,18 @@ class NappletProtocolJsonTest {
     fun decodesValueResourceUpload() {
         assertEquals(NappletRequest.PayInvoice("lnbc1"), NappletProtocolJson.decodeRequest("""{"type":"value.payInvoice","invoice":"lnbc1"}"""))
         assertEquals(NappletRequest.ResourceBytes("https://x"), NappletProtocolJson.decodeRequest("""{"type":"resource.bytes","url":"https://x"}"""))
-        // "SGk=" is base64 for "Hi"
-        val up = NappletProtocolJson.decodeRequest("""{"type":"upload","bytes":"SGk=","contentType":"text/plain"}""") as NappletRequest.UploadBlob
+        // "SGk=" is base64 for "Hi"; shell.html inlines the request Blob as request.dataBase64.
+        val up = NappletProtocolJson.decodeRequest("""{"type":"upload.upload","request":{"dataBase64":"SGk=","mimeType":"text/plain","filename":"a.txt"}}""") as NappletRequest.UploadBlob
         assertEquals("text/plain", up.contentType)
+        assertEquals("a.txt", up.filename)
         assertEquals("Hi", up.bytes.decodeToString())
     }
 
     @Test
     fun unknownTypeDecodesToNull() {
         assertNull(NappletProtocolJson.decodeRequest("""{"type":"inc.emit","id":"1"}"""))
-        // keys.* (keyboard actions) are handled client-side and never cross the boundary.
+        // keys.signEvent is not a real domain method (keys = keyboard actions, not signing).
         assertNull(NappletProtocolJson.decodeRequest("""{"type":"keys.signEvent","id":"1"}"""))
-        assertNull(NappletProtocolJson.decodeRequest("""{"type":"keys.registerAction","id":"1"}"""))
         assertNull(NappletProtocolJson.decodeRequest("""{"foo":"bar"}"""))
     }
 

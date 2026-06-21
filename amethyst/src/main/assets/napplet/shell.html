@@ -24,13 +24,31 @@
         // applet -> native: only forward messages that came from our applet iframe.
         // The @napplet SDK posts structured-clone objects; our injected shim posts strings. The
         // native bridge carries only strings, so serialize objects here. (Requests carry no Blobs.)
-        window.addEventListener('message', function (e) {
-          if (e.source !== iframe.contentWindow) return;
-          var data = e.data;
+        function forward(data) {
           if (typeof data !== 'string') {
             try { data = JSON.stringify(data); } catch (_) { return; }
           }
           if (bridge) bridge.postMessage(data);
+        }
+        window.addEventListener('message', function (e) {
+          if (e.source !== iframe.contentWindow) return;
+          var data = e.data;
+          // upload.upload carries a Blob/ArrayBuffer in request.data that JSON can't serialize —
+          // inline it as base64 (request.dataBase64) before forwarding to native.
+          if (data && data.type === 'upload.upload' && data.request &&
+              (data.request.data instanceof Blob || data.request.data instanceof ArrayBuffer)) {
+            var blob = data.request.data instanceof Blob ? data.request.data : new Blob([data.request.data]);
+            var reader = new FileReader();
+            reader.onloadend = function () {
+              data.request.dataBase64 = String(reader.result).split(',')[1] || '';
+              delete data.request.data;
+              forward(data);
+            };
+            reader.onerror = function () { /* drop a blob we can't read */ };
+            reader.readAsDataURL(blob);
+            return;
+          }
+          forward(data);
         });
 
         // native -> applet: hand the broker's reply (or a subscription push) down into the iframe as

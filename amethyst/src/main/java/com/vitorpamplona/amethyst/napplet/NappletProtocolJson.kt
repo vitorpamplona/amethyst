@@ -36,6 +36,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import java.util.Base64
 
 /**
@@ -76,6 +77,24 @@ object NappletProtocolJson {
             put("subId", subId)
         }.toString()
 
+    /**
+     * The `shell.init` handshake reply (`@napplet/core`): the capability environment the napplet
+     * caches and answers `shell.supports()` from. [domains] is the set of NAP domains this shell
+     * will broker for the applet; [services] mirrors them. We don't advertise numbered protocols.
+     */
+    fun encodeShellInit(
+        domains: List<String>,
+        services: List<String>,
+    ): String =
+        buildJsonObject {
+            put("type", "shell.init")
+            putJsonObject("capabilities") {
+                put("domains", buildJsonArray { domains.forEach { add(it) } })
+                putJsonObject("protocols") {}
+            }
+            put("services", buildJsonArray { services.forEach { add(it) } })
+        }.toString()
+
     /** Parses a request envelope. Returns `null` for an unrecognized `type` so the broker can deny it. */
     fun decodeRequest(envelopeJson: String): NappletRequest? {
         val o = json.parseToJsonElement(envelopeJson).jsonObject
@@ -102,9 +121,23 @@ object NappletProtocolJson {
             "storage.set" -> NappletRequest.StorageSet(o.req("key"), o.req("value"))
             "storage.remove" -> NappletRequest.StorageRemove(o.req("key"))
             "storage.keys" -> NappletRequest.StorageKeys
+            "keys.registerAction" -> {
+                val action = o.getValue("action").jsonObject
+                NappletRequest.RegisterAction(action.req("id"), action.str("label") ?: "")
+            }
+            "keys.unregisterAction" -> NappletRequest.UnregisterAction(o.req("actionId"))
             "value.payInvoice" -> NappletRequest.PayInvoice(o.req("invoice"))
             "resource.bytes" -> NappletRequest.ResourceBytes(o.req("url"))
-            "upload" -> NappletRequest.UploadBlob(Base64.getDecoder().decode(o.req("bytes")), o.req("contentType"))
+            "upload.upload" -> {
+                // UploadUploadMessage: { type, id, request: { data, mimeType?, filename?, ... } }.
+                // The Blob in `request.data` is inlined as base64 `request.dataBase64` by shell.html.
+                val request = o.getValue("request").jsonObject
+                NappletRequest.UploadBlob(
+                    bytes = Base64.getDecoder().decode(request.req("dataBase64")),
+                    contentType = request.str("mimeType") ?: "application/octet-stream",
+                    filename = request.str("filename"),
+                )
+            }
             else -> {
                 // Any other identity.* read (getProfile/getRelays/getFollows/getList/...) routes through
                 // a generic IdentityRead; the broker/gateway decides which are implemented.
@@ -145,6 +178,10 @@ object NappletProtocolJson {
                     put("ok", true)
                     put("supported", response.supported)
                 }
+                is NappletResponse.ActionRegistered -> {
+                    put("ok", true)
+                    put("actionId", response.actionId)
+                }
                 is NappletResponse.StorageValue -> {
                     put("ok", true)
                     put("value", response.value)
@@ -167,8 +204,14 @@ object NappletProtocolJson {
                     put("mime", response.contentType)
                 }
                 is NappletResponse.Uploaded -> {
+                    // UploadResult: { ok, uploadId, status, url?, sha256?, size?, mimeType?, ... }.
                     put("ok", true)
+                    put("uploadId", response.sha256 ?: response.url)
+                    put("status", "completed")
                     put("url", response.url)
+                    response.sha256?.let { put("sha256", it) }
+                    response.size?.let { put("size", it) }
+                    response.mimeType?.let { put("mimeType", it) }
                 }
                 is NappletResponse.Paid -> {
                     put("ok", true)

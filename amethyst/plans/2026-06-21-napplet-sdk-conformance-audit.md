@@ -9,6 +9,27 @@ shell handshake). Audited against branch `claude/awesome-pasteur-xwiwad`.
 Our edge layer: `NappletProtocolJson` (codec), `NappletRequest`/`NappletResponse` (commons),
 `NappletHostActivity` (`SHIM_JS` + `shell.html` relay), `NappletBroker`, `NappletBrokerService`.
 
+## Update — the four 🔴 breakers are now implemented
+
+All four conformance breakers below are fixed (codec pinned by `NappletSdkConformanceTest`):
+
+1. **Shell handshake** — the host answers `shell.ready` with `shell.init { capabilities:{domains,
+   protocols}, services }` built from the declared domains (`NappletProtocolJson.encodeShellInit`),
+   so a stock napplet's cached environment is populated and `supports()` works.
+2. **Id-less messages** — `onShellMessage` no longer drops messages without an `id`: `shell.ready`
+   is answered locally, and other fire-and-forget messages get a synthetic id so they reach the broker.
+3. **keys** — `keys.registerAction`/`keys.unregisterAction` decode and the broker acknowledges them
+   (declared-gated, no consent) so `registerAction()` resolves; the shim dispatches the `keys.action`
+   push. (The actual global-key binding is still a follow-up — `keys.action` isn't emitted yet.)
+4. **upload** — realigned to `upload.upload { request:{ data, mimeType, filename } }` → rich
+   `UploadResult { ok, uploadId, status, url, sha256, size, mimeType }`; `shell.html` inlines the
+   request `Blob` as base64 so it survives the bridge; the gateway uploads via the app's
+   `BlossomUploader` to the user's kind:10063 server with a signed auth event.
+
+Still open (◐): multi-`filters` queries, identity `getList`/`getZaps`/`getBadges` + `onChanged`,
+`resource` `nostr:` + `cancel`, `relay.closed` + live subscription tail, and `inc`/`intent`/the
+niche domains. Plus **on-device verification** of the host/shell behavior.
+
 ## Base envelope & error convention (verified)
 
 - `NappletMessage` carries only **`type`** (`"domain.action"`). **There is no universal `id`** —

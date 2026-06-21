@@ -185,6 +185,25 @@ sealed interface NappletRequest {
     }
 
     /**
+     * `keys.registerAction` — register a named keyboard/command action. This is a shell-mediated UI
+     * affordance, **not** signing (the `keys` domain has no key access). [actionId] is the napplet's
+     * action id (echoed back); [label] is its display name.
+     */
+    data class RegisterAction(
+        val actionId: String,
+        val label: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.KEYS
+    }
+
+    /** `keys.unregisterAction` — drop a previously registered action (fire-and-forget). */
+    data class UnregisterAction(
+        val actionId: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.KEYS
+    }
+
+    /**
      * Pay a BOLT-11 invoice from the user's wallet (`value.payInvoice`). This is an
      * **Amethyst-specific extension** — the upstream `value` domain models zaps/value-transfer
      * differently — kept because a real napplet built against `@napplet/shim` never calls it, so
@@ -203,19 +222,20 @@ sealed interface NappletRequest {
         override val capability get() = NappletCapability.RESOURCE
     }
 
-    /** Upload a blob to the user's Blossom server (`upload`). */
+    /** Upload a blob to the user's Blossom server (`upload.upload`). */
     data class UploadBlob(
         val bytes: ByteArray,
         val contentType: String,
+        val filename: String? = null,
     ) : NappletRequest {
         override val capability get() = NappletCapability.UPLOAD
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is UploadBlob) return false
-            return contentType == other.contentType && bytes.contentEquals(other.bytes)
+            return contentType == other.contentType && filename == other.filename && bytes.contentEquals(other.bytes)
         }
 
-        override fun hashCode(): Int = 31 * contentType.hashCode() + bytes.contentHashCode()
+        override fun hashCode(): Int = 31 * (31 * contentType.hashCode() + filename.hashCode()) + bytes.contentHashCode()
     }
 }

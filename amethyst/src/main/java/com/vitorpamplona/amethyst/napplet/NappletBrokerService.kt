@@ -43,14 +43,18 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletResource
 import com.vitorpamplona.amethyst.commons.napplet.NappletResourceGateway
+import com.vitorpamplona.amethyst.commons.napplet.NappletUploadGateway
+import com.vitorpamplona.amethyst.commons.napplet.NappletUploadResult
 import com.vitorpamplona.amethyst.commons.napplet.NappletWalletGateway
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
@@ -59,6 +63,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.sniffContentType
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +79,7 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.ByteArrayInputStream
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.URLDecoder
@@ -202,10 +208,46 @@ class NappletBrokerService : Service() {
 
         val identityReads = NappletIdentityGateway { method, argument -> readIdentity(account, method, argument) }
 
-        // upload is intentionally not provided yet: a correct Blossom upload needs a content Uri,
-        // a signed authorization event, and server selection — wired end-to-end (protocol/shim) but
-        // the Android gateway is a follow-up that needs on-device verification.
-        return NappletBroker(account.signer, ledger, consent, relay, storage, wallet, resource, upload = null, identityReads = identityReads)
+        val upload = NappletUploadGateway { bytes, contentType, filename -> uploadBlob(account, bytes, contentType, filename) }
+
+        return NappletBroker(account.signer, ledger, consent, relay, storage, wallet, resource, upload = upload, identityReads = identityReads)
+    }
+
+    /**
+     * Uploads [bytes] to the user's first Blossom server (kind:10063) with a signed authorization
+     * event, via the app's existing [BlossomUploader]. Returns null when there's no server or the
+     * upload fails. Consent is enforced by the broker before this runs.
+     */
+    private suspend fun uploadBlob(
+        account: Account,
+        bytes: ByteArray,
+        contentType: String,
+        filename: String?,
+    ): NappletUploadResult? {
+        val server =
+            account.blossomServers
+                .getBlossomServersList()
+                ?.servers()
+                ?.firstOrNull() ?: return null
+        val hash = sha256(bytes).toHexKey()
+        val result =
+            runCatching {
+                BlossomUploader().upload(
+                    inputStream = ByteArrayInputStream(bytes),
+                    hash = hash,
+                    length = bytes.size.toLong(),
+                    baseFileName = filename,
+                    contentType = contentType,
+                    alt = null,
+                    sensitiveContent = null,
+                    serverBaseUrl = server,
+                    okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                    httpAuth = { h, size, alt -> account.createBlossomUploadAuth(h, size, alt) },
+                    context = applicationContext,
+                )
+            }.getOrNull() ?: return null
+        val url = result.url ?: return null
+        return NappletUploadResult(url, result.sha256, result.size, result.type)
     }
 
     /**
@@ -463,8 +505,8 @@ class NappletBrokerService : Service() {
             }
             is NappletRequest.ResourceBytes -> getString(R.string.napplet_consent_resource)
             is NappletRequest.UploadBlob -> getString(R.string.napplet_consent_upload)
-            // Negotiation is resolved in the broker before consent; never shown to the user.
-            is NappletRequest.ShellSupports -> ""
+            // Resolved in the broker before consent (negotiation / shell-mediated); never shown.
+            is NappletRequest.ShellSupports, is NappletRequest.RegisterAction, is NappletRequest.UnregisterAction -> ""
         }
 
     private fun reply(

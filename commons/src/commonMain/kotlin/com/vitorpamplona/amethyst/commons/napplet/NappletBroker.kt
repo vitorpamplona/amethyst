@@ -98,6 +98,9 @@ class NappletBroker(
 
         val authorized =
             when {
+                // Keyboard/command action registration is a shell-mediated UI affordance, not key
+                // access — declared is enough; it never prompts.
+                request is NappletRequest.RegisterAction || request is NappletRequest.UnregisterAction -> true
                 // Remote/external signers run their own per-request consent UI — defer to them.
                 signerSelfGates(request) -> true
                 // A standing allow short-circuits, except for per-use capabilities (e.g. payments).
@@ -196,6 +199,12 @@ class NappletBroker(
                 NappletResponse.Strings(store.keys(identity.coordinate))
             }
 
+            // Keyboard actions are acknowledged so SDK napplets' registerAction() resolves; the
+            // actual global-key binding (and the keys.action push) is a follow-up.
+            is NappletRequest.RegisterAction -> NappletResponse.ActionRegistered(request.actionId)
+
+            is NappletRequest.UnregisterAction -> NappletResponse.Done
+
             is NappletRequest.PayInvoice -> {
                 val gateway = wallet ?: return NappletResponse.Unsupported("value.payInvoice")
                 NappletResponse.Paid(gateway.payInvoice(request.invoice))
@@ -208,9 +217,9 @@ class NappletBroker(
             }
 
             is NappletRequest.UploadBlob -> {
-                val gateway = upload ?: return NappletResponse.Unsupported("upload")
-                val url = gateway.upload(request.bytes, request.contentType) ?: return NappletResponse.Failed("Upload failed.")
-                NappletResponse.Uploaded(url)
+                val gateway = upload ?: return NappletResponse.Unsupported("upload.upload")
+                val res = gateway.upload(request.bytes, request.contentType, request.filename) ?: return NappletResponse.Failed("Upload failed.")
+                NappletResponse.Uploaded(res.url, res.sha256, res.size, res.mimeType)
             }
         }
 

@@ -120,13 +120,22 @@ fun interface NappletResourceGateway {
     suspend fun fetch(url: String): NappletResource?
 }
 
+/** A completed upload: where the blob lives plus NIP-94-ish metadata. */
+class NappletUploadResult(
+    val url: String,
+    val sha256: String? = null,
+    val size: Long? = null,
+    val mimeType: String? = null,
+)
+
 /**
- * Bridges the broker to Blossom upload for [NappletCapability.UPLOAD]. Returns the URL the blob
- * can be fetched from, or `null` on failure. A `null` gateway answers with `Unsupported`.
+ * Bridges the broker to Blossom upload for [NappletCapability.UPLOAD]. Returns the upload result,
+ * or `null` on failure. A `null` gateway answers with `Unsupported`.
  */
 fun interface NappletUploadGateway {
     suspend fun upload(
         bytes: ByteArray,
         contentType: String,
-    ): String?
+        filename: String?,
+    ): NappletUploadResult?
 }

@@ -55,6 +55,11 @@ sealed interface NappletResponse {
         val supported: Boolean,
     ) : NappletResponse
 
+    /** Result of `keys.registerAction`: the shell-assigned [actionId] (key binding is a follow-up). */
+    data class ActionRegistered(
+        val actionId: String,
+    ) : NappletResponse
+
     /** Result of a storage read; [value] is null when the key is absent. */
     data class StorageValue(
         val value: String?,
@@ -87,9 +92,12 @@ sealed interface NappletResponse {
         override fun hashCode(): Int = 31 * contentType.hashCode() + bytes.contentHashCode()
     }
 
-    /** Result of an `upload`; [url] is where the blob can be fetched. */
+    /** Result of an `upload.upload`; [url] is where the blob can be fetched, plus NIP-94-ish metadata. */
     data class Uploaded(
         val url: String,
+        val sha256: String? = null,
+        val size: Long? = null,
+        val mimeType: String? = null,
     ) : NappletResponse
 
     /** Result of a successful invoice payment; [preimage] is null when unconfirmed. */

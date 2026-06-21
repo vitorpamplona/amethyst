@@ -195,33 +195,67 @@ class NappletSdkConformanceTest {
         assertTrue(result("relay.query", NappletResponse.Failed("boom")).containsKey("error"))
     }
 
-    // ---------- gap guards (documented non-conformance; flip these when fixed) ----------
+    // ---------- shell handshake (ShellReadyMessage / ShellInitMessage) ----------
 
     @Test
-    fun gapShellHandshakeIsNotHandled() {
-        // SDK posts shell.ready (no id) and expects a shell.init reply; we don't model it yet.
-        // Audit item #1. NOTE: our codec also doesn't recognize shell.ready as a request.
+    fun shellInitAdvertisesTheCapabilityEnvironment() {
+        // shell.ready is answered by the host (not the codec) with this shell.init env, which the
+        // SDK caches and answers shell.supports() from locally. ShellInitMessage:
+        // { type:'shell.init', capabilities:{ domains, protocols }, services }.
+        val o = json.parseToJsonElement(NappletProtocolJson.encodeShellInit(listOf("shell", "relay"), listOf("shell", "relay"))).jsonObject
+        assertEquals("shell.init", o["type"]?.jsonPrimitive?.content)
+        assertEquals(
+            2,
+            o["capabilities"]
+                ?.jsonObject
+                ?.get("domains")
+                ?.jsonArray
+                ?.size,
+        )
+        assertTrue(o["capabilities"]?.jsonObject?.containsKey("protocols") == true)
+        assertEquals(2, o["services"]?.jsonArray?.size)
+        // shell.ready stays a host-layer message — the codec doesn't treat it as a broker request.
         assertNull(NappletProtocolJson.decodeRequest("""{"type":"shell.ready"}"""))
     }
 
-    @Test
-    fun gapKeysActionsAreNotHandledAtTheBoundary() {
-        // SDK: keys.registerAction / keys.unregisterAction. We only stub them client-side, so a real
-        // napplet's registerAction currently rejects. Audit item #3.
-        assertNull(NappletProtocolJson.decodeRequest("""{"type":"keys.registerAction","id":"1","action":{"id":"a","label":"A"}}"""))
-        assertNull(NappletProtocolJson.decodeRequest("""{"type":"keys.unregisterAction","actionId":"a"}"""))
-    }
+    // ---------- keys (keyboard/command actions) ----------
 
     @Test
-    fun gapUploadWireIsNonConformant() {
-        // SDK sends upload.upload with a Blob in request.data; we only decode a non-standard `upload`.
-        // Audit item #4.
-        assertNull(NappletProtocolJson.decodeRequest("""{"type":"upload.upload","id":"1","request":{"mimeType":"image/png"}}"""))
+    fun keysRegisterAndUnregisterActionsConform() {
+        // keys.registerAction{action:{id,label}} → RegisterAction; result carries actionId.
+        assertEquals(
+            NappletRequest.RegisterAction("save", "Save"),
+            NappletProtocolJson.decodeRequest("""{"type":"keys.registerAction","id":"1","action":{"id":"save","label":"Save"}}"""),
+        )
+        assertEquals(
+            NappletRequest.UnregisterAction("save"),
+            NappletProtocolJson.decodeRequest("""{"type":"keys.unregisterAction","actionId":"save"}"""),
+        )
+        assertEquals("save", result("keys.registerAction", NappletResponse.ActionRegistered("save"))["actionId"]?.jsonPrimitive?.content)
     }
+
+    // ---------- upload (UploadUploadMessage / UploadResult) ----------
+
+    @Test
+    fun uploadUploadWireConforms() {
+        // upload.upload{request:{data,mimeType,filename}} — shell.html inlines the Blob as dataBase64.
+        val up = NappletProtocolJson.decodeRequest("""{"type":"upload.upload","id":"1","request":{"dataBase64":"SGk=","mimeType":"image/png","filename":"a.png"}}""") as NappletRequest.UploadBlob
+        assertEquals("image/png", up.contentType)
+        assertEquals("a.png", up.filename)
+
+        // UploadResult: { ok, uploadId, status, url?, sha256?, ... }
+        val o = result("upload.upload", NappletResponse.Uploaded("https://b/abc", "abc", 2L, "image/png"))
+        assertEquals("https://b/abc", o["url"]?.jsonPrimitive?.content)
+        assertEquals("abc", o["sha256"]?.jsonPrimitive?.content)
+        assertTrue(o.containsKey("uploadId"))
+        assertEquals("completed", o["status"]?.jsonPrimitive?.content)
+    }
+
+    // ---------- still-open gaps ----------
 
     @Test
     fun gapIncIsNotModeled() {
-        // inter-napplet comms (inc.emit / inc.subscribe / inc.event) are not modeled. Audit item #6/➖.
+        // inter-napplet comms (inc.emit / inc.subscribe / inc.event) are not modeled. Audit ➖.
         assertNull(NappletProtocolJson.decodeRequest("""{"type":"inc.emit","topic":"t"}"""))
     }
 }
