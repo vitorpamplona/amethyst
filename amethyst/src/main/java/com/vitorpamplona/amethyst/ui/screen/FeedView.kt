@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.FeedLoaded
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.feeds.PrefetchLoadedFeedMedia
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
@@ -133,7 +134,10 @@ fun RenderFeedState(
         when (state) {
             is FeedState.Empty -> onEmpty()
             is FeedState.FeedError -> onError(state.errorMessage)
-            is FeedState.Loaded -> onLoaded(state)
+            is FeedState.Loaded -> {
+                PrefetchLoadedFeedMedia(state, listState, accountViewModel)
+                onLoaded(state)
+            }
             is FeedState.Loading -> onLoading()
         }
     }
