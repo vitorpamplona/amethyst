@@ -223,7 +223,9 @@ Two amy processes can talk: one **hosts** a bunker with its local key; the other
 | Command | What it does |
 |---|---|
 | `amy bunker [--relay URL[,URL…]] [--secret S] [--timeout SECS]` | Run a NIP-46 remote signer for the active local-key account. Prints a `bunker://…` URI, then services sign / nip04 / nip44 / get_public_key / ping requests until interrupted (or `--timeout`). |
-| `amy login bunker://PUBKEY?relay=…&secret=…` | Log in through a bunker. Mints a local transport keypair; the account then acts as PUBKEY and every signing/encryption call is delegated to the remote signer. |
+| `amy login bunker://PUBKEY?relay=…&secret=…` | Log in through a bunker. Mints a local transport keypair; the account then acts as PUBKEY and every signing/encryption call is delegated to the remote signer. Percent-encoded relay params are decoded. |
+
+Interop-tested against the real [`nak`](https://github.com/fiatjaf/nak) binary, both directions: `amy login bunker://` ⇄ `nak bunker`, and `nak event --sec bunker://` ⇄ `amy bunker`. Supports `connect` (secret-checked), `get_public_key`, `get_relays`, `sign_event`, `nip04_encrypt/decrypt`, `nip44_encrypt/decrypt`, `ping`. The `nostrconnect://` reverse flow and `auth_url` challenges are not implemented.
 
 Example (two terminals, shared `$HOME`):
 

@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetRelays
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Decrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Encrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
@@ -46,9 +47,11 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseDecrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEncrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseGetRelays
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePong
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.ReadWrite
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.withTimeoutOrNull
@@ -93,11 +96,13 @@ object BunkerCommand {
             val secret = args.flag("secret") ?: KeyPair().privKey!!.toHexKey().take(32)
             val self = ctx.identity.pubKeyHex
 
+            // Percent-encode params (spec/nak convention: relay=wss%3A%2F%2F…).
+            val enc = { s: String -> java.net.URLEncoder.encode(s, "UTF-8") }
             val uri =
                 buildString {
                     append("bunker://").append(self)
-                    append("?").append(relays.joinToString("&") { "relay=${it.url}" })
-                    append("&secret=").append(secret)
+                    append("?").append(relays.joinToString("&") { "relay=${enc(it.url)}" })
+                    append("&secret=").append(enc(secret))
                 }
             Output.emit(
                 mapOf(
@@ -165,6 +170,7 @@ object BunkerCommand {
                             BunkerResponseError(request.id, "invalid secret")
                         }
                     is BunkerRequestGetPublicKey -> BunkerResponsePublicKey(request.id, signer.pubKey)
+                    is BunkerRequestGetRelays -> BunkerResponseGetRelays(request.id, relays.associate { it.url to ReadWrite(read = true, write = true) })
                     is BunkerRequestPing -> BunkerResponsePong(request.id)
                     is BunkerRequestSign -> {
                         val signed = signer.sign<Event>(request.event.createdAt, request.event.kind, request.event.tags, request.event.content)

@@ -92,9 +92,12 @@ data class Identity(
             parts.getOrNull(1)?.split("&")?.forEach { param ->
                 val kv = param.split("=", limit = 2)
                 if (kv.size < 2) return@forEach
+                // Relay/secret params are percent-encoded by spec-compliant
+                // emitters (nak does: `relay=wss%3A%2F%2F…`), so decode them.
+                val value = java.net.URLDecoder.decode(kv[1], "UTF-8")
                 when (kv[0]) {
-                    "relay" -> relays.add(kv[1])
-                    "secret" -> secret = kv[1]
+                    "relay" -> relays.add(value)
+                    "secret" -> secret = value
                 }
             }
             require(relays.isNotEmpty()) { "bunker uri must carry at least one relay" }
