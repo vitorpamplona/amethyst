@@ -232,6 +232,22 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.subscribe(dataDir, tail)
         }
 
+        "count" -> {
+            Commands.count(dataDir, tail)
+        }
+
+        "encrypt" -> {
+            Commands.encrypt(dataDir, tail)
+        }
+
+        "decrypt" -> {
+            Commands.decrypt(dataDir, tail)
+        }
+
+        "gift" -> {
+            Commands.gift(dataDir, tail)
+        }
+
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -430,6 +446,17 @@ private fun printUsage() {
         |         [--timeout SECS]
         |  subscribe [<same filter flags as fetch>]    live stream: print each event as it arrives
         |         [--relay URL[,URL…]] [--timeout SECS]  (NDJSON). Runs until --timeout or interrupt.
+        |  count  [<same filter flags as fetch>]        NIP-45 COUNT: per-relay match counts, no
+        |         [--relay URL[,URL…]] [--timeout SECS]  event download.
+        |
+        |Encryption (active account's key):
+        |  encrypt --to USER [TEXT] [--nip04]           NIP-44 (default) or NIP-04 encrypt. Reads
+        |                                                stdin when TEXT is omitted or `-`.
+        |  decrypt --from USER [CIPHERTEXT] [--nip04]   inverse of encrypt.
+        |  gift wrap --to USER [EVENT-JSON]             NIP-59: seal + wrap a signed inner event for
+        |         [--relay URL[,URL…]]                   USER (add --relay to broadcast the wrap).
+        |  gift unwrap [GIFTWRAP-JSON]                  decrypt + unseal a kind:1059 wrap addressed
+        |                                                to the active account.
         |
         |Static websites (NIP-5A kind:15128/35128):
         |  nsite fetch AUTHOR [--d ID] [--path P]      resolve one path over Nostr + Blossom and

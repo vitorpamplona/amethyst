@@ -155,4 +155,24 @@ object Commands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int = SubscribeCommand.run(dataDir, tail)
+
+    suspend fun count(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = CountCommand.run(dataDir, tail)
+
+    suspend fun encrypt(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = EncryptCommand.run(dataDir, tail)
+
+    suspend fun decrypt(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = DecryptCommand.run(dataDir, tail)
+
+    suspend fun gift(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = GiftCommands.dispatch(dataDir, tail)
 }

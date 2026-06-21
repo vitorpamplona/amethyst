@@ -86,9 +86,9 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `publish` | `amy publish` | ✅ | broadcast a pre-made event JSON (verified first). |
 | `req` (one-shot) | `amy fetch` | ✅ | filter → collect-until-EOSE, dedupe, sort, cap. |
 | `req` (stream) | `amy subscribe` | ✅ | filter → live NDJSON stream to stdout. |
-| `count` | `amy count` | 🆕 | NIP-45. |
-| `encrypt` / `decrypt` | `amy encrypt\|decrypt` | 🆕 | raw NIP-44 / NIP-04. |
-| `gift` | `amy gift wrap\|unwrap` | 🆕 | NIP-59 primitive (gift-wrap path already used by `dm`). |
+| `count` | `amy count` | ✅ | NIP-45, per-relay counts. |
+| `encrypt` / `decrypt` | `amy encrypt\|decrypt` | ✅ | raw NIP-44 (default) / NIP-04. |
+| `gift` | `amy gift wrap\|unwrap` | ✅ | NIP-59 seal+wrap / unwrap+unseal. |
 | `relay` (NIP-11) | `amy relay info` | 🆕 | amy's `relay` is config today; add an `info` verb. |
 | `outbox` | `amy outbox` | 🆕 | NIP-65 relay discovery for a user. |
 | `blossom` | `amy blossom` | 🆕 | upload/download/list/delete (client already used by `dm`/`nsite`). |
