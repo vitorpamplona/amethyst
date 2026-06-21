@@ -59,6 +59,7 @@ import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
@@ -4002,6 +4003,10 @@ object LocalCache : ILocalCache, ICacheProvider {
 
                 is WorkoutRecordEvent -> {
                     consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is ExerciseTemplateEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
                 }
 
                 is PaymentTargetsEvent -> {
