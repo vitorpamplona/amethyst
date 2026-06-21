@@ -49,13 +49,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
-import com.vitorpamplona.amethyst.logTime
+import com.vitorpamplona.amethyst.traced
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.StickToTopOnPrepend
@@ -138,7 +142,15 @@ fun NotificationFeedEmpty(onRefresh: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+/**
+ * UiAutomator/Macrobenchmark handle for the notifications list. Exposed as a
+ * resource-id (see the `testTagsAsResourceId` on the LazyColumn below) so the
+ * scroll benchmark targets the feed deterministically — never an embedded,
+ * separately-scrollable widget inside a card (e.g. a Road event's map).
+ */
+const val NOTIFICATION_FEED_TEST_TAG = "notificationFeedList"
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
 private fun FeedLoaded(
     loaded: CardFeedState.Loaded,
@@ -174,7 +186,11 @@ private fun FeedLoaded(
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .semantics { testTagsAsResourceId = true }
+                .testTag(NOTIFICATION_FEED_TEST_TAG),
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
@@ -242,9 +258,7 @@ private fun FeedLoaded(
             )
 
             Row(Modifier.fillMaxWidth().background(highlightColor).animateItem()) {
-                logTime(
-                    debugMessage = { "CardFeedView $item" },
-                ) {
+                traced("Notif.Card.${item.javaClass.simpleName}") {
                     RenderCardItem(
                         item,
                         routeForLastRead,

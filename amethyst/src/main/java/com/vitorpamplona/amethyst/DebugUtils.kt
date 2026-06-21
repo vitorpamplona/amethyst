@@ -24,6 +24,7 @@ import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Debug
+import android.os.Trace
 import androidx.core.content.getSystemService
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -171,6 +172,27 @@ fun debugState(context: Context) {
     qttAddressables.toList().sortedByDescending { bytesNotes[it.first] }.forEach { (kind, qtt) ->
         Log.d(STATE_DUMP_TAG) { "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesAddressables[kind]?.div((1024 * 1024))}MB " }
     }
+}
+
+/**
+ * Wraps [block] in an `android.os.Trace` section so it shows up as a named slice in
+ * Perfetto / `atrace` captures. The platform `Trace` calls are near-free when tracing
+ * is not active, so this is safe to leave always-on, including in release-like builds.
+ *
+ * NOTE: deliberately no `try/finally` — the Compose compiler forbids wrapping a
+ * `@Composable` invocation in `try/catch`, and this helper is used around composables
+ * (e.g. per-card rendering in the feeds). On a thrown exception the section is left
+ * open, which only matters during a crash. Section names must stay under 127 chars
+ * or `beginSection` throws.
+ */
+inline fun <T> traced(
+    sectionName: String,
+    block: () -> T,
+): T {
+    Trace.beginSection(sectionName)
+    val result = block()
+    Trace.endSection()
+    return result
 }
 
 inline fun <T> logTime(

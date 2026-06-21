@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.BundledUpdate
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.traced
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrderCard
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
@@ -62,8 +63,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 @Stable
 class CardFeedContentState(
@@ -161,7 +162,12 @@ class CardFeedContentState(
         }
     }
 
-    private fun convertToCard(notes: Collection<Note>): List<Card> {
+    private fun convertToCard(notes: Collection<Note>): List<Card> =
+        traced("Notif.convertToCard.${notes.size}") {
+            convertToCardInternal(notes)
+        }
+
+    private fun convertToCardInternal(notes: Collection<Note>): List<Card> {
         checkNotInMainThread()
 
         val reactionsPerEvent = mutableMapOf<Note, MutableList<Note>>()
@@ -266,7 +272,14 @@ class CardFeedContentState(
                 }
             }
 
-        val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
+        // Notifications are bucketed per calendar day. Computing the day key as a
+        // raw epoch-day Long (instead of formatting a "yyyy-MM-dd" String per event)
+        // gives identical buckets and chronological ordering while avoiding a
+        // DateTimeFormatter + ZonedDateTime + String allocation for every single
+        // reaction/zap/repost — a meaningful GC saving on full feed conversions.
+        val zone = ZoneId.systemDefault()
+
+        fun epochDay(createdAt: Long?): Long = LocalDate.ofInstant(Instant.ofEpochSecond(createdAt ?: 0L), zone).toEpochDay()
 
         val allBaseNotes = zapsPerEvent.keys + boostsPerEvent.keys + reactionsPerEvent.keys + nutzapsPerEvent.keys
         val multiCards =
@@ -278,21 +291,16 @@ class CardFeedContentState(
 
                 val singleList =
                     (boostsInCard + zapsInCard.map { it.response } + reactionsInCard + nutzapsInCard).groupBy {
-                        sdf.format(
-                            Instant
-                                .ofEpochSecond(it.createdAt() ?: 0L)
-                                .atZone(ZoneId.systemDefault())
-                                .toLocalDateTime(),
-                        )
+                        epochDay(it.createdAt())
                     }
 
                 val days = singleList.keys.sortedBy { it }
 
                 days
-                    .mapNotNull { string ->
+                    .mapNotNull { day ->
                         val sortedList =
                             singleList
-                                .get(string)
+                                .get(day)
                                 ?.sortedWith(compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex })
 
                         sortedList?.chunked(30)?.map { chunk ->
@@ -312,12 +320,7 @@ class CardFeedContentState(
                 .map { user ->
                     val byDay =
                         user.value.groupBy {
-                            sdf.format(
-                                Instant
-                                    .ofEpochSecond(it.createdAt() ?: 0L)
-                                    .atZone(ZoneId.systemDefault())
-                                    .toLocalDateTime(),
-                            )
+                            epochDay(it.createdAt())
                         }
 
                     byDay.values.map { zaps ->
@@ -338,12 +341,7 @@ class CardFeedContentState(
                 .map { user ->
                     val byDay =
                         user.value.groupBy {
-                            sdf.format(
-                                Instant
-                                    .ofEpochSecond(it.createdAt() ?: 0L)
-                                    .atZone(ZoneId.systemDefault())
-                                    .toLocalDateTime(),
-                            )
+                            epochDay(it.createdAt())
                         }
 
                     byDay.values.map { nutzaps ->
