@@ -25,14 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
@@ -68,7 +65,6 @@ class InterestSetEvent(
 
     companion object {
         const val KIND = 30015
-        const val ALT = "Interest Set"
 
         fun createAddress(
             pubKey: HexKey,
@@ -134,12 +130,7 @@ class InterestSetEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): InterestSetEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, content)
         }
@@ -172,7 +163,6 @@ class InterestSetEvent(
             createdAt = createdAt,
         ) {
             dTag(dTag)
-            alt(ALT)
             title(title)
             hashtags(publicHashtags)
 

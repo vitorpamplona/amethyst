@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.state.tags.HeadTag
 import com.vitorpamplona.quartz.nip34Git.state.tags.RefTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -61,7 +60,6 @@ class GitRepositoryStateEvent(
 
     companion object {
         const val KIND = 30618
-        const val ALT_DESCRIPTION = "Git Repository State"
 
         fun build(
             dTag: String,
@@ -70,7 +68,6 @@ class GitRepositoryStateEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GitRepositoryStateEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(dTag)
             refs.forEach { ref(it) }
             head?.let { head(it) }

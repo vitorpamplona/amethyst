@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.eTags
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEventIds
 import com.vitorpamplona.quartz.nip28PublicChat.base.BasePublicChatEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.channel
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -52,7 +51,6 @@ class ChannelHideMessageEvent(
 
     companion object {
         const val KIND = 43
-        const val ALT = "Hide message instruction for public chats"
 
         fun build(
             reason: String,
@@ -61,7 +59,6 @@ class ChannelHideMessageEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChannelHideMessageEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, reason, createdAt) {
-            alt(ALT)
             channel(channel)
             eTags(messagesToHide)
             initializer()

@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -47,7 +46,6 @@ class ThreadEvent(
 
     companion object {
         const val KIND = 11
-        const val ALT_DESCRIPTION = "Thread"
 
         fun build(
             content: String,
@@ -55,7 +53,6 @@ class ThreadEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ThreadEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
-            alt(ALT_DESCRIPTION)
             title(title)
             initializer()
         }

@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTagIds
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
 
 @Immutable
@@ -49,7 +48,6 @@ class CallAnswerEvent(
 
     companion object {
         const val KIND = 25051
-        const val ALT_DESCRIPTION = "WebRTC call answer"
 
         fun build(
             sdpAnswer: String,
@@ -57,7 +55,6 @@ class CallAnswerEvent(
             callId: String,
             initializer: TagArrayBuilder<CallAnswerEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, sdpAnswer) {
-            alt(ALT_DESCRIPTION)
             pTag(callerPubKey)
             callId(callId)
             initializer()
@@ -69,7 +66,6 @@ class CallAnswerEvent(
             callId: String,
             initializer: TagArrayBuilder<CallAnswerEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, sdpAnswer) {
-            alt(ALT_DESCRIPTION)
             pTagIds(memberPubKeys)
             callId(callId)
             initializer()

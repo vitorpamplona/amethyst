@@ -107,19 +107,6 @@ class PodcastMetadataEventTest {
     }
 
     @Test
-    fun `alt tag is emitted`() {
-        val template =
-            PodcastMetadataEvent.build(
-                title = "Show",
-                image = "https://example.com/cover.png",
-                description = "Desc",
-            )
-        val event = signer.sign<PodcastMetadataEvent>(template)
-
-        assertTrue(event.tags.any { it[0] == "alt" && it[1] == PodcastMetadataEvent.ALT_DESCRIPTION })
-    }
-
-    @Test
     fun `is replaceable with empty d-tag`() {
         val template =
             PodcastMetadataEvent.build(

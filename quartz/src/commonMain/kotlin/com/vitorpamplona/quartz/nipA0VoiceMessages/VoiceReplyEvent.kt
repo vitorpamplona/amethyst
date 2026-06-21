@@ -57,7 +57,6 @@ class VoiceReplyEvent(
 
     companion object {
         const val KIND = 1244
-        const val ALT_DESCRIPTION = "Voice reply"
 
         fun build(
             url: String,
@@ -73,7 +72,7 @@ class VoiceReplyEvent(
             replyingTo: EventHintBundle<BaseVoiceEvent>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<VoiceReplyEvent>.() -> Unit = {},
-        ) = build(voiceMessage, KIND, ALT_DESCRIPTION, createdAt) {
+        ) = build(voiceMessage, KIND, createdAt) {
             replyEvent(replyingTo.event.id, replyingTo.relay, replyingTo.event.pubKey)
             replyKind(replyingTo.event.kind)
             replyAuthor(replyingTo.event.pubKey, replyingTo.authorHomeRelay)

@@ -218,6 +218,7 @@ class AccountSettings(
     var hideNIP17WarningDialog: Boolean = false,
     val alwaysOnNotificationService: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val splitNotificationsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val showMessagesInNotifications: MutableStateFlow<Boolean> = MutableStateFlow(true),
     var backupUserMetadata: MetadataEvent? = null,
     var backupContactList: ContactListEvent? = null,
     var backupDMRelayList: ChatMessageRelayListEvent? = null,
@@ -292,6 +293,13 @@ class AccountSettings(
     fun toggleSplitNotificationsEnabled(): Boolean {
         val newValue = !splitNotificationsEnabled.value
         splitNotificationsEnabled.tryEmit(newValue)
+        saveAccountSettings()
+        return newValue
+    }
+
+    fun toggleShowMessagesInNotifications(): Boolean {
+        val newValue = !showMessagesInNotifications.value
+        showMessagesInNotifications.tryEmit(newValue)
         saveAccountSettings()
         return newValue
     }

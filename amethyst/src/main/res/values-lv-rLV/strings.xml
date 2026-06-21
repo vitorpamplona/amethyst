@@ -5,7 +5,6 @@
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanāla attēls</string>
     <string name="group_picture">Grupas attēls</string>
-    <string name="unknown">Nezināms</string>
     <string name="unknown_author">Nezināms autors</string>
     <string name="copy_text">Kopēt tekstu</string>
     <string name="copy_user_pubkey">Kopēt autora ID</string>
@@ -14,7 +13,6 @@
     <string name="report_impersonation">Sūdzēties par uzdošanos kā cita persona</string>
     <string name="report_malware">Sūdzēties par ļaunprogrammatūru</string>
     <string name="malware">Ļaunprogrammatūra</string>
-    <string name="view_count">Skatījumi</string>
     <string name="edited">rediģēts</string>
     <string name="quote">Citāts</string>
     <string name="add">Pievienot</string>
@@ -27,7 +25,6 @@
     <string name="pay">Maksāt</string>
     <string name="secret_visible_text_placeholder">😎</string>
     <string name="secret_add_to_text">Pievienot ierakstam</string>
-    <string name="new_channel">Jauns kanāls</string>
     <string name="channel_name">Kanāla nosaukums</string>
     <string name="picture_url">Attēla URL</string>
     <string name="description">Apraksts</string>
@@ -36,21 +33,14 @@
     <string name="save">Saglabāt</string>
     <string name="create">Izveidot</string>
     <string name="cancel">Atcelt</string>
-    <string name="failed_to_upload_the_image">Neizdevās augšupielādēt attēlu</string>
-    <string name="posts">Ieraksti</string>
-    <string name="bytes">Baiti</string>
     <string name="errors">Kļūdas</string>
     <string name="username">Lietotājvārds</string>
-    <string name="my_username">Mans lietotājvārds</string>
     <string name="about_me">Par mani</string>
-    <string name="ln_address">LN adrese</string>
     <string name="upload_image">Augšupielādēt attēlu</string>
-    <string name="uploading">Augšupielādē…</string>
     <string name="blocked_users">Bloķētie lietotāji</string>
     <string name="notes">Piezīmes</string>
     <string name="replies">Atbildes</string>
     <string name="gallery">Galerija</string>
-    <string name="follows">"Seko"</string>
     <string name="follow">Sekot</string>
     <string name="unblock">Atbloķēt</string>
     <string name="unblock_user">Atbloķēt lietotāju</string>
@@ -61,14 +51,10 @@
     <string name="hide_password">Slēpt paroli</string>
     <string name="password_is_required">Ir nepieciešama parole</string>
     <string name="create_account">Izveidot kontu</string>
-    <string name="create_a_new_account">Izveidot jaunu kontu</string>
-    <string name="generate_a_new_key">Ģenerēt jaunu atslēgu</string>
     <string name="loading_account">Ielādē kontu</string>
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="refresh">Atsvaidzināt</string>
-    <string name="description_to">aprakstu uz</string>
-    <string name="and_picture_to">un attēlu uz</string>
     <string name="channel_created">Kanāls izveidots</string>
     <string name="posts_received">saņemtie ieraksti</string>
     <string name="remove">Noņemt</string>
@@ -82,14 +68,11 @@
     <string name="account_backup_tips3_md" tools:ignore="Typos">        Papildu drošībai variet šifrēt atslēgu ar paroli. Šī atslēga sāksies ar **ncryptsec1** virkni un to nevarēs izmantot bez šīs paroles.
         \n\nJa jūs aizmirsīsiet paroli, vairs nevarēsiet atgūt savu atslēgu.
     </string>
-    <string name="biometric_error">Kļūda</string>
     <string name="account_switch_add_account_dialog_title">Pievienot jaunu kontu</string>
     <string name="drawer_accounts">Konti</string>
     <string name="account_switch_select_account">Atlasīt kontu</string>
     <string name="account_switch_add_account_btn">Pievienot jaunu kontu</string>
     <string name="account_switch_active_account">Pašreizējais konts</string>
-    <string name="account_switch_has_private_key">Ar privāto atslēgu</string>
-    <string name="account_switch_pubkey_only">Tikai lasīšana, bez privātās atslēgas</string>
     <string name="quick_action_copy_user_id">Autora ID</string>
     <string name="quick_action_copy_text">Kopēt tekstu</string>
     <string name="quick_action_delete">Dzēst</string>
@@ -97,15 +80,11 @@
     <string name="quick_action_block_dialog_btn">@string/block_only</string>
     <string name="quick_action_delete_dialog_btn">Dzēst</string>
     <string name="quick_action_block">@string/block_only</string>
-    <string name="quick_action_delete_button">Dzēst</string>
-    <string name="report_dialog_malware">@string/malware</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[@string/block_hide_user]]></string>
     <string name="report_dialog_select_reason_label">Iemesls</string>
     <string name="report_dialog_title">Bloķēt un sūdzēties</string>
     <string name="block_only">Bloķēt</string>
     <string name="bookmarks">Grāmatzīmes</string>
-    <string name="poll_closing_time">Aizvērt pēc</string>
-    <string name="poll_closing_time_days">dienām</string>
     <string name="content_description_add_image">Pievienot attēlu</string>
     <string name="content_description_add_video">Pievienot video</string>
     <string name="content_description_add_document">Pievienot dokumentu</string>
@@ -116,9 +95,7 @@
     <string name="connect_via_tor2">Tor iestatījumi</string>
     <string name="yes">Jā</string>
     <string name="no">Nē</string>
-    <string name="follow_list_selection">Sekot saraksts</string>
     <string name="follow_set_icon_description">Ikona sarakstam</string>
-    <string name="follow_set_creation_menu_title">Izveidot jaunu sarakstu</string>
     <string name="follow_set_creation_dialog_title">Jauns sekošanas saraksts</string>
     <string name="follow_set_creation_name_label">Kolekcijas nosaukums</string>
     <string name="follow_set_creation_desc_label">Kolekcijas apraksts (neobligāti, pēc izvēles)</string>
@@ -133,8 +110,6 @@
     <string name="version">Versija</string>
     <string name="countries">Valstis</string>
     <string name="languages">Valodas</string>
-    <string name="tags">Birkas</string>
-    <string name="auth">Autorizācija</string>
     <string name="followed_tags">Birkas, kurām sekoju</string>
     <string name="community_approved_posts">Apstiprinātie ieraksti</string>
     <string name="preferences">Lietotnes iestatījumi</string>
@@ -147,10 +122,7 @@
     <string name="language">Valoda</string>
     <string name="theme">Motīvs</string>
     <string name="messages_cant_upload_title">Nevar augšupielādēt</string>
-    <string name="rules">Noteikumi</string>
-    <string name="community_description">Par mums</string>
     <string name="error_dialog_button_ok">Labi</string>
-    <string name="active_for_search">Meklēt</string>
     <string name="zap_split_search_and_add_user_placeholder">Lietotājvārds vai parādāmais vārds</string>
     <string name="automatically_show_profile_picture">Profila attēls</string>
     <string name="error_dialog_pay_invoice_error">Nevarēja samaksāt rēķinu</string>
@@ -166,14 +138,11 @@
     <string name="failed_to_upload_media">Augšupielādes kļūda: %1$s</string>
     <string name="could_not_download_from_the_server">Nevarēja lejupielādēt augšupielādēto multivides datni no servera</string>
     <string name="failed_to_upload_to_server_with_message">Neizdevās augšupielādēt %1$s: %2$s</string>
-    <string name="failed_to_upload_with_message">Neizdevās augšupielādēt: %1$s</string>
-    <string name="route_search">Meklēt</string>
     <string name="route_notifications">Paziņojumi</string>
     <!-- Onchain zap send dialog -->
     <string name="new_post">Jauns ieraksts</string>
     <string name="thank_you">Paldies!</string>
     <string name="edit_post">Rediģēt ierakstu</string>
-    <string name="message_to_author">Izmaiņu kopsavilkums</string>
     <string name="accessibility_download_for_offline">@string/torrent_download</string>
     <string name="accessibility_play_username">Atskaņot lietotājvārdu ar skaņu</string>
     <string name="torrent_file">Torrenta datne</string>
@@ -190,4 +159,5 @@
     <!-- Emoji packs -->
     <!-- NIP-9B community rules composer-side validation. -->
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <!-- Marmot (MLS) group chats -->
 </resources>

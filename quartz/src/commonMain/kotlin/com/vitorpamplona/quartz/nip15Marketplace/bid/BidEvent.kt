@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -59,7 +58,6 @@ class BidEvent(
 
     companion object {
         const val KIND = 1021
-        const val ALT_DESCRIPTION = "Auction bid"
 
         fun build(
             auction: EventHintBundle<AuctionEvent>,
@@ -67,7 +65,6 @@ class BidEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<BidEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, amount.toLong().toString(), createdAt) {
-            alt(ALT_DESCRIPTION)
             auction(auction)
             notifyAuthor(auction)
             initializer()

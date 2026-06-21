@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.tags.RecommendationTag
@@ -54,7 +53,6 @@ class AppRecommendationEvent(
 
     companion object {
         const val KIND = 31989
-        const val ALT_DESCRIPTION = "App recommendations by the author"
 
         class AppRecommendationItem(
             val appDefinitionEvent: AppDefinitionEvent,
@@ -72,7 +70,6 @@ class AppRecommendationEvent(
             appReferences.forEach {
                 recommend(it.appDefinitionEvent.addressTag(), it.relayHint, it.platform.code)
             }
-            alt(ALT_DESCRIPTION)
             initializer()
         }
 
@@ -84,7 +81,6 @@ class AppRecommendationEvent(
         ) = eventTemplate(KIND, "", createdAt) {
             dTag(supportedKind)
             recommend(recommendations)
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

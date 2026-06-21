@@ -39,7 +39,6 @@ class GitStatusDraftEvent(
 ) : GitStatusEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = KIND_DRAFT
-        const val ALT = "A Git Draft Status"
 
         fun <T : com.vitorpamplona.quartz.nip01Core.core.Event> build(
             content: String,
@@ -49,7 +48,6 @@ class GitStatusDraftEvent(
             initializer: TagArrayBuilder<GitStatusDraftEvent>.() -> Unit = {},
         ) = GitStatusBuilders.buildStatus<GitStatusDraftEvent, T>(
             kind = KIND,
-            altDescriptor = ALT,
             content = content,
             target = target,
             notify = notify,

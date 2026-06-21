@@ -32,8 +32,6 @@
     <string name="other">Zingine</string>
     <string name="harassment">Usumbufu</string>
     <string name="violence">Ukatili</string>
-    <string name="unknown">Haijulikani</string>
-    <string name="relay_icon">Aikoni ya Relay</string>
     <string name="unknown_author">Mwandishi asiyejulikana</string>
     <string name="copy_text">Nakili Maandishi</string>
     <string name="copy_user_pubkey">Nakili Kitambulisho cha Mwandishi</string>
@@ -48,12 +46,9 @@
     <string name="block_hide_user"><![CDATA[Zuia na Ufiche Mtumiaji]]></string>
     <string name="report_spam_scam">Ripoti Barua Taka / Ulaghai</string>
     <string name="report_impersonation">Ripoti Uigaji</string>
-    <string name="report_explicit_content">Ripoti Maudhui Dhahiri</string>
     <string name="report_illegal_behaviour">Ripoti Tabia Haramu</string>
     <string name="report_malware">Ripoti Programu Hasidi</string>
-    <string name="report_mod">Ripoti Msimamizi</string>
     <string name="malware">Programu hasidi</string>
-    <string name="mod">Msimamizi</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Ingia kwa kutumia Ufunguo wa Faragha ili uweze kujibu</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Ingia kwa kutumia ufunguo wa Faragha ili uweze kuboresha machapisho</string>
     <string name="login_with_a_private_key_to_like_posts">Ingia kwa kutumia ufunguo wa Faragha ili kupenda Machapisho</string>
@@ -67,15 +62,12 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Ingia kwa kutumia Ufunguo wa Faragha ili uweze Kuacha Kufuata</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Unatumia maneno ya umma na funguo za umma ni za kusoma tu. Ingia kwa kutumia ua Faragha ili kuweza kuficha neno au sentensi</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Unatumia maneno ya umma na maneno ya umma ni ya kusoma tu. Ingia kwa kutumia maneno ya Faragha ili kuweza kuonyesha neno au sentensi</string>
-    <string name="login_with_a_private_key_to_be_able_to_change_settings">Unatumia maneno ya umma na maneno ya umma ni ya kusoma tu. Ingia kwa kutumia maneno ya Faragha ili kuweza kubadilisha mipangilio</string>
     <string name="login_with_a_private_key_to_be_able_to_upload">Unatumia maneno ya umma na maneno ya umma ni ya kusoma tu. Ingia kwa kutumia maneno ya Faragha ili kuweza kupakia</string>
     <string name="login_with_a_private_key_to_be_able_to_sign_events">Unatumia maneno ya umma na maneno ya umma ni ya kusoma tu. Ingia kwa kutumia maneno ya Faragha ili kuweza kujisajili kwa matukio</string>
     <string name="unauthorized_exception">Usimbuaji Uisoidhinishwa</string>
     <string name="unauthorized_exception_description">Mtuaji sahihi hakuidhinisha usimbuaji unaohitajika ili kutekeleza operesheni hii. Washa usimbuaji NIP-44 kwenye programu yako ya utiaji sahihi kisha ujaribu tena</string>
     <string name="signer_not_found_exception">Mtuaji sahihi hajaonekana</string>
     <string name="signer_not_found_exception_description">Je, programu ya Utiaji sahihi iliondolewa? Angalia ikiwa programu ya utiaji sahihi imesakinishwa na ina akaunti hii. Ondoka kisha Uingie tena ikiwa programu ya utiaji sahihi imebadilika.</string>
-    <string name="signer_illegal_state_exception">Programu ya utiaji sahihi imepata hitilafu</string>
-    <string name="view_count">Idadi ya maoni</string>
     <string name="boost">Kuongeza</string>
     <string name="boosted">imeimarishwa</string>
     <string name="quote">Nukuu</string>
@@ -83,9 +75,7 @@
     <string name="add">Ongeza</string>
     <string name="replying_to">"kujibu "</string>
     <string name="and">" na "</string>
-    <string name="in_channel">"katika chaneli "</string>
     <string name="profile_banner">Bango la Wasifu</string>
-    <string name="payment_successful">Malipo Yamefaulu</string>
     <string name="error_parsing_error_message">Hitilafu katika kuchanganua ujumbe wa hitilafu</string>
     <string name="following">" Kufuatia"</string>
     <string name="followers">" Wafuasi"</string>
@@ -101,9 +91,7 @@
     <string name="amount_in_sats">Kiasi katika Sats</string>
     <string name="send_sats">Tuma Sats</string>
     <string name="secret_visible_text_placeholder">😎</string>
-    <string name="error_parsing_preview_for">"Hitilafu katika kuchanganua onyesho la kukagua %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Hakiki Picha ya Kadi ya %1$s"</string>
-    <string name="new_channel">Kituo Kipya</string>
     <string name="channel_name">Kituo Kipya</string>
     <string name="my_awesome_group">Kundi Langu la Ajabu</string>
     <string name="picture_url">Url ya picha</string>
@@ -114,35 +102,20 @@
     <string name="save">Hifadhi</string>
     <string name="create">Unda</string>
     <string name="cancel">Ghairi</string>
-    <string name="failed_to_upload_the_image">Kushindwa kupakia picha</string>
-    <string name="relay_address">Anwani ya Relay</string>
-    <string name="posts">Machapisho</string>
-    <string name="bytes">Bayti</string>
     <string name="errors">Makosa</string>
-    <string name="home_feed">Malisho ya Nyumbani</string>
-    <string name="private_message_feed">Malisho ya Ujumbe Binafsi</string>
-    <string name="public_chat_feed">Malisho ya Mazungumzo ya Umma</string>
-    <string name="global_feed">Malisho ya Kimataifa</string>
-    <string name="search_feed">Malisho ya Utafutaji</string>
     <string name="add_a_relay">Ongeza Relay</string>
     <string name="display_name">Jina la Kuonyesha</string>
     <string name="my_display_name">Jina langu la kuonyesha</string>
     <string name="username">Jina la mtumiaji</string>
-    <string name="my_username">Jina langu la mtumiaji</string>
     <string name="about_me">Kuhusu mimi</string>
     <string name="avatar_url">URL ya Picha ya Profaili</string>
     <string name="banner_url">URL ya Bango</string>
     <string name="website_url">URL ya Tovuti</string>
-    <string name="ln_address">Anwani ya LN</string>
-    <string name="ln_url_outdated">URL ya LN (imepitwa na wakati)</string>
     <string name="image_saved_to_the_gallery">Picha imesave kwenye galeria</string>
     <string name="failed_to_save_the_image">Kushindwa kuhifadhi picha</string>
     <string name="upload_image">Pakia Picha</string>
-    <string name="uploading">Inapakia…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Mtumiaji hana anwani ya umeme iliyoandaliwa kupokea sati</string>
     <string name="reply_here">"jibu hapa.. "</string>
-    <string name="copies_the_note_id_to_the_clipboard_for_sharing">Hunakili Kitambulisho cha Dokezo kwenye ubao wa kunakili ili kushiriki katika Nostr</string>
-    <string name="copy_channel_id_note_to_the_clipboard">Nakili Kitambulisho cha Kituo (Kumbuka) kwenye Ubao wa kunakili</string>
     <string name="edits_the_channel_metadata">Huhariri Metadata ya Kituo</string>
     <string name="join">Jiunge</string>
     <string name="known">Inajulikana</string>
@@ -152,14 +125,10 @@
     <string name="conversations">Mazungumzo</string>
     <string name="notes">Vidokezo</string>
     <string name="replies">Majibu</string>
-    <string name="follows">"Anafuata"</string>
     <string name="more_options">Chaguo Zaidi</string>
     <string name="website">Tovuti</string>
     <string name="lightning_address">Anwani ya Umeme</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Hunakili Kitambulisho cha Nsec (nywila yako) kwenye ubao wa kunakili kwa ajili ya nakala rudufu</string>
-    <string name="copy_private_key_to_the_clipboard">Nakili Ufunguo wa Siri kwenye Ubao wa Kunakili</string>
-    <string name="copies_the_public_key_to_the_clipboard_for_sharing">Hunakili ufunguo wa umma kwenye ubao wa kunakili kwa ajili ya kushiriki</string>
-    <string name="copy_public_key_npub_to_the_clipboard">Nakili Ufunguo wa Umma (NPub) kwenye Ubao wa Kunakili</string>
     <string name="send_a_direct_message">Tuma Ujumbe wa Moja kwa Moja</string>
     <string name="edits_the_user_s_metadata">Huhariri Metadata ya Mtumiaji</string>
     <string name="follow">Fuata</string>
@@ -179,7 +148,6 @@
     <string name="acceptance_of_terms_is_required">Kukubaliana na masharti ni lazima</string>
     <string name="key_is_required">Ufunguo unahitajika</string>
     <string name="login">Ingia</string>
-    <string name="generate_a_new_key">Tengeneza Ufunguo Mpya</string>
     <string name="loading_feed">Inapakia malisho</string>
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
@@ -187,12 +155,6 @@
     <string name="try_again">Jaribu tena</string>
     <string name="feed_is_empty">Malisho ni tupu.</string>
     <string name="refresh">Sasisha</string>
-    <string name="created">imeundwa</string>
-    <string name="with_description_of">na maelezo ya</string>
-    <string name="and_picture">na picha</string>
-    <string name="changed_chat_name_to">ilisitisha jina la mazungumzo hadi</string>
-    <string name="description_to">maelezo ya</string>
-    <string name="and_picture_to">na picha ya</string>
     <string name="leave">Ondoka</string>
     <string name="unfollow">Acha kufuata</string>
     <string name="channel_created">Kituo kimeundwa</string>
@@ -212,7 +174,6 @@
     <string name="profanity_hateful_speech">Lugha chafu / Maneno yenye chuki</string>
     <string name="report_hateful_speech">Ripoti Lugha yenye chuki</string>
     <string name="report_nudity_porn">Ripoti Uchi / Pornografia</string>
-    <string name="others">wengine</string>
     <string name="mark_all_known_as_read">Funga kama Zimejulikana</string>
     <string name="mark_all_new_as_read">Funga kama Mpya</string>
     <string name="mark_all_as_read">Funga kama Zimejulikana</string>
@@ -220,23 +181,18 @@
     <string name="secret_key_copied_to_clipboard">Ufunguo wa siri (nsec) umeinakiliwa kwenye ubao wa kunakili</string>
     <string name="copy_my_secret_key">Nakili Ufunguo Wangu wa Siri</string>
     <string name="biometric_authentication_failed">Uthibitishaji umeshindwa</string>
-    <string name="biometric_error">Kosa</string>
-    <string name="badge_created_by">"Imeundwa na %1$s"</string>
     <string name="badge_award_image_for">"Picha ya tuzo ya alama kwa %1$s"</string>
     <string name="new_badge_award_notif">Umepokea Tuzo Mpya ya Alama</string>
     <string name="award_granted_to">Tuzo ya alama imetolewa kwa</string>
     <string name="copied_note_text_to_clipboard">Maudhui ya dokezo yamenakiliwa kwenye ubao wa kunakili</string>
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Imesakinishwa @npub ya mwandishi kwa ubao wa kunakili</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Imesakinishwa ID ya andiko (@note1) kwa ubao wa kunakili</string>
-    <string name="select_text_dialog_top">Chagua Matini</string>
     <string name="private_conversation_notification">"&lt;Haiwezi kuifanyia utawala ujumbe binafsi uliofichwa&gt;\n\nUlinukuliwa katika mazungumzo ya faragha/yaliyofichwa kati ya %1$s na %2$s."</string>
     <string name="account_switch_add_account_dialog_title">Ongeza Akaunti Mpya</string>
     <string name="drawer_accounts">Akaunti</string>
     <string name="account_switch_select_account">Chagua Akaunti</string>
     <string name="account_switch_add_account_btn">Ongeza Akaunti Mpya</string>
     <string name="account_switch_active_account">Akaunti Iliyo Hai</string>
-    <string name="account_switch_has_private_key">Ina ufunguo wa faragha</string>
-    <string name="account_switch_pubkey_only">Soma tu, hakuna ufunguo wa faragha</string>
     <string name="back">Rudi</string>
     <string name="quick_action_select">Chagua</string>
     <string name="quick_action_share_browser_link">Shiriki Kiungo cha Kivinjari</string>
@@ -253,7 +209,6 @@
     <string name="quick_action_delete_dialog_btn">Futa</string>
     <string name="quick_action_block">Zuia</string>
     <string name="quick_action_report">Ripoti</string>
-    <string name="quick_action_delete_button">Futa</string>
     <string name="quick_action_dont_show_again_button">Usionyeshe Tena</string>
     <string name="report_dialog_spam">Barua Taka au Udanganyifu</string>
     <string name="report_dialog_profanity">Lugha chafu au tabia yenye chuki</string>
@@ -278,27 +233,12 @@
     <string name="add_to_public_bookmarks">Ongeza kwenye Vialamisho vya Umma</string>
     <string name="remove_from_private_bookmarks">Ondoa kutoka kwenye Vialamisho Binafsi</string>
     <string name="remove_from_public_bookmarks">Ondoa kutoka kwenye Vialamisho vya Umma</string>
-    <string name="wallet_connect_service">Huduma ya Kuchanganya Pochi</string>
-    <string name="wallet_connect_service_explainer">Inaidhinisha Nostr Secret kulipa zaps bila kuacha programu. Weka siri salama na tumia relay ya faragha ikiwezekana</string>
-    <string name="wallet_connect_service_pubkey">Ufunguo wa Umma wa Kuchanganya Pochi</string>
-    <string name="wallet_connect_service_relay">Kuchanganya Relay</string>
-    <string name="wallet_connect_service_secret">Siri ya Kuchanganya Pochi</string>
-    <string name="wallet_connect_service_show_secret">Onyesha ufunguo wa siri</string>
-    <string name="wallet_connect_service_secret_placeholder">nsec / ufunguo wa siri wa hex</string>
     <string name="pledge_amount_in_sats">Kiasi cha Ahadi katika Sats</string>
-    <string name="post_poll">Chapisha Kura</string>
-    <string name="poll_heading_required">Sehemu zinazohitajika:</string>
-    <string name="poll_zap_recipients">Wapokeaji wa Zaps</string>
-    <string name="poll_primary_description">Maelezo ya msingi ya kura…</string>
     <string name="poll_option_index">Chaguo %s</string>
     <string name="poll_option_description">Maelezo ya chaguo cha kura</string>
-    <string name="poll_heading_optional">Sehemu za hiari:</string>
     <string name="poll_zap_value_min">Kima cha Chini cha Zaps</string>
     <string name="poll_zap_value_max">Kima cha Juu cha Zaps</string>
     <string name="poll_consensus_threshold">Uamuzi</string>
-    <string name="poll_closing_time">Funga baada ya</string>
-    <string name="poll_closing_time_days">siku</string>
-    <string name="poll_zap_amount">Kiasi cha Zaps</string>
     <string name="one_vote_per_user_on_atomic_votes">Kura moja tu kwa mtumiaji inaruhusiwa kwenye aina hii ya kura</string>
     <string name="looking_for_event">"Inatafuta Tukio %1$s"</string>
     <string name="custom_zaps_add_a_message">Ongeza ujumbe wa umma</string>
@@ -326,29 +266,12 @@
     <string name="zap_type_nonzap">Bila Zap</string>
     <string name="zap_type_nonzap_explainer">Hakuna alama katika Nostr, tu katika Lightning</string>
     <string name="file_server">Seva ya Faili</string>
-    <string name="zap_forward_lnAddress">LnAddress au @Mtumiaji</string>
-    <string name="upload_server_relays_nip95">Relays Zako (NIP-95)</string>
-    <string name="upload_server_relays_nip95_explainer">Faili zinahifadhiwa na relays zako. NIP mpya: hakikisha zinazisaidia</string>
-    <string name="connect_via_tor_short">Usanidi wa Tor/Orbot</string>
-    <string name="connect_via_tor">Unaweza kuunganisha kupitia usanidi wako wa Orbot</string>
-    <string name="do_you_really_want_to_disable_tor_title">Kujitenga na Orbot/Tor yako?</string>
-    <string name="do_you_really_want_to_disable_tor_text">Data yako itahamishwa mara moja kwenye mtandao wa kawaida</string>
     <string name="yes">Ndio</string>
     <string name="no">Hapana</string>
-    <string name="follow_list_selection">Orodha ya Kufuatilia</string>
     <string name="follow_list_kind3follows">Yafuatayo Yote</string>
     <string name="follow_list_global">Kote</string>
-    <string name="connect_through_your_orbot_setup_markdown">## Kuungana kupitia Tor na Orbot
-\n\n1. Sakinisha [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
-\n2. Anza Orbot
-\n3. Katika Orbot, angalia bandari ya Socks. Chaguo-msingi hutumia 9050
-\n4. Ikiwa ni lazima, badilisha bandari katika Orbot
-\n5. Sanidi bandari ya Socks kwenye skrini hii
-\n6. Bonyeza kitufe cha Kuamilisha kutumia Orbot kama mbadala</string>
     <string name="orbot_socks_port">Bandari ya Socks ya Orbot</string>
     <string name="invalid_port_number">Nambari ya bandari sio sahihi</string>
-    <string name="use_orbot">Tumia Orbot</string>
-    <string name="disconnect_from_your_orbot_setup">Jitenge na Tor/Orbot yako</string>
     <string name="app_notification_dms_channel_name">Ujumbe Binafsi</string>
     <string name="app_notification_dms_channel_description">Inakuarifu wakati ujumbe binafsi unapowasili</string>
     <string name="app_notification_zaps_channel_name">Zaps Zilizopokelewa</string>
@@ -357,20 +280,9 @@
     <string name="app_notification_zaps_channel_message_for">kwa %1$s</string>
     <!-- Call notifications and UI -->
     <string name="reply_notify">Taarifa: </string>
-    <string name="channel_list_join_conversation">jiunge kwenye mazungumzo</string>
-    <string name="channel_list_user_or_group_id">Kitambulisho cha Mtumiaji au Kikundi</string>
-    <string name="channel_list_user_or_group_id_demo">npub, nevent au hex</string>
-    <string name="channel_list_create_channel">Unda</string>
-    <string name="channel_list_join_channel">jiunge</string>
     <string name="today">Leo</string>
     <string name="content_warning">Onyo la Yaliyomo</string>
     <string name="content_warning_explanation">Chapisho hili lina yaliyomo nyeti ambayo baadhi ya watu wanaweza kuona kama ya kuchukiza au kusumbua</string>
-    <string name="content_warning_hide_all_sensitive_content">Daima ficha yaliyomo nyeti</string>
-    <string name="content_warning_show_all_sensitive_content">Daima onyesha yaliyomo nyeti</string>
-    <string name="content_warning_see_warnings">Daima onyesha onyo za yaliyomo</string>
-    <string name="recommended_apps">Inapendekeza: </string>
-    <string name="filter_spam_from_strangers">Chuja barua taka kutoka kwa wageni</string>
-    <string name="warn_when_posts_have_reports_from_your_follows">Onya wakati machapisho yana ripoti kutoka kwa wafuatavyo wako</string>
     <string name="new_reaction_symbol">Alama Mpya ya Majibu</string>
     <string name="no_reaction_type_setup_long_press_to_change">Hakuna aina za majibu zilizochaguliwa. Bonyeza kwa muda mrefu kubadilisha</string>
     <string name="zapraiser">Mzushi wa Zaps</string>
@@ -379,32 +291,21 @@
     <string name="sats_to_complete">Mzushi wa Zaps kwa %1$s. Sats %2$s hadi kufikia lengo</string>
     <string name="read_from_relay">Soma kutoka kwa Relay</string>
     <string name="write_to_relay">Andika kwa Relay</string>
-    <string name="an_error_occurred_trying_to_get_relay_information">Kuna kosa lililotokea jaribu kupata habari za Relay kutoka kwa %1$s</string>
     <string name="owner">Mmiliki</string>
     <string name="version">Toleo</string>
     <string name="software">Programu</string>
     <string name="contact">Wasiliana</string>
     <string name="supports">NIPs Zinazoungwa mkono</string>
-    <string name="admission_fees">Ada za Kuingia</string>
     <string name="payments_url">URL ya Malipo</string>
     <string name="limitations">Vikwazo</string>
     <string name="countries">Nchi</string>
     <string name="languages">Lugha</string>
-    <string name="tags">Alama</string>
     <string name="posting_policy">Sera ya Kutuma</string>
-    <string name="message_length">Urefu wa Ujumbe</string>
-    <string name="subscriptions">Michango</string>
-    <string name="filters">Vichujio</string>
-    <string name="subscription_id_length">Urefu wa Kitambulisho cha Michango</string>
     <string name="minimum_prefix">Awamu ya Chini</string>
     <string name="maximum_event_tags">Vichwa vya Tukio vya Juu</string>
-    <string name="content_length">Urefu wa Yaliyomo</string>
     <string name="minimum_pow">PoW ya Chini</string>
-    <string name="auth">Uthibitishaji</string>
-    <string name="payment">Malipo</string>
     <string name="cashu_redeem">Kukomboa</string>
     <string name="no_lightning_address_set">Hakuna Anwani ya Lightning Imewekwa</string>
-    <string name="copied_token_to_clipboard">Kitufe kimekopwa kwenye ubao wa kunakili</string>
     <string name="live_stream_live_tag">Moja kwa Moja</string>
     <string name="live_stream_offline_tag">Nje ya Mtandao</string>
     <string name="live_stream_ended_tag">Imemalizika</string>
@@ -426,7 +327,6 @@
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="connectivity_type_always">Daima</string>
-    <string name="connectivity_type_wifi_only">Wi-Fi tu</string>
     <string name="connectivity_type_never">Kamwe</string>
     <string name="system">Mfumo</string>
     <string name="light">Mwanga</string>
@@ -437,7 +337,6 @@
     <string name="automatically_load_images_gifs">Onesha Picha</string>
     <string name="automatically_play_videos">Cheza Video</string>
     <string name="automatically_show_url_preview">Onesha Hakikisho za URL</string>
-    <string name="load_image">Soma Picha</string>
     <string name="spamming_users">Wahasibu</string>
     <string name="muted_button">Walemavu. Bonyeza kuwasha sauti</string>
     <string name="mute_button">Sauti imewashwa. Bonyeza kulegeza</string>
@@ -445,17 +344,10 @@
     <string name="nip05_verified">Anwani ya Nostr ilithibitishwa</string>
     <string name="nip05_failed">Anwani ya Nostr ilishindwa kuthibitishwa</string>
     <string name="nip05_checking">Kuthibitisha Anwani ya Nostr</string>
-    <string name="select_deselect_all">Chagua/Chagua Vingine Vyote</string>
     <string name="default_relays">Chaguo-msingi</string>
-    <string name="select_a_relay_to_continue">Chagua kiotomatiki kuendelea</string>
-    <string name="zap_forward_title">Tuma Zaps kwa:</string>
-    <string name="zap_forward_explainer">Wateja wanaosaidia watatuma Zaps kwa LNAddress au Wasifu wa Mtumiaji hapa chini badala ya yako</string>
     <string name="geohash_title">Tumia Mahali kama </string>
     <string name="geohash_explainer">Inaongeza Geohash ya eneo lako kwenye chapisho. Umma utajua kuwa uko ndani ya kilometa 5 (maili 3) ya eneo la sasa</string>
     <string name="add_sensitive_content_explainer">Inaongeza onyo la yaliyomo nyeti kabla ya kuonyesha yaliyomo yako. Hii ni nzuri kwa yaliyomo yoyote ya NSFW au yaliyomo ambayo baadhi ya watu wanaweza kuona kama ya kuchukiza au kusumbua</string>
-    <string name="new_feature_nip17_might_not_be_available_title">Kipengee Kipya</string>
-    <string name="new_feature_nip17_might_not_be_available_description">Kuwezesha hali hii kunahitaji Amethyst kutuma ujumbe wa NIP-17 (Ufungaji wa Zawadi, Ujumbe wa Moja kwa Moja Uliosajiliwa, na Ujumbe wa Kikundi). NIP-17 ni mpya na wateja wengi bado hawajaijumuisha. Hakikisha mpokeaji anatumia mteja unaokubaliana.</string>
-    <string name="new_feature_nip17_activate">Tumia</string>
     <string name="messages_create_public_chat">Umma</string>
     <string name="messages_new_message">Binafsi</string>
     <string name="messages_new_message_to">Kwa</string>
@@ -470,26 +362,14 @@
     <string name="automatically_load_images_gifs_description">Lisha picha na GIFs kiotomatiki</string>
     <string name="automatically_play_videos_description">Cheza video na GIFs kiotomatiki</string>
     <string name="automatically_show_url_preview_description">Onyesha hakikisho za URL kiotomatiki</string>
-    <string name="load_image_description">Lini kusoma picha</string>
     <string name="copy_url_to_clipboard">Nakili URL kwa ubao wa kunakili</string>
     <string name="copy_the_note_id_to_the_clipboard">Nakili Kitambulisho cha Andiko kwa ubao wa kunakili</string>
     <string name="created_at">Imetengenezwa saa</string>
-    <string name="rules">Miongozo</string>
     <string name="status_update">Sasisha hali yako</string>
-    <string name="lightning_wallets_not_found">Kosa katika uchambuzi wa ujumbe wa kosa</string>
     <string name="poll_zap_value_min_max_explainer">Kura zina uzito kulingana na kiasi cha zap. Unaweza kuweka kiasi cha chini ili kuepuka wahasibu na kiasi cha juu ili kuepuka wahasibu wakubwa kuchukua kura ya maoni. Tumia kiasi sawa katika sehemu zote mbili ili kuhakikisha kila kura inathaminiwa kwa kiasi sawa. Acha tupu ili kukubali kiasi chochote.</string>
     <string name="error_dialog_zap_error">Haiwezekani kutuma zap</string>
     <string name="error_dialog_talk_to_user">Tuma ujumbe kwa mtumiaji</string>
     <string name="error_dialog_button_ok">Sawa</string>
-    <string name="relay_information_document_error_assemble_url">Imeshindwa kufikia %1$s: %2$s</string>
-    <string name="relay_information_document_error_reach_server">Imeshindwa kufikia %1$s: %2$s</string>
-    <string name="relay_information_document_error_parse_result">Imeshindwa kuchanganua matokeo kutoka %1$s: %2$s</string>
-    <string name="relay_information_document_error_http_status">%1$s imeshindwa kwa kutumia msimbo %2$s</string>
-    <string name="active_for">Inatumika kwa: </string>
-    <string name="active_for_home">Nyumbani</string>
-    <string name="active_for_chats">Soga</string>
-    <string name="active_for_global">Ulimwenguni</string>
-    <string name="active_for_search">Tafuta</string>
     <!-- Onchain zap send dialog -->
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
@@ -502,4 +382,5 @@
     <!-- Emoji packs -->
     <!-- NIP-9B community rules composer-side validation. -->
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <!-- Marmot (MLS) group chats -->
 </resources>

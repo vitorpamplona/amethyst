@@ -92,7 +92,6 @@ class FileHeaderEvent(
 
     companion object {
         const val KIND = 1063
-        const val ALT_DESCRIPTION = "Verifiable file url"
 
         fun build(
             url: String,
@@ -101,7 +100,9 @@ class FileHeaderEvent(
             initializer: TagArrayBuilder<FileHeaderEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, caption ?: "", createdAt) {
             url(url)
-            caption?.ifBlank { null }?.let { alt(caption) } ?: alt(ALT_DESCRIPTION)
+            // NIP-94 accessibility description of the file (kept; the deprecated
+            // generic NIP-31 boilerplate alt is not written).
+            caption?.ifBlank { null }?.let { alt(it) }
             initializer()
         }
 
@@ -121,7 +122,9 @@ class FileHeaderEvent(
             initializer: TagArrayBuilder<FileHeaderEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, caption ?: "", createdAt) {
             url(url)
-            caption?.ifBlank { null }?.let { alt(caption) } ?: alt(ALT_DESCRIPTION)
+            // NIP-94 accessibility description of the file (kept; the deprecated
+            // generic NIP-31 boilerplate alt is not written).
+            caption?.ifBlank { null }?.let { alt(it) }
 
             hash?.let { hash(it) }
             size?.let { fileSize(it) }

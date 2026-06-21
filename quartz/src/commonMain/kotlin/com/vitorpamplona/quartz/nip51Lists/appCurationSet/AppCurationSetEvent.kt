@@ -26,13 +26,10 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.remove
@@ -70,7 +67,6 @@ class AppCurationSetEvent(
 
     companion object {
         const val KIND = 30267
-        const val ALT = "App Curation Set"
 
         fun createAddress(
             pubKey: HexKey,
@@ -109,12 +105,7 @@ class AppCurationSetEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): AppCurationSetEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, content)
         }
@@ -150,7 +141,6 @@ class AppCurationSetEvent(
             createdAt = createdAt,
         ) {
             dTag(dTag)
-            alt(ALT)
             title(title)
             apps(apps)
 

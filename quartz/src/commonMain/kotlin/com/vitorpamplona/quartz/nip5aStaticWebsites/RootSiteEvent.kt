@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -54,7 +53,6 @@ class RootSiteEvent(
 
     companion object {
         const val KIND = 15128
-        const val ALT_DESCRIPTION = "Static Website"
 
         fun build(
             paths: List<PathTag>,
@@ -65,7 +63,6 @@ class RootSiteEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RootSiteEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             sitePaths(paths)
             if (servers.isNotEmpty()) siteServers(servers)
             title?.let { siteTitle(it) }

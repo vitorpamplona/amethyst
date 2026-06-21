@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip14Subject.SubjectTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -65,7 +64,6 @@ class AudioTrackEvent(
 
     companion object {
         const val KIND = 31337
-        const val ALT_DESCRIPTION = "Audio track"
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
@@ -79,7 +77,6 @@ class AudioTrackEvent(
             initializer: TagArrayBuilder<AudioTrackEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             dTag(dTag)
-            alt(ALT_DESCRIPTION)
 
             type(type)
             media(media)

@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -65,7 +64,6 @@ class NutzapEvent(
 
     companion object {
         const val KIND = 9321
-        const val ALT_DESCRIPTION = "Nutzap"
 
         fun build(
             message: String,
@@ -77,7 +75,6 @@ class NutzapEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NutzapEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, message, createdAt) {
-            alt(ALT_DESCRIPTION)
             proofs(proofs)
             mintUrl(mintUrl)
             unit(unit)
@@ -100,7 +97,6 @@ class NutzapEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NutzapEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, message, createdAt) {
-            alt(ALT_DESCRIPTION)
             proofs(proofs)
             mintUrl(mintUrl)
             unit(unit)

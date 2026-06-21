@@ -36,7 +36,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -98,7 +97,6 @@ class LnZapRequestEvent(
 
     companion object {
         const val KIND = 9734
-        const val ALT = "Zap request"
 
         suspend fun create(
             zappedEvent: Event,
@@ -118,7 +116,6 @@ class LnZapRequestEvent(
                     arrayOf("p", toUserPubHex ?: zappedEvent.pubKey),
                     arrayOf("relays") + relays.map { it.url },
                     KindTag.assemble(zappedEvent.kind),
-                    AltTag.assemble(ALT),
                 )
             if (zappedEvent is AddressableEvent) {
                 tags = tags + listOf(ATag.assemble(zappedEvent.address(), null))

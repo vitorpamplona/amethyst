@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -53,7 +52,6 @@ class MintRecommendationEvent(
 
     companion object {
         const val KIND = 38000
-        const val ALT_DESCRIPTION = "Mint Recommendation"
 
         fun build(
             mintIdentifier: String,
@@ -65,7 +63,6 @@ class MintRecommendationEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<MintRecommendationEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, review, createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(mintIdentifier)
             kTag(mintKind)
             mintUrls.forEach { mintUrl(it) }

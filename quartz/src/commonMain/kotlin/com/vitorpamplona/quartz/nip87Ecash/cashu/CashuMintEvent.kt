@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip87Ecash.NetworkType
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -48,7 +47,6 @@ class CashuMintEvent(
 
     companion object {
         const val KIND = 38172
-        const val ALT_DESCRIPTION = "Cashu Mint Announcement"
 
         fun build(
             mintPubKey: String,
@@ -59,7 +57,6 @@ class CashuMintEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CashuMintEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, metadata, createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(mintPubKey)
             mintUrl(mintUrl)
             nuts(nuts)

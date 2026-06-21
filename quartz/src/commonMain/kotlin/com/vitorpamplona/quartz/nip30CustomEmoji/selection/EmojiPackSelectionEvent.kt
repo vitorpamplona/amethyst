@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventUpdate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -55,7 +54,6 @@ class EmojiPackSelectionEvent(
 
     companion object {
         const val KIND = 10030
-        const val ALT_DESCRIPTION = "Emoji selection"
         const val FIXED_D_TAG = ""
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
@@ -87,7 +85,6 @@ class EmojiPackSelectionEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<EmojiPackSelectionEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             packs(listOfEmojiPacks.map { it.toATag() })
             initializer()
         }

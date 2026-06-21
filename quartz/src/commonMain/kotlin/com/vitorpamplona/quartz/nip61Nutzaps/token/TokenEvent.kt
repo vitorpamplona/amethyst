@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -39,14 +38,12 @@ class TokenEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 7375
-        const val ALT_DESCRIPTION = "Token"
 
         fun build(
             encryptedContent: String,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<TokenEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, encryptedContent, createdAt) {
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

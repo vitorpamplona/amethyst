@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -55,7 +54,6 @@ class MarketplaceEvent(
 
     companion object {
         const val KIND = 30019
-        const val ALT_DESCRIPTION = "Marketplace UI"
 
         fun build(
             marketplace: MarketplaceData,
@@ -64,7 +62,6 @@ class MarketplaceEvent(
             initializer: TagArrayBuilder<MarketplaceEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, JsonMapper.toJson(marketplace), createdAt) {
             dTag(dTag)
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

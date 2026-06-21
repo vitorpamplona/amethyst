@@ -25,15 +25,12 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip28PublicChat.list.tags.ChannelTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
@@ -57,7 +54,6 @@ class ChannelListEvent(
 
     companion object {
         const val KIND = 10005
-        const val ALT = "Public Chat List"
         const val FIXED_D_TAG = ""
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
@@ -166,16 +162,7 @@ class ChannelListEvent(
             tags: TagArray,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): ChannelListEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
-
-            return signer.sign(createdAt, KIND, newTags, content)
-        }
+        ): ChannelListEvent = signer.sign(createdAt, KIND, tags, content)
 
         suspend fun create(
             publicChannels: List<ChannelTag> = emptyList(),
@@ -194,7 +181,7 @@ class ChannelListEvent(
             createdAt: Long = TimeUtils.now(),
         ): ChannelListEvent {
             val privateTagArray = privateChannels.map { it.toTagArray() }.toTypedArray()
-            val publicTagArray = publicChannels.map { it.toTagArray() }.toTypedArray() + AltTag.assemble(ALT)
+            val publicTagArray = publicChannels.map { it.toTagArray() }.toTypedArray()
             return signer.signNip51List(createdAt, KIND, publicTagArray, privateTagArray)
         }
 
@@ -209,7 +196,6 @@ class ChannelListEvent(
             description = PrivateTagsInContent.encryptNip44(privateChannels.map { it.toTagArray() }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
-            alt(ALT)
             channels(publicChannels)
 
             initializer()

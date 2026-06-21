@@ -25,14 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
@@ -53,7 +50,6 @@ class HashtagListEvent(
 
     companion object {
         const val KIND = 10015
-        const val ALT = "Hashtag List"
         const val FIXED_D_TAG = ""
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
@@ -165,12 +161,7 @@ class HashtagListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): HashtagListEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, content)
         }
@@ -192,7 +183,7 @@ class HashtagListEvent(
             createdAt: Long = TimeUtils.now(),
         ): HashtagListEvent {
             val privateTagArray = publicHashtags.map { HashtagTag.assemble(it) }.toTypedArray()
-            val publicTagArray = privateHashtags.map { HashtagTag.assemble(it) }.toTypedArray() + AltTag.assemble(ALT)
+            val publicTagArray = privateHashtags.map { HashtagTag.assemble(it) }.toTypedArray()
             return signer.signNip51List(createdAt, KIND, publicTagArray, privateTagArray)
         }
 
@@ -207,7 +198,6 @@ class HashtagListEvent(
             description = PrivateTagsInContent.encryptNip44(privateHashtags.map { HashtagTag.assemble(it) }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
-            alt(ALT)
             hashtags(publicHashtags)
 
             initializer()

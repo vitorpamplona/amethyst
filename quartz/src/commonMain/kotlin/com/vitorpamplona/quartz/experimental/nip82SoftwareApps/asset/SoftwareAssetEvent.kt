@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -81,7 +80,6 @@ class SoftwareAssetEvent(
 
     companion object {
         const val KIND = 3063
-        const val ALT_DESCRIPTION = "Software asset"
 
         fun build(
             appId: String,
@@ -93,7 +91,6 @@ class SoftwareAssetEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<SoftwareAssetEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             appId(appId)
             mimeType(mimeType)
             hash(hash)

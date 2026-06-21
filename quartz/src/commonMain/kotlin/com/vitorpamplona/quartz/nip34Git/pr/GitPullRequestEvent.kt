@@ -36,7 +36,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip14Subject.SubjectTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.pr.tags.BranchNameTag
 import com.vitorpamplona.quartz.nip34Git.pr.tags.CurrentCommitTag
 import com.vitorpamplona.quartz.nip34Git.pr.tags.MergeBaseTag
@@ -103,7 +102,6 @@ class GitPullRequestEvent(
 
     companion object {
         const val KIND = 1618
-        const val ALT = "A Git Pull Request"
 
         /**
          * Build a NIP-34 kind-1618 pull request event.
@@ -135,7 +133,6 @@ class GitPullRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GitPullRequestEvent>.() -> Unit = {},
         ) = eventTemplate<GitPullRequestEvent>(KIND, description, createdAt) {
-            alt(ALT)
             repository(repository)
             euc(earliestUniqueCommit)
             pTag(repository.event.pubKey, repository.authorHomeRelay)

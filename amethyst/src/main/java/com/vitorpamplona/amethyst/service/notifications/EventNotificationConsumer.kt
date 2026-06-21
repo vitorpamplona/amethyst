@@ -69,6 +69,7 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
@@ -755,7 +756,12 @@ class EventNotificationConsumer(
         // p-tag match already enforced by consumeFromCache; no redundant
         // isTaggedUser re-check needed.
 
-        val reactedPostId = event.originalPost().firstOrNull() ?: return
+        // NIP-25: when a reaction carries multiple `e` tags (e.g. both the
+        // thread root and the replied-to note), the LAST one is the event
+        // actually being reacted to. Using the first tag would surface the
+        // root in the tray when the like was really on a reply. This matches
+        // the in-app card, which resolves the target via replyTo.lastOrNull().
+        val reactedPostId = event.originalPost().lastOrNull() ?: return
         val reactedNote = LocalCache.checkGetOrCreateNote(reactedPostId)
 
         // Drop reactions on muted threads, hidden authors, etc.
@@ -766,14 +772,24 @@ class EventNotificationConsumer(
         val userPicture = author.profilePicture()
 
         val reactionContent = event.content
-        val reactionSymbol =
-            when {
-                reactionContent == ReactionEvent.LIKE || reactionContent.isBlank() -> "\uD83E\uDD19"
-                reactionContent == ReactionEvent.DISLIKE -> "\uD83D\uDC4E"
-                else -> reactionContent
-            }
 
-        val title = "$reactionSymbol $user"
+        // NIP-30 custom emoji: content is ":shortcode:" backed by an ["emoji", shortcode, url]
+        // tag. The image can't be rendered as text, so it is surfaced as a badge on the author's
+        // avatar (see sendReactionNotification) and the title keeps just the author's name.
+        val customEmojiUrl = CustomEmoji.createEmojiMap(event.tags)[reactionContent]
+
+        val title =
+            if (customEmojiUrl != null) {
+                user
+            } else {
+                val reactionSymbol =
+                    when {
+                        reactionContent == ReactionEvent.LIKE || reactionContent.isBlank() -> "\uD83E\uDD19"
+                        reactionContent == ReactionEvent.DISLIKE -> "\uD83D\uDC4E"
+                        else -> reactionContent
+                    }
+                "$reactionSymbol $user"
+            }
 
         val reactedContent =
             reactedNote
@@ -813,6 +829,7 @@ class EventNotificationConsumer(
                 userPicture,
                 noteUri,
                 applicationContext,
+                emojiUrl = customEmojiUrl,
             )
     }
 

@@ -46,7 +46,6 @@ import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -129,7 +128,6 @@ class ZapPollEvent(
 
     companion object {
         const val KIND = 6969
-        const val ALT_DESCRIPTION = "Poll event"
 
         fun build(
             post: String,
@@ -139,7 +137,6 @@ class ZapPollEvent(
         ): EventTemplate<ZapPollEvent> {
             val tags = TagArrayBuilder<ZapPollEvent>()
             tags.pollOptions(options)
-            tags.alt(ALT_DESCRIPTION)
             tags.apply(initializer)
             return EventTemplate(createdAt, KIND, tags.build(), post)
         }

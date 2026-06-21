@@ -24,7 +24,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -32,16 +31,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -187,28 +183,37 @@ fun ProfileAppRecommendationsScreen(
     // author dimension is meaningful for app definitions, so the matchAuthor side
     // does the work (Follows lists narrow to apps by those authors); the
     // hashtag/relay/community variants leave matchAuthor == true and act as no-ops.
+    // Applied to discovered apps only — apps I already recommend stay listed so I
+    // can always turn them off.
     val navFilter by accountViewModel.account.liveAppRecommendationsFollowLists
         .collectAsStateWithLifecycle()
+    val authorFilteredApps =
+        remember(apps, navFilter) {
+            apps.filter { navFilter.matchAuthor(it.address.pubKeyHex) }
+        }
 
-    // Local, in-memory text filter over the apps already loaded into the list,
-    // applied on top of the author filter. Matches the app name and description;
-    // the kind-31990-less missing rows have nothing searchable, so they only show
-    // when the query is blank.
+    // Full candidate list in display order; the search box filters this view.
+    val allApps =
+        remember(missingRecommended, authorFilteredApps) {
+            missingRecommended + authorFilteredApps
+        }
+
     var searchQuery by remember { mutableStateOf("") }
-    val filteredApps =
-        remember(apps, searchQuery, navFilter) {
+
+    // Matches on the app's name; rows whose definition hasn't arrived yet have no
+    // name to match, so they only show when the search box is empty.
+    val visibleApps =
+        remember(allApps, searchQuery) {
             val query = searchQuery.trim()
-            apps.filter { note ->
-                if (!navFilter.matchAuthor(note.address.pubKeyHex)) return@filter false
-                if (query.isEmpty()) return@filter true
-                val metadata = (note.event as? AppDefinitionEvent)?.appMetaData()
-                metadata?.anyName()?.contains(query, ignoreCase = true) == true ||
-                    metadata?.about?.contains(query, ignoreCase = true) == true
+            if (query.isEmpty()) {
+                allApps
+            } else {
+                allApps.filter { note ->
+                    val event = note.event as? AppDefinitionEvent
+                    event?.appMetaData()?.anyName()?.contains(query, ignoreCase = true) == true
+                }
             }
         }
-    // Apps I recommend stay visible regardless of the author filter so they can
-    // always be turned off; they only hide while a text search is active.
-    val visibleMissing = if (searchQuery.isBlank()) missingRecommended else emptyList()
 
     Scaffold(
         topBar = {
@@ -223,26 +228,52 @@ fun ProfileAppRecommendationsScreen(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
             )
 
-            if (apps.isNotEmpty() || searchQuery.isNotBlank()) {
-                AppSearchField(
-                    query = searchQuery,
-                    onQueryChange = { searchQuery = it },
+            if (allApps.isNotEmpty()) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 4.dp),
+                    placeholder = {
+                        Text(
+                            text = stringRes(R.string.profile_app_recommendations_search),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    leadingIcon = { SearchIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                ClearTextIcon()
+                            }
+                        }
+                    },
+                    singleLine = true,
                 )
             }
 
             HorizontalDivider()
 
-            if (visibleMissing.isEmpty() && filteredApps.isEmpty()) {
+            if (allApps.isEmpty()) {
+                // Apps exist in cache but the author filter hid them all, vs.
+                // nothing discovered yet.
+                val emptyMessage =
+                    if (apps.isNotEmpty()) {
+                        stringRes(R.string.profile_app_recommendations_filter_empty)
+                    } else {
+                        stringRes(R.string.profile_app_recommendations_empty)
+                    }
                 Text(
-                    text =
-                        when {
-                            searchQuery.isNotBlank() ->
-                                stringRes(R.string.profile_app_recommendations_search_empty, searchQuery)
-                            // There are apps in cache, but the author filter hid them all.
-                            apps.isNotEmpty() ->
-                                stringRes(R.string.profile_app_recommendations_filter_empty)
-                            else -> stringRes(R.string.profile_app_recommendations_empty)
-                        },
+                    text = emptyMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(20.dp),
+                )
+            } else if (visibleApps.isEmpty()) {
+                Text(
+                    text = stringRes(R.string.profile_app_recommendations_search_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(20.dp),
@@ -250,7 +281,7 @@ fun ProfileAppRecommendationsScreen(
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(
-                        items = visibleMissing + filteredApps,
+                        items = visibleApps,
                         key = { it.idHex },
                     ) { appNote ->
                         AppRow(
@@ -296,43 +327,6 @@ private fun AppRecommendationsTopBar(
                 accountViewModel = accountViewModel,
             )
         },
-    )
-}
-
-@Composable
-private fun AppSearchField(
-    query: String,
-    onQueryChange: (String) -> Unit,
-) {
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
-                .defaultMinSize(minHeight = 20.dp),
-        shape = RoundedCornerShape(25.dp),
-        leadingIcon = { SearchIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText) },
-        placeholder = {
-            Text(
-                text = stringRes(R.string.profile_app_recommendations_search_hint),
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
-        },
-        trailingIcon = {
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    ClearTextIcon()
-                }
-            }
-        },
-        singleLine = true,
-        colors =
-            TextFieldDefaults.colors(
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-            ),
     )
 }
 

@@ -39,7 +39,6 @@ class GitStatusOpenEvent(
 ) : GitStatusEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = KIND_OPEN
-        const val ALT = "A Git Open Status"
 
         fun <T : com.vitorpamplona.quartz.nip01Core.core.Event> build(
             content: String,
@@ -49,7 +48,6 @@ class GitStatusOpenEvent(
             initializer: TagArrayBuilder<GitStatusOpenEvent>.() -> Unit = {},
         ) = GitStatusBuilders.buildStatus<GitStatusOpenEvent, T>(
             kind = KIND,
-            altDescriptor = ALT,
             content = content,
             target = target,
             notify = notify,

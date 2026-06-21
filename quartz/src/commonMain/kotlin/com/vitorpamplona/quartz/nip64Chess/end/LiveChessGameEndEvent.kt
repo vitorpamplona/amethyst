@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip64Chess.GameResult
 import com.vitorpamplona.quartz.nip64Chess.GameTermination
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
@@ -66,7 +65,6 @@ class LiveChessGameEndEvent(
 
     companion object {
         const val KIND = 30067
-        const val ALT_DESCRIPTION = "Chess game ended"
 
         fun build(
             gameId: String,
@@ -83,7 +81,6 @@ class LiveChessGameEndEvent(
             termination(termination)
             winnerPubkey?.let { winner(it) }
             opponent(opponent)
-            alt("$ALT_DESCRIPTION: ${result.notation}")
             initializer()
         }
     }

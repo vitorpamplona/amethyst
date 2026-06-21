@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.RoleTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -45,7 +44,6 @@ class SupportedRolesEvent(
 
     companion object {
         const val KIND = 39003
-        const val ALT_DESCRIPTION = "Group supported roles"
 
         fun build(
             groupId: String,
@@ -53,7 +51,6 @@ class SupportedRolesEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<SupportedRolesEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(groupId)
             addAll(RoleTag.assemble(roles))
             initializer()

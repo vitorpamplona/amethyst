@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -52,7 +51,6 @@ class CalendarEvent(
 
     companion object {
         const val KIND = 31924
-        const val ALT = "Calendar"
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
@@ -64,7 +62,6 @@ class CalendarEvent(
         ) = eventTemplate(KIND, content, createdAt) {
             dTag(dTag)
             title(title)
-            alt(ALT)
             initializer()
         }
     }

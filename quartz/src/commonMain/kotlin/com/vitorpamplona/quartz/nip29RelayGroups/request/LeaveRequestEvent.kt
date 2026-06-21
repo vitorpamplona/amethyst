@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.groupId
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -42,7 +41,6 @@ class LeaveRequestEvent(
 
     companion object {
         const val KIND = 9022
-        const val ALT_DESCRIPTION = "Group leave request"
 
         fun build(
             groupId: String,
@@ -50,7 +48,6 @@ class LeaveRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<LeaveRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, reason, createdAt) {
-            alt(ALT_DESCRIPTION)
             groupId(groupId)
             initializer()
         }

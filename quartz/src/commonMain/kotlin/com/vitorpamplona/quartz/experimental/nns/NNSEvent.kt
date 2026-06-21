@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -48,13 +47,11 @@ class NNSEvent(
 
     companion object {
         const val KIND = 30053
-        const val ALT = "DNS records"
 
         fun build(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NNSEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             initializer()
         }
 
@@ -63,7 +60,6 @@ class NNSEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NNSEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             ipv4(ipv4)
             initializer()
         }

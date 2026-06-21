@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
@@ -62,7 +61,6 @@ class PollEvent(
 
     companion object {
         const val KIND = 1068
-        const val ALT_DESCRIPTION = "Poll"
 
         fun build(
             description: String,
@@ -73,7 +71,6 @@ class PollEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<PollEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description, createdAt) {
-            alt(ALT_DESCRIPTION)
             poolType(pollType)
             options(options)
             relays(relays)

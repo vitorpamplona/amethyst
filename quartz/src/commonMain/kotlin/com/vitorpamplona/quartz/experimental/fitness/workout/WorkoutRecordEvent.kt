@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -89,7 +88,6 @@ class WorkoutRecordEvent(
 
     companion object {
         const val KIND = 1301
-        const val ALT_DESCRIPTION = "Workout record"
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
@@ -101,7 +99,6 @@ class WorkoutRecordEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<WorkoutRecordEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, notes, createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(workoutId)
             exercise(exercise)
             hashtag(exercise.hashtag)

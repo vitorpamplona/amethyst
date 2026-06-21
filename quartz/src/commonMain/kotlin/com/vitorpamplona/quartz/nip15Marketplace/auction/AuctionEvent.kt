@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -56,7 +55,6 @@ class AuctionEvent(
 
     companion object {
         const val KIND = 30020
-        const val ALT_DESCRIPTION = "Marketplace auction"
 
         fun build(
             auction: AuctionData,
@@ -65,7 +63,6 @@ class AuctionEvent(
             initializer: TagArrayBuilder<AuctionEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, JsonMapper.toJson(auction), createdAt) {
             dTag(auction.id)
-            alt(ALT_DESCRIPTION)
             categories?.let { hashtags(it) }
             initializer()
         }

@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
 import com.vitorpamplona.quartz.nip90Dvms.tags.firstInputByType
@@ -51,7 +50,6 @@ class NIP90TextToSpeechRequestEvent(
 
     companion object {
         const val KIND = 5250
-        const val ALT = "NIP90 Text-to-Speech request"
 
         fun build(
             text: String,
@@ -59,7 +57,6 @@ class NIP90TextToSpeechRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90TextToSpeechRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             inputText(text)
             language?.let { param("language", it) }
             initializer()
