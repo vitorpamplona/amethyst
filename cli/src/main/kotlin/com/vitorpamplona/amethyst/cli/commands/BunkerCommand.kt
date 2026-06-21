@@ -77,13 +77,22 @@ object BunkerCommand {
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
+    ): Int =
+        if (rest.firstOrNull() == "connect") {
+            connect(dataDir, rest.drop(1).toTypedArray())
+        } else {
+            advertise(dataDir, rest)
+        }
+
+    /** `amy bunker …` — advertise a bunker:// uri and service requests. */
+    private suspend fun advertise(
+        dataDir: DataDir,
+        rest: Array<String>,
     ): Int {
         val args = Args(rest)
         val timeoutMs = args.flag("timeout")?.toLongOrNull()?.let { it * 1000 }
-        // A self-bunker needs the real key to sign; a remote (bunker) account can't host one.
-        if (dataDir.loadIdentityFileOrNull()?.bunker != null) {
-            return Output.error("bad_account", "this account signs through a remote bunker — host a bunker from a local-key account")
-        }
+        val accountError = checkHostable(dataDir)
+        if (accountError != null) return accountError
 
         Context.open(dataDir).use { ctx ->
             if (!ctx.identity.hasPrivateKey) {
@@ -114,33 +123,94 @@ object BunkerCommand {
             )
             System.err.println("[bunker] listening as ${self.take(8)}… on ${relays.size} relay(s); paste the bunker:// uri into `amy login`")
 
-            val events = Channel<NostrConnectEvent>(UNLIMITED)
-            val seen = mutableSetOf<String>()
-            val subId = newSubId()
-            val listener =
-                object : SubscriptionListener {
-                    override fun onEvent(
-                        event: Event,
-                        isLive: Boolean,
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?,
-                    ) {
-                        if (event is NostrConnectEvent && seen.add(event.id)) events.trySend(event)
-                    }
-                }
-
-            val filter = Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(self)))
-            ctx.client.subscribe(subId, relays.associateWith { listOf(filter) }, listener)
-            try {
-                val loop: suspend () -> Unit = {
-                    while (true) handle(ctx, events.receive(), secret, relays)
-                }
-                if (timeoutMs != null) withTimeoutOrNull(timeoutMs) { loop() } else loop()
-            } finally {
-                ctx.client.unsubscribe(subId)
-                events.close()
-            }
+            serve(ctx, relays, secret, timeoutMs)
             return 0
+        }
+    }
+
+    /**
+     * `amy bunker connect <nostrconnect://…>` — the client-initiated
+     * (NostrConnect) flow: parse a client's offer, send the connect ACK that
+     * echoes the offer's secret back (so the client learns our signer pubkey),
+     * then service that client's requests on the offer's relays.
+     */
+    private suspend fun connect(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val timeoutMs = args.flag("timeout")?.toLongOrNull()?.let { it * 1000 }
+        val uri = args.positional(0, "nostrconnect-uri")
+        val offer = NostrConnect.parseOffer(uri) ?: return Output.error("bad_args", "not a valid nostrconnect:// uri")
+        val accountError = checkHostable(dataDir)
+        if (accountError != null) return accountError
+
+        Context.open(dataDir).use { ctx ->
+            if (!ctx.identity.hasPrivateKey) {
+                return Output.error("read_only", "bunker host needs a local private key (this account is read-only)")
+            }
+            ctx.prepare()
+            if (offer.relays.isEmpty()) return Output.error("bad_args", "nostrconnect uri carries no relay")
+
+            // Send the connect ACK (result == secret) to the client.
+            val ack = BunkerResponse(newSubId(), offer.secret, null)
+            val reply = NostrConnectEvent.create(ack, offer.clientPubkey, ctx.signer)
+            ctx.client.publish(reply, offer.relays)
+            Output.emit(
+                mapOf(
+                    "connected_to" to offer.clientPubkey,
+                    "pubkey" to ctx.identity.pubKeyHex,
+                    "relays" to offer.relays.map { it.url },
+                ),
+            )
+            System.err.println("[bunker] acked nostrconnect from ${offer.clientPubkey.take(8)}…; now servicing requests")
+
+            serve(ctx, offer.relays, offer.secret, timeoutMs)
+            return 0
+        }
+    }
+
+    /** A remote-signer (bunker) account cannot itself host a bunker. */
+    private fun checkHostable(dataDir: DataDir): Int? =
+        if (dataDir.loadIdentityFileOrNull()?.bunker != null) {
+            Output.error("bad_account", "this account signs through a remote bunker — host a bunker from a local-key account")
+        } else {
+            null
+        }
+
+    /** Subscribe for kind:24133 requests addressed to us and service them until timeout/interrupt. */
+    private suspend fun serve(
+        ctx: Context,
+        relays: Set<NormalizedRelayUrl>,
+        secret: String,
+        timeoutMs: Long?,
+    ) {
+        val self = ctx.identity.pubKeyHex
+        val events = Channel<NostrConnectEvent>(UNLIMITED)
+        val seen = mutableSetOf<String>()
+        val subId = newSubId()
+        val listener =
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (event is NostrConnectEvent && seen.add(event.id)) events.trySend(event)
+                }
+            }
+
+        val filter = Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(self)))
+        ctx.client.subscribe(subId, relays.associateWith { listOf(filter) }, listener)
+        try {
+            val loop: suspend () -> Unit = {
+                while (true) handle(ctx, events.receive(), secret, relays)
+            }
+            if (timeoutMs != null) withTimeoutOrNull(timeoutMs) { loop() } else loop()
+        } finally {
+            ctx.client.unsubscribe(subId)
+            events.close()
         }
     }
 

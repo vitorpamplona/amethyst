@@ -101,15 +101,28 @@ data class Identity(
                 }
             }
             require(relays.isNotEmpty()) { "bunker uri must carry at least one relay" }
-            val clientPriv = KeyPair().privKey!!.toHexKey()
-            return Identity(
-                privKeyHex = null,
-                pubKeyHex = remotePubkey,
-                nsec = null,
-                npub = remotePubkey.hexToByteArray().toNpub(),
-                bunker = Bunker(remotePubkey, relays, secret, clientPriv),
-            )
+            return bunkerIdentity(remotePubkey, relays, secret, KeyPair().privKey!!.toHexKey())
         }
+
+        /**
+         * Build a remote-signer identity from already-resolved parts (used by
+         * the NostrConnect flow once the signer pubkey is discovered). The
+         * account acts as [signerPubkey]; [clientPrivKeyHex] is the local
+         * transport key.
+         */
+        fun bunkerIdentity(
+            signerPubkey: String,
+            relays: List<String>,
+            connectSecret: String?,
+            clientPrivKeyHex: String,
+        ): Identity =
+            Identity(
+                privKeyHex = null,
+                pubKeyHex = signerPubkey,
+                nsec = null,
+                npub = signerPubkey.hexToByteArray().toNpub(),
+                bunker = Bunker(signerPubkey, relays, connectSecret, clientPrivKeyHex),
+            )
 
         fun fromPrivateKey(priv: ByteArray): Identity {
             val pub = KeyPair(privKey = priv).pubKey

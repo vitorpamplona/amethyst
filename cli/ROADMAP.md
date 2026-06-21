@@ -97,7 +97,7 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `sync` | `amy sync` | ✅ | NIP-77 Negentropy reconcile with the local store (down/up/both). |
 | `git` | `amy git` | ✅ in part | NIP-34 repo announce/list/show/issue. clone/push (packfile transport) out of scope. |
 | `podcast` | `amy podcast` | ✅ | NIP-F4 show metadata (10154) + episode publish (54) + list. |
-| `bunker` | `amy bunker` + `amy login bunker://` | ✅ | NIP-46 remote signer (server) + bunker login (client). Interop-verified vs real `nak` both directions; connect/get_public_key/get_relays/sign/nip04/nip44/ping. `nostrconnect://` + `auth_url` still pending. |
+| `bunker` | `amy bunker[ connect]` + `amy login bunker://`/`--nostrconnect` | ✅ | NIP-46 remote signer + login, both the `bunker://` and `nostrconnect://` flows, each direction. Interop-verified vs real `nak`. `auth_url` challenge still pending. |
 | `serve` / `admin` / `wallet` / `mcp` / `fs` / `spell` | — | 🆕 (tier 2/3) | larger/niche; some pull new deps. |
 
 **Tier 1 status:** shipped — `decode`, `encode`, `verify`, `key`, `event`,

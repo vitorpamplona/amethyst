@@ -49,8 +49,14 @@ object LoginCommand {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        // NIP-46 NostrConnect (client-initiated) login: no key positional —
+        // amy mints a transport key, prints an offer, and waits for a signer.
+        val preArgs = Args(rest)
+        if (preArgs.bool("nostrconnect")) {
+            return NostrConnect.login(dataDir, preArgs)
+        }
         if (rest.isEmpty()) {
-            return Output.error("bad_args", "login <nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05> [--password X]")
+            return Output.error("bad_args", "login <nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05|bunker://|--nostrconnect> [--password X]")
         }
         if (dataDir.identityExists()) {
             return Output.error("exists", "identity already exists at ${dataDir.identityFile}; use a fresh --data-dir or delete it first")

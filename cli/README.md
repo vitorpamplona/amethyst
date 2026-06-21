@@ -223,9 +223,15 @@ Two amy processes can talk: one **hosts** a bunker with its local key; the other
 | Command | What it does |
 |---|---|
 | `amy bunker [--relay URL[,URL…]] [--secret S] [--timeout SECS]` | Run a NIP-46 remote signer for the active local-key account. Prints a `bunker://…` URI, then services sign / nip04 / nip44 / get_public_key / ping requests until interrupted (or `--timeout`). |
-| `amy login bunker://PUBKEY?relay=…&secret=…` | Log in through a bunker. Mints a local transport keypair; the account then acts as PUBKEY and every signing/encryption call is delegated to the remote signer. Percent-encoded relay params are decoded. |
+| `amy login bunker://PUBKEY?relay=…&secret=…` | Log in through a bunker (signer advertises). Mints a local transport keypair; the account then acts as PUBKEY and every signing/encryption call is delegated to the remote signer. Percent-encoded relay params are decoded. |
+| `amy bunker connect nostrconnect://…` | Client-initiated (NostrConnect) flow, signer side: ack a client's offer (echo its secret) and service its requests. |
+| `amy login --nostrconnect [--relay URL[,URL…]] [--name N] [--timeout SECS]` | Client-initiated flow, client side: print a `nostrconnect://` offer, wait for a signer to connect, then persist a bunker account that acts as the signer's key. |
 
-Interop-tested against the real [`nak`](https://github.com/fiatjaf/nak) binary, both directions: `amy login bunker://` ⇄ `nak bunker`, and `nak event --sec bunker://` ⇄ `amy bunker`. Supports `connect` (secret-checked), `get_public_key`, `get_relays`, `sign_event`, `nip04_encrypt/decrypt`, `nip44_encrypt/decrypt`, `ping`. The `nostrconnect://` reverse flow and `auth_url` challenges are not implemented.
+Interop-tested against the real [`nak`](https://github.com/fiatjaf/nak) binary:
+- **bunker:// both directions** — `amy login bunker://` ⇄ `nak bunker`, and `nak event --sec bunker://` ⇄ `amy bunker`.
+- **nostrconnect:// client** — `amy login --nostrconnect` ⇄ `nak bunker connect` (amy signs, event authored by nak's key).
+
+Supports `connect` (secret-checked), `get_public_key`, `get_relays`, `sign_event`, `nip04_encrypt/decrypt`, `nip44_encrypt/decrypt`, `ping`. `auth_url` challenges are not implemented.
 
 Example (two terminals, shared `$HOME`):
 
