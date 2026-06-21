@@ -24,6 +24,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.unit.Velocity
+import kotlin.math.abs
 
 /**
  * Scroll-linked connection that hides/reveals the top and bottom bars together.
@@ -66,7 +67,10 @@ class DisappearingBarNestedScroll(
     ): Offset {
         if (!canScroll()) return Offset.Zero
         val totalY = consumed.y + available.y
-        if (totalY == 0f) return Offset.Zero
+        // Dead-zone: ignore sub-pixel jitter so the bars (and the binary status-bar toggle that
+        // tracks their collapse fraction) don't twitch on scroll noise. Kept symmetric and tiny so
+        // it never makes the reveal lag the content enough to open a visible gap.
+        if (abs(totalY) < MIN_SCROLL_DELTA) return Offset.Zero
 
         // If the list did not consume any scroll and the bars are fully visible, treat
         // this as a non-scrollable list and keep the bars in place. Without this, a tiny
@@ -100,5 +104,14 @@ class DisappearingBarNestedScroll(
         // to the first item. Deliberate reveal is enforced on settle, not by damping the delta here.
         state.topHeightOffset = (state.topHeightOffset + deltaY).coerceIn(-topLimit, 0f)
         state.bottomHeightOffset = (state.bottomHeightOffset + deltaY).coerceIn(-bottomLimit, 0f)
+    }
+
+    companion object {
+        /**
+         * Sub-pixel dead-zone: scroll attempts smaller than this are ignored so jitter doesn't nudge
+         * the bars. Tiny on purpose — large enough to swallow fractional noise, small enough that the
+         * bar offset never measurably lags the content scroll.
+         */
+        const val MIN_SCROLL_DELTA = 0.5f
     }
 }
