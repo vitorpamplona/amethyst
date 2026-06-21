@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip60Cashu
 
+import com.vitorpamplona.amethyst.commons.cashu.CashuWalletReader
 import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.MeltCompleted
 import com.vitorpamplona.amethyst.commons.cashu.ops.NutzapSent
@@ -52,7 +53,6 @@ import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -719,44 +719,13 @@ class CashuWalletState(
             }
         }
 
-        // Apply `del` rollover.
-        val deletedIds = mutableSetOf<HexKey>()
-        all.forEach { evt -> tokenContents[evt.id]?.del?.let(deletedIds::addAll) }
-
-        val unspent =
-            all
-                .filter { it.id !in deletedIds && tokenContents.containsKey(it.id) }
-                .mapNotNull { evt -> tokenContents[evt.id]?.let { TokenEntry(evt, it) } }
-                .sortedByDescending { it.event.createdAt }
-
-        _tokenEntries.value = unspent
+        // Shared del-rollover + sort with the headless reader.
+        _tokenEntries.value = CashuWalletReader.computeUnspent(all, tokenContents)
     }
 
     private fun recomputePending() {
-        val now = TimeUtils.now()
-        // A quote is "pending" if (1) not expired, and (2) no kind:7376 history
-        // event references its id with a "destroyed" marker — completion of the
-        // mint flow deletes the kind:7374, and history records a `destroyed`
-        // reference to the now-fulfilled quote.
-        val destroyedQuoteIds =
-            historyEvents.values
-                .asSequence()
-                .flatMap { it.tags.asSequence() }
-                .filter { it.size >= 4 && it[0] == "e" && it[3] == "destroyed" }
-                .map { it[1] }
-                .toSet()
-
-        _pendingQuotes.value =
-            quoteEvents.values
-                .filter { it.id !in destroyedQuoteIds }
-                .filter { evt ->
-                    val exp =
-                        evt.tags
-                            .firstOrNull { it.size >= 2 && it[0] == "expiration" }
-                            ?.get(1)
-                            ?.toLongOrNull()
-                    exp == null || exp > now
-                }.sortedByDescending { it.createdAt }
+        // Shared destroyed/expired filter with the headless reader.
+        _pendingQuotes.value = CashuWalletReader.computePending(quoteEvents.values, historyEvents.values)
     }
 
     private fun scanCacheForOwnEvents(): List<Event> {
