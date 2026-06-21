@@ -21,28 +21,28 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Output
 
 object GroupCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "group <create|list|show|…>")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "create" -> GroupCreateCommand.run(dataDir, rest)
-            "list" -> GroupReadCommands.list(dataDir)
-            "show" -> GroupReadCommands.show(dataDir, rest)
-            "members" -> GroupReadCommands.members(dataDir, rest)
-            "admins" -> GroupReadCommands.admins(dataDir, rest)
-            "add" -> GroupAddMemberCommand.run(dataDir, rest)
-            "rename" -> GroupMetadataCommands.rename(dataDir, rest)
-            "promote" -> GroupMetadataCommands.promote(dataDir, rest)
-            "demote" -> GroupMetadataCommands.demote(dataDir, rest)
-            "remove" -> GroupMembershipCommands.remove(dataDir, rest)
-            "leave" -> GroupMembershipCommands.leave(dataDir, rest)
-            else -> Output.error("bad_args", "group ${tail[0]}")
-        }
-    }
+    ): Int =
+        route(
+            "group",
+            tail,
+            "group <create|list|show|…>",
+            mapOf(
+                "create" to { rest -> GroupCreateCommand.run(dataDir, rest) },
+                "list" to { _ -> GroupReadCommands.list(dataDir) },
+                "show" to { rest -> GroupReadCommands.show(dataDir, rest) },
+                "members" to { rest -> GroupReadCommands.members(dataDir, rest) },
+                "admins" to { rest -> GroupReadCommands.admins(dataDir, rest) },
+                "add" to { rest -> GroupAddMemberCommand.run(dataDir, rest) },
+                "rename" to { rest -> GroupMetadataCommands.rename(dataDir, rest) },
+                "promote" to { rest -> GroupMetadataCommands.promote(dataDir, rest) },
+                "demote" to { rest -> GroupMetadataCommands.demote(dataDir, rest) },
+                "remove" to { rest -> GroupMembershipCommands.remove(dataDir, rest) },
+                "leave" to { rest -> GroupMembershipCommands.leave(dataDir, rest) },
+            ),
+        )
 }

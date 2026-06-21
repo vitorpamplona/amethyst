@@ -129,10 +129,12 @@ via `Output.emit`. The template is in `references/command-template.md`;
 copy it rather than re-deriving it.
 
 Wire-up checklist:
-1. New file in `cli/commands/` with the `object` pattern.
-2. Add a branch in `Commands.kt`.
-3. Add a branch in `Main.kt`'s `dispatch` (or under `marmotDispatch`
-   / a new group dispatcher).
+1. New file in `cli/commands/` with the `object` pattern. Sub-verb
+   `dispatch` functions use the shared `route(...)` helper in
+   `Router.kt` rather than a hand-rolled `when (tail[0])`.
+2. Add a branch in `Main.kt`'s `dispatch` (top-level verbs call the
+   command object directly, e.g. `"relay" -> RelayCommands.dispatch(…)`;
+   `marmot` sub-verbs go through `marmotDispatch`'s `route` map).
 4. Extend `printUsage()` in `Main.kt`.
 5. Add the row to `cli/README.md`'s command table.
 6. Update `cli/ROADMAP.md` — move the row from 🆕 / 📦 to ✅.
@@ -173,6 +175,7 @@ cli/
     ├── secrets/           # SecretStore backends (keychain / ncryptsec / plaintext)
     └── commands/          # one file (or group) per top-level verb
         ├── UseCommand.kt          # `amy use NAME`
+        ├── Router.kt              # `route(...)` shared sub-verb dispatcher
         ├── InitCommands.kt        # init, whoami
         ├── CreateCommand.kt + LoginCommand.kt
         ├── RelayCommands.kt

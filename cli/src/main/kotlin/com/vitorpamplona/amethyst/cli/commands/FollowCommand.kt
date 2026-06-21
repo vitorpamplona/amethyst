@@ -68,8 +68,7 @@ object FollowCommand {
         val args = Args(rest.drop(1).toTypedArray())
         val timeoutSecs = args.longFlag("timeout", 8L)
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val target = ctx.requireUserHex(userArg)
             val self = ctx.identity.pubKeyHex
@@ -148,8 +147,6 @@ object FollowCommand {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 

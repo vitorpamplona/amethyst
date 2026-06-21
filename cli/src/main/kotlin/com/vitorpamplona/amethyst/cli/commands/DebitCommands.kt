@@ -47,16 +47,17 @@ object DebitCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "debit <info|pay|budget>")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "info" -> info(rest)
-            "pay" -> pay(dataDir, rest)
-            "budget" -> budget(dataDir, rest)
-            else -> Output.error("bad_args", "debit ${tail[0]} (expected info|pay|budget)")
-        }
-    }
+    ): Int =
+        route(
+            "debit",
+            tail,
+            "debit <info|pay|budget>",
+            mapOf(
+                "info" to { rest -> info(rest) },
+                "pay" to { rest -> pay(dataDir, rest) },
+                "budget" to { rest -> budget(dataDir, rest) },
+            ),
+        )
 
     /** Local decode of an `ndebit` pointer — no network, no account needed. */
     private fun info(rest: Array<String>): Int {
@@ -119,8 +120,7 @@ object DebitCommands {
                 ?: return Output.error("bad_args", "not a valid ndebit pointer")
         if (debit.relays.isEmpty()) return Output.error("bad_pointer", "ndebit carries no relay to reach")
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             return when (val outcome = settle(ctx, debit, timeoutMs, buildRequest)) {
                 Settle.Timeout -> {
@@ -130,8 +130,6 @@ object DebitCommands {
                 Settle.BadReply -> Output.error("bad_response", "service reply was not a kind-21002 debit event")
                 is Settle.Replied -> emitDebit(outcome, debit.pubKey)
             }
-        } finally {
-            ctx.close()
         }
     }
 

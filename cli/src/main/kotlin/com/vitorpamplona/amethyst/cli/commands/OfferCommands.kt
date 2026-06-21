@@ -57,17 +57,18 @@ object OfferCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "offer <info|discover|request|pay>")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "info" -> info(rest)
-            "discover" -> discover(dataDir, rest)
-            "request" -> request(dataDir, rest)
-            "pay" -> pay(dataDir, rest)
-            else -> Output.error("bad_args", "offer ${tail[0]} (expected info|discover|request|pay)")
-        }
-    }
+    ): Int =
+        route(
+            "offer",
+            tail,
+            "offer <info|discover|request|pay>",
+            mapOf(
+                "info" to { rest -> info(rest) },
+                "discover" to { rest -> discover(dataDir, rest) },
+                "request" to { rest -> request(dataDir, rest) },
+                "pay" to { rest -> pay(dataDir, rest) },
+            ),
+        )
 
     /**
      * Resolve a profile's advertised offer from its NIP-05 `.well-known/nostr.json` `clink_offer`
@@ -83,8 +84,7 @@ object OfferCommands {
             Nip05Id.parse(args.positional(0, "nip05").trim())
                 ?: return Output.error("bad_args", "not a valid NIP-05 address (e.g. bob@example.com)")
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val noffer = ctx.nip05Client.loadClinkOffer(id)
             if (noffer == null) {
@@ -105,8 +105,6 @@ object OfferCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -152,8 +150,7 @@ object OfferCommands {
             ClinkPointerParser.parse(args.positional(0, "noffer").trim()) as? NOffer
                 ?: return Output.error("bad_args", ERR_NOT_A_NOFFER)
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             var hops = 0
             while (hops <= MAX_FOLLOW_HOPS) {
@@ -200,8 +197,6 @@ object OfferCommands {
                 )
             }
             return Output.error("offer_error", "too many redirects following moved offers (>$MAX_FOLLOW_HOPS)")
-        } finally {
-            ctx.close()
         }
     }
 
@@ -232,8 +227,7 @@ object OfferCommands {
         if (offerRelays.isEmpty()) return Output.error("bad_pointer", "noffer carries no relay to reach")
         if (debit.relays.isEmpty()) return Output.error("bad_pointer", "ndebit carries no relay to reach")
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
 
             // 1. fetch a fresh BOLT-11 from the offer service.
@@ -287,8 +281,6 @@ object OfferCommands {
                         )
                     }
             }
-        } finally {
-            ctx.close()
         }
     }
 

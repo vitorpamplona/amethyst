@@ -29,8 +29,7 @@ import com.vitorpamplona.amethyst.cli.Output
  */
 object GroupReadCommands {
     suspend fun list(dataDir: DataDir): Int {
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             ctx.syncIncoming()
             val ids = ctx.marmot.activeGroupIds()
@@ -46,8 +45,6 @@ object GroupReadCommands {
                 }
             Output.emit(mapOf("groups" to items))
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -56,8 +53,7 @@ object GroupReadCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Output.error("bad_args", "group show <group_id>")
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
@@ -81,8 +77,6 @@ object GroupReadCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -91,8 +85,7 @@ object GroupReadCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Output.error("bad_args", "group members <group_id>")
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
@@ -103,8 +96,6 @@ object GroupReadCommands {
                 }
             Output.emit(mapOf("group_id" to gid, "members" to members))
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -113,8 +104,7 @@ object GroupReadCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Output.error("bad_args", "group admins <group_id>")
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
@@ -122,8 +112,6 @@ object GroupReadCommands {
             val m = ctx.marmot.groupMetadata(gid)
             Output.emit(mapOf("group_id" to gid, "admins" to (m?.adminPubkeys ?: emptyList())))
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }
