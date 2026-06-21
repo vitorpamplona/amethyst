@@ -50,6 +50,19 @@ sealed interface NappletRequest {
         override val capability get() = NappletCapability.IDENTITY
     }
 
+    /**
+     * Read a non-key identity datum (`identity.getProfile`/`getRelays`/`getFollows`/`getMutes`/…).
+     * [method] is the bare method name and [argument] carries an optional parameter (e.g. the list
+     * type for `getList`). The shell answers from the active account; a method this shell does not
+     * implement resolves to Unsupported. No private key material is ever returned.
+     */
+    data class IdentityRead(
+        val method: String,
+        val argument: String? = null,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.IDENTITY
+    }
+
     /** `shell.supports(domain, protocol?)` — capability negotiation; always answerable, no consent. */
     data class ShellSupports(
         val domain: String,

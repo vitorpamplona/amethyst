@@ -65,6 +65,14 @@ sealed interface NappletResponse {
         val values: List<String>,
     ) : NappletResponse
 
+    /**
+     * A read result already serialized as a JSON value string (object/array/string, or the literal
+     * `"null"`). Used by `identity.*` reads, whose shapes vary; the host builds the JSON.
+     */
+    data class Json(
+        val raw: String,
+    ) : NappletResponse
+
     /** Result of a `resource.bytes` fetch. */
     data class Bytes(
         val bytes: ByteArray,

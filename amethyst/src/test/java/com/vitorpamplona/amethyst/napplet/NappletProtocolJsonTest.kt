@@ -108,6 +108,25 @@ class NappletProtocolJsonTest {
     }
 
     @Test
+    fun decodesIdentityReads() {
+        assertEquals(NappletRequest.IdentityRead("getProfile"), NappletProtocolJson.decodeRequest("""{"type":"identity.getProfile"}"""))
+        assertEquals(NappletRequest.IdentityRead("getFollows"), NappletProtocolJson.decodeRequest("""{"type":"identity.getFollows"}"""))
+        assertEquals(NappletRequest.IdentityRead("getList", "bookmarks"), NappletProtocolJson.decodeRequest("""{"type":"identity.getList","listType":"bookmarks"}"""))
+        // getPublicKey keeps its dedicated request type, not the generic read.
+        assertEquals(NappletRequest.GetPublicKey, NappletProtocolJson.decodeRequest("""{"type":"identity.getPublicKey"}"""))
+    }
+
+    @Test
+    fun encodesIdentityJsonResultVerbatim() {
+        val arr = json.parseToJsonElement(NappletProtocolJson.encodeResponse("identity.getFollows", NappletResponse.Json("""["aa","bb"]"""))).jsonObject
+        assertEquals(2, arr["result"]?.jsonArray?.size)
+
+        // A malformed payload degrades to a JSON null rather than throwing.
+        val bad = json.parseToJsonElement(NappletProtocolJson.encodeResponse("identity.getProfile", NappletResponse.Json("not json"))).jsonObject
+        assertEquals(JsonNull, bad["result"])
+    }
+
+    @Test
     fun decodesStorageOps() {
         assertEquals(NappletRequest.StorageGet("k"), NappletProtocolJson.decodeRequest("""{"type":"storage.getItem","key":"k"}"""))
         assertEquals(NappletRequest.StorageSet("k", "v"), NappletProtocolJson.decodeRequest("""{"type":"storage.setItem","key":"k","value":"v"}"""))

@@ -66,6 +66,7 @@ class NappletBroker(
     private val wallet: NappletWalletGateway? = null,
     private val resource: NappletResourceGateway? = null,
     private val upload: NappletUploadGateway? = null,
+    private val identityReads: NappletIdentityGateway? = null,
 ) {
     /**
      * Authorizes and runs [request] on behalf of [identity]. [declared] is the capability set the
@@ -142,6 +143,12 @@ class NappletBroker(
             is NappletRequest.ShellSupports -> NappletResponse.Supported(true)
 
             is NappletRequest.GetPublicKey -> NappletResponse.PublicKey(signer.pubKey)
+
+            is NappletRequest.IdentityRead -> {
+                val gateway = identityReads ?: return NappletResponse.Unsupported("identity.${request.method}")
+                val raw = gateway.read(request.method, request.argument) ?: return NappletResponse.Unsupported("identity.${request.method}")
+                NappletResponse.Json(raw)
+            }
 
             // The napplet supplies an unsigned template; the shell signs and publishes it.
             // created_at comes from the host, never the applet, so it cannot backdate.

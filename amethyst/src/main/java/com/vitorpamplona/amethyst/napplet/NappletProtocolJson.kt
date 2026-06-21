@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -82,7 +83,16 @@ object NappletProtocolJson {
             "value.payInvoice" -> NappletRequest.PayInvoice(o.req("invoice"))
             "resource.bytes" -> NappletRequest.ResourceBytes(o.req("url"))
             "upload" -> NappletRequest.UploadBlob(Base64.getDecoder().decode(o.req("bytes")), o.req("contentType"))
-            else -> null
+            else -> {
+                // Any other identity.* read (getProfile/getRelays/getFollows/getList/...) routes through
+                // a generic IdentityRead; the broker/gateway decides which are implemented.
+                val type = o.str("type")
+                if (type != null && type.startsWith("identity.")) {
+                    NappletRequest.IdentityRead(type.removePrefix("identity."), o.str("listType") ?: o.str("argument"))
+                } else {
+                    null
+                }
+            }
         }
     }
 
@@ -120,6 +130,11 @@ object NappletProtocolJson {
                 is NappletResponse.Strings -> {
                     put("ok", true)
                     put("values", buildJsonArray { response.values.forEach { add(it) } })
+                }
+                is NappletResponse.Json -> {
+                    put("ok", true)
+                    // The host already serialized the value; embed it (fall back to null if malformed).
+                    put("result", runCatching { json.parseToJsonElement(response.raw) }.getOrDefault(JsonNull))
                 }
                 is NappletResponse.Bytes -> {
                     put("ok", true)

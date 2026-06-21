@@ -390,6 +390,36 @@ class NappletBrokerTest {
         }
 
     @Test
+    fun identityReadReturnsGatewayJsonOrUnsupported() =
+        runTest {
+            val gateway =
+                NappletIdentityGateway { method, _ ->
+                    if (method == "getFollows") """["aa","bb"]""" else null
+                }
+            val broker =
+                NappletBroker(
+                    signer,
+                    NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    ScriptedPrompt(GrantState.ALLOW_ONCE),
+                    identityReads = gateway,
+                )
+
+            val implemented = broker.handle(applet, NappletRequest.IdentityRead("getFollows"), allDeclared)
+            assertIs<NappletResponse.Json>(implemented)
+            assertEquals("""["aa","bb"]""", implemented.raw)
+
+            // A method the gateway doesn't implement degrades gracefully to Unsupported.
+            assertIs<NappletResponse.Unsupported>(broker.handle(applet, NappletRequest.IdentityRead("getZaps"), allDeclared))
+        }
+
+    @Test
+    fun identityReadIsUnsupportedWithoutAGateway() =
+        runTest {
+            val response = broker(ScriptedPrompt(GrantState.ALLOW_ONCE)).handle(applet, NappletRequest.IdentityRead("getProfile"), allDeclared)
+            assertIs<NappletResponse.Unsupported>(response)
+        }
+
+    @Test
     fun resourceAndUploadAreUnsupportedWithoutGateways() =
         runTest {
             val broker = broker(ScriptedPrompt(GrantState.ALLOW_ONCE))

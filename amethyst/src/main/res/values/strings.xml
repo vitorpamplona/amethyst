@@ -770,6 +770,7 @@
     <string name="napplet_consent_deny_always">Never allow</string>
     <string name="napplet_consent_not_now">Not now</string>
     <string name="napplet_consent_get_pubkey">This napplet wants to read your public key.</string>
+    <string name="napplet_consent_identity_read">This napplet wants to read your profile and account data.</string>
     <string name="napplet_consent_publish">This napplet wants to sign and publish a kind %1$d event as you.</string>
     <string name="napplet_consent_publish_preview">This napplet wants to sign and publish a kind %1$d event as you:</string>
     <string name="napplet_consent_publish_encrypted">This napplet wants to send an encrypted event as you.</string>

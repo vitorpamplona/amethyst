@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
+import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletResource
 import com.vitorpamplona.amethyst.commons.napplet.NappletResourceGateway
@@ -55,6 +56,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +65,11 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.InetSocketAddress
@@ -173,10 +180,58 @@ class NappletBrokerService : Service() {
 
         val resource = NappletResourceGateway { url -> fetchResource(account, url) }
 
+        val identityReads = NappletIdentityGateway { method, argument -> readIdentity(account, method, argument) }
+
         // upload is intentionally not provided yet: a correct Blossom upload needs a content Uri,
         // a signed authorization event, and server selection — wired end-to-end (protocol/shim) but
         // the Android gateway is a follow-up that needs on-device verification.
-        return NappletBroker(account.signer, ledger, consent, relay, storage, wallet, resource, upload = null)
+        return NappletBroker(account.signer, ledger, consent, relay, storage, wallet, resource, upload = null, identityReads = identityReads)
+    }
+
+    /**
+     * Reads a non-key identity datum from the active account as a JSON value string. Returns the
+     * literal `"null"` for an absent value, or `null` for a method this shell does not implement
+     * (the broker then answers `Unsupported`). All reads are public data — never key material.
+     */
+    private fun readIdentity(
+        account: Account,
+        method: String,
+        argument: String?,
+    ): String? =
+        when (method) {
+            // The kind-0 content is itself the profile JSON object.
+            "getProfile" -> account.userMetadata.getUserMetadataEvent()?.content ?: "null"
+            "getFollows" -> jsonStringArray(account.kind3FollowList.flow.value.authors)
+            "getMutes" ->
+                jsonStringArray(
+                    account.muteList.flow.value
+                        .filterIsInstance<UserTag>()
+                        .map { it.pubKey },
+                )
+            "getBlocked" ->
+                jsonStringArray(
+                    account.blockPeopleList.flow.value
+                        .filterIsInstance<UserTag>()
+                        .map { it.pubKey },
+                )
+            "getRelays" -> relaysJson(account)
+            // getList/getZaps/getBadges and any other read are not implemented yet → Unsupported.
+            else -> null
+        }
+
+    private fun jsonStringArray(items: Iterable<String>): String = buildJsonArray { items.forEach { add(it) } }.toString()
+
+    /** Builds `{ "<relay url>": { "read": bool, "write": bool }, ... }` from the user's NIP-65 list. */
+    private fun relaysJson(account: Account): String {
+        val relays = account.nip65RelayList.getNIP65RelayList()?.relays() ?: return "null"
+        return buildJsonObject {
+            relays.forEach { info ->
+                putJsonObject(info.relayUrl.url) {
+                    put("read", info.type.isRead())
+                    put("write", info.type.isWrite())
+                }
+            }
+        }.toString()
     }
 
     /** Fetches an https/data resource on the applet's behalf (it has no direct network). */
@@ -300,6 +355,7 @@ class NappletBrokerService : Service() {
     private fun summaryFor(request: NappletRequest): String =
         when (request) {
             is NappletRequest.GetPublicKey -> getString(R.string.napplet_consent_get_pubkey)
+            is NappletRequest.IdentityRead -> getString(R.string.napplet_consent_identity_read)
             is NappletRequest.Publish -> {
                 val preview = request.content.take(160).trim()
                 if (preview.isEmpty()) {

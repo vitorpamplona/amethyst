@@ -453,7 +453,15 @@ class NappletHostActivity : ComponentActivity() {
     },
     identity: {
       getPublicKey: function(){ return field(call('identity.getPublicKey'), 'pubkey'); },
-      // Live identity-change events and the rich read API (getProfile/getRelays/...) are a follow-up.
+      getProfile: function(){ return field(call('identity.getProfile'), 'result'); },
+      getRelays: function(){ return field(call('identity.getRelays'), 'result'); },
+      getFollows: function(){ return field(call('identity.getFollows'), 'result'); },
+      getMutes: function(){ return field(call('identity.getMutes'), 'result'); },
+      getBlocked: function(){ return field(call('identity.getBlocked'), 'result'); },
+      getList: function(listType){ return field(call('identity.getList', { listType: listType }), 'result'); },
+      getZaps: function(){ return field(call('identity.getZaps'), 'result'); },
+      getBadges: function(){ return field(call('identity.getBadges'), 'result'); },
+      // Live identity-change push is a follow-up; onChanged is a no-op subscription for now.
       onChanged: function(handler){ return { close: function(){} }; }
     },
     // keys = keyboard / command action binding (NOT signing). Signing is shell-only via relay.publish.

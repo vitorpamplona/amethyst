@@ -55,6 +55,20 @@ interface NappletRelayGateway {
 }
 
 /**
+ * Bridges the broker to read-only account data for the [NappletCapability.IDENTITY] capability
+ * beyond the public key — profile (`getProfile`), relays (`getRelays`), follows (`getFollows`),
+ * mutes (`getMutes`), blocks (`getBlocked`). The host returns the datum as a JSON value string
+ * (the literal `"null"` for an absent value), or `null` if this shell does not implement [method]
+ * (the broker then answers `Unsupported`). A `null` gateway makes every such read `Unsupported`.
+ */
+fun interface NappletIdentityGateway {
+    suspend fun read(
+        method: String,
+        argument: String?,
+    ): String?
+}
+
+/**
  * A per-applet sandboxed key-value store for the [NappletCapability.STORAGE] capability. The
  * broker namespaces every call by the applet's coordinate, so one napplet can never read or
  * overwrite another's data — and none of it is the app's own storage.

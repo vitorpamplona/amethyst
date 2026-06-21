@@ -182,9 +182,12 @@ Still open (documented, not blocking basic napplets):
   `outbox`, `ifc`, `cvm` remain unknown→denied (no method spec available to build to).
 - **Method-name fidelity** — ✅ resolved. All standard method names/shapes are now confirmed
   against `@napplet/shim@0.16.0` (see the later update above), not guessed.
-- **Identity read API** — `getProfile/getRelays/getFollows/...` and `identity.onChanged` are not
-  yet implemented (need account-data wiring + on-device verification of the return shapes); the
-  shim exposes `getPublicKey` + an `onChanged` no-op for now.
+- **Identity read API** — ✅ partly landed. `identity.getProfile` (kind-0 content), `getRelays`
+  (NIP-65 read/write map), `getFollows` (kind-3 authors), `getMutes` and `getBlocked` (NIP-51
+  decrypted user tags) now read from the active `Account` and return JSON, gated by the IDENTITY
+  consent (and deferred to remote/external signers). `getList`/`getZaps`/`getBadges` route through
+  but degrade to `Unsupported` for now; `identity.onChanged` is still a client-side no-op (needs
+  the live push channel). Return shapes still want on-device verification against a real napplet.
 - **On-device verification** of the whole round-trip with a real playground napplet.
 
 Revised ecosystem-compatibility estimate: **~80%** — real request/response napplets using
