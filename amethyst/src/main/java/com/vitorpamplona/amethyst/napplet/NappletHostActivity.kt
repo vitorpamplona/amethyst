@@ -242,7 +242,11 @@ class NappletHostActivity : ComponentActivity() {
             if (!url.startsWith(ORIGIN)) return notFound()
 
             if (url == SHELL_URL) return serveShell()
-            if (url == APP_BASE || url.startsWith(APP_BASE)) return serveAppResource(url)
+            if (url == APP_BASE || url.startsWith(APP_BASE)) {
+                // A document navigation accepts text/html; a sub-resource (js/css/img) does not.
+                val acceptsHtml = request.requestHeaders["Accept"]?.contains("text/html", ignoreCase = true) == true
+                return serveAppResource(url, acceptsHtml)
+            }
             return notFound()
         }
 
@@ -250,8 +254,19 @@ class NappletHostActivity : ComponentActivity() {
             view: WebView,
             request: WebResourceRequest,
         ): Boolean {
-            // Block any navigation away from our internal origin (e.g. applet link clicks).
-            return request.url.host != HOST
+            val uri = request.url
+            // Internal origin: let the WebView load it (it goes through shouldInterceptRequest).
+            if (uri.host == HOST) return false
+            // An external link the user actually tapped is handed to the system browser. A user
+            // gesture is required so a hostile site can't auto-redirect to spam-open the browser,
+            // and only http(s) is honored so it can't fire arbitrary intent schemes.
+            if (request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
+                runCatching {
+                    startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+            }
+            // Never navigate the sandbox WebView away from our internal origin.
+            return true
         }
     }
 
@@ -267,7 +282,10 @@ class NappletHostActivity : ComponentActivity() {
         )
     }
 
-    private fun serveAppResource(url: String): WebResourceResponse {
+    private fun serveAppResource(
+        url: String,
+        acceptsHtml: Boolean,
+    ): WebResourceResponse {
         val requestPath =
             url
                 .removePrefix(APP_BASE)
@@ -275,7 +293,16 @@ class NappletHostActivity : ComponentActivity() {
                 .substringBefore('#')
                 .let { if (it.isEmpty()) "/" else "/$it" }
 
-        val resolution = runBlocking { StaticSiteResolver.resolve(requestPath, paths, servers, fetch) }
+        var resolution = runBlocking { StaticSiteResolver.resolve(requestPath, paths, servers, fetch) }
+
+        // SPA fallback: a document navigation (Accept: text/html) to a route that isn't in the
+        // manifest falls back to the verified index.html, so client-side-routed sites survive deep
+        // links and refreshes. Missing sub-resources (js/css/images) still 404 — they don't accept
+        // html — so a broken asset never silently returns the page.
+        if (resolution !is StaticSiteResolution.Resolved && acceptsHtml && requestPath != "/") {
+            resolution = runBlocking { StaticSiteResolver.resolve("/", paths, servers, fetch) }
+        }
+
         if (resolution !is StaticSiteResolution.Resolved) return notFound()
 
         val (mime, charset) = splitContentType(resolution.contentType)
