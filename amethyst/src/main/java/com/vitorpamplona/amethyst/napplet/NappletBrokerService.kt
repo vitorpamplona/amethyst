@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -86,6 +87,7 @@ import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.URLDecoder
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -110,9 +112,24 @@ class NappletBrokerService : Service() {
 
     private val incoming by lazy { Messenger(Handler(Looper.getMainLooper(), ::handleMessage)) }
 
-    // Live relay subscriptions: applet subId -> client subId, so relay.close (and teardown) can stop them.
-    private val liveSubs = ConcurrentHashMap<String, String>()
+    // The broker for the current account, rebuilt only on account switch (see broker()).
+    private var cachedBroker: Pair<Account, NappletBroker>? = null
+
+    // Reused blob HTTP client, keyed by the active Tor port (see blobHttpClient()).
+    private var cachedHttp: Pair<Int, OkHttpClient>? = null
+
+    // Live relay subscriptions, keyed by the applet's subId. Holds the exact client that opened each
+    // one so teardown unsubscribes from the right account even after a switch, and an eose latch so
+    // a multi-relay subscription emits a single relay.eose.
+    private val liveSubs = ConcurrentHashMap<String, LiveSub>()
     private val liveSeq = AtomicInteger(0)
+
+    private class LiveSub(
+        val clientSubId: String,
+        val client: INostrClient,
+    ) {
+        val eoseSent = AtomicBoolean(false)
+    }
 
     override fun onBind(intent: Intent?): IBinder? {
         // Defense in depth on top of exported=false: only our own UID may bind.
@@ -121,11 +138,7 @@ class NappletBrokerService : Service() {
     }
 
     override fun onDestroy() {
-        val client =
-            Amethyst.instance.sessionManager
-                .loggedInAccount()
-                ?.client
-        liveSubs.values.forEach { runCatching { client?.unsubscribe(it) } }
+        liveSubs.values.forEach { sub -> runCatching { sub.client.unsubscribe(sub.clientSubId) } }
         liveSubs.clear()
         scope.cancel()
         super.onDestroy()
@@ -197,14 +210,23 @@ class NappletBrokerService : Service() {
             runCatching { NappletProtocolJson.decodeRequest(payload) }.getOrNull()
                 ?: return NappletResponse.Failed("Malformed or unsupported request.")
 
-        val broker = buildBroker() ?: return NappletResponse.Failed("No account is signed in.")
+        val broker = broker() ?: return NappletResponse.Failed("No account is signed in.")
         return broker.handle(identity, request, declared)
     }
 
-    /** Builds a broker bound to the *currently* signed-in account, so account switches are honored. */
-    private fun buildBroker(): NappletBroker? {
+    /**
+     * The broker for the *currently* signed-in account, cached and rebuilt only when the account
+     * changes (reference identity). The gateways capture the account and read its flows live, so a
+     * cached broker stays correct across requests without per-request allocation.
+     */
+    @Synchronized
+    private fun broker(): NappletBroker? {
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return null
+        cachedBroker?.let { (acc, broker) -> if (acc === account) return broker }
+        return buildBroker(account).also { cachedBroker = account to it }
+    }
 
+    private fun buildBroker(account: Account): NappletBroker {
         val relay =
             object : NappletRelayGateway {
                 override suspend fun publish(event: Event): List<String> {
@@ -364,14 +386,22 @@ class NappletBrokerService : Service() {
             }
         }
 
-    /** Tor-routed OkHttp client for host-side blob fetches (the applet has no direct network). */
+    /**
+     * Tor-routed OkHttp client for host-side blob fetches (the applet has no direct network).
+     * Cached and reused for connection pooling; rebuilt only when the Tor proxy port changes.
+     */
+    @Synchronized
     private fun blobHttpClient(): OkHttpClient {
         val port = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-        return if (port > 0) {
-            OkHttpClient.Builder().proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port))).build()
-        } else {
-            OkHttpClient()
-        }
+        cachedHttp?.let { (cachedPort, client) -> if (cachedPort == port) return client }
+        val client =
+            if (port > 0) {
+                OkHttpClient.Builder().proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port))).build()
+            } else {
+                OkHttpClient()
+            }
+        cachedHttp = port to client
+        return client
     }
 
     /**
@@ -482,8 +512,10 @@ class NappletBrokerService : Service() {
         }
 
         closeLiveSubscription(nappletSubId)
-        val clientSubId = "napplet-$nappletSubId-${liveSeq.incrementAndGet()}"
-        liveSubs[nappletSubId] = clientSubId
+        // liveSeq guarantees a unique client subId, so a rapid re-open of the same applet subId
+        // can't collide with the subscription it's replacing.
+        val sub = LiveSub("napplet-$nappletSubId-${liveSeq.incrementAndGet()}", account.client)
+        liveSubs[nappletSubId] = sub
 
         val listener =
             object : SubscriptionListener {
@@ -494,10 +526,14 @@ class NappletBrokerService : Service() {
                     forFilters: List<Filter>?,
                 ) = push(replyTo, NappletProtocolJson.encodeRelayEvent(nappletSubId, event))
 
+                // A subscription fans out to several relays; collapse their EOSEs into the single
+                // relay.eose the SDK expects (fired when the first relay finishes its stored events).
                 override fun onEose(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
-                ) = push(replyTo, NappletProtocolJson.encodeRelayEose(nappletSubId))
+                ) {
+                    if (sub.eoseSent.compareAndSet(false, true)) push(replyTo, NappletProtocolJson.encodeRelayEose(nappletSubId))
+                }
 
                 override fun onClosed(
                     message: String,
@@ -506,17 +542,14 @@ class NappletBrokerService : Service() {
                 ) = push(replyTo, NappletProtocolJson.encodeRelayClosed(nappletSubId, message))
             }
 
-        runCatching { account.client.subscribe(clientSubId, relays.associateWith { filters }, listener) }
+        runCatching { sub.client.subscribe(sub.clientSubId, relays.associateWith { filters }, listener) }
     }
 
-    /** Stops the live subscription for [nappletSubId], if any. */
+    /** Stops the live subscription for [nappletSubId], unsubscribing from the client that opened it. */
     private fun closeLiveSubscription(nappletSubId: String) {
-        val clientSubId = liveSubs.remove(nappletSubId) ?: return
+        val sub = liveSubs.remove(nappletSubId) ?: return
         runCatching {
-            Amethyst.instance.sessionManager
-                .loggedInAccount()
-                ?.client
-                ?.unsubscribe(clientSubId)
+            sub.client.unsubscribe(sub.clientSubId)
         }
     }
 
