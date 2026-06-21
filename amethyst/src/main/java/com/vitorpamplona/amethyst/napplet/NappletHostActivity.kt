@@ -49,10 +49,12 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolutio
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import kotlinx.coroutines.runBlocking
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.net.InetSocketAddress
 import java.net.Proxy
 
@@ -405,16 +407,34 @@ class NappletHostActivity : ComponentActivity() {
         return true
     }
 
-    /** Routes blob fetches through the user's Tor SOCKS proxy when one is active (port > 0). */
-    private fun buildHttpClient(port: Int): OkHttpClient =
+    /**
+     * Routes blob fetches through the user's Tor SOCKS proxy when one is active (port > 0), and
+     * caches them on disk. Blobs are content-addressed (`<server>/<sha256>`) and therefore
+     * immutable, so a long-lived forced cache is safe — and the resolver re-verifies every blob's
+     * sha256 on the way out regardless, so a stale/poisoned cache entry can never be served.
+     */
+    private fun buildHttpClient(port: Int): OkHttpClient {
+        val builder = OkHttpClient.Builder()
         if (port > 0) {
-            OkHttpClient
-                .Builder()
-                .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port)))
-                .build()
-        } else {
-            OkHttpClient()
+            builder.proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port)))
         }
+        runCatching {
+            builder.cache(Cache(File(cacheDir, "napplet-blobs"), BLOB_CACHE_BYTES))
+            builder.addNetworkInterceptor { chain ->
+                val response = chain.proceed(chain.request())
+                if (response.isSuccessful) {
+                    response
+                        .newBuilder()
+                        .header("Cache-Control", "public, max-age=31536000, immutable")
+                        .removeHeader("Pragma")
+                        .build()
+                } else {
+                    response
+                }
+            }
+        }
+        return builder.build()
+    }
 
     private fun notFound(): WebResourceResponse = WebResourceResponse("text/plain", "utf-8", 404, "Not Found", emptyMap(), ByteArrayInputStream(ByteArray(0)))
 
@@ -428,6 +448,7 @@ class NappletHostActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "NappletHostActivity"
+        private const val BLOB_CACHE_BYTES = 50L * 1024 * 1024
         private const val HOST = "napplet.local"
         private const val ORIGIN = "https://napplet.local"
         private const val SHELL_URL = "$ORIGIN/__shell__"

@@ -57,6 +57,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
+import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.sniffContentType
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -275,15 +277,8 @@ class NappletBrokerService : Service() {
             when {
                 url.startsWith("data:") -> decodeDataUrl(url)
                 url.startsWith("https://") -> {
-                    val port = account.let { Amethyst.instance.torManager.activePortOrNull.value } ?: -1
-                    val client =
-                        if (port > 0) {
-                            OkHttpClient.Builder().proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port))).build()
-                        } else {
-                            OkHttpClient()
-                        }
                     runCatching {
-                        client
+                        blobHttpClient()
                             .newCall(
                                 Request
                                     .Builder()
@@ -299,10 +294,68 @@ class NappletBrokerService : Service() {
                             }
                     }.getOrNull()
                 }
-                // blossom: / nostr: schemes are a follow-up.
+                url.startsWith("blossom:") -> fetchBlossom(account, url)
+                // nostr: resolution (event → bytes) is unspecified for resource.bytes; left as a follow-up.
                 else -> null
             }
         }
+
+    /** Tor-routed OkHttp client for host-side blob fetches (the applet has no direct network). */
+    private fun blobHttpClient(): OkHttpClient {
+        val port = Amethyst.instance.torManager.activePortOrNull.value ?: -1
+        return if (port > 0) {
+            OkHttpClient.Builder().proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port))).build()
+        } else {
+            OkHttpClient()
+        }
+    }
+
+    /**
+     * Fetches a `blossom:<sha256>` (or `blossom://<sha256>`) blob from the user's Blossom servers
+     * (kind:10063), verifying the sha256 before returning — content-addressed, so a wrong server
+     * can never substitute the blob. Returns null for a malformed hash or if no server serves it.
+     */
+    private fun fetchBlossom(
+        account: Account,
+        url: String,
+    ): NappletResource? {
+        val hash =
+            url
+                .removePrefix("blossom://")
+                .removePrefix("blossom:")
+                .substringBefore('/')
+                .substringBefore('?')
+                .trim()
+                .lowercase()
+        if (!hash.matches(Regex("^[0-9a-f]{64}$"))) return null
+
+        val servers =
+            account.blossomServers
+                .getBlossomServersList()
+                ?.servers()
+                .orEmpty()
+        val client = blobHttpClient()
+        for (candidate in StaticSiteResolver.candidateUrls(servers, hash)) {
+            val bytes =
+                runCatching {
+                    client
+                        .newCall(
+                            Request
+                                .Builder()
+                                .url(candidate)
+                                .get()
+                                .build(),
+                        ).execute()
+                        .use { r ->
+                            if (r.isSuccessful) r.body.bytes() else null
+                        }
+                }.getOrNull() ?: continue
+            if (StaticSiteResolver.verify(bytes, hash)) {
+                return NappletResource(bytes, sniffContentType(bytes) ?: "application/octet-stream")
+            }
+        }
+        return null
+    }
 
     /** Parses a `data:[<mediatype>][;base64],<data>` URL into bytes + content type. */
     private fun decodeDataUrl(url: String): NappletResource? {

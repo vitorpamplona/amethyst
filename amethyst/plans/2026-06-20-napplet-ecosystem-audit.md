@@ -172,6 +172,30 @@ Still open: a **live subscription tail** (push as events arrive, not just the sn
 `upload` gateway; and **on-device verification** — the shell/shim changes are JS and not exercised
 by the JVM unit tests.
 
+## Update (2026-06-21, even later): feed surfacing + nsite runtime hardening
+
+- **Feed surfacing (sandbox-preserving).** Napplets gained an inline feed card (nsites already had
+  one), both render via `NoteCompose`, are indexed in `LocalCache`, and a profile **"Apps & Sites"**
+  tab lists a user's manifests. The cards are inert (`Text`+`Button`, no WebView); execution begins
+  only on explicit tap, in the `:napplet` process.
+- **SPA route fallback** — a document navigation (Accept: text/html) to a route not in the manifest
+  serves the verified `index.html`; missing sub-resources still 404.
+- **External-link handoff** — a user-tapped off-origin http(s) link opens in the system browser
+  (gesture-gated so a hostile site can't auto-redirect); the sandbox WebView never navigates away.
+- **`resource.bytes` `blossom:` scheme** — `blossom:<sha256>` fetches from the user's kind:10063
+  Blossom servers and verifies the hash before returning. `nostr:` stays deferred (unspecified).
+- **Content-type byte-sniffing** — when a manifest path has no/unknown extension, the resolver
+  sniffs magic bytes; text/markup is never sniffed, so HTML detection stays extension-driven.
+  Unit-tested in quartz.
+- **kind:10063 fallback** — the launcher augments the manifest's `servers` with the author's
+  published Blossom list (best-effort); every blob is still sha256-verified.
+- **Blob caching** — the host OkHttp client caches blobs on disk (forced-immutable, since they're
+  content-addressed); the resolver re-verifies every served blob, so a stale entry can't be served.
+
+Remaining: live subscription tail + `identity.onChanged`/`inc.on`, the Blossom `upload` gateway,
+`getList`/`getZaps`/`getBadges`, the `nostr:` resource scheme, multi-`filters` queries — and
+**on-device verification** of all the WebView-host behavior.
+
 ## Update (2026-06-20, later): verified against `@napplet/shim@0.16.0` and corrected
 
 Pulled the authoritative SDK (`@napplet/shim` v0.16.0, npm/unpkg) and corrected the

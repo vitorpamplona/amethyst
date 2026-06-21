@@ -68,6 +68,37 @@ class StaticSiteResolverTest {
     }
 
     @Test
+    fun sniffsBinaryMagicBytesAndIgnoresText() {
+        val png = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0)
+        assertEquals("image/png", sniffContentType(png))
+
+        val jpeg = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0)
+        assertEquals("image/jpeg", sniffContentType(jpeg))
+
+        val webp = "RIFF".encodeToByteArray() + byteArrayOf(0, 0, 0, 0) + "WEBP".encodeToByteArray()
+        assertEquals("image/webp", sniffContentType(webp))
+
+        val wasm = byteArrayOf(0x00, 0x61, 0x73, 0x6D, 1, 0, 0, 0)
+        assertEquals("application/wasm", sniffContentType(wasm))
+
+        // Text / markup is never sniffed — HTML detection must stay extension-driven.
+        assertEquals(null, sniffContentType("<html>hi</html>".encodeToByteArray()))
+        assertEquals(null, sniffContentType(byteArrayOf()))
+    }
+
+    @Test
+    fun resolveSniffsContentTypeWhenTheExtensionIsUnknown() =
+        runTest {
+            val png = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+            val hash = sha256(png).toHexKey()
+            val paths = listOf(PathTag("/icon", hash)) // no extension → extension guess is generic
+
+            val resolution = StaticSiteResolver.resolve("/icon", paths, listOf("https://s")) { png }
+            assertIs<StaticSiteResolution.Resolved>(resolution)
+            assertEquals("image/png", resolution.contentType)
+        }
+
+    @Test
     fun verifyAcceptsMatchingAndRejectsTamperedBytes() {
         val good = bytes("<html>napplet</html>")
         val hash = sha256(good).toHexKey()

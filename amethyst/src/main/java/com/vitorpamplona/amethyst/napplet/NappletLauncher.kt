@@ -23,9 +23,11 @@ package com.vitorpamplona.amethyst.napplet
 import android.content.Context
 import android.content.Intent
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 
 /**
  * Opens a napplet/nsite in the sandboxed [NappletHostActivity] (the `:napplet` process). Only
@@ -80,11 +82,21 @@ object NappletLauncher {
         requires: List<String>,
     ) {
         val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
+
+        // Augment the manifest's servers with the author's published Blossom list (kind:10063), if
+        // we already hold it, so a blob the manifest's servers dropped can still be fetched. The
+        // host re-verifies every blob's sha256, so a wrong/extra server can never inject content.
+        val authorBlossomServers =
+            runCatching {
+                (LocalCache.getAddressableNoteIfExists(BlossomServersEvent.createAddressTag(authorPubKey))?.event as? BlossomServersEvent)?.servers()
+            }.getOrNull().orEmpty()
+        val allServers = (servers + authorBlossomServers).distinct()
+
         val intent =
             Intent(context, NappletHostActivity::class.java).apply {
                 putExtra(EXTRA_PATHS, ArrayList(paths.map { it.path }))
                 putExtra(EXTRA_HASHES, ArrayList(paths.map { it.hash }))
-                putExtra(EXTRA_SERVERS, ArrayList(servers))
+                putExtra(EXTRA_SERVERS, ArrayList(allServers))
                 putExtra(EXTRA_AUTHOR, authorPubKey)
                 putExtra(EXTRA_IDENTIFIER, identifier)
                 putExtra(EXTRA_AGGREGATE_HASH, aggregateHash)
