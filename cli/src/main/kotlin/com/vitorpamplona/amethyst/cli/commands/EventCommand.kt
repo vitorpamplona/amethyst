@@ -70,8 +70,7 @@ object EventCommand {
         // Publish when explicitly asked (--publish) or when a relay set is given.
         val wantPublish = args.bool("publish") || args.flag("relay") != null
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val signed: Event = ctx.signer.sign(createdAt, kind, tags, content)
             val eventNode = Output.mapper.readTree(signed.toJson())
@@ -95,8 +94,6 @@ object EventCommand {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

@@ -25,7 +25,17 @@ import androidx.compose.runtime.Stable
 @Stable
 class ImmutableListOfLists<T>(
     val lists: Array<Array<T>>,
-)
+) {
+    // Memoized content hash of all tags. `lists` is an Array (identity hashCode),
+    // so any consumer that needs a *content*-based key (e.g. CachedRichTextParser,
+    // so an off-thread pre-parse maps to the same cache entry the renderer uses)
+    // would otherwise re-traverse every tag on each call. Computing it once per
+    // instance keeps that O(1)-amortized. Benign data race: concurrent first
+    // readers just recompute the same value.
+    private var cachedContentHash: Int? = null
+
+    fun contentHash(): Int = cachedContentHash ?: lists.contentDeepHashCode().also { cachedContentHash = it }
+}
 
 val EmptyTagList = ImmutableListOfLists<String>(emptyArray())
 

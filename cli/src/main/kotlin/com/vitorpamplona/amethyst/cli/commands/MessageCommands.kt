@@ -31,17 +31,18 @@ object MessageCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "message <send|list|react|delete> …")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "send" -> send(dataDir, rest)
-            "list" -> list(dataDir, rest)
-            "react" -> react(dataDir, rest)
-            "delete" -> delete(dataDir, rest)
-            else -> Output.error("bad_args", "message ${tail[0]}")
-        }
-    }
+    ): Int =
+        route(
+            "message",
+            tail,
+            "message <send|list|react|delete> …",
+            mapOf(
+                "send" to { rest -> send(dataDir, rest) },
+                "list" to { rest -> list(dataDir, rest) },
+                "react" to { rest -> react(dataDir, rest) },
+                "delete" to { rest -> delete(dataDir, rest) },
+            ),
+        )
 
     private suspend fun send(
         dataDir: DataDir,
@@ -49,8 +50,7 @@ object MessageCommands {
     ): Int {
         if (rest.size < 2) return Output.error("bad_args", "message send <gid> <text>")
         val text = rest[1]
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
@@ -70,8 +70,6 @@ object MessageCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -82,8 +80,7 @@ object MessageCommands {
         if (rest.isEmpty()) return Output.error("bad_args", "message list <gid>")
         val args = Args(rest.drop(1).toTypedArray())
         val limit = args.intFlag("limit", Int.MAX_VALUE)
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
@@ -110,8 +107,6 @@ object MessageCommands {
 
             Output.emit(mapOf("group_id" to gid, "messages" to items))
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -122,8 +117,7 @@ object MessageCommands {
         if (rest.size < 3) return Output.error("bad_args", "message react <gid> <target_event_id> <emoji>")
         val targetId = rest[1]
         val emoji = rest[2]
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
@@ -146,8 +140,6 @@ object MessageCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -156,8 +148,7 @@ object MessageCommands {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Output.error("bad_args", "message delete <gid> <target_event_id> [target_event_id ...]")
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
@@ -184,8 +175,6 @@ object MessageCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 

@@ -48,8 +48,7 @@ object FetchCommand {
         val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 8L) * 1000
         val filter = RawEventSupport.buildFilter(args)
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val relays = RawEventSupport.queryTargets(ctx, args)
             if (relays.isEmpty()) return Output.error("no_relays", "no relays available; pass --relay or run `amy relay add`")
@@ -73,8 +72,6 @@ object FetchCommand {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

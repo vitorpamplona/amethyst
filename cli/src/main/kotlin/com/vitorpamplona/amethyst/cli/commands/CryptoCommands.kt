@@ -48,16 +48,13 @@ object EncryptCommand {
         val text = RawEventSupport.readArgOrStdin(args)
         if (text.isEmpty()) return Output.error("bad_args", "no plaintext on the argument or stdin")
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val peer = ctx.requireUserHex(to)
             val ciphertext =
                 if (nip04) ctx.signer.nip04Encrypt(text, peer) else ctx.signer.nip44Encrypt(text, peer)
             Output.emit(mapOf("algorithm" to if (nip04) "nip04" else "nip44", "ciphertext" to ciphertext))
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }
@@ -73,16 +70,13 @@ object DecryptCommand {
         val ciphertext = RawEventSupport.readArgOrStdin(args)
         if (ciphertext.isEmpty()) return Output.error("bad_args", "no ciphertext on the argument or stdin")
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val peer = ctx.requireUserHex(from)
             val plaintext =
                 if (nip04) ctx.signer.nip04Decrypt(ciphertext, peer) else ctx.signer.nip44Decrypt(ciphertext, peer)
             Output.emit(mapOf("algorithm" to if (nip04) "nip04" else "nip44", "plaintext" to plaintext))
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

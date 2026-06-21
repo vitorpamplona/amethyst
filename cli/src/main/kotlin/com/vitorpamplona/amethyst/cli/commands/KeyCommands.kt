@@ -37,15 +37,16 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
  * (reused here via [Identity], which wraps Quartz's `KeyPair`).
  */
 object KeyCommands {
-    fun dispatch(rest: Array<String>): Int {
-        if (rest.isEmpty()) return Output.error("bad_args", "key <generate|public>")
-        val tail = rest.drop(1).toTypedArray()
-        return when (rest[0]) {
-            "generate" -> generate()
-            "public" -> public(tail)
-            else -> Output.error("bad_args", "key ${rest[0]} (expected generate|public)")
-        }
-    }
+    suspend fun dispatch(rest: Array<String>): Int =
+        route(
+            "key",
+            rest,
+            "key <generate|public>",
+            mapOf(
+                "generate" to { _ -> generate() },
+                "public" to { tail -> public(tail) },
+            ),
+        )
 
     private fun generate(): Int {
         val id = Identity.create()

@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
@@ -128,12 +129,14 @@ class Context(
      * humans inspect these files. Verification always re-canonicalises,
      * so the stored bytes never feed back into a signature check.
      */
-    val store: IEventStore by lazy {
-        FsEventStore(
-            root = dataDir.eventsDir.toPath(),
-            eventToJson = com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper::toJsonPretty,
-        )
-    }
+    private val storeDelegate: Lazy<IEventStore> =
+        lazy {
+            FsEventStore(
+                root = dataDir.eventsDir.toPath(),
+                eventToJson = JacksonMapper::toJsonPretty,
+            )
+        }
+    val store: IEventStore by storeDelegate
 
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
     val marmot: MarmotManager = MarmotManager(signer, mlsStore, messageStore, keyPackageStore)
@@ -611,22 +614,11 @@ class Context(
         }
         // Only close the store if it was actually opened — by-lazy
         // otherwise allocates the lock channel just to release it.
-        if (storeIsInitialized()) {
+        if (storeDelegate.isInitialized()) {
             try {
-                store.close()
+                storeDelegate.value.close()
             } catch (_: Exception) {
             }
-        }
-    }
-
-    private fun storeIsInitialized(): Boolean {
-        // Reflect on the lazy delegate to avoid forcing initialisation in close().
-        return try {
-            val field = javaClass.getDeclaredField("store\$delegate").apply { isAccessible = true }
-            val delegate = field.get(this) as Lazy<*>
-            delegate.isInitialized()
-        } catch (_: Throwable) {
-            false
         }
     }
 

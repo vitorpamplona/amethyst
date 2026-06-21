@@ -47,15 +47,16 @@ object GiftCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "gift <wrap|unwrap>")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "wrap" -> wrap(dataDir, rest)
-            "unwrap" -> unwrap(dataDir, rest)
-            else -> Output.error("bad_args", "gift ${tail[0]} (expected wrap|unwrap)")
-        }
-    }
+    ): Int =
+        route(
+            "gift",
+            tail,
+            "gift <wrap|unwrap>",
+            mapOf(
+                "wrap" to { rest -> wrap(dataDir, rest) },
+                "unwrap" to { rest -> unwrap(dataDir, rest) },
+            ),
+        )
 
     private suspend fun wrap(
         dataDir: DataDir,
@@ -72,8 +73,7 @@ object GiftCommands {
                 return Output.error("bad_args", "could not parse inner event JSON: ${e.message}")
             }
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val peer = ctx.requireUserHex(to)
             val seal = SealedRumorEvent.create(event = inner, encryptTo = peer, signer = ctx.signer)
@@ -95,8 +95,6 @@ object GiftCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -115,8 +113,7 @@ object GiftCommands {
                 return Output.error("bad_args", "could not parse gift wrap JSON: ${e.message}")
             }
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val unwrapped =
                 try {
@@ -128,8 +125,6 @@ object GiftCommands {
             val inner = if (unwrapped is SealedRumorEvent) unwrapped.unsealThrowing(ctx.signer) else unwrapped
             Output.emit(mapOf("event" to Output.mapper.readTree(inner.toJson())))
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

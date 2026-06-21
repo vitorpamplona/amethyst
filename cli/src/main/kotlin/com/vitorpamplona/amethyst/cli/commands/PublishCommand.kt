@@ -55,8 +55,7 @@ object PublishCommand {
             return Output.error("invalid_event", "event id/signature does not verify — refusing to publish")
         }
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val targets = RawEventSupport.publishTargets(ctx, args)
             if (targets.isEmpty()) {
@@ -72,8 +71,6 @@ object PublishCommand {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

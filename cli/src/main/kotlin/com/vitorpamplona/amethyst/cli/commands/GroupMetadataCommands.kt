@@ -69,8 +69,7 @@ object GroupMetadataCommands {
         rawGid: HexKey,
         mutate: suspend (Context, MarmotGroupData) -> MarmotGroupData,
     ): Int {
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rawGid)
             ctx.syncIncoming()
@@ -100,8 +99,6 @@ object GroupMetadataCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

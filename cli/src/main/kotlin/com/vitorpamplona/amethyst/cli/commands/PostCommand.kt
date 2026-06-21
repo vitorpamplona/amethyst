@@ -50,8 +50,7 @@ object PostCommand {
                 ?.map { it.trim() }
                 ?.filter { it.isNotEmpty() } ?: emptyList()
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val outbox = ctx.outboxRelays()
             val extraNormalized =
@@ -78,8 +77,6 @@ object PostCommand {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

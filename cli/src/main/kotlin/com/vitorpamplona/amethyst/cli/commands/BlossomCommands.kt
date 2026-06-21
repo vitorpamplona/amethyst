@@ -54,17 +54,18 @@ object BlossomCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "blossom <upload|download|list|delete>")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "upload" -> upload(dataDir, rest)
-            "download" -> download(dataDir, rest)
-            "list" -> list(dataDir, rest)
-            "delete" -> delete(dataDir, rest)
-            else -> Output.error("bad_args", "blossom ${tail[0]} (expected upload|download|list|delete)")
-        }
-    }
+    ): Int =
+        route(
+            "blossom",
+            tail,
+            "blossom <upload|download|list|delete>",
+            mapOf(
+                "upload" to { rest -> upload(dataDir, rest) },
+                "download" to { rest -> download(dataDir, rest) },
+                "list" to { rest -> list(dataDir, rest) },
+                "delete" to { rest -> delete(dataDir, rest) },
+            ),
+        )
 
     private suspend fun upload(
         dataDir: DataDir,
@@ -80,8 +81,7 @@ object BlossomCommands {
         val hash = sha256(bytes).toHexKey()
         val mime = args.flag("mime-type") ?: runCatching { Files.probeContentType(file.toPath()) }.getOrNull() ?: "application/octet-stream"
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val auth = BlossomAuth.createUploadAuth(hash, file.length(), "Upload ${file.name}", ctx.signer)
             val result = BlossomClient().upload(file, mime, server, auth)
@@ -95,8 +95,6 @@ object BlossomCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -109,8 +107,7 @@ object BlossomCommands {
         val server = args.flag("server")
         val url = if (server != null && !target.startsWith("http")) BlossomServerUrl.blob(server, target) else target
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             val bytes =
                 BlossomClient().download(url)
                     ?: return Output.error("not_found", "server returned no blob for $url")
@@ -127,8 +124,6 @@ object BlossomCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -139,8 +134,7 @@ object BlossomCommands {
         val args = Args(rest)
         val server = args.flag("server") ?: return Output.error("bad_args", "blossom list requires --server URL")
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val pubkey = args.positionalOrNull(0)?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
             val auth = BlossomAuthorizationEvent.createListAuth(ctx.signer, "List blobs").toAuthorizationHeader()
@@ -159,8 +153,6 @@ object BlossomCommands {
                 Output.emit(mapOf("server" to server, "pubkey" to pubkey, "count" to node.size(), "blobs" to node))
             }
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -172,8 +164,7 @@ object BlossomCommands {
         val server = args.flag("server") ?: return Output.error("bad_args", "blossom delete requires --server URL")
         val hash = args.positional(0, "sha256")
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val auth = BlossomAuthorizationEvent.createDeleteAuth(hash, "Delete blob", ctx.signer).toAuthorizationHeader()
             val blobUrl = BlossomServerUrl.blob(server, hash)
@@ -195,8 +186,6 @@ object BlossomCommands {
                 )
                 return if (response.isSuccessful) 0 else 1
             }
-        } finally {
-            ctx.close()
         }
     }
 }

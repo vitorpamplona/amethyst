@@ -30,8 +30,7 @@ object GroupMembershipCommands {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Output.error("bad_args", "group remove <gid> <npub>")
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             val target = ctx.requireUserHex(rest[1])
@@ -56,8 +55,6 @@ object GroupMembershipCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -66,8 +63,7 @@ object GroupMembershipCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Output.error("bad_args", "group leave <gid>")
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
@@ -111,8 +107,6 @@ object GroupMembershipCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

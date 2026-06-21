@@ -71,17 +71,14 @@ object CreateCommand {
         //    store via verifyAndStore — so kind:10002 / 10050 / 10051 are
         //    immediately readable by outboxRelays() / inboxRelays() /
         //    keyPackageRelays() without a separate config file.
-        val ctx = Context.open(dataDir)
         val accepted = mutableMapOf<String, List<String>>()
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             for (event in bootstrap.all()) {
                 val ack = ctx.publish(event, DefaultNIP65RelaySet)
                 accepted[event.kind.toString()] =
                     ack.filterValues { it }.keys.map { it.url }
             }
-        } finally {
-            ctx.close()
         }
 
         Output.emit(

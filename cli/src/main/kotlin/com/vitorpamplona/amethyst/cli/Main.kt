@@ -20,7 +20,43 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.vitorpamplona.amethyst.cli.commands.Commands
+import com.vitorpamplona.amethyst.cli.commands.AwaitCommands
+import com.vitorpamplona.amethyst.cli.commands.BlossomCommands
+import com.vitorpamplona.amethyst.cli.commands.CountCommand
+import com.vitorpamplona.amethyst.cli.commands.CreateCommand
+import com.vitorpamplona.amethyst.cli.commands.DebitCommands
+import com.vitorpamplona.amethyst.cli.commands.DecodeCommand
+import com.vitorpamplona.amethyst.cli.commands.DecryptCommand
+import com.vitorpamplona.amethyst.cli.commands.DmCommands
+import com.vitorpamplona.amethyst.cli.commands.EncodeCommand
+import com.vitorpamplona.amethyst.cli.commands.EncryptCommand
+import com.vitorpamplona.amethyst.cli.commands.EventCommand
+import com.vitorpamplona.amethyst.cli.commands.FetchCommand
+import com.vitorpamplona.amethyst.cli.commands.FilterCommand
+import com.vitorpamplona.amethyst.cli.commands.FollowCommand
+import com.vitorpamplona.amethyst.cli.commands.GiftCommands
+import com.vitorpamplona.amethyst.cli.commands.GroupCommands
+import com.vitorpamplona.amethyst.cli.commands.InitCommands
+import com.vitorpamplona.amethyst.cli.commands.KeyCommands
+import com.vitorpamplona.amethyst.cli.commands.KeyPackageCommands
+import com.vitorpamplona.amethyst.cli.commands.LoginCommand
+import com.vitorpamplona.amethyst.cli.commands.MarmotResetCommand
+import com.vitorpamplona.amethyst.cli.commands.MessageCommands
+import com.vitorpamplona.amethyst.cli.commands.NappletCommands
+import com.vitorpamplona.amethyst.cli.commands.NotesCommands
+import com.vitorpamplona.amethyst.cli.commands.NsiteCommands
+import com.vitorpamplona.amethyst.cli.commands.OfferCommands
+import com.vitorpamplona.amethyst.cli.commands.OutboxCommand
+import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
+import com.vitorpamplona.amethyst.cli.commands.PublishCommand
+import com.vitorpamplona.amethyst.cli.commands.RelayCommands
+import com.vitorpamplona.amethyst.cli.commands.SearchCommand
+import com.vitorpamplona.amethyst.cli.commands.StoreCommands
+import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
+import com.vitorpamplona.amethyst.cli.commands.UseCommand
+import com.vitorpamplona.amethyst.cli.commands.VerifyCommand
+import com.vitorpamplona.amethyst.cli.commands.ZapCommand
+import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
 import kotlinx.coroutines.runBlocking
 import kotlin.system.exitProcess
@@ -28,10 +64,10 @@ import kotlin.system.exitProcess
 /**
  * amy — non-interactive command-line interface to Amethyst.
  *
- * Today this covers the Marmot/MLS surface (`amy marmot …`) plus identity
- * and relay configuration at the root level. The layout is intentionally
- * extensible — future verbs (`amy dm`, `amy feed`, `amy profile`) slot in
- * as new top-level subcommands.
+ * Covers Amethyst's account/social/Marmot surface plus a set of
+ * nak-style army-knife primitives (`decode`, `encode`, `event`, `fetch`,
+ * `subscribe`, …). The layout is intentionally extensible — new verbs
+ * slot in as top-level subcommands.
  *
  * Usage: amy --data-dir PATH SUBCOMMAND ARGS
  *
@@ -118,155 +154,59 @@ private suspend fun dispatch(argv: Array<String>): Int {
     // resolve "multiple accounts, ambiguous" cases) — so it skips
     // DataDir.resolve. Other commands fall through to the normal path.
     if (head == "use") {
-        return com.vitorpamplona.amethyst.cli.commands.UseCommand
-            .run(tail)
+        return UseCommand.run(tail)
     }
 
     // Stateless local primitives (nak-style army-knife verbs). They operate
     // purely on their arguments — no identity, no relays, no `~/.amy/` — so
     // they dispatch before account resolution and work with zero state.
     when (head) {
-        "decode" ->
-            return com.vitorpamplona.amethyst.cli.commands.DecodeCommand
-                .run(tail)
-        "encode" ->
-            return com.vitorpamplona.amethyst.cli.commands.EncodeCommand
-                .run(tail)
-        "verify" ->
-            return com.vitorpamplona.amethyst.cli.commands.VerifyCommand
-                .run(tail)
-        "key" ->
-            return com.vitorpamplona.amethyst.cli.commands.KeyCommands
-                .dispatch(tail)
-        "filter" ->
-            return com.vitorpamplona.amethyst.cli.commands.FilterCommand
-                .run(tail)
+        "decode" -> return DecodeCommand.run(tail)
+        "encode" -> return EncodeCommand.run(tail)
+        "verify" -> return VerifyCommand.run(tail)
+        "key" -> return KeyCommands.dispatch(tail)
+        "filter" -> return FilterCommand.run(tail)
     }
 
     // `relay info URL` is a stateless NIP-11 fetch — no account needed. The
     // rest of `relay …` (add/list/publish-lists) operates on the account and
     // falls through to the normal path below.
     if (head == "relay" && tail.firstOrNull() == "info") {
-        return com.vitorpamplona.amethyst.cli.commands.RelayCommands
-            .info(tail.drop(1).toTypedArray())
+        return RelayCommands.info(tail.drop(1).toTypedArray())
     }
 
     val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
     val dataDir = DataDir.resolve(accountFlag = accountFlag, secrets = secrets)
 
     return when (head) {
-        "init" -> {
-            Commands.init(dataDir, Args(tail))
-        }
-
-        "create" -> {
-            Commands.create(dataDir, tail)
-        }
-
-        "login" -> {
-            Commands.login(dataDir, tail)
-        }
-
-        "whoami" -> {
-            Commands.whoami(dataDir)
-        }
-
-        "relay" -> {
-            Commands.relay(dataDir, tail)
-        }
-
-        "marmot" -> {
-            marmotDispatch(dataDir, tail)
-        }
-
-        "dm" -> {
-            Commands.dm(dataDir, tail)
-        }
-
-        "profile" -> {
-            Commands.profile(dataDir, tail)
-        }
-
-        "notes" -> {
-            Commands.notes(dataDir, tail)
-        }
-
-        "nsite" -> {
-            Commands.nsite(dataDir, tail)
-        }
-
-        "napplet" -> {
-            Commands.napplet(dataDir, tail)
-        }
-
-        "store" -> {
-            Commands.store(dataDir, tail)
-        }
-
-        "follow" -> {
-            Commands.follow(dataDir, tail)
-        }
-
-        "unfollow" -> {
-            Commands.unfollow(dataDir, tail)
-        }
-
-        "search" -> {
-            Commands.search(dataDir, tail)
-        }
-
-        "zap" -> {
-            Commands.zap(dataDir, tail)
-        }
-
-        "offer" -> {
-            Commands.offer(dataDir, tail)
-        }
-
-        "debit" -> {
-            Commands.debit(dataDir, tail)
-        }
-
-        "event" -> {
-            Commands.event(dataDir, tail)
-        }
-
-        "publish" -> {
-            Commands.publish(dataDir, tail)
-        }
-
-        "fetch" -> {
-            Commands.fetch(dataDir, tail)
-        }
-
-        "subscribe" -> {
-            Commands.subscribe(dataDir, tail)
-        }
-
-        "count" -> {
-            Commands.count(dataDir, tail)
-        }
-
-        "encrypt" -> {
-            Commands.encrypt(dataDir, tail)
-        }
-
-        "decrypt" -> {
-            Commands.decrypt(dataDir, tail)
-        }
-
-        "gift" -> {
-            Commands.gift(dataDir, tail)
-        }
-
-        "outbox" -> {
-            Commands.outbox(dataDir, tail)
-        }
-
-        "blossom" -> {
-            Commands.blossom(dataDir, tail)
-        }
-
+        "init" -> InitCommands.init(dataDir, Args(tail))
+        "create" -> CreateCommand.run(dataDir, tail)
+        "login" -> LoginCommand.run(dataDir, tail)
+        "whoami" -> InitCommands.whoami(dataDir)
+        "relay" -> RelayCommands.dispatch(dataDir, tail)
+        "marmot" -> marmotDispatch(dataDir, tail)
+        "dm" -> DmCommands.dispatch(dataDir, tail)
+        "profile" -> ProfileCommands.dispatch(dataDir, tail)
+        "notes" -> NotesCommands.dispatch(dataDir, tail)
+        "nsite" -> NsiteCommands.dispatch(dataDir, tail)
+        "napplet" -> NappletCommands.dispatch(dataDir, tail)
+        "store" -> StoreCommands.dispatch(dataDir, tail)
+        "follow" -> FollowCommand.follow(dataDir, tail)
+        "unfollow" -> FollowCommand.unfollow(dataDir, tail)
+        "search" -> SearchCommand.dispatch(dataDir, tail)
+        "zap" -> ZapCommand.dispatch(dataDir, tail)
+        "offer" -> OfferCommands.dispatch(dataDir, tail)
+        "debit" -> DebitCommands.dispatch(dataDir, tail)
+        "event" -> EventCommand.run(dataDir, tail)
+        "publish" -> PublishCommand.run(dataDir, tail)
+        "fetch" -> FetchCommand.run(dataDir, tail)
+        "subscribe" -> SubscribeCommand.run(dataDir, tail)
+        "count" -> CountCommand.run(dataDir, tail)
+        "encrypt" -> EncryptCommand.run(dataDir, tail)
+        "decrypt" -> DecryptCommand.run(dataDir, tail)
+        "gift" -> GiftCommands.dispatch(dataDir, tail)
+        "outbox" -> OutboxCommand.run(dataDir, tail)
+        "blossom" -> BlossomCommands.dispatch(dataDir, tail)
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -278,41 +218,20 @@ private suspend fun dispatch(argv: Array<String>): Int {
 private suspend fun marmotDispatch(
     dataDir: DataDir,
     tail: Array<String>,
-): Int {
-    if (tail.isEmpty()) {
-        printUsage()
-        return 2
-    }
-    val head = tail[0]
-    val rest = tail.drop(1).toTypedArray()
-    return when (head) {
-        "key-package" -> {
-            Commands.keyPackage(dataDir, rest)
-        }
-
-        "group" -> {
-            Commands.group(dataDir, rest)
-        }
-
-        "message" -> {
-            Commands.message(dataDir, rest)
-        }
-
-        "await" -> {
-            Commands.await(dataDir, rest)
-        }
-
-        "reset" -> {
-            Commands.reset(dataDir, rest)
-        }
-
-        else -> {
-            System.err.println("unknown marmot subcommand: $head")
-            printUsage()
-            2
-        }
-    }
-}
+): Int =
+    route(
+        name = "marmot",
+        tail = tail,
+        usage = "marmot <key-package|group|message|await|reset>",
+        routes =
+            mapOf(
+                "key-package" to { rest -> KeyPackageCommands.dispatch(dataDir, rest) },
+                "group" to { rest -> GroupCommands.dispatch(dataDir, rest) },
+                "message" to { rest -> MessageCommands.dispatch(dataDir, rest) },
+                "await" to { rest -> AwaitCommands.dispatch(dataDir, rest) },
+                "reset" to { rest -> MarmotResetCommand.run(dataDir, rest) },
+            ),
+    )
 
 private enum class GlobalFlag(
     val long: String,

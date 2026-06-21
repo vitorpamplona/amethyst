@@ -85,7 +85,7 @@ cli/src/main/kotlin/com/vitorpamplona/amethyst/cli/
 ├── stores/FileStores.kt       # File-backed MLS / KP / message stores
 ├── secrets/                   # SecretStore backends (keychain / ncryptsec / plaintext)
 └── commands/
-    ├── Commands.kt            # dispatcher tables
+    ├── Router.kt             # `route(...)` shared sub-verb dispatcher
     ├── UseCommand.kt          # `amy use NAME` — pin active account
     ├── InitCommands.kt        # init, whoami
     ├── CreateCommand.kt       # full bootstrap (→ commons/account/)
@@ -111,17 +111,18 @@ host. Never add a Gradle dependency on `:amethyst` or `:desktopApp`.
 **`Context.kt` is the backbone.** Most commands follow this template:
 
 ```kotlin
-val ctx = Context.open(dataDir)
-try {
+Context.open(dataDir).use { ctx ->   // .use closes the Context on exit
     ctx.prepare()               // restore MLS state + connect relays
     ctx.syncIncoming()          // pull new gift-wraps + group events
     // ...call into commons/ or quartz/ to build an event...
     val ack = ctx.publish(event, targets)
     Output.emit(mapOf(...))
-} finally {
-    ctx.close()                 // flush RunState, disconnect
-}
+    return 0
+}                               // close() flushes RunState + disconnects
 ```
+
+`Context` is `AutoCloseable`, so wrap it in `use { }` rather than a
+hand-rolled `try { } finally { ctx.close() }`.
 
 ---
 
@@ -179,20 +180,15 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 
 object NoteCommands {
-    suspend fun dispatch(dataDir: DataDir, tail: Array<String>): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "note <publish|read|…>")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "publish" -> publish(dataDir, rest)
-            else -> Output.error("bad_args", "note ${tail[0]}")
-        }
-    }
+    suspend fun dispatch(dataDir: DataDir, tail: Array<String>): Int =
+        route("note", tail, "note <publish|read|…>", mapOf(
+            "publish" to { rest -> publish(dataDir, rest) },
+        ))
 
     private suspend fun publish(dataDir: DataDir, rest: Array<String>): Int {
         val args = Args(rest)
         val text = args.positional(0, "text")
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val event = com.vitorpamplona.amethyst.commons.note.buildTextNote(ctx.signer, text)
             val ack = ctx.publish(event, ctx.outboxRelays())
@@ -202,13 +198,15 @@ object NoteCommands {
                 "published_to" to ack.filterValues { it }.keys.map { it.url },
             ))
             return 0
-        } finally { ctx.close() }
+        }
     }
 }
 ```
 
-Wire it into `Commands.kt`, add a top-level branch in `Main.kt`'s
-`dispatch`, and extend `printUsage()`. Keep the command tour in
+The shared `route(name, tail, usage, routes)` helper (in `Router.kt`)
+handles the empty-input and unknown-verb `bad_args` cases, so each
+`dispatch` is just the verb→handler map. Add a top-level branch in
+`Main.kt`'s `dispatch` and extend `printUsage()`. Keep the command tour in
 [README.md](./README.md) and the parity matrix in
 [ROADMAP.md](./ROADMAP.md) in sync.
 
