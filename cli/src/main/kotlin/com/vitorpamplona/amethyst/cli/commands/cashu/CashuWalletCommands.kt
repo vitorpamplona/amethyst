@@ -68,10 +68,14 @@ object CashuWalletCommands {
         val mints = (args.csv("mint") + args.csv("mints") + args.positional.toList()).distinct()
         if (mints.isEmpty()) return Output.error("bad_args", "at least one --mint URL is required")
         val privkey = args.flag("privkey")
-        val nutzapRelays = args.csv("relay").mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+        val explicitRelays = args.csv("relay").mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
+            // Match Amethyst: kind:10019 advertises the account's outbox
+            // relays as nutzap-receiving relays unless the caller overrides
+            // with --relay, so senders publish nutzaps where we actually read.
+            val nutzapRelays = explicitRelays.ifEmpty { ctx.outboxRelays().toList() }
             val created =
                 try {
                     ctx.cashuOps().publishWalletEvents(mints, privkey, nutzapRelays)

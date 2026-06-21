@@ -204,7 +204,11 @@ class Context(
     fun cashuOps(): CashuWalletOps =
         CashuWalletOps(
             signer = signer,
-            publish = { event -> publish(event, outboxRelays()) },
+            // Amethyst publishes cashu events via sendLiterallyEverywhere
+            // (all the user's relays). anyRelays() — outbox + inbox +
+            // keypackage — is the CLI's closest analog, so the wallet lands
+            // on the same broad relay set the app would use, not just outbox.
+            publish = { event -> publish(event, anyRelays()) },
             okHttpClient = { okhttp },
             secretFactory =
                 DeterministicSecretFactory(
@@ -228,6 +232,9 @@ class Context(
      */
     suspend fun cashuSnapshot(): CashuWalletReader.WalletSnapshot {
         val pk = identity.pubKeyHex
+        // Mirror commons' CashuWalletFilterAssembler exactly: authored wallet
+        // kinds by authors=[pk], inbound nutzaps by #p — so amy projects the
+        // same event set the Android app subscribes to.
         val authored =
             store.query<Event>(
                 Filter(
@@ -235,11 +242,10 @@ class Context(
                     kinds =
                         listOf(
                             CashuWalletEvent.KIND,
-                            NutzapInfoEvent.KIND,
                             CashuTokenEvent.KIND,
                             CashuSpendingHistoryEvent.KIND,
                             CashuMintQuoteEvent.KIND,
-                            NutzapEvent.KIND,
+                            NutzapInfoEvent.KIND,
                             MintRecommendationEvent.KIND,
                         ),
                 ),
