@@ -75,6 +75,29 @@ Lives in `amethyst/src/test/.../screenshots/`. Renders through the real
   `build/screenshots/` exists first (a `@Before { File("build/screenshots").mkdirs() }`).
 - `unitTests.isIncludeAndroidResources = true` must stay on in `amethyst/build.gradle.kts`.
 
+## Live, data-driven captures (real relays)
+
+To screenshot a screen that needs real network data (e.g. a specific pubkey's
+home feed), drive the real `App()` composable to a logged-in state against live
+relays instead of rendering an isolated composable. See
+`HomeFeedLiveCaptureTest.kt` (desktop) as the template:
+
+- Pre-seed a `ViewOnly` `AccountInfo(npub, SignerType.ViewOnly)` via
+  `accountManager.accountStorage`, then drive `App(layoutMode = SINGLE_PANE, …)`
+  (its default screen is the Home feed) with a **real**
+  `DesktopRelayConnectionManager(DesktopHttpClient(...Tor OFF...))` and
+  `skipStartupRelayBootstrap = false`.
+- Wait for `AccountState.LoggedIn`, then `compose.waitUntil { localCache.noteCount() > N }`
+  so the feed has pulled notes, settle a couple of frames, then `saveScreenshot`.
+- These tests hit the network, so they're **opt-in**: gated on
+  `-Pamethyst.live.capture=true` (forwarded to the test JVM in
+  `desktopApp/build.gradle.kts`) and skipped otherwise. Relays must be reachable.
+
+```bash
+xvfb-run --auto-servernum ./gradlew :desktopApp:test \
+  --tests '*HomeFeedLiveCaptureTest*' -Pamethyst.live.capture=true
+```
+
 ## Surfacing the result
 
 After the artifact is written, send it to the user:

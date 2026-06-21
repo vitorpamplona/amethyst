@@ -27,6 +27,15 @@ kotlin {
     jvmToolchain(21)
 }
 
+// Forward opt-in capture flags from the Gradle invocation into the test JVM so the
+// live screenshot tests (e.g. HomeFeedLiveCaptureTest) can be switched on with
+// `-Pamethyst.live.capture=true` and optionally `-Pamethyst.screenshot.dir=...`.
+tasks.withType<Test>().configureEach {
+    listOf("amethyst.live.capture", "amethyst.screenshot.dir").forEach { key ->
+        (project.findProperty(key) as? String)?.let { systemProperty(key, it) }
+    }
+}
+
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation(libs.jetbrains.compose.material3)
