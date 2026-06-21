@@ -61,8 +61,7 @@ object FeedCommand {
         val until = args.flag("until")?.toLongOrNull()
         val timeoutSecs = args.longFlag("timeout", 8L)
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
 
             val (authors, mode) =
@@ -131,8 +130,6 @@ object FeedCommand {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 

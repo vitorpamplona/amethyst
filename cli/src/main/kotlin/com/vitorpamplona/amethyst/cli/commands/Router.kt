@@ -20,25 +20,23 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
-import com.vitorpamplona.amethyst.cli.DataDir
+import com.vitorpamplona.amethyst.cli.Output
 
 /**
- * `amy notes <post|feed>` — NIP-10 kind:1 short text notes. Sits alongside
- * `profile` (kind:0) and `dm` (NIP-17) as a top-level verb group so the CLI
- * shape mirrors the Amethyst UI: one subcommand group per event family.
+ * Shared sub-verb router used by every `*Commands.dispatch`.
+ *
+ * Maps the first token of [tail] to a handler over the remaining args.
+ * Empty input emits `bad_args: <usage>`; an unrecognised verb emits
+ * `bad_args: <name> <verb>`. Handlers receive the args *after* the verb,
+ * mirroring the old hand-rolled `when (tail[0]) { … }` blocks.
  */
-object NotesCommands {
-    suspend fun dispatch(
-        dataDir: DataDir,
-        tail: Array<String>,
-    ): Int =
-        route(
-            "notes",
-            tail,
-            "notes <post|feed> …",
-            mapOf(
-                "post" to { rest -> PostCommand.run(dataDir, rest) },
-                "feed" to { rest -> FeedCommand.run(dataDir, rest) },
-            ),
-        )
+suspend fun route(
+    name: String,
+    tail: Array<String>,
+    usage: String,
+    routes: Map<String, suspend (Array<String>) -> Int>,
+): Int {
+    if (tail.isEmpty()) return Output.error("bad_args", usage)
+    val handler = routes[tail[0]] ?: return Output.error("bad_args", "$name ${tail[0]}")
+    return handler(tail.drop(1).toTypedArray())
 }

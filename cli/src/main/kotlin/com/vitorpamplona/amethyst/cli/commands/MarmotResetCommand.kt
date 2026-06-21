@@ -46,8 +46,7 @@ object MarmotResetCommand {
         rest: Array<String>,
     ): Int {
         val confirmed = rest.any { it == "--yes" || it == "-y" }
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val groupIds =
                 ctx.marmot
@@ -77,8 +76,6 @@ object MarmotResetCommand {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

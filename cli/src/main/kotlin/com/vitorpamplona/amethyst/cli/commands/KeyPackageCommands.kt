@@ -30,18 +30,19 @@ object KeyPackageCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "key-package <publish|check> …")
-        return when (tail[0]) {
-            "publish" -> publish(dataDir)
-            "check" -> check(dataDir, tail.drop(1).toTypedArray())
-            else -> Output.error("bad_args", "key-package ${tail[0]}")
-        }
-    }
+    ): Int =
+        route(
+            "key-package",
+            tail,
+            "key-package <publish|check> …",
+            mapOf(
+                "publish" to { _ -> publish(dataDir) },
+                "check" to { rest -> check(dataDir, rest) },
+            ),
+        )
 
     private suspend fun publish(dataDir: DataDir): Int {
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val relays = ctx.keyPackageRelays().ifEmpty { ctx.outboxRelays() }.ifEmpty { ctx.anyRelays() }
             if (relays.isEmpty()) return Output.error("no_relays", "configure relays first")
@@ -57,8 +58,6 @@ object KeyPackageCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -67,8 +66,7 @@ object KeyPackageCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Output.error("bad_args", "key-package check <npub>")
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val targetHex = ctx.requireUserHex(rest[0])
             // Per MIP-00: a user's KeyPackages live on the relays advertised
@@ -109,8 +107,6 @@ object KeyPackageCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

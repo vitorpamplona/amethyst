@@ -51,17 +51,17 @@ object RelayCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "relay <add|list|publish-lists> …")
-        val sub = tail[0]
-        val rest = tail.drop(1).toTypedArray()
-        return when (sub) {
-            "add" -> add(dataDir, Args(rest))
-            "list" -> list(dataDir)
-            "publish-lists" -> publishLists(dataDir)
-            else -> Output.error("bad_args", "relay $sub")
-        }
-    }
+    ): Int =
+        route(
+            "relay",
+            tail,
+            "relay <add|list|publish-lists> …",
+            mapOf(
+                "add" to { rest -> add(dataDir, Args(rest)) },
+                "list" to { _ -> list(dataDir) },
+                "publish-lists" to { _ -> publishLists(dataDir) },
+            ),
+        )
 
     private suspend fun add(
         dataDir: DataDir,
@@ -74,8 +74,7 @@ object RelayCommands {
                 ?: return Output.error("bad_args", "invalid relay url: $rawUrl")
 
         val targets = if (type == "all") listOf("nip65", "inbox", "key_package") else listOf(type)
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             val addedTo = mutableListOf<String>()
             val alreadyPresent = mutableListOf<String>()
             for (t in targets) {
@@ -89,8 +88,6 @@ object RelayCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -138,8 +135,7 @@ object RelayCommands {
     }
 
     private suspend fun list(dataDir: DataDir): Int {
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             val self = ctx.identity.pubKeyHex
             Output.emit(
                 mapOf(
@@ -149,14 +145,11 @@ object RelayCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
     private suspend fun publishLists(dataDir: DataDir): Int {
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val self = ctx.identity.pubKeyHex
             val nip65Event = ctx.relaysOf(self)
@@ -189,8 +182,6 @@ object RelayCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

@@ -94,8 +94,7 @@ object ZapCommand {
                     ?: return Output.error("bad_args", "--with must be a valid ndebit pointer with a relay")
             }
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val recipient = ctx.requireUserHex(userArg)
             val metadata =
@@ -117,8 +116,6 @@ object ZapCommand {
 
             emitZapResult(ctx, sats, lnAddress, comment, request, zapType, timeoutMs, settleWith)
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -145,8 +142,7 @@ object ZapCommand {
                     ?: return Output.error("bad_args", "--with must be a valid ndebit pointer with a relay")
             }
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val zappedEvent =
                 ctx.store.query<Event>(Filter(ids = listOf(eventId), limit = 1)).firstOrNull()
@@ -197,8 +193,6 @@ object ZapCommand {
 
             emitSplitZapResult(ctx, sats, comment, zappedEvent.id, zapType, requests, timeoutMs, settleWith)
             return 0
-        } finally {
-            ctx.close()
         }
     }
 

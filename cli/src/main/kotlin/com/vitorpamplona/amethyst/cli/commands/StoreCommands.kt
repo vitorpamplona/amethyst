@@ -54,18 +54,19 @@ object StoreCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "store <stat|sweep-expired|scrub|compact|reindex-fts>")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "stat" -> stat(dataDir)
-            "sweep-expired" -> sweepExpired(dataDir)
-            "scrub" -> scrub(dataDir)
-            "compact" -> compact(dataDir)
-            "reindex-fts" -> reindexFts(dataDir)
-            else -> Output.error("bad_args", "store ${tail[0]}")
-        }
-    }
+    ): Int =
+        route(
+            "store",
+            tail,
+            "store <stat|sweep-expired|scrub|compact|reindex-fts>",
+            mapOf(
+                "stat" to { _ -> stat(dataDir) },
+                "sweep-expired" to { _ -> sweepExpired(dataDir) },
+                "scrub" to { _ -> scrub(dataDir) },
+                "compact" to { _ -> compact(dataDir) },
+                "reindex-fts" to { _ -> reindexFts(dataDir) },
+            ),
+        )
 
     private fun stat(dataDir: DataDir): Int {
         val storeRoot = dataDir.eventsDir.toPath()
