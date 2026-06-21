@@ -77,9 +77,21 @@
     "since": "2026-06-19T19:01:59-04:00",
     "translators": [
       {
+        "user": "anthony-robin",
+        "languages": [
+          "French"
+        ]
+      },
+      {
         "user": "maxblake2015",
         "languages": [
           "Polish"
+        ]
+      },
+      {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
         ]
       },
       {
@@ -92,12 +104,6 @@
         "user": "StellarStoic",
         "languages": [
           "Slovenian"
-        ]
-      },
-      {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
         ]
       },
       {
@@ -138,10 +144,6 @@
       },
       {
         "user": "Bardesss",
-        "languages": []
-      },
-      {
-        "user": "anthony-robin",
         "languages": []
       },
       {
