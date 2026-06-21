@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.cli.commands.GroupCommands
 import com.vitorpamplona.amethyst.cli.commands.InitCommands
 import com.vitorpamplona.amethyst.cli.commands.KeyCommands
 import com.vitorpamplona.amethyst.cli.commands.KeyPackageCommands
+import com.vitorpamplona.amethyst.cli.commands.KindCommand
 import com.vitorpamplona.amethyst.cli.commands.LoginCommand
 import com.vitorpamplona.amethyst.cli.commands.MarmotResetCommand
 import com.vitorpamplona.amethyst.cli.commands.MessageCommands
@@ -172,6 +173,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "key" -> return KeyCommands.dispatch(tail)
         "filter" -> return FilterCommand.run(tail)
         "nip" -> return NipCommand.run(tail)
+        "kind" -> return KindCommand.run(tail)
     }
 
     // `relay info URL` is a stateless NIP-11 fetch — no account needed. The
@@ -350,6 +352,7 @@ private fun printUsage() {
         |         [--id …] [--tag …] …        same flags fetch/subscribe use (no query sent)
         |  nip N                        show a NIP (repo first, then a Nostr wiki/long-form fallback)
         |  nip list                     fetch the NIP index (README) from the repo
+        |  kind N|NAME                  look up an event kind's label + NIP (number, or search by name)
         |
         |Identity:
         |  init [--nsec NSEC]           create or import a bare identity (no defaults published)

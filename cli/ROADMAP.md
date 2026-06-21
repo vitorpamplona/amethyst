@@ -94,7 +94,7 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `filter` | `amy filter` | ✅ | stateless — assemble + print a filter JSON. |
 | `blossom` | `amy blossom` | ✅ | upload/download/list/delete/check/mirror (reuses commons `BlossomClient`). |
 | `nip` | `amy nip` | ✅ | repo-first lookup + Nostr wiki/long-form fallback; `nip list`. |
-| `kind` | `amy kind` | 🆕 | needs a kind→schema registry (nak embeds one); none in quartz today. |
+| `kind` | `amy kind` | ✅ | quartz `KindNames` registry (kind → English label + NIP), ported from the Android relay view; number lookup + name search. |
 | `sync` | `amy sync` | ✅ | NIP-77 Negentropy reconcile with the local store (down/up/both). |
 | `git` | `amy git` | ✅ in part | NIP-34 repo announce/list/show/issue. clone/push (packfile transport) out of scope. |
 | `podcast` | `amy podcast` | ✅ | NIP-F4 show metadata (10154) + episode publish (54) + list. |
@@ -105,15 +105,15 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 
 nak has 34 functional commands. Coverage:
 
-- **Full / equivalent (18):** `event`, `req`(→`fetch`+`subscribe`), `filter`,
+- **Full / equivalent (19):** `event`, `req`(→`fetch`+`subscribe`), `filter`,
   `count`, `decode`, `encode`, `verify`, `relay`, `bunker`(+nostrconnect+auth_url),
   `encrypt`, `decrypt`, `gift`, `publish`, `sync`, `profile`, `podcast`, `nip`,
-  `blossom`. Protocol-sensitive ones (`bunker`, `sync`, `key` NIP-49,
+  `kind`, `blossom`. Protocol-sensitive ones (`bunker`, `sync`, `key` NIP-49,
   `encode`/`decode`) are interop-verified against the real `nak` binary.
 - **Partial / adapted (4):** `key` (no `expand`/`combine`/`validate`/`default`),
   `git` (NIP-34 events only — no packfile transport), `outbox` (shows NIP-65 vs
   nak's hints DB), `fetch` (filter-based, not nip19-hint resolution).
-- **Missing (12):** `kind` (needs a kind-schema registry), `admin` (NIP-86),
+- **Missing (11):** `admin` (NIP-86),
   `serve` (geode is a standalone relay), `dekey` (NIP-4E), `wallet` (NIP-60
   Cashu), `mcp`, `curl` (NIP-98), `fs` (FUSE), `group`/`nip29` (NIP-29 — amy has
   MLS/Marmot instead), `spell` (MuSig2/FROST), `validate` (RoK schema).
@@ -125,8 +125,7 @@ a large surface nak lacks: Marmot/MLS, NIP-17 DMs, zaps, CLINK offer/debit,
 NIP-02 follow, NIP-50 search, napplets, profile edit, store management, account
 management.
 
-**Cheap remaining wins:** `kind` (needs a registry), the `key`
-`expand`/`combine`/`validate`/`default` sub-verbs.
+**Cheap remaining wins:** the `key` `expand`/`combine`/`validate`/`default` sub-verbs.
 
 ---
 
