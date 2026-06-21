@@ -224,6 +224,14 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.publish(dataDir, tail)
         }
 
+        "fetch" -> {
+            Commands.fetch(dataDir, tail)
+        }
+
+        "subscribe" -> {
+            Commands.subscribe(dataDir, tail)
+        }
+
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -413,6 +421,15 @@ private fun printUsage() {
         |                                                array-of-arrays, e.g. '[["t","nostr"]]'.
         |  publish [EVENT-JSON] [--relay URL[,URL…]]   broadcast a pre-made signed event (verified
         |                                                first; reads stdin when the arg is omitted/`-`)
+        |
+        |Queries (filter flags shared by fetch/subscribe):
+        |  fetch  [--kind K[,K]] [--author U[,U]]      one-shot query: collect until EOSE, print, exit.
+        |         [--id ID[,ID]] [--tag e=ID,p=PK,…]    --author/--id accept npub/nevent/note/hex.
+        |         [--since TS] [--until TS] [--limit N]  default --limit 100, --timeout 8s.
+        |         [--search TEXT] [--relay URL[,URL…]]
+        |         [--timeout SECS]
+        |  subscribe [<same filter flags as fetch>]    live stream: print each event as it arrives
+        |         [--relay URL[,URL…]] [--timeout SECS]  (NDJSON). Runs until --timeout or interrupt.
         |
         |Static websites (NIP-5A kind:15128/35128):
         |  nsite fetch AUTHOR [--d ID] [--path P]      resolve one path over Nostr + Blossom and

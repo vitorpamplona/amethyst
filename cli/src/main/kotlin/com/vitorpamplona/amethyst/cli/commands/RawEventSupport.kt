@@ -22,8 +22,11 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 
 /**
  * Shared helpers for the nak-style raw-event verbs (`event`, `publish`,
@@ -65,4 +68,69 @@ object RawEventSupport {
         ctx: Context,
         args: Args,
     ): Set<NormalizedRelayUrl> = relayFlag(args).ifEmpty { ctx.outboxRelays() }
+
+    /**
+     * Where to read from for `fetch` / `subscribe` / `count`: the explicit
+     * `--relay` set, else the account's outbox, else the bootstrap union.
+     */
+    suspend fun queryTargets(
+        ctx: Context,
+        args: Args,
+    ): Set<NormalizedRelayUrl> = relayFlag(args).ifEmpty { ctx.outboxRelays().ifEmpty { ctx.bootstrapRelays() } }
+
+    /**
+     * Assemble a NIP-01 [Filter] from the common query flags shared by
+     * `fetch` / `subscribe` / `count`:
+     *
+     *   --kind 1,7        comma-separated kind ints
+     *   --author a,b      comma-separated npub / nprofile / 64-hex (local decode only)
+     *   --id x,y          comma-separated note / nevent / naddr / 64-hex
+     *   --tag e=<id>,p=<pk>,t=nostr   generic single-letter tag filters
+     *   --since / --until unix seconds
+     *   --limit N
+     *   --search TEXT     NIP-50
+     *
+     * Author/id decoding is local (no NIP-05 round-trip) — pass hex or a
+     * bech32 entity. Unparseable entries are dropped.
+     */
+    fun buildFilter(args: Args): Filter {
+        val kinds =
+            args
+                .flag("kind")
+                ?.split(',')
+                ?.mapNotNull { it.trim().toIntOrNull() }
+                ?.takeIf { it.isNotEmpty() }
+        val authors =
+            args
+                .flag("author")
+                ?.split(',')
+                ?.mapNotNull { decodePublicKeyAsHexOrNull(it.trim()) }
+                ?.takeIf { it.isNotEmpty() }
+        val ids =
+            args
+                .flag("id")
+                ?.split(',')
+                ?.mapNotNull { decodeEventIdAsHexOrNull(it.trim()) }
+                ?.takeIf { it.isNotEmpty() }
+        val tags =
+            args
+                .flag("tag")
+                ?.split(',')
+                ?.mapNotNull { pair ->
+                    val idx = pair.indexOf('=')
+                    if (idx <= 0) null else pair.take(idx).trim() to pair.substring(idx + 1).trim()
+                }?.groupBy({ it.first }, { it.second })
+                ?.takeIf { it.isNotEmpty() }
+
+        return Filter(
+            ids = ids,
+            authors = authors,
+            kinds = kinds,
+            tags = tags,
+            since = args.flag("since")?.toLongOrNull(),
+            until = args.flag("until")?.toLongOrNull(),
+            limit = args.flag("limit")?.toIntOrNull(),
+            search = args.flag("search"),
+        )
+    }
 }

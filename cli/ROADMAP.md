@@ -84,8 +84,8 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `key` | `amy key generate\|public` | ✅ in part · 🆕 | generate + derive done; NIP-49 encrypt/decrypt pending. |
 | `event` | `amy event` | ✅ | build/sign an arbitrary event, optional `--publish`/`--relay`. |
 | `publish` | `amy publish` | ✅ | broadcast a pre-made event JSON (verified first). |
-| `req` (one-shot) | `amy fetch` | 🆕 | filter → collect-until-EOSE. |
-| `req` (stream) | `amy subscribe` | 🆕 | filter → live stream to stdout. |
+| `req` (one-shot) | `amy fetch` | ✅ | filter → collect-until-EOSE, dedupe, sort, cap. |
+| `req` (stream) | `amy subscribe` | ✅ | filter → live NDJSON stream to stdout. |
 | `count` | `amy count` | 🆕 | NIP-45. |
 | `encrypt` / `decrypt` | `amy encrypt\|decrypt` | 🆕 | raw NIP-44 / NIP-04. |
 | `gift` | `amy gift wrap\|unwrap` | 🆕 | NIP-59 primitive (gift-wrap path already used by `dm`). |

@@ -222,6 +222,15 @@ Army-knife verbs that operate purely on their arguments. They never touch
 | `amy event … --publish` / `--relay URL[,URL…]` | As above, then broadcast (to the outbox, or to the given relays). |
 | `amy publish [EVENT-JSON] [--relay URL[,URL…]]` | Broadcast a pre-made signed event (verified first). Reads stdin when the argument is omitted or `-`. |
 
+### Queries
+
+Filter flags are shared by `fetch` and `subscribe`: `--kind K[,K]`, `--author U[,U]` (npub/nprofile/hex), `--id ID[,ID]` (note/nevent/naddr/hex), `--tag e=ID,p=PK,t=hashtag`, `--since TS`, `--until TS`, `--limit N`, `--search TEXT`, `--relay URL[,URL…]`. Relays default to your outbox, then the bootstrap set.
+
+| Command | What it does |
+|---|---|
+| `amy fetch [filter flags] [--timeout SECS]` | One-shot query — collect until every relay sends EOSE (or `--timeout`, default 8s), dedupe, sort newest-first, print and exit. `--limit` defaults to 100. |
+| `amy subscribe [filter flags] [--timeout SECS]` | Live stream — print each matching event as it arrives (NDJSON under `--json`). Runs until `--timeout` SECS or until interrupted. |
+
 ### Identity
 
 | Command | What it does |

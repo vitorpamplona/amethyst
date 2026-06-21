@@ -145,4 +145,14 @@ object Commands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int = PublishCommand.run(dataDir, tail)
+
+    suspend fun fetch(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = FetchCommand.run(dataDir, tail)
+
+    suspend fun subscribe(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = SubscribeCommand.run(dataDir, tail)
 }
