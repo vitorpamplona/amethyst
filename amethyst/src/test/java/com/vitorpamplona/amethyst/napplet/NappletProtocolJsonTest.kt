@@ -188,6 +188,31 @@ class NappletProtocolJsonTest {
         assertEquals("relay.publish", NappletProtocolJson.readType("""{"type":"relay.publish","id":"9"}"""))
     }
 
+    @Test
+    fun readsSubIdFromASubscription() {
+        assertEquals("s7", NappletProtocolJson.readSubId("""{"type":"relay.subscribe","id":"1","subId":"s7","filters":[{}]}"""))
+        assertNull(NappletProtocolJson.readSubId("""{"type":"relay.query"}"""))
+    }
+
+    @Test
+    fun encodesSubscriptionPushesKeyedBySubId() {
+        val ev = json.parseToJsonElement(NappletProtocolJson.encodeRelayEvent("s1", sampleEvent())).jsonObject
+        assertEquals("relay.event", ev["type"]?.jsonPrimitive?.content)
+        assertEquals("s1", ev["subId"]?.jsonPrimitive?.content)
+        assertEquals(
+            "a".repeat(64),
+            ev["event"]
+                ?.jsonObject
+                ?.get("id")
+                ?.jsonPrimitive
+                ?.content,
+        )
+
+        val eose = json.parseToJsonElement(NappletProtocolJson.encodeRelayEose("s1")).jsonObject
+        assertEquals("relay.eose", eose["type"]?.jsonPrimitive?.content)
+        assertEquals("s1", eose["subId"]?.jsonPrimitive?.content)
+    }
+
     // ---- encode responses (".result" envelope) ----
 
     @Test

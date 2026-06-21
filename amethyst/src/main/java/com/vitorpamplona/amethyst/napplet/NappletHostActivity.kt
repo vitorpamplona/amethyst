@@ -357,15 +357,24 @@ class NappletHostActivity : ComponentActivity() {
     }
 
     private fun onBrokerReply(msg: Message): Boolean {
-        if (msg.what != NappletIpc.MSG_RESPONSE) return false
         val data = msg.data ?: return true
-        val id = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return true
-        val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
+        when (msg.what) {
+            NappletIpc.MSG_RESPONSE -> {
+                val id = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return true
+                val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
 
-        // payload is the broker's {type:"...result", ok, ...}; inject the correlation id for the shim.
-        val result = runCatching { JSONObject(payload) }.getOrNull() ?: JSONObject()
-        result.put("id", id)
-        bridgeReplyProxy?.postMessage(result.toString())
+                // payload is the broker's {type:"...result", ok, ...}; inject the correlation id for the shim.
+                val result = runCatching { JSONObject(payload) }.getOrNull() ?: JSONObject()
+                result.put("id", id)
+                bridgeReplyProxy?.postMessage(result.toString())
+            }
+            // A subscription push (relay.event/relay.eose) is keyed by subId, not a request id; forward verbatim.
+            NappletIpc.MSG_PUSH -> {
+                val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
+                bridgeReplyProxy?.postMessage(payload)
+            }
+            else -> return false
+        }
         return true
     }
 
@@ -419,28 +428,35 @@ class NappletHostActivity : ComponentActivity() {
         private const val SHIM_JS = """
 (function(){
   if (window.__nappletShimInstalled) return; window.__nappletShimInstalled = true;
-  var seq = 0, pending = {};
+  var seq = 0, pending = {}, subs = {};
+  function send(env){ env.id = env.id || ('r' + (seq++)); parent.postMessage(JSON.stringify(env), '*'); return env.id; }
   function call(type, fields){
     return new Promise(function(resolve, reject){
-      var id = 'r' + (seq++);
+      var env = { type: type }; if (fields) for (var k in fields) env[k] = fields[k];
+      var id = send(env);
       pending[id] = { resolve: resolve, reject: reject };
-      var env = { type: type, id: id };
-      if (fields) for (var k in fields) env[k] = fields[k];
-      parent.postMessage(JSON.stringify(env), '*');
     });
   }
+  // Fire-and-forget (no .result awaited), used for subscribe/unsubscribe.
+  function post(type, fields){ var env = { type: type }; if (fields) for (var k in fields) env[k] = fields[k]; send(env); }
   window.addEventListener('message', function(e){
     if (e.source !== parent) return;
-    if (typeof e.data !== 'string') return;
-    var msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
-    if (!msg || !msg.id) return;
+    var msg; if (typeof e.data === 'string') { try { msg = JSON.parse(e.data); } catch (_) { return; } } else { msg = e.data; }
+    if (!msg) return;
+    // Subscription pushes are keyed by subId, not a request id.
+    if (msg.type === 'relay.event' || msg.type === 'relay.eose') {
+      var sub = subs[msg.subId]; if (!sub) return;
+      if (msg.type === 'relay.event') { if (sub.onEvent) sub.onEvent(msg.event); }
+      else { if (sub.onEose) sub.onEose(); }
+      return;
+    }
+    if (!msg.id) return;
     var p = pending[msg.id]; if (!p) return; delete pending[msg.id];
     if (msg.ok) p.resolve(msg);
     else { var err = new Error(msg.reason || msg.operation || msg.error || 'napplet error'); err.napplet = msg; p.reject(err); }
   });
   function field(promise, name){ return promise.then(function(m){ return m[name]; }); }
   function normFilters(filters){ return Array.isArray(filters) ? { filters: filters } : { filter: filters || {} }; }
-  function b64ToBytes(b64){ var bin = atob(b64); var u = new Uint8Array(bin.length); for (var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u; }
   function bytesToB64(bytes){ var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); var s=''; for (var i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return btoa(s); }
   var actionSeq = 0;
   var napplet = {
@@ -477,14 +493,14 @@ class NappletHostActivity : ComponentActivity() {
       publish: function(template, options){ return field(call('relay.publish', { event: template, options: options }), 'event'); },
       publishEncrypted: function(template, recipient, encryption){ return field(call('relay.publishEncrypted', { event: template, recipient: recipient, encryption: encryption || 'nip44' }), 'event'); },
       query: function(filters){ return field(call('relay.query', normFilters(filters)), 'events'); },
-      // subscribe currently delivers the initial matches; a live tail is a follow-up.
+      // subscribe is push-based: the shell sends relay.event/relay.eose keyed by subId. Today it
+      // delivers the initial matches then EOSE; a live tail is a follow-up.
       subscribe: function(filters, onEvent, onEose, options){
-        call('relay.subscribe', normFilters(filters)).then(function(m){
-          var events = m.events || [];
-          if (typeof onEvent === 'function') events.forEach(function(ev){ onEvent(ev); });
-          if (typeof onEose === 'function') onEose();
-        });
-        return { close: function(){} };
+        var subId = 's' + (seq++);
+        subs[subId] = { onEvent: onEvent, onEose: onEose };
+        var env = normFilters(filters); env.subId = subId;
+        post('relay.subscribe', env);
+        return { close: function(){ delete subs[subId]; post('relay.close', { subId: subId }); } };
       }
     },
     storage: {
@@ -499,8 +515,9 @@ class NappletHostActivity : ComponentActivity() {
       payInvoice: function(invoice){ return field(call('value.payInvoice', { invoice: invoice }), 'preimage'); }
     },
     resource: {
-      bytes: function(url){ return call('resource.bytes', { url: url }).then(function(m){ return new Blob([b64ToBytes(m.bytes)], { type: m.mime || '' }); }); },
-      bytesAsObjectURL: function(url){ return call('resource.bytes', { url: url }).then(function(m){ return URL.createObjectURL(new Blob([b64ToBytes(m.bytes)], { type: m.mime || '' })); }); }
+      // The shell rebuilds the Blob from the host's base64 before this resolves.
+      bytes: function(url){ return field(call('resource.bytes', { url: url }), 'blob'); },
+      bytesAsObjectURL: function(url){ return field(call('resource.bytes', { url: url }), 'blob').then(function(blob){ return URL.createObjectURL(blob); }); }
     },
     // upload.blob is an Amethyst-specific extension (not part of @napplet/shim).
     upload: {

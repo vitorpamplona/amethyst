@@ -127,8 +127,26 @@ class NappletBrokerService : Service() {
 
         val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: "napplet"
         scope.launch {
+            // Unsubscribe is fire-and-forget: snapshot subscriptions have no live tail to cancel.
+            if (requestType == "relay.close") {
+                reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Done))
+                return@launch
+            }
+
             val response = process(identity, declared, payload)
-            reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, response))
+
+            // A subscription is answered with relay.event/relay.eose pushes (keyed by subId), not a
+            // .result — matching @napplet/shim. Today it delivers the initial matches then EOSE; a
+            // live tail is a follow-up.
+            val subId = if (requestType == "relay.subscribe") runCatching { NappletProtocolJson.readSubId(payload) }.getOrNull() else null
+            if (subId != null) {
+                if (response is NappletResponse.Events) {
+                    response.events.forEach { push(replyTo, NappletProtocolJson.encodeRelayEvent(subId, it)) }
+                }
+                push(replyTo, NappletProtocolJson.encodeRelayEose(subId))
+            } else {
+                reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, response))
+            }
         }
         return true
     }
@@ -413,6 +431,22 @@ class NappletBrokerService : Service() {
             replyTo.send(response)
         } catch (e: RemoteException) {
             Log.w("NappletBrokerService", "Applet host went away before reply could be delivered", e)
+        }
+    }
+
+    /** Sends an unsolicited push (a `relay.event`/`relay.eose` envelope) for the host to forward verbatim. */
+    private fun push(
+        replyTo: Messenger,
+        payload: String,
+    ) {
+        val message =
+            Message.obtain(null, NappletIpc.MSG_PUSH).apply {
+                data = Bundle().apply { putString(NappletIpc.KEY_PAYLOAD, payload) }
+            }
+        try {
+            replyTo.send(message)
+        } catch (e: RemoteException) {
+            Log.w("NappletBrokerService", "Applet host went away before push could be delivered", e)
         }
     }
 

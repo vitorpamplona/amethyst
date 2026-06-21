@@ -151,14 +151,26 @@ than dumping raw content. Corrected in code: identity reads now emit method-spec
 `storage.keys` returns `keys`; `relay.publish`/`publishEncrypted` read the template from `event`;
 `getProfile` builds a `ProfileData` object. Locked by `NappletProtocolJsonTest`.
 
-**Transport gap still open (the real blocker for stock napplets).** `@napplet/core` posts
+**Transport: structured-clone objects + subscription push — landed.** `@napplet/core` posts
 **structured-clone objects** (not JSON strings) via `target.postMessage(obj)` and validates
-cloneability — that is how `resource.bytes` returns a real `Blob`. Our shell relay
-(`shell.html`) only forwards `typeof e.data === 'string'` and posts replies back as strings, so a
-stock napplet's object messages are dropped today. Making the shell bridge object↔string (and
-converting the `resource.bytes` base64 reply into a real `Blob`), plus the `relay.subscribe`
-push channel (`relay.event`/`relay.eose`, no `.result`) and multi-`filters` queries, is the next
-focused pass — and it needs on-device verification.
+cloneability — that is how `resource.bytes` returns a real `Blob`, and why a stock napplet's
+object messages were dropped before (our shell only forwarded strings). Fixed:
+
+- **`shell.html` bridges object↔string both ways.** applet→native serializes object envelopes to
+  the string the native bridge carries (requests carry no Blobs); native→applet parses the reply
+  to an object and posts a **structured-clone object** (what the SDK reads via `e.data.type`), not
+  a string. The injected shim accepts either form.
+- **`resource.bytes` Blob.** The shell rebuilds a real `Blob` from the host's base64 `bytes`+`mime`
+  before delivering, so both the SDK and our shim resolve to a `Blob`.
+- **`relay.subscribe` push channel.** Subscriptions are answered with `relay.event` (one per match)
+  then `relay.eose`, keyed by `subId` — no `.result`, matching the SDK. A new `MSG_PUSH` IPC frame
+  lets the broker push unsolicited envelopes the host forwards verbatim; `relay.close` is a
+  fire-and-forget no-op. Today this delivers the **initial snapshot then EOSE**.
+
+Still open: a **live subscription tail** (push as events arrive, not just the snapshot) plus
+`identity.onChanged`/`inc.on`; multi-`filters` queries (we use the first filter); the Blossom
+`upload` gateway; and **on-device verification** — the shell/shim changes are JS and not exercised
+by the JVM unit tests.
 
 ## Update (2026-06-20, later): verified against `@napplet/shim@0.16.0` and corrected
 

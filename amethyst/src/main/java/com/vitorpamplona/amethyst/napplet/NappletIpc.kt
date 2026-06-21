@@ -33,6 +33,13 @@ object NappletIpc {
     /** Broker → host: the matching reply. Carries [KEY_REQUEST_ID] and [KEY_PAYLOAD]. */
     const val MSG_RESPONSE = 2
 
+    /**
+     * Broker → host: an **unsolicited push** (a live `relay.event`/`relay.eose` for a subscription).
+     * Carries only [KEY_PAYLOAD] — a full envelope keyed by the applet's `subId`, not a request id —
+     * which the host forwards to the applet verbatim.
+     */
+    const val MSG_PUSH = 3
+
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
 

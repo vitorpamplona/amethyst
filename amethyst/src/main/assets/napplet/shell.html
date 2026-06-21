@@ -22,16 +22,33 @@
         var bridge = window.__nappletBridge;
 
         // applet -> native: only forward messages that came from our applet iframe.
+        // The @napplet SDK posts structured-clone objects; our injected shim posts strings. The
+        // native bridge carries only strings, so serialize objects here. (Requests carry no Blobs.)
         window.addEventListener('message', function (e) {
           if (e.source !== iframe.contentWindow) return;
-          if (typeof e.data !== 'string') return;
-          if (bridge) bridge.postMessage(e.data);
+          var data = e.data;
+          if (typeof data !== 'string') {
+            try { data = JSON.stringify(data); } catch (_) { return; }
+          }
+          if (bridge) bridge.postMessage(data);
         });
 
-        // native -> applet: hand the broker's reply down into the iframe.
+        // native -> applet: hand the broker's reply (or a subscription push) down into the iframe as
+        // a structured-clone object, which is what the SDK expects (it reads e.data.type, not a string).
         if (bridge) {
           bridge.onmessage = function (e) {
-            iframe.contentWindow.postMessage(e.data, '*');
+            var msg;
+            try { msg = JSON.parse(e.data); } catch (_) { return; }
+            // resource.bytes resolves to a real Blob in the SDK; rebuild it from the base64 the host sent.
+            if (msg && msg.type === 'resource.bytes.result' && typeof msg.bytes === 'string') {
+              try {
+                var bin = atob(msg.bytes), u = new Uint8Array(bin.length);
+                for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+                msg.blob = new Blob([u], { type: msg.mime || '' });
+                delete msg.bytes;
+              } catch (_) {}
+            }
+            iframe.contentWindow.postMessage(msg, '*');
           };
         }
 

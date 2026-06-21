@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
@@ -53,6 +54,27 @@ object NappletProtocolJson {
 
     /** The `type` discriminant of a request envelope, used to build the matching `.result` type. */
     fun readType(envelopeJson: String): String? = json.parseToJsonElement(envelopeJson).jsonObject.str("type")
+
+    /** The `subId` of a subscription request, used to key the `relay.event`/`relay.eose` pushes back to it. */
+    fun readSubId(envelopeJson: String): String? = json.parseToJsonElement(envelopeJson).jsonObject.str("subId")
+
+    /** A `relay.event` push: delivers one matching [event] to the subscription [subId] (no request id). */
+    fun encodeRelayEvent(
+        subId: String,
+        event: Event,
+    ): String =
+        buildJsonObject {
+            put("type", "relay.event")
+            put("subId", subId)
+            put("event", json.parseToJsonElement(event.toJson()))
+        }.toString()
+
+    /** A `relay.eose` push: signals end-of-stored-events for the subscription [subId]. */
+    fun encodeRelayEose(subId: String): String =
+        buildJsonObject {
+            put("type", "relay.eose")
+            put("subId", subId)
+        }.toString()
 
     /** Parses a request envelope. Returns `null` for an unrecognized `type` so the broker can deny it. */
     fun decodeRequest(envelopeJson: String): NappletRequest? {
