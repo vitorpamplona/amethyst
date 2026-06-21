@@ -150,9 +150,15 @@ fun observeUserBanner(
 fun observeUserPicture(
     user: User,
     accountViewModel: AccountViewModel,
+    subscribe: Boolean = true,
 ): State<String?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
+    // Callers that already hold a single shared subscription for the same user
+    // (e.g. an author avatar that also observes the contact-card score) can pass
+    // subscribe = false to avoid setting up a redundant relay subscription.
+    if (subscribe) {
+        UserFinderFilterAssemblerSubscription(user, accountViewModel)
+    }
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -476,9 +482,14 @@ fun observeUserIsFollowingChannel(
 fun observeUserContactCardsScore(
     user: User,
     accountViewModel: AccountViewModel,
+    subscribe: Boolean = true,
 ): State<Int?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
+    // See observeUserPicture: pass subscribe = false when a shared subscription
+    // for the same user already exists.
+    if (subscribe) {
+        UserFinderFilterAssemblerSubscription(user, accountViewModel)
+    }
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow = remember(user) { user.cards().rankFlow(accountViewModel.account.trustProviderList) }
