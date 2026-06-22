@@ -51,6 +51,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.JavaScriptReplyProxy
@@ -229,9 +230,15 @@ class NappletHostActivity : ComponentActivity() {
         // Activities are edge-to-edge by default on recent Android; pad by the system bar and
         // display-cutout insets so neither the chrome nor the applet draws under the system bars.
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            val applied = WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            val bars = insets.getInsets(applied)
             view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
-            insets
+            // Zero the insets we just turned into padding before they reach the child WebView: on
+            // targetSdk 35+ the WebView auto-applies any insets it receives to its own web content, so
+            // leaving them un-consumed padded the bottom a SECOND time — a band of the page's own
+            // background above the navigation bar. Keep the other types (notably IME) flowing so the
+            // applet's keyboard-aware resize still works.
+            WindowInsetsCompat.Builder(insets).setInsets(applied, Insets.NONE).build()
         }
 
         probeAndMount()
@@ -375,6 +382,10 @@ class NappletHostActivity : ComponentActivity() {
                 safeBrowsingEnabled = true
             }
         }
+        // Disable the overscroll stretch/glow: forcing a scroll past the content edge stretched the
+        // WebView's output and exposed the shell document's background behind the applet iframe at the
+        // seam (a stray white band at the bottom). The applet's own content still scrolls normally.
+        webView.overScrollMode = View.OVER_SCROLL_NEVER
         WebView.setWebContentsDebuggingEnabled(false)
         webView.webViewClient = NappletWebViewClient()
     }

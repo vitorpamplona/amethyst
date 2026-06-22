@@ -169,9 +169,15 @@ class NappletContentServer(
     /** Inserts the `window.napplet` client shim into the applet's HTML document. */
     private fun injectShim(html: ByteArray): ByteArray {
         val text = html.decodeToString()
+        // Disable the document's overscroll affordance (the bounce/stretch): the Android-level
+        // WebView.overScrollMode only governs the outer frame, so an applet whose own root background is
+        // transparent stretched on over-scroll and exposed the shell's background behind it (a stray
+        // white band at the bottom). `overscroll-behavior: none` removes the stretch at the source,
+        // theme-independently. Allowed by the app CSP's `style-src 'unsafe-inline'`.
+        val style = "<style>html,body{overscroll-behavior:none !important}</style>"
         // In website mode, set the NIP-07 flag synchronously *before* the shim so window.nostr installs.
         val nip07Flag = if (websiteMode) "<script>window.__nappletNip07=true;</script>" else ""
-        val script = "$nip07Flag<script>$shimJs</script>"
+        val script = "$style$nip07Flag<script>$shimJs</script>"
         val headIdx = text.indexOf("<head", ignoreCase = true)
         val injected =
             when {
