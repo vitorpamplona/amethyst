@@ -57,12 +57,49 @@ object NappletCommands {
         route(
             "napplet",
             tail,
-            "napplet <fetch|publish> …",
+            "napplet <fetch|publish|serve> …",
             mapOf(
                 "fetch" to { rest -> fetch(dataDir, rest) },
                 "publish" to { rest -> publish(dataDir, rest) },
+                "serve" to { rest -> serve(dataDir, rest) },
             ),
         )
+
+    /**
+     * `amy napplet serve <author> [--d ID] [--port N]` — fetch + aggregate-verify the manifest and
+     * serve its static content over a local HTTP server. NOTE: the napplet's window.napplet.* runtime
+     * needs the Amethyst host; this serves the files only, for inspecting that they load/route.
+     */
+    private suspend fun serve(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val author = args.positionalOrNull(0) ?: return Output.error("bad_args", "napplet serve <author> [--d ID] [--port N] [--server S] [--relay R]")
+        val identifier = args.flag("d")
+        val port = args.intFlag("port", 8080)
+        val extraServers = StaticSiteFetch.commaList(args.flag("server"))
+        val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
+        val timeoutSecs = args.longFlag("timeout", 8L)
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val authorHex = ctx.requireUserHex(author)
+            val relays =
+                extraRelays
+                    .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                    .toSet()
+                    .ifEmpty { ctx.bootstrapRelays() }
+            val event =
+                fetchByAuthor(ctx, authorHex, identifier, relays, timeoutSecs * 1000)
+                    ?: return Output.error("not_found", "no napplet manifest found", mapOf("pubkey" to authorHex, "d" to identifier))
+            val manifest = event as NappletManifest
+            if (!manifest.verifyAggregate()) {
+                return Output.error("aggregate_mismatch", "manifest x aggregate does not match its path tags")
+            }
+            return StaticSiteServe.serve(manifest.paths(), (manifest.servers() + extraServers).distinct(), port)
+        }
+    }
 
     /**
      * `amy napplet publish <dir> --server <blossom> [--requires identity,relay,…] [--d ID] [--relay …]`

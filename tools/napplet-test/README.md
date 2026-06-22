@@ -5,19 +5,16 @@ A self-contained napplet for **on-device verification** of Amethyst's NIP-5D hos
 shim → shell → broker → consent round-trip (and the newer `identity.getList/getZaps/getBadges`,
 `identity.onChanged`, `keys.onAction`, and `resource.bytes` `nostr:` paths) works on a real device.
 
-## Files
+`index.html` is the napplet: read-only checks run on load; publish/upload/pay are behind buttons; live
+pushes (`identity.changed`, `keys.action`) land in the top banner.
 
-- `index.html` — the napplet. Read-only checks run on load; publish/upload/pay are behind buttons;
-  live pushes (`identity.changed`, `keys.action`) land in the top banner.
-- `publish.sh` — a standalone (nak + curl) uploader, for when you don't want to build `amy`.
+## Publish it
 
-## Publish with `amy` (recommended)
-
-`amy napplet publish` uploads the whole directory to Blossom and broadcasts the NIP-5D event in one
-step, using the account `amy` is logged in as:
+`amy napplet publish` uploads the whole directory to Blossom (BUD-02 signed) and broadcasts the NIP-5D
+event in one step, as the account `amy` is logged in as:
 
 ```bash
-./gradlew :cli:installDist            # builds amy
+./gradlew :cli:installDist            # builds amy → cli/build/install/amy/bin/amy
 amy napplet publish tools/napplet-test \
   --server https://blossom.primal.net \
   --requires identity,relay,storage,value,resource,upload,keys \
@@ -25,33 +22,26 @@ amy napplet publish tools/napplet-test \
   --relay wss://relay.damus.io --relay wss://nos.lol
 ```
 
-(`--d` makes it an addressable kind-35129 napplet; omit it for a root kind-15129. For a plain static
-site use `amy nsite publish <dir> --server …`.) Use the **same key you're logged in as in Amethyst**.
+- `--d` makes it an addressable kind-35129 napplet; omit it for a root kind-15129.
+- For a plain static site, use `amy nsite publish <dir> --server …` (kind 15128/35128).
+- Use the **same key you're logged in as in Amethyst**, so the napplet appears under your account and
+  the identity reads (`getProfile`, `getFollows`, …) have data.
 
-## Prerequisites
+Verify it resolves (optional): `amy napplet fetch <your-pubkey-hex> --d napplet-test`.
 
-- [`nak`](https://github.com/fiatjaf/nak) (signs + publishes the events), `curl`, and `sha256sum`
-  (or `shasum`/`openssl`).
-- A Blossom server that accepts BUD-02 uploads (e.g. `https://blossom.primal.net`,
-  `https://cdn.satellite.earth`, or your own).
-- Your **nsec** — use the **same key you're logged in as in Amethyst**, so the napplet appears under
-  your account and the identity reads (`getProfile`, `getFollows`, …) have data.
+## Preview in a browser (optional)
 
-## Publish without `amy` (standalone)
+`amy napplet serve` resolves the published manifest and serves its static content locally (each blob
+sha256-verified, just like the device host) so you can eyeball that it loads:
 
 ```bash
-cd tools/napplet-test
-./publish.sh --sec nsec1yourkey... --server https://blossom.primal.net \
-  --relay wss://relay.damus.io --relay wss://nos.lol
+amy napplet serve <your-pubkey-hex> --d napplet-test --port 8080   # then open http://127.0.0.1:8080
 ```
 
-Then verify it resolves (optional):
+This serves the **files only** — the `window.napplet.*` runtime needs the Amethyst host, so the API
+rows won't pass in a plain browser. Use it to confirm the files publish and route correctly.
 
-```bash
-amy napplet fetch <your-pubkey-hex> --d napplet-test
-```
-
-## Open it in Amethyst
+## Run on a device
 
 Build & install the debug app and watch the logs:
 
@@ -82,6 +72,4 @@ feed card) and tap **Open**. It launches in the sandboxed `:napplet` process.
 
 ## Notes
 
-- `publish.sh` uses `nak`'s `-t key=val1;val2` multi-element tag syntax (e.g.
-  `path=/index.html;<hash>`). If your `nak` version differs, adjust accordingly.
-- Re-running `publish.sh` replaces the same addressable event (`d=napplet-test`).
+- Re-running `amy napplet publish … --d napplet-test` replaces the same addressable event.

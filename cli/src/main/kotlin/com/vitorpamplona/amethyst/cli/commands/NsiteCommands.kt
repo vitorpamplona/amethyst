@@ -57,12 +57,48 @@ object NsiteCommands {
         route(
             "nsite",
             tail,
-            "nsite <fetch|publish> …",
+            "nsite <fetch|publish|serve> …",
             mapOf(
                 "fetch" to { rest -> fetch(dataDir, rest) },
                 "publish" to { rest -> publish(dataDir, rest) },
+                "serve" to { rest -> serve(dataDir, rest) },
             ),
         )
+
+    /**
+     * `amy nsite serve <author> [--d ID] [--port N]` — fetch the manifest and serve it over a local
+     * HTTP server (sha256-verified per request) so you can open it in a browser.
+     */
+    private suspend fun serve(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val author = args.positionalOrNull(0) ?: return Output.error("bad_args", "nsite serve <author> [--d ID] [--port N] [--server S] [--relay R]")
+        val identifier = args.flag("d")
+        val port = args.intFlag("port", 8080)
+        val extraServers = StaticSiteFetch.commaList(args.flag("server"))
+        val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
+        val timeoutSecs = args.longFlag("timeout", 8L)
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val authorHex = ctx.requireUserHex(author)
+            val relays =
+                extraRelays
+                    .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                    .toSet()
+                    .ifEmpty { ctx.bootstrapRelays() }
+            val manifest =
+                fetchManifest(ctx, authorHex, identifier, relays, timeoutSecs * 1000)
+                    ?: return Output.error(
+                        "not_found",
+                        "no static-website manifest for this author",
+                        mapOf("pubkey" to authorHex, "d" to identifier),
+                    )
+            return StaticSiteServe.serve(manifest.paths, (manifest.servers + extraServers).distinct(), port)
+        }
+    }
 
     /**
      * `amy nsite publish <dir> --server <blossom> [--d ID] [--relay …] [--title …]` — upload a static
