@@ -28,6 +28,7 @@ amy napplet publish tools/napplet-test \
   the identity reads (`getProfile`, `getFollows`, …) have data.
 
 Verify it resolves (optional): `amy napplet fetch <your-pubkey-hex> --d napplet-test`.
+List everything you've published: `amy napplet list <your-pubkey-hex>` (or `amy nsite list <pubkey>`).
 
 ## Preview in a browser (optional)
 

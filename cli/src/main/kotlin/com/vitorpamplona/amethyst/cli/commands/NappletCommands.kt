@@ -57,13 +57,65 @@ object NappletCommands {
         route(
             "napplet",
             tail,
-            "napplet <fetch|publish|serve> …",
+            "napplet <fetch|publish|serve|list> …",
             mapOf(
                 "fetch" to { rest -> fetch(dataDir, rest) },
                 "publish" to { rest -> publish(dataDir, rest) },
                 "serve" to { rest -> serve(dataDir, rest) },
+                "list" to { rest -> list(dataDir, rest) },
             ),
         )
+
+    /**
+     * `amy napplet list <author> [--relay R] [--timeout S]` — enumerate an author's published
+     * napplets: the root (kind 15129) and every named one (kind 35129), latest per identifier.
+     */
+    private suspend fun list(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val author = args.positionalOrNull(0) ?: return Output.error("bad_args", "napplet list <author> [--relay R] [--timeout S]")
+        val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
+        val timeoutSecs = args.longFlag("timeout", 8L)
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val authorHex = ctx.requireUserHex(author)
+            val relays =
+                extraRelays
+                    .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                    .toSet()
+                    .ifEmpty { ctx.bootstrapRelays() }
+            val filter = Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND), authors = listOf(authorHex))
+            val items =
+                ctx
+                    .drain(relays.associateWith { listOf(filter) }, timeoutSecs * 1000)
+                    .map { (_, ev) -> ev }
+                    .filter { it.pubKey == authorHex && it is NappletManifest }
+                    .groupBy { it.kind to (it as? NamedNappletEvent)?.identifier() }
+                    .mapNotNull { (_, dupes) -> dupes.maxByOrNull { it.createdAt } }
+                    .sortedByDescending { it.createdAt }
+                    .map { ev ->
+                        val m = ev as NappletManifest
+                        mapOf(
+                            "kind" to ev.kind,
+                            "d" to (ev as? NamedNappletEvent)?.identifier(),
+                            "title" to m.title(),
+                            "description" to m.description(),
+                            "paths" to m.paths().size,
+                            "servers" to m.servers(),
+                            "requires" to m.requires(),
+                            "aggregate_sha256" to m.declaredAggregateHash(),
+                            "aggregate_verified" to m.verifyAggregate(),
+                            "event_id" to ev.id,
+                            "created_at" to ev.createdAt,
+                        )
+                    }
+            Output.emit(mapOf("pubkey" to authorHex, "count" to items.size, "napplets" to items))
+            return 0
+        }
+    }
 
     /**
      * `amy napplet serve <author> [--d ID] [--port N]` — fetch + aggregate-verify the manifest and

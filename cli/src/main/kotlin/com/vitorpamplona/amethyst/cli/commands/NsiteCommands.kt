@@ -57,13 +57,77 @@ object NsiteCommands {
         route(
             "nsite",
             tail,
-            "nsite <fetch|publish|serve> …",
+            "nsite <fetch|publish|serve|list> …",
             mapOf(
                 "fetch" to { rest -> fetch(dataDir, rest) },
                 "publish" to { rest -> publish(dataDir, rest) },
                 "serve" to { rest -> serve(dataDir, rest) },
+                "list" to { rest -> list(dataDir, rest) },
             ),
         )
+
+    /**
+     * `amy nsite list <author> [--relay R] [--timeout S]` — enumerate an author's static websites:
+     * the root (kind 15128) and every named one (kind 35128), latest per identifier.
+     */
+    private suspend fun list(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val author = args.positionalOrNull(0) ?: return Output.error("bad_args", "nsite list <author> [--relay R] [--timeout S]")
+        val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
+        val timeoutSecs = args.longFlag("timeout", 8L)
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val authorHex = ctx.requireUserHex(author)
+            val relays =
+                extraRelays
+                    .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                    .toSet()
+                    .ifEmpty { ctx.bootstrapRelays() }
+            val filter = Filter(kinds = listOf(RootSiteEvent.KIND, NamedSiteEvent.KIND), authors = listOf(authorHex))
+            val items =
+                ctx
+                    .drain(relays.associateWith { listOf(filter) }, timeoutSecs * 1000)
+                    .map { (_, ev) -> ev }
+                    .filter { it.pubKey == authorHex && (it is RootSiteEvent || it is NamedSiteEvent) }
+                    .groupBy { it.kind to (it as? NamedSiteEvent)?.identifier() }
+                    .mapNotNull { (_, dupes) -> dupes.maxByOrNull { it.createdAt } }
+                    .sortedByDescending { it.createdAt }
+                    .map { ev -> describe(ev) }
+            Output.emit(mapOf("pubkey" to authorHex, "count" to items.size, "nsites" to items))
+            return 0
+        }
+    }
+
+    private fun describe(ev: Event): Map<String, Any?> =
+        when (ev) {
+            is NamedSiteEvent ->
+                mapOf(
+                    "kind" to ev.kind,
+                    "d" to ev.identifier(),
+                    "title" to ev.title(),
+                    "description" to ev.description(),
+                    "paths" to ev.paths().size,
+                    "servers" to ev.servers(),
+                    "event_id" to ev.id,
+                    "created_at" to ev.createdAt,
+                )
+            is RootSiteEvent ->
+                mapOf(
+                    "kind" to ev.kind,
+                    "d" to null,
+                    "title" to ev.title(),
+                    "description" to ev.description(),
+                    "paths" to ev.paths().size,
+                    "servers" to ev.servers(),
+                    "event_id" to ev.id,
+                    "created_at" to ev.createdAt,
+                )
+            else -> mapOf("kind" to ev.kind, "event_id" to ev.id)
+        }
 
     /**
      * `amy nsite serve <author> [--d ID] [--port N]` — fetch the manifest and serve it over a local
