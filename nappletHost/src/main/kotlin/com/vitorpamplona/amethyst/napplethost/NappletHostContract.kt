@@ -60,6 +60,13 @@ object NappletHostContract {
     const val EXTRA_WEBSITE_MODE = "napplet_website_mode"
 
     /**
+     * Whether this site's traffic routes through Tor (true, the default when Tor is active) or over the
+     * open web (false). The main process resolves the per-site preference; the sandbox applies it to
+     * both the WebView proxy and the blob-fetch client. Always true for locked napplets.
+     */
+    const val EXTRA_USE_TOR = "napplet_use_tor"
+
+    /**
      * FQN of the main-process broker service (in `:amethyst`). The sandbox binds it by name so it
      * needs no compile-time reference to `:amethyst`. Must match the manifest `<service>` declaration.
      */

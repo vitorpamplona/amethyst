@@ -55,6 +55,8 @@ import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.JavaScriptReplyProxy
+import androidx.webkit.ProxyConfig
+import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -73,6 +75,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.util.concurrent.Executor
 
 /**
  * Hosts a napplet/nsite WebView in the isolated `:napplet` process — a process that holds **no**
@@ -106,6 +109,10 @@ class NappletHostActivity : ComponentActivity() {
 
     // nSite "website mode": a normal web app (NIP-07 window.nostr + normal network), vs a locked napplet.
     private var websiteMode: Boolean = false
+
+    // Per-site network choice: route this site's traffic through Tor (default) or over the open web.
+    // Applied to both the WebView proxy and the blob-fetch client; toggled from the top-bar onion.
+    private var useTor: Boolean = true
 
     // NAP domain strings the shell advertises to the applet in the shell.init handshake.
     private var declaredDomains: List<String> = emptyList()
@@ -196,13 +203,20 @@ class NappletHostActivity : ComponentActivity() {
         val shellHtml = readContractAsset(NappletWebContract.SHELL_HTML_PATH)
         val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
         val appOrigin = NappletWebContract.appOrigin(deriveAppId(author, identifier))
-        contentServer = NappletContentServer(paths, servers, proxyPort, cacheDir, shellHtml, shim, appOrigin, websiteMode)
+        // "Open web" for a site makes everything direct — both its blob fetches (here) and its live
+        // web traffic (the WebView proxy, below). Tor (the default) routes both through the SOCKS port.
+        val effectiveProxy = if (useTor) proxyPort else -1
+        contentServer = NappletContentServer(paths, servers, effectiveProxy, cacheDir, shellHtml, shim, appOrigin, websiteMode)
 
         // Create + warm the WebView NOW so its (slow, first-in-process) Chromium init runs on the main
         // thread concurrently with the index probe below (which runs on IO) — instead of serially after
         // it. Binding the broker early overlaps too. The WebView is attached once the probe succeeds.
         webView = WebView(this)
         hardenWebView(webView)
+        // Route the WebView's own (off-origin) traffic through Tor for an nSite, unless this site was
+        // opted out to the open web. Set process-wide before any page navigation; the shell + blobs are
+        // served from cache via shouldInterceptRequest, so only the site's external requests hit this.
+        if (websiteMode) applyWebViewProxy(effectiveProxy)
         // Origin-restricted bridge: only the trusted shell page (main frame) can reach native.
         WebViewCompat.addWebMessageListener(
             webView,
@@ -328,6 +342,7 @@ class NappletHostActivity : ComponentActivity() {
         author = intent.getStringExtra(NappletHostContract.EXTRA_AUTHOR).orEmpty()
         identifier = intent.getStringExtra(NappletHostContract.EXTRA_IDENTIFIER).orEmpty()
         websiteMode = intent.getBooleanExtra(NappletHostContract.EXTRA_WEBSITE_MODE, false)
+        useTor = intent.getBooleanExtra(NappletHostContract.EXTRA_USE_TOR, true)
         title = intent.getStringExtra(NappletHostContract.EXTRA_TITLE).orEmpty()
         proxyPort = intent.getIntExtra(NappletHostContract.EXTRA_PROXY_PORT, -1)
         launchToken = intent.getStringExtra(NappletHostContract.EXTRA_LAUNCH_TOKEN).orEmpty()
@@ -388,6 +403,25 @@ class NappletHostActivity : ComponentActivity() {
         webView.overScrollMode = View.OVER_SCROLL_NEVER
         WebView.setWebContentsDebuggingEnabled(false)
         webView.webViewClient = NappletWebViewClient()
+    }
+
+    /**
+     * Routes this process's WebView traffic through the Tor SOCKS proxy when [port] > 0, else clears any
+     * override so the site loads over the open web. Process-global (this `:napplet` process hosts only
+     * applet/site WebViews) and best-effort: a device whose WebView can't honor a SOCKS proxy falls back
+     * to direct — verified on-device, since SOCKS-over-WebView support varies by WebView version.
+     */
+    private fun applyWebViewProxy(port: Int) {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) return
+        val executor = Executor { it.run() }
+        runCatching {
+            if (port > 0) {
+                val config = ProxyConfig.Builder().addProxyRule("socks5://127.0.0.1:$port").build()
+                ProxyController.getInstance().setProxyOverride(config, executor) {}
+            } else {
+                ProxyController.getInstance().clearProxyOverride(executor) {}
+            }
+        }.onFailure { Log.w(TAG, "Failed to apply WebView proxy override", it) }
     }
 
     /** Serves only the trusted shell and the manifest's verified blobs; everything else 404s. */
@@ -638,6 +672,21 @@ class NappletHostActivity : ComponentActivity() {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             },
         )
+        // nSite network indicator + toggle: onion = Tor (private), globe = open web (IP visible). Only
+        // shown when this is a website-mode nSite AND Tor is active — otherwise there is nothing to
+        // route through. Its own click handler opens the network dialog without firing the access sheet.
+        if (websiteMode && proxyPort > 0) {
+            bar.addView(
+                TextView(this).apply {
+                    text = if (useTor) "🧅" else "🌐"
+                    textSize = 18f
+                    setPadding(0, 0, dp(12), 0)
+                    isClickable = true
+                    setOnClickListener { showNetworkDialog() }
+                    contentDescription = getString(if (useTor) R.string.napplet_net_tor_desc else R.string.napplet_net_open_desc)
+                },
+            )
+        }
         bar.addView(
             TextView(this).apply {
                 text = "ⓘ" // circled info
@@ -646,6 +695,40 @@ class NappletHostActivity : ComponentActivity() {
             },
         )
         return bar
+    }
+
+    /**
+     * Explains the site's current network routing and offers to switch it. Switching persists the
+     * per-site choice (via the broker, which owns the preference) and relaunches this screen so the new
+     * routing applies cleanly from [onCreate] — the proxy and content server are rebuilt for the new mode.
+     */
+    private fun showNetworkDialog() {
+        val titleRes = if (useTor) R.string.napplet_net_tor_title else R.string.napplet_net_open_title
+        val messageRes = if (useTor) R.string.napplet_net_tor_message else R.string.napplet_net_open_message
+        val switchRes = if (useTor) R.string.napplet_net_switch_open else R.string.napplet_net_switch_tor
+        AlertDialog
+            .Builder(this)
+            .setTitle(getString(titleRes, barTitle()))
+            .setMessage(getString(messageRes))
+            .setPositiveButton(getString(switchRes)) { _, _ -> setNetworkMode(!useTor) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** Persists the new routing choice in the main process, then relaunches this screen to apply it. */
+    private fun setNetworkMode(newUseTor: Boolean) {
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_SET_NETWORK_MODE).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_LAUNCH_TOKEN, launchToken)
+                        putBoolean(NappletIpc.KEY_NETWORK_USE_TOR, newUseTor)
+                    }
+            }
+        sendToBroker(msg)
+        useTor = newUseTor
+        intent.putExtra(NappletHostContract.EXTRA_USE_TOR, newUseTor)
+        recreate()
     }
 
     private fun buildDivider(): View =

@@ -40,8 +40,18 @@ object NappletIpc {
      */
     const val MSG_PUSH = 3
 
+    /**
+     * Host → broker: persist this nSite's network-routing choice (Tor vs open web). Carries
+     * [KEY_LAUNCH_TOKEN] (so the broker resolves the trusted coordinate) and [KEY_NETWORK_USE_TOR].
+     * The sandbox never persists anything itself; the main process owns the preference.
+     */
+    const val MSG_SET_NETWORK_MODE = 4
+
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
+
+    /** Boolean: route this site through Tor (true) or over the open web (false). */
+    const val KEY_NETWORK_USE_TOR = "networkUseTor"
 
     /**
      * Opaque per-launch token. The sandbox cannot be trusted to state its own identity, so it sends

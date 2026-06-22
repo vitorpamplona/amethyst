@@ -98,6 +98,11 @@ object NappletLauncher {
             }
         val launchToken = NappletLaunchRegistry.register(identity, declared)
 
+        // Resolve the per-site network choice (Tor default; a site can be opted out to the open web).
+        // Locked napplets always keep Tor for their blob fetches — only nSites expose the toggle.
+        NappletNetworkRegistry.init(context.applicationContext)
+        val useTor = if (websiteMode) NappletNetworkRegistry.useTor(identity.coordinate) else true
+
         // Resolve capability labels here (the app has the resources) so the sandbox module needs none.
         val capLabels = declared.map { context.getString(it.labelRes()) }
 
@@ -115,6 +120,7 @@ object NappletLauncher {
                 putExtra(NappletHostContract.EXTRA_LAUNCH_TOKEN, launchToken)
                 putExtra(NappletHostContract.EXTRA_PROXY_PORT, proxyPort)
                 putExtra(NappletHostContract.EXTRA_WEBSITE_MODE, websiteMode)
+                putExtra(NappletHostContract.EXTRA_USE_TOR, useTor)
                 if (context !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         context.startActivity(intent)

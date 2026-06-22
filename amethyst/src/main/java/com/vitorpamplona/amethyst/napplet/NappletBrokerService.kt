@@ -102,6 +102,16 @@ class NappletBrokerService : Service() {
     }
 
     private fun handleMessage(msg: Message): Boolean {
+        // The sandbox relays the user's per-site network choice; persist it against the trusted
+        // coordinate the launch token resolves to (the sandbox can't state its own coordinate).
+        if (msg.what == NappletIpc.MSG_SET_NETWORK_MODE) {
+            val data = msg.data ?: return true
+            val session = NappletLaunchRegistry.resolve(data.getString(NappletIpc.KEY_LAUNCH_TOKEN)) ?: return true
+            NappletNetworkRegistry.init(applicationContext)
+            NappletNetworkRegistry.set(session.identity.coordinate, data.getBoolean(NappletIpc.KEY_NETWORK_USE_TOR, true))
+            return true
+        }
+
         if (msg.what != NappletIpc.MSG_REQUEST) return false
 
         val data = msg.data ?: return true
