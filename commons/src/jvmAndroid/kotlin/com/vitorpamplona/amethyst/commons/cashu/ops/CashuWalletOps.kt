@@ -153,9 +153,11 @@ class CashuWalletOps(
         val walletEvent = signer.sign(walletTemplate)
         publish(walletEvent)
 
-        // Populate `relay` tags so senders know where to publish nutzaps —
-        // without these, they fall back to NIP-65 outbox and may miss our
-        // subscription scope on relays we don't read from.
+        // Populate `relay` tags so senders know where to publish nutzaps.
+        // Per NIP-61 these are the relays where the recipient reads incoming
+        // token events, so callers pass our inbox-side relays here (NIP-65
+        // outbox model). Without them, senders fall back to NIP-65 and may
+        // publish where we don't subscribe for inbound nutzaps.
         val nutzapInfoTemplate =
             NutzapInfoEvent.build(
                 mints = mints.map { NutzapMintTag(it, listOf("sat")) },

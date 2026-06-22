@@ -40,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -72,6 +73,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsScore
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
@@ -463,8 +465,12 @@ fun AuthorGalleryZaps(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    Column(modifier = StdStartPadding) {
-        FlowRow { authorNotes.forEach { RenderState(it, backgroundColor, accountViewModel, nav) } }
+    CompositionLocalProvider(
+        LocalAuthorGalleryRenderContext provides rememberAuthorGalleryRenderContext(accountViewModel),
+    ) {
+        Column(modifier = StdStartPadding) {
+            FlowRow { authorNotes.forEach { RenderState(it, backgroundColor, accountViewModel, nav) } }
+        }
     }
 }
 
@@ -631,8 +637,12 @@ fun AuthorGallery(
     accountViewModel: AccountViewModel,
     clickRoute: (Note) -> Route? = ::authorRouteFor,
 ) {
-    Column(modifier = StdStartPadding) {
-        FlowRow { authorNotes.forEach { note -> BoxedAuthor(note, nav, accountViewModel, clickRoute) } }
+    CompositionLocalProvider(
+        LocalAuthorGalleryRenderContext provides rememberAuthorGalleryRenderContext(accountViewModel),
+    ) {
+        Column(modifier = StdStartPadding) {
+            FlowRow { authorNotes.forEach { note -> BoxedAuthor(note, nav, accountViewModel, clickRoute) } }
+        }
     }
 }
 
@@ -643,9 +653,13 @@ fun AuthorGallery(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    Column(modifier = StdStartPadding) {
-        FlowRow {
-            noteToGetBoostEvents.note.boosts.forEach { note -> BoxedAuthor(note, nav, accountViewModel) }
+    CompositionLocalProvider(
+        LocalAuthorGalleryRenderContext provides rememberAuthorGalleryRenderContext(accountViewModel),
+    ) {
+        Column(modifier = StdStartPadding) {
+            FlowRow {
+                noteToGetBoostEvents.note.boosts.forEach { note -> BoxedAuthor(note, nav, accountViewModel) }
+            }
         }
     }
 }
@@ -684,7 +698,27 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
     author: User,
     accountViewModel: AccountViewModel,
 ) {
-    WatchUserMetadata(author, accountViewModel) { baseUserPicture ->
+    // When rendered inside a gallery, the account-global auto-play and follow-set
+    // reads are hoisted to a single collection for the whole gallery (see
+    // [rememberAuthorGalleryRenderContext]). Falls back to per-author collection
+    // for callers that don't provide a context.
+    val galleryContext = LocalAuthorGalleryRenderContext.current
+
+    // One shared relay subscription per author. The profile picture and the
+    // contact-card score below both fetch the same kind-0 metadata, so we
+    // subscribe once here and let them skip their own (formerly duplicate) one.
+    UserFinderFilterAssemblerSubscription(author, accountViewModel)
+
+    WatchUserMetadata(author, accountViewModel, subscribe = false) { baseUserPicture ->
+        val autoPlayGif =
+            if (galleryContext != null) {
+                galleryContext.autoPlayGif
+            } else {
+                accountViewModel.settings.autoPlayVideosFlow
+                    .collectAsStateWithLifecycle()
+                    .value
+            }
+
         RobohashFallbackAsyncImage(
             robot = author.pubkeyHex,
             model = baseUserPicture,
@@ -693,30 +727,39 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-            autoPlayGif =
-                accountViewModel.settings.autoPlayVideosFlow
-                    .collectAsStateWithLifecycle()
-                    .value,
+            autoPlayGif = autoPlayGif,
         )
     }
 
-    WatchUserFollows(author.pubkeyHex, accountViewModel) { isFollowing ->
+    if (galleryContext != null) {
+        val isFollowing =
+            accountViewModel.isLoggedUser(author.pubkeyHex) ||
+                author.pubkeyHex in galleryContext.follows
         if (isFollowing) {
             Box(modifier = Size35Modifier, contentAlignment = Alignment.TopEnd) {
                 FollowingIcon(Size10Modifier)
             }
         }
+    } else {
+        WatchUserFollows(author.pubkeyHex, accountViewModel) { isFollowing ->
+            if (isFollowing) {
+                Box(modifier = Size35Modifier, contentAlignment = Alignment.TopEnd) {
+                    FollowingIcon(Size10Modifier)
+                }
+            }
+        }
     }
 
-    ObserveAndRenderBoxedUserCards(author, accountViewModel)
+    ObserveAndRenderBoxedUserCards(author, accountViewModel, subscribe = false)
 }
 
 @Composable
 fun ObserveAndRenderBoxedUserCards(
     user: User,
     accountViewModel: AccountViewModel,
+    subscribe: Boolean = true,
 ) {
-    val score by observeUserContactCardsScore(user, accountViewModel)
+    val score by observeUserContactCardsScore(user, accountViewModel, subscribe)
 
     score?.let {
         Box(modifier = Size35Modifier, contentAlignment = Alignment.BottomCenter) {
@@ -729,9 +772,10 @@ fun ObserveAndRenderBoxedUserCards(
 private fun WatchUserMetadata(
     author: User,
     accountViewModel: AccountViewModel,
+    subscribe: Boolean = true,
     onNewMetadata: @Composable (String?) -> Unit,
 ) {
-    val userProfile by observeUserPicture(author, accountViewModel)
+    val userProfile by observeUserPicture(author, accountViewModel, subscribe)
 
     onNewMetadata(userProfile)
 }

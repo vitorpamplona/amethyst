@@ -46,8 +46,46 @@ class DisappearingBarState(
     initialTopHeightOffset: Float = 0f,
     initialBottomHeightOffset: Float = 0f,
 ) {
-    var topHeightOffset by mutableFloatStateOf(initialTopHeightOffset)
-    var bottomHeightOffset by mutableFloatStateOf(initialBottomHeightOffset)
+    private var _topHeightOffset by mutableFloatStateOf(initialTopHeightOffset)
+    private var _bottomHeightOffset by mutableFloatStateOf(initialBottomHeightOffset)
+
+    /**
+     * Latches that record whether each bar has been driven all the way to its hidden edge by real
+     * scrolling since it was last fully in view. The settle reads them to tell a deliberate hide —
+     * where the content has scrolled at least a full bar height, so snapping the bar fully hidden
+     * leaves content (not a blank band) in the slot it vacates — apart from a small near-top
+     * collapse, where snapping hidden would expose the background because the content hasn't
+     * scrolled far enough to fill the bar's slot.
+     */
+    private var topReachedHiddenEdge = false
+    private var bottomReachedHiddenEdge = false
+
+    var topHeightOffset: Float
+        get() = _topHeightOffset
+        set(value) {
+            _topHeightOffset = value
+            updateLatch(value, topHeightLimit) { topReachedHiddenEdge = it }
+        }
+
+    var bottomHeightOffset: Float
+        get() = _bottomHeightOffset
+        set(value) {
+            _bottomHeightOffset = value
+            updateLatch(value, bottomHeightLimit) { bottomReachedHiddenEdge = it }
+        }
+
+    private inline fun updateLatch(
+        offset: Float,
+        limit: Float,
+        set: (Boolean) -> Unit,
+    ) {
+        if (limit <= 0f) return
+        if (offset >= 0f) {
+            set(false)
+        } else if (offset <= -limit) {
+            set(true)
+        }
+    }
 
     var topHeightLimit: Float = 0f
         set(value) {
@@ -76,8 +114,8 @@ class DisappearingBarState(
      */
     suspend fun settleToNearestEdge(initialVelocityY: Float = 0f) {
         coroutineScope {
-            launch { settleOne({ topHeightOffset }, topHeightLimit, initialVelocityY) { topHeightOffset = it } }
-            launch { settleOne({ bottomHeightOffset }, bottomHeightLimit, initialVelocityY) { bottomHeightOffset = it } }
+            launch { settleOne({ topHeightOffset }, topHeightLimit, topReachedHiddenEdge, initialVelocityY) { topHeightOffset = it } }
+            launch { settleOne({ bottomHeightOffset }, bottomHeightLimit, bottomReachedHiddenEdge, initialVelocityY) { bottomHeightOffset = it } }
         }
     }
 
@@ -94,6 +132,7 @@ class DisappearingBarState(
     private suspend fun settleOne(
         get: () -> Float,
         limit: Float,
+        canFullyHide: Boolean,
         initialVelocityY: Float,
         set: (Float) -> Unit,
     ) {
@@ -105,6 +144,11 @@ class DisappearingBarState(
         val positionBiasToHide = -current > limit / 2f
         val target =
             when {
+                // Snapping to the hidden edge is only safe once the bar has actually been scrolled
+                // there (canFullyHide): the content has then moved at least a full bar height and
+                // fills the slot the bar vacates. From a small near-top collapse it hasn't, so
+                // snapping hidden would open a blank band — settle back into view instead.
+                !canFullyHide -> 0f
                 initialVelocityY < -VELOCITY_BIAS_THRESHOLD -> -limit
                 initialVelocityY > VELOCITY_BIAS_THRESHOLD -> 0f
                 positionBiasToHide -> -limit
@@ -142,10 +186,14 @@ class DisappearingBarState(
     companion object {
         private const val VELOCITY_BIAS_THRESHOLD = 200f
 
+        // Bounce-free so the chrome never wobbles past its edge, but stiff enough to feel like a
+        // quick native snap rather than a slow float once the finger lifts. Overshoot from a strong
+        // initial velocity is still caught by the bounds in animateOne, so a higher stiffness here
+        // only affects how briskly the bar resolves to its edge.
         private val SETTLE_SPRING =
             spring<Float>(
                 dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMediumLow,
+                stiffness = Spring.StiffnessMedium,
             )
 
         val Saver: Saver<DisappearingBarState, *> =
