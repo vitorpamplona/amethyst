@@ -176,14 +176,14 @@ object NsiteCommands {
         StaticSitePublish.run(
             dataDir,
             rest,
-            "nsite publish <dir> --server <blossom-url> [--d ID] [--relay R] [--title T] [--description D] [--source URL]",
+            "nsite publish <dir> --server <blossom-url> [--d ID] [--relay R] [--title T] [--description D] [--source URL] [--icon URL]",
         ) { m ->
             if (m.identifier != null) {
-                NamedSiteEvent.build(m.identifier, m.paths, m.servers, m.title, m.description, m.source) {
+                NamedSiteEvent.build(m.identifier, m.paths, m.servers, m.title, m.description, m.source, m.icon) {
                     siteAggregateHash(m.paths)
                 }
             } else {
-                RootSiteEvent.build(m.paths, m.servers, m.title, m.description, m.source) {
+                RootSiteEvent.build(m.paths, m.servers, m.title, m.description, m.source, m.icon) {
                     siteAggregateHash(m.paths)
                 }
             }

@@ -49,6 +49,7 @@ fun RenderRootNappletEvent(
         identifier = null,
         isNapplet = true,
         requires = event.requires(),
+        icon = event.icon(),
         // Tapping Open hands off to the sandboxed :napplet process; the card itself never executes code.
         onOpen =
             if (event.paths().isNotEmpty()) {
@@ -76,6 +77,7 @@ fun RenderNamedNappletEvent(
         identifier = event.identifier(),
         isNapplet = true,
         requires = event.requires(),
+        icon = event.icon(),
         onOpen =
             if (event.paths().isNotEmpty()) {
                 { NappletLauncher.launch(context = context, manifest = event, authorPubKey = event.pubKey, identifier = event.identifier()) }
@@ -101,6 +103,7 @@ fun RenderRootSiteEvent(
         servers = event.servers(),
         identifier = null,
         isNapplet = false,
+        icon = event.icon(),
         onOpen =
             if (event.paths().isNotEmpty()) {
                 {
@@ -137,6 +140,7 @@ fun RenderNamedSiteEvent(
         servers = event.servers(),
         identifier = event.identifier(),
         isNapplet = false,
+        icon = event.icon(),
         onOpen =
             if (event.paths().isNotEmpty()) {
                 {

@@ -23,6 +23,8 @@ amy napplet publish tools/napplet-test \
 ```
 
 - `--d` makes it an addressable kind-35129 napplet; omit it for a root kind-15129.
+- `--icon https://…/icon.png` sets the square app icon shown on the launcher card (optional; the card
+  falls back to a colored monogram from the title when absent).
 - For a plain static site, use `amy nsite publish <dir> --server …` (kind 15128/35128).
 - Use the **same key you're logged in as in Amethyst**, so the napplet appears under your account and
   the identity reads (`getProfile`, `getFollows`, …) have data.

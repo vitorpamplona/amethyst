@@ -83,7 +83,9 @@
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">Static Website: %1$s</string>
     <string name="napplet_card_title">Napplet: %1$s</string>
-    <string name="napplet_card_permissions">Permissions:</string>
+    <string name="napplet_card_kind">Napplet</string>
+    <string name="nsite_website_kind">Website</string>
+    <string name="napplet_card_permissions">What it can access</string>
     <string name="nsite_root_site">Root Site</string>
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
