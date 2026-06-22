@@ -331,6 +331,17 @@ class Context(
             ?: DefaultNIP65RelaySet
 
     /**
+     * NIP-65 *read* (inbox) relays for this account — "where others reach me".
+     * Mirrors the Android app's NIP-65 inbox set (the `notificationRelays`
+     * flow). Used as the default `relay` tags advertised in a kind:10019
+     * nutzap-info event. Falls back to [outboxRelays] when no read relays are
+     * marked.
+     */
+    suspend fun nip65ReadRelays(): Set<NormalizedRelayUrl> =
+        relaysOf(identity.pubKeyHex)?.readRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
+            ?: outboxRelays()
+
+    /**
      * DM inbox relays (NIP-17 kind:10050) for this account. Falls back
      * to [DefaultDMRelayList] when no kind:10050 has been seen.
      */

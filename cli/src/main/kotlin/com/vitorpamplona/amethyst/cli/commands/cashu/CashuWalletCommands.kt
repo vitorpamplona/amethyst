@@ -72,10 +72,11 @@ object CashuWalletCommands {
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            // Match Amethyst: kind:10019 advertises the account's outbox
-            // relays as nutzap-receiving relays unless the caller overrides
-            // with --relay, so senders publish nutzaps where we actually read.
-            val nutzapRelays = explicitRelays.ifEmpty { ctx.outboxRelays().toList() }
+            // Match Amethyst: kind:10019 advertises the account's NIP-65
+            // inbox (read) relays as nutzap-receiving relays unless the caller
+            // overrides with --relay, so senders publish kind:9321 where we
+            // read incoming events.
+            val nutzapRelays = explicitRelays.ifEmpty { ctx.nip65ReadRelays().toList() }
             val created =
                 try {
                     ctx.cashuOps().publishWalletEvents(mints, privkey, nutzapRelays)
