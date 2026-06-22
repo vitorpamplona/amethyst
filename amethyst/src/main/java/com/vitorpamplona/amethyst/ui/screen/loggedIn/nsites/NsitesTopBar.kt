@@ -45,7 +45,7 @@ fun NsitesTopBar(
     UserDrawerSearchTopBar(accountViewModel, nav) {
         val listName: TopFilter by accountViewModel.account.settings.defaultNsitesFollowList
             .collectAsStateWithLifecycle()
-        val allLists by accountViewModel.feedStates.feedListOptions.kind3GlobalPeopleRoutes
+        val allLists by accountViewModel.feedStates.feedListOptions.authorOnlyRoutes
             .collectAsStateWithLifecycle()
 
         FeedFilterSpinner(

@@ -92,7 +92,7 @@ fun NappletsTopBar(
 private fun NappletsTopNavFilterBar(accountViewModel: AccountViewModel) {
     val listName: TopFilter by accountViewModel.account.settings.defaultNappletsFollowList
         .collectAsStateWithLifecycle()
-    val allLists by accountViewModel.feedStates.feedListOptions.kind3GlobalPeopleRoutes
+    val allLists by accountViewModel.feedStates.feedListOptions.authorOnlyRoutes
         .collectAsStateWithLifecycle()
 
     FeedFilterSpinner(

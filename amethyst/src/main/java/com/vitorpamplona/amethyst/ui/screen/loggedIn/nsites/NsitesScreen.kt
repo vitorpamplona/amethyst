@@ -39,19 +39,23 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.NsitesFilterAssemblerSubscription
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 
 /**
- * Lists the NIP-5A static-site manifests currently in the local cache (kinds 15128/35128). Mirrors the
- * nApplets browse screen: a follow-list filter in the top bar and each row rendered through the shared
- * [NoteCompose] — the same path the main feed uses for these events — so it gets the author header, the
+ * Lists the NIP-5A static-site manifests currently in the local cache (kinds 15128/35128). These are
+ * replaceable/addressable events, so the screen observes the **AddressableNote** store ([observeNotes],
+ * which scans `LocalCache.addressables`): exactly one note per address — the latest version — keyed by
+ * the stable address ([com.vitorpamplona.amethyst.model.Note.idHex]) and auto-updating in place as
+ * newer versions arrive. Mirrors the nApplets browse screen: a follow-list filter in the top bar and
+ * each row rendered through the shared [NoteCompose] — the same path the main feed uses for these
+ * events — so it gets the author header, the
  * [com.vitorpamplona.amethyst.commons.ui.note.StaticWebsiteCard] (with its Open button), and the
  * standard reaction bar for free.
  */
@@ -64,17 +68,25 @@ fun NsitesScreen(
     NsitesFilterAssemblerSubscription(accountViewModel)
 
     val nsites by remember {
-        Amethyst.instance.cache.observeEvents<Event>(
+        Amethyst.instance.cache.observeNotes(
             Filter(kinds = listOf(RootSiteEvent.KIND, NamedSiteEvent.KIND)),
         )
     }.collectAsStateWithLifecycle(emptyList())
 
     val followFilter by accountViewModel.account.liveNsitesFollowLists
         .collectAsStateWithLifecycle()
+    val listName by accountViewModel.account.settings.defaultNsitesFollowList
+        .collectAsStateWithLifecycle()
+    val myPubkey = accountViewModel.account.userProfile().pubkeyHex
 
     val visible =
-        remember(nsites, followFilter) {
-            nsites.filter { followFilter.matchAuthor(it.pubKey) }
+        remember(nsites, followFilter, listName, myPubkey) {
+            nsites.filter { note ->
+                val author = note.event?.pubKey ?: return@filter false
+                // "Mine" matches the user's own sites; the shared author-matcher resolves Mine to
+                // all-follows (see the SubAssembler), so it can't be used for the Mine case here.
+                if (listName == TopFilter.Mine) author == myPubkey else followFilter.matchAuthor(author)
+            }
         }
 
     Scaffold(
@@ -89,8 +101,7 @@ fun NsitesScreen(
             }
         } else {
             LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-                items(visible, key = { it.id }) { event ->
-                    val note = remember(event.id) { Amethyst.instance.cache.getOrCreateNote(event) }
+                items(visible, key = { it.idHex }) { note ->
                     NoteCompose(
                         baseNote = note,
                         modifier = Modifier.fillMaxWidth(),

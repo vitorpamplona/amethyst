@@ -38,10 +38,11 @@ class NappletsQueryState(
 )
 
 /**
- * Subscribes to NIP-5D napplet manifests (kinds 15129/35129) on the user's read relays while a
- * napplet screen is open, dumping them into `LocalCache` for the screen to observe. Registered as
- * an app-lifetime singleton in `RelaySubscriptionsCoordinator` (the underlying EOSE manager opens
- * its relay subscription at construction, so it must not be created per screen).
+ * Subscribes to NIP-5D napplet manifests (kinds 15129/35129) while a napplet screen is open,
+ * honoring the top-nav follow-list selection at the relay level (see [NappletsFilterSubAssembler])
+ * and dumping the results into `LocalCache` for the screen to observe. Registered as an app-lifetime
+ * singleton in `RelaySubscriptionsCoordinator` (the underlying EOSE manager opens its relay
+ * subscription at construction, so it must not be created per screen).
  */
 @Stable
 class NappletsFilterAssembler(

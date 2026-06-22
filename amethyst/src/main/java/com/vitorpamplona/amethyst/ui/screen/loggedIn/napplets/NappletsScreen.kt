@@ -39,23 +39,27 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssemblerSubscription
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 
 /**
- * Lists the napplet manifests currently in the local cache (NIP-5D kinds 15129/35129). The top bar
- * carries a follow-list filter (like the Pictures/Articles feeds) and each row is rendered through the
- * shared [NoteCompose] — the same path the main feed uses for these events — so it gets the author
- * header, the [com.vitorpamplona.amethyst.commons.ui.note.StaticWebsiteCard] (title, description,
- * capability chips, and an Open button wired to the sandboxed [NappletLauncher]), and the standard
- * reaction bar (reply/boost/like/zap) for free, without a second card implementation that could drift.
+ * Lists the napplet manifests currently in the local cache (NIP-5D kinds 15129/35129). These are
+ * replaceable/addressable events, so the screen observes the **AddressableNote** store ([observeNotes],
+ * which scans `LocalCache.addressables`): exactly one note per address — the latest version — keyed by
+ * the stable address ([com.vitorpamplona.amethyst.model.Note.idHex]) and auto-updating in place as
+ * newer versions arrive. The top bar carries a follow-list filter (like the Pictures/Articles feeds)
+ * and each row is rendered through the shared [NoteCompose] — the same path the main feed uses for
+ * these events — so it gets the author header, the
+ * [com.vitorpamplona.amethyst.commons.ui.note.StaticWebsiteCard] (title, description, capability chips,
+ * and an Open button wired to the sandboxed [NappletLauncher]), and the standard reaction bar
+ * (reply/boost/like/zap) for free, without a second card implementation that could drift.
  */
 @Composable
 fun NappletsScreen(
@@ -66,17 +70,25 @@ fun NappletsScreen(
     NappletsFilterAssemblerSubscription(accountViewModel)
 
     val napplets by remember {
-        Amethyst.instance.cache.observeEvents<Event>(
+        Amethyst.instance.cache.observeNotes(
             Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND)),
         )
     }.collectAsStateWithLifecycle(emptyList())
 
     val followFilter by accountViewModel.account.liveNappletsFollowLists
         .collectAsStateWithLifecycle()
+    val listName by accountViewModel.account.settings.defaultNappletsFollowList
+        .collectAsStateWithLifecycle()
+    val myPubkey = accountViewModel.account.userProfile().pubkeyHex
 
     val visible =
-        remember(napplets, followFilter) {
-            napplets.filter { followFilter.matchAuthor(it.pubKey) }
+        remember(napplets, followFilter, listName, myPubkey) {
+            napplets.filter { note ->
+                val author = note.event?.pubKey ?: return@filter false
+                // "Mine" matches the user's own napplets; the shared author-matcher resolves Mine to
+                // all-follows (see the SubAssembler), so it can't be used for the Mine case here.
+                if (listName == TopFilter.Mine) author == myPubkey else followFilter.matchAuthor(author)
+            }
         }
 
     Scaffold(
@@ -91,8 +103,7 @@ fun NappletsScreen(
             }
         } else {
             LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-                items(visible, key = { it.id }) { event ->
-                    val note = remember(event.id) { Amethyst.instance.cache.getOrCreateNote(event) }
+                items(visible, key = { it.idHex }) { note ->
                     NoteCompose(
                         baseNote = note,
                         modifier = Modifier.fillMaxWidth(),

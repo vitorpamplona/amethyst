@@ -38,10 +38,11 @@ class NsitesQueryState(
 )
 
 /**
- * Subscribes to NIP-5A static-site manifests (kinds 15128/35128) on the user's read relays while an
- * nSite screen is open, dumping them into `LocalCache` for the screen to observe. Registered as an
- * app-lifetime singleton in `RelaySubscriptionsCoordinator` (the underlying EOSE manager opens its
- * relay subscription at construction, so it must not be created per screen).
+ * Subscribes to NIP-5A static-site manifests (kinds 15128/35128) while an nSite screen is open,
+ * honoring the top-nav follow-list selection at the relay level (see [NsitesFilterSubAssembler]) and
+ * dumping the results into `LocalCache` for the screen to observe. Registered as an app-lifetime
+ * singleton in `RelaySubscriptionsCoordinator` (the underlying EOSE manager opens its relay
+ * subscription at construction, so it must not be created per screen).
  */
 @Stable
 class NsitesFilterAssembler(

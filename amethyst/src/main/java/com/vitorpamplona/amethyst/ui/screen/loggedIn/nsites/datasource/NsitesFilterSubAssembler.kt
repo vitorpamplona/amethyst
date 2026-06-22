@@ -20,45 +20,86 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource
 
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
+import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.subassemblies.filterNsitesMine
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
-import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-
-private const val NSITE_PAGE_LIMIT = 200
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.launch
 
 /**
- * Emits one REQ per read relay for both static-site manifest kinds. A single subscription per account
- * (deduped by [distinct]) is enough — the screen wants "what nSites exist", not a per-author feed — so
- * this stays far lighter than the follow-list feed assemblers.
+ * Subscribes to NIP-5A static-site manifests (kinds 15128/35128), honoring the top-nav follow-list
+ * selection at the relay level: one subscription per logged-in user + selected list, with the authors
+ * resolved to each author's outbox relays (via [com.vitorpamplona.amethyst.model.Account.liveNsitesFollowListsPerRelay]).
+ * Mirrors [com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesSubAssembler]; the
+ * only spinner options are author-based (see `authorOnlyRoutes`), so [makeNsitesFilter] needs no
+ * tag-based branches.
  */
 class NsitesFilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<NsitesQueryState>,
-) : SingleSubEoseManager<NsitesQueryState>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<NsitesQueryState, TopFilter>(client, allKeys) {
     override fun updateFilter(
-        keys: List<NsitesQueryState>,
+        key: NsitesQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        if (keys.isEmpty()) return emptyList()
-
-        return keys.flatMap { key ->
-            key.account.homeRelays.flow.value.map { relay ->
-                RelayBasedFilter(
-                    relay = relay,
-                    filter =
-                        Filter(
-                            kinds = listOf(RootSiteEvent.KIND, NamedSiteEvent.KIND),
-                            limit = NSITE_PAGE_LIMIT,
-                            since = since?.get(relay)?.time,
-                        ),
-                )
-            }
+        // "Mine" bypasses the follow-list machinery: query the user's own nSites by author against
+        // their outbox relays (same pattern as badges/music). The shared TopFilter.Mine flow falls
+        // back to all-follows, so it can't be used here.
+        if (key.listName() == TopFilter.Mine) {
+            return filterNsitesMine(key.account.userProfile().pubkeyHex, key.account.outboxRelays.flow.value, since)
         }
+        return makeNsitesFilter(key.followsPerRelay(), since)
     }
 
-    override fun distinct(key: NsitesQueryState) = key.account.signer.pubKey
+    override fun user(key: NsitesQueryState) = key.account.userProfile()
+
+    override fun list(key: NsitesQueryState) = key.listName()
+
+    fun NsitesQueryState.listNameFlow() = account.settings.defaultNsitesFollowList
+
+    fun NsitesQueryState.listName() = listNameFlow().value
+
+    fun NsitesQueryState.followsPerRelayFlow() = account.liveNsitesFollowListsPerRelay
+
+    fun NsitesQueryState.followsPerRelay() = followsPerRelayFlow().value
+
+    val userJobMap = mutableMapOf<User, List<Job>>()
+
+    @OptIn(FlowPreview::class)
+    override fun newSub(key: NsitesQueryState): Subscription {
+        val user = user(key)
+        userJobMap[user]?.forEach { it.cancel() }
+        userJobMap[user] =
+            listOf(
+                key.scope.launch(Dispatchers.IO) {
+                    key.listNameFlow().collectLatest {
+                        invalidateFilters()
+                    }
+                },
+                key.scope.launch(Dispatchers.IO) {
+                    key.followsPerRelayFlow().sample(500).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+            )
+
+        return super.newSub(key)
+    }
+
+    override fun endSub(
+        key: User,
+        subId: String,
+    ) {
+        super.endSub(key, subId)
+        userJobMap[key]?.forEach { it.cancel() }
+    }
 }
