@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.napplethost
 
 import android.app.AlertDialog
 import android.content.ComponentName
@@ -52,11 +52,10 @@ import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
+import com.vitorpamplona.amethyst.napplethost.R
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import org.json.JSONObject
 
@@ -87,6 +86,9 @@ class NappletHostActivity : ComponentActivity() {
 
     // NAP domain strings the shell advertises to the applet in the shell.init handshake.
     private var declaredDomains: List<String> = emptyList()
+
+    // Pre-localized capability labels for the "what it can access" sheet (resolved by the launcher).
+    private var capabilityLabels: List<String> = emptyList()
 
     // Correlation id for id-less fire-and-forget messages so they still reach the broker.
     private var fireSeq = 0
@@ -175,7 +177,10 @@ class NappletHostActivity : ComponentActivity() {
             ::onShellMessage,
         )
 
-        bindService(Intent(this, NappletBrokerService::class.java), brokerConnection, BIND_AUTO_CREATE)
+        // Bind the main-process broker by explicit class name (same APK) rather than a compile-time
+        // class reference, so this sandbox module needs no dependency on :amethyst.
+        val brokerIntent = Intent().setClassName(this, NappletHostContract.BROKER_SERVICE_CLASS)
+        bindService(brokerIntent, brokerConnection, BIND_AUTO_CREATE)
 
         webView.loadUrl(NappletWebContract.SHELL_URL)
     }
@@ -223,18 +228,19 @@ class NappletHostActivity : ComponentActivity() {
     }
 
     private fun readManifestExtras(): Boolean {
-        val pathList = intent.getStringArrayListExtra(NappletLauncher.EXTRA_PATHS) ?: return false
-        val hashList = intent.getStringArrayListExtra(NappletLauncher.EXTRA_HASHES) ?: return false
+        val pathList = intent.getStringArrayListExtra(NappletHostContract.EXTRA_PATHS) ?: return false
+        val hashList = intent.getStringArrayListExtra(NappletHostContract.EXTRA_HASHES) ?: return false
         if (pathList.size != hashList.size || pathList.isEmpty()) return false
 
         for (i in pathList.indices) paths.add(PathTag(pathList[i], hashList[i]))
-        servers.addAll(intent.getStringArrayListExtra(NappletLauncher.EXTRA_SERVERS) ?: emptyList())
-        author = intent.getStringExtra(NappletLauncher.EXTRA_AUTHOR).orEmpty()
-        title = intent.getStringExtra(NappletLauncher.EXTRA_TITLE).orEmpty()
-        proxyPort = intent.getIntExtra(NappletLauncher.EXTRA_PROXY_PORT, -1)
-        launchToken = intent.getStringExtra(NappletLauncher.EXTRA_LAUNCH_TOKEN).orEmpty()
+        servers.addAll(intent.getStringArrayListExtra(NappletHostContract.EXTRA_SERVERS) ?: emptyList())
+        author = intent.getStringExtra(NappletHostContract.EXTRA_AUTHOR).orEmpty()
+        title = intent.getStringExtra(NappletHostContract.EXTRA_TITLE).orEmpty()
+        proxyPort = intent.getIntExtra(NappletHostContract.EXTRA_PROXY_PORT, -1)
+        launchToken = intent.getStringExtra(NappletHostContract.EXTRA_LAUNCH_TOKEN).orEmpty()
+        capabilityLabels = intent.getStringArrayListExtra(NappletHostContract.EXTRA_CAP_LABELS) ?: emptyList()
 
-        val requires = intent.getStringArrayListExtra(NappletLauncher.EXTRA_REQUIRES) ?: emptyList()
+        val requires = intent.getStringArrayListExtra(NappletHostContract.EXTRA_REQUIRES) ?: emptyList()
         val resolved = resolveRequiredCapabilities(requires)
         // shell is always available; the rest are the declared domains advertised to the applet in the
         // handshake. (The broker enforces the authoritative set from the launch token, not this list.)
@@ -437,18 +443,13 @@ class NappletHostActivity : ComponentActivity() {
             setBackgroundColor(resolveThemeColor(android.R.attr.textColorPrimary) and 0x22FFFFFF)
         }
 
-    /** Lists, in plain language, exactly which capability domains this napplet was launched with. */
+    /** Lists, in plain language, exactly which capabilities this napplet was launched with. */
     private fun showAccessDialog() {
-        val caps =
-            declaredDomains
-                .filter { it != "shell" }
-                .mapNotNull { NappletCapability.fromNapDomain(it) }
-                .map { getString(it.labelRes()) }
         val body =
-            if (caps.isEmpty()) {
+            if (capabilityLabels.isEmpty()) {
                 getString(R.string.napplet_chrome_static_site)
             } else {
-                caps.joinToString("\n") { "•  $it" } + "\n\n" + getString(R.string.napplet_chrome_keys_safe)
+                capabilityLabels.joinToString("\n") { "•  $it" } + "\n\n" + getString(R.string.napplet_chrome_keys_safe)
             }
         AlertDialog
             .Builder(this)

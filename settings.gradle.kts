@@ -31,6 +31,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "Amethyst"
 include(":amethyst")
+include(":nappletHost")
 include(":benchmark")
 include(":quartz")
 include(":geode")

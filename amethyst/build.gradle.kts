@@ -334,6 +334,7 @@ dependencies {
     implementation(project(":quartz"))
     implementation(project(":commons"))
     implementation(project(":nestsClient"))
+    implementation(project(":nappletHost"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
 

@@ -23,9 +23,12 @@ package com.vitorpamplona.amethyst.napplet
 import android.content.Context
 import android.content.Intent
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.napplethost.NappletHostActivity
+import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
@@ -38,27 +41,6 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
  * declared capabilities, and a display title. No account state crosses into the sandbox process.
  */
 object NappletLauncher {
-    const val EXTRA_PATHS = "napplet_paths"
-    const val EXTRA_HASHES = "napplet_hashes"
-    const val EXTRA_SERVERS = "napplet_servers"
-    const val EXTRA_AUTHOR = "napplet_author"
-    const val EXTRA_IDENTIFIER = "napplet_identifier"
-    const val EXTRA_AGGREGATE_HASH = "napplet_aggregate_hash"
-    const val EXTRA_TITLE = "napplet_title"
-
-    /** Bare NAP capability domains the manifest declared (empty for a plain nsite). */
-    const val EXTRA_REQUIRES = "napplet_requires"
-
-    /**
-     * Unguessable token for this launch. The sandbox relays it to the broker, which resolves it back
-     * to the trusted identity + declared capabilities via [NappletLaunchRegistry] — the sandbox never
-     * carries (and so can never forge) its own coordinate.
-     */
-    const val EXTRA_LAUNCH_TOKEN = "napplet_launch_token"
-
-    /** SOCKS proxy port to route blob fetches through, or -1 for a direct connection. */
-    const val EXTRA_PROXY_PORT = "napplet_proxy_port"
-
     /** Opens a NIP-5D napplet, forwarding its declared capabilities to the broker. */
     fun launch(
         context: Context,
@@ -107,18 +89,22 @@ object NappletLauncher {
         val declared = resolveRequiredCapabilities(requires).capabilities.toSet()
         val launchToken = NappletLaunchRegistry.register(identity, declared)
 
+        // Resolve capability labels here (the app has the resources) so the sandbox module needs none.
+        val capLabels = requires.mapNotNull { NappletCapability.fromNapDomain(it) }.map { context.getString(it.labelRes()) }
+
         val intent =
             Intent(context, NappletHostActivity::class.java).apply {
-                putExtra(EXTRA_PATHS, ArrayList(paths.map { it.path }))
-                putExtra(EXTRA_HASHES, ArrayList(paths.map { it.hash }))
-                putExtra(EXTRA_SERVERS, ArrayList(allServers))
-                putExtra(EXTRA_AUTHOR, authorPubKey)
-                putExtra(EXTRA_IDENTIFIER, identifier)
-                putExtra(EXTRA_AGGREGATE_HASH, aggregateHash)
-                putExtra(EXTRA_TITLE, title)
-                putExtra(EXTRA_REQUIRES, ArrayList(requires))
-                putExtra(EXTRA_LAUNCH_TOKEN, launchToken)
-                putExtra(EXTRA_PROXY_PORT, proxyPort)
+                putExtra(NappletHostContract.EXTRA_PATHS, ArrayList(paths.map { it.path }))
+                putExtra(NappletHostContract.EXTRA_HASHES, ArrayList(paths.map { it.hash }))
+                putExtra(NappletHostContract.EXTRA_SERVERS, ArrayList(allServers))
+                putExtra(NappletHostContract.EXTRA_AUTHOR, authorPubKey)
+                putExtra(NappletHostContract.EXTRA_IDENTIFIER, identifier)
+                putExtra(NappletHostContract.EXTRA_AGGREGATE_HASH, aggregateHash)
+                putExtra(NappletHostContract.EXTRA_TITLE, title)
+                putExtra(NappletHostContract.EXTRA_REQUIRES, ArrayList(requires))
+                putExtra(NappletHostContract.EXTRA_CAP_LABELS, ArrayList(capLabels))
+                putExtra(NappletHostContract.EXTRA_LAUNCH_TOKEN, launchToken)
+                putExtra(NappletHostContract.EXTRA_PROXY_PORT, proxyPort)
                 if (context !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         context.startActivity(intent)

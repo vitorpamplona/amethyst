@@ -58,6 +58,13 @@ and what remains as future work.
   new *signed* manifest and own the app — expected Nostr trust model. Aggregate `x` hash
   is enforced when present (only *recommended* by the spec); per-path hashes always
   protect.
+- **Sandbox isolation is now structural.** The `:napplet` runtime
+  (`NappletHostActivity`, content server, IPC, key actions) lives in its own
+  `:nappletHost` module that depends only on `:commons` + `:quartz` — so it is
+  *compile-time incapable* of importing `Amethyst`/`LocalCache`/`Account`. The
+  broker-side (signer, gateways, `NappletLaunchRegistry`) stays in `:amethyst`;
+  the activity binds the broker service by class-name string and the two halves
+  communicate only over Messenger IPC.
 - **Launch-token lifecycle.** Tokens are capped (LRU, 128) rather than explicitly
   unregistered on sandbox close (the sandbox is a separate process and can't reach the
   main-process registry). A long-backgrounded napplet whose token was evicted would need

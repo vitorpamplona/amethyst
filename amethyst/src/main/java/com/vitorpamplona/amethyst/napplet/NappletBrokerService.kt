@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
+import com.vitorpamplona.amethyst.napplethost.NappletIpc
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

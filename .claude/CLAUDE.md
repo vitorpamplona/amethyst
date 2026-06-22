@@ -95,6 +95,10 @@ Application class (there is no per-process Application in the manifest) in **bot
   (`NappletHostActivity`, declared `android:process=":napplet"`). It holds **no**
   account or keys; `Amethyst.onCreate()` early-returns here so `Amethyst.instance`
   is **left unset** (touching it throws `UninitializedPropertyAccessException`).
+  The sandbox runtime lives in its own module **`:nappletHost`** (depends only on
+  `:commons` + `:quartz`, **never** `:amethyst`) so it *cannot* import
+  `Amethyst`/`LocalCache`/`Account` — the broker-side (signer, gateways, registry)
+  stays in `:amethyst` and the two halves talk over Messenger IPC.
 
 Consequences — don't get caught assuming one process:
 
