@@ -20,6 +20,14 @@
  */
 package com.vitorpamplona.amethyst.model.nip60Cashu
 
+import com.vitorpamplona.amethyst.commons.cashu.CashuWalletReader
+import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
+import com.vitorpamplona.amethyst.commons.cashu.ops.MeltCompleted
+import com.vitorpamplona.amethyst.commons.cashu.ops.NutzapSent
+import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
+import com.vitorpamplona.amethyst.commons.cashu.ops.SendTokenCompleted
+import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
+import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletQueryState
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -35,7 +43,6 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
-import com.vitorpamplona.quartz.nip60Cashu.mintApi.ProofState
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -45,7 +52,6 @@ import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -732,44 +738,13 @@ class CashuWalletState(
             }
         }
 
-        // Apply `del` rollover.
-        val deletedIds = mutableSetOf<HexKey>()
-        all.forEach { evt -> tokenContents[evt.id]?.del?.let(deletedIds::addAll) }
-
-        val unspent =
-            all
-                .filter { it.id !in deletedIds && tokenContents.containsKey(it.id) }
-                .mapNotNull { evt -> tokenContents[evt.id]?.let { TokenEntry(evt, it) } }
-                .sortedByDescending { it.event.createdAt }
-
-        _tokenEntries.value = unspent
+        // Shared del-rollover + sort with the headless reader.
+        _tokenEntries.value = CashuWalletReader.computeUnspent(all, tokenContents)
     }
 
     private fun recomputePending() {
-        val now = TimeUtils.now()
-        // A quote is "pending" if (1) not expired, and (2) no kind:7376 history
-        // event references its id with a "destroyed" marker — completion of the
-        // mint flow deletes the kind:7374, and history records a `destroyed`
-        // reference to the now-fulfilled quote.
-        val destroyedQuoteIds =
-            historyEvents.values
-                .asSequence()
-                .flatMap { it.tags.asSequence() }
-                .filter { it.size >= 4 && it[0] == "e" && it[3] == "destroyed" }
-                .map { it[1] }
-                .toSet()
-
-        _pendingQuotes.value =
-            quoteEvents.values
-                .filter { it.id !in destroyedQuoteIds }
-                .filter { evt ->
-                    val exp =
-                        evt.tags
-                            .firstOrNull { it.size >= 2 && it[0] == "expiration" }
-                            ?.get(1)
-                            ?.toLongOrNull()
-                    exp == null || exp > now
-                }.sortedByDescending { it.createdAt }
+        // Shared destroyed/expired filter with the headless reader.
+        _pendingQuotes.value = CashuWalletReader.computePending(quoteEvents.values, historyEvents.values)
     }
 
     private fun scanCacheForOwnEvents(): List<Event> {
@@ -1166,38 +1141,21 @@ class CashuWalletState(
                 .groupBy { it.content.mint }
                 .filterKeys { mintUrlFilter == null || it == mintUrlFilter }
         for ((mintUrl, entries) in byMint) {
-            val allProofs = entries.flatMap { it.content.proofs }
-            if (allProofs.isEmpty()) continue
-            val states =
-                runCatching { ops.checkProofStates(mintUrl, allProofs) }
+            // Shared NUT-07 check + NIP-09 delete with amy's `cashu maintenance
+            // scrub`. Returns the stale token events it published a deletion for.
+            val staleEvents =
+                runCatching { ops.scrubStaleProofs(mintUrl, entries) }
                     .onFailure {
-                        Log.w("CashuWallet", "checkProofStates($mintUrl) failed; skipping sweep", it)
+                        Log.w("CashuWallet", "scrubStaleProofs($mintUrl) failed; skipping sweep", it)
                     }.getOrNull()
                     ?: continue
-
-            // Any entry with at least one SPENT proof gets purged. Keeping
-            // mixed-state entries around would let the next send pick them
-            // and trip the same HTTP 400 we're trying to prevent.
-            val staleEntries =
-                entries.filter { entry ->
-                    entry.content.proofs.any { states[it.secret] == ProofState.SPENT }
-                }
-            if (staleEntries.isEmpty()) continue
+            if (staleEvents.isEmpty()) continue
             Log.i("CashuWallet") {
-                "Scrubbing ${staleEntries.size} stale kind:7375 event(s) at $mintUrl"
+                "Scrubbing ${staleEvents.size} stale kind:7375 event(s) at $mintUrl"
             }
-            val staleIds = staleEntries.map { it.event.id }.toSet()
-            runCatching {
-                val template = DeletionEvent.build(staleEntries.map { it.event })
-                val signed = signer.sign(template)
-                publishEvent(signed)
-            }.onFailure {
-                Log.w("CashuWallet", "Failed to NIP-09 delete stale entries for $mintUrl", it)
-            }
-            // Drop from internal indexes regardless of publish success — even
-            // if the kind:5 didn't go out, we know these proofs are unusable
-            // and shouldn't be selected for the next swap.
-            removeEvents(staleIds)
+            // Drop from internal indexes — even if the kind:5 didn't reach a
+            // relay, these proofs are unusable and must not be re-selected.
+            removeEvents(staleEvents.map { it.id }.toSet())
         }
     }
 

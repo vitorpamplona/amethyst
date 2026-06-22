@@ -80,4 +80,20 @@ data class IdentityFile(
     // never written by current code.
     val privKeyHex: String? = null,
     val nsec: String? = null,
+    // Present for NIP-46 remote-signer (bunker) accounts. [pubKeyHex] is the
+    // user pubkey the bunker signs as; [secret] holds the LOCAL transport
+    // keypair used to encrypt NIP-46 traffic (not the user's key).
+    val bunker: BunkerFile? = null,
+)
+
+/**
+ * NIP-46 bunker connection persisted in `identity.json`. The transport
+ * (client) private key lives in [IdentityFile.secret]; this records where
+ * to reach the remote signer and the optional connect secret.
+ */
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class BunkerFile(
+    val remotePubkey: String,
+    val relays: List<String>,
+    val connectSecret: String? = null,
 )

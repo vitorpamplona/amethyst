@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -1009,8 +1010,7 @@ class AccountViewModel(
         } catch (e: Exception) {
             onError(
                 stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
-                com.vitorpamplona.amethyst.model.nip60Cashu
-                    .describeMintError(e),
+                describeMintError(e),
                 baseNote.author,
             )
         }
@@ -1042,8 +1042,7 @@ class AccountViewModel(
             if (e is CancellationException) throw e
             onError(
                 stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
-                com.vitorpamplona.amethyst.model.nip60Cashu
-                    .describeMintError(e),
+                describeMintError(e),
                 getUserIfExists(recipientPubKey),
             )
         }

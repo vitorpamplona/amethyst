@@ -24,4 +24,9 @@ open class BunkerResponse(
     val id: String,
     val result: String?,
     val error: String?,
-) : BunkerMessage()
+) : BunkerMessage() {
+    companion object {
+        /** NIP-46 auth-challenge marker: `result == "auth_url"`, with the URL carried in `error`. */
+        const val RESULT_AUTH_URL = "auth_url"
+    }
+}

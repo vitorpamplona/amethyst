@@ -57,6 +57,12 @@ class NostrSignerRemote(
     val client: INostrClient,
     val permissions: String? = null,
     val secret: String? = null,
+    /**
+     * Invoked with the authorization URL when the bunker answers with a NIP-46
+     * `auth_url` challenge. Surface it (open a browser / print it); the pending
+     * request keeps waiting for the real response.
+     */
+    val onAuthUrl: ((String) -> Unit)? = null,
 ) : NostrSigner(signer.pubKey) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -66,6 +72,7 @@ class NostrSignerRemote(
             remoteKey = remotePubkey,
             relayList = relays,
             client = client,
+            onAuthUrl = onAuthUrl,
         )
 
     val subscription =

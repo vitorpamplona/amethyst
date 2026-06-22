@@ -227,6 +227,22 @@ contract.
 - Errors via `Output.error("code","detail")` — single lower_snake
   code, free-form detail.
 
+**Command-family schemas:**
+
+- **Cashu** (`amy cashu …`, NIP-60/61): the full per-verb `--json` key table
+  and the `cashu.json` NUT-13 counter layout are pinned in
+  [`plans/2026-05-28-cashu-cli.md`](./plans/2026-05-28-cashu-cli.md). Common
+  keys: `wallet_event_id`, `mint_url`, `amount_sats` (Long), `proofs_count`,
+  `token_event_id`, `history_event_id`, `quote_id`, `p2pk_pubkey`. Error codes
+  include `no_wallet`, `no_mint`, `insufficient_funds`, `mint_unreachable`,
+  `mint_http_<status>`, `mint_proofs_spent`, `mint_quote_gone`.
+- **Admin** (`amy admin …`, NIP-86): `{relay, method, result}` where `result`
+  is the relay's raw JSON-RPC result (list/boolean/null). Relay-side failures
+  surface as `error: relay_error`.
+- **Serve** (`amy serve`): a single startup object `{listening, host, port,
+  path, persistent, admin_pubkeys[]}`, then the process blocks (it embeds
+  geode; teardown is on SIGINT).
+
 ---
 
 ## Testing
@@ -360,6 +376,7 @@ events.
 │   ├── identity.json                    # nsec/npub/hex — the account
 │   ├── state.json                       # sync cursors (giftWrapSince, groupSince)
 │   ├── aliases.json                     # local name → npub map (init writes a self-entry)
+│   ├── cashu.json                       # NIP-60 NUT-13 counters: {"keyset_counters":{"<id>":<long>}}
 │   └── marmot/
 │       ├── keypackages.bundle           # MLS KeyPackage bundles (NostrSignerInternal)
 │       └── groups/
