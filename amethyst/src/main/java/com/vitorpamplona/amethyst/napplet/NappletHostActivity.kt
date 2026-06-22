@@ -43,6 +43,7 @@ import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.BlobFetcher
@@ -149,6 +150,13 @@ class NappletHostActivity : ComponentActivity() {
             return
         }
 
+        // The shell page + shim are the shared web contract (commons composeResources); load them
+        // once up front so the WebView worker threads that serve them never block on resource I/O.
+        runBlocking {
+            shellHtmlBytes = NappletWebContract.shellHtml()
+            shimJs = NappletWebContract.shimJs().decodeToString()
+        }
+
         webView = WebView(this)
         setContentView(webView)
         hardenWebView(webView)
@@ -156,15 +164,19 @@ class NappletHostActivity : ComponentActivity() {
         // Origin-restricted bridge: only the trusted shell page (main frame) can reach native.
         WebViewCompat.addWebMessageListener(
             webView,
-            BRIDGE_NAME,
-            setOf(ORIGIN),
+            NappletWebContract.BRIDGE_NAME,
+            setOf(NappletWebContract.ORIGIN),
             ::onShellMessage,
         )
 
         bindService(Intent(this, NappletBrokerService::class.java), brokerConnection, BIND_AUTO_CREATE)
 
-        webView.loadUrl(SHELL_URL)
+        webView.loadUrl(NappletWebContract.SHELL_URL)
     }
+
+    // The shared web contract, preloaded in onCreate (see commons NappletWebContract).
+    private lateinit var shellHtmlBytes: ByteArray
+    private lateinit var shimJs: String
 
     override fun onResume() {
         super.onResume()
@@ -251,10 +263,10 @@ class NappletHostActivity : ComponentActivity() {
         ): WebResourceResponse? {
             val url = request.url.toString()
             if (!request.method.equals("GET", ignoreCase = true)) return null
-            if (!url.startsWith(ORIGIN)) return notFound()
+            if (!url.startsWith(NappletWebContract.ORIGIN)) return notFound()
 
-            if (url == SHELL_URL) return serveShell()
-            if (url == APP_BASE || url.startsWith(APP_BASE)) {
+            if (url == NappletWebContract.SHELL_URL) return serveShell()
+            if (url == NappletWebContract.APP_BASE || url.startsWith(NappletWebContract.APP_BASE)) {
                 // A document navigation accepts text/html; a sub-resource (js/css/img) does not.
                 val acceptsHtml = request.requestHeaders["Accept"]?.contains("text/html", ignoreCase = true) == true
                 return serveAppResource(url, acceptsHtml)
@@ -268,7 +280,7 @@ class NappletHostActivity : ComponentActivity() {
         ): Boolean {
             val uri = request.url
             // Internal origin: let the WebView load it (it goes through shouldInterceptRequest).
-            if (uri.host == HOST) return false
+            if (uri.host == NappletWebContract.HOST) return false
             // An external link the user actually tapped is handed to the system browser. A user
             // gesture is required so a hostile site can't auto-redirect to spam-open the browser,
             // and only http(s) is honored so it can't fire arbitrary intent schemes.
@@ -282,17 +294,15 @@ class NappletHostActivity : ComponentActivity() {
         }
     }
 
-    private fun serveShell(): WebResourceResponse {
-        val bytes = assets.open("napplet/shell.html").use { it.readBytes() }
-        return WebResourceResponse(
+    private fun serveShell(): WebResourceResponse =
+        WebResourceResponse(
             "text/html",
             "utf-8",
             200,
             "OK",
-            mapOf("Content-Security-Policy" to SHELL_CSP),
-            ByteArrayInputStream(bytes),
+            mapOf("Content-Security-Policy" to NappletWebContract.SHELL_CSP),
+            ByteArrayInputStream(shellHtmlBytes),
         )
-    }
 
     private fun serveAppResource(
         url: String,
@@ -300,7 +310,7 @@ class NappletHostActivity : ComponentActivity() {
     ): WebResourceResponse {
         val requestPath =
             url
-                .removePrefix(APP_BASE)
+                .removePrefix(NappletWebContract.APP_BASE)
                 .substringBefore('?')
                 .substringBefore('#')
                 .let { if (it.isEmpty()) "/" else "/$it" }
@@ -326,13 +336,10 @@ class NappletHostActivity : ComponentActivity() {
             charset,
             200,
             "OK",
-            mapOf("Content-Security-Policy" to APP_CSP),
+            mapOf("Content-Security-Policy" to NappletWebContract.APP_CSP),
             ByteArrayInputStream(bytes),
         )
     }
-
-    // The injected window.napplet shim, read once from assets (see assets/napplet/shim.js).
-    private val shimJs by lazy { assets.open("napplet/shim.js").use { it.readBytes() }.decodeToString() }
 
     /** Inserts the `window.napplet` client shim into the applet's HTML document. */
     private fun injectShim(html: ByteArray): ByteArray {
@@ -472,25 +479,5 @@ class NappletHostActivity : ComponentActivity() {
     companion object {
         private const val TAG = "NappletHostActivity"
         private const val BLOB_CACHE_BYTES = 50L * 1024 * 1024
-        private const val HOST = "napplet.local"
-        private const val ORIGIN = "https://napplet.local"
-        private const val SHELL_URL = "$ORIGIN/__shell__"
-        private const val APP_BASE = "$ORIGIN/app/"
-        private const val BRIDGE_NAME = "__nappletBridge"
-
-        private const val SHELL_CSP =
-            "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
-                "frame-src https://napplet.local; base-uri 'none'; form-action 'none'"
-
-        // 'self' does not match an opaque (sandboxed) origin, so the host is listed explicitly.
-        // connect-src 'none' is the key lever: the applet gets no direct network.
-        private const val APP_CSP =
-            "default-src 'self' https://napplet.local; " +
-                "script-src 'self' https://napplet.local 'unsafe-inline'; " +
-                "style-src 'self' https://napplet.local 'unsafe-inline'; " +
-                "img-src 'self' https://napplet.local data: blob:; " +
-                "font-src 'self' https://napplet.local data:; " +
-                "media-src 'self' https://napplet.local blob: data:; " +
-                "connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
     }
 }

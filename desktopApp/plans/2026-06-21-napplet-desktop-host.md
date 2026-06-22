@@ -19,10 +19,12 @@ doc is the map: what already works for free, what desktop must build, and the de
 - **`NappletProtocolJson`** (`commons/jvmAndroid`) — the wire codec. Desktop's host marshals through
   the same object, so request/result/push shapes can never drift between platforms.
 
-**The web contract (`amethyst/assets/napplet/`)** — `shell.html` (the trusted shell page that hosts
-the applet in an opaque-origin `sandbox="allow-scripts"` iframe and bridges object↔string) and
-`shim.js` (the injected `window.napplet.*`). **These must be reused byte-for-byte** — they embody
-the envelope/push contract. See "Shared web assets" below for how to share them.
+**The web contract (`commons/commonMain/composeResources/files/napplet/` + `NappletWebContract`)** —
+`shell.html` (the trusted shell page that hosts the applet in an opaque-origin
+`sandbox="allow-scripts"` iframe and bridges object↔string), `shim.js` (the injected
+`window.napplet.*`), and `NappletWebContract` (the origin/URLs + both CSP strings + shell/shim
+loaders). **Reused byte-for-byte** — they embody the envelope/push contract. Desktop reads the same
+`Res.readBytes(...)` and serves the same CSP headers.
 
 ## What desktop must build (platform-specific)
 
@@ -56,13 +58,17 @@ These reduce desktop reimplementation and prevent drift:
   broker + transport + live relay subscription. Unit-tested in `commons/jvmTest`
   (`NappletRequestRouterTest`); Android's service consumes it via a `when (outcome)` dispatch. The
   desktop host will route the exact same way.
-- **Shared web assets.** Move `shell.html` + `shim.js` into `commons/commonMain/composeResources/files/napplet/`
-  and read them via the generated `Res.readBytes("files/napplet/...")` on both platforms (the
-  Material Symbols font already lives in commons composeResources). This makes the web contract
-  single-sourced. (Android's host then reads them via `Res` instead of `assets.open`.)
-- **The inert feed card.** `RenderStaticWebsite` (+ the napplet/nsite branches) in
-  `amethyst/.../note/types/StaticWebsite.kt` is plain Compose; move it to `commons` so the desktop
-  feed renders the identical card and launches the desktop host.
+- **DONE: Shared web assets + contract.** `shell.html` + `shim.js` now live in
+  `commons/commonMain/composeResources/files/napplet/` and are read via `Res.readBytes("files/napplet/...")`.
+  A new `commons/commonMain/.../napplet/NappletWebContract` single-sources the whole web contract:
+  the shell/shim loaders **plus** the origin/host/URLs and both CSP strings (`SHELL_CSP`, `APP_CSP`).
+  Android's host preloads the bytes in `onCreate` and reads every origin/CSP constant from
+  `NappletWebContract`; the desktop scheme handler will serve the same bytes + headers.
+- **DONE: The inert feed card.** The preview card is now
+  `commons/commonMain/.../ui/note/StaticWebsiteCard` — self-contained (commons compose-resource
+  strings, `LocalUriHandler` for links, inlined card chrome), parameterized by `isNapplet` and an
+  `onOpen` launch slot. Android's `note/types/StaticWebsite.kt` is now a thin set of event→card
+  adapters; the desktop feed renders the identical card and supplies its own `onOpen`.
 
 ## Security parity checklist (desktop must match Android)
 
