@@ -232,7 +232,8 @@ fun NonClickableUserPictures(
     size: Dp,
     accountViewModel: AccountViewModel,
 ) {
-    NonClickableUserPictures(room.users.toList(), size, accountViewModel)
+    val userList = remember(room) { room.users.toList() }
+    NonClickableUserPictures(userList, size, accountViewModel)
 }
 
 @Composable

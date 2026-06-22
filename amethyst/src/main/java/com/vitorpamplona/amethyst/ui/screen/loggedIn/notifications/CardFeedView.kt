@@ -44,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -232,9 +233,9 @@ private fun FeedLoaded(
         itemsIndexed(
             items = items.list,
             key = { _, item -> item.id() },
-            contentType = { _, item -> item.javaClass.simpleName },
+            contentType = { _, item -> item::class },
         ) { _, item ->
-            val isHighlighted = highlightedCardId == item.id()
+            val isHighlighted by remember(item) { derivedStateOf { highlightedCardId == item.id() } }
             val highlightColor by animateColorAsState(
                 targetValue = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent,
                 animationSpec = tween(durationMillis = if (isHighlighted) 300 else 1000),

@@ -476,7 +476,16 @@ fun DisplayLiveBubbles(
     val feed by liveFeed.feed.collectAsStateWithLifecycle()
 
     LazyRow(HorzPadding, horizontalArrangement = spacedBy(Size5dp)) {
-        itemsIndexed(feed.list, key = { _, item -> item.hashCode() }) { _, item ->
+        itemsIndexed(
+            feed.list,
+            key = { _, item ->
+                when (item) {
+                    is EphemeralChatChannel -> item.roomId.id
+                    is LiveActivitiesChannel -> item.address.toValue()
+                }
+            },
+            contentType = { _, item -> item::class },
+        ) { _, item ->
             when (item) {
                 is EphemeralChatChannel -> RenderEphemeralBubble(item, accountViewModel, nav)
                 is LiveActivitiesChannel -> RenderLiveActivityBubble(item, accountViewModel, nav)

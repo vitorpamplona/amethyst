@@ -456,7 +456,7 @@ fun RenderThreadFeed(
                 }
             },
         ) { index, item ->
-            val level = viewModel.levelFlowForItem(item).collectAsStateWithLifecycle(0)
+            val level = remember(item) { viewModel.levelFlowForItem(item) }.collectAsStateWithLifecycle(0)
 
             val modifier =
                 Modifier

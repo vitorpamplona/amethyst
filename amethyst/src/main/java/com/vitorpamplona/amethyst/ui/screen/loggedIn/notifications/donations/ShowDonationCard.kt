@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.donations
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -34,7 +35,7 @@ fun ShowDonationCard(
     nav: INav,
 ) {
     if (!accountViewModel.account.hasDonatedInThisVersion()) {
-        val donated by accountViewModel.account.observeDonatedInThisVersion().collectAsStateWithLifecycle()
+        val donated by remember { accountViewModel.account.observeDonatedInThisVersion() }.collectAsStateWithLifecycle()
         if (!donated) {
             LoadNote(
                 BuildConfig.RELEASE_NOTES_ID,

@@ -331,7 +331,7 @@ private fun SoftwareAppDetailBody(
             key = { _, item -> item.idHex },
             contentType = { _, _ -> "comment" },
         ) { _, item ->
-            val level = threadViewModel.levelFlowForItem(item).collectAsStateWithLifecycle(0)
+            val level = remember(item) { threadViewModel.levelFlowForItem(item) }.collectAsStateWithLifecycle(0)
 
             NoteCompose(
                 baseNote = item,
