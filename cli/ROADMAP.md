@@ -107,21 +107,22 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 
 ### Full nak comparison (introspected both binaries)
 
-nak has 34 functional commands. Coverage:
+nak has 34 functional commands (introspected from `nak --help`). Coverage:
 
-- **Full / equivalent (22):** `event`, `req`(→`fetch`+`subscribe`), `filter`,
-  `count`, `decode`, `encode`, `verify`, `relay`, `bunker`(+nostrconnect+auth_url),
-  `encrypt`, `decrypt`, `gift`, `publish`, `sync`, `profile`, `podcast`, `nip`,
-  `kind`, `blossom`, `admin`(NIP-86), `serve`(geode), `wallet`(NIP-60/61 Cashu).
+- **Full / equivalent (24):** `event`, `req`(→`fetch`+`subscribe`), `fetch`
+  (nip19/nip05-hint resolution), `filter`, `count`, `decode`, `encode`,
+  `verify`, `relay`, `bunker`(+nostrconnect+auth_url), `encrypt`, `decrypt`,
+  `gift`, `publish`, `sync`, `profile`, `podcast`, `nip`, `kind`, `blossom`,
+  `nsite`(NIP-5A), `admin`(NIP-86), `serve`(geode), `wallet`(NIP-60/61 Cashu).
   Protocol-sensitive ones (`bunker`, `sync`, `key` NIP-49, `encode`/`decode`,
   `admin`) are interop-verified against the real `nak` binary or `amy serve`.
 - **Partial / adapted (3):** `key` (no `expand`/`combine`(MuSig2)/`default`),
-  `git` (NIP-34 events only — no packfile transport), `outbox` (shows NIP-65 vs
-  nak's hints DB). `fetch` now does both filter mode AND nip19/nip05-hint
-  resolution (outbox model), so it's no longer partial.
-- **Missing (6):** `dekey` (NIP-4E), `mcp`, `curl` (NIP-98),
-  `fs` (FUSE), `group`/`nip29` (NIP-29 — amy has MLS/Marmot instead),
-  `spell` (MuSig2/FROST), `validate` (RoK schema).
+  `git` (NIP-34 events only — no packfile transport), `outbox` (NIP-65 model vs
+  nak's local hints DB).
+- **Missing (7):** `dekey` (NIP-4E), `mcp`, `curl` (NIP-98), `fs` (FUSE),
+  `spell` (MuSig2/FROST), `validate` (event-schema validation), and
+  `group`/`nip29` (NIP-29 — amy ships MLS/Marmot instead, an intentional
+  divergence rather than a gap).
 
 **Design differences (not gaps):** amy is a *stateful client* (accounts,
 `~/.amy/`, shared event store) with a stable JSON contract; nak is a *stateless*
@@ -130,7 +131,8 @@ a large surface nak lacks: Marmot/MLS, NIP-17 DMs, zaps, CLINK offer/debit,
 NIP-02 follow, NIP-50 search, napplets, profile edit, store management, account
 management.
 
-**Cheap remaining wins:** the `key` `expand`/`combine`/`validate`/`default` sub-verbs.
+**Cheap remaining wins:** the `key` `expand` (hex left-pad) and `default`
+(print the active account's key) sub-verbs. `key combine` needs MuSig2.
 
 ---
 
