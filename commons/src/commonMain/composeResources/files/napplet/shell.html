@@ -1,9 +1,13 @@
 <!doctype html>
 <!--
-  Trusted napplet shell page (served from app assets at https://napplet.local/__shell__).
-  It hosts the untrusted applet in an opaque-origin sandboxed iframe and relays capability
-  messages between the applet (window.postMessage) and the native bridge (__nappletBridge),
-  which is origin-restricted to this page only. The applet iframe can never reach the bridge.
+  Trusted napplet shell page (served on the shell origin https://napplet.local at /__shell__).
+  It hosts the untrusted applet in a sandboxed iframe pointed at the applet's OWN per-applet origin
+  (a distinct napplet.local subdomain, injected as __APP_ORIGIN__) and relays capability messages
+  between the applet (window.postMessage) and the native bridge (__nappletBridge), which is
+  origin-restricted to this shell page only. The applet is cross-origin to the shell, so it can never
+  reach the bridge or read the shell DOM. The iframe carries allow-same-origin so the applet has real,
+  isolated storage on its own origin — which is safe precisely because that origin is never the
+  shell's: the applet is same-origin only with itself.
 -->
 <html>
   <head>
@@ -15,7 +19,7 @@
     </style>
   </head>
   <body>
-    <iframe id="app" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
+    <iframe id="app" sandbox="allow-scripts allow-same-origin" referrerpolicy="no-referrer"></iframe>
     <script>
       (function () {
         var iframe = document.getElementById('app');
@@ -70,7 +74,7 @@
           };
         }
 
-        iframe.src = 'https://napplet.local/app/';
+        iframe.src = '__APP_ORIGIN__/';
       })();
     </script>
   </body>

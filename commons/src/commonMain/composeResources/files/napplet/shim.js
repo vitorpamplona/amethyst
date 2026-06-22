@@ -3,6 +3,49 @@
 // This is loaded as an asset and injected into the applet document by NappletHostActivity.
 (function(){
   if (window.__nappletShimInstalled) return; window.__nappletShimInstalled = true;
+
+  // Web Storage polyfill. The applet runs in an `allow-scripts` (no `allow-same-origin`) iframe, so
+  // its origin is opaque and reading `window.localStorage`/`sessionStorage` throws a SecurityError —
+  // which aborts the bootstrap of essentially every bundler-built SPA (they read storage at init) and
+  // leaves a blank page. We can't grant `allow-same-origin` (that would hand the applet the
+  // napplet.local origin the native bridge trusts — a sandbox escape), so we shadow the throwing
+  // native accessor with a synchronous in-memory Storage. It is per-launch (not persisted); durable
+  // storage is available separately and asynchronously via `window.napplet.storage.*`. This inline
+  // shim runs before the applet's deferred module script, so the polyfill is in place first.
+  (function(){
+    function makeStorage(){
+      var data = Object.create(null);
+      var methods = {
+        getItem: function(k){ k = String(k); return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
+        setItem: function(k, v){ data[String(k)] = String(v); },
+        removeItem: function(k){ delete data[String(k)]; },
+        clear: function(){ data = Object.create(null); },
+        key: function(i){ var ks = Object.keys(data); i = i >>> 0; return i < ks.length ? ks[i] : null; }
+      };
+      return new Proxy(methods, {
+        get: function(t, p){
+          if (p === 'length') return Object.keys(data).length;
+          if (typeof p !== 'string' || p in t) return t[p];
+          return Object.prototype.hasOwnProperty.call(data, p) ? data[p] : undefined;
+        },
+        set: function(t, p, v){ if (p in t) { t[p] = v; } else { data[String(p)] = String(v); } return true; },
+        has: function(t, p){ return (p in t) || (p === 'length') || Object.prototype.hasOwnProperty.call(data, p); },
+        deleteProperty: function(t, p){ delete data[p]; return true; },
+        ownKeys: function(){ return Object.keys(data); },
+        getOwnPropertyDescriptor: function(t, p){
+          if (Object.prototype.hasOwnProperty.call(data, p)) return { value: data[p], writable: true, enumerable: true, configurable: true };
+          return undefined;
+        }
+      });
+    }
+    function install(name){
+      try { if (window[name]) return; } catch (_) { /* native getter threw — install the polyfill */ }
+      try { Object.defineProperty(window, name, { value: makeStorage(), configurable: true, enumerable: true, writable: false }); } catch (_) {}
+    }
+    install('localStorage');
+    install('sessionStorage');
+  })();
+
   var seq = 0, pending = {}, subs = {}, actions = {}, identityHandlers = [];
   function send(env){ env.id = env.id || ('r' + (seq++)); parent.postMessage(JSON.stringify(env), '*'); return env.id; }
   function call(type, fields){

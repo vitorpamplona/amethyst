@@ -60,8 +60,10 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
 import com.vitorpamplona.amethyst.napplethost.R
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -90,6 +92,11 @@ class NappletHostActivity : ComponentActivity() {
     private val paths = mutableListOf<PathTag>()
     private val servers = mutableListOf<String>()
     private var author: String = ""
+
+    // The applet's stable identifier (the manifest `d` tag; empty for a root/replaceable applet).
+    // Combined with [author] it gives the applet's per-launch-stable identity, used to derive its
+    // own sandbox origin so its storage persists across launches and stays isolated from other applets.
+    private var identifier: String = ""
 
     // Opaque token the broker resolves to this launch's trusted identity + declared capabilities.
     // The sandbox never carries its own coordinate, so a compromised :napplet process can't forge one.
@@ -164,7 +171,8 @@ class NappletHostActivity : ComponentActivity() {
         fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
         val shellHtml = readContractAsset(NappletWebContract.SHELL_HTML_PATH)
         val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
-        contentServer = NappletContentServer(paths, servers, proxyPort, cacheDir, shellHtml, shim)
+        val appOrigin = NappletWebContract.appOrigin(deriveAppId(author, identifier))
+        contentServer = NappletContentServer(paths, servers, proxyPort, cacheDir, shellHtml, shim, appOrigin)
 
         // Create + warm the WebView NOW so its (slow, first-in-process) Chromium init runs on the main
         // thread concurrently with the index probe below (which runs on IO) — instead of serially after
@@ -285,6 +293,7 @@ class NappletHostActivity : ComponentActivity() {
         for (i in pathList.indices) paths.add(PathTag(pathList[i], hashList[i]))
         servers.addAll(intent.getStringArrayListExtra(NappletHostContract.EXTRA_SERVERS) ?: emptyList())
         author = intent.getStringExtra(NappletHostContract.EXTRA_AUTHOR).orEmpty()
+        identifier = intent.getStringExtra(NappletHostContract.EXTRA_IDENTIFIER).orEmpty()
         title = intent.getStringExtra(NappletHostContract.EXTRA_TITLE).orEmpty()
         proxyPort = intent.getIntExtra(NappletHostContract.EXTRA_PROXY_PORT, -1)
         launchToken = intent.getStringExtra(NappletHostContract.EXTRA_LAUNCH_TOKEN).orEmpty()
@@ -299,13 +308,29 @@ class NappletHostActivity : ComponentActivity() {
         return author.isNotEmpty() && launchToken.isNotEmpty()
     }
 
+    /**
+     * Stable, unique, DNS-label-safe id for this applet's sandbox origin: a sha256 of
+     * `author:identifier`, hex, truncated to 31 chars and letter-prefixed (`n`). The leading letter
+     * avoids any numeric-host parsing quirk and keeps it ≤63 chars (a valid DNS label). The same
+     * applet always derives the same id, so its origin — and therefore its localStorage/IndexedDB —
+     * persists across launches; different applets derive different subdomains, so their storage is
+     * isolated from one another.
+     */
+    private fun deriveAppId(
+        author: String,
+        identifier: String,
+    ): String = "n" + sha256("$author:$identifier".encodeToByteArray()).toHexKey().take(31)
+
     private var title: String = ""
 
     @Suppress("SetJavaScriptEnabled")
     private fun hardenWebView(webView: WebView) {
         webView.settings.apply {
             javaScriptEnabled = true // the applet needs JS; isolation comes from process + CSP + sandbox
-            domStorageEnabled = false
+            // DOM storage (localStorage/sessionStorage) is on because the applet runs on its OWN real,
+            // per-applet origin (a napplet.local subdomain) — storage is scoped to that origin, isolated
+            // from other applets and from the shell. SPAs need it at boot; without it they crash-loop.
+            domStorageEnabled = true
             databaseEnabled = false
             allowFileAccess = false
             allowContentAccess = false
@@ -339,8 +364,9 @@ class NappletHostActivity : ComponentActivity() {
             request: WebResourceRequest,
         ): Boolean {
             val uri = request.url
-            // Internal origin: let the WebView load it (it goes through shouldInterceptRequest).
-            if (uri.host == NappletWebContract.HOST) return false
+            // Internal hosts (the shell host and this applet's own per-applet subdomain): let the
+            // WebView load them — they go through shouldInterceptRequest and are served from cache.
+            if (NappletWebContract.isInternalHost(uri.host)) return false
             // An external link the user actually tapped is handed to the system browser. A user
             // gesture is required so a hostile site can't auto-redirect to spam-open the browser,
             // and only http(s) is honored so it can't fire arbitrary intent schemes.

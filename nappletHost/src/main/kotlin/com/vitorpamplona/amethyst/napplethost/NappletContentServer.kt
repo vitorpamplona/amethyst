@@ -54,6 +54,9 @@ class NappletContentServer(
     cacheDir: File,
     private val shellHtmlBytes: ByteArray,
     private val shimJs: String,
+    // The applet's own per-applet origin (a distinct napplet.local subdomain). The shell is on
+    // NappletWebContract.ORIGIN; app blobs are served here so the applet has a real, isolated origin.
+    private val appOrigin: String,
 ) {
     private val cache = NappletBlobCache(NappletBlobCache.dirFor(cacheDir))
     private val http = NappletBlobHttp.client(proxyPort)
@@ -88,16 +91,15 @@ class NappletContentServer(
     fun resolve(requestPath: String): StaticSiteResolution = resolveCacheFirst(requestPath)
 
     /**
-     * Serves the trusted shell or a verified app blob for a GET to our origin; 404s anything else on
-     * the origin, and returns null (defer to the WebView) for non-GET or off-origin requests.
+     * Serves the trusted shell (on the shell origin) or a verified app blob (on the per-applet
+     * [appOrigin]); 404s anything else, and returns null (defer to the WebView) for non-GET requests.
      */
     fun serve(request: WebResourceRequest): WebResourceResponse? {
         val url = request.url.toString()
         if (!request.method.equals("GET", ignoreCase = true)) return null
-        if (!url.startsWith(NappletWebContract.ORIGIN)) return notFound()
 
         if (url == NappletWebContract.SHELL_URL) return serveShell()
-        if (url == NappletWebContract.APP_BASE || url.startsWith(NappletWebContract.APP_BASE)) {
+        if (url == appOrigin || url.startsWith("$appOrigin/")) {
             // A document navigation accepts text/html; a sub-resource (js/css/img) does not.
             val acceptsHtml = request.requestHeaders["Accept"]?.contains("text/html", ignoreCase = true) == true
             return serveAppResource(url, acceptsHtml)
@@ -105,15 +107,19 @@ class NappletContentServer(
         return notFound()
     }
 
-    private fun serveShell(): WebResourceResponse =
-        WebResourceResponse(
+    private fun serveShell(): WebResourceResponse {
+        // The shell HTML carries an APP_ORIGIN_PLACEHOLDER for the iframe src; bind it to this applet's
+        // origin so the shell frames exactly this applet (and the CSP frame-src is pinned to it too).
+        val html = shellHtmlBytes.decodeToString().replace(NappletWebContract.APP_ORIGIN_PLACEHOLDER, appOrigin).encodeToByteArray()
+        return WebResourceResponse(
             "text/html",
             "utf-8",
             200,
             "OK",
-            mapOf("Content-Security-Policy" to NappletWebContract.SHELL_CSP),
-            ByteArrayInputStream(shellHtmlBytes),
+            mapOf("Content-Security-Policy" to NappletWebContract.shellCsp(appOrigin)),
+            ByteArrayInputStream(html),
         )
+    }
 
     private fun serveAppResource(
         url: String,
@@ -121,10 +127,10 @@ class NappletContentServer(
     ): WebResourceResponse {
         val requestPath =
             url
-                .removePrefix(NappletWebContract.APP_BASE)
+                .removePrefix(appOrigin)
                 .substringBefore('?')
                 .substringBefore('#')
-                .let { if (it.isEmpty()) "/" else "/$it" }
+                .ifEmpty { "/" }
 
         var resolution = resolveCacheFirst(requestPath)
 
@@ -142,6 +148,8 @@ class NappletContentServer(
         val isHtml = mime.equals("text/html", ignoreCase = true)
         val bytes = if (isHtml) injectShim(resolution.bytes) else resolution.bytes
 
+        // No CORS header needed: the applet document and these blobs are now on the same (per-applet)
+        // origin, so its own module scripts / stylesheets / assets load as same-origin requests.
         return WebResourceResponse(
             mime,
             charset,

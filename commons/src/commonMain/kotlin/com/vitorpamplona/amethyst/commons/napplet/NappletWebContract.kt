@@ -33,39 +33,66 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
  * [Res] accessor; the constants below are duplicated nowhere else.
  */
 object NappletWebContract {
-    /** Internal host the sandbox is served from (an opaque sandboxed origin, never the user's keys). */
+    /** Internal host the trusted **shell** is served from (never the user's keys). */
     const val HOST = "napplet.local"
     const val ORIGIN = "https://napplet.local"
 
-    /** The trusted shell document. */
+    /** The trusted shell document (top frame, on the shell [ORIGIN], where the native bridge lives). */
     const val SHELL_URL = "$ORIGIN/__shell__"
 
-    /** Base path the applet's own (verified) blobs are served under. */
-    const val APP_BASE = "$ORIGIN/app/"
+    /**
+     * The applet runs on its **own per-applet origin** — a unique subdomain of [HOST] — served at the
+     * origin root, NOT on the shell [ORIGIN]. Two reasons, both load-bearing:
+     *
+     *  1. **A real (non-opaque) origin is what gives the applet working, persistent storage.** An
+     *     `allow-scripts`-only opaque-origin iframe has no `localStorage`/`IndexedDB`/service worker
+     *     (reads throw `SecurityError`), which crash-loops essentially every SPA. A real origin with
+     *     `allow-same-origin` has them, scoped and isolated per applet (subdomains don't share
+     *     storage), so applets can't read each other's data.
+     *  2. **Keeping it on a DISTINCT origin from the shell is what preserves the trust boundary.** The
+     *     native bridge is origin-restricted to the shell [ORIGIN]; the applet, being cross-origin,
+     *     still can't reach it (nor read the shell DOM) — it talks only via `postMessage`, which the
+     *     shell relays. `allow-same-origin` is therefore safe here precisely because the applet is
+     *     same-origin only with *itself*, never with the shell.
+     *
+     * The applet is served at its origin root because SPA bundlers (Vite, CRA, webpack, nsyte, …) emit
+     * **absolute** asset URLs (`/assets/app.js`, `/fonts/x.woff2`) that resolve against the origin root.
+     *
+     * [appId] must be a stable, unique, DNS-label-safe token per applet (the host derives it from the
+     * applet's author + identifier), so the same applet keeps its storage across launches.
+     */
+    fun appOrigin(appId: String): String = "https://$appId.$HOST"
+
+    /** True for the shell host and any per-applet subdomain — i.e. everything we serve internally. */
+    fun isInternalHost(host: String?): Boolean = host == HOST || (host != null && host.endsWith(".$HOST"))
+
+    /** Placeholder in [SHELL_HTML_PATH] the host replaces with the per-applet [appOrigin] before serving. */
+    const val APP_ORIGIN_PLACEHOLDER = "__APP_ORIGIN__"
 
     /** Name of the origin-restricted native bridge the shell (and only the shell) can reach. */
     const val BRIDGE_NAME = "__nappletBridge"
 
     /**
-     * CSP for the shell document: it may inline its own bridge script/style and frame the applet, but
-     * has no network and cannot navigate or submit anywhere.
+     * CSP for the shell document: it may inline its own bridge script/style and frame **only this
+     * applet's** origin, but has no network and cannot navigate or submit anywhere.
      */
-    const val SHELL_CSP: String =
+    fun shellCsp(appOrigin: String): String =
         "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
-            "frame-src https://napplet.local; base-uri 'none'; form-action 'none'"
+            "frame-src $appOrigin; base-uri 'none'; form-action 'none'"
 
     /**
-     * CSP for the applet document. `'self'` does not match an opaque (sandboxed) origin, so the host
-     * is listed explicitly. The key lever is `connect-src 'none'`: the applet gets **no** direct
-     * network — every fetch goes through the brokered, consent-gated `resource.bytes`.
+     * CSP for the applet document. The applet has a real origin now, so `'self'` resolves to its own
+     * per-applet origin and the shell origin is deliberately NOT granted. The key lever is
+     * `connect-src 'none'`: the applet gets **no** direct network — every fetch goes through the
+     * brokered, consent-gated `resource.bytes`.
      */
     const val APP_CSP: String =
-        "default-src 'self' https://napplet.local; " +
-            "script-src 'self' https://napplet.local 'unsafe-inline'; " +
-            "style-src 'self' https://napplet.local 'unsafe-inline'; " +
-            "img-src 'self' https://napplet.local data: blob:; " +
-            "font-src 'self' https://napplet.local data:; " +
-            "media-src 'self' https://napplet.local blob: data:; " +
+        "default-src 'self'; " +
+            "script-src 'self' 'unsafe-inline'; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: blob:; " +
+            "font-src 'self' data:; " +
+            "media-src 'self' blob: data:; " +
             "connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
 
     const val SHELL_HTML_PATH = "files/napplet/shell.html"
