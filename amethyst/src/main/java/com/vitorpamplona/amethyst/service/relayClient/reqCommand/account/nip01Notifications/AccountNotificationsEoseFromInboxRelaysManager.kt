@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -51,15 +50,22 @@ class AccountNotificationsEoseFromInboxRelaysManager(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> =
         key.account.notificationRelays.flow.value.flatMap {
+            // On a cold start the EOSE watermark map is empty. Falling back to a
+            // fixed `oneWeekAgo()` here hard-capped the initial backfill to the
+            // last 7 days, so a fresh install showed far fewer notifications than
+            // clients that query the same relays with only a `limit`. Leaving
+            // `since` null lets the per-filter `limit` govern instead, so the
+            // relay returns the newest N notifications regardless of age. Once an
+            // EOSE arrives the per-relay watermark takes over for the live tail.
             filterSummaryNotificationsToPubkey(
                 relay = it,
                 pubkey = user(key).pubkeyHex,
-                since = since?.get(it)?.time ?: TimeUtils.oneWeekAgo(),
+                since = since?.get(it)?.time,
             ) +
                 filterNotificationsToPubkey(
                     relay = it,
                     pubkey = user(key).pubkeyHex,
-                    since = since?.get(it)?.time ?: key.feedContentStates.notifications.lastNoteCreatedAtIfFilled() ?: TimeUtils.oneWeekAgo(),
+                    since = since?.get(it)?.time ?: key.feedContentStates.notifications.lastNoteCreatedAtIfFilled(),
                 )
         }
 

@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -51,8 +50,12 @@ class AccountNotificationsEoseFromRandomRelaysManager(
         key: AccountQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        // only loads this after the feed is built
-        val defaultSince = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled() ?: TimeUtils.oneWeekAgo()
+        // Null `since` on a cold start: these filters carry tiny limits (20/20/10/2),
+        // so leaving `since` open returns the newest few notifications per relay
+        // regardless of age — a true "just the latest", as the filter name says.
+        // A fixed `oneWeekAgo()` floor used to intersect that with the last 7 days,
+        // hiding older interactions on a fresh install even when well under the limit.
+        val defaultSince = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled()
         return (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value).flatMap {
             val since = since?.get(it)?.time ?: defaultSince
             filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since)
