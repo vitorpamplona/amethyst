@@ -44,6 +44,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -672,18 +673,21 @@ class NappletHostActivity : ComponentActivity() {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             },
         )
-        // nSite network indicator + toggle: onion = Tor (private), globe = open web (IP visible). Only
-        // shown when this is a website-mode nSite AND Tor is active — otherwise there is nothing to
-        // route through. Its own click handler opens the network dialog without firing the access sheet.
+        // nSite network indicator + toggle: the Tor logo, lit when routing through Tor and dimmed when
+        // the site loads over the open web. Only shown for a website-mode nSite when Tor is active —
+        // otherwise there is nothing to route through. Its own click opens the network dialog (and, by
+        // consuming the click, doesn't also fire the access sheet bound to the bar).
         if (websiteMode && proxyPort > 0) {
             bar.addView(
-                TextView(this).apply {
-                    text = if (useTor) "🧅" else "🌐"
-                    textSize = 18f
+                ImageView(this).apply {
+                    setImageResource(R.drawable.ic_tor)
+                    setColorFilter(if (useTor) onSurface else resolveThemeColor(android.R.attr.textColorSecondary))
+                    alpha = if (useTor) 1f else 0.4f
                     setPadding(0, 0, dp(12), 0)
                     isClickable = true
                     setOnClickListener { showNetworkDialog() }
                     contentDescription = getString(if (useTor) R.string.napplet_net_tor_desc else R.string.napplet_net_open_desc)
+                    layoutParams = LinearLayout.LayoutParams(dp(34), dp(22))
                 },
             )
         }

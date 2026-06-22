@@ -35,6 +35,8 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun RenderRootNappletEvent(
@@ -187,9 +189,13 @@ private fun PrefetchManifestBlobs(
 ) {
     val context = LocalContext.current
     LaunchedEffect(paths, servers) {
-        runCatching {
-            val torPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-            NappletBlobPrefetcher.prefetch(paths, servers, context.cacheDir, torPort)
+        // Off the main thread: context.cacheDir touches disk (ensurePrivateCacheDirExists), so reading
+        // it on the composition dispatcher trips StrictMode. The prefetch itself is already IO-bound.
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val torPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
+                NappletBlobPrefetcher.prefetch(paths, servers, context.cacheDir, torPort)
+            }
         }
     }
 }
