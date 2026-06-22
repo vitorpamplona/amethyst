@@ -126,6 +126,7 @@ fun RenderRootSiteEvent(
                         aggregateHash = null,
                         title = event.title() ?: "nsite",
                         requires = emptyList(),
+                        websiteMode = true,
                     )
                 }
             } else {
@@ -165,6 +166,7 @@ fun RenderNamedSiteEvent(
                         aggregateHash = null,
                         title = event.title() ?: event.identifier(),
                         requires = emptyList(),
+                        websiteMode = true,
                     )
                 }
             } else {

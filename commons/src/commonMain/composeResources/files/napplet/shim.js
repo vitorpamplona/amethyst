@@ -157,4 +157,16 @@
     }
   };
   window.napplet = Object.freeze(napplet);
+
+  // NIP-07 provider (window.nostr), installed only for nSites in website mode (the host sets
+  // window.__nappletNip07 synchronously before this shim). Lets standard Nostr web apps "log in with
+  // Amethyst" and sign, bridged to the same consent-gated signer: getPublicKey + getRelays reuse the
+  // identity reads; signEvent is sign-only (no publish) and honors the app's created_at.
+  if (window.__nappletNip07 && !window.nostr) {
+    window.nostr = Object.freeze({
+      getPublicKey: function(){ return field(call('identity.getPublicKey'), 'pubkey'); },
+      getRelays: function(){ return field(call('identity.getRelays'), 'relays'); },
+      signEvent: function(event){ return field(call('nostr.signEvent', { event: event }), 'event'); }
+    });
+  }
 })();

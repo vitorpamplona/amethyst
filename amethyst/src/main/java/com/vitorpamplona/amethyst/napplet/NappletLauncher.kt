@@ -71,6 +71,10 @@ object NappletLauncher {
         aggregateHash: HexKey?,
         title: String,
         requires: List<String>,
+        // nSites open in "website mode": a NIP-07 window.nostr provider + normal network. The broker
+        // then grants the IDENTITY + RELAY capabilities NIP-07 needs (consent-gated), regardless of the
+        // (empty) manifest `requires`. Napplets pass false and keep their declared-only, locked sandbox.
+        websiteMode: Boolean = false,
     ) {
         val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
 
@@ -86,11 +90,16 @@ object NappletLauncher {
         // Mint the launch token in the (trusted) main process: the broker resolves the sandbox's
         // requests back to THIS identity + declared set, regardless of anything the sandbox sends.
         val identity = NappletIdentity(authorPubKey = authorPubKey, identifier = identifier, aggregateHash = aggregateHash)
-        val declared = resolveRequiredCapabilities(requires).capabilities.toSet()
+        val declared =
+            if (websiteMode) {
+                setOf(NappletCapability.IDENTITY, NappletCapability.RELAY)
+            } else {
+                resolveRequiredCapabilities(requires).capabilities.toSet()
+            }
         val launchToken = NappletLaunchRegistry.register(identity, declared)
 
         // Resolve capability labels here (the app has the resources) so the sandbox module needs none.
-        val capLabels = requires.mapNotNull { NappletCapability.fromNapDomain(it) }.map { context.getString(it.labelRes()) }
+        val capLabels = declared.map { context.getString(it.labelRes()) }
 
         val intent =
             Intent(context, NappletHostActivity::class.java).apply {
@@ -105,6 +114,7 @@ object NappletLauncher {
                 putExtra(NappletHostContract.EXTRA_CAP_LABELS, ArrayList(capLabels))
                 putExtra(NappletHostContract.EXTRA_LAUNCH_TOKEN, launchToken)
                 putExtra(NappletHostContract.EXTRA_PROXY_PORT, proxyPort)
+                putExtra(NappletHostContract.EXTRA_WEBSITE_MODE, websiteMode)
                 if (context !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         context.startActivity(intent)

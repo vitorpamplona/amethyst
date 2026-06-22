@@ -63,6 +63,14 @@ class NappletConsentSummary(
                     context.getString(R.string.napplet_consent_publish_preview, request.kind) + "\n“$preview”"
                 }
             }
+            is NappletRequest.SignEvent -> {
+                val preview = request.content.take(160).trim()
+                if (preview.isEmpty()) {
+                    context.getString(R.string.napplet_consent_sign, request.kind)
+                } else {
+                    context.getString(R.string.napplet_consent_sign, request.kind) + "\n“$preview”"
+                }
+            }
             is NappletRequest.PublishEncrypted -> context.getString(R.string.napplet_consent_publish_encrypted)
             is NappletRequest.QueryEvents, is NappletRequest.Subscribe -> context.getString(R.string.napplet_consent_query)
             is NappletRequest.StorageGet, is NappletRequest.StorageSet, is NappletRequest.StorageRemove, is NappletRequest.StorageKeys ->

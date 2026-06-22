@@ -54,6 +54,12 @@ object NappletHostContract {
     const val EXTRA_PROXY_PORT = "napplet_proxy_port"
 
     /**
+     * nSite "website mode": treat the content as a normal web app — install the NIP-07 `window.nostr`
+     * provider and allow normal network (no app CSP). Off for locked napplets.
+     */
+    const val EXTRA_WEBSITE_MODE = "napplet_website_mode"
+
+    /**
      * FQN of the main-process broker service (in `:amethyst`). The sandbox binds it by name so it
      * needs no compile-time reference to `:amethyst`. Must match the manifest `<service>` declaration.
      */

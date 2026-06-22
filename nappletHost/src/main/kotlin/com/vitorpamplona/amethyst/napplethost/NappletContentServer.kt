@@ -57,6 +57,9 @@ class NappletContentServer(
     // The applet's own per-applet origin (a distinct napplet.local subdomain). The shell is on
     // NappletWebContract.ORIGIN; app blobs are served here so the applet has a real, isolated origin.
     private val appOrigin: String,
+    // nSite "website mode": the applet is a normal web app — it gets a NIP-07 window.nostr provider,
+    // normal network (no app CSP; off-origin requests defer to the WebView), unlike a locked napplet.
+    private val websiteMode: Boolean = false,
 ) {
     private val cache = NappletBlobCache(NappletBlobCache.dirFor(cacheDir))
     private val http = NappletBlobHttp.client(proxyPort)
@@ -104,7 +107,9 @@ class NappletContentServer(
             val acceptsHtml = request.requestHeaders["Accept"]?.contains("text/html", ignoreCase = true) == true
             return serveAppResource(url, acceptsHtml)
         }
-        return notFound()
+        // Off-origin: a locked napplet 404s (connect-src 'none' means it shouldn't ask). An nSite in
+        // website mode is a normal web app — defer to the WebView so it can load external resources.
+        return if (websiteMode) null else notFound()
     }
 
     private fun serveShell(): WebResourceResponse {
@@ -148,14 +153,15 @@ class NappletContentServer(
         val isHtml = mime.equals("text/html", ignoreCase = true)
         val bytes = if (isHtml) injectShim(resolution.bytes) else resolution.bytes
 
-        // No CORS header needed: the applet document and these blobs are now on the same (per-applet)
-        // origin, so its own module scripts / stylesheets / assets load as same-origin requests.
+        // Locked napplets get the strict app CSP (connect-src 'none', etc.). An nSite in website mode
+        // is a normal web app: no app CSP, so it can talk to relays (wss) and load external resources.
+        val headers = if (websiteMode) emptyMap() else mapOf("Content-Security-Policy" to NappletWebContract.APP_CSP)
         return WebResourceResponse(
             mime,
             charset,
             200,
             "OK",
-            mapOf("Content-Security-Policy" to NappletWebContract.APP_CSP),
+            headers,
             ByteArrayInputStream(bytes),
         )
     }
@@ -163,7 +169,9 @@ class NappletContentServer(
     /** Inserts the `window.napplet` client shim into the applet's HTML document. */
     private fun injectShim(html: ByteArray): ByteArray {
         val text = html.decodeToString()
-        val script = "<script>$shimJs</script>"
+        // In website mode, set the NIP-07 flag synchronously *before* the shim so window.nostr installs.
+        val nip07Flag = if (websiteMode) "<script>window.__nappletNip07=true;</script>" else ""
+        val script = "$nip07Flag<script>$shimJs</script>"
         val headIdx = text.indexOf("<head", ignoreCase = true)
         val injected =
             when {

@@ -188,6 +188,10 @@ class NappletBroker(
             // created_at comes from the host, never the applet, so it cannot backdate.
             is NappletRequest.Publish -> signAndPublish(request.kind, request.tags, request.content)
 
+            // NIP-07 signEvent: sign as the user (honoring the app's created_at) and return it WITHOUT
+            // publishing — the web app sends it to relays itself. pubkey is still fixed by the signer.
+            is NappletRequest.SignEvent -> NappletResponse.Published(signer.sign(request.createdAt, request.kind, request.tags, request.content), emptyList())
+
             is NappletRequest.PublishEncrypted -> {
                 val ciphertext =
                     when (request.encryption.trim().lowercase()) {

@@ -103,6 +103,9 @@ class NappletHostActivity : ComponentActivity() {
     // The sandbox never carries its own coordinate, so a compromised :napplet process can't forge one.
     private var launchToken: String = ""
 
+    // nSite "website mode": a normal web app (NIP-07 window.nostr + normal network), vs a locked napplet.
+    private var websiteMode: Boolean = false
+
     // NAP domain strings the shell advertises to the applet in the shell.init handshake.
     private var declaredDomains: List<String> = emptyList()
 
@@ -192,7 +195,7 @@ class NappletHostActivity : ComponentActivity() {
         val shellHtml = readContractAsset(NappletWebContract.SHELL_HTML_PATH)
         val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
         val appOrigin = NappletWebContract.appOrigin(deriveAppId(author, identifier))
-        contentServer = NappletContentServer(paths, servers, proxyPort, cacheDir, shellHtml, shim, appOrigin)
+        contentServer = NappletContentServer(paths, servers, proxyPort, cacheDir, shellHtml, shim, appOrigin, websiteMode)
 
         // Create + warm the WebView NOW so its (slow, first-in-process) Chromium init runs on the main
         // thread concurrently with the index probe below (which runs on IO) — instead of serially after
@@ -317,6 +320,7 @@ class NappletHostActivity : ComponentActivity() {
         servers.addAll(intent.getStringArrayListExtra(NappletHostContract.EXTRA_SERVERS) ?: emptyList())
         author = intent.getStringExtra(NappletHostContract.EXTRA_AUTHOR).orEmpty()
         identifier = intent.getStringExtra(NappletHostContract.EXTRA_IDENTIFIER).orEmpty()
+        websiteMode = intent.getBooleanExtra(NappletHostContract.EXTRA_WEBSITE_MODE, false)
         title = intent.getStringExtra(NappletHostContract.EXTRA_TITLE).orEmpty()
         proxyPort = intent.getIntExtra(NappletHostContract.EXTRA_PROXY_PORT, -1)
         launchToken = intent.getStringExtra(NappletHostContract.EXTRA_LAUNCH_TOKEN).orEmpty()

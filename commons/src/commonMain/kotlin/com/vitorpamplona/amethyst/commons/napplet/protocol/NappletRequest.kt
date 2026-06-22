@@ -104,6 +104,39 @@ sealed interface NappletRequest {
     }
 
     /**
+     * NIP-07 `window.nostr.signEvent`: sign a full event template **as the user** and return it,
+     * **without publishing** (the web app sends it to relays itself). Unlike [Publish] this honors the
+     * app-supplied `created_at` (NIP-07 apps rely on it); the shell still fixes `pubkey` to the real
+     * signer, so the app can never sign as another identity. Exposed only to nSites (website mode).
+     */
+    data class SignEvent(
+        val kind: Int,
+        val tags: Array<Array<String>>,
+        val content: String,
+        val createdAt: Long,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.RELAY
+        override val signsAsUser get() = true
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is SignEvent) return false
+            if (kind != other.kind || createdAt != other.createdAt || content != other.content) return false
+            if (tags.size != other.tags.size) return false
+            for (i in tags.indices) if (!tags[i].contentEquals(other.tags[i])) return false
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = kind
+            result = 31 * result + createdAt.hashCode()
+            result = 31 * result + content.hashCode()
+            result = 31 * result + tags.sumOf { it.contentHashCode() }
+            return result
+        }
+    }
+
+    /**
      * Encrypt [content] to [recipient] with [encryption] (`"nip44"`, default, or `"nip04"`), then
      * build, sign, and publish the event. The shell holds the key and performs both the encryption
      * and the signing; the napplet supplies only plaintext.

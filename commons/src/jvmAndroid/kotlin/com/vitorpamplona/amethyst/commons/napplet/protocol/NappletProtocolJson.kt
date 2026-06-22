@@ -148,6 +148,16 @@ object NappletProtocolJson {
             }
             "relay.query" -> NappletRequest.QueryEvents(decodeFilterList(o))
             "relay.subscribe" -> NappletRequest.Subscribe(decodeFilterList(o))
+            "nostr.signEvent" -> {
+                // NIP-07 signEvent: sign-only, honoring the app-supplied created_at (fallback: now).
+                val t = o.eventTemplate()
+                NappletRequest.SignEvent(
+                    kind = t.kindOf(),
+                    tags = decodeTags(t),
+                    content = t.str("content") ?: "",
+                    createdAt = t["created_at"]?.jsonPrimitive?.long ?: (System.currentTimeMillis() / 1000),
+                )
+            }
             "storage.get" -> NappletRequest.StorageGet(o.req("key"))
             "storage.set" -> NappletRequest.StorageSet(o.req("key"), o.req("value"))
             "storage.remove" -> NappletRequest.StorageRemove(o.req("key"))
