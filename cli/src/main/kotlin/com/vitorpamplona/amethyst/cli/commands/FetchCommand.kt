@@ -24,18 +24,35 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 /**
  * `amy fetch [--kind …] [--author …] [--id …] [--tag …] [--since/--until TS]
  *            [--limit N] [--search TEXT] [--relay URL[,URL…]] [--timeout SECS]`
  *
+ *   amy fetch <nevent1…|naddr1…|nprofile1…|npub1…|note1…|name@domain>
+ *
  * One-shot query: open a subscription, collect everything until every relay
  * sends EOSE (or the timeout fires), then print and exit. This is the bounded
  * half of nak's `req`; the live-streaming half is `amy subscribe`.
  *
+ * Two modes:
+ *  - **filter mode** (flags) — assemble a filter and query `--relay`/outbox.
+ *  - **code mode** (a nip19/nip05 positional) — Amethyst's outbox-model
+ *    resolution: query the relay hints embedded in the code PLUS the author's
+ *    NIP-65 write relays, exactly how the app downloads an event/profile from
+ *    a shared link. This is nak's `fetch` (nip19-hint resolution).
+ *
  * Results are deduplicated by id, sorted newest-first, capped at `--limit`
  * (default 100), and emitted as full event JSON under an `events` array.
- * Relays default to the account's outbox, then the bootstrap union.
  */
 object FetchCommand {
     suspend fun run(
@@ -46,6 +63,13 @@ object FetchCommand {
         val limit = args.flag("limit")?.toIntOrNull() ?: 100
         if (limit <= 0) return Output.error("bad_args", "--limit must be > 0")
         val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 8L) * 1000
+
+        // Code mode: a nip19/nip05 positional resolves its own relays via the
+        // outbox model rather than using a hand-built filter.
+        args.positionalOrNull(0)?.takeIf { looksLikeCode(it) }?.let {
+            return fetchByCode(dataDir, it, limit, timeoutMs)
+        }
+
         val filter = RawEventSupport.buildFilter(args)
 
         Context.open(dataDir).use { ctx ->
@@ -73,5 +97,102 @@ object FetchCommand {
             )
             return 0
         }
+    }
+
+    private fun looksLikeCode(s: String): Boolean {
+        val t = s.removePrefix("nostr:")
+        return t.startsWith("npub1") || t.startsWith("nprofile1") || t.startsWith("nevent1") ||
+            t.startsWith("naddr1") || t.startsWith("note1") || ('@' in t && '.' in t)
+    }
+
+    /**
+     * Outbox-model fetch from a nip19/nip05 code: decode it into a filter +
+     * relay hints + author, then query the hint relays UNION the author's
+     * NIP-65 write relays — the same resolution the Android app uses to open a
+     * shared `nevent`/`naddr`/profile link.
+     */
+    private suspend fun fetchByCode(
+        dataDir: DataDir,
+        codeArg: String,
+        limit: Int,
+        timeoutMs: Long,
+    ): Int {
+        val code = codeArg.removePrefix("nostr:")
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+
+            var filter: Filter
+            val hintRelays = mutableSetOf<NormalizedRelayUrl>()
+            var author: String? = null
+
+            if ('@' in code) {
+                // nip05 → pubkey, then fetch that author's profile metadata.
+                author = ctx.requireUserHex(code)
+                filter = Filter(authors = listOf(author), kinds = listOf(0), limit = 1)
+            } else {
+                val entity = Nip19Parser.uriToRoute(code)?.entity ?: return Output.error("bad_args", "could not decode: $codeArg")
+                filter =
+                    when (entity) {
+                        is NEvent -> {
+                            hintRelays.addAll(entity.relay)
+                            author = entity.author
+                            Filter(ids = listOf(entity.hex), limit = 1)
+                        }
+                        is NNote -> Filter(ids = listOf(entity.hex), limit = 1)
+                        is NAddress -> {
+                            hintRelays.addAll(entity.relay)
+                            author = entity.author
+                            Filter(kinds = listOf(entity.kind), authors = listOf(entity.author), tags = mapOf("d" to listOf(entity.dTag)), limit = 1)
+                        }
+                        is NProfile -> {
+                            hintRelays.addAll(entity.relay)
+                            author = entity.hex
+                            Filter(authors = listOf(entity.hex), kinds = listOf(0), limit = 1)
+                        }
+                        is NPub -> {
+                            author = entity.hex
+                            Filter(authors = listOf(entity.hex), kinds = listOf(0), limit = 1)
+                        }
+                        else -> return Output.error("bad_args", "unsupported code for fetch: $codeArg")
+                    }
+            }
+
+            // Outbox model: hint relays + the author's advertised write relays.
+            val relays = (hintRelays + (author?.let { authorWriteRelays(ctx, it) } ?: emptySet())).ifEmpty { ctx.bootstrapRelays() }
+
+            val received = ctx.drain(relays.associateWith { listOf(filter) }, timeoutMs)
+            val events =
+                received
+                    .asSequence()
+                    .map { it.second }
+                    .distinctBy { it.id }
+                    .sortedByDescending { it.createdAt }
+                    .take(limit)
+                    .map { Output.mapper.readTree(it.toJson()) }
+                    .toList()
+
+            Output.emit(
+                mapOf(
+                    "code" to codeArg,
+                    "resolved_author" to author,
+                    "queried_relays" to relays.map { it.url },
+                    "count" to events.size,
+                    "events" to events,
+                ),
+            )
+            return 0
+        }
+    }
+
+    /** The author's NIP-65 write (outbox) relays, draining their kind:10002 on a cache miss. */
+    private suspend fun authorWriteRelays(
+        ctx: Context,
+        author: String,
+    ): Set<NormalizedRelayUrl> {
+        if (ctx.relaysOf(author) == null) {
+            val f = Filter(authors = listOf(author), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1)
+            ctx.drain(ctx.bootstrapRelays().associateWith { listOf(f) })
+        }
+        return ctx.relaysOf(author)?.writeRelaysNorm()?.toSet() ?: emptySet()
     }
 }

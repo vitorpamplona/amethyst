@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 
 /**
@@ -52,8 +53,34 @@ object KeyCommands {
                 "public" to { tail -> public(tail) },
                 "encrypt" to { tail -> encrypt(tail) },
                 "decrypt" to { tail -> decrypt(tail) },
+                "validate" to { tail -> validate(tail) },
             ),
         )
+
+    /**
+     * `key validate PUBKEY` — nak's `key validate`. Parses an npub or 64-hex
+     * public key and reports whether it is a structurally valid x-only pubkey.
+     * Never errors on a bad key — it reports `{"valid": false}` so scripts can
+     * branch on the field rather than the exit code.
+     */
+    private fun validate(rest: Array<String>): Int {
+        val input = Args(rest).positional(0, "pubkey").trim()
+        val hex =
+            when {
+                input.startsWith("npub") -> runCatching { input.bechToBytes().toHexKey() }.getOrNull()
+                input.length == 64 && input.lowercase().all { it in "0123456789abcdef" } -> input.lowercase()
+                else -> null
+            }
+        // A Nostr pubkey is a 32-byte x-only key. Confirm length after decode.
+        val valid = hex != null && hex.length == 64
+        if (!valid) {
+            Output.emit(mapOf("valid" to false))
+            return 0
+        }
+        val npub = hex!!.hexToByteArray().toNpub()
+        Output.emit(mapOf("valid" to true, "pubkey" to hex, "npub" to npub))
+        return 0
+    }
 
     /** Read the private key (nsec or 64-hex) into hex, or null if unparseable. */
     private fun privHexOrNull(input: String): String? =

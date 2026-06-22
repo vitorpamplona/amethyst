@@ -82,10 +82,10 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `decode` | `amy decode` | ✅ | NIP-19/21 → JSON. Quartz `Nip19Parser`. |
 | `encode` | `amy encode` | ✅ | npub/nsec/note/nevent/nprofile/naddr. |
 | `verify` / `validate` | `amy verify` | ✅ | id-hash + signature, reported separately. |
-| `key` | `amy key generate\|public\|encrypt\|decrypt` | ✅ | generate/derive + NIP-49 encrypt/decrypt (bidirectionally nak-verified). `expand`/`combine`/`validate`/`default` still 🆕. |
+| `key` | `amy key generate\|public\|encrypt\|decrypt\|validate` | ✅ | generate/derive + NIP-49 encrypt/decrypt (bidirectionally nak-verified) + `validate` (npub/hex parse check). `expand`/`combine`(MuSig2)/`default` still 🆕. |
 | `event` | `amy event` | ✅ | build/sign an arbitrary event, optional `--publish`/`--relay`. |
 | `publish` | `amy publish` | ✅ | broadcast a pre-made event JSON (verified first). |
-| `req` (one-shot) | `amy fetch` | ✅ | filter → collect-until-EOSE, dedupe, sort, cap. |
+| `req` (one-shot) | `amy fetch` | ✅ | filter → collect-until-EOSE, dedupe, sort, cap. Also accepts a nip19/nip05 code and resolves relays via the outbox model (code hints + author's NIP-65 write relays), like nak's `fetch`. |
 | `req` (stream) | `amy subscribe` | ✅ | filter → live NDJSON stream to stdout. |
 | `count` | `amy count` | ✅ | NIP-45, per-relay counts. |
 | `encrypt` / `decrypt` | `amy encrypt\|decrypt` | ✅ | raw NIP-44 (default) / NIP-04. |
@@ -115,9 +115,10 @@ nak has 34 functional commands. Coverage:
   `kind`, `blossom`, `admin`(NIP-86), `serve`(geode), `wallet`(NIP-60/61 Cashu).
   Protocol-sensitive ones (`bunker`, `sync`, `key` NIP-49, `encode`/`decode`,
   `admin`) are interop-verified against the real `nak` binary or `amy serve`.
-- **Partial / adapted (4):** `key` (no `expand`/`combine`/`validate`/`default`),
+- **Partial / adapted (3):** `key` (no `expand`/`combine`(MuSig2)/`default`),
   `git` (NIP-34 events only — no packfile transport), `outbox` (shows NIP-65 vs
-  nak's hints DB), `fetch` (filter-based, not nip19-hint resolution).
+  nak's hints DB). `fetch` now does both filter mode AND nip19/nip05-hint
+  resolution (outbox model), so it's no longer partial.
 - **Missing (6):** `dekey` (NIP-4E), `mcp`, `curl` (NIP-98),
   `fs` (FUSE), `group`/`nip29` (NIP-29 — amy has MLS/Marmot instead),
   `spell` (MuSig2/FROST), `validate` (RoK schema).
