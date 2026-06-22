@@ -537,6 +537,9 @@ class Account(
     // Napplets read from the local cache (no outbox subscription yet), so only the author-matcher is needed.
     val liveNappletsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNappletsFollowList)
 
+    // nSites likewise read from the local cache; only the author-matcher is needed.
+    val liveNsitesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNsitesFollowList)
+
     val liveWorkoutsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultWorkoutsFollowList)
     val liveWorkoutsFollowListsPerRelay = OutboxLoaderState(liveWorkoutsFollowLists, cache, scope).flow
 

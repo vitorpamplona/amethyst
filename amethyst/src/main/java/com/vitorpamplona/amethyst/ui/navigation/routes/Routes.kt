@@ -89,6 +89,8 @@ sealed class Route {
 
     @Serializable object Napplets : Route()
 
+    @Serializable object Nsites : Route()
+
     @Serializable object NappletPermissions : Route()
 
     @Serializable data class SoftwareAppDetail(

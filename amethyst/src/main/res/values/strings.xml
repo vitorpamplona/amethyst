@@ -663,6 +663,8 @@
     <string name="software_apps">Apps</string>
     <string name="route_software_apps">Apps</string>
     <string name="napplets">nApplets</string>
+    <string name="nsites">nSites</string>
+    <string name="nsite_none_found">No nSites found yet.</string>
     <string name="napplet_permissions">nApplet permissions</string>
     <string name="napplet_manage_permissions">Manage permissions</string>
     <string name="napplet_permissions_empty">No nApplet permissions yet</string>
