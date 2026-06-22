@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.napplet
 import android.content.Context
 import android.content.Intent
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
+import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
@@ -46,6 +48,13 @@ object NappletLauncher {
 
     /** Bare NAP capability domains the manifest declared (empty for a plain nsite). */
     const val EXTRA_REQUIRES = "napplet_requires"
+
+    /**
+     * Unguessable token for this launch. The sandbox relays it to the broker, which resolves it back
+     * to the trusted identity + declared capabilities via [NappletLaunchRegistry] — the sandbox never
+     * carries (and so can never forge) its own coordinate.
+     */
+    const val EXTRA_LAUNCH_TOKEN = "napplet_launch_token"
 
     /** SOCKS proxy port to route blob fetches through, or -1 for a direct connection. */
     const val EXTRA_PROXY_PORT = "napplet_proxy_port"
@@ -92,6 +101,12 @@ object NappletLauncher {
             }.getOrNull().orEmpty()
         val allServers = (servers + authorBlossomServers).distinct()
 
+        // Mint the launch token in the (trusted) main process: the broker resolves the sandbox's
+        // requests back to THIS identity + declared set, regardless of anything the sandbox sends.
+        val identity = NappletIdentity(authorPubKey = authorPubKey, identifier = identifier, aggregateHash = aggregateHash)
+        val declared = resolveRequiredCapabilities(requires).capabilities.toSet()
+        val launchToken = NappletLaunchRegistry.register(identity, declared)
+
         val intent =
             Intent(context, NappletHostActivity::class.java).apply {
                 putExtra(EXTRA_PATHS, ArrayList(paths.map { it.path }))
@@ -102,6 +117,7 @@ object NappletLauncher {
                 putExtra(EXTRA_AGGREGATE_HASH, aggregateHash)
                 putExtra(EXTRA_TITLE, title)
                 putExtra(EXTRA_REQUIRES, ArrayList(requires))
+                putExtra(EXTRA_LAUNCH_TOKEN, launchToken)
                 putExtra(EXTRA_PROXY_PORT, proxyPort)
                 if (context !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }

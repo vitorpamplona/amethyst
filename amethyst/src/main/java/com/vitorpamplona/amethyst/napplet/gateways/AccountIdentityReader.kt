@@ -58,15 +58,22 @@ class AccountIdentityReader(
             "getFollows" -> jsonStringArray(account.kind3FollowList.flow.value.authors)
             "getMutes" ->
                 jsonStringArray(
-                    account.muteList.flow.value
-                        .filterIsInstance<UserTag>()
-                        .map { it.pubKey },
+                    // PUBLIC mutes only — the decrypted flow (muteList.flow) also holds the user's
+                    // private mutes, which a napplet must never see. Read the event's plaintext tags.
+                    account.muteList
+                        .getMuteList()
+                        ?.publicMutes()
+                        ?.filterIsInstance<UserTag>()
+                        ?.map { it.pubKey }
+                        .orEmpty(),
                 )
             "getBlocked" ->
                 jsonStringArray(
-                    account.blockPeopleList.flow.value
-                        .filterIsInstance<UserTag>()
-                        .map { it.pubKey },
+                    // PUBLIC blocks only, for the same reason as getMutes.
+                    account.blockPeopleList
+                        .getBlockList()
+                        ?.publicUsersIdSet()
+                        .orEmpty(),
                 )
             "getRelays" -> relaysJson()
             "getList" -> listJson(argument)

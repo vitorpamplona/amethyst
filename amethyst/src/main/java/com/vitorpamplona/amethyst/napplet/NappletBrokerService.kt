@@ -34,8 +34,6 @@ import android.os.RemoteException
 import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
-import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
-import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
@@ -110,15 +108,19 @@ class NappletBrokerService : Service() {
         val requestId = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return true
         val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
 
-        val identity =
-            NappletIdentity(
-                authorPubKey = data.getString(NappletIpc.KEY_AUTHOR).orEmpty(),
-                identifier = data.getString(NappletIpc.KEY_IDENTIFIER).orEmpty(),
-                aggregateHash = data.getString(NappletIpc.KEY_AGGREGATE_HASH),
-            )
-        val declared = parseDeclared(data.getString(NappletIpc.KEY_DECLARED))
-
         val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: "napplet"
+
+        // Resolve the launch token to the trusted identity + declared set. The sandbox never states
+        // its own coordinate, so a compromised :napplet process can only ever act as the napplet it
+        // was launched as (it holds only its own token). An unknown token = no session; refuse.
+        val session = NappletLaunchRegistry.resolve(data.getString(NappletIpc.KEY_LAUNCH_TOKEN))
+        if (session == null) {
+            reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("Unknown napplet session.")))
+            return true
+        }
+        val identity = session.identity
+        val declared = session.declared
+
         scope.launch {
             // The shared, host-agnostic router owns decode → broker → encode and the subscribe-vs-reply
             // decision (it stays wire-identical with the future desktop host). This service only supplies
@@ -140,13 +142,6 @@ class NappletBrokerService : Service() {
         }
         return true
     }
-
-    private fun parseDeclared(value: String?): Set<NappletCapability> =
-        value
-            ?.split(',')
-            ?.mapNotNull { name -> runCatching { NappletCapability.valueOf(name.trim()) }.getOrNull() }
-            ?.toSet()
-            ?: emptySet()
 
     /**
      * The broker for the *currently* signed-in account, cached and rebuilt only when the account

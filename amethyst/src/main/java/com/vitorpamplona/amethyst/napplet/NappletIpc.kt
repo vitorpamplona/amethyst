@@ -43,13 +43,10 @@ object NappletIpc {
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
 
-    // Applet identity (the ledger coordinate) travels with every request — the host cannot be
-    // trusted to have applied any policy, so the broker re-derives everything from these.
-    const val KEY_AUTHOR = "author"
-    const val KEY_IDENTIFIER = "identifier"
-    const val KEY_AGGREGATE_HASH = "aggregateHash"
-
-    /** Capability names (comma-separated) the manifest's `requires` resolved to. The broker
-     *  refuses any request outside this set, regardless of consent state. */
-    const val KEY_DECLARED = "declared"
+    /**
+     * Opaque per-launch token. The sandbox cannot be trusted to state its own identity, so it sends
+     * only this token; the broker resolves it through [NappletLaunchRegistry] (main process) back to
+     * the trusted identity + declared capability set the launch was registered with.
+     */
+    const val KEY_LAUNCH_TOKEN = "launchToken"
 }

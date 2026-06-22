@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.napplet
 
+import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
@@ -31,14 +32,20 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.util.Log
+import android.util.TypedValue
+import android.view.Gravity
 import android.view.KeyEvent
+import android.view.View
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.JavaScriptReplyProxy
@@ -46,6 +53,7 @@ import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
@@ -72,11 +80,10 @@ class NappletHostActivity : ComponentActivity() {
     private val paths = mutableListOf<PathTag>()
     private val servers = mutableListOf<String>()
     private var author: String = ""
-    private var identifier: String = ""
-    private var aggregateHash: String? = null
 
-    // Capability names (comma-separated) the manifest declared; the broker refuses anything else.
-    private var declared: String = ""
+    // Opaque token the broker resolves to this launch's trusted identity + declared capabilities.
+    // The sandbox never carries its own coordinate, so a compromised :napplet process can't forge one.
+    private var launchToken: String = ""
 
     // NAP domain strings the shell advertises to the applet in the shell.init handshake.
     private var declaredDomains: List<String> = emptyList()
@@ -140,15 +147,25 @@ class NappletHostActivity : ComponentActivity() {
         contentServer = NappletContentServer(paths, servers, proxyPort, cacheDir, shellHtml, shim)
 
         webView = WebView(this)
-        setContentView(webView)
-        // Activities are edge-to-edge by default on recent Android; pad the WebView by the system bar
-        // and display-cutout insets so the applet's own content isn't drawn under the status/nav bars.
-        ViewCompat.setOnApplyWindowInsetsListener(webView) { view, insets ->
+        hardenWebView(webView)
+
+        // Persistent trusted chrome: a sandbox bar the applet can't draw over (anti-phishing) showing
+        // the napplet's name and a tap-to-see "what it can access". Below it, the applet's WebView.
+        val root =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(buildSandboxBar())
+                addView(buildDivider())
+                addView(webView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+            }
+        setContentView(root)
+        // Activities are edge-to-edge by default on recent Android; pad by the system bar and
+        // display-cutout insets so neither the chrome nor the applet draws under the system bars.
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
             insets
         }
-        hardenWebView(webView)
 
         // Origin-restricted bridge: only the trusted shell page (main frame) can reach native.
         WebViewCompat.addWebMessageListener(
@@ -213,18 +230,17 @@ class NappletHostActivity : ComponentActivity() {
         for (i in pathList.indices) paths.add(PathTag(pathList[i], hashList[i]))
         servers.addAll(intent.getStringArrayListExtra(NappletLauncher.EXTRA_SERVERS) ?: emptyList())
         author = intent.getStringExtra(NappletLauncher.EXTRA_AUTHOR).orEmpty()
-        identifier = intent.getStringExtra(NappletLauncher.EXTRA_IDENTIFIER).orEmpty()
-        aggregateHash = intent.getStringExtra(NappletLauncher.EXTRA_AGGREGATE_HASH)
         title = intent.getStringExtra(NappletLauncher.EXTRA_TITLE).orEmpty()
         proxyPort = intent.getIntExtra(NappletLauncher.EXTRA_PROXY_PORT, -1)
+        launchToken = intent.getStringExtra(NappletLauncher.EXTRA_LAUNCH_TOKEN).orEmpty()
 
         val requires = intent.getStringArrayListExtra(NappletLauncher.EXTRA_REQUIRES) ?: emptyList()
         val resolved = resolveRequiredCapabilities(requires)
-        declared = resolved.capabilities.joinToString(",") { it.name }
-        // shell is always available; the rest are the declared domains the broker will honor.
+        // shell is always available; the rest are the declared domains advertised to the applet in the
+        // handshake. (The broker enforces the authoritative set from the launch token, not this list.)
         declaredDomains = (listOf("shell") + resolved.capabilities.map { it.name.lowercase() }).distinct()
 
-        return author.isNotEmpty()
+        return author.isNotEmpty() && launchToken.isNotEmpty()
     }
 
     private var title: String = ""
@@ -323,10 +339,7 @@ class NappletHostActivity : ComponentActivity() {
                     Bundle().apply {
                         putString(NappletIpc.KEY_REQUEST_ID, id)
                         putString(NappletIpc.KEY_PAYLOAD, raw)
-                        putString(NappletIpc.KEY_AUTHOR, author)
-                        putString(NappletIpc.KEY_IDENTIFIER, identifier)
-                        putString(NappletIpc.KEY_AGGREGATE_HASH, aggregateHash)
-                        putString(NappletIpc.KEY_DECLARED, declared)
+                        putString(NappletIpc.KEY_LAUNCH_TOKEN, launchToken)
                     }
             }
 
@@ -362,6 +375,7 @@ class NappletHostActivity : ComponentActivity() {
                     val actionId = result.optString("actionId")
                     if (actionId.isNotEmpty()) keyActions.register(actionId, result.optString("binding").ifEmpty { null })
                 }
+                notifyIfSensitive(result)
                 bridgeReplyProxy?.postMessage(result.toString())
             }
             // A subscription push (relay.event/relay.eose) is keyed by subId, not a request id; forward verbatim.
@@ -373,6 +387,100 @@ class NappletHostActivity : ComponentActivity() {
         }
         return true
     }
+
+    // ---- trusted sandbox chrome ----
+
+    private fun barTitle(): String = title.ifBlank { getString(R.string.napplet_untitled) }
+
+    /** The always-visible bar: a shield, the napplet's name, and an info affordance to see its access. */
+    private fun buildSandboxBar(): View {
+        val onSurface = resolveThemeColor(android.R.attr.textColorPrimary)
+        val bar =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
+                setPadding(dp(14), dp(10), dp(14), dp(10))
+                isClickable = true
+                setOnClickListener { showAccessDialog() }
+                contentDescription = getString(R.string.napplet_chrome_permissions_desc)
+            }
+        bar.addView(
+            TextView(this).apply {
+                text = "🛡" // shield
+                setPadding(0, 0, dp(10), 0)
+            },
+        )
+        bar.addView(
+            TextView(this).apply {
+                text = barTitle()
+                setTextColor(onSurface)
+                textSize = 16f
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            },
+        )
+        bar.addView(
+            TextView(this).apply {
+                text = "ⓘ" // circled info
+                setTextColor(onSurface)
+                textSize = 18f
+            },
+        )
+        return bar
+    }
+
+    private fun buildDivider(): View =
+        View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1))
+            setBackgroundColor(resolveThemeColor(android.R.attr.textColorPrimary) and 0x22FFFFFF)
+        }
+
+    /** Lists, in plain language, exactly which capability domains this napplet was launched with. */
+    private fun showAccessDialog() {
+        val caps =
+            declaredDomains
+                .filter { it != "shell" }
+                .mapNotNull { NappletCapability.fromNapDomain(it) }
+                .map { getString(it.labelRes()) }
+        val body =
+            if (caps.isEmpty()) {
+                getString(R.string.napplet_chrome_static_site)
+            } else {
+                caps.joinToString("\n") { "•  $it" } + "\n\n" + getString(R.string.napplet_chrome_keys_safe)
+            }
+        AlertDialog
+            .Builder(this)
+            .setTitle(getString(R.string.napplet_chrome_access_title, barTitle()))
+            .setMessage(body)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    /**
+     * Surfaces an "allow always" capability acting on the user's behalf, so a granted RELAY/UPLOAD/VALUE
+     * op can never run completely silently. Read-only ops (identity/storage/resource) don't toast.
+     */
+    private fun notifyIfSensitive(result: JSONObject) {
+        if (!result.optBoolean("ok")) return
+        val message =
+            when (result.optString("type")) {
+                "relay.publish.result", "relay.publishEncrypted.result" -> getString(R.string.napplet_action_published, barTitle())
+                "upload.upload.result" -> getString(R.string.napplet_action_uploaded, barTitle())
+                "value.payInvoice.result" -> getString(R.string.napplet_action_paid, barTitle())
+                else -> return
+            }
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun resolveThemeColor(attr: Int): Int {
+        val tv = TypedValue()
+        theme.resolveAttribute(attr, tv, true)
+        return if (tv.resourceId != 0) ContextCompat.getColor(this, tv.resourceId) else tv.data
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     companion object {
         private const val TAG = "NappletHostActivity"
