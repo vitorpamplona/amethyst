@@ -189,14 +189,29 @@ cli/
         ├── MessageCommands.kt
         ├── MarmotResetCommand.kt
         ├── AwaitCommands.kt
-        └── StoreCommands.kt
+        ├── StoreCommands.kt
+        ├── AdminCommand.kt        # `amy admin RELAY METHOD` (NIP-86)
+        ├── ServeCommand.kt        # `amy serve` (embeds :geode)
+        └── cashu/                 # `amy cashu …` (NIP-60/61) — thin wrappers
+            ├── CashuCommands.kt   #   over commons CashuWalletOps / CashuWalletReader
+            ├── CashuWalletCommands.kt + CashuBalanceCommand.kt + CashuMintCommands.kt
+            └── CashuReceiveCommands.kt + CashuSendCommands.kt
+                + CashuMaintenanceCommands.kt + CashuMintRecCommands.kt
 ```
 
 Shared logic consumed by Amy lives in `commons/`:
 - `commons/account/` — account bootstrap
 - `commons/marmot/` — MLS / group state
+- `commons/cashu/` — `ops/CashuWalletOps` (jvmAndroid) + `CashuWalletReader`
+  + `CashuKeysetCounterStore`; the NIP-60/61 wallet, shared with Android.
+- `commons/relayManagement/Nip86Retriever` — NIP-86 HTTP client, shared with
+  the Android relay-management screen.
 - `commons/defaults/` — default relays, kinds
 - Consult `commons/plans/` for cross-cutting design work in flight.
+
+A few amy verbs lean on modules beyond `quartz`/`commons`: `amy serve`
+depends on `:geode` (the standalone relay) — the one allowed extra module
+dependency. `:amethyst` / `:desktopApp` remain forbidden (Rule 5).
 
 ## Common mistakes to refuse
 

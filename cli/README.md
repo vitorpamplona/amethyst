@@ -215,6 +215,7 @@ Army-knife verbs that operate purely on their arguments. They never touch
 | `amy key public NSEC\|HEX` | Derive the public key from a secret key. |
 | `amy key encrypt NSEC\|HEX --password X` | NIP-49 encrypt a secret key to an `ncryptsec1…`. |
 | `amy key decrypt NCRYPTSEC --password X` | NIP-49 decrypt back to nsec/hex/npub. |
+| `amy key validate NPUB\|HEX` | Parse-check a public key. Prints `{valid, pubkey, npub}` or `{valid:false}` — never errors, so scripts branch on the field. |
 | `amy filter [filter flags]` | Assemble and print a NIP-01 filter JSON from the same flags `fetch`/`subscribe` use — no query is sent. |
 | `amy nip N` / `amy nip list` | Look up a NIP — the `nostr-protocol/nips` repo first, then a Nostr wiki/long-form fallback. `list` fetches the index. |
 | `amy kind N` / `amy kind NAME` | Look up an event kind's label + defining NIP (number), or search labels by name. Backed by quartz's `KindNames` registry. |
@@ -264,6 +265,7 @@ Filter flags are shared by `fetch` and `subscribe`: `--kind K[,K]`, `--author U[
 | Command | What it does |
 |---|---|
 | `amy fetch [filter flags] [--timeout SECS]` | One-shot query — collect until every relay sends EOSE (or `--timeout`, default 8s), dedupe, sort newest-first, print and exit. `--limit` defaults to 100. |
+| `amy fetch CODE [--timeout SECS]` | Code mode — pass a single `nevent`/`naddr`/`nprofile`/`npub`/`note` or `name@domain`. Resolves relays the outbox way: the hints embedded in the code **plus** the author's NIP-65 write relays (draining their kind:10002 on a cache miss), exactly how the app opens a shared link. |
 | `amy subscribe [filter flags] [--timeout SECS]` | Live stream — print each matching event as it arrives (NDJSON under `--json`). Runs until `--timeout` SECS or until interrupted. |
 | `amy count [filter flags] [--timeout SECS]` | NIP-45 COUNT — per-relay match counts, no event download. |
 | `amy outbox USER [--refresh] [--timeout SECS]` | Show USER's NIP-65 read/write relays (outbox model). Cache-first; `--refresh` forces a relay drain. |
@@ -307,6 +309,55 @@ nak's `clone`/`push`/`pull` (git-packfile transport over relays/GRASP) are out o
 | `amy blossom delete HASH --server URL` | Delete a blob you own (BUD-02). |
 | `amy blossom check --server URL HASH[,HASH]` | HEAD-check the server has each blob; exit 1 if any is missing. |
 | `amy blossom mirror --server URL SOURCE-URL` | Ask the server to mirror a blob from SOURCE-URL (BUD-04). |
+
+### Cashu wallet (NIP-60 / NIP-61)
+
+A NIP-60 ecash wallet + NIP-61 nutzaps, driven by the **same** shared
+`commons` `CashuWalletOps` / `CashuWalletReader` the Android wallet runs — so
+amy's on-relay events match the app's. NUT-13 counters persist in
+`~/.amy/<account>/cashu.json`. `mint ping`/`info` are stateless (no account).
+
+| Command | What it does |
+|---|---|
+| `amy cashu wallet create [--mint URL] [--mints a,b] [--privkey HEX] [--relay r1,r2]` | Publish a kind:17375 wallet + kind:10019 nutzap info. Advertises your outbox relays for nutzaps unless `--relay` overrides. |
+| `amy cashu wallet show` | P2PK pubkey, mints, balance, per-mint balances, proof/history/pending counts. |
+| `amy cashu wallet export-key` | Decrypt and print the wallet's P2PK private key. |
+| `amy cashu wallet destroy` | Withdraw the nutzap advertisement and NIP-09 delete the wallet (leaves token events — the ecash still lives at the mint). |
+| `amy cashu balance [--mint URL]` | Spendable balance from the local store (optionally one mint). |
+| `amy cashu mint ping URL` / `info URL` | Stateless `/v1/info` probe (name/pubkey/version) / full DTO. |
+| `amy cashu receive ln SATS [--mint URL]` | Request a mint quote; prints the bolt11 + kind:7374 quote. |
+| `amy cashu receive complete QUOTE_ID` / `resume QUOTE_ID` | Poll the quote; once the invoice is settled, mint proofs (kind:7375 + kind:7376). |
+| `amy cashu receive token TOKEN` | Redeem a `cashuB…` token into the wallet. |
+| `amy cashu receive nutzap-sweep [--mint URL]` | Redeem inbound NIP-61 nutzaps locked to your wallet key. |
+| `amy cashu send ln INVOICE [--mint URL]` | Melt proofs to pay a bolt11 (scrubs stale proofs first). |
+| `amy cashu send token SATS [--mint URL] [--memo S]` | Export a `cashuB…` token of SATS. |
+| `amy cashu send nutzap USER SATS [--zapped EVENT_ID] [--message S]` | Send a P2PK-locked nutzap to USER (resolves their kind:10019). |
+| `amy cashu maintenance scrub [--mint URL]` | NUT-07 + NIP-09 prune of spent proofs. |
+| `amy cashu maintenance restore MINT_URL` | NUT-09 restore unspent proofs from the wallet seed. |
+| `amy cashu maintenance migrate-keysets [--mint URL]` | Consolidate proofs onto each mint's active keyset. |
+| `amy cashu mint-rec show [--author NPUB]` / `add URL [--dtag X] [--review T]` / `remove EVENT_ID` | NIP-87 mint recommendations (kind:38000). |
+
+### Relay management — admin (NIP-86)
+
+Signs a NIP-98 request with the active account and POSTs it to the relay's
+HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
+(the same path Amethyst's relay-management screen runs).
+
+| Command | What it does |
+|---|---|
+| `amy admin RELAY supported-methods` | List the NIP-86 methods the relay implements. |
+| `amy admin RELAY ban-pubkey HEX [--reason R]` / `unban-pubkey HEX` / `list-banned-pubkeys` | Pubkey ban list. |
+| `amy admin RELAY allow-pubkey HEX [--reason R]` / `unallow-pubkey HEX` / `list-allowed-pubkeys` | Pubkey allow list. |
+| `amy admin RELAY ban-event ID [--reason R]` / `allow-event ID` / `list-banned-events` / `list-needing-moderation` | Event moderation. |
+| `amy admin RELAY allow-kind N` / `disallow-kind N` / `list-allowed-kinds` | Kind allow list. |
+| `amy admin RELAY block-ip IP [--reason R]` / `unblock-ip IP` / `list-blocked-ips` | IP block list. |
+| `amy admin RELAY change-name S` / `change-description S` / `change-icon URL` | Relay metadata. |
+
+### Run a relay — serve
+
+| Command | What it does |
+|---|---|
+| `amy serve [--host H] [--port N] [--path P] [--db FILE] [--admin NPUBS]` | Run a Nostr relay by embedding **geode** (the standalone Ktor relay on quartz's relay-server code). In-memory by default; `--db FILE` for SQLite. The active account is always an admin, so `amy admin ws://host:port …` works against it. Blocks until interrupted. |
 
 ### Identity
 

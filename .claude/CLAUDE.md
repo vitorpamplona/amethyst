@@ -76,7 +76,9 @@ amethyst/
 - `nestsClient/` = MoQ + audio-rooms client; takes `:quic` as transport,
   Quartz for crypto, `MediaCodec` / `AudioRecord` / `AudioTrack` for audio.
 - `amethyst/` & `desktopApp/` = Platform-native layouts and navigation
-- `cli/` = Thin assembly layer over `quartz/` + `commons/` (no new logic allowed)
+- `cli/` = Thin assembly layer over `quartz/` + `commons/` (no new logic
+  allowed). May also depend on `:geode` (for `amy serve`, which embeds the
+  standalone relay); never on `:amethyst` or `:desktopApp`.
 
 **Plans per module:** design docs for new subsystems live in the owning
 module's `plans/YYYY-MM-DD-<slug>.md` (e.g. `cli/plans/`, `commons/plans/`).
