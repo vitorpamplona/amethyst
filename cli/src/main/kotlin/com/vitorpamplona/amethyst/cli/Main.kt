@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.cli
 
+import com.vitorpamplona.amethyst.cli.commands.AdminCommand
 import com.vitorpamplona.amethyst.cli.commands.AwaitCommands
 import com.vitorpamplona.amethyst.cli.commands.BlossomCommands
 import com.vitorpamplona.amethyst.cli.commands.BunkerCommand
@@ -56,6 +57,7 @@ import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
 import com.vitorpamplona.amethyst.cli.commands.PublishCommand
 import com.vitorpamplona.amethyst.cli.commands.RelayCommands
 import com.vitorpamplona.amethyst.cli.commands.SearchCommand
+import com.vitorpamplona.amethyst.cli.commands.ServeCommand
 import com.vitorpamplona.amethyst.cli.commands.StoreCommands
 import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
 import com.vitorpamplona.amethyst.cli.commands.SyncCommand
@@ -225,6 +227,8 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "blossom" -> BlossomCommands.dispatch(dataDir, tail)
         "sync" -> SyncCommand.run(dataDir, tail)
         "git" -> GitCommands.dispatch(dataDir, tail)
+        "admin" -> AdminCommand.run(dataDir, tail)
+        "serve" -> ServeCommand.run(dataDir, tail)
         "cashu" -> CashuCommands.dispatch(dataDir, tail)
         "podcast" -> PodcastCommands.dispatch(dataDir, tail)
         "bunker" -> BunkerCommand.run(dataDir, tail)

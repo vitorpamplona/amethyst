@@ -22,8 +22,12 @@ sourceSets {
 dependencies {
     implementation(project(":quartz"))
     implementation(project(":commons"))
+    // `amy serve` embeds geode (the standalone Ktor relay built on quartz's
+    // relay-server code). geode depends only on :quartz, never on :amethyst.
+    implementation(project(":geode"))
 
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
     implementation(libs.okhttpCoroutines)
     implementation(libs.jackson.module.kotlin)

@@ -100,24 +100,27 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `git` | `amy git` | ✅ in part | NIP-34 repo announce/list/show/issue. clone/push (packfile transport) out of scope. |
 | `podcast` | `amy podcast` | ✅ | NIP-F4 show metadata (10154) + episode publish (54) + list. |
 | `bunker` | `amy bunker[ connect]` + `amy login bunker://`/`--nostrconnect` | ✅ | NIP-46 remote signer + login, both the `bunker://` and `nostrconnect://` flows, each direction, plus `auth_url` challenge handling (client surfaces the URL + keeps waiting). Interop-verified vs real `nak`. |
-| `serve` / `admin` / `wallet` / `mcp` / `fs` / `spell` | — | 🆕 (tier 2/3) | larger/niche; some pull new deps. |
+| `admin` | `amy admin RELAY METHOD` | ✅ | NIP-86 Relay Management over NIP-98 HTTP auth — full method set (ban/allow pubkey + event, kinds, IP block, change name/desc/icon, list-*). Reuses quartz `Nip86Client` + shared `commons` `Nip86Retriever`. Interop-verified against `amy serve`. |
+| `serve` | `amy serve` | ✅ | Embeds **geode** (the standalone Ktor relay on quartz's relay-server code) — in-memory by default, `--db FILE` for SQLite, account is admin so `amy admin` works against it. NIP-86 + NIP-77 included. |
+| `wallet` (NIP-60 Cashu) | `amy cashu` | ✅ | See the Cashu row above — full NIP-60/61 wallet + nutzaps. |
+| `mcp` / `fs` / `spell` | — | 🆕 (niche) | MCP server, FUSE mount, MuSig2/FROST; some pull new deps. |
 
 ### Full nak comparison (introspected both binaries)
 
 nak has 34 functional commands. Coverage:
 
-- **Full / equivalent (19):** `event`, `req`(→`fetch`+`subscribe`), `filter`,
+- **Full / equivalent (22):** `event`, `req`(→`fetch`+`subscribe`), `filter`,
   `count`, `decode`, `encode`, `verify`, `relay`, `bunker`(+nostrconnect+auth_url),
   `encrypt`, `decrypt`, `gift`, `publish`, `sync`, `profile`, `podcast`, `nip`,
-  `kind`, `blossom`. Protocol-sensitive ones (`bunker`, `sync`, `key` NIP-49,
-  `encode`/`decode`) are interop-verified against the real `nak` binary.
+  `kind`, `blossom`, `admin`(NIP-86), `serve`(geode), `wallet`(NIP-60/61 Cashu).
+  Protocol-sensitive ones (`bunker`, `sync`, `key` NIP-49, `encode`/`decode`,
+  `admin`) are interop-verified against the real `nak` binary or `amy serve`.
 - **Partial / adapted (4):** `key` (no `expand`/`combine`/`validate`/`default`),
   `git` (NIP-34 events only — no packfile transport), `outbox` (shows NIP-65 vs
   nak's hints DB), `fetch` (filter-based, not nip19-hint resolution).
-- **Missing (11):** `admin` (NIP-86),
-  `serve` (geode is a standalone relay), `dekey` (NIP-4E), `wallet` (NIP-60
-  Cashu), `mcp`, `curl` (NIP-98), `fs` (FUSE), `group`/`nip29` (NIP-29 — amy has
-  MLS/Marmot instead), `spell` (MuSig2/FROST), `validate` (RoK schema).
+- **Missing (6):** `dekey` (NIP-4E), `mcp`, `curl` (NIP-98),
+  `fs` (FUSE), `group`/`nip29` (NIP-29 — amy has MLS/Marmot instead),
+  `spell` (MuSig2/FROST), `validate` (RoK schema).
 
 **Design differences (not gaps):** amy is a *stateful client* (accounts,
 `~/.amy/`, shared event store) with a stable JSON contract; nak is a *stateless*
