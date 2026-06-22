@@ -21,8 +21,13 @@
 package com.vitorpamplona.amethyst.napplet.gateways
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -33,10 +38,17 @@ import kotlinx.serialization.json.putJsonObject
  * domain. Everything here is **public** profile/list data — never key material. Returns the literal
  * `"null"` for an absent value, or `null` for a method this shell does not implement yet (the broker
  * then answers `Unsupported`). Shapes match `@napplet/nap` (e.g. `displayName`, not `display_name`).
+ *
+ * List/zap/badge reads draw from what Amethyst already has locally ([Account.cache]) — the same
+ * "what we know now" semantics as `getFollows`/`getMutes` — so they never block on a relay round
+ * trip. Private (encrypted) list entries are not included; only the public tag values.
  */
 class AccountIdentityReader(
     private val account: Account,
 ) {
+    private val cache get() = account.cache
+    private val pubkey get() = account.signer.pubKey
+
     fun read(
         method: String,
         argument: String?,
@@ -57,7 +69,9 @@ class AccountIdentityReader(
                         .map { it.pubKey },
                 )
             "getRelays" -> relaysJson()
-            // getList/getZaps/getBadges and any other read are not implemented yet → Unsupported.
+            "getList" -> listJson(argument)
+            "getZaps" -> zapsJson()
+            "getBadges" -> badgesJson()
             else -> null
         }
 
@@ -89,5 +103,87 @@ class AccountIdentityReader(
                 }
             }
         }.toString()
+    }
+
+    /**
+     * `identity.getList(listType)` → the public tag values of the user's NIP-51 list of that type
+     * (e.g. the e/a entries of "bookmarks", the t hashtags of "interests"). Unknown list types → null.
+     */
+    private fun listJson(listType: String?): String? {
+        val kind = listKinds[listType?.trim()?.lowercase()] ?: return null
+        val event =
+            cache
+                .filter(Filter(kinds = listOf(kind), authors = listOf(pubkey)))
+                .mapNotNull { it.event }
+                .maxByOrNull { it.createdAt }
+        val entries =
+            event
+                ?.tags
+                ?.filter { it.size >= 2 && it[0] in ENTRY_TAGS }
+                ?.map { it[1] }
+                .orEmpty()
+        return buildJsonArray { entries.forEach { add(it) } }.toString()
+    }
+
+    /** `identity.getZaps` → `ZapReceipt[]` ({eventId, sender, amount, content?}) the user received, from cache. */
+    private fun zapsJson(): String {
+        val receipts =
+            cache
+                .filter(Filter(kinds = listOf(9735), tags = mapOf("p" to listOf(pubkey))))
+                .mapNotNull { it.event as? LnZapEvent }
+        return buildJsonArray {
+            receipts.forEach { zap ->
+                addJsonObject {
+                    put("eventId", zap.zappedPost().firstOrNull() ?: "")
+                    put("sender", zap.zappedRequestAuthor() ?: "")
+                    put("amount", zap.amount() ?: 0L)
+                    zap.zapRequest
+                        ?.content
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { put("content", it) }
+                }
+            }
+        }.toString()
+    }
+
+    /** `identity.getBadges` → `Badge[]` ({id, name?, description?, image?, thumbs?, awardedBy}) awarded to the user, from cache. */
+    private fun badgesJson(): String {
+        val awards =
+            cache
+                .filter(Filter(kinds = listOf(8), tags = mapOf("p" to listOf(pubkey))))
+                .mapNotNull { it.event as? BadgeAwardEvent }
+        return buildJsonArray {
+            awards.forEach { award ->
+                val address = award.awardDefinition().firstOrNull() ?: return@forEach
+                val definition = cache.getAddressableNoteIfExists(address)?.event as? BadgeDefinitionEvent
+                addJsonObject {
+                    put("id", definition?.dTag() ?: address.dTag)
+                    definition?.name()?.let { put("name", it) }
+                    definition?.description()?.let { put("description", it) }
+                    definition?.image()?.let { put("image", it) }
+                    definition?.thumb()?.let { thumb -> put("thumbs", buildJsonArray { add(thumb) }) }
+                    put("awardedBy", award.pubKey)
+                }
+            }
+        }.toString()
+    }
+
+    companion object {
+        /** NIP-51 replaceable list kinds keyed by the napplet list-type string. */
+        private val listKinds =
+            mapOf(
+                "mute" to 10000,
+                "mutes" to 10000,
+                "pins" to 10001,
+                "pin" to 10001,
+                "bookmarks" to 10003,
+                "communities" to 10004,
+                "channels" to 10005,
+                "interests" to 10015,
+                "emojis" to 10030,
+            )
+
+        /** Tag names whose value is a list entry (vs metadata like d/title/description). */
+        private val ENTRY_TAGS = setOf("e", "a", "p", "t", "word", "r", "emoji")
     }
 }

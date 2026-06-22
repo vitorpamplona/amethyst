@@ -23,6 +23,17 @@ package com.vitorpamplona.amethyst.napplet.gateways
 import android.util.Base64
 import com.vitorpamplona.amethyst.commons.napplet.NappletResource
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.sniffContentType
 import kotlinx.coroutines.Dispatchers
@@ -74,10 +85,61 @@ class NappletResourceFetcher(
                     }.getOrNull()
                 }
                 url.startsWith("blossom:") -> fetchBlossom(url)
-                // nostr: resolution (event → bytes) is unspecified for resource.bytes; left as a follow-up.
+                url.startsWith("nostr:") -> resolveNostr(url)
                 else -> null
             }
         }
+
+    /**
+     * Resolves a `nostr:` URI (NIP-19) to the referenced event and returns its JSON. An `nembed`
+     * carries the event inline; `note`/`nevent`/`naddr` resolve from the local cache, falling back to
+     * a bounded relay fetch; `npub`/`nprofile` resolve the author's kind-0 metadata event. Returns
+     * the event JSON as `application/json`, or null when nothing resolves.
+     */
+    private suspend fun resolveNostr(url: String): NappletResource? {
+        val entity = Nip19Parser.uriToRoute(url)?.entity ?: return null
+        val event =
+            when (entity) {
+                is NEmbed -> entity.event
+                is NNote -> resolveEvent(entity.hex)
+                is NEvent -> resolveEvent(entity.hex)
+                is NAddress -> resolveAddress(entity.address())
+                is NPub -> resolveReplaceable(0, entity.hex)
+                is NProfile -> resolveReplaceable(0, entity.hex)
+                else -> null
+            } ?: return null
+        return NappletResource(event.toJson().encodeToByteArray(), "application/json")
+    }
+
+    /** A non-replaceable event by id: local cache first, then a bounded relay fetch. */
+    private suspend fun resolveEvent(id: String): Event? =
+        account.cache.getNoteIfExists(id)?.event
+            ?: fetchOne(Filter(ids = listOf(id)))
+
+    /** A parameterized-replaceable event by address: local cache first, then a bounded relay fetch. */
+    private suspend fun resolveAddress(address: Address): Event? =
+        account.cache.getAddressableNoteIfExists(address)?.event
+            ?: fetchOne(Filter(kinds = listOf(address.kind), authors = listOf(address.pubKeyHex), tags = mapOf("d" to listOf(address.dTag))))
+
+    /** A replaceable event (e.g. kind-0 metadata) by author: local cache first, then a bounded relay fetch. */
+    private suspend fun resolveReplaceable(
+        kind: Int,
+        author: String,
+    ): Event? =
+        account.cache
+            .getAddressableNoteIfExists(Address(kind, author, ""))
+            ?.event
+            ?: fetchOne(Filter(kinds = listOf(kind), authors = listOf(author)))
+
+    /** Bounded relay fetch for [filter]; returns the newest matching event, or null. */
+    private suspend fun fetchOne(filter: Filter): Event? {
+        val relays = account.homeRelays.flow.value
+        if (relays.isEmpty()) return null
+        return runCatching {
+            account.client.fetchAll(filters = relays.associateWith { listOf(filter) }, timeoutMs = NOSTR_FETCH_TIMEOUT_MS)
+        }.getOrDefault(emptyList())
+            .maxByOrNull { it.createdAt }
+    }
 
     /**
      * Tor-routed OkHttp client for host-side blob fetches (the applet has no direct network).
@@ -156,5 +218,9 @@ class NappletResourceFetcher(
                 URLDecoder.decode(data, "UTF-8").encodeToByteArray()
             }
         return NappletResource(bytes, contentType)
+    }
+
+    companion object {
+        private const val NOSTR_FETCH_TIMEOUT_MS = 8_000L
     }
 }

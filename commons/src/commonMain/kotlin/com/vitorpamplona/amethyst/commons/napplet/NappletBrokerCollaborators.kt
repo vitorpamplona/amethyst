@@ -57,9 +57,10 @@ interface NappletRelayGateway {
 /**
  * Bridges the broker to read-only account data for the [NappletCapability.IDENTITY] capability
  * beyond the public key — profile (`getProfile`), relays (`getRelays`), follows (`getFollows`),
- * mutes (`getMutes`), blocks (`getBlocked`). The host returns the datum as a JSON value string
- * (the literal `"null"` for an absent value), or `null` if this shell does not implement [method]
- * (the broker then answers `Unsupported`). A `null` gateway makes every such read `Unsupported`.
+ * mutes (`getMutes`), blocks (`getBlocked`), lists (`getList`, [argument] is the list type), zaps
+ * (`getZaps`), and badges (`getBadges`). The host returns the datum as a JSON value string (the
+ * literal `"null"` for an absent value), or `null` if this shell does not implement [method] (the
+ * broker then answers `Unsupported`). A `null` gateway makes every such read `Unsupported`.
  */
 fun interface NappletIdentityGateway {
     suspend fun read(
