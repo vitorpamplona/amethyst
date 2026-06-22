@@ -20,8 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.UserContext
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -95,6 +100,121 @@ class NotificationTagsAnEventByUserTest {
             Note(replyId).apply {
                 event = reply
                 replyTo = listOf(Note(zapId))
+            }
+
+        assertTrue(NotificationFeedFilter.tagsAnEventByUser(note, me))
+    }
+
+    // Empty user context — the relevance heuristics only read pubkeyHex.
+    private val noContext = UserContext { addr -> AddressableNote(addr) }
+
+    /**
+     * A plain NIP-25 reaction (kind 7) to my note carries my pubkey in its own
+     * `p` tag (the author of the reacted-to event). On a cold start the reacted
+     * note frequently has not loaded yet, so [Note.replyTo] resolves to an empty
+     * shell with no author. The reaction must still be recognized as mine from
+     * its own `p` tag — otherwise whether it shows depends on the race between
+     * the reaction and its parent arriving, which is exactly the "missing set
+     * differs every launch" symptom.
+     */
+    @Test
+    fun `reaction to my note is relevant from its own p tag without the parent in cache`() {
+        val reaction =
+            ReactionEvent(
+                reactionId,
+                replier,
+                1000,
+                arrayOf(
+                    arrayOf("e", "d".repeat(64)),
+                    arrayOf("p", me),
+                    arrayOf("k", "1"),
+                ),
+                "+",
+                sig,
+            )
+        // Reacted note not in cache yet: replyTo is an empty shell, no author.
+        val note =
+            Note(reactionId).apply {
+                event = reaction
+                replyTo = listOf(Note("d".repeat(64)))
+            }
+
+        assertTrue(NotificationFeedFilter.tagsAnEventByUser(note, me))
+    }
+
+    @Test
+    fun `reaction to my note stays relevant once the parent loads`() {
+        val reaction =
+            ReactionEvent(
+                reactionId,
+                replier,
+                1000,
+                arrayOf(
+                    arrayOf("e", "d".repeat(64)),
+                    arrayOf("p", me),
+                    arrayOf("k", "1"),
+                ),
+                "+",
+                sig,
+            )
+        val parent = Note("d".repeat(64)).apply { author = User(me, noContext) }
+        val note =
+            Note(reactionId).apply {
+                event = reaction
+                replyTo = listOf(parent)
+            }
+
+        assertTrue(NotificationFeedFilter.tagsAnEventByUser(note, me))
+    }
+
+    @Test
+    fun `reaction to someone else's note that does not tag me stays irrelevant`() {
+        val reaction =
+            ReactionEvent(
+                reactionId,
+                replier,
+                1000,
+                arrayOf(
+                    arrayOf("e", "d".repeat(64)),
+                    arrayOf("p", wallet),
+                    arrayOf("k", "1"),
+                ),
+                "+",
+                sig,
+            )
+        val note =
+            Note(reactionId).apply {
+                event = reaction
+                replyTo = listOf(Note("d".repeat(64)))
+            }
+
+        assertFalse(NotificationFeedFilter.tagsAnEventByUser(note, me))
+    }
+
+    /**
+     * NIP-18 reposts (kind 6) likewise carry the reposted author in their `p`
+     * tag, so a repost of my note is relevant even before the reposted note
+     * loads into the cache.
+     */
+    @Test
+    fun `repost of my note is relevant from its own p tag without the parent in cache`() {
+        val repost =
+            RepostEvent(
+                reactionId,
+                replier,
+                1000,
+                arrayOf(
+                    arrayOf("e", "d".repeat(64)),
+                    arrayOf("p", me),
+                    arrayOf("k", "1"),
+                ),
+                "",
+                sig,
+            )
+        val note =
+            Note(reactionId).apply {
+                event = repost
+                replyTo = listOf(Note("d".repeat(64)))
             }
 
         assertTrue(NotificationFeedFilter.tagsAnEventByUser(note, me))

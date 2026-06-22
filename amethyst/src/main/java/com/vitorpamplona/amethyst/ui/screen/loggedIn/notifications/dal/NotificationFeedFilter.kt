@@ -279,17 +279,38 @@ class NotificationFeedFilter(
             }
 
             if (event is ReactionEvent) {
-                return note.replyTo
-                    ?.lastOrNull()
-                    ?.author
-                    ?.pubkeyHex == authorHex
+                // A reaction carries the reacted-to event's author in its own
+                // NIP-25 `p` tag, so a reaction to my note is detectable from the
+                // wrapper alone — before the reacted note loads into the cache. On
+                // a cold start that note is often missing, leaving `replyTo` an
+                // authorless shell; relying solely on the resolved parent author
+                // then drops the reaction until the parent happens to arrive,
+                // which is what makes the missing set differ every launch. The
+                // resolved-parent check is kept as the fallback once it is present.
+                return event.originalAuthor().contains(authorHex) ||
+                    note.replyTo
+                        ?.lastOrNull()
+                        ?.author
+                        ?.pubkeyHex == authorHex
             }
 
-            if (event is RepostEvent || event is GenericRepostEvent) {
-                return note.replyTo
-                    ?.lastOrNull()
-                    ?.author
-                    ?.pubkeyHex == authorHex
+            if (event is RepostEvent) {
+                // Same reasoning as reactions: NIP-18 reposts name the reposted
+                // author in their `p` tag, so a repost of my note is relevant even
+                // before the reposted note loads.
+                return event.originalAuthorKeys().contains(authorHex) ||
+                    note.replyTo
+                        ?.lastOrNull()
+                        ?.author
+                        ?.pubkeyHex == authorHex
+            }
+
+            if (event is GenericRepostEvent) {
+                return event.originalAuthorKeys().contains(authorHex) ||
+                    note.replyTo
+                        ?.lastOrNull()
+                        ?.author
+                        ?.pubkeyHex == authorHex
             }
 
             return true
