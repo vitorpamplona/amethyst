@@ -63,12 +63,76 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | Long-form (NIP-23) publish / read | 🆕 | |
 | Live activities / chess (NIP-53 / NIP-64) | 🆕 | |
 | Blossom uploads (NIP-B7) | 🆕 | |
+| NIP-60 / 61 Cashu wallet + nutzaps | ✅ | Full surface: `cashu wallet {create,show,export-key,destroy}`, `mint {ping,info}`, `balance`, `receive {ln,complete,resume,token,nutzap-sweep}`, `send {ln,token,nutzap}`, `maintenance {scrub,restore,migrate-keysets}`, `mint-rec {show,add,remove}` — all on shared `commons` `CashuWalletOps` + `CashuWalletReader` (the exact path the Android wallet runs). Interop harness pending. Plan: [`cli/plans/2026-05-28-cashu-cli.md`](./plans/2026-05-28-cashu-cli.md). |
 | NIP-47 Wallet Connect | 🆕 | |
 | NIP-46 bunker signer | 🆕 | Needs a signers abstraction in Amy. |
 | Profile view (`amy profile show NPUB`) + edit | ✅ | `ProfileCommands`. Cache-first; `--refresh` forces a relay drain. |
 | Thread view (`amy thread show EVENT_ID`) | ⚠️ | Same. |
 | Notifications feed | 🆕 | |
 | Search (NIP-50) | 🆕 | |
+
+### `nak` parity — army-knife primitives
+
+Tracking [`fiatjaf/nak`](https://github.com/fiatjaf/nak)'s command surface. amy
+adapts the verbiage where its own conventions differ (`req` → one-shot `fetch`
+vs streaming `subscribe`). Stateless verbs run with no account or network.
+
+| nak command | amy verb | Status | Notes |
+|---|---|---|---|
+| `decode` | `amy decode` | ✅ | NIP-19/21 → JSON. Quartz `Nip19Parser`. |
+| `encode` | `amy encode` | ✅ | npub/nsec/note/nevent/nprofile/naddr. |
+| `verify` / `validate` | `amy verify` | ✅ | id-hash + signature, reported separately. |
+| `key` | `amy key generate\|public\|encrypt\|decrypt\|validate` | ✅ | generate/derive + NIP-49 encrypt/decrypt (bidirectionally nak-verified) + `validate` (npub/hex parse check). `expand`/`combine`(MuSig2)/`default` still 🆕. |
+| `event` | `amy event` | ✅ | build/sign an arbitrary event, optional `--publish`/`--relay`. |
+| `publish` | `amy publish` | ✅ | broadcast a pre-made event JSON (verified first). |
+| `req` (one-shot) | `amy fetch` | ✅ | filter → collect-until-EOSE, dedupe, sort, cap. Also accepts a nip19/nip05 code and resolves relays via the outbox model (code hints + author's NIP-65 write relays), like nak's `fetch`. |
+| `req` (stream) | `amy subscribe` | ✅ | filter → live NDJSON stream to stdout. |
+| `count` | `amy count` | ✅ | NIP-45, per-relay counts. |
+| `encrypt` / `decrypt` | `amy encrypt\|decrypt` | ✅ | raw NIP-44 (default) / NIP-04. |
+| `gift` | `amy gift wrap\|unwrap` | ✅ | NIP-59 seal+wrap / unwrap+unseal. |
+| `relay` (NIP-11) | `amy relay info` | ✅ | stateless NIP-11 doc fetch. |
+| `outbox` | `amy outbox` | ✅ | NIP-65 read/write relays, cache-first. |
+| `filter` | `amy filter` | ✅ | stateless — assemble + print a filter JSON. |
+| `blossom` | `amy blossom` | ✅ | upload/download/list/delete/check/mirror (reuses commons `BlossomClient`). |
+| `nip` | `amy nip` | ✅ | repo-first lookup + Nostr fallback (NipText kind:30817, wiki:30818, long-form:30023); `nip list`. |
+| `kind` | `amy kind` | ✅ | quartz `KindNames` registry (kind → English label + NIP) covering **every** event kind quartz defines (280 entries); number lookup + name search. |
+| `sync` | `amy sync` | ✅ | NIP-77 Negentropy reconcile with the local store (down/up/both). |
+| `git` | `amy git` | ✅ in part | NIP-34 repo announce/list/show/issue. clone/push (packfile transport) out of scope. |
+| `podcast` | `amy podcast` | ✅ | NIP-F4 show metadata (10154) + episode publish (54) + list. |
+| `bunker` | `amy bunker[ connect]` + `amy login bunker://`/`--nostrconnect` | ✅ | NIP-46 remote signer + login, both the `bunker://` and `nostrconnect://` flows, each direction, plus `auth_url` challenge handling (client surfaces the URL + keeps waiting). Interop-verified vs real `nak`. |
+| `admin` | `amy admin RELAY METHOD` | ✅ | NIP-86 Relay Management over NIP-98 HTTP auth — full method set (ban/allow pubkey + event, kinds, IP block, change name/desc/icon, list-*). Reuses quartz `Nip86Client` + shared `commons` `Nip86Retriever`. Interop-verified against `amy serve`. |
+| `serve` | `amy serve` | ✅ | Embeds **geode** (the standalone Ktor relay on quartz's relay-server code) — in-memory by default, `--db FILE` for SQLite, account is admin so `amy admin` works against it. NIP-86 + NIP-77 included. |
+| `wallet` (NIP-60 Cashu) | `amy cashu` | ✅ | See the Cashu row above — full NIP-60/61 wallet + nutzaps. |
+| `mcp` / `fs` / `spell` | — | 🆕 (niche) | MCP server, FUSE mount, MuSig2/FROST; some pull new deps. |
+
+### Full nak comparison (introspected both binaries)
+
+nak has 34 functional commands (introspected from `nak --help`). Coverage:
+
+- **Full / equivalent (24):** `event`, `req`(→`fetch`+`subscribe`), `fetch`
+  (nip19/nip05-hint resolution), `filter`, `count`, `decode`, `encode`,
+  `verify`, `relay`, `bunker`(+nostrconnect+auth_url), `encrypt`, `decrypt`,
+  `gift`, `publish`, `sync`, `profile`, `podcast`, `nip`, `kind`, `blossom`,
+  `nsite`(NIP-5A), `admin`(NIP-86), `serve`(geode), `wallet`(NIP-60/61 Cashu).
+  Protocol-sensitive ones (`bunker`, `sync`, `key` NIP-49, `encode`/`decode`,
+  `admin`) are interop-verified against the real `nak` binary or `amy serve`.
+- **Partial / adapted (3):** `key` (no `expand`/`combine`(MuSig2)/`default`),
+  `git` (NIP-34 events only — no packfile transport), `outbox` (NIP-65 model vs
+  nak's local hints DB).
+- **Missing (7):** `dekey` (NIP-4E), `mcp`, `curl` (NIP-98), `fs` (FUSE),
+  `spell` (MuSig2/FROST), `validate` (event-schema validation), and
+  `group`/`nip29` (NIP-29 — amy ships MLS/Marmot instead, an intentional
+  divergence rather than a gap).
+
+**Design differences (not gaps):** amy is a *stateful client* (accounts,
+`~/.amy/`, shared event store) with a stable JSON contract; nak is a *stateless*
+per-invocation tool that prints bare values for shell substitution. amy also has
+a large surface nak lacks: Marmot/MLS, NIP-17 DMs, zaps, CLINK offer/debit,
+NIP-02 follow, NIP-50 search, napplets, profile edit, store management, account
+management.
+
+**Cheap remaining wins:** the `key` `expand` (hex left-pad) and `default`
+(print the active account's key) sub-verbs. `key combine` needs MuSig2.
 
 ---
 

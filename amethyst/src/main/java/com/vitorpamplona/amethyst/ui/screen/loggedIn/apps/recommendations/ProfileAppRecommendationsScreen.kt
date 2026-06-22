@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.coroutines.Dispatchers
@@ -427,7 +428,7 @@ private fun supportedKindsLabel(kinds: List<Int>): String {
     val names =
         kinds.take(VISIBLE_KIND_NAMES).map { kind ->
             val nameRes = kindDisplayName(kind)
-            if (nameRes != -1) stringRes(nameRes) else "k$kind"
+            if (nameRes != -1) stringRes(nameRes) else (KindNames.nameFor(kind) ?: "k$kind")
         }
     val overflow = kinds.size - VISIBLE_KIND_NAMES
     val suffix = if (overflow > 0) " +$overflow" else ""

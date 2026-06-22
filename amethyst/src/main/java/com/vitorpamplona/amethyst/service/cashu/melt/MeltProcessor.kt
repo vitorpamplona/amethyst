@@ -35,7 +35,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * via NUT-05 melt (`POST /v1/melt/quote/bolt11` + `POST /v1/melt/bolt11`).
  *
  * This is the "Redeem" button on a received cashu token preview — distinct
- * from the NIP-60 wallet's own send-LN flow ([com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletOps.meltToLightning]),
+ * from the NIP-60 wallet's own send-LN flow ([com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps.meltToLightning]),
  * which spends the user's stored proofs and rolls change back into the wallet.
  * Here there is no wallet: the proofs come straight off the pasted token and
  * any leftover stays with the mint.

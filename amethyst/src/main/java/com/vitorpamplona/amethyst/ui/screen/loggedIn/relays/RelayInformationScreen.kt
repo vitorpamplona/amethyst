@@ -133,6 +133,7 @@ import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.ErrorDebugMessage
@@ -694,7 +695,7 @@ val reports = setOf(ReportEvent.KIND, MuteListEvent.KIND, DeletionEvent.KIND, Re
 @Composable
 fun KindChip(kind: Int) {
     val nameResId = kindDisplayName(kind)
-    val name = if (nameResId != -1) stringResource(nameResId) else "k$kind"
+    val name = if (nameResId != -1) stringResource(nameResId) else (KindNames.nameFor(kind) ?: "k$kind")
     val (bg, fg) =
         when (kind) {
             in posts -> {
