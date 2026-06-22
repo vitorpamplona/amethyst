@@ -55,6 +55,12 @@ object NappletRequestRouter {
             val subId: String,
         ) : Outcome
 
+        /** Start streaming `identity.changed` pushes when the active user's key changes (fire-and-forget). */
+        data object WatchIdentity : Outcome
+
+        /** Stop the `identity.changed` stream (fire-and-forget; no reply). */
+        data object UnwatchIdentity : Outcome
+
         /** Push these envelope(s) to the applet immediately, unkeyed (e.g. an EOSE closing a refused sub). */
         data class Push(
             val payloads: List<String>,
@@ -77,6 +83,12 @@ object NappletRequestRouter {
             }
             "resource.cancel" ->
                 return Outcome.Reply(NappletProtocolJson.encodeResponse(requestType, NappletResponse.Done))
+            // identity.watch/unwatch are a push subscription (like relay.subscribe), gated on the
+            // IDENTITY declaration directly — the actual pubkey stream is the host's job.
+            "identity.watch" ->
+                return if (NappletCapability.IDENTITY in declared) Outcome.WatchIdentity else Outcome.Ignore
+            "identity.unwatch" ->
+                return Outcome.UnwatchIdentity
         }
 
         val request =

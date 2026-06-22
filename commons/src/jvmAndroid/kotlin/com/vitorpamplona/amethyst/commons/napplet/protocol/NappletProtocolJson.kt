@@ -80,6 +80,16 @@ object NappletProtocolJson {
             put("subId", subId)
         }.toString()
 
+    /**
+     * An `identity.changed` push: the active user's public key changed (account switch / connect /
+     * disconnect). [pubkey] is the new hex key, or `""` when no account is signed in.
+     */
+    fun encodeIdentityChanged(pubkey: String): String =
+        buildJsonObject {
+            put("type", "identity.changed")
+            put("pubkey", pubkey)
+        }.toString()
+
     /** A `relay.closed` push: a relay (or the shell) ended the subscription [subId]. */
     fun encodeRelayClosed(
         subId: String,

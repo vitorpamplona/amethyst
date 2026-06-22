@@ -42,10 +42,12 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
+import com.vitorpamplona.amethyst.ui.screen.AccountState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
@@ -80,6 +82,13 @@ class NappletBrokerService : Service() {
     // Live relay subscriptions, keyed by the applet's subId; reads the current account live.
     private val liveSubscriptions = NappletLiveSubscriptions { Amethyst.instance.sessionManager.loggedInAccount() }
 
+    // Streams identity.changed pushes (account switch / connect / disconnect) to a watching applet.
+    private val identityWatch =
+        NappletIdentityWatch(scope) {
+            Amethyst.instance.sessionManager.accountContent
+                .map { (it as? AccountState.LoggedIn)?.account?.signer?.pubKey ?: "" }
+        }
+
     override fun onBind(intent: Intent?): IBinder? {
         // Defense in depth on top of exported=false: only our own UID may bind.
         if (Binder.getCallingUid() != Process.myUid()) return null
@@ -88,6 +97,7 @@ class NappletBrokerService : Service() {
 
     override fun onDestroy() {
         liveSubscriptions.closeAll()
+        identityWatch.stop()
         scope.cancel()
         super.onDestroy()
     }
@@ -123,6 +133,8 @@ class NappletBrokerService : Service() {
                 is NappletRequestRouter.Outcome.Reply -> reply(replyTo, requestId, outcome.payload)
                 is NappletRequestRouter.Outcome.OpenSubscription -> liveSubscriptions.open(outcome.subId, outcome.filters) { push(replyTo, it) }
                 is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(outcome.subId)
+                is NappletRequestRouter.Outcome.WatchIdentity -> identityWatch.start { push(replyTo, it) }
+                is NappletRequestRouter.Outcome.UnwatchIdentity -> identityWatch.stop()
                 is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
             }
         }

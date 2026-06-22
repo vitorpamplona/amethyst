@@ -3,7 +3,7 @@
 // This is loaded as an asset and injected into the applet document by NappletHostActivity.
 (function(){
   if (window.__nappletShimInstalled) return; window.__nappletShimInstalled = true;
-  var seq = 0, pending = {}, subs = {}, actions = {};
+  var seq = 0, pending = {}, subs = {}, actions = {}, identityHandlers = [];
   function send(env){ env.id = env.id || ('r' + (seq++)); parent.postMessage(JSON.stringify(env), '*'); return env.id; }
   function call(type, fields){
     return new Promise(function(resolve, reject){
@@ -28,6 +28,8 @@
     }
     // keys.action push: the shell triggers a registered keyboard/command action.
     if (msg.type === 'keys.action') { var cb = actions[msg.actionId]; if (cb) cb(); return; }
+    // identity.changed push: the active user's key changed (account switch / connect / disconnect).
+    if (msg.type === 'identity.changed') { identityHandlers.slice().forEach(function(h){ try { h(msg.pubkey); } catch (_) {} }); return; }
     if (!msg.id) return;
     var p = pending[msg.id]; if (!p) return; delete pending[msg.id];
     if (msg.ok) p.resolve(msg);
@@ -54,9 +56,17 @@
       getList: function(listType){ return field(call('identity.getList', { listType: listType }), 'entries'); },
       getZaps: function(){ return field(call('identity.getZaps'), 'zaps'); },
       getBadges: function(){ return field(call('identity.getBadges'), 'badges'); },
-      // onChanged is a no-op subscription: the host does not yet emit identity-change pushes, so
-      // the handler is never called. Kept for API parity.
-      onChanged: function(handler){ return { close: function(){} }; }
+      // onChanged: the shell pushes identity.changed when the active user's key changes. The first
+      // handler opens the watch (identity.watch); closing the last one stops it (identity.unwatch).
+      onChanged: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        identityHandlers.push(handler);
+        if (identityHandlers.length === 1) post('identity.watch');
+        return { close: function(){
+          var i = identityHandlers.indexOf(handler); if (i >= 0) identityHandlers.splice(i, 1);
+          if (identityHandlers.length === 0) post('identity.unwatch');
+        } };
+      }
     },
     // keys = keyboard / command action binding (NOT signing). The shell acknowledges registration;
     // the global-key binding + keys.action push is a follow-up, so onAction won't fire yet.

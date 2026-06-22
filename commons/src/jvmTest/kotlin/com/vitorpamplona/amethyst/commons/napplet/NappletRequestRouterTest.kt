@@ -127,4 +127,31 @@ class NappletRequestRouterTest {
             assertEquals(1, outcome.payloads.size)
             assertTrue(outcome.payloads.first().contains("relay.eose"))
         }
+
+    @Test
+    fun identityWatchWhenDeclaredBecomesWatchIdentity() =
+        runTest {
+            assertEquals(
+                NappletRequestRouter.Outcome.WatchIdentity,
+                NappletRequestRouter.route(broker(), applet, allDeclared, """{"type":"identity.watch"}"""),
+            )
+        }
+
+    @Test
+    fun identityWatchWithoutDeclarationIsIgnored() =
+        runTest {
+            assertEquals(
+                NappletRequestRouter.Outcome.Ignore,
+                NappletRequestRouter.route(broker(), applet, emptySet(), """{"type":"identity.watch"}"""),
+            )
+        }
+
+    @Test
+    fun identityUnwatchBecomesUnwatchIdentity() =
+        runTest {
+            assertEquals(
+                NappletRequestRouter.Outcome.UnwatchIdentity,
+                NappletRequestRouter.route(broker(), applet, emptySet(), """{"type":"identity.unwatch"}"""),
+            )
+        }
 }
