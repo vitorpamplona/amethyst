@@ -36,7 +36,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -90,14 +89,6 @@ class RoadEventConfirmationEvent(
     companion object {
         const val KIND = 1316
 
-        /** NIP-31 fallback for a confirmation (`still_there`), per the roadstr spec. */
-        const val ALT_CONFIRMED = "Roadstr: event confirmed"
-
-        /** NIP-31 fallback for a denial (`no_longer_there`), per the roadstr spec. */
-        const val ALT_DENIED = "Roadstr: event denied"
-
-        fun altDescription(status: RoadEventStatus) = if (status == RoadEventStatus.NO_LONGER_THERE) ALT_DENIED else ALT_CONFIRMED
-
         fun build(
             reportId: HexKey,
             status: RoadEventStatus,
@@ -113,7 +104,6 @@ class RoadEventConfirmationEvent(
                 coordinates(latitude, longitude)
             }
             expiration(createdAt + RoadEventReportEvent.RELAY_TTL_SECONDS)
-            alt(altDescription(status))
             initializer()
         }
 

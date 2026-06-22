@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
-import android.content.Intent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
@@ -148,6 +147,7 @@ import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorM
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
+import com.vitorpamplona.amethyst.ui.note.elements.ShareOptionsBottomSheet
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
@@ -318,6 +318,7 @@ private fun InnerReactionRow(
                     if (!isPrivateRumor) {
                         ShareReaction(
                             note = baseNote,
+                            nav = nav,
                             grayTint = MaterialTheme.colorScheme.placeholderText,
                         )
                     }
@@ -338,37 +339,25 @@ private fun InnerReactionRow(
 @Composable
 fun ShareReaction(
     note: Note,
+    nav: INav,
     grayTint: Color,
     barChartModifier: Modifier = Size19Modifier,
 ) {
-    val context = LocalContext.current
+    var showShareSheet by remember { mutableStateOf(false) }
 
     ClickableBox(
         modifier = barChartModifier,
-        onClick = {
-            val sendIntent =
-                Intent().apply {
-                    action = Intent.ACTION_SEND
-                    type = "text/plain"
-                    putExtra(
-                        Intent.EXTRA_TEXT,
-                        externalLinkForNote(note),
-                    )
-                    putExtra(
-                        Intent.EXTRA_TITLE,
-                        stringRes(context, R.string.quick_action_share_browser_link),
-                    )
-                }
-
-            val shareIntent =
-                Intent.createChooser(
-                    sendIntent,
-                    stringRes(context, R.string.quick_action_share),
-                )
-            context.startActivity(shareIntent)
-        },
+        onClick = { showShareSheet = true },
     ) {
         ShareIcon(barChartModifier, grayTint)
+    }
+
+    if (showShareSheet) {
+        ShareOptionsBottomSheet(
+            note = note,
+            nav = nav,
+            onDismiss = { showShareSheet = false },
+        )
     }
 }
 

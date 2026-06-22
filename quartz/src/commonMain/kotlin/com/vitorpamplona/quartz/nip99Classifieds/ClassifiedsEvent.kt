@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
@@ -110,7 +109,6 @@ class ClassifiedsEvent(
 
     companion object {
         const val KIND = 30402
-        const val ALT_DESCRIPTION = "Classifieds listing"
 
         val REQUIRED_FIELDS = setOf(TitleTag.TAG_NAME, PriceTag.TAG_NAME, ImageTag.TAG_NAME)
 
@@ -136,7 +134,6 @@ class ClassifiedsEvent(
             location?.let { location(it) }
             images?.let { images(images) }
 
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -50,7 +49,6 @@ class EphemeralChatEvent(
 
     companion object {
         const val KIND = 23333
-        const val ALT_DESCRIPTION = "Ephemeral Chat"
 
         const val DEFAULT_ROOM = "_"
 
@@ -63,7 +61,6 @@ class EphemeralChatEvent(
         ) = eventTemplate(KIND, message, createdAt) {
             room(room)
             relay(relay)
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

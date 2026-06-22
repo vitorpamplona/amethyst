@@ -24,9 +24,13 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * Activity verbs used by NIP-101e clients (RUNSTR dialect). The tag value is the
- * lowercase [code]; the matching capitalized [hashtag] is published as a `t` tag
- * so the workout is discoverable.
+ * Activity / workout types understood across the kind-1301 dialects.
+ *
+ * The first group are the RUNSTR activity verbs carried in the `exercise` tag;
+ * the [STRENGTH]/[CIRCUIT]/[EMOM]/[AMRAP] values double as the POWR / NIP-101e
+ * `type` tag classifications. The tag value is the lowercase [code]; the
+ * matching capitalized [hashtag] is published as a `t` tag so RUNSTR workouts
+ * stay discoverable.
  */
 enum class ExerciseType(
     val code: String,
@@ -43,6 +47,9 @@ enum class ExerciseType(
     MEDITATION("meditation", "Meditation"),
     DIET("diet", "Diet"),
     FASTING("fasting", "Fasting"),
+    CIRCUIT("circuit", "Circuit"),
+    EMOM("emom", "EMOM"),
+    AMRAP("amrap", "AMRAP"),
     ;
 
     companion object {
@@ -56,11 +63,17 @@ class ExerciseTag {
 
         fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
-        /** Returns the raw verb. Other clients may publish verbs outside [ExerciseType]. */
+        /**
+         * Returns the raw activity verb. Other clients may publish verbs outside
+         * [ExerciseType]. Returns null for the POWR coordinate form
+         * (`33401:pubkey:d-tag`), which carries per-set data, not a verb — parse
+         * those with [ExerciseSetTag] instead.
+         */
         fun parse(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
+            ensure(!ExerciseSetTag.isCoordinate(tag[1])) { return null }
             return tag[1]
         }
 

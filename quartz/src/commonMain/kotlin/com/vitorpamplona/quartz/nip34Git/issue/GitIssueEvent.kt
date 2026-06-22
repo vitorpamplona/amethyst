@@ -43,7 +43,6 @@ import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -119,7 +118,6 @@ class GitIssueEvent(
 
     companion object {
         const val KIND = 1621
-        const val ALT_DESCRIPTION = "A Git Issue"
 
         fun build(
             subject: String,
@@ -130,7 +128,6 @@ class GitIssueEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GitIssueEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
-            alt(ALT_DESCRIPTION)
             subject(subject)
             repository(repository)
             notify(notify)

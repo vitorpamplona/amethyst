@@ -29,11 +29,13 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.isClient
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -198,8 +200,19 @@ class NotificationReplyReceiver : BroadcastReceiver() {
         val targetEvent = LocalCache.getNoteIfExists(targetEventId)?.event ?: return
 
         val template =
-            when (targetEvent) {
-                is TextNoteEvent -> {
+            when {
+                // A brand-new Amethyst kind-1 thread root is replied to with a NIP-22
+                // kind 1111 Comment instead of a kind 1 reply.
+                targetEvent is TextNoteEvent &&
+                    targetEvent.isNewThread() &&
+                    targetEvent.isClient(AccountCacheState.CLIENT_TAG_NAME) -> {
+                    CommentEvent.replyBuilder(
+                        msg = replyText,
+                        replyingTo = EventHintBundle(targetEvent),
+                    )
+                }
+
+                targetEvent is TextNoteEvent -> {
                     TextNoteEvent.build(
                         note = replyText,
                         replyingTo = EventHintBundle(targetEvent),

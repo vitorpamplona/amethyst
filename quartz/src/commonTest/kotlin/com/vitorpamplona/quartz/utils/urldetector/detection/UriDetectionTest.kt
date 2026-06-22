@@ -839,6 +839,49 @@ class UriDetectionTest {
         }
     }
 
+    @Test
+    fun testBalancedClosingDelimitersAreKept() {
+        // Wikipedia-style urls whose path legitimately ends in a balanced ")".
+        runTest(
+            "https://en.wikipedia.org/wiki/Bitcoin_(disambiguation)",
+            "https://en.wikipedia.org/wiki/Bitcoin_(disambiguation)",
+        )
+        // also exercises a comma without surrounding spaces inside the path.
+        runTest(
+            "https://memory-alpha.fandom.com/wiki/Scorpion,_Part_II_(episode)",
+            "https://memory-alpha.fandom.com/wiki/Scorpion,_Part_II_(episode)",
+        )
+
+        // a balanced closer is kept even when followed by sentence punctuation/words.
+        runTest(
+            "See https://en.wikipedia.org/wiki/Bitcoin_(disambiguation).",
+            "https://en.wikipedia.org/wiki/Bitcoin_(disambiguation)",
+        )
+        runTest(
+            "read https://en.wikipedia.org/wiki/Bitcoin_(disambiguation) now",
+            "https://en.wikipedia.org/wiki/Bitcoin_(disambiguation)",
+        )
+
+        // balanced braces/brackets inside the path are kept as well.
+        runTest("https://example.com/a[b]c", "https://example.com/a[b]c")
+        runTest("https://example.com/a{b}c", "https://example.com/a{b}c")
+
+        // commas without surrounding spaces stay part of the url.
+        runTest("https://example.com/a,b,c", "https://example.com/a,b,c")
+    }
+
+    @Test
+    fun testUnbalancedClosingDelimitersAreStripped() {
+        // a closer that wraps the url (no matching opener inside it) is still removed.
+        runTest("(see example.com)", "example.com")
+        runTest("look [example.com]", "example.com")
+        runTest("note {example.com}", "example.com")
+        runTest("https://example.com/path)", "https://example.com/path")
+
+        // a trailing comma is sentence punctuation and is still removed.
+        runTest("visit example.com,", "example.com")
+    }
+
     private fun runTest(
         text: String,
         vararg expected: String?,

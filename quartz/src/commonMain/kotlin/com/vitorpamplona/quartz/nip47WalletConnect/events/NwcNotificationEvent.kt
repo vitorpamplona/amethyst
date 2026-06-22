@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -56,7 +55,6 @@ class NwcNotificationEvent(
     companion object {
         const val KIND = 23197
         const val LEGACY_KIND = 23196
-        const val ALT = "Wallet notification"
 
         /**
          * Creates an NWC notification event (server-side).
@@ -78,7 +76,6 @@ class NwcNotificationEvent(
             val tags =
                 arrayOf(
                     arrayOf("p", clientPubkey),
-                    AltTag.assemble(ALT),
                 )
 
             val encrypted = signer.nip44Encrypt(serialized, clientPubkey)

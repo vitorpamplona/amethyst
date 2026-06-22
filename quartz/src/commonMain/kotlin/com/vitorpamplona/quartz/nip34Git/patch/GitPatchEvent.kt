@@ -37,7 +37,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.patch.tags.CommitPgpSigTag
 import com.vitorpamplona.quartz.nip34Git.patch.tags.CommitTag
 import com.vitorpamplona.quartz.nip34Git.patch.tags.Committer
@@ -118,7 +117,6 @@ class GitPatchEvent(
 
     companion object {
         const val KIND = 1617
-        const val ALT = "A Git Patch"
         const val ROOT = "root"
         const val ROOT_REVISION = "root-revision"
 
@@ -150,7 +148,6 @@ class GitPatchEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GitPatchEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, patch, createdAt) {
-            alt(ALT)
             repository(repository)
             euc(earliestUniqueCommit)
             pTag(repository.event.pubKey, repository.authorHomeRelay)

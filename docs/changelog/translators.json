@@ -73,9 +73,39 @@
     "Kevin_1": ""
   },
   "sinceLastTag": {
-    "tag": "v1.12.5",
-    "since": "2026-06-19T12:55:37-04:00",
+    "tag": "v1.12.6",
+    "since": "2026-06-19T19:01:59-04:00",
     "translators": [
+      {
+        "user": "anthony-robin",
+        "languages": [
+          "French"
+        ]
+      },
+      {
+        "user": "maxblake2015",
+        "languages": [
+          "Polish"
+        ]
+      },
+      {
+        "user": "StellarStoic",
+        "languages": [
+          "Slovenian"
+        ]
+      },
+      {
+        "user": "hypnotichemionus4",
+        "languages": [
+          "Chinese Simplified"
+        ]
+      },
+      {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
+        ]
+      },
       {
         "user": "vitorpamplona",
         "languages": []
@@ -114,10 +144,6 @@
       },
       {
         "user": "Bardesss",
-        "languages": []
-      },
-      {
-        "user": "anthony-robin",
         "languages": []
       },
       {
@@ -241,15 +267,7 @@
         "languages": []
       },
       {
-        "user": "StellarStoic",
-        "languages": []
-      },
-      {
         "user": "D4rkFIow",
-        "languages": []
-      },
-      {
-        "user": "summoner001",
         "languages": []
       },
       {
@@ -266,14 +284,6 @@
       },
       {
         "user": "Coool",
-        "languages": []
-      },
-      {
-        "user": "hypnotichemionus4",
-        "languages": []
-      },
-      {
-        "user": "maxblake2015",
         "languages": []
       },
       {

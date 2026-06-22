@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
@@ -57,7 +56,6 @@ class NIP90ContentDiscoveryRequestEvent(
 
     companion object {
         const val KIND = 5300
-        const val ALT = "NIP90 Content Discovery request"
 
         fun build(
             dvmPublicKey: HexKey,
@@ -66,7 +64,6 @@ class NIP90ContentDiscoveryRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90ContentDiscoveryRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             dvmPubKey(dvmPublicKey)
             relays(relays)
             param("max_results", "200")

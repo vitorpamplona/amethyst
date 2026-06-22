@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip62RequestToVanish.tags.shouldVanishFrom
 import com.vitorpamplona.quartz.nip62RequestToVanish.tags.vanishFrom
 import com.vitorpamplona.quartz.nip62RequestToVanish.tags.vanishFromAllRelays
@@ -49,7 +48,6 @@ class RequestToVanishEvent(
 
     companion object {
         const val KIND = 62
-        const val ALT = "Request to vanish"
 
         fun build(
             relay: NormalizedRelayUrl,
@@ -57,7 +55,6 @@ class RequestToVanishEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RequestToVanishEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, reason, createdAt) {
-            alt(ALT)
             vanishFrom(relay)
             initializer()
         }
@@ -68,7 +65,6 @@ class RequestToVanishEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RequestToVanishEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, reason, createdAt) {
-            alt(ALT)
             vanishFrom(relays)
             initializer()
         }
@@ -78,7 +74,6 @@ class RequestToVanishEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RequestToVanishEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, reason, createdAt) {
-            alt(ALT)
             vanishFromEverywhere()
             initializer()
         }

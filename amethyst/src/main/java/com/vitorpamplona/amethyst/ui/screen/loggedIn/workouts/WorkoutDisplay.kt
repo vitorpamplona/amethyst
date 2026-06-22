@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,18 +51,23 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseGroup
+import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DistanceTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DurationTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.Elevation
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WeightTag
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import kotlin.math.abs
 import kotlin.math.round
 
@@ -78,6 +84,9 @@ fun ExerciseType?.symbol(): MaterialSymbol =
         ExerciseType.MEDITATION -> MaterialSymbols.SelfImprovement
         ExerciseType.DIET -> MaterialSymbols.Restaurant
         ExerciseType.FASTING -> MaterialSymbols.Timer
+        ExerciseType.CIRCUIT -> MaterialSymbols.FitnessCenter
+        ExerciseType.EMOM -> MaterialSymbols.FitnessCenter
+        ExerciseType.AMRAP -> MaterialSymbols.FitnessCenter
         null -> MaterialSymbols.DirectionsRun
     }
 
@@ -94,6 +103,9 @@ fun ExerciseType.labelRes(): Int =
         ExerciseType.MEDITATION -> R.string.exercise_meditation
         ExerciseType.DIET -> R.string.exercise_diet
         ExerciseType.FASTING -> R.string.exercise_fasting
+        ExerciseType.CIRCUIT -> R.string.exercise_circuit
+        ExerciseType.EMOM -> R.string.exercise_emom
+        ExerciseType.AMRAP -> R.string.exercise_amrap
     }
 
 private fun Double.trimmed(): String = if (this % 1.0 == 0.0 && abs(this) < 1e15) toLong().toString() else toString()
@@ -148,12 +160,44 @@ private fun WeightTag.toDisplay(miles: Boolean): WeightTag =
         WeightTag(round(toKilograms() * 10.0) / 10.0, WeightTag.KILOGRAMS)
     }
 
+/** Renders a kilogram weight (POWR's native unit) in the viewer's preferred unit, e.g. `84 kg` or `185 lbs`. */
+private fun formatWeightKg(
+    kg: Double,
+    miles: Boolean,
+): String {
+    val display = WeightTag(kg, WeightTag.KILOGRAMS).toDisplay(miles)
+    return "${display.value.trimmed()} ${display.unit}"
+}
+
+/** One readable line summarizing the sets logged for a single exercise. */
+private fun ExerciseGroup.summaryLine(miles: Boolean): String {
+    val descriptors =
+        sets.map { set ->
+            val reps = set.reps
+            val kg = set.weightKg?.takeIf { it > 0.0 }
+            when {
+                kg != null && reps != null -> "$reps × ${formatWeightKg(kg, miles)}"
+                reps != null -> "$reps reps"
+                kg != null -> formatWeightKg(kg, miles)
+                else -> "—"
+            }
+        }
+    if (descriptors.isEmpty()) return ""
+    // Collapse identical sets (e.g. 3 sets of 8 × 84 kg) into "3 × 8 × 84 kg".
+    return if (descriptors.size > 1 && descriptors.distinct().size == 1) {
+        "${descriptors.size} × ${descriptors.first()}"
+    } else {
+        descriptors.joinToString(", ")
+    }
+}
+
 /** One-shot snapshot of the parsed workout tags, so the feed doesn't re-scan the tag array on every recomposition. */
 @Immutable
 class WorkoutInfo(
     val title: String?,
     val type: ExerciseType?,
     val exerciseRaw: String?,
+    val typeRaw: String?,
     val source: String?,
     val durationSeconds: Long?,
     val distance: DistanceTag?,
@@ -166,6 +210,8 @@ class WorkoutInfo(
     val sets: Int?,
     val reps: Int?,
     val weight: WeightTag?,
+    // POWR / NIP-101e strength dialect: per-exercise logged sets (weights are in kilograms).
+    val exerciseGroups: List<ExerciseGroup>,
 ) {
     /** Rewrites the unit-bearing metrics into the viewer's preferred system (miles/feet/lbs vs km/m/kg). */
     fun inUnits(miles: Boolean) =
@@ -173,6 +219,7 @@ class WorkoutInfo(
             title = title,
             type = type,
             exerciseRaw = exerciseRaw,
+            typeRaw = typeRaw,
             source = source,
             durationSeconds = durationSeconds,
             distance = distance?.toDisplay(miles),
@@ -185,16 +232,19 @@ class WorkoutInfo(
             sets = sets,
             reps = reps,
             weight = weight?.toDisplay(miles),
+            // Kept in kilograms; the breakdown converts per the viewer's unit at render time.
+            exerciseGroups = exerciseGroups,
         )
 
     companion object {
         fun from(event: WorkoutRecordEvent) =
             WorkoutInfo(
                 title = event.title(),
-                type = event.exerciseType(),
+                type = event.activityType(),
                 exerciseRaw = event.exercise(),
-                source = event.workoutSource(),
-                durationSeconds = event.durationSeconds(),
+                typeRaw = event.workoutTypeCode(),
+                source = event.workoutSource() ?: event.client(),
+                durationSeconds = event.effectiveDurationSeconds(),
                 distance = event.distance(),
                 elevationGain = event.elevationGain(),
                 elevationLoss = event.elevationLoss(),
@@ -205,6 +255,7 @@ class WorkoutInfo(
                 sets = event.sets(),
                 reps = event.reps(),
                 weight = event.weight(),
+                exerciseGroups = event.exerciseGroups(),
             )
     }
 }
@@ -232,7 +283,11 @@ fun WorkoutDisplay(
 
     val miles = remember { phonePrefersMiles() }
     val info = remember(baseNote, miles) { WorkoutInfo.from(event).inUnits(miles) }
-    val typeLabel = info.type?.let { stringRes(it.labelRes()) } ?: info.exerciseRaw ?: stringRes(R.string.workout)
+    val typeLabel =
+        info.type?.let { stringRes(it.labelRes()) }
+            ?: info.exerciseRaw
+            ?: info.typeRaw?.replaceFirstChar { it.uppercaseChar() }
+            ?: stringRes(R.string.workout)
 
     val duration = info.durationSeconds
     val distance = info.distance
@@ -250,6 +305,7 @@ fun WorkoutDisplay(
         buildSecondaryStats(
             info = info,
             heroKind = heroKind,
+            miles = miles,
             durationLabel = stringRes(R.string.workout_duration),
             distanceLabel = stringRes(R.string.workout_distance),
             paceLabel = stringRes(R.string.workout_pace),
@@ -263,6 +319,8 @@ fun WorkoutDisplay(
             setsLabel = stringRes(R.string.workout_sets),
             repsLabel = stringRes(R.string.workout_reps),
             weightLabel = stringRes(R.string.workout_weight),
+            exercisesLabel = stringRes(R.string.workout_exercises),
+            volumeLabel = stringRes(R.string.workout_volume),
         )
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp)) {
@@ -318,6 +376,10 @@ fun WorkoutDisplay(
 
         WorkoutStatsGrid(secondaryStats)
 
+        if (info.exerciseGroups.isNotEmpty()) {
+            ExerciseBreakdown(info.exerciseGroups, miles, accountViewModel)
+        }
+
         // Route the note (event content) through the same kind-1 pipeline: rich text with
         // links/mentions/hashtags, embeds, sensitivity warning and inline translations.
         val notes = event.content.trim()
@@ -346,6 +408,7 @@ fun WorkoutDisplay(
 private fun buildSecondaryStats(
     info: WorkoutInfo,
     heroKind: HeroKind,
+    miles: Boolean,
     durationLabel: String,
     distanceLabel: String,
     paceLabel: String,
@@ -359,11 +422,21 @@ private fun buildSecondaryStats(
     setsLabel: String,
     repsLabel: String,
     weightLabel: String,
+    exercisesLabel: String,
+    volumeLabel: String,
 ): List<Stat> {
     val duration = info.durationSeconds
     val distance = info.distance
 
     return buildList {
+        // POWR / NIP-101e strength workouts: aggregate the per-set exercise tags.
+        val groups = info.exerciseGroups
+        if (groups.isNotEmpty()) {
+            add(Stat("${groups.size}", exercisesLabel))
+            add(Stat("${groups.sumOf { it.sets.size }}", setsLabel))
+            val volumeKg = groups.mapNotNull { it.totalVolumeKg() }.takeIf { it.isNotEmpty() }?.sum()
+            volumeKg?.let { add(Stat(formatWeightKg(it, miles), volumeLabel)) }
+        }
         if (heroKind != HeroKind.DURATION) {
             duration?.let { add(Stat(DurationTag.formatTime(it), durationLabel)) }
         }
@@ -451,6 +524,72 @@ private fun WorkoutStatsGrid(
                 }
             }
         }
+    }
+}
+
+/** Per-exercise breakdown for POWR / NIP-101e strength workouts: exercise name + its logged sets. */
+@Composable
+private fun ExerciseBreakdown(
+    groups: List<ExerciseGroup>,
+    miles: Boolean,
+    accountViewModel: AccountViewModel,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        groups.forEach { group ->
+            ExerciseRow(group, miles, accountViewModel)
+        }
+    }
+}
+
+@Composable
+private fun ExerciseRow(
+    group: ExerciseGroup,
+    miles: Boolean,
+    accountViewModel: AccountViewModel,
+) {
+    val fallback = group.displayName() ?: "—"
+    val address = remember(group.reference) { Address.parse(group.reference) }
+
+    if (address == null) {
+        ExerciseRowContent(fallback, group.summaryLine(miles))
+        return
+    }
+
+    // Resolve the kind-33401 template to show its real title; falls back to the slug
+    // until the template is fetched (the workout event's relay hints drive the fetch).
+    LoadAddressableNote(address, accountViewModel) { templateNote ->
+        val name =
+            if (templateNote != null) {
+                val templateEvent by observeNoteEvent<ExerciseTemplateEvent>(templateNote, accountViewModel)
+                templateEvent?.title() ?: fallback
+            } else {
+                fallback
+            }
+        ExerciseRowContent(name, group.summaryLine(miles))
+    }
+}
+
+@Composable
+private fun ExerciseRowContent(
+    name: String,
+    summary: String,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = summary,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
     }
 }
 

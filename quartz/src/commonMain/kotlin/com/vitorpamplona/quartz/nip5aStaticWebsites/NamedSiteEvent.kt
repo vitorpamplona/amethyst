@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -57,7 +56,6 @@ class NamedSiteEvent(
 
     companion object {
         const val KIND = 35128
-        const val ALT_DESCRIPTION = "Named Static Website"
 
         fun build(
             identifier: String,
@@ -69,7 +67,6 @@ class NamedSiteEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NamedSiteEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(identifier)
             sitePaths(paths)
             if (servers.isNotEmpty()) siteServers(servers)

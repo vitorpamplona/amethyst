@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -45,7 +44,6 @@ class DeleteEventEvent(
 
     companion object {
         const val KIND = 9005
-        const val ALT_DESCRIPTION = "Group delete event"
 
         fun build(
             groupId: String,
@@ -54,7 +52,6 @@ class DeleteEventEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<DeleteEventEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             groupId(groupId)
             eventIds.forEach { add(arrayOf("e", it)) }
             previous(previousEvents)

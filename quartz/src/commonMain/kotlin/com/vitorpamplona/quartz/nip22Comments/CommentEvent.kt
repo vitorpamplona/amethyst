@@ -44,7 +44,6 @@ import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
-import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip22Comments.tags.ReplyAddressTag
 import com.vitorpamplona.quartz.nip22Comments.tags.ReplyAuthorTag
 import com.vitorpamplona.quartz.nip22Comments.tags.ReplyEventTag
@@ -55,7 +54,6 @@ import com.vitorpamplona.quartz.nip22Comments.tags.RootAuthorTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
@@ -240,7 +238,6 @@ class CommentEvent(
 
     companion object {
         const val KIND = 1111
-        const val ALT = "Reply to "
 
         fun replyBuilder(
             msg: String,
@@ -248,8 +245,6 @@ class CommentEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CommentEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, msg, createdAt) {
-            alt(ALT + replyingTo.toNostrUri())
-
             if (replyingTo.event is CommentEvent) {
                 addAll(replyingTo.event.rootScopes())
                 addAll(replyingTo.event.rootKinds())
@@ -278,8 +273,6 @@ class CommentEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CommentEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, msg, createdAt) {
-            alt(ALT + extId.toScope())
-
             if (extId is GeohashId) {
                 GeoHashTag.geoMipMap(extId.geohash).forEach { rootExternalIdentity(GeohashId(it, extId.hint)) }
             } else {

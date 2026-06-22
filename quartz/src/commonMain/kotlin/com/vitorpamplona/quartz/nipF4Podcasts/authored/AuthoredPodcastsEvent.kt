@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -61,7 +60,6 @@ class AuthoredPodcastsEvent(
 
     companion object {
         const val KIND = 10064
-        const val ALT_DESCRIPTION = "List of authored podcasts"
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
 
@@ -72,7 +70,6 @@ class AuthoredPodcastsEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<AuthoredPodcastsEvent>.() -> Unit = {},
         ) = eventTemplate<AuthoredPodcastsEvent>(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             podcasts.forEach { podcast(it) }
             initializer()
         }

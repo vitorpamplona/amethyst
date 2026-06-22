@@ -207,6 +207,7 @@ class AccountSettings(
     val defaultBrowseEmojiSetsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultCommunitiesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultFollowPacksFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultAppRecommendationsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
     val clinkDebitWallets: MutableStateFlow<List<ClinkDebitWalletEntryNorm>> = MutableStateFlow(emptyList()),
     // The unified default spend rail (an NWC wallet OR a CLINK debit). Persisted under a
@@ -217,6 +218,7 @@ class AccountSettings(
     var hideNIP17WarningDialog: Boolean = false,
     val alwaysOnNotificationService: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val splitNotificationsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val showMessagesInNotifications: MutableStateFlow<Boolean> = MutableStateFlow(true),
     var backupUserMetadata: MetadataEvent? = null,
     var backupContactList: ContactListEvent? = null,
     var backupDMRelayList: ChatMessageRelayListEvent? = null,
@@ -291,6 +293,13 @@ class AccountSettings(
     fun toggleSplitNotificationsEnabled(): Boolean {
         val newValue = !splitNotificationsEnabled.value
         splitNotificationsEnabled.tryEmit(newValue)
+        saveAccountSettings()
+        return newValue
+    }
+
+    fun toggleShowMessagesInNotifications(): Boolean {
+        val newValue = !showMessagesInNotifications.value
+        showMessagesInNotifications.tryEmit(newValue)
         saveAccountSettings()
         return newValue
     }
@@ -814,6 +823,17 @@ class AccountSettings(
     fun changeDefaultFollowPacksFollowList(name: TopFilter) {
         if (defaultFollowPacksFollowList.value != name) {
             defaultFollowPacksFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultAppRecommendationsFollowList(name: FeedDefinition) {
+        changeDefaultAppRecommendationsFollowList(name.code)
+    }
+
+    fun changeDefaultAppRecommendationsFollowList(name: TopFilter) {
+        if (defaultAppRecommendationsFollowList.value != name) {
+            defaultAppRecommendationsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

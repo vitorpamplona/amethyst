@@ -30,8 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
@@ -58,8 +56,6 @@ class BroadcastRelayListEvent(
 
     companion object {
         const val KIND = 10088
-        const val ALT = "Broadcast relays from this author"
-        val TAGS = arrayOf(AltTag.assemble(ALT))
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, "")
 
@@ -87,7 +83,7 @@ class BroadcastRelayListEvent(
             createdAt: Long = TimeUtils.now(),
         ): BroadcastRelayListEvent {
             val privateTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
-            return signer.signNip51List(createdAt, KIND, TAGS, privateTagArray)
+            return signer.signNip51List(createdAt, KIND, emptyArray(), privateTagArray)
         }
 
         suspend fun create(
@@ -96,7 +92,7 @@ class BroadcastRelayListEvent(
             createdAt: Long = TimeUtils.now(),
         ): BroadcastRelayListEvent {
             val privateTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
-            return signer.signNip51List(createdAt, KIND, TAGS, privateTagArray)
+            return signer.signNip51List(createdAt, KIND, emptyArray(), privateTagArray)
         }
 
         suspend fun build(
@@ -110,7 +106,6 @@ class BroadcastRelayListEvent(
             description = PrivateTagsInContent.encryptNip44(privateRelays.map { RelayTag.assemble(it) }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
-            alt(ALT)
             broadcastRelays(publicRelays)
 
             initializer()

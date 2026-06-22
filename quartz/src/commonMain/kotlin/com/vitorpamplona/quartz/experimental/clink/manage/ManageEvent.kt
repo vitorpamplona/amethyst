@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -87,7 +86,6 @@ class ManageEvent(
 
     companion object {
         const val KIND = 21003
-        const val ALT = "CLINK manage"
 
         /** Builds a request event (app side) addressed to the wallet server. */
         suspend fun createRequest(
@@ -101,7 +99,6 @@ class ManageEvent(
                 eventTemplate(KIND, encrypted, createdAt) {
                     pTag(serverPubKey, null)
                     clinkVersion()
-                    alt(ALT)
                 },
             )
         }
@@ -120,7 +117,6 @@ class ManageEvent(
                     pTag(appPubKey, null)
                     add(ETag.assemble(requestEvent.id, null, null))
                     clinkVersion()
-                    alt(ALT)
                 },
             )
         }

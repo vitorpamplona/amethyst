@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.nip17Dm.files.tags.EncryptionKey
 import com.vitorpamplona.quartz.nip17Dm.files.tags.EncryptionNonce
 import com.vitorpamplona.quartz.nip17Dm.files.tags.FileTypeTag
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
@@ -78,7 +77,6 @@ class ChatMessageEncryptedFileHeaderEvent(
 
     companion object {
         const val KIND = 15
-        const val ALT_DESCRIPTION = "Encrypted file in chat"
 
         fun build(
             to: List<PTag>,
@@ -97,8 +95,6 @@ class ChatMessageEncryptedFileHeaderEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChatMessageEncryptedFileHeaderEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, url, createdAt) {
-            alt(ALT_DESCRIPTION)
-
             group(to)
 
             encryptionAlgo(cipher.name())

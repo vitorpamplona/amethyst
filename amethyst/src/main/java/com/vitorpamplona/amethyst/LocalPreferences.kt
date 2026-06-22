@@ -123,6 +123,7 @@ private object PrefKeys {
     const val DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST = "defaultBrowseEmojiSetsFollowList"
     const val DEFAULT_COMMUNITIES_FOLLOW_LIST = "defaultCommunitiesFollowList"
     const val DEFAULT_FOLLOW_PACKS_FOLLOW_LIST = "defaultFollowPacksFollowList"
+    const val DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST = "defaultAppRecommendationsFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer" // legacy, kept for migration
     const val NWC_WALLETS = "nwcWallets"
     const val DEFAULT_NWC_WALLET_ID = "defaultNwcWalletId" // legacy, migrated into DEFAULT_PAYMENT_SOURCE_ID
@@ -152,6 +153,7 @@ private object PrefKeys {
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
     const val ALWAYS_ON_NOTIFICATION_SERVICE = "always_on_notification_service"
     const val SPLIT_NOTIFICATIONS_ENABLED = "split_notifications_enabled"
+    const val SHOW_MESSAGES_IN_NOTIFICATIONS = "show_messages_in_notifications"
 
     // One-shot stamp: set once an account has gone through the notifications
     // Global -> Selected (Curated) migration (or was created after it shipped).
@@ -406,6 +408,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBrowseEmojiSetsFollowList.value))
                     putString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCommunitiesFollowList.value))
                     putString(PrefKeys.DEFAULT_FOLLOW_PACKS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultFollowPacksFollowList.value))
+                    putString(PrefKeys.DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultAppRecommendationsFollowList.value))
 
                     val walletEntries = settings.nwcWallets.value.mapNotNull { it.denormalize() }
                     if (walletEntries.isNotEmpty()) {
@@ -467,6 +470,7 @@ object LocalPreferences {
                     putBoolean(PrefKeys.CALLS_ENABLED, settings.callsEnabled.value)
                     putBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, settings.alwaysOnNotificationService.value)
                     putBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, settings.splitNotificationsEnabled.value)
+                    putBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, settings.showMessagesInNotifications.value)
                     // Any account that reaches a save has its notification filter in its
                     // post-split meaning, so stamp it as migrated. This keeps the one-shot
                     // Global -> Selected rewrite from ever touching it again and preserves a
@@ -582,6 +586,7 @@ object LocalPreferences {
                     val callsEnabled = getBoolean(PrefKeys.CALLS_ENABLED, true)
                     val alwaysOnNotificationService = getBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, false)
                     val splitNotificationsEnabled = getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)
+                    val showMessagesInNotifications = getBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, true)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
                     val dismissedPollNoteIds = getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null) ?: setOf()
                     val viewedPollResultNoteIdsStr = getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)
@@ -727,6 +732,7 @@ object LocalPreferences {
                         defaultBrowseEmojiSetsFollowList = MutableStateFlow(followListPrefs.browseEmojiSets),
                         defaultCommunitiesFollowList = MutableStateFlow(followListPrefs.communities),
                         defaultFollowPacksFollowList = MutableStateFlow(followListPrefs.followPacks),
+                        defaultAppRecommendationsFollowList = MutableStateFlow(followListPrefs.appRecommendations),
                         nwcWallets = MutableStateFlow(nwcWalletsLoaded.await().first),
                         clinkDebitWallets = MutableStateFlow(clinkDebitsLoaded.await()),
                         // Prefer the new unified default; migrate from the legacy NWC default;
@@ -742,6 +748,7 @@ object LocalPreferences {
                         hideNIP17WarningDialog = hideNIP17WarningDialog,
                         alwaysOnNotificationService = MutableStateFlow(alwaysOnNotificationService),
                         splitNotificationsEnabled = MutableStateFlow(splitNotificationsEnabled),
+                        showMessagesInNotifications = MutableStateFlow(showMessagesInNotifications),
                         backupUserMetadata = latestUserMetadata.await(),
                         backupContactList = latestContactList.await(),
                         backupNIP65RelayList = latestNip65RelayList.await(),
@@ -815,6 +822,7 @@ object LocalPreferences {
         val browseEmojiSets: TopFilter,
         val communities: TopFilter,
         val followPacks: TopFilter,
+        val appRecommendations: TopFilter,
     )
 
     /**
@@ -867,6 +875,7 @@ object LocalPreferences {
             browseEmojiSets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, null), TopFilter.Global),
             communities = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, null), TopFilter.AllFollows),
             followPacks = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_FOLLOW_PACKS_FOLLOW_LIST, null), TopFilter.Global),
+            appRecommendations = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST, null), TopFilter.Global),
         )
 
     private inline fun <reified T : Any> parseOrNull(value: String?): T? {

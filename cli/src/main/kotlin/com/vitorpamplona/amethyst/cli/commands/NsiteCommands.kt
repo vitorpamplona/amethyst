@@ -52,14 +52,15 @@ object NsiteCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "nsite <fetch> …")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "fetch" -> fetch(dataDir, rest)
-            else -> Output.error("bad_args", "nsite ${tail[0]}")
-        }
-    }
+    ): Int =
+        route(
+            "nsite",
+            tail,
+            "nsite <fetch> …",
+            mapOf(
+                "fetch" to { rest -> fetch(dataDir, rest) },
+            ),
+        )
 
     private suspend fun fetch(
         dataDir: DataDir,
@@ -75,8 +76,7 @@ object NsiteCommands {
         val extraServers = StaticSiteFetch.commaList(args.flag("server"))
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val authorHex = ctx.requireUserHex(author)
 
@@ -113,8 +113,6 @@ object NsiteCommands {
                 outFile = outFile,
                 maxInlineBytes = maxInlineBytes,
             )
-        } finally {
-            ctx.close()
         }
     }
 

@@ -24,11 +24,9 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
@@ -55,7 +53,6 @@ class GitRepositoryListEvent(
 
     companion object {
         const val KIND = 10018
-        const val ALT = "Git Repositories List"
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, "")
 
@@ -129,12 +126,7 @@ class GitRepositoryListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): GitRepositoryListEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, content)
         }

@@ -203,11 +203,6 @@ class ChessGameEventTest {
     }
 
     @Test
-    fun `default alt text is Chess Game`() {
-        assertEquals("Chess Game", ChessGameEvent.ALT_DESCRIPTION)
-    }
-
-    @Test
     fun `event inherits from Event base class`() {
         val testEvent =
             ChessGameEvent(

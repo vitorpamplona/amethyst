@@ -25,9 +25,9 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -50,8 +50,20 @@ class WorkoutRecordEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
-    SearchableEvent {
+    SearchableEvent,
+    AddressHintProvider {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
+
+    // POWR / NIP-101e workouts reference kind-33401 exercise templates (and a kind-33402
+    // workout template) by coordinate + relay hint, so the templates can be fetched and
+    // rendered with real names. RUNSTR workouts carry none of these and contribute nothing.
+    override fun addressHints() =
+        buildList {
+            addAll(tags.exerciseSetHints())
+            tags.templateHint()?.let { add(it) }
+        }
+
+    override fun linkedAddressIds() = (tags.exerciseSetAddressIds() + listOfNotNull(tags.templateAddressId())).distinct()
 
     fun title() = tags.title()
 
@@ -87,9 +99,40 @@ class WorkoutRecordEvent(
 
     fun workoutStartTime() = tags.workoutStartTime()
 
+    // --- POWR / NIP-101e strength dialect ---
+
+    fun workoutTypeCode() = tags.workoutTypeCode()
+
+    fun workoutType() = tags.workoutType()
+
+    fun workoutStart() = tags.workoutStart()
+
+    fun workoutEnd() = tags.workoutEnd()
+
+    fun workoutCompleted() = tags.workoutCompleted()
+
+    fun exerciseSets() = tags.exerciseSets()
+
+    fun exerciseGroups() = groupExerciseSets(exerciseSets())
+
+    fun client() = tags.clientName()
+
+    /** Activity type, preferring the POWR `type` tag and falling back to the RUNSTR `exercise` verb. */
+    fun activityType() = workoutType() ?: exerciseType()
+
+    /**
+     * Duration in seconds: the explicit `duration` tag if present (RUNSTR),
+     * otherwise derived from the POWR `start`/`end` session timestamps.
+     */
+    fun effectiveDurationSeconds(): Long? {
+        durationSeconds()?.let { return it }
+        val start = workoutStart()
+        val end = workoutEnd()
+        return if (start != null && end != null && end > start) end - start else null
+    }
+
     companion object {
         const val KIND = 1301
-        const val ALT_DESCRIPTION = "Workout record"
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
@@ -101,7 +144,6 @@ class WorkoutRecordEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<WorkoutRecordEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, notes, createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(workoutId)
             exercise(exercise)
             hashtag(exercise.hashtag)

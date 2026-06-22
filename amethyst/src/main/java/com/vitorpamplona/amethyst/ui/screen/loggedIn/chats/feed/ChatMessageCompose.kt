@@ -187,7 +187,7 @@ fun NormalChatNote(
 
     if (routeForLastRead != null) {
         LaunchedEffect(key1 = routeForLastRead) {
-            accountViewModel.loadAndMarkAsRead(routeForLastRead, note.createdAt())
+            accountViewModel.loadAndMarkAsRead(routeForLastRead, note.createdAt(), dismissNotificationId = note.idHex)
         }
     }
 

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Output
 
 /**
  * `amy notes <post|feed>` — NIP-10 kind:1 short text notes. Sits alongside
@@ -32,13 +31,14 @@ object NotesCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "notes <post|feed> …")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "post" -> PostCommand.run(dataDir, rest)
-            "feed" -> FeedCommand.run(dataDir, rest)
-            else -> Output.error("bad_args", "notes ${tail[0]}")
-        }
-    }
+    ): Int =
+        route(
+            "notes",
+            tail,
+            "notes <post|feed> …",
+            mapOf(
+                "post" to { rest -> PostCommand.run(dataDir, rest) },
+                "feed" to { rest -> FeedCommand.run(dataDir, rest) },
+            ),
+        )
 }

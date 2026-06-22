@@ -25,12 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
@@ -52,7 +49,6 @@ class FavoriteAlgoFeedsListEvent(
 
     companion object {
         const val KIND = 10090
-        const val ALT = "Favorite algo-feeds list"
         const val FIXED_D_TAG = ""
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
@@ -148,12 +144,7 @@ class FavoriteAlgoFeedsListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): FavoriteAlgoFeedsListEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, content)
         }
@@ -183,7 +174,6 @@ class FavoriteAlgoFeedsListEvent(
                 ),
             createdAt = createdAt,
         ) {
-            alt(ALT)
             favoriteAlgoFeeds(publicFeeds)
 
             initializer()

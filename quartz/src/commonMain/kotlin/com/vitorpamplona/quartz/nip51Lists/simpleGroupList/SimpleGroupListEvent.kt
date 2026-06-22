@@ -24,10 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.remove
@@ -48,7 +46,6 @@ class SimpleGroupListEvent(
 
     companion object {
         const val KIND = 10009
-        const val ALT = "Simple Groups List"
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, "")
 
@@ -121,15 +118,6 @@ class SimpleGroupListEvent(
             tags: TagArray,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): SimpleGroupListEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
-
-            return signer.sign(createdAt, KIND, newTags, content)
-        }
+        ): SimpleGroupListEvent = signer.sign(createdAt, KIND, tags, content)
     }
 }

@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -57,7 +56,6 @@ class NutzapRedemptionEvent(
 
     companion object {
         const val KIND = 7376
-        const val ALT_DESCRIPTION = "Nutzap redemption"
 
         fun build(
             nutzap: EventHintBundle<NutzapEvent>,
@@ -65,7 +63,6 @@ class NutzapRedemptionEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NutzapRedemptionEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, encryptedContent, createdAt) {
-            alt(ALT_DESCRIPTION)
             redeemedNutzap(nutzap)
             notifySender(nutzap)
             initializer()

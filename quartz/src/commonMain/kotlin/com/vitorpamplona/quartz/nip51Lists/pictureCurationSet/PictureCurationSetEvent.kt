@@ -25,14 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
@@ -75,7 +72,6 @@ class PictureCurationSetEvent(
 
     companion object {
         const val KIND = 30006
-        const val ALT = "Picture Curation Set"
 
         fun createAddress(
             pubKey: HexKey,
@@ -148,12 +144,7 @@ class PictureCurationSetEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): PictureCurationSetEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, content)
         }
@@ -192,7 +183,6 @@ class PictureCurationSetEvent(
             createdAt = createdAt,
         ) {
             dTag(dTag)
-            alt(ALT)
             title(title)
             bookmarks(publicItems)
 

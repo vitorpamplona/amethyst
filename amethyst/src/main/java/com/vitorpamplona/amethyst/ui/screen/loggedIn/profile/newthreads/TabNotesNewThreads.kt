@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.feeds.PrefetchLoadedFeedMedia
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
@@ -96,6 +97,7 @@ fun TabNotesNewThreads(
                 }
 
                 is FeedState.Loaded -> {
+                    PrefetchLoadedFeedMedia(state, listState, accountViewModel)
                     FeedLoadedWithPinnedNotes(
                         pinnedFeedState = pinnedFeedState as? FeedState.Loaded,
                         loaded = state,

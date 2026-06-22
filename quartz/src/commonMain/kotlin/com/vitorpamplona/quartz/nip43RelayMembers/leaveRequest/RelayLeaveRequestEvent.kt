@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip70ProtectedEvts.protect
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -40,13 +39,11 @@ class RelayLeaveRequestEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 28936
-        const val ALT_DESCRIPTION = "Relay leave request"
 
         fun build(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RelayLeaveRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             protect()
             initializer()
         }

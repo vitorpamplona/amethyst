@@ -196,6 +196,7 @@ import com.vitorpamplona.amethyst.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.ExerciseTemplateDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutDisplay
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -228,6 +229,7 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -242,6 +244,7 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -532,6 +535,7 @@ fun calculateBackgroundColor(
     routeForLastRead: String? = null,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    dismissNotificationId: HexKey? = null,
 ): MutableState<Color> {
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
@@ -544,7 +548,7 @@ fun calculateBackgroundColor(
 
     val isNew =
         remember(createdAt, routeForLastRead) {
-            routeForLastRead != null && accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
+            routeForLastRead != null && accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt, dismissNotificationId)
         }
 
     val bgColor =
@@ -593,6 +597,7 @@ private fun CheckNewAndRenderNote(
             routeForLastRead,
             parentBackgroundColor,
             accountViewModel,
+            dismissNotificationId = baseNote.idHex,
         )
 
     InnerNoteWithReactions(
@@ -1415,6 +1420,10 @@ private fun RenderNoteRow(
 
         is WorkoutRecordEvent -> {
             WorkoutDisplay(baseNote, backgroundColor, canPreview, quotesLeft, accountViewModel, nav)
+        }
+
+        is ExerciseTemplateEvent -> {
+            ExerciseTemplateDisplay(baseNote, backgroundColor, canPreview, quotesLeft, accountViewModel, nav)
         }
 
         is BaseVoiceEvent -> {

@@ -43,6 +43,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.produceState
@@ -59,6 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
@@ -90,10 +92,14 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAss
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.SoftwareReleaseEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.asSoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.AppIdTag
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 
 /**
  * NIP-82 kind 32267 — compact feed card. Renders icon, name, latest version
@@ -188,52 +194,79 @@ fun RenderSoftwareApplication(
 }
 
 /**
- * Looks up the latest NIP-82 [SoftwareReleaseEvent] for [app] from
- * [LocalCache] and exposes the version string. Recomputes on event identity
- * change; relay-driven recompositions of the surrounding feed will pick up
- * newer releases via re-keying.
+ * Latest NIP-82 [SoftwareReleaseEvent] version for [app], kept live.
+ *
+ * Releases (kind 30063) are separate events that point back to the app via an
+ * `i` tag rather than an `a` tag, so they are never indexed as replies to the
+ * app note and never ping its flows. Instead we register an index-driven
+ * [LocalCache.observeNotes] observer, so a newer release arriving while the
+ * card is visible updates the version chip without a manual refresh.
+ *
+ * The filter narrows on the release's `i` tag (the app id), not just the
+ * author, so the observer only ever loads *this* app's releases — an author
+ * with many apps would otherwise pull every release they ever published into
+ * the observer's working set. A blind `limit` is deliberately avoided:
+ * [LocalCache.filter] applies `take(limit)` before sorting by `created_at`,
+ * so it could drop the very release we are looking for.
  */
 @Composable
-fun produceLatestReleaseVersion(app: SoftwareApplicationEvent) =
-    produceState<String?>(initialValue = null, key1 = app.id) {
-        value =
-            withContext(Dispatchers.Default) {
-                findLatestNip82Release(app)?.version()
-            }
-    }
-
-fun findLatestNip82Release(app: SoftwareApplicationEvent): SoftwareReleaseEvent? {
-    val prefix = "${app.dTag()}@"
-    val notes =
-        LocalCache.addressables.filterIntoSet(SoftwareReleaseEvent.KIND, app.pubKey) { _, addr ->
-            val ev = addr.event ?: return@filterIntoSet false
-            ev.isNip82SoftwareRelease() && ev.dTag().startsWith(prefix)
+fun produceLatestReleaseVersion(app: SoftwareApplicationEvent): State<String?> {
+    val flow =
+        remember(app.pubKey, app.id) {
+            val filter =
+                Filter(
+                    kinds = listOf(SoftwareReleaseEvent.KIND),
+                    authors = listOf(app.pubKey),
+                    tags = mapOf(AppIdTag.TAG_NAME to listOf(app.appId())),
+                )
+            LocalCache
+                .observeNotes(filter)
+                .map { notes -> latestNip82Release(notes, app)?.version() }
+                .distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
         }
-    return notes
-        .mapNotNull {
-            when (val ev = it.event) {
-                is SoftwareReleaseEvent -> ev
-                null -> null
-                else -> if (ev.isNip82SoftwareRelease()) ev.asSoftwareRelease() else null
-            }
-        }.maxByOrNull { it.createdAt }
+    return flow.collectAsStateWithLifecycle(initialValue = null)
 }
+
+fun findLatestNip82Release(app: SoftwareApplicationEvent): SoftwareReleaseEvent? = latestNip82Release(nip82ReleaseNotesFor(app), app)
+
+/** Picks the newest NIP-82 release for [app] out of an already-narrowed [notes] collection. */
+private fun latestNip82Release(
+    notes: Collection<Note>,
+    app: SoftwareApplicationEvent,
+): SoftwareReleaseEvent? {
+    val prefix = "${app.dTag()}@"
+    return notes
+        .mapNotNull { it.asNip82ReleaseFor(prefix) }
+        .maxByOrNull { it.createdAt }
+}
+
+/** kind-30063 addressables authored by [app] whose `d` tag is `<app-id>@<version>`. */
+private fun nip82ReleaseNotesFor(app: SoftwareApplicationEvent): Set<Note> {
+    val prefix = "${app.dTag()}@"
+    return LocalCache.addressables.filterIntoSet(SoftwareReleaseEvent.KIND, app.pubKey) { _, addr ->
+        val ev = addr.event ?: return@filterIntoSet false
+        ev.isNip82SoftwareRelease() && ev.dTag().startsWith(prefix)
+    }
+}
+
+/**
+ * Re-reads this note as the NIP-82 release for [prefix] (`<app-id>@`). kind 30063
+ * collides with NIP-51 `ReleaseArtifactSetEvent`, which is what `EventFactory`
+ * builds, so we re-parse matching tag arrays as the NIP-82 form.
+ */
+private fun Note.asNip82ReleaseFor(prefix: String): SoftwareReleaseEvent? =
+    when (val ev = event) {
+        null -> null
+        is SoftwareReleaseEvent -> ev.takeIf { it.dTag().startsWith(prefix) }
+        else -> if (ev.isNip82SoftwareRelease() && ev.dTag().startsWith(prefix)) ev.asSoftwareRelease() else null
+    }
 
 fun findAllNip82Releases(app: SoftwareApplicationEvent): List<SoftwareReleaseEvent> {
     val prefix = "${app.dTag()}@"
-    val notes =
-        LocalCache.addressables.filterIntoSet(SoftwareReleaseEvent.KIND, app.pubKey) { _, addr ->
-            val ev = addr.event ?: return@filterIntoSet false
-            ev.isNip82SoftwareRelease() && ev.dTag().startsWith(prefix)
-        }
-    return notes
-        .mapNotNull {
-            when (val ev = it.event) {
-                is SoftwareReleaseEvent -> ev
-                null -> null
-                else -> if (ev.isNip82SoftwareRelease()) ev.asSoftwareRelease() else null
-            }
-        }.sortedByDescending { it.createdAt }
+    return nip82ReleaseNotesFor(app)
+        .mapNotNull { it.asNip82ReleaseFor(prefix) }
+        .sortedByDescending { it.createdAt }
 }
 
 @Composable

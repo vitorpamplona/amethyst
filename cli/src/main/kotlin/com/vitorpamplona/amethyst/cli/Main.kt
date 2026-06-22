@@ -20,7 +20,28 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.vitorpamplona.amethyst.cli.commands.Commands
+import com.vitorpamplona.amethyst.cli.commands.AwaitCommands
+import com.vitorpamplona.amethyst.cli.commands.CreateCommand
+import com.vitorpamplona.amethyst.cli.commands.DebitCommands
+import com.vitorpamplona.amethyst.cli.commands.DmCommands
+import com.vitorpamplona.amethyst.cli.commands.FollowCommand
+import com.vitorpamplona.amethyst.cli.commands.GroupCommands
+import com.vitorpamplona.amethyst.cli.commands.InitCommands
+import com.vitorpamplona.amethyst.cli.commands.KeyPackageCommands
+import com.vitorpamplona.amethyst.cli.commands.LoginCommand
+import com.vitorpamplona.amethyst.cli.commands.MarmotResetCommand
+import com.vitorpamplona.amethyst.cli.commands.MessageCommands
+import com.vitorpamplona.amethyst.cli.commands.NappletCommands
+import com.vitorpamplona.amethyst.cli.commands.NotesCommands
+import com.vitorpamplona.amethyst.cli.commands.NsiteCommands
+import com.vitorpamplona.amethyst.cli.commands.OfferCommands
+import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
+import com.vitorpamplona.amethyst.cli.commands.RelayCommands
+import com.vitorpamplona.amethyst.cli.commands.SearchCommand
+import com.vitorpamplona.amethyst.cli.commands.StoreCommands
+import com.vitorpamplona.amethyst.cli.commands.UseCommand
+import com.vitorpamplona.amethyst.cli.commands.ZapCommand
+import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
 import kotlinx.coroutines.runBlocking
 import kotlin.system.exitProcess
@@ -118,86 +139,31 @@ private suspend fun dispatch(argv: Array<String>): Int {
     // resolve "multiple accounts, ambiguous" cases) — so it skips
     // DataDir.resolve. Other commands fall through to the normal path.
     if (head == "use") {
-        return com.vitorpamplona.amethyst.cli.commands.UseCommand
-            .run(tail)
+        return UseCommand.run(tail)
     }
 
     val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
     val dataDir = DataDir.resolve(accountFlag = accountFlag, secrets = secrets)
 
     return when (head) {
-        "init" -> {
-            Commands.init(dataDir, Args(tail))
-        }
-
-        "create" -> {
-            Commands.create(dataDir, tail)
-        }
-
-        "login" -> {
-            Commands.login(dataDir, tail)
-        }
-
-        "whoami" -> {
-            Commands.whoami(dataDir)
-        }
-
-        "relay" -> {
-            Commands.relay(dataDir, tail)
-        }
-
-        "marmot" -> {
-            marmotDispatch(dataDir, tail)
-        }
-
-        "dm" -> {
-            Commands.dm(dataDir, tail)
-        }
-
-        "profile" -> {
-            Commands.profile(dataDir, tail)
-        }
-
-        "notes" -> {
-            Commands.notes(dataDir, tail)
-        }
-
-        "nsite" -> {
-            Commands.nsite(dataDir, tail)
-        }
-
-        "napplet" -> {
-            Commands.napplet(dataDir, tail)
-        }
-
-        "store" -> {
-            Commands.store(dataDir, tail)
-        }
-
-        "follow" -> {
-            Commands.follow(dataDir, tail)
-        }
-
-        "unfollow" -> {
-            Commands.unfollow(dataDir, tail)
-        }
-
-        "search" -> {
-            Commands.search(dataDir, tail)
-        }
-
-        "zap" -> {
-            Commands.zap(dataDir, tail)
-        }
-
-        "offer" -> {
-            Commands.offer(dataDir, tail)
-        }
-
-        "debit" -> {
-            Commands.debit(dataDir, tail)
-        }
-
+        "init" -> InitCommands.init(dataDir, Args(tail))
+        "create" -> CreateCommand.run(dataDir, tail)
+        "login" -> LoginCommand.run(dataDir, tail)
+        "whoami" -> InitCommands.whoami(dataDir)
+        "relay" -> RelayCommands.dispatch(dataDir, tail)
+        "marmot" -> marmotDispatch(dataDir, tail)
+        "dm" -> DmCommands.dispatch(dataDir, tail)
+        "profile" -> ProfileCommands.dispatch(dataDir, tail)
+        "notes" -> NotesCommands.dispatch(dataDir, tail)
+        "nsite" -> NsiteCommands.dispatch(dataDir, tail)
+        "napplet" -> NappletCommands.dispatch(dataDir, tail)
+        "store" -> StoreCommands.dispatch(dataDir, tail)
+        "follow" -> FollowCommand.follow(dataDir, tail)
+        "unfollow" -> FollowCommand.unfollow(dataDir, tail)
+        "search" -> SearchCommand.dispatch(dataDir, tail)
+        "zap" -> ZapCommand.dispatch(dataDir, tail)
+        "offer" -> OfferCommands.dispatch(dataDir, tail)
+        "debit" -> DebitCommands.dispatch(dataDir, tail)
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -209,41 +175,20 @@ private suspend fun dispatch(argv: Array<String>): Int {
 private suspend fun marmotDispatch(
     dataDir: DataDir,
     tail: Array<String>,
-): Int {
-    if (tail.isEmpty()) {
-        printUsage()
-        return 2
-    }
-    val head = tail[0]
-    val rest = tail.drop(1).toTypedArray()
-    return when (head) {
-        "key-package" -> {
-            Commands.keyPackage(dataDir, rest)
-        }
-
-        "group" -> {
-            Commands.group(dataDir, rest)
-        }
-
-        "message" -> {
-            Commands.message(dataDir, rest)
-        }
-
-        "await" -> {
-            Commands.await(dataDir, rest)
-        }
-
-        "reset" -> {
-            Commands.reset(dataDir, rest)
-        }
-
-        else -> {
-            System.err.println("unknown marmot subcommand: $head")
-            printUsage()
-            2
-        }
-    }
-}
+): Int =
+    route(
+        name = "marmot",
+        tail = tail,
+        usage = "marmot <key-package|group|message|await|reset>",
+        routes =
+            mapOf(
+                "key-package" to { rest -> KeyPackageCommands.dispatch(dataDir, rest) },
+                "group" to { rest -> GroupCommands.dispatch(dataDir, rest) },
+                "message" to { rest -> MessageCommands.dispatch(dataDir, rest) },
+                "await" to { rest -> AwaitCommands.dispatch(dataDir, rest) },
+                "reset" to { rest -> MarmotResetCommand.run(dataDir, rest) },
+            ),
+    )
 
 private enum class GlobalFlag(
     val long: String,

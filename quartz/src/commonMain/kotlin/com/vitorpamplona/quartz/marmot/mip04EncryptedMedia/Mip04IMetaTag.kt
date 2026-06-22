@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.marmot.mip04EncryptedMedia
 
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.utils.Log
@@ -167,6 +168,7 @@ fun buildMip04IMetaTag(
     dimensions: String? = null,
     blurhash: String? = null,
     thumbhash: String? = null,
+    alt: String? = null,
 ): IMetaTag =
     IMetaTagBuilder(url)
         .apply {
@@ -178,4 +180,6 @@ fun buildMip04IMetaTag(
             dimensions?.let { add(Mip04Fields.DIMENSIONS, it) }
             blurhash?.let { add(Mip04Fields.BLURHASH, it) }
             thumbhash?.let { add(Mip04Fields.THUMBHASH, it) }
+            // imeta accessibility description (NIP-92/94 "alt"); only when provided.
+            alt?.ifBlank { null }?.let { add(AltTag.TAG_NAME, it) }
         }.build()

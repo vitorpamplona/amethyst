@@ -45,15 +45,16 @@ object ProfileCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "profile <show|edit> …")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "show" -> show(dataDir, rest)
-            "edit" -> edit(dataDir, rest)
-            else -> Output.error("bad_args", "profile ${tail[0]}")
-        }
-    }
+    ): Int =
+        route(
+            "profile",
+            tail,
+            "profile <show|edit> …",
+            mapOf(
+                "show" to { rest -> show(dataDir, rest) },
+                "edit" to { rest -> edit(dataDir, rest) },
+            ),
+        )
 
     private suspend fun show(
         dataDir: DataDir,
@@ -62,8 +63,7 @@ object ProfileCommands {
         val args = Args(rest)
         val refresh = args.bool("refresh")
         val timeoutSecs = args.longFlag("timeout", 8L)
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val pubKey =
                 args.positionalOrNull(0)?.let { ctx.requireUserHex(it) }
@@ -118,8 +118,6 @@ object ProfileCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -161,8 +159,7 @@ object ProfileCommands {
             )
         }
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val targets = ctx.outboxRelays().ifEmpty { ctx.bootstrapRelays() }
             val latest =
@@ -226,8 +223,6 @@ object ProfileCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 

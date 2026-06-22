@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
@@ -30,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -47,7 +45,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
-import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
@@ -116,6 +113,23 @@ fun NoteDropDownMenu(
 ) {
     var reportDialogShowing by remember { mutableStateOf(false) }
     var addLabelDialogShowing by remember { mutableStateOf(false) }
+    var showShareSheet by remember { mutableStateOf(false) }
+
+    // Tapping "Share" hands the note's share options off to the shared Share
+    // drawer (ShareOptionsBottomSheet). We render it INSTEAD of the menu dialog
+    // — not on top of it — so the menu doesn't sit dimmed behind the sheet;
+    // dismissing the drawer closes the whole menu.
+    if (showShareSheet) {
+        ShareOptionsBottomSheet(
+            note = note,
+            nav = nav,
+            onDismiss = {
+                showShareSheet = false
+                onDismiss()
+            },
+        )
+        return
+    }
 
     val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
         DropDownParams(
@@ -158,7 +172,6 @@ fun NoteDropDownMenu(
         onDismiss = onDismiss,
     ) {
         val clipboardManager = LocalClipboard.current
-        val actContext = LocalContext.current
         val scope = rememberCoroutineScope()
 
         // Unsealed rumors (private replies/posts received in gift wraps) are
@@ -189,7 +202,8 @@ fun NoteDropDownMenu(
             }
         }
 
-        // Copy & Share section
+        // Copy & Share section. The copy-to-clipboard rows live here (and only
+        // here); the "Share" row hands off to the shared Share drawer.
         M3ActionSection {
             M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_text)) {
                 val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
@@ -228,26 +242,7 @@ fun NoteDropDownMenu(
             }
             if (!isPrivateRumor) {
                 M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.quick_action_share)) {
-                    val sendIntent =
-                        Intent().apply {
-                            action = Intent.ACTION_SEND
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, externalLinkForNote(note))
-                            putExtra(Intent.EXTRA_TITLE, stringRes(actContext, R.string.quick_action_share_browser_link))
-                        }
-                    val shareIntent = Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
-                    actContext.startActivity(shareIntent)
-                    onDismiss()
-                }
-                M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(R.string.share_as_image)) {
-                    val shareId = if (note is AddressableNote) note.address.toValue() else note.idHex
-                    nav.nav(Route.ShareNoteAsImageFile(shareId))
-                    onDismiss()
-                }
-                M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(R.string.share_as_image_url)) {
-                    val shareId = if (note is AddressableNote) note.address.toValue() else note.idHex
-                    nav.nav(Route.ShareNoteAsImage(shareId))
-                    onDismiss()
+                    showShareSheet = true
                 }
             }
         }

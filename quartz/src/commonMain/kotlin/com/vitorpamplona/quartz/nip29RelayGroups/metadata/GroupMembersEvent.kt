@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -45,7 +44,6 @@ class GroupMembersEvent(
 
     companion object {
         const val KIND = 39002
-        const val ALT_DESCRIPTION = "Group members"
 
         fun build(
             groupId: String,
@@ -53,7 +51,6 @@ class GroupMembersEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GroupMembersEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(groupId)
             memberPubKeys.forEach { add(arrayOf("p", it)) }
             initializer()

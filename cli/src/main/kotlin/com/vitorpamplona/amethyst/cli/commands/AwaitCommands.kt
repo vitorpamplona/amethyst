@@ -42,20 +42,21 @@ object AwaitCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "await <key-package|group|member|admin|message|rename|epoch>")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "key-package" -> awaitKeyPackage(dataDir, rest)
-            "group" -> awaitGroup(dataDir, rest)
-            "member" -> awaitMember(dataDir, rest)
-            "admin" -> awaitAdmin(dataDir, rest)
-            "message" -> awaitMessage(dataDir, rest)
-            "rename" -> awaitRename(dataDir, rest)
-            "epoch" -> awaitEpoch(dataDir, rest)
-            else -> Output.error("bad_args", "await ${tail[0]}")
-        }
-    }
+    ): Int =
+        route(
+            "await",
+            tail,
+            "await <key-package|group|member|admin|message|rename|epoch>",
+            mapOf(
+                "key-package" to { rest -> awaitKeyPackage(dataDir, rest) },
+                "group" to { rest -> awaitGroup(dataDir, rest) },
+                "member" to { rest -> awaitMember(dataDir, rest) },
+                "admin" to { rest -> awaitAdmin(dataDir, rest) },
+                "message" to { rest -> awaitMessage(dataDir, rest) },
+                "rename" to { rest -> awaitRename(dataDir, rest) },
+                "epoch" to { rest -> awaitEpoch(dataDir, rest) },
+            ),
+        )
 
     private suspend fun awaitKeyPackage(
         dataDir: DataDir,
@@ -64,8 +65,7 @@ object AwaitCommands {
         if (rest.isEmpty()) return Output.error("bad_args", "await key-package <npub>")
         val args = Args(rest.drop(1).toTypedArray())
         val timeoutSecs = args.longFlag("timeout", 30)
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val target = ctx.requireUserHex(rest[0])
             val filter = ctx.marmot.subscriptionManager.keyPackageFilter(target)
@@ -112,8 +112,6 @@ object AwaitCommands {
                 delay(2_000)
             }
             throw AwaitTimeout("no KeyPackage for $target within ${timeoutSecs}s")
-        } finally {
-            ctx.close()
         }
     }
 
@@ -124,8 +122,7 @@ object AwaitCommands {
         val args = Args(rest)
         val wantedName = args.flag("name")
         val timeoutSecs = args.longFlag("timeout", 30)
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
             while (System.currentTimeMillis() < deadline) {
@@ -148,8 +145,6 @@ object AwaitCommands {
                 delay(1_500)
             }
             throw AwaitTimeout("no group with name=$wantedName within ${timeoutSecs}s")
-        } finally {
-            ctx.close()
         }
     }
 
@@ -197,8 +192,7 @@ object AwaitCommands {
         val args = Args(rest.drop(1).toTypedArray())
         val wantedName = args.requireFlag("name")
         val timeoutSecs = args.longFlag("timeout", 30)
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
@@ -212,8 +206,6 @@ object AwaitCommands {
                 delay(1_500)
             }
             throw AwaitTimeout("group $gid never renamed to $wantedName within ${timeoutSecs}s")
-        } finally {
-            ctx.close()
         }
     }
 
@@ -225,8 +217,7 @@ object AwaitCommands {
         val args = Args(rest.drop(1).toTypedArray())
         val min = args.longFlag("min", 1)
         val timeoutSecs = args.longFlag("timeout", 30)
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
@@ -240,8 +231,6 @@ object AwaitCommands {
                 delay(1_500)
             }
             throw AwaitTimeout("group $gid epoch never reached $min within ${timeoutSecs}s")
-        } finally {
-            ctx.close()
         }
     }
 
@@ -253,8 +242,7 @@ object AwaitCommands {
         val args = Args(rest.drop(1).toTypedArray())
         val needle = args.requireFlag("match")
         val timeoutSecs = args.longFlag("timeout", 30)
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
@@ -285,8 +273,6 @@ object AwaitCommands {
                 delay(1_500)
             }
             throw AwaitTimeout("no message matching '$needle' in $gid within ${timeoutSecs}s")
-        } finally {
-            ctx.close()
         }
     }
 
@@ -304,8 +290,7 @@ object AwaitCommands {
         if (rest.size <= targetIdx) return Output.error("bad_args", usage)
         val args = Args(rest.drop(targetIdx + 1).toTypedArray())
         val timeoutSecs = args.longFlag("timeout", 30)
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
             while (System.currentTimeMillis() < deadline) {
@@ -318,8 +303,6 @@ object AwaitCommands {
                 delay(1_500)
             }
             throw AwaitTimeout("condition never satisfied within ${timeoutSecs}s ($usage)")
-        } finally {
-            ctx.close()
         }
     }
 }

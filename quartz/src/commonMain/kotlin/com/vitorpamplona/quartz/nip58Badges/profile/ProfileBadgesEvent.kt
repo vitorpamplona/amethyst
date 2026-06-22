@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip58Badges.accepted.tags.AcceptedBadge
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -69,7 +68,6 @@ class ProfileBadgesEvent(
 
     companion object {
         const val KIND = 10008
-        const val ALT_DESCRIPTION = "List of accepted badges by the author"
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, "")
 
@@ -85,7 +83,6 @@ class ProfileBadgesEvent(
             // the builder, then append the ordered pair tags verbatim.
             val prefix =
                 tagArray<ProfileBadgesEvent> {
-                    alt(ALT_DESCRIPTION)
                     initializer()
                 }
             val pairs = AcceptedBadge.assemble(acceptedBadges).toTypedArray()

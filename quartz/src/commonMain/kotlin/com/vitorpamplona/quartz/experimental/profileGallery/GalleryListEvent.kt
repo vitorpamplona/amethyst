@@ -24,7 +24,6 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -41,7 +40,6 @@ class GalleryListEvent(
     @Suppress("DEPRECATION")
     companion object {
         const val KIND = 10011
-        const val ALT = "Profile Gallery"
         const val GALLERY_TAG_NAME = "url"
 
         suspend fun addEvent(
@@ -127,16 +125,7 @@ class GalleryListEvent(
             tags: Array<Array<String>>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): GalleryListEvent {
-            val newTags =
-                if (tags.any { it.size > 1 && it[0] == "alt" }) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
-
-            return signer.sign(createdAt, KIND, newTags, content)
-        }
+        ): GalleryListEvent = signer.sign(createdAt, KIND, tags, content)
     }
 
     @Immutable

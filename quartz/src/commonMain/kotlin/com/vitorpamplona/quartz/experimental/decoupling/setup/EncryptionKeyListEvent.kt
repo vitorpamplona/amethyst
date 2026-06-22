@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventUpdate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -43,7 +42,6 @@ class EncryptionKeyListEvent(
 
     companion object {
         const val KIND = 10044
-        const val ALT = "Encryption keys"
 
         fun add(
             key: KeyTag,
@@ -51,7 +49,6 @@ class EncryptionKeyListEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<EncryptionKeyListEvent>.() -> Unit = {},
         ) = eventUpdate(currentEvent, createdAt) {
-            alt(ALT)
             key(key)
             initializer()
         }
@@ -62,7 +59,6 @@ class EncryptionKeyListEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<EncryptionKeyListEvent>.() -> Unit = {},
         ) = eventUpdate(currentEvent, createdAt) {
-            alt(ALT)
             removeIf(KeyTag::isSameKey, key.toTagArray())
             initializer()
         }
@@ -72,7 +68,6 @@ class EncryptionKeyListEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<EncryptionKeyListEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             keys(keys)
             initializer()
         }

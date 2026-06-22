@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -70,13 +69,11 @@ class NIP90ContentSearchResponseEvent(
 
     companion object {
         const val KIND = 6302
-        const val ALT = "NIP90 Content Search response"
 
         fun build(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90ContentSearchResponseEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             initializer()
         }
     }

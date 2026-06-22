@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip35Torrents.tags.BtihTag
 import com.vitorpamplona.quartz.nip35Torrents.tags.FileTag
 import com.vitorpamplona.quartz.nip35Torrents.tags.InfoHashTag
@@ -98,7 +97,6 @@ class TorrentEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<TorrentEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description ?: "", createdAt) {
-            alt(ALT_DESCRIPTION)
             initializer()
         }
 
@@ -109,11 +107,9 @@ class TorrentEvent(
             description: String? = null,
             x: String? = null,
             trackers: List<String>? = null,
-            alt: String? = null,
             contentWarningReason: String? = null,
             createdAt: Long = TimeUtils.now(),
         ) = eventTemplate(KIND, description ?: "", createdAt) {
-            alt(alt ?: ALT_DESCRIPTION)
             title(title)
             btih(btih)
             files(files)

@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.opponent
@@ -61,7 +60,6 @@ class LiveChessGameChallengeEvent(
 
     companion object {
         const val KIND = 30064
-        const val ALT_DESCRIPTION = "Chess game challenge"
 
         fun build(
             gameId: String,
@@ -75,7 +73,6 @@ class LiveChessGameChallengeEvent(
             playerColor(playerColor)
             opponent?.let { opponent(opponent) }
             timeControl?.let { timeControl(it) }
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

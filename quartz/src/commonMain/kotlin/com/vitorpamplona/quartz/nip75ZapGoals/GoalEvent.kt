@@ -40,7 +40,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.reference
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.AmountTag
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.ClosedAtTag
@@ -88,7 +87,6 @@ class GoalEvent(
 
     companion object {
         const val KIND = 9041
-        const val ALT_DESCRIPTION = "Zap Goal"
 
         fun build(
             description: String,
@@ -114,7 +112,6 @@ class GoalEvent(
                 }
                 linked(it.toETag())
             }
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

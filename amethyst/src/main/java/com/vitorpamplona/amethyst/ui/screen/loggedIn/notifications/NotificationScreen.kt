@@ -313,8 +313,11 @@ fun WatchAccountForNotifications(
 ) {
     val listState by
         accountViewModel.account.liveNotificationFollowLists.collectAsStateWithLifecycle()
+    val showMessages by
+        accountViewModel.account.settings.showMessagesInNotifications
+            .collectAsStateWithLifecycle()
 
-    LaunchedEffect(accountViewModel, listState) {
+    LaunchedEffect(accountViewModel, listState, showMessages) {
         notifFeedContentState.checkKeysInvalidateDataAndSendToTop()
     }
 }

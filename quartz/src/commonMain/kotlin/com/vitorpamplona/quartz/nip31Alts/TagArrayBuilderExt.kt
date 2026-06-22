@@ -23,4 +23,11 @@ package com.vitorpamplona.quartz.nip31Alts
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
+/**
+ * Writes an `alt` tag. The generic NIP-31 "alt" client-hint is deprecated, so do
+ * NOT use this to add a boilerplate description of the event kind. It remains only
+ * for file-metadata events (e.g. NIP-94 kind 1063, NIP-17 encrypted file headers)
+ * where the `alt` tag is the accessibility description of the file itself, and only
+ * when the user actually provided one.
+ */
 fun <T : Event> TagArrayBuilder<T>.alt(altDescriptor: String) = addUnique(AltTag.assemble(altDescriptor))

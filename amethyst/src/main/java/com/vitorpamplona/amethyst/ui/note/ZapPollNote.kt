@@ -104,7 +104,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -204,7 +203,6 @@ fun ZapZapPollNotePreview2() {
                     arrayOf("poll_option", "1", "Pesquisa em ingles"),
                     arrayOf("value_maximum", "2"),
                     arrayOf("value_minimum", "2"),
-                    AltTag.assemble("Poll event"),
                 ),
         )
 

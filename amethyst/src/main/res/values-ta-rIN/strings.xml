@@ -14,8 +14,6 @@
     <string name="spam">எரிதம் (தேவையற்றவை)</string>
     <string name="impersonation">ஆள்மாறாட்டம்</string>
     <string name="illegal_behavior">சட்டவிரோத நடத்தை</string>
-    <string name="unknown">தெரியாதவை</string>
-    <string name="relay_icon">ரிலே ஐகான்</string>
     <string name="unknown_author">எழுதியவர் தெரியவில்லை</string>
     <string name="copy_text">உரையை நகலெடுக்கவும்</string>
     <string name="copy_user_pubkey">எழுதியவர் IDஐ நகலெடுக்கவும்</string>
@@ -25,7 +23,6 @@
     <string name="block_hide_user"><![CDATA[பயனரை முடக்கு + மறை]]></string>
     <string name="report_spam_scam">எரிதம் / மோசடி என்று புகாரளிக்கவும்</string>
     <string name="report_impersonation">ஆள்மாறாட்டத்தைப் புகாரளிக்கவும்</string>
-    <string name="report_explicit_content">வெளிப்படையான உள்ளடக்கத்தைப் புகாரளிக்கவும்</string>
     <string name="report_illegal_behaviour">சட்டப்புறம்பான நடத்தையைப் புகாரளிக்கவும்</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">பதிலளிக்க ஒரு தனிப்பட்ட சாவியுடன் உள்நுழைக</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">குறிப்புகளை உயர்த்த ஒரு தனிப்பட்ட சாவியுடன் உள்நுழைக</string>
@@ -33,7 +30,6 @@
     <string name="no_zap_amount_setup_long_press_to_change">ஜாப் தொகை அமைப்பு இல்லை. மாற்ற நீண்ட நேரம் அழுத்தவும்</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">ஜாப்களை அனுப்ப ஒரு தனிப்பட்ட சாவியுடன் உள்நுழைக</string>
     <string name="zaps">ஜாப்கள்</string>
-    <string name="view_count">பார்வை எண்ணிக்கை</string>
     <string name="boost">உயர்த்து</string>
     <string name="boosted">உயர்த்தப்பட்டது</string>
     <string name="quote">மேற்கோள் காட்டு</string>
@@ -41,7 +37,6 @@
     <string name="add">சேர்</string>
     <string name="replying_to">"பதில்  பெறுநர் "</string>
     <string name="and">"மற்றும்"</string>
-    <string name="in_channel">"அலை வரிசையில் "</string>
     <string name="profile_banner">தன்விவர பேனர்</string>
     <string name="following">" பின்பற்றப்படுவோர்"</string>
     <string name="followers">" பின்பற்றுவோர்"</string>
@@ -56,9 +51,7 @@
     <string name="thank_you_so_much">மிக்க நன்றி!</string>
     <string name="amount_in_sats">தொகை (ஸாட்களில்)</string>
     <string name="send_sats">ஸாட்கள் அனுப்பவும்</string>
-    <string name="error_parsing_preview_for">"%1$s க்கான முன்னோட்டத்தை புரிந்து கொள்வதில் பிழை: %2$s"</string>
     <string name="preview_card_image_for">" %1$s க்கான முன்னோட்ட அட்டைப் படம்"</string>
-    <string name="new_channel">புதிய அலைவரிசை</string>
     <string name="channel_name">அலைவரிசைப் பெயர்</string>
     <string name="my_awesome_group">எனது அருமையான குழு</string>
     <string name="picture_url">படச்சுட்டி</string>
@@ -69,35 +62,20 @@
     <string name="save">சேமி</string>
     <string name="create">உருவாக்கு</string>
     <string name="cancel">ரத்து</string>
-    <string name="failed_to_upload_the_image">படத்தை பதிவேற்ற இயலவில்லை</string>
-    <string name="relay_address">ரிலே முகவரி</string>
-    <string name="posts">குறிப்புகள்</string>
-    <string name="bytes">துணுக்குகள்</string>
     <string name="errors">பிழைகள்</string>
-    <string name="home_feed">முகப்பு ஊட்டம்</string>
-    <string name="private_message_feed">தனிசெய்தி ஊட்டம்</string>
-    <string name="public_chat_feed">பொது செய்தி ஊட்டம்</string>
-    <string name="global_feed">முழுதளாவிய ஊட்டம்</string>
-    <string name="search_feed">தேடுதல் ஊட்டம்</string>
     <string name="add_a_relay">ஒரு ரிலேவை சேர்</string>
     <string name="display_name">காட்சிப் பெயர்</string>
     <string name="my_display_name">எனது காட்சிப் பெயர்</string>
     <string name="username">பயனர் பெயர்</string>
-    <string name="my_username">எனது பயனர் பெயர்</string>
     <string name="about_me">என்னைப் பற்றி</string>
     <string name="avatar_url">தன்விவரப் படச் சுட்டி</string>
     <string name="banner_url">பேனர் சுட்டி</string>
     <string name="website_url">வலைதள முகவரி</string>
-    <string name="ln_address">LN முகவரி </string>
-    <string name="ln_url_outdated">LN URL (காலாவதியானது)</string>
     <string name="image_saved_to_the_gallery">படம் காட்சியகத்தில் சேமிக்கப்பட்டது</string>
     <string name="failed_to_save_the_image">படத்தைச் சேமிக்க இயலவில்லை</string>
     <string name="upload_image">படத்தைப் பதிவேற்று</string>
-    <string name="uploading">பதிவேற்றுகிறது….</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">பயனர் ஸாட்கள் பெறுவதற்கு லைட்னிங் முகவரி அமைக்கவில்லை</string>
     <string name="reply_here">"இங்கு பதிலளிக்கவும்.. "</string>
-    <string name="copies_the_note_id_to_the_clipboard_for_sharing">குறிப்பு ID ஐ கிளிப்போர்டில் பிரதி எடுக்கும்</string>
-    <string name="copy_channel_id_note_to_the_clipboard">அலைவரிசை ID ஐ கிளிப்போர்டில் பிரதி எடு</string>
     <string name="edits_the_channel_metadata">அலைவரிசை பற்றிய தகவல்களை மாற்றும்</string>
     <string name="join">சேர்</string>
     <string name="known">தெரிந்த</string>
@@ -107,16 +85,12 @@
     <string name="conversations">உரையாடல்கள்</string>
     <string name="notes">குறிப்புகள்</string>
     <string name="replies">பதில்கள்</string>
-    <string name="follows">"பின்தொடரப்படுவோர்"</string>
     <string name="reports">"புகார்கள்"</string>
     <string name="more_options">மேலும் </string>
     <string name="relays">" ரிலேகள்"</string>
     <string name="website">இணையதளம்</string>
     <string name="lightning_address">லைட்னிங் முகவரி</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Nsec IDயை (உங்கள் கடவுச்சொல்) காப்புப்பிரதிக்காக கிளிப்போர்டுக்கு நகலெடுக்கிறது</string>
-    <string name="copy_private_key_to_the_clipboard">கிளிப்போர்டுக்கு ரகசிய சாவியை நகலெடுக்கவும்</string>
-    <string name="copies_the_public_key_to_the_clipboard_for_sharing">பகிர்வுக்காக கிளிப்போர்டுக்கு பொதுசாவியை நகலெடுக்கிறது</string>
-    <string name="copy_public_key_npub_to_the_clipboard">கிளிப்போர்டுக்கு பொதுசாவியை (NPUB) நகலெடுக்கவும்</string>
     <string name="send_a_direct_message">நேரடிச் செய்தியை அனுப்பு</string>
     <string name="edits_the_user_s_metadata">பயனரின் தகவலை திருத்துகிறது</string>
     <string name="follow">பின்தொடர்</string>
@@ -136,7 +110,6 @@
     <string name="acceptance_of_terms_is_required">விதிமுறைகளை ஏற்பது கட்டாயம்</string>
     <string name="key_is_required">சாவி தேவை</string>
     <string name="login">உள்நுழைக</string>
-    <string name="generate_a_new_key">புதிய சாவியை உருவாக்குக</string>
     <string name="loading_feed">ஊட்டம் ஏற்றப்படுகிறது</string>
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
@@ -144,12 +117,6 @@
     <string name="try_again">மறுமுயற்சி செய்</string>
     <string name="feed_is_empty">ஊட்டம் காலியாக உள்ளது.</string>
     <string name="refresh">புதுப்பி</string>
-    <string name="created">உருவாக்கப்பட்டது</string>
-    <string name="with_description_of">விளக்கம்:</string>
-    <string name="and_picture">மற்றும் படம்</string>
-    <string name="changed_chat_name_to">மாற்றப்பட்ட அரட்டை பெயர்</string>
-    <string name="description_to">விளக்கம்</string>
-    <string name="and_picture_to">மற்றும் படம்</string>
     <string name="leave">வெளியேறு</string>
     <string name="unfollow">பின்தொடர்வதை நிறுத்து</string>
     <string name="channel_created">அலைவரிசை உருவாக்கப்பட்டது</string>
@@ -168,7 +135,6 @@
     <string name="profanity_hateful_speech">அவதூறு / வெறுப்புப் பேச்சு</string>
     <string name="report_hateful_speech">வெறுப்புப் பேச்சைப் புகாரளிக்கவும்</string>
     <string name="report_nudity_porn">பிறந்தமேனி / ஆபாசத்தைப் புகாரளிக்கவும்</string>
-    <string name="others">பிற</string>
     <string name="mark_all_known_as_read">தெரிந்தவற்றைப் படித்ததாகக் குறி</string>
     <string name="mark_all_new_as_read">புதியனவற்றைப் படித்ததாகக் குறி</string>
     <string name="mark_all_as_read">அனைத்தையும் படித்ததாகக் குறி</string>
@@ -176,23 +142,18 @@
     <string name="secret_key_copied_to_clipboard">ரகசிய சாவி (nsec) கிளிப்போர்டுக்கு நகலெடுக்கப்பட்டது</string>
     <string name="copy_my_secret_key">எனது ரகசிய சாவியை நகலெடுக்கவும்</string>
     <string name="biometric_authentication_failed">அங்கீகரிப்பு தோல்வியுற்றது</string>
-    <string name="biometric_error">பிழை</string>
-    <string name="badge_created_by">" %1$s ஆல் உருவாக்கப்பட்டது"</string>
     <string name="badge_award_image_for">" %1$s க்கான பேட்ஜ் விருது படம்"</string>
     <string name="new_badge_award_notif">நீங்கள் ஒரு புதிய பேட்ஜ் விருதைப் பெற்றீர்கள்</string>
     <string name="award_granted_to">பேட்ஜ் விருது வழங்கப்பட்டது. பெறுநர்:</string>
     <string name="copied_note_text_to_clipboard">குறிப்பு கிளிப்போர்டுக்கு நகலெடுக்கப் பட்டது</string>
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">கிளிப்போர்டுக்கு எழுத்தாளரின் @npub நகலெடுக்கப் பட்டது</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">கிளிப்போர்டுக்கு குறிப்பு ஐடி (@note1) நகலெடுக்கப் பட்டது</string>
-    <string name="select_text_dialog_top">உரையைத் தேர்ந்தெடுக்கவும்</string>
     <string name="private_conversation_notification">"தனிப்பட்ட செய்தியை மறைக்குறியாக்க இயலவில்லை \n \n %1$s மற்றும் %2$s க்கு இடையே தனிப்பட்ட/ குறியாக்கப்பட்ட உரையாடலில் நீங்கள் மேற்கோள் காட்டப்பட்டீர்கள்."</string>
     <string name="account_switch_add_account_dialog_title">புதிய கணக்கைச் சேர்க்கவும்</string>
     <string name="drawer_accounts">கணக்குகள்</string>
     <string name="account_switch_select_account">கணக்கைத் தேர்ந்தெடுக்கவும்</string>
     <string name="account_switch_add_account_btn">புதிய கணக்கைச் சேர்க்கவும்</string>
     <string name="account_switch_active_account">செயலில் உள்ள கணக்கு</string>
-    <string name="account_switch_has_private_key">தனிப்பட்ட சாவி உள்ளது</string>
-    <string name="account_switch_pubkey_only">படிக்க மட்டும், தனிப்பட்ட சாவி இல்லை</string>
     <string name="back">பின்</string>
     <string name="quick_action_select">தேர்ந்தெடுக்கவும்</string>
     <string name="quick_action_share_browser_link">உலாவி இணைப்பைப் பகிரவும்</string>
@@ -209,7 +170,6 @@
     <string name="quick_action_delete_dialog_btn">அழி</string>
     <string name="quick_action_block">தடைசெய்</string>
     <string name="quick_action_report">புகார் </string>
-    <string name="quick_action_delete_button">அழி</string>
     <string name="quick_action_dont_show_again_button">மீண்டும் காட்டாதே</string>
     <string name="report_dialog_spam">எரிதம் அல்லது மோசடிகள்</string>
     <string name="report_dialog_profanity">அவதூறு அல்லது வெறுக்கத்தக்க நடத்தை</string>
@@ -234,26 +194,12 @@
     <string name="add_to_public_bookmarks">பொது புக்மார்க்குகளில் சேர்க்கவும்</string>
     <string name="remove_from_private_bookmarks">தனிப்பட்ட புக்மார்க்குகளிலிருந்து அகற்று</string>
     <string name="remove_from_public_bookmarks">பொது புக்மார்க்குகளிலிருந்து அகற்று</string>
-    <string name="wallet_connect_service">பணப்பை இணைப்பு சேவை</string>
-    <string name="wallet_connect_service_explainer">பயன்பாட்டை விட்டு வெளியேறாமல் ஜாப்களை செலுத்த ஒரு நாஸ்டர் ரகசியத்தை அங்கீகரிக்கிறது. ரகசியத்தை பாதுகாப்பாக வைத்து, முடிந்தால் தனியார் ரிலேவைப் பயன்படுத்துங்கள்</string>
-    <string name="wallet_connect_service_pubkey">பணப்பை இணைப்பு பொது சாவி</string>
-    <string name="wallet_connect_service_relay">பணப்பை இணைப்பு ரிலே</string>
-    <string name="wallet_connect_service_secret">பணப்பை இணைப்பு ரகசியம்</string>
-    <string name="wallet_connect_service_show_secret">மறைமுகச் சாவியைக் காட்டு</string>
-    <string name="wallet_connect_service_secret_placeholder">nsec / hex தனிப்பட்ட சாவி</string>
     <string name="pledge_amount_in_sats">உறுதிமொழி தொகை (ஸாட்களில்)</string>
-    <string name="poll_heading_required">தேவையான புலங்கள்:</string>
-    <string name="poll_zap_recipients">ஜாப் பெறுநர்கள்</string>
-    <string name="poll_primary_description">முதன்மை வாக்கெடுப்பு விளக்கம்…</string>
     <string name="poll_option_index">விருப்பம் %s</string>
     <string name="poll_option_description">(வாக்குத்) தெரிவின் விளக்கம்</string>
-    <string name="poll_heading_optional">விருப்ப புலங்கள்:</string>
     <string name="poll_zap_value_min">குறைந்தளவு ஜாப்</string>
     <string name="poll_zap_value_max">அதிகளவு ஜாப்</string>
     <string name="poll_consensus_threshold">ஒருமித்த கருத்து</string>
-    <string name="poll_closing_time">நிறைவுறும் நேரம்</string>
-    <string name="poll_closing_time_days">நாட்களில்</string>
-    <string name="poll_zap_amount">ஜாப் தொகை</string>
     <string name="one_vote_per_user_on_atomic_votes">இந்த வகை வாக்கெடுப்பில் ஒரு பயனருக்கு ஒரு வாக்கு மட்டுமே அனுமதிக்கப்படுகிறது</string>
     <string name="looking_for_event">"நிகழ்வு %1$s ஐத் தேடி"</string>
     <string name="custom_zaps_add_a_message">ஒரு பொது செய்தியைச் சேர்க்கவும்</string>
@@ -281,29 +227,12 @@
     <string name="zap_type_nonzap">அல்லாத-ஜாப்</string>
     <string name="zap_type_nonzap_explainer">நாஸ்டரில் எந்த சுவடும் இன்றி, லைட்நிங்கில் மட்டும் உள்ளது</string>
     <string name="file_server">கோப்புச் சேவையகம்</string>
-    <string name="zap_forward_lnAddress">LN முகவரி அல்லது @பயனர்</string>
-    <string name="upload_server_relays_nip95">உங்கள் ரிலே (NIP-95)</string>
-    <string name="upload_server_relays_nip95_explainer">ஃபைல்ஸ் உங்கள் ரிலேக்களில் ஹோஸ்ட் செய்யப்படும். புதிய NIP: ரிலேயில் இச்சேவை உள்ளதா என சரிபார்க்கவும்</string>
-    <string name="connect_via_tor_short">Tor/Orbot இணைப்பு</string>
-    <string name="connect_via_tor">Orbot அமைப்பு மூலம் இணைக்கவும்</string>
-    <string name="do_you_really_want_to_disable_tor_title">Tor/Orbot இணைப்பை துண்டிக்கவா?</string>
-    <string name="do_you_really_want_to_disable_tor_text">உங்கள் டேட்டா உடனே வழக்கமான நெட்வொர்க்கிற்கு மாற்றப்படும்</string>
     <string name="yes">ஆம்</string>
     <string name="no">இல்லை</string>
-    <string name="follow_list_selection">பின்பற்றப்படுவோர் பட்டியல்</string>
     <string name="follow_list_kind3follows">எல்லா பின்பற்றப் படுவோர்</string>
     <string name="follow_list_global">முழுதளாவிய</string>
-    <string name="connect_through_your_orbot_setup_markdown">## Tor மூலம் Orbot உடன் இணைக்க
-	\n\n1. [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android) இன்ஸ்டால் செய்க
-	\n2. Orbot-ஐ தொடங்குங்கள்
-	\n3. Orbot-இல் Socks போர்ட்டை செக் செய்க. இயல்புநிலையில் அது 9050
-	\n4. வேண்டுமானால் Orbot-இல் போர்ட்டை மாற்றுங்கள்
-	\n5. இந்த திரையில் Socks போர்டை கட்டமைக்க
-	\n6. ஆக்டிவேட் பொத்தானை அழுத்தி Orbot-ஐ proxy-ஆக பயன்படுத்துங்கள் </string>
     <string name="orbot_socks_port">Orbot Socks போர்ட்</string>
     <string name="invalid_port_number">செல்லாத போர்ட் நம்பர்</string>
-    <string name="use_orbot">Orbot-ஐ பயன்படுத்துங்கள்</string>
-    <string name="disconnect_from_your_orbot_setup">Orbot இணைப்பது துண்டிக்க</string>
     <string name="app_notification_dms_channel_name">தனிப்பட்ட செய்திகள்</string>
     <string name="app_notification_dms_channel_description">தனிப்பட்ட செய்தி வருகையில் தெரிவிக்கவும்</string>
     <string name="app_notification_zaps_channel_name">ஜாப் பெறப்பட்டது</string>
@@ -313,20 +242,9 @@
     <string name="app_notification_zaps_channel_message_for">%1$s -க்கு</string>
     <!-- Call notifications and UI -->
     <string name="reply_notify">தெரிவிக்க</string>
-    <string name="channel_list_join_conversation">உரையாடலில் இணைக</string>
-    <string name="channel_list_user_or_group_id">பயனர் அல்லது குழுவின் ID</string>
-    <string name="channel_list_user_or_group_id_demo">npub, nevent அல்லது hex</string>
-    <string name="channel_list_create_channel">உருவாக்குக</string>
-    <string name="channel_list_join_channel">இணைக</string>
     <string name="today">இன்று</string>
     <string name="content_warning">உள்ளடக்க எச்சரிக்கை</string>
     <string name="content_warning_explanation">இந்த குறிப்பின் உள்ளடக்கம் சிலருக்கு அவமதிப்பாகவோ அருவெறுப்பாகவோ இருக்கலாம்</string>
-    <string name="content_warning_hide_all_sensitive_content">எப்போதும் உணர்ச்சிபூர்வமான உள்ளடக்கத்தை மறைக்க</string>
-    <string name="content_warning_show_all_sensitive_content">எப்போதும் உணர்ச்சிபூர்வமான உள்ளடக்கத்தை காண்பிக்க</string>
-    <string name="content_warning_see_warnings">எப்போதும் உள்ளடக்க எச்சரிக்கையை காண்பிக்க</string>
-    <string name="recommended_apps">பரிந்துரைகள்</string>
-    <string name="filter_spam_from_strangers">தெரியாதவர்களிடமிருந்து ஸ்பேம்-மை வடிகட்டுக</string>
-    <string name="warn_when_posts_have_reports_from_your_follows">குறிப்புகளில் நீங்கள் பின்பற்றுபவரின் புகார் இருந்தால் எச்சரிக்க</string>
     <string name="new_reaction_symbol">புதிய ரியாக்ஷன் குறி</string>
     <string name="no_reaction_type_setup_long_press_to_change">எந்த ரியாக்ஷனும் தேர்ந்தெடுக்கவில்லை. மாற்ற நீண்ட நேரம் அழுத்தவும்</string>
     <string name="zapraiser">ஜாப்-திரட்டுதல்</string>
@@ -340,23 +258,14 @@
     <string name="software">மென்பொருள்</string>
     <string name="contact">தொடர்புக்கு</string>
     <string name="supports">ஆதரிக்கப்படும் NIPகள்</string>
-    <string name="admission_fees">நுழைவுக் கட்டணம்</string>
     <string name="payments_url">கட்டண URL</string>
     <string name="limitations">வரம்புகள்</string>
     <string name="countries">நாடுகள்</string>
     <string name="languages">மொழிகள்</string>
-    <string name="tags">சிட்டைகள்</string>
     <string name="posting_policy">பதிவுக் கொள்கை</string>
-    <string name="message_length">குறிப்பு நீளம்</string>
-    <string name="subscriptions">சப்ஸ்க்ரிப்ஷன்கள்</string>
-    <string name="filters">வடிப்பான்கள்</string>
-    <string name="subscription_id_length">சப்ஸ்க்ரிப்ஷன் ID நீளம்</string>
     <string name="minimum_prefix">குறைந்தளவு முன்னீடு</string>
     <string name="maximum_event_tags">அதிகளவு நிகழ்வு சிட்டைகள்</string>
-    <string name="content_length">உள்ளடக்க நீளம்</string>
     <string name="minimum_pow">குறைந்தளவு PoW</string>
-    <string name="auth">சான்றளிப்பு</string>
-    <string name="payment">கட்டணம்</string>
     <string name="cashu">Cashu வில்லை</string>
     <string name="cashu_redeem">மீட்க</string>
     <string name="live_stream_live_tag">நேரலை</string>
@@ -388,4 +297,5 @@
     <!-- Emoji packs -->
     <!-- NIP-9B community rules composer-side validation. -->
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <!-- Marmot (MLS) group chats -->
 </resources>

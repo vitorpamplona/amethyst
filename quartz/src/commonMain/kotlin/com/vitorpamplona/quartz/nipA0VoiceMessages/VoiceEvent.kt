@@ -36,7 +36,6 @@ class VoiceEvent(
 ) : BaseVoiceEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 1222
-        const val ALT_DESCRIPTION = "Voice message"
 
         fun build(
             url: String,
@@ -50,6 +49,6 @@ class VoiceEvent(
             voiceMessage: AudioMeta,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<VoiceEvent>.() -> Unit = {},
-        ) = build(voiceMessage, KIND, ALT_DESCRIPTION, createdAt, initializer)
+        ) = build(voiceMessage, KIND, createdAt, initializer)
     }
 }

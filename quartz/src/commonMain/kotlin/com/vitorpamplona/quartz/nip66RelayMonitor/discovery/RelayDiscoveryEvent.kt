@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.RttType
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -82,7 +81,6 @@ class RelayDiscoveryEvent(
 
     companion object {
         const val KIND = 30166
-        const val ALT_DESCRIPTION = "Relay discovery"
 
         fun build(
             relayUrl: NormalizedRelayUrl,
@@ -90,7 +88,6 @@ class RelayDiscoveryEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RelayDiscoveryEvent>.() -> Unit = {},
         ) = eventTemplate<RelayDiscoveryEvent>(KIND, content, createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(relayUrl.url)
             initializer()
         }

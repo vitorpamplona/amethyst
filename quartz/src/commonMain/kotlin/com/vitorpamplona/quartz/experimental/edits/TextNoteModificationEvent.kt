@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -43,7 +42,6 @@ class TextNoteModificationEvent(
 
     companion object {
         const val KIND = 1010
-        const val ALT = "Content Change Event"
 
         suspend fun create(
             content: String,
@@ -62,8 +60,6 @@ class TextNoteModificationEvent(
             summary?.let {
                 tags.add(arrayOf("summary", it))
             }
-
-            tags.add(AltTag.assemble(ALT))
 
             return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
         }

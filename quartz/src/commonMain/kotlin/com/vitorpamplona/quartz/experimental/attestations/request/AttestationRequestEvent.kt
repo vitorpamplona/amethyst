@@ -37,7 +37,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -82,7 +81,6 @@ class AttestationRequestEvent(
 
     companion object {
         const val KIND = 31872
-        const val ALT_DESCRIPTION = "Attestation Request"
 
         fun buildEvent(
             dTagId: String,
@@ -93,7 +91,6 @@ class AttestationRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<AttestationRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(dTagId)
             about(about)
             attestorPubKeys(attestorPubKeys)
@@ -110,7 +107,6 @@ class AttestationRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<AttestationRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(dTagId)
             aboutReplaceable(about)
             attestorPubKeys(attestorPubKeys)
@@ -127,7 +123,6 @@ class AttestationRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<AttestationRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(dTagId)
             aboutAddressable(about)
             attestorPubKeys(attestorPubKeys)

@@ -66,10 +66,11 @@ class ChatFileSender(
                 blurhash = result.fileHeader.blurHash?.blurhash,
                 thumbhash = result.fileHeader.thumbHash?.thumbhash,
             ) {
+                // NIP-94 accessibility description of the file (kept; the deprecated
+                // generic NIP-31 boilerplate alt is not written).
                 if (!caption.isNullOrEmpty()) {
                     alt(caption)
                 }
-
                 contentWarningReason?.let { contentWarning(it) }
             },
         )
@@ -89,9 +90,6 @@ class ChatFileSender(
             ChatMessageEvent.build(result.url, toUsers) {
                 references(listOf(result.url))
 
-                if (!caption.isNullOrEmpty()) {
-                    alt(caption)
-                }
                 contentWarningReason?.let { contentWarning(it) }
 
                 imetas(iMetaAttachments.filterIsIn(setOf(result.url)))

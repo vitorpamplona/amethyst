@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -40,7 +39,6 @@ class VideoShortEvent(
     RootScope {
     companion object {
         const val KIND = 22
-        const val ALT_DESCRIPTION = "Vertical Video"
 
         fun build(
             video: VideoMeta,
@@ -57,7 +55,6 @@ class VideoShortEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<VideoShortEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description, createdAt) {
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

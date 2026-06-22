@@ -425,6 +425,8 @@ class Account(
             scope = scope,
             assembler = cashuWalletFilterAssembler(),
             outboxRelaysFlow = outboxRelays.flow,
+            inboxRelaysFlow = notificationRelays.flow,
+            dmRelaysFlow = dmRelays.flow,
             settings = settings,
             okHttpClient = okHttpClientForMoney,
         )
@@ -585,6 +587,11 @@ class Account(
 
     val liveFollowPacksFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultFollowPacksFollowList)
     val liveFollowPacksFollowListsPerRelay = OutboxLoaderState(liveFollowPacksFollowLists, cache, scope).flow
+
+    // App recommendations are read straight from LocalCache (no relay feed of its
+    // own), so only the in-memory author/tag matcher is needed here, not a
+    // per-relay outbox loader.
+    val liveAppRecommendationsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultAppRecommendationsFollowList)
 
     override fun isWriteable(): Boolean = settings.isWriteable()
 

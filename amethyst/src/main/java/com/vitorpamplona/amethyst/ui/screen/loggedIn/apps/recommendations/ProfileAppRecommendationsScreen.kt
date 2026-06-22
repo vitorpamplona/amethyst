@@ -31,15 +31,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,37 +63,57 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
+import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.types.ByAuthorChip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.datasource.ProfileAppRecommendationsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.flowOn
 
 @Composable
 fun ProfileAppRecommendationsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val myPubkey = accountViewModel.userProfile().pubkeyHex
-
     // Pull my kind 31989 events plus recent kind 31990 app definitions from
     // relays so the list below has candidates while this screen is open.
     ProfileAppRecommendationsFilterAssemblerSubscription(accountViewModel)
 
-    // Ticks whenever LocalCache emits a bundle with a new app definition, so
-    // the candidate snapshot below recomputes.
-    var appDefinitionsTick by remember { mutableIntStateOf(0) }
-    LaunchedEffect(myPubkey) {
-        launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect { bundle ->
-                if (bundle.any { it.event is AppDefinitionEvent }) appDefinitionsTick++
-            }
+    // Kind 31990 app definitions, kept live. observeNotes seeds with the notes
+    // already cached and re-emits as new definitions are inserted, so the
+    // candidate list below derives straight from these notes — no manual tick or
+    // full-cache rescan.
+    //
+    // Caveat: observeNotes does NOT re-emit when an already-listed addressable is
+    // replaced in place, so the list isn't re-filtered/re-sorted on a kind-31990
+    // update (a blank app that later gains a name, or a newer createdAt changing
+    // the tier order). That's acceptable here: membership rarely flips on an
+    // update, each row's own content stays live via AppRow's observeNoteEvent, and
+    // the list recomputes anyway as the recommendation/follow lists stream in.
+    //
+    // The initial value is the current cache snapshot so the first frame matches
+    // the seeded emission instead of flashing empty.
+    val cachedAppDefinitions =
+        remember {
+            LocalCache.addressables
+                .filterIntoSet(AppDefinitionEvent.KIND) { _, _ -> true }
+                .toList()
         }
-    }
+    val appDefinitionNotes by remember {
+        LocalCache
+            .observeNotes(Filter(kinds = listOf(AppDefinitionEvent.KIND)))
+            .flowOn(Dispatchers.IO)
+    }.collectAsStateWithLifecycle(initialValue = cachedAppDefinitions)
 
     val myRecommendationEvents by accountViewModel.account.appRecommendations.flow
         .collectAsStateWithLifecycle()
@@ -124,10 +146,11 @@ fun ProfileAppRecommendationsScreen(
     }
 
     val apps =
-        remember(appDefinitionsTick, pinnedRecommended, pinnedFollows) {
-            LocalCache.addressables
-                .filterIntoSet(AppDefinitionEvent.KIND) { _, note ->
-                    val event = note.event as? AppDefinitionEvent ?: return@filterIntoSet false
+        remember(appDefinitionNotes, pinnedRecommended, pinnedFollows) {
+            appDefinitionNotes
+                .filterIsInstance<AddressableNote>()
+                .filter { note ->
+                    val event = note.event as? AppDefinitionEvent ?: return@filter false
                     // Unnamed apps are poor recommendation candidates; keep them
                     // only when already recommended, so they can be turned off.
                     note.address in pinnedRecommended ||
@@ -156,9 +179,45 @@ fun ProfileAppRecommendationsScreen(
                 .map { LocalCache.getOrCreateAddressableNote(it) }
         }
 
+    // The shared top-nav feed filter, resolved to an author/tag matcher. Only the
+    // author dimension is meaningful for app definitions, so the matchAuthor side
+    // does the work (Follows lists narrow to apps by those authors); the
+    // hashtag/relay/community variants leave matchAuthor == true and act as no-ops.
+    // Applied to discovered apps only — apps I already recommend stay listed so I
+    // can always turn them off.
+    val navFilter by accountViewModel.account.liveAppRecommendationsFollowLists
+        .collectAsStateWithLifecycle()
+    val authorFilteredApps =
+        remember(apps, navFilter) {
+            apps.filter { navFilter.matchAuthor(it.address.pubKeyHex) }
+        }
+
+    // Full candidate list in display order; the search box filters this view.
+    val allApps =
+        remember(missingRecommended, authorFilteredApps) {
+            missingRecommended + authorFilteredApps
+        }
+
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Matches on the app's name; rows whose definition hasn't arrived yet have no
+    // name to match, so they only show when the search box is empty.
+    val visibleApps =
+        remember(allApps, searchQuery) {
+            val query = searchQuery.trim()
+            if (query.isEmpty()) {
+                allApps
+            } else {
+                allApps.filter { note ->
+                    val event = note.event as? AppDefinitionEvent
+                    event?.appMetaData()?.anyName()?.contains(query, ignoreCase = true) == true
+                }
+            }
+        }
+
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.profile_app_recommendations_title), nav)
+            AppRecommendationsTopBar(accountViewModel, nav)
         },
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
@@ -168,11 +227,53 @@ fun ProfileAppRecommendationsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
             )
+
+            if (allApps.isNotEmpty()) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 4.dp),
+                    placeholder = {
+                        Text(
+                            text = stringRes(R.string.profile_app_recommendations_search),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    leadingIcon = { SearchIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                ClearTextIcon()
+                            }
+                        }
+                    },
+                    singleLine = true,
+                )
+            }
+
             HorizontalDivider()
 
-            if (apps.isEmpty() && missingRecommended.isEmpty()) {
+            if (allApps.isEmpty()) {
+                // Apps exist in cache but the author filter hid them all, vs.
+                // nothing discovered yet.
+                val emptyMessage =
+                    if (apps.isNotEmpty()) {
+                        stringRes(R.string.profile_app_recommendations_filter_empty)
+                    } else {
+                        stringRes(R.string.profile_app_recommendations_empty)
+                    }
                 Text(
-                    text = stringRes(R.string.profile_app_recommendations_empty),
+                    text = emptyMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(20.dp),
+                )
+            } else if (visibleApps.isEmpty()) {
+                Text(
+                    text = stringRes(R.string.profile_app_recommendations_search_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(20.dp),
@@ -180,7 +281,7 @@ fun ProfileAppRecommendationsScreen(
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(
-                        items = missingRecommended + apps,
+                        items = visibleApps,
                         key = { it.idHex },
                     ) { appNote ->
                         AppRow(
@@ -196,6 +297,37 @@ fun ProfileAppRecommendationsScreen(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppRecommendationsTopBar(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    ShorterTopAppBar(
+        navigationIcon = {
+            if (nav.canPop()) {
+                IconButton(nav::popBack) {
+                    ArrowBackIcon()
+                }
+            }
+        },
+        title = {
+            val listName by accountViewModel.account.settings.defaultAppRecommendationsFollowList
+                .collectAsStateWithLifecycle()
+            val options by accountViewModel.feedStates.feedListOptions.kind3GlobalPeople
+                .collectAsStateWithLifecycle()
+
+            FeedFilterSpinner(
+                placeholderCode = listName,
+                explainer = stringRes(R.string.select_list_to_filter),
+                options = options,
+                onSelect = accountViewModel.account.settings::changeDefaultAppRecommendationsFollowList,
+                accountViewModel = accountViewModel,
+            )
+        },
+    )
 }
 
 @Composable

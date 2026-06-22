@@ -75,6 +75,14 @@ class OkHttpClientFactory(
             .connectionPool(connectionPool)
             .dns(dns)
             .eventListenerFactory(MediaCallEventListenerFactory(dispatcher, connectionPool, dns))
+            // Some media hosts (e.g. blossom.primal.net) silently drop idle HTTP/2
+            // connections between the bursts of a feed scroll. Without a keepalive
+            // ping, OkHttp can pull such a dead connection from the 5-min pool and
+            // the request stalls until the read timeout (30s wifi / 90s mobile),
+            // which shows up as "the first image after a pause takes forever".
+            // An HTTP/2 ping detects the dead connection in seconds and lets
+            // retryOnConnectionFailure re-issue the request on a fresh one.
+            .pingInterval(Duration.ofSeconds(HTTP2_PING_INTERVAL_SECS))
             .followRedirects(true)
             .followSslRedirects(true)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
@@ -128,4 +136,11 @@ class OkHttpClientFactory(
         }
 
     fun buildLocalSocksProxy(port: Int?) = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port ?: DEFAULT_SOCKS_PORT))
+
+    companion object {
+        // HTTP/2 keepalive ping for pooled media connections. Short enough to
+        // evict a silently-dropped connection well before the read timeout would
+        // otherwise stall a request for the full 30s/90s.
+        const val HTTP2_PING_INTERVAL_SECS: Long = 10
+    }
 }

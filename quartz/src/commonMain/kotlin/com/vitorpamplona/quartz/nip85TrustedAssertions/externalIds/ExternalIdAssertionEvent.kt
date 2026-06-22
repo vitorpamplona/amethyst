@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.CommentCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.ReactionCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
@@ -51,7 +50,6 @@ class ExternalIdAssertionEvent(
 
     companion object {
         const val KIND = 30385
-        const val ALT = "External Identifier Assertion"
 
         fun build(
             targetIdentifier: String,
@@ -59,7 +57,6 @@ class ExternalIdAssertionEvent(
             initializer: TagArrayBuilder<ExternalIdAssertionEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             dTag(targetIdentifier)
-            alt(ALT)
             initializer()
         }
     }

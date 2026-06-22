@@ -39,7 +39,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.toETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip32Labeling.tags.LabelNamespaceTag
 import com.vitorpamplona.quartz.nip32Labeling.tags.LabelTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -114,7 +113,6 @@ class LabelEvent(
 
     companion object {
         const val KIND = 1985
-        const val ALT = "Label event"
 
         /**
          * NIP-32 tag-association namespace for hashtags. A label of the form
@@ -133,7 +131,6 @@ class LabelEvent(
             hashtag: String,
             createdAt: Long = TimeUtils.now(),
         ) = eventTemplate<LabelEvent>(KIND, "", createdAt) {
-            alt(ALT)
             eTag(labeledEvent.toETag())
             val tag = LabelTag(hashtag.removePrefix("#").lowercase(), HASHTAG_NAMESPACE)
             labelNamespace(tag.namespace)
@@ -151,7 +148,6 @@ class LabelEvent(
             content: String = "",
             createdAt: Long = TimeUtils.now(),
         ) = eventTemplate<LabelEvent>(KIND, content, createdAt) {
-            alt(ALT)
             eTag(ETag(labeledEventId, labeledEventRelay?.let { RelayUrlNormalizer.normalizeOrNull(it) }, labeledEventAuthor))
             labels.map { it.namespace }.distinct().forEach { labelNamespace(it) }
             labels.forEach { label(it) }
@@ -167,7 +163,6 @@ class LabelEvent(
             content: String = "",
             createdAt: Long = TimeUtils.now(),
         ) = eventTemplate<LabelEvent>(KIND, content, createdAt) {
-            alt(ALT)
             pTag(labeledPubKey, labeledPubKeyRelay?.let { RelayUrlNormalizer.normalizeOrNull(it) })
             labels.map { it.namespace }.distinct().forEach { labelNamespace(it) }
             labels.forEach { label(it) }
@@ -181,7 +176,6 @@ class LabelEvent(
             content: String = "",
             createdAt: Long = TimeUtils.now(),
         ) = eventTemplate<LabelEvent>(KIND, content, createdAt) {
-            alt(ALT)
             labels.map { it.namespace }.distinct().forEach { labelNamespace(it) }
             labels.forEach { label(it) }
         }

@@ -61,17 +61,18 @@ object DmCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "dm <send|send-file|list|await> …")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "send" -> send(dataDir, rest)
-            "send-file" -> sendFile(dataDir, rest)
-            "list" -> list(dataDir, rest)
-            "await" -> await(dataDir, rest)
-            else -> Output.error("bad_args", "dm ${tail[0]}")
-        }
-    }
+    ): Int =
+        route(
+            "dm",
+            tail,
+            "dm <send|send-file|list|await> …",
+            mapOf(
+                "send" to { rest -> send(dataDir, rest) },
+                "send-file" to { rest -> sendFile(dataDir, rest) },
+                "list" to { rest -> list(dataDir, rest) },
+                "await" to { rest -> await(dataDir, rest) },
+            ),
+        )
 
     private suspend fun send(
         dataDir: DataDir,
@@ -82,14 +83,11 @@ object DmCommands {
         val args = Args(rest.drop(2).toTypedArray())
         val allowFallback = args.bool("allow-fallback")
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val recipient = ctx.requireUserHex(rest[0])
             val result = DmActions.buildTextDm(ctx.signer, recipient, text)
             return publishWraps(ctx, result, allowFallback)
-        } finally {
-            ctx.close()
         }
     }
 
@@ -118,8 +116,7 @@ object DmCommands {
         val allowFallback = args.bool("allow-fallback")
         val recipientInput = rest[0]
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val recipient = ctx.requireUserHex(recipientInput)
 
@@ -133,8 +130,6 @@ object DmCommands {
                 }
 
             return publishWraps(ctx, result, allowFallback, extra = summary)
-        } finally {
-            ctx.close()
         }
     }
 
@@ -315,8 +310,7 @@ object DmCommands {
         val limit = args.intFlag("limit", Int.MAX_VALUE)
         val timeoutSecs = args.longFlag("timeout", 8)
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val peerHex = peerInput?.let { ctx.requireUserHex(it) }
 
@@ -357,8 +351,6 @@ object DmCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -371,8 +363,7 @@ object DmCommands {
         val match = args.requireFlag("match")
         val timeoutSecs = args.longFlag("timeout", 30)
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val peerHex = ctx.requireUserHex(peerInput)
 
@@ -408,8 +399,6 @@ object DmCommands {
                 delay(2_000)
             }
             throw AwaitTimeout("no DM from $peerHex matching '$match' within ${timeoutSecs}s")
-        } finally {
-            ctx.close()
         }
     }
 
