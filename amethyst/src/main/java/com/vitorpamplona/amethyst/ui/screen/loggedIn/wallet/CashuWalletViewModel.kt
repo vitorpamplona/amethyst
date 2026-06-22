@@ -500,8 +500,12 @@ class CashuWalletViewModel : ViewModel() {
                 ops.publishWalletEvents(
                     mints = mints,
                     p2pkPrivkeyHex = privkey,
+                    // Advertise our inbox + DM relays as the nutzap relays, so
+                    // senders publish kind:9321 where we read incoming events
+                    // (NIP-65 outbox model). Mirrors the relay set the wallet
+                    // subscribes to for inbound nutzaps.
                     nutzapRelays =
-                        acc.outboxRelays.flow.value
+                        (acc.notificationRelays.flow.value + acc.dmRelays.flow.value)
                             .toList(),
                 )
                 _createState.value = CashuWalletCreateState.Success
