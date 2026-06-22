@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.topbars
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,27 +30,35 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
-import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
+import com.vitorpamplona.amethyst.ui.navigation.topbars.LoggedInUserPictureDrawer
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
+import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
+/**
+ * Top bar for the Napplets browse screen, matching the other feed screens (Pictures, Articles, …): a
+ * drawer/back navigation icon, a centered follow-list [FeedFilterSpinner] that filters which authors'
+ * napplets are shown, and Search + "manage permissions" actions.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserDrawerSearchTopBar(
+fun NappletsTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
-    content: @Composable () -> Unit,
 ) {
     ShorterTopAppBar(
         title = {
@@ -59,22 +67,20 @@ fun UserDrawerSearchTopBar(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                content()
+                NappletsTopNavFilterBar(accountViewModel)
             }
         },
         navigationIcon = {
-            // When this screen sits on top of a back stack (entered via the drawer
-            // or any deep link), show a back arrow. When it's the root (entered via
-            // the bottom nav, which clears the stack), show the drawer opener.
             if (nav.canPop()) {
-                IconButton(onClick = nav::popBack) {
-                    ArrowBackIcon()
-                }
+                IconButton(onClick = nav::popBack) { ArrowBackIcon() }
             } else {
                 LoggedInUserPictureDrawer(accountViewModel, nav::openDrawer)
             }
         },
         actions = {
+            IconButton(onClick = { nav.nav(Route.NappletPermissions) }) {
+                Icon(MaterialSymbols.Tune, contentDescription = stringResource(R.string.napplet_manage_permissions))
+            }
             IconButton(onClick = { nav.nav(Route.Search) }) {
                 SearchIcon(modifier = Size22Modifier, MaterialTheme.colorScheme.placeholderText)
             }
@@ -83,25 +89,17 @@ fun UserDrawerSearchTopBar(
 }
 
 @Composable
-internal fun LoggedInUserPictureDrawer(
-    accountViewModel: AccountViewModel,
-    onClick: () -> Unit,
-) {
-    IconButton(onClick = onClick) {
-        val profilePicture by observeUserPicture(accountViewModel.userProfile(), accountViewModel)
+private fun NappletsTopNavFilterBar(accountViewModel: AccountViewModel) {
+    val listName: TopFilter by accountViewModel.account.settings.defaultNappletsFollowList
+        .collectAsStateWithLifecycle()
+    val allLists by accountViewModel.feedStates.feedListOptions.kind3GlobalPeopleRoutes
+        .collectAsStateWithLifecycle()
 
-        RobohashFallbackAsyncImage(
-            robot = accountViewModel.userProfile().pubkeyHex,
-            model = profilePicture,
-            contentDescription = stringRes(id = R.string.your_profile_image),
-            modifier = HeaderPictureModifier,
-            contentScale = ContentScale.Crop,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-            autoPlayGif =
-                accountViewModel.settings.autoPlayVideosFlow
-                    .collectAsStateWithLifecycle()
-                    .value,
-        )
-    }
+    FeedFilterSpinner(
+        placeholderCode = listName,
+        explainer = stringRes(R.string.select_list_to_filter),
+        options = allLists,
+        onSelect = { selected: FeedDefinition -> accountViewModel.account.settings.changeDefaultNappletsFollowList(selected) },
+        accountViewModel = accountViewModel,
+    )
 }

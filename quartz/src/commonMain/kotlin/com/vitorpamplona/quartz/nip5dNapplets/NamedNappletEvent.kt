@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteAggregateHash
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteDescription
+import com.vitorpamplona.quartz.nip5aStaticWebsites.siteIcon
 import com.vitorpamplona.quartz.nip5aStaticWebsites.sitePaths
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteServers
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteSource
@@ -67,6 +68,7 @@ class NamedNappletEvent(
             title: String? = null,
             description: String? = null,
             source: String? = null,
+            icon: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NamedNappletEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
@@ -78,6 +80,7 @@ class NamedNappletEvent(
             title?.let { siteTitle(it) }
             description?.let { siteDescription(it) }
             source?.let { siteSource(it) }
+            icon?.let { siteIcon(it) }
             initializer()
         }
     }

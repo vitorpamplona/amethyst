@@ -18,27 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip5aStaticWebsites
+package com.vitorpamplona.quartz.nip5aStaticWebsites.tags
 
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.DescriptionTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.IconTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.ServerTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.SourceTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.TitleTag
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.XTag
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-fun TagArray.sitePaths() = mapNotNull(PathTag::parse)
+/** The `icon` tag: a URL to the site's / napplet's square app icon, for richer launcher cards. */
+class IconTag {
+    companion object {
+        const val TAG_NAME = "icon"
 
-fun TagArray.siteServers() = mapNotNull(ServerTag::parse)
+        fun parse(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
 
-fun TagArray.siteTitle() = firstNotNullOfOrNull(TitleTag::parse)
-
-fun TagArray.siteDescription() = firstNotNullOfOrNull(DescriptionTag::parse)
-
-fun TagArray.siteSource() = firstNotNullOfOrNull(SourceTag::parse)
-
-fun TagArray.siteIcon() = firstNotNullOfOrNull(IconTag::parse)
-
-fun TagArray.siteAggregateHash() = firstNotNullOfOrNull(XTag::parse)
+        fun assemble(url: String) = arrayOf(TAG_NAME, url)
+    }
+}

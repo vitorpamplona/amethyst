@@ -39,6 +39,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
@@ -139,6 +141,13 @@ class NappletHostActivity : ComponentActivity() {
 
         webView = WebView(this)
         setContentView(webView)
+        // Activities are edge-to-edge by default on recent Android; pad the WebView by the system bar
+        // and display-cutout insets so the applet's own content isn't drawn under the status/nav bars.
+        ViewCompat.setOnApplyWindowInsetsListener(webView) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
         hardenWebView(webView)
 
         // Origin-restricted bridge: only the trusted shell page (main frame) can reach native.

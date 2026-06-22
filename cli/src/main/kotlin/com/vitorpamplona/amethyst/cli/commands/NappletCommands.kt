@@ -166,12 +166,12 @@ object NappletCommands {
         StaticSitePublish.run(
             dataDir,
             rest,
-            "napplet publish <dir> --server <blossom-url> [--requires identity,relay,…] [--d ID] [--relay R] [--title T]",
+            "napplet publish <dir> --server <blossom-url> [--requires identity,relay,…] [--d ID] [--relay R] [--title T] [--icon URL]",
         ) { m ->
             if (m.identifier != null) {
-                NamedNappletEvent.build(m.identifier, m.paths, m.servers, m.requires, m.title, m.description, m.source)
+                NamedNappletEvent.build(m.identifier, m.paths, m.servers, m.requires, m.title, m.description, m.source, m.icon)
             } else {
-                RootNappletEvent.build(m.paths, m.servers, m.requires, m.title, m.description, m.source)
+                RootNappletEvent.build(m.paths, m.servers, m.requires, m.title, m.description, m.source, m.icon)
             }
         }
 

@@ -51,6 +51,8 @@ class RootSiteEvent(
 
     fun source() = tags.siteSource()
 
+    fun icon() = tags.siteIcon()
+
     companion object {
         const val KIND = 15128
 
@@ -60,6 +62,7 @@ class RootSiteEvent(
             title: String? = null,
             description: String? = null,
             source: String? = null,
+            icon: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RootSiteEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
@@ -68,6 +71,7 @@ class RootSiteEvent(
             title?.let { siteTitle(it) }
             description?.let { siteDescription(it) }
             source?.let { siteSource(it) }
+            icon?.let { siteIcon(it) }
             initializer()
         }
     }

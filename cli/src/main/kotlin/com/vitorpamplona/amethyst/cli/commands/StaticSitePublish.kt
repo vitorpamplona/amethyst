@@ -49,6 +49,7 @@ object StaticSitePublish {
         val title: String?,
         val description: String?,
         val source: String?,
+        val icon: String?,
     )
 
     suspend fun run(
@@ -70,6 +71,7 @@ object StaticSitePublish {
         val title = args.flag("title")
         val description = args.flag("description")
         val sourceUrl = args.flag("source")
+        val icon = args.flag("icon")
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
 
         Context.open(dataDir).use { ctx ->
@@ -82,7 +84,7 @@ object StaticSitePublish {
                     return Output.error("upload_failed", e.message ?: "upload failed")
                 }
 
-            val manifest = Manifest(identifier, result.pathTags, servers, requires, title, description, sourceUrl)
+            val manifest = Manifest(identifier, result.pathTags, servers, requires, title, description, sourceUrl, icon)
             val signed = ctx.signer.sign(buildEvent(manifest))
 
             val relays =
@@ -100,6 +102,7 @@ object StaticSitePublish {
                     "kind" to signed.kind,
                     "d" to identifier,
                     "title" to title,
+                    "icon" to icon,
                     "servers" to servers,
                     "requires" to requires,
                     "aggregate_sha256" to SiteAggregateHash.compute(result.pathTags),

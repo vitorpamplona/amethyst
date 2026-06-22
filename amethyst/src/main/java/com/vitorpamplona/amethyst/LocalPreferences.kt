@@ -105,6 +105,7 @@ private object PrefKeys {
     const val DEFAULT_DISCOVERY_FOLLOW_LIST = "defaultDiscoveryFollowList"
     const val DEFAULT_POLLS_FOLLOW_LIST = "defaultPollsFollowList"
     const val DEFAULT_PICTURES_FOLLOW_LIST = "defaultPicturesFollowList"
+    const val DEFAULT_NAPPLETS_FOLLOW_LIST = "defaultNappletsFollowList"
     const val DEFAULT_WORKOUTS_FOLLOW_LIST = "defaultWorkoutsFollowList"
     const val DEFAULT_CALENDARS_FOLLOW_LIST = "defaultCalendarsFollowList"
     const val DEFAULT_PRODUCTS_FOLLOW_LIST = "defaultProductsFollowList"
@@ -390,6 +391,7 @@ object LocalPreferences {
 
                     putString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPollsFollowList.value))
                     putString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPicturesFollowList.value))
+                    putString(PrefKeys.DEFAULT_NAPPLETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNappletsFollowList.value))
                     putString(PrefKeys.DEFAULT_WORKOUTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultWorkoutsFollowList.value))
                     putString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCalendarsFollowList.value))
                     putString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultProductsFollowList.value))
@@ -714,6 +716,7 @@ object LocalPreferences {
                         defaultDiscoveryFollowList = MutableStateFlow(followListPrefs.discovery),
                         defaultPollsFollowList = MutableStateFlow(followListPrefs.polls),
                         defaultPicturesFollowList = MutableStateFlow(followListPrefs.pictures),
+                        defaultNappletsFollowList = MutableStateFlow(followListPrefs.napplets),
                         defaultWorkoutsFollowList = MutableStateFlow(followListPrefs.workouts),
                         defaultCalendarsFollowList = MutableStateFlow(followListPrefs.calendars),
                         defaultProductsFollowList = MutableStateFlow(followListPrefs.products),
@@ -804,6 +807,7 @@ object LocalPreferences {
         val discovery: TopFilter,
         val polls: TopFilter,
         val pictures: TopFilter,
+        val napplets: TopFilter,
         val workouts: TopFilter,
         val calendars: TopFilter,
         val products: TopFilter,
@@ -857,6 +861,7 @@ object LocalPreferences {
             discovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null), TopFilter.Global),
             polls = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, null), TopFilter.Global),
             pictures = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null), TopFilter.Global),
+            napplets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NAPPLETS_FOLLOW_LIST, null), TopFilter.Global),
             workouts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_WORKOUTS_FOLLOW_LIST, null), TopFilter.Global),
             calendars = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, null), TopFilter.Global),
             products = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, null), TopFilter.AroundMe),

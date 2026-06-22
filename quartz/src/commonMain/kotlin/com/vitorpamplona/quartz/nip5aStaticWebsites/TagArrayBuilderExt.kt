@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.IconTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.ServerTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.SourceTag
@@ -39,6 +40,8 @@ fun <T : Event> TagArrayBuilder<T>.siteTitle(title: String) = addUnique(TitleTag
 fun <T : Event> TagArrayBuilder<T>.siteDescription(description: String) = addUnique(DescriptionTag.assemble(description))
 
 fun <T : Event> TagArrayBuilder<T>.siteSource(url: String) = addUnique(SourceTag.assemble(url))
+
+fun <T : Event> TagArrayBuilder<T>.siteIcon(url: String) = addUnique(IconTag.assemble(url))
 
 fun <T : Event> TagArrayBuilder<T>.siteAggregateHash(aggregateHash: HexKey) = addUnique(XTag.assemble(aggregateHash))
 
