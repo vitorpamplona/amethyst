@@ -48,7 +48,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
-import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 
 /**
@@ -130,7 +129,12 @@ class NappletHostActivity : ComponentActivity() {
 
         // The shell page + shim are the shared web contract (commons composeResources); load them
         // once up front so the WebView worker threads that serve them never block on resource I/O.
-        val (shellHtml, shim) = runBlocking { NappletWebContract.shellHtml() to NappletWebContract.shimJs().decodeToString() }
+        // This isolated `:napplet` process skips app init (to stay key-free), so the compose-resources
+        // Android context is never set here and `Res.readBytes` would crash — read the contract bytes
+        // straight from the APK assets, where compose-resources packages them.
+        fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
+        val shellHtml = readContractAsset(NappletWebContract.SHELL_HTML_PATH)
+        val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
         contentServer = NappletContentServer(paths, servers, proxyPort, cacheDir, shellHtml, shim)
 
         webView = WebView(this)

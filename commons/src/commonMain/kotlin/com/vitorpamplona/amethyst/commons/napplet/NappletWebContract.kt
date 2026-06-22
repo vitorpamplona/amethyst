@@ -68,8 +68,17 @@ object NappletWebContract {
             "media-src 'self' https://napplet.local blob: data:; " +
             "connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
 
-    private const val SHELL_HTML_PATH = "files/napplet/shell.html"
-    private const val SHIM_JS_PATH = "files/napplet/shim.js"
+    const val SHELL_HTML_PATH = "files/napplet/shell.html"
+    const val SHIM_JS_PATH = "files/napplet/shim.js"
+
+    /**
+     * Asset directory the compose-resources of `:commons` are packaged under on Android (mirrors the
+     * prefix the generated [Res] accessor prepends). Hosts that run in a process without an
+     * initialized compose-resources context — e.g. the isolated `:napplet` process, which skips app
+     * init to stay key-free — read [SHELL_HTML_PATH]/[SHIM_JS_PATH] straight from `assets` under this
+     * root instead of going through [shellHtml]/[shimJs].
+     */
+    const val RESOURCE_ASSET_ROOT = "composeResources/com.vitorpamplona.amethyst.commons.resources/"
 
     /** The trusted shell page's HTML, read from the shared bundle. */
     @OptIn(ExperimentalResourceApi::class)
