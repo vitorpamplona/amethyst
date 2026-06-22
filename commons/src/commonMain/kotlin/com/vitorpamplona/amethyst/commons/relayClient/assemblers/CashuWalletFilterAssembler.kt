@@ -42,13 +42,23 @@ import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEven
  * Query state for the NIP-60 / NIP-61 wallet subscription.
  *
  * `pubkey` is the wallet owner — used both as `authors=` for their own
- * NIP-60 events and as the `#p` tag value for inbound nutzaps. `relays` is
- * the union of relays to subscribe on (NIP-65 outbox + DM relays at minimum).
+ * NIP-60 events and as the `#p` tag value for inbound nutzaps.
+ *
+ * The two filters read from different relay sets, following the NIP-65
+ * outbox model:
+ *  - [ownEventRelays] — the user's own write/outbox relays, where they
+ *    published their NIP-60 wallet/token/history events. Restoring those
+ *    means reading from where they were written.
+ *  - [inboxRelays] — where *other* people deliver kind:9321 nutzaps to this
+ *    user. Per NIP-61 the source of truth is the `relay` tags in the user's
+ *    own kind:10019; in practice we listen on the union of those plus the
+ *    user's NIP-65 inbox + DM relays so a nutzap can't slip past us.
  */
 @Immutable
 data class CashuWalletQueryState(
     val pubkey: HexKey,
-    val relays: Set<NormalizedRelayUrl>,
+    val ownEventRelays: Set<NormalizedRelayUrl>,
+    val inboxRelays: Set<NormalizedRelayUrl>,
 )
 
 /**
@@ -91,11 +101,9 @@ private class CashuWalletSubAssembler(
         if (keys.isEmpty()) return null
 
         val pubkey = keys.first().pubkey
-        val relays =
-            keys
-                .flatMap { it.relays }
-                .toSet()
-                .ifEmpty { return null }
+        val ownEventRelays = keys.flatMap { it.ownEventRelays }.toSet()
+        val inboxRelays = keys.flatMap { it.inboxRelays }.toSet()
+        if (ownEventRelays.isEmpty() && inboxRelays.isEmpty()) return null
 
         val ownedFilter =
             Filter(
@@ -121,18 +129,26 @@ private class CashuWalletSubAssembler(
                 tags = mapOf("p" to listOf(pubkey)),
             )
 
-        return relays.flatMap { relay ->
-            val sinceTime = since?.get(relay)?.time
-            listOf(
+        // Own NIP-60 events are read from the user's outbox; inbound nutzaps
+        // from the user's inbox set. A relay that appears in both gets both
+        // filters.
+        val ownedSubs =
+            ownEventRelays.map { relay ->
+                val sinceTime = since?.get(relay)?.time
                 RelayBasedFilter(
                     relay,
                     if (sinceTime != null) ownedFilter.copy(since = sinceTime) else ownedFilter,
-                ),
+                )
+            }
+        val inboundSubs =
+            inboxRelays.map { relay ->
+                val sinceTime = since?.get(relay)?.time
                 RelayBasedFilter(
                     relay,
                     if (sinceTime != null) inboundNutzapsFilter.copy(since = sinceTime) else inboundNutzapsFilter,
-                ),
-            )
-        }
+                )
+            }
+
+        return ownedSubs + inboundSubs
     }
 }

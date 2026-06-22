@@ -97,6 +97,8 @@ class CashuWalletState(
     private val scope: CoroutineScope,
     private val assembler: CashuWalletFilterAssembler,
     private val outboxRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
+    private val inboxRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
+    private val dmRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
     private val settings: AccountSettings,
     okHttpClient: (String) -> OkHttpClient,
 ) {
@@ -436,12 +438,31 @@ class CashuWalletState(
             triggerAutoRedeem()
         }
 
-        // Keep the relay subscription in sync with the outbox set.
+        // Keep the wallet subscription in sync with the relay sets it reads
+        // from. Following the NIP-65 outbox model, the two halves of the
+        // subscription read from different places:
+        //  - our own NIP-60 events (wallet/token/history) are read back from
+        //    our OUTBOX relays, where we published them;
+        //  - inbound kind:9321 nutzaps are read from our INBOX set, since
+        //    that is where other people deliver them. Per NIP-61 the source
+        //    of truth for "where to send me nutzaps" is the `relay` tags in
+        //    our own kind:10019 — and another client may have published that
+        //    with relays unrelated to our NIP-65 lists — so we listen on the
+        //    union of those plus our NIP-65 inbox + DM relays.
         jobs +=
             scope.launch(Dispatchers.IO) {
-                outboxRelaysFlow.collect { relays ->
-                    syncSubscription(relays)
-                }
+                combine(
+                    outboxRelaysFlow,
+                    inboxRelaysFlow,
+                    dmRelaysFlow,
+                    _nutzapInfoEvent,
+                ) { outbox, inbox, dm, info ->
+                    CashuWalletQueryState(
+                        pubkey = pubKey,
+                        ownEventRelays = outbox,
+                        inboxRelays = inbox + dm + (info?.relays() ?: emptyList()),
+                    )
+                }.collect { syncSubscription(it) }
             }
 
         // Reactive incremental update: any new event arrival that matches our
@@ -504,17 +525,16 @@ class CashuWalletState(
     // ============================================================
     // Subscription management
     // ============================================================
-    private fun syncSubscription(relays: Set<NormalizedRelayUrl>) {
+    private fun syncSubscription(next: CashuWalletQueryState) {
         val previous = currentSubscription
-        if (relays.isEmpty()) {
+        if (next.ownEventRelays.isEmpty() && next.inboxRelays.isEmpty()) {
             previous?.let { runCatching { assembler.unsubscribe(it) } }
             currentSubscription = null
             return
         }
-        if (previous != null && previous.relays == relays) return // unchanged
+        if (previous == next) return // unchanged
 
         previous?.let { runCatching { assembler.unsubscribe(it) } }
-        val next = CashuWalletQueryState(pubKey, relays)
         currentSubscription = next
         assembler.subscribe(next)
     }
@@ -875,7 +895,11 @@ class CashuWalletState(
         ops.publishWalletEvents(
             mints = currentMints,
             p2pkPrivkeyHex = manualPrivkeyHex?.takeIf { it.isNotBlank() },
-            nutzapRelays = outboxRelaysFlow.value.toList(),
+            // Advertise our NIP-65 inbox relays as the nutzap relays (NIP-65
+            // outbox model): senders publish kind:9321 where we read inbound
+            // events. We listen on a wider set (inbox + DM + these tags), but
+            // the kind:10019 default copies the inbox relay list, not outbox.
+            nutzapRelays = inboxRelaysFlow.value.toList(),
         )
         // The NUT-13 seed (derived from the P2PK key) is invalidated by
         // applyEvents when the new kind:17375 round-trips in, so it re-derives
