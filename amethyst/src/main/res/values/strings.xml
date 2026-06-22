@@ -281,6 +281,7 @@
     <string name="unblock">Unblock</string>
     <string name="copy_user_id">Copy User ID</string>
     <string name="unblock_user">Unblock User</string>
+    <string name="user_is_blocked_hidden">This user is blocked/muted. Their posts are hidden.</string>
     <string name="npub_hex_username">"npub, username, text"</string>
     <string name="clear">Clear</string>
     <string name="app_logo">App Logo</string>
