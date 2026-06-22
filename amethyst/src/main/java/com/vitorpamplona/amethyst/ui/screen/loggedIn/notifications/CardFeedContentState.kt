@@ -273,7 +273,7 @@ class CardFeedContentState(
         // reaction/zap/repost — a meaningful GC saving on full feed conversions.
         val zone = ZoneId.systemDefault()
 
-        fun epochDay(createdAt: Long?): Long = LocalDate.ofInstant(Instant.ofEpochSecond(createdAt ?: 0L), zone).toEpochDay()
+        fun epochDay(createdAt: Long?): Long = Instant.ofEpochSecond(createdAt ?: 0L).atZone(zone).toLocalDate().toEpochDay()
 
         val allBaseNotes = zapsPerEvent.keys + boostsPerEvent.keys + reactionsPerEvent.keys + nutzapsPerEvent.keys
         val multiCards =
