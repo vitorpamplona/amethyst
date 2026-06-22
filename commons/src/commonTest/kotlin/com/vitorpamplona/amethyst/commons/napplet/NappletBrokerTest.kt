@@ -36,6 +36,10 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -224,6 +228,57 @@ class NappletBrokerTest {
             broker.handle(applet, NappletRequest.GetPublicKey, allDeclared)
 
             assertEquals(1, prompt.calls) // only the first request prompted
+        }
+
+    /** A prompt that blocks inside [request] until [gate] is released, tracking peak concurrency. */
+    private class GatedPrompt(
+        private val answer: GrantState,
+    ) : NappletConsentPrompt {
+        val gate = CompletableDeferred<Unit>()
+        var calls = 0
+            private set
+        var maxActive = 0
+            private set
+        private var active = 0
+
+        override suspend fun request(
+            identity: NappletIdentity,
+            capability: NappletCapability,
+            request: NappletRequest,
+        ): GrantState {
+            calls++
+            active++
+            if (active > maxActive) maxActive = active
+            try {
+                gate.await()
+                return answer
+            } finally {
+                active--
+            }
+        }
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    @Test
+    fun concurrentRequestsForOneCapabilitySerializeIntoASinglePrompt() =
+        runTest {
+            // Five capability calls land at once (a napplet hitting relays/storage/identity on load).
+            // Without serialization each would launch its own consent prompt concurrently; the host
+            // can only show one, so the rest are dropped and hang. The broker must queue them through
+            // a single prompt, and siblings must honor the grant the first one records.
+            val prompt = GatedPrompt(GrantState.ALLOW_ALWAYS)
+            val broker = broker(prompt)
+
+            val jobs = List(5) { async { broker.handle(applet, NappletRequest.GetPublicKey, allDeclared) } }
+            advanceUntilIdle() // everyone reaches the gate/lock; only the lock holder is inside request()
+
+            assertEquals(1, prompt.maxActive) // never two prompts at once (the bug would show 5)
+
+            prompt.gate.complete(Unit)
+            val responses = jobs.awaitAll()
+
+            assertEquals(1, prompt.calls) // siblings honored the recorded ALLOW_ALWAYS instead of re-prompting
+            responses.forEach { assertEquals(NappletResponse.PublicKey(signer.pubKey), it) }
         }
 
     @Test

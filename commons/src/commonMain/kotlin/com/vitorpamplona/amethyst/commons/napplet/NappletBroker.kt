@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -68,6 +70,11 @@ class NappletBroker(
     private val upload: NappletUploadGateway? = null,
     private val identityReads: NappletIdentityGateway? = null,
 ) {
+    // Serializes the consent-prompt path so concurrent requests queue into one dialog at a time
+    // (see [authorizeWithConsent]). Only the prompt is held here; non-prompting paths and execute()
+    // run unserialized.
+    private val consentLock = Mutex()
+
     /**
      * Authorizes and runs [request] on behalf of [identity]. [declared] is the capability set the
      * manifest's `requires` resolved to; a request outside it is refused before any prompt.
@@ -105,11 +112,7 @@ class NappletBroker(
                 signerSelfGates(request) -> true
                 // A standing allow short-circuits, except for per-use capabilities (e.g. payments).
                 ledger.decide(identity, capability) == PermissionDecision.ALLOW && !capability.requiresPerUseConsent -> true
-                else -> {
-                    val grant = consentPrompt.request(identity, capability, request)
-                    ledger.record(identity, capability, effectiveGrant(capability, grant))
-                    grant.allowsExecution
-                }
+                else -> authorizeWithConsent(identity, capability, request)
             }
 
         if (!authorized) return NappletResponse.Denied(capability, "The user declined.")
@@ -122,6 +125,34 @@ class NappletBroker(
             NappletResponse.Failed(e.message ?: e::class.simpleName ?: "Unknown error")
         }
     }
+
+    /**
+     * Prompts for consent under [consentLock] so several requests arriving at once — the common case,
+     * a napplet reading relays + storage + identity on load — queue into one dialog at a time instead
+     * of racing. Without this each would launch a consent prompt concurrently; the host can only show
+     * one, so the rest are dropped and their calls hang forever.
+     *
+     * After taking the lock we re-read the standing decision: a sibling request for the same capability
+     * may have recorded an Allow/Deny while we waited, so we honor that instead of prompting again.
+     * Per-use capabilities (payments) always re-prompt, so they skip the re-check.
+     */
+    private suspend fun authorizeWithConsent(
+        identity: NappletIdentity,
+        capability: NappletCapability,
+        request: NappletRequest,
+    ): Boolean =
+        consentLock.withLock {
+            if (!capability.requiresPerUseConsent) {
+                when (ledger.decide(identity, capability)) {
+                    PermissionDecision.DENY -> return@withLock false
+                    PermissionDecision.ALLOW -> return@withLock true
+                    PermissionDecision.ASK -> {}
+                }
+            }
+            val grant = consentPrompt.request(identity, capability, request)
+            ledger.record(identity, capability, effectiveGrant(capability, grant))
+            grant.allowsExecution
+        }
 
     /** Identity reads and sign-as-user ops are gated by us only when we hold the key; remote/external signers gate themselves. */
     private fun signerSelfGates(request: NappletRequest): Boolean = (request.capability == NappletCapability.IDENTITY || request.signsAsUser) && signer !is NostrSignerInternal
