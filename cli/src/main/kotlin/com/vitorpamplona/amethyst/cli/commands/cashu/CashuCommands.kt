@@ -39,12 +39,16 @@ object CashuCommands {
         route(
             name = "cashu",
             tail = tail,
-            usage = "cashu <wallet|mint|balance>",
+            usage = "cashu <wallet|mint|balance|receive|send|maintenance|mint-rec>",
             routes =
                 mapOf(
                     "wallet" to { rest -> CashuWalletCommands.dispatch(dataDir, rest) },
                     "mint" to { rest -> CashuMintCommands.dispatch(rest) },
                     "balance" to { rest -> CashuBalanceCommand.run(dataDir, rest) },
+                    "receive" to { rest -> CashuReceiveCommands.dispatch(dataDir, rest) },
+                    "send" to { rest -> CashuSendCommands.dispatch(dataDir, rest) },
+                    "maintenance" to { rest -> CashuMaintenanceCommands.dispatch(dataDir, rest) },
+                    "mint-rec" to { rest -> CashuMintRecCommands.dispatch(dataDir, rest) },
                 ),
         )
 }

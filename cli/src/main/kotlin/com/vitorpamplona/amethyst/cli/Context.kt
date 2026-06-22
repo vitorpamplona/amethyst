@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.stores.FileMarmotMessageStore
 import com.vitorpamplona.amethyst.cli.stores.FileMlsGroupStateStore
 import com.vitorpamplona.amethyst.commons.cashu.CashuWalletReader
 import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
+import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
@@ -255,6 +256,32 @@ class Context(
                 Filter(kinds = listOf(NutzapEvent.KIND), tags = mapOf("p" to listOf(pk))),
             )
         return CashuWalletReader(signer).project(authored + inboundNutzaps)
+    }
+
+    /** Warm and return the wallet's NUT-13 seed, or null if no wallet. */
+    suspend fun cashuSeed(): ByteArray? {
+        warmCashuSeed()
+        return cachedCashuSeed
+    }
+
+    /**
+     * NUT-09 restore for one mint, mirroring Android's
+     * `CashuWalletState.restoreFromMint`: re-derive proofs from the seed
+     * (skipping secrets we already hold), then bump the persisted NUT-13
+     * counter past every slot the scan confirmed in use so later mints can't
+     * reuse one. Returns null when the wallet has no seed yet.
+     */
+    suspend fun cashuRestore(mintUrl: String): RestoreOutcome? {
+        val seed = cashuSeed() ?: return null
+        val existingSecrets =
+            cashuSnapshot()
+                .tokenEntries
+                .flatMap { it.content.proofs }
+                .mapTo(HashSet()) { it.secret }
+        val outcome = cashuOps().restoreFromMint(mintUrl = mintUrl, seed = seed, startCounter = 0L, existingSecrets = existingSecrets)
+        val delta = (outcome.nextCounterAfterScan - cashuCounters.peek(outcome.keysetId)).coerceAtLeast(0L)
+        if (delta > 0) cashuCounters.reserve(outcome.keysetId, delta.toInt())
+        return outcome
     }
 
     private var prepared = false

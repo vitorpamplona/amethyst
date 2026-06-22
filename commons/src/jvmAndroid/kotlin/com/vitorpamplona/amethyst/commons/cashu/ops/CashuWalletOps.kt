@@ -946,6 +946,33 @@ class CashuWalletOps(
     ): Map<String, ProofState> = ops(mintUrl).checkStates(proofs)
 
     /**
+     * NUT-07 scrub for a single mint: check every proof in [entries] against
+     * the mint's `/checkstate`, then NIP-09 delete every kind:7375 event that
+     * holds at least one SPENT proof (a mixed-state entry is unusable — the
+     * next swap would pick it and trip HTTP 400). Returns the deleted token
+     * events so the caller can drop them from its own indexes.
+     *
+     * Shared by Android's `CashuWalletState.scrubLocallyStaleProofs` and amy's
+     * `cashu maintenance scrub`, so both prune identically.
+     */
+    suspend fun scrubStaleProofs(
+        mintUrl: String,
+        entries: List<TokenEntry>,
+    ): List<CashuTokenEvent> {
+        val allProofs = entries.flatMap { it.content.proofs }
+        if (allProofs.isEmpty()) return emptyList()
+        val states = ops(mintUrl).checkStates(allProofs)
+        val stale =
+            entries.filter { entry ->
+                entry.content.proofs.any { states[it.secret] == ProofState.SPENT }
+            }
+        if (stale.isEmpty()) return emptyList()
+        val delTemplate = DeletionEvent.build(stale.map { it.event })
+        publish(signer.sign(delTemplate))
+        return stale.map { it.event }
+    }
+
+    /**
      * Swap every proof inside [entries] (which the caller has already
      * filtered to "contains at least one stale-keyset proof") onto the
      * mint's current active keyset, publish the result as a single
