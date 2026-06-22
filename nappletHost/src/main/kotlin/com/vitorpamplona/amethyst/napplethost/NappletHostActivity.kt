@@ -49,6 +49,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -132,6 +133,25 @@ class NappletHostActivity : ComponentActivity() {
     // Set once the WebView has begun loading the shell, so a retry doesn't reload it.
     private var started = false
 
+    // Back goes "page back" inside the applet's WebView history first; only when it can't go back
+    // further does this disable itself and let the system back exit the sandbox to Amethyst.
+    private val backCallback =
+        object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                if (this@NappletHostActivity::webView.isInitialized && webView.canGoBack()) {
+                    webView.goBack()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        }
+
+    /** Keep the in-WebView back gesture enabled exactly while the applet has history to pop. */
+    private fun syncBackState() {
+        if (this::webView.isInitialized) backCallback.isEnabled = webView.canGoBack()
+    }
+
     private val brokerConnection =
         object : ServiceConnection {
             override fun onServiceConnected(
@@ -189,6 +209,9 @@ class NappletHostActivity : ComponentActivity() {
         // Bind the main-process broker by explicit class name (same APK) rather than a compile-time
         // class reference, so this sandbox module needs no dependency on :amethyst.
         bindService(Intent().setClassName(this, NappletHostContract.BROKER_SERVICE_CLASS), brokerConnection, BIND_AUTO_CREATE)
+
+        // Route the back gesture into the WebView's history first (see backCallback).
+        onBackPressedDispatcher.addCallback(this, backCallback)
 
         // Persistent trusted chrome (anti-phishing bar the applet can't draw over) over a content
         // frame that shows a loading screen → the applet's WebView, or an "unavailable" screen.
@@ -358,6 +381,23 @@ class NappletHostActivity : ComponentActivity() {
             view: WebView,
             request: WebResourceRequest,
         ): WebResourceResponse? = contentServer.serve(request)
+
+        // The applet's in-page / in-iframe navigations (links + history.pushState) change the
+        // WebView's back/forward list; keep the back gesture enabled exactly while it can pop.
+        override fun doUpdateVisitedHistory(
+            view: WebView,
+            url: String,
+            isReload: Boolean,
+        ) {
+            syncBackState()
+        }
+
+        override fun onPageFinished(
+            view: WebView,
+            url: String,
+        ) {
+            syncBackState()
+        }
 
         override fun shouldOverrideUrlLoading(
             view: WebView,
