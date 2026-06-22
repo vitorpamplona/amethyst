@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.note.LinkIcon
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
+import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -165,6 +166,14 @@ fun RenderSoftwareApplication(
                 Spacer(Modifier.width(8.dp))
                 VersionChip(version)
             }
+
+            Spacer(Modifier.width(4.dp))
+            MoreOptionsButton(
+                baseNote = note,
+                editState = null,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
         }
 
         if (description.isNotBlank()) {
