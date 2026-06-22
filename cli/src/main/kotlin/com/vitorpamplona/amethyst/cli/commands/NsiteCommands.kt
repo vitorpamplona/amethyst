@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.siteAggregateHash
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 
 /**
@@ -56,11 +57,37 @@ object NsiteCommands {
         route(
             "nsite",
             tail,
-            "nsite <fetch> …",
+            "nsite <fetch|publish> …",
             mapOf(
                 "fetch" to { rest -> fetch(dataDir, rest) },
+                "publish" to { rest -> publish(dataDir, rest) },
             ),
         )
+
+    /**
+     * `amy nsite publish <dir> --server <blossom> [--d ID] [--relay …] [--title …]` — upload a static
+     * site directory to Blossom and broadcast its NIP-5A manifest (kind 15128 root, or 35128 named
+     * with `--d`). Includes the `x` aggregate hash so the manifest is self-verifying.
+     */
+    private suspend fun publish(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int =
+        StaticSitePublish.run(
+            dataDir,
+            rest,
+            "nsite publish <dir> --server <blossom-url> [--d ID] [--relay R] [--title T] [--description D] [--source URL]",
+        ) { m ->
+            if (m.identifier != null) {
+                NamedSiteEvent.build(m.identifier, m.paths, m.servers, m.title, m.description, m.source) {
+                    siteAggregateHash(m.paths)
+                }
+            } else {
+                RootSiteEvent.build(m.paths, m.servers, m.title, m.description, m.source) {
+                    siteAggregateHash(m.paths)
+                }
+            }
+        }
 
     private suspend fun fetch(
         dataDir: DataDir,

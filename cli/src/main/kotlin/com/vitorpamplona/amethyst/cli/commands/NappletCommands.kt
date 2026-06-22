@@ -57,11 +57,34 @@ object NappletCommands {
         route(
             "napplet",
             tail,
-            "napplet <fetch> …",
+            "napplet <fetch|publish> …",
             mapOf(
                 "fetch" to { rest -> fetch(dataDir, rest) },
+                "publish" to { rest -> publish(dataDir, rest) },
             ),
         )
+
+    /**
+     * `amy napplet publish <dir> --server <blossom> [--requires identity,relay,…] [--d ID] [--relay …]`
+     * — upload a napplet directory to Blossom and broadcast its NIP-5D manifest (kind 15129 root, or
+     * 35129 named with `--d`). The builder adds the `x` aggregate hash and the `requires` capability
+     * tags the shell gates on.
+     */
+    private suspend fun publish(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int =
+        StaticSitePublish.run(
+            dataDir,
+            rest,
+            "napplet publish <dir> --server <blossom-url> [--requires identity,relay,…] [--d ID] [--relay R] [--title T]",
+        ) { m ->
+            if (m.identifier != null) {
+                NamedNappletEvent.build(m.identifier, m.paths, m.servers, m.requires, m.title, m.description, m.source)
+            } else {
+                RootNappletEvent.build(m.paths, m.servers, m.requires, m.title, m.description, m.source)
+            }
+        }
 
     private suspend fun fetch(
         dataDir: DataDir,

@@ -9,7 +9,24 @@ shim → shell → broker → consent round-trip (and the newer `identity.getLis
 
 - `index.html` — the napplet. Read-only checks run on load; publish/upload/pay are behind buttons;
   live pushes (`identity.changed`, `keys.action`) land in the top banner.
-- `publish.sh` — uploads `index.html` to a Blossom server and publishes the napplet event.
+- `publish.sh` — a standalone (nak + curl) uploader, for when you don't want to build `amy`.
+
+## Publish with `amy` (recommended)
+
+`amy napplet publish` uploads the whole directory to Blossom and broadcasts the NIP-5D event in one
+step, using the account `amy` is logged in as:
+
+```bash
+./gradlew :cli:installDist            # builds amy
+amy napplet publish tools/napplet-test \
+  --server https://blossom.primal.net \
+  --requires identity,relay,storage,value,resource,upload,keys \
+  --d napplet-test --title "Napplet Test Harness" \
+  --relay wss://relay.damus.io --relay wss://nos.lol
+```
+
+(`--d` makes it an addressable kind-35129 napplet; omit it for a root kind-15129. For a plain static
+site use `amy nsite publish <dir> --server …`.) Use the **same key you're logged in as in Amethyst**.
 
 ## Prerequisites
 
@@ -20,7 +37,7 @@ shim → shell → broker → consent round-trip (and the newer `identity.getLis
 - Your **nsec** — use the **same key you're logged in as in Amethyst**, so the napplet appears under
   your account and the identity reads (`getProfile`, `getFollows`, …) have data.
 
-## Publish
+## Publish without `amy` (standalone)
 
 ```bash
 cd tools/napplet-test
