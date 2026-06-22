@@ -41,7 +41,10 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -56,7 +59,14 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
 import com.vitorpamplona.amethyst.napplethost.R
+import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
@@ -107,6 +117,10 @@ class NappletHostActivity : ComponentActivity() {
     // Keyboard/command actions the applet bound via keys.registerAction; matched in dispatchKeyEvent.
     private val keyActions = NappletKeyActions()
 
+    // Swaps between the loading screen, the applet WebView, and the "unavailable" screen.
+    private val contentFrame by lazy { FrameLayout(this) }
+    private val uiScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
     private val brokerConnection =
         object : ServiceConnection {
             override fun onServiceConnected(
@@ -148,17 +162,14 @@ class NappletHostActivity : ComponentActivity() {
         val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
         contentServer = NappletContentServer(paths, servers, proxyPort, cacheDir, shellHtml, shim)
 
-        webView = WebView(this)
-        hardenWebView(webView)
-
-        // Persistent trusted chrome: a sandbox bar the applet can't draw over (anti-phishing) showing
-        // the napplet's name and a tap-to-see "what it can access". Below it, the applet's WebView.
+        // Persistent trusted chrome (anti-phishing bar the applet can't draw over) over a content
+        // frame that shows a loading screen → the applet's WebView, or an "unavailable" screen.
         val root =
             LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 addView(buildSandboxBar())
                 addView(buildDivider())
-                addView(webView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+                addView(contentFrame, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
             }
         setContentView(root)
         // Activities are edge-to-edge by default on recent Android; pad by the system bar and
@@ -168,6 +179,32 @@ class NappletHostActivity : ComponentActivity() {
             view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
             insets
         }
+
+        probeAndMount()
+    }
+
+    /**
+     * Probe whether the app/site's index resolves (downloading + verifying it, which also warms the
+     * cache) before showing the WebView — so the user sees a loading screen, then either the running
+     * app or a clear "unavailable" screen with Retry, instead of a blank/white WebView.
+     */
+    private fun probeAndMount() {
+        contentFrame.removeAllViews()
+        contentFrame.addView(buildLoadingView())
+        uiScope.launch {
+            val available = withContext(Dispatchers.IO) { contentServer.resolve("/") is StaticSiteResolution.Resolved }
+            if (available) {
+                mountWebView()
+            } else {
+                contentFrame.removeAllViews()
+                contentFrame.addView(buildErrorView { probeAndMount() })
+            }
+        }
+    }
+
+    private fun mountWebView() {
+        webView = WebView(this)
+        hardenWebView(webView)
 
         // Origin-restricted bridge: only the trusted shell page (main frame) can reach native.
         WebViewCompat.addWebMessageListener(
@@ -182,6 +219,8 @@ class NappletHostActivity : ComponentActivity() {
         val brokerIntent = Intent().setClassName(this, NappletHostContract.BROKER_SERVICE_CLASS)
         bindService(brokerIntent, brokerConnection, BIND_AUTO_CREATE)
 
+        contentFrame.removeAllViews()
+        contentFrame.addView(webView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         webView.loadUrl(NappletWebContract.SHELL_URL)
     }
 
@@ -205,6 +244,8 @@ class NappletHostActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        uiScope.cancel()
+        // unbind is in runCatching: if the index never resolved we never bound the broker.
         runCatching { unbindService(brokerConnection) }
         keyActions.clear()
         if (this::webView.isInitialized) {
@@ -393,6 +434,86 @@ class NappletHostActivity : ComponentActivity() {
         }
         return true
     }
+
+    // ---- loading / unavailable screens ----
+
+    /** A monogram tile (first letter of the title on a colored rounded square), matching the card. */
+    private fun monogram(sizeDp: Int): TextView =
+        TextView(this).apply {
+            text = barTitle().trim().take(1).uppercase()
+            setTextColor(resolveThemeColor(android.R.attr.textColorPrimaryInverse))
+            textSize = (sizeDp / 2.4f)
+            gravity = Gravity.CENTER
+            val bg =
+                android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = dp(18).toFloat()
+                    setColor(resolveThemeColor(android.R.attr.colorPrimary))
+                }
+            background = bg
+            layoutParams = LinearLayout.LayoutParams(dp(sizeDp), dp(sizeDp))
+        }
+
+    private fun centeredColumn(): LinearLayout =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(32), dp(32), dp(32), dp(32))
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        }
+
+    private fun buildLoadingView(): View =
+        centeredColumn().apply {
+            addView(monogram(72))
+            addView(spacer(dp(20)))
+            addView(
+                TextView(this@NappletHostActivity).apply {
+                    text = barTitle()
+                    setTextColor(resolveThemeColor(android.R.attr.textColorPrimary))
+                    textSize = 20f
+                    gravity = Gravity.CENTER
+                },
+            )
+            addView(spacer(dp(20)))
+            addView(ProgressBar(this@NappletHostActivity))
+        }
+
+    private fun buildErrorView(onRetry: () -> Unit): View =
+        centeredColumn().apply {
+            addView(
+                TextView(this@NappletHostActivity).apply {
+                    text = "⚠"
+                    textSize = 44f
+                    gravity = Gravity.CENTER
+                },
+            )
+            addView(spacer(dp(12)))
+            addView(
+                TextView(this@NappletHostActivity).apply {
+                    text = getString(R.string.napplet_unavailable_title, barTitle())
+                    setTextColor(resolveThemeColor(android.R.attr.textColorPrimary))
+                    textSize = 18f
+                    gravity = Gravity.CENTER
+                },
+            )
+            addView(spacer(dp(8)))
+            addView(
+                TextView(this@NappletHostActivity).apply {
+                    text = getString(R.string.napplet_unavailable_subtitle)
+                    setTextColor(resolveThemeColor(android.R.attr.textColorSecondary))
+                    textSize = 14f
+                    gravity = Gravity.CENTER
+                },
+            )
+            addView(spacer(dp(20)))
+            addView(
+                Button(this@NappletHostActivity).apply {
+                    text = getString(R.string.napplet_unavailable_retry)
+                    setOnClickListener { onRetry() }
+                },
+            )
+        }
+
+    private fun spacer(heightPx: Int): View = View(this).apply { layoutParams = LinearLayout.LayoutParams(1, heightPx) }
 
     // ---- trusted sandbox chrome ----
 

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
-import android.util.Log
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
@@ -29,20 +28,16 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolutio
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import kotlinx.coroutines.runBlocking
-import okhttp3.Cache
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.ByteArrayInputStream
 import java.io.File
-import java.net.InetSocketAddress
-import java.net.Proxy
 
 /**
  * Serves the napplet sandbox's content over the internal `https://napplet.local` origin: the trusted
  * shell page, and the manifest's blobs — each **sha256-verified** by [StaticSiteResolver] before it
- * leaves this class. Everything else 404s. Blobs are fetched through the user's Tor proxy (the applet
- * has no direct network) and disk-cached; because they are content-addressed and re-verified on every
- * serve, a stale or poisoned cache entry can never be served.
+ * leaves this class. Everything else 404s. Blobs come from the shared content-addressed
+ * [NappletBlobCache] (warmed by the prefetcher when the card was on screen, so opening is instant);
+ * a cache miss falls back to a Tor-routed download that re-fills the cache. Because blobs are
+ * content-addressed and re-verified on every serve, a stale or poisoned cache entry can never be served.
  *
  * This is the host's resource edge, kept separate from the Activity lifecycle and the broker bridge:
  * given a [WebResourceRequest] it returns the [WebResourceResponse] (with the right CSP headers) or
@@ -56,26 +51,20 @@ class NappletContentServer(
     private val shellHtmlBytes: ByteArray,
     private val shimJs: String,
 ) {
-    private val http = buildHttpClient(proxyPort, cacheDir)
+    private val cache = NappletBlobCache(NappletBlobCache.dirFor(cacheDir))
+    private val http = NappletBlobHttp.client(proxyPort)
 
     private val fetch: BlobFetcher = { url ->
-        try {
-            http
-                .newCall(
-                    Request
-                        .Builder()
-                        .url(url)
-                        .get()
-                        .build(),
-                ).execute()
-                .use { r ->
-                    if (r.isSuccessful) r.body.bytes() else null
-                }
-        } catch (e: Exception) {
-            Log.w(TAG, "Blob fetch failed for $url", e)
-            null
-        }
+        val hash = url.substringAfterLast('/').lowercase()
+        cache.get(hash) ?: NappletBlobHttp.download(http, url)?.also { cache.put(hash, it) }
     }
+
+    /**
+     * Resolves [requestPath] to a verified blob (or PathNotInManifest / Unresolvable). Used by the host
+     * to probe availability for the loading screen before showing the WebView. Warms the cache as a
+     * side effect, so the subsequent WebView request serves from disk.
+     */
+    fun resolve(requestPath: String): StaticSiteResolution = runBlocking { StaticSiteResolver.resolve(requestPath, paths, servers, fetch) }
 
     /**
      * Serves the trusted shell or a verified app blob for a GET to our origin; 404s anything else on
@@ -158,38 +147,6 @@ class NappletContentServer(
         return injected.encodeToByteArray()
     }
 
-    /**
-     * Routes blob fetches through the user's Tor SOCKS proxy when one is active (port > 0), and
-     * caches them on disk. Blobs are content-addressed (`<server>/<sha256>`) and therefore
-     * immutable, so a long-lived forced cache is safe — and the resolver re-verifies every blob's
-     * sha256 on the way out regardless, so a stale/poisoned cache entry can never be served.
-     */
-    private fun buildHttpClient(
-        port: Int,
-        cacheDir: File,
-    ): OkHttpClient {
-        val builder = OkHttpClient.Builder()
-        if (port > 0) {
-            builder.proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port)))
-        }
-        runCatching {
-            builder.cache(Cache(File(cacheDir, "napplet-blobs"), BLOB_CACHE_BYTES))
-            builder.addNetworkInterceptor { chain ->
-                val response = chain.proceed(chain.request())
-                if (response.isSuccessful) {
-                    response
-                        .newBuilder()
-                        .header("Cache-Control", "public, max-age=31536000, immutable")
-                        .removeHeader("Pragma")
-                        .build()
-                } else {
-                    response
-                }
-            }
-        }
-        return builder.build()
-    }
-
     private fun notFound(): WebResourceResponse = WebResourceResponse("text/plain", "utf-8", 404, "Not Found", emptyMap(), ByteArrayInputStream(ByteArray(0)))
 
     private fun splitContentType(contentType: String): Pair<String, String> {
@@ -198,10 +155,5 @@ class NappletContentServer(
             contentType.substringAfter("charset=", "").trim().ifEmpty { null }
                 ?: if (mime.startsWith("text/") || mime.endsWith("javascript") || mime.endsWith("json")) "utf-8" else ""
         return mime to charset
-    }
-
-    companion object {
-        private const val TAG = "NappletContentServer"
-        private const val BLOB_CACHE_BYTES = 50L * 1024 * 1024
     }
 }
