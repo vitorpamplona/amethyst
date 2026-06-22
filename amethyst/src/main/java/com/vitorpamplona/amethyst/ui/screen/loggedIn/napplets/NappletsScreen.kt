@@ -24,15 +24,20 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,14 +51,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.navigation.topbars.MyExtensibleTopAppBar
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.note.ReactionsRow
+import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -63,16 +67,15 @@ import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 
 /**
  * Lists the napplet manifests currently in the local cache (NIP-5D kinds 15129/35129) and opens
- * the selected one in the sandboxed [NappletLauncher] host. Reads the cache directly rather than
- * standing up a full relay-backed feed — discovery/subscription is a later step.
+ * the selected one in the sandboxed [NappletLauncher] host. The top bar carries a follow-list filter
+ * (like the Pictures/Articles feeds) and each row is a rich card with the author, declared
+ * capabilities, and the usual reaction bar (reply/boost/like/zap).
  */
 @Composable
 fun NappletsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
-
     // Pull napplet manifests from the user's relays into LocalCache while this screen is open.
     NappletsFilterAssemblerSubscription(accountViewModel)
 
@@ -82,20 +85,18 @@ fun NappletsScreen(
         )
     }.collectAsStateWithLifecycle(emptyList())
 
+    val followFilter by accountViewModel.account.liveNappletsFollowLists
+        .collectAsStateWithLifecycle()
+
+    val visible =
+        remember(napplets, followFilter) {
+            napplets.filter { followFilter.matchAuthor(it.pubKey) }
+        }
+
     Scaffold(
-        topBar = {
-            MyExtensibleTopAppBar(
-                title = { Text(stringResource(R.string.napplets)) },
-                navigationIcon = { IconButton(onClick = { nav.popBack() }) { ArrowBackIcon() } },
-                actions = {
-                    IconButton(onClick = { nav.nav(Route.NappletPermissions) }) {
-                        Icon(MaterialSymbols.Tune, contentDescription = stringResource(R.string.napplet_manage_permissions))
-                    }
-                },
-            )
-        },
+        topBar = { NappletsTopBar(accountViewModel, nav) },
     ) { padding ->
-        if (napplets.isEmpty()) {
+        if (visible.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
                     stringResource(R.string.napplet_none_found),
@@ -103,11 +104,15 @@ fun NappletsScreen(
                 )
             }
         } else {
+            val context = LocalContext.current
             LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-                items(napplets, key = { it.id }) { event ->
+                items(visible, key = { it.id }) { event ->
                     val manifest = event as? NappletManifest ?: return@items
-                    NappletRow(
+                    NappletCard(
+                        event = event,
                         manifest = manifest,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
                         onClick = {
                             NappletLauncher.launch(
                                 context = context,
@@ -124,33 +129,72 @@ fun NappletsScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun NappletRow(
+private fun NappletCard(
+    event: Event,
     manifest: NappletManifest,
+    accountViewModel: AccountViewModel,
+    nav: INav,
     onClick: () -> Unit,
 ) {
+    val note = remember(event.id) { Amethyst.instance.cache.getOrCreateNote(event) }
+
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(
-            text = manifest.title()?.ifBlank { null } ?: stringResource(R.string.napplet_untitled),
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            UserPicture(userHex = event.pubKey, size = 48.dp, accountViewModel = accountViewModel, nav = nav)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = manifest.title()?.ifBlank { null } ?: stringResource(R.string.napplet_untitled),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                LoadUser(baseUserHex = event.pubKey, accountViewModel) { user ->
+                    if (user != null) {
+                        UsernameDisplay(user, accountViewModel = accountViewModel)
+                    }
+                }
+            }
+        }
+
         manifest.description()?.takeIf { it.isNotBlank() }?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
         }
+
+        val requires = manifest.requires()
+        if (requires.isNotEmpty()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                requires.forEach { capability ->
+                    SuggestionChip(
+                        onClick = onClick,
+                        label = { Text(capability.replaceFirstChar { it.uppercase() }) },
+                    )
+                }
+            }
+        }
+
+        ReactionsRow(
+            baseNote = note,
+            showReactionDetail = true,
+            addPadding = false,
+            editState = null,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
