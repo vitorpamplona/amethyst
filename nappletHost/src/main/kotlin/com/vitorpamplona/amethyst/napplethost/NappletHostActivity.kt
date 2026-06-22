@@ -36,6 +36,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -121,6 +122,9 @@ class NappletHostActivity : ComponentActivity() {
     private val contentFrame by lazy { FrameLayout(this) }
     private val uiScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
+    // Set once the WebView has begun loading the shell, so a retry doesn't reload it.
+    private var started = false
+
     private val brokerConnection =
         object : ServiceConnection {
             override fun onServiceConnected(
@@ -162,6 +166,22 @@ class NappletHostActivity : ComponentActivity() {
         val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
         contentServer = NappletContentServer(paths, servers, proxyPort, cacheDir, shellHtml, shim)
 
+        // Create + warm the WebView NOW so its (slow, first-in-process) Chromium init runs on the main
+        // thread concurrently with the index probe below (which runs on IO) — instead of serially after
+        // it. Binding the broker early overlaps too. The WebView is attached once the probe succeeds.
+        webView = WebView(this)
+        hardenWebView(webView)
+        // Origin-restricted bridge: only the trusted shell page (main frame) can reach native.
+        WebViewCompat.addWebMessageListener(
+            webView,
+            NappletWebContract.BRIDGE_NAME,
+            setOf(NappletWebContract.ORIGIN),
+            ::onShellMessage,
+        )
+        // Bind the main-process broker by explicit class name (same APK) rather than a compile-time
+        // class reference, so this sandbox module needs no dependency on :amethyst.
+        bindService(Intent().setClassName(this, NappletHostContract.BROKER_SERVICE_CLASS), brokerConnection, BIND_AUTO_CREATE)
+
         // Persistent trusted chrome (anti-phishing bar the applet can't draw over) over a content
         // frame that shows a loading screen → the applet's WebView, or an "unavailable" screen.
         val root =
@@ -185,8 +205,9 @@ class NappletHostActivity : ComponentActivity() {
 
     /**
      * Probe whether the app/site's index resolves (downloading + verifying it, which also warms the
-     * cache) before showing the WebView — so the user sees a loading screen, then either the running
-     * app or a clear "unavailable" screen with Retry, instead of a blank/white WebView.
+     * cache) — on IO, concurrently with the WebView init kicked off in [onCreate] — before showing the
+     * WebView. The user sees a loading screen, then either the running app or a clear "unavailable"
+     * screen with Retry, instead of a blank/white WebView.
      */
     private fun probeAndMount() {
         contentFrame.removeAllViews()
@@ -203,25 +224,13 @@ class NappletHostActivity : ComponentActivity() {
     }
 
     private fun mountWebView() {
-        webView = WebView(this)
-        hardenWebView(webView)
-
-        // Origin-restricted bridge: only the trusted shell page (main frame) can reach native.
-        WebViewCompat.addWebMessageListener(
-            webView,
-            NappletWebContract.BRIDGE_NAME,
-            setOf(NappletWebContract.ORIGIN),
-            ::onShellMessage,
-        )
-
-        // Bind the main-process broker by explicit class name (same APK) rather than a compile-time
-        // class reference, so this sandbox module needs no dependency on :amethyst.
-        val brokerIntent = Intent().setClassName(this, NappletHostContract.BROKER_SERVICE_CLASS)
-        bindService(brokerIntent, brokerConnection, BIND_AUTO_CREATE)
-
         contentFrame.removeAllViews()
+        (webView.parent as? ViewGroup)?.removeView(webView)
         contentFrame.addView(webView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-        webView.loadUrl(NappletWebContract.SHELL_URL)
+        if (!started) {
+            started = true
+            webView.loadUrl(NappletWebContract.SHELL_URL)
+        }
     }
 
     override fun onResume() {

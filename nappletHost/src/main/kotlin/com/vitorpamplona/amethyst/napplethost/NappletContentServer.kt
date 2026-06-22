@@ -24,8 +24,12 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.BlobFetcher
+import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.GENERIC_CONTENT_TYPE
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
+import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.guessStaticContentType
+import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.resolvePath
+import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.sniffContentType
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import kotlinx.coroutines.runBlocking
 import java.io.ByteArrayInputStream
@@ -60,11 +64,28 @@ class NappletContentServer(
     }
 
     /**
+     * Fast path for a cache hit: the blob is already on disk under its sha256 (the cache verified it on
+     * write and addresses it by hash), so we serve it without re-hashing — skipping the resolver's
+     * per-serve sha256 over the whole blob, which is the dominant CPU cost for large JS bundles. Returns
+     * null on a miss, so the caller falls back to the verifying network resolve.
+     */
+    private fun cacheHit(requestPath: String): StaticSiteResolution.Resolved? {
+        val match = paths.resolvePath(requestPath) ?: return null
+        val bytes = cache.get(match.hash.lowercase()) ?: return null
+        val byExtension = guessStaticContentType(match.path)
+        val contentType = if (byExtension == GENERIC_CONTENT_TYPE) sniffContentType(bytes) ?: byExtension else byExtension
+        return StaticSiteResolution.Resolved(match.path, match.hash, contentType, bytes, server = CACHE_SERVER)
+    }
+
+    /** Cache-first resolution: serve a verified-on-write CAS hit directly, else fall back to the resolver. */
+    private fun resolveCacheFirst(requestPath: String): StaticSiteResolution = cacheHit(requestPath) ?: runBlocking { StaticSiteResolver.resolve(requestPath, paths, servers, fetch) }
+
+    /**
      * Resolves [requestPath] to a verified blob (or PathNotInManifest / Unresolvable). Used by the host
      * to probe availability for the loading screen before showing the WebView. Warms the cache as a
      * side effect, so the subsequent WebView request serves from disk.
      */
-    fun resolve(requestPath: String): StaticSiteResolution = runBlocking { StaticSiteResolver.resolve(requestPath, paths, servers, fetch) }
+    fun resolve(requestPath: String): StaticSiteResolution = resolveCacheFirst(requestPath)
 
     /**
      * Serves the trusted shell or a verified app blob for a GET to our origin; 404s anything else on
@@ -105,14 +126,14 @@ class NappletContentServer(
                 .substringBefore('#')
                 .let { if (it.isEmpty()) "/" else "/$it" }
 
-        var resolution = runBlocking { StaticSiteResolver.resolve(requestPath, paths, servers, fetch) }
+        var resolution = resolveCacheFirst(requestPath)
 
         // SPA fallback: a document navigation (Accept: text/html) to a route that isn't in the
         // manifest falls back to the verified index.html, so client-side-routed sites survive deep
         // links and refreshes. Missing sub-resources (js/css/images) still 404 — they don't accept
         // html — so a broken asset never silently returns the page.
         if (resolution !is StaticSiteResolution.Resolved && acceptsHtml && requestPath != "/") {
-            resolution = runBlocking { StaticSiteResolver.resolve("/", paths, servers, fetch) }
+            resolution = resolveCacheFirst("/")
         }
 
         if (resolution !is StaticSiteResolution.Resolved) return notFound()
@@ -155,5 +176,10 @@ class NappletContentServer(
             contentType.substringAfter("charset=", "").trim().ifEmpty { null }
                 ?: if (mime.startsWith("text/") || mime.endsWith("javascript") || mime.endsWith("json")) "utf-8" else ""
         return mime to charset
+    }
+
+    companion object {
+        // Marker "server" for a Resolved served from the local content-addressed cache.
+        private const val CACHE_SERVER = "cache"
     }
 }

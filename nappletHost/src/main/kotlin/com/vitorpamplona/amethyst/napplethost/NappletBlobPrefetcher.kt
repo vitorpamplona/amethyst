@@ -24,8 +24,14 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
@@ -37,6 +43,8 @@ import kotlin.coroutines.coroutineContext
  * manifest hash, and stored content-addressed — exactly what the on-device host serves.
  */
 object NappletBlobPrefetcher {
+    private const val MAX_PARALLEL = 5
+
     // De-dupes blobs already being fetched by another visible card in this process.
     private val inFlight = ConcurrentHashMap.newKeySet<String>()
 
@@ -56,27 +64,43 @@ object NappletBlobPrefetcher {
         withContext(Dispatchers.IO) {
             val cache = NappletBlobCache(NappletBlobCache.dirFor(cacheDir))
             val client = NappletBlobHttp.client(proxyPort)
+            val gate = Semaphore(MAX_PARALLEL)
 
-            for (path in paths) {
-                coroutineContext.ensureActive()
-                val hash = path.hash.lowercase()
-                if (cache.has(hash) || !inFlight.add(hash)) continue
-                try {
-                    for (url in StaticSiteResolver.candidateUrls(servers, hash)) {
-                        coroutineContext.ensureActive()
-                        val bytes = NappletBlobHttp.download(client, url) ?: continue
-                        if (StaticSiteResolver.verify(bytes, hash)) {
-                            cache.put(hash, bytes)
-                            break
+            // Fetch the entry document(s) first so first paint is fastest, then the rest in parallel
+            // (bounded), instead of strictly sequentially.
+            coroutineScope {
+                paths
+                    .sortedByDescending { it.path == "/" || it.path == "/index.html" }
+                    .map { path ->
+                        async {
+                            gate.withPermit { fetchOne(path.hash.lowercase(), servers, cache, client) }
                         }
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } finally {
-                    inFlight.remove(hash)
-                }
+                    }.awaitAll()
             }
             cache.trimToSize(NappletBlobCache.DEFAULT_MAX_BYTES)
+        }
+    }
+
+    private suspend fun fetchOne(
+        hash: String,
+        servers: List<String>,
+        cache: NappletBlobCache,
+        client: OkHttpClient,
+    ) {
+        if (cache.has(hash) || !inFlight.add(hash)) return
+        try {
+            for (url in StaticSiteResolver.candidateUrls(servers, hash)) {
+                coroutineContext.ensureActive()
+                val bytes = NappletBlobHttp.download(client, url) ?: continue
+                if (StaticSiteResolver.verify(bytes, hash)) {
+                    cache.put(hash, bytes)
+                    break
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } finally {
+            inFlight.remove(hash)
         }
     }
 }
