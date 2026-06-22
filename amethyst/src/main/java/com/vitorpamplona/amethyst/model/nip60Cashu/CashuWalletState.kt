@@ -895,10 +895,11 @@ class CashuWalletState(
         ops.publishWalletEvents(
             mints = currentMints,
             p2pkPrivkeyHex = manualPrivkeyHex?.takeIf { it.isNotBlank() },
-            // Advertise our inbox + DM relays as the nutzap relays (NIP-65
+            // Advertise our NIP-65 inbox relays as the nutzap relays (NIP-65
             // outbox model): senders publish kind:9321 where we read inbound
-            // events, matching the wallet's inbound-nutzap subscription set.
-            nutzapRelays = (inboxRelaysFlow.value + dmRelaysFlow.value).toList(),
+            // events. We listen on a wider set (inbox + DM + these tags), but
+            // the kind:10019 default copies the inbox relay list, not outbox.
+            nutzapRelays = inboxRelaysFlow.value.toList(),
         )
         // The NUT-13 seed (derived from the P2PK key) is invalidated by
         // applyEvents when the new kind:17375 round-trips in, so it re-derives
