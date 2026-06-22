@@ -21,6 +21,10 @@
 package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -213,7 +217,13 @@ private fun DetailsDisclosure(
         )
     }
 
-    AnimatedVisibility(visible = expanded) {
+    AnimatedVisibility(
+        visible = expanded,
+        // Expand/collapse straight down from the top (matching the card) with a fade — never a
+        // sideways slide. Each child fills width so nothing grows in from the left as it lays out.
+        enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+    ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -239,7 +249,7 @@ private fun DetailsDisclosure(
             }
 
             if (servers.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = stringResource(Res.string.nsite_servers),
                         style = MaterialTheme.typography.labelMedium,
