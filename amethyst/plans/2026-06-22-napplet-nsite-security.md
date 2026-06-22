@@ -39,7 +39,47 @@ and what remains as future work.
    allow-always grant can't act completely silently. Also fixes the host drawing under
    the status/navigation bars (edge-to-edge insets).
 
+4. **Real per-applet storage origin (was: opaque sandbox → broken apps).** The applet
+   ran in an `allow-scripts`-only iframe served under `napplet.local/app/`, i.e. an
+   **opaque ("null") origin**. That has no `localStorage`/`IndexedDB`/service worker
+   (reads throw `SecurityError`), and module scripts / asset fetches are CORS-blocked, so
+   essentially every bundled SPA rendered **blank** or **crash-looped** ("cache version
+   0 → reset → reload" forever, because IndexedDB never persisted the version). Each
+   applet now loads on its **own** internal origin `https://<id>.napplet.local` —
+   `id = sha256(author + ":" + identifier)`, truncated + letter-prefixed to a DNS label —
+   with `allow-scripts allow-same-origin`, served at the **origin root** (bundlers emit
+   absolute `/assets/...` URLs). A real origin restores DOM storage / IndexedDB / SW and
+   makes the applet's own assets same-origin (no CORS shim needed). **Isolation is
+   preserved precisely because the applet origin is distinct from the shell's:** the
+   bridge stays origin-restricted to the shell (`napplet.local`), so the cross-origin
+   applet still cannot reach it or read the shell DOM — it talks only via `postMessage`,
+   which the shell relays. Per-applet subdomains keep applets' storage isolated from one
+   another; CSP `connect-src 'none'` is unchanged; the app CSP was **tightened** to
+   `'self'` (it no longer grants the shell origin).
+
 ## Residual risks / future work
+
+- **`allow-same-origin` is safe only while the applet origin ≠ the shell/bridge origin.**
+  A frame carrying *both* `allow-scripts` and `allow-same-origin` can strip its own
+  sandbox **iff it is same-origin with its embedder**; here it never is (applet on a
+  per-applet subdomain, shell on `napplet.local`), so it cannot. **Load-bearing
+  invariant — do not break:** never serve the applet on the shell origin, and never add
+  an applet origin (`*.napplet.local`) to the bridge's `addWebMessageListener` allowlist
+  (kept to `setOf(ORIGIN)`). Collapsing the two origins would hand the applet the bridge.
+- **Persistent client storage is now a persistence/exfil surface.** The applet keeps
+  `localStorage`/`IndexedDB` across launches (origin-scoped, per applet, key-free and
+  isolated from other applets). A consented applet can build durable local state and,
+  combined with allow-always RESOURCE, a durable profile. Tie to the session-scoped-grant
+  proposal above; consider a "clear this applet's data" affordance.
+- **Per-applet origin id.** `sha256(author:identifier)` is stable per applet and
+  collision-resistant; root/replaceable applets (kinds 15128/15129, no `d` tag) collapse
+  to one origin per author — fine, since there's one root per author. Changing the id
+  scheme later resets an applet's storage (new origin); acceptable.
+- **Service workers are reachable but unwired.** With a real origin the applet *can* now
+  register a service worker; the host does not yet route SW fetches
+  (`ServiceWorkerControllerCompat`), so registration currently fails gracefully (a
+  warning, not a crash). If SW support is wired later, SW-originated fetches MUST go
+  through the same verified content server, never the network.
 
 - **Coarse, persistent grants.** Non-payment capabilities persist as ALLOW_ALWAYS. A
   consented napplet can still, thereafter, publish as you (RELAY), read your social graph
