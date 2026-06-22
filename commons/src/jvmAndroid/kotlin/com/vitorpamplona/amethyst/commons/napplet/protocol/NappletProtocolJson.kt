@@ -80,6 +80,13 @@ object NappletProtocolJson {
             put("subId", subId)
         }.toString()
 
+    /** A `keys.action` push: the user triggered the registered keyboard/command action [actionId]. */
+    fun encodeKeysAction(actionId: String): String =
+        buildJsonObject {
+            put("type", "keys.action")
+            put("actionId", actionId)
+        }.toString()
+
     /**
      * An `identity.changed` push: the active user's public key changed (account switch / connect /
      * disconnect). [pubkey] is the new hex key, or `""` when no account is signed in.
@@ -147,7 +154,7 @@ object NappletProtocolJson {
             "storage.keys" -> NappletRequest.StorageKeys
             "keys.registerAction" -> {
                 val action = o.getValue("action").jsonObject
-                NappletRequest.RegisterAction(action.req("id"), action.str("label") ?: "")
+                NappletRequest.RegisterAction(action.req("id"), action.str("label") ?: "", action.str("defaultKey"))
             }
             "keys.unregisterAction" -> NappletRequest.UnregisterAction(o.req("actionId"))
             "value.payInvoice" -> NappletRequest.PayInvoice(o.req("invoice"))
@@ -205,6 +212,7 @@ object NappletProtocolJson {
                 is NappletResponse.ActionRegistered -> {
                     put("ok", true)
                     put("actionId", response.actionId)
+                    response.binding?.let { put("binding", it) }
                 }
                 is NappletResponse.StorageValue -> {
                     put("ok", true)

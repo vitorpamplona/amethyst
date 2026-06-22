@@ -200,9 +200,9 @@ class NappletBroker(
                 NappletResponse.Strings(store.keys(identity.coordinate))
             }
 
-            // Keyboard actions are acknowledged so SDK napplets' registerAction() resolves; the
-            // actual global-key binding (and the keys.action push) is a follow-up.
-            is NappletRequest.RegisterAction -> NappletResponse.ActionRegistered(request.actionId)
+            // Keyboard actions are acknowledged (with the honored binding) so SDK napplets'
+            // registerAction() resolves; the host binds the key and pushes keys.action when triggered.
+            is NappletRequest.RegisterAction -> NappletResponse.ActionRegistered(request.actionId, request.binding)
 
             is NappletRequest.UnregisterAction -> NappletResponse.Done
 

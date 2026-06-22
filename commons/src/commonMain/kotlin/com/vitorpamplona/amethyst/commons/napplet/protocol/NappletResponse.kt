@@ -55,9 +55,10 @@ sealed interface NappletResponse {
         val supported: Boolean,
     ) : NappletResponse
 
-    /** Result of `keys.registerAction`: the shell-assigned [actionId] (key binding is a follow-up). */
+    /** Result of `keys.registerAction`: the shell-assigned [actionId] and the [binding] it honored (e.g. `"Ctrl+S"`). */
     data class ActionRegistered(
         val actionId: String,
+        val binding: String? = null,
     ) : NappletResponse
 
     /** `relay.subscribe` was authorized; the host now streams `relay.event`/`relay.eose` pushes. */

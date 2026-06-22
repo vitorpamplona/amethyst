@@ -187,11 +187,13 @@ sealed interface NappletRequest {
     /**
      * `keys.registerAction` — register a named keyboard/command action. This is a shell-mediated UI
      * affordance, **not** signing (the `keys` domain has no key access). [actionId] is the napplet's
-     * action id (echoed back); [label] is its display name.
+     * action id (echoed back); [label] is its display name; [binding] is the requested key combo
+     * (the SDK's `defaultKey`, e.g. `"Ctrl+S"`), which the shell honors and echoes back.
      */
     data class RegisterAction(
         val actionId: String,
         val label: String,
+        val binding: String? = null,
     ) : NappletRequest {
         override val capability get() = NappletCapability.KEYS
     }

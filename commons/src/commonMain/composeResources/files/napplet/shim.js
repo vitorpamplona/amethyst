@@ -68,8 +68,8 @@
         } };
       }
     },
-    // keys = keyboard / command action binding (NOT signing). The shell acknowledges registration;
-    // the global-key binding + keys.action push is a follow-up, so onAction won't fire yet.
+    // keys = keyboard / command action binding (NOT signing). The shell honors the action's defaultKey
+    // and pushes keys.action when the bound combo is pressed, which fires the onAction callback.
     keys: {
       registerAction: function(action){ return call('keys.registerAction', { action: action }).then(function(m){ return { actionId: m.actionId, binding: m.binding }; }); },
       unregisterAction: function(actionId){ post('keys.unregisterAction', { actionId: actionId }); },

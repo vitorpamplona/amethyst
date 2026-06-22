@@ -31,6 +31,7 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.util.Log
+import android.view.KeyEvent
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -92,6 +93,9 @@ class NappletHostActivity : ComponentActivity() {
     private val replyMessenger = Messenger(Handler(Looper.getMainLooper(), ::onBrokerReply))
     private val pendingRequests = mutableListOf<Message>()
     private var bridgeReplyProxy: JavaScriptReplyProxy? = null
+
+    // Keyboard/command actions the applet bound via keys.registerAction; matched in dispatchKeyEvent.
+    private val keyActions = NappletKeyActions()
 
     private val brokerConnection =
         object : ServiceConnection {
@@ -167,10 +171,25 @@ class NappletHostActivity : ComponentActivity() {
 
     override fun onDestroy() {
         runCatching { unbindService(brokerConnection) }
+        keyActions.clear()
         if (this::webView.isInitialized) {
             webView.destroy()
         }
         super.onDestroy()
+    }
+
+    /**
+     * Intercepts hardware-key combos the applet bound via `keys.registerAction` and turns them into a
+     * `keys.action` push — the applet never sees raw key events, only its own named action. Unmatched
+     * keys fall through to the WebView (so the applet's own text inputs still work normally).
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val actionId = keyActions.actionFor(event)
+        if (actionId != null) {
+            runCatching { bridgeReplyProxy?.postMessage(NappletProtocolJson.encodeKeysAction(actionId)) }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     private fun readManifestExtras(): Boolean {
@@ -274,6 +293,12 @@ class NappletHostActivity : ComponentActivity() {
             return
         }
 
+        // Unbind a keyboard action as soon as the applet drops it (the broker's Done reply carries no
+        // actionId, so the binding is removed here from the envelope itself).
+        if (envelope.optString("type") == "keys.unregisterAction") {
+            envelope.optString("actionId").takeIf { it.isNotEmpty() }?.let { keyActions.unregister(it) }
+        }
+
         // Fire-and-forget messages (inc.emit, keys.unregisterAction) have no id; synthesize one so
         // they still reach the broker. Any reply is harmless — the applet has nothing to correlate.
         val id = envelope.optString("id").ifEmpty { "fire-${fireSeq++}" }
@@ -318,6 +343,12 @@ class NappletHostActivity : ComponentActivity() {
                 // payload is the broker's {type:"...result", ok, ...}; inject the correlation id for the shim.
                 val result = runCatching { JSONObject(payload) }.getOrNull() ?: JSONObject()
                 result.put("id", id)
+                // The broker authorized a keyboard action: bind the honored key combo so dispatchKeyEvent
+                // can fire it. Only ok'd registrations bind (a denied KEYS request never reaches here).
+                if (result.optString("type") == "keys.registerAction.result" && result.optBoolean("ok")) {
+                    val actionId = result.optString("actionId")
+                    if (actionId.isNotEmpty()) keyActions.register(actionId, result.optString("binding").ifEmpty { null })
+                }
                 bridgeReplyProxy?.postMessage(result.toString())
             }
             // A subscription push (relay.event/relay.eose) is keyed by subId, not a request id; forward verbatim.

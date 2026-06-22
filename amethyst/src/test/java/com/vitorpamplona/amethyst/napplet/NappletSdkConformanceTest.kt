@@ -230,16 +230,22 @@ class NappletSdkConformanceTest {
 
     @Test
     fun keysRegisterAndUnregisterActionsConform() {
-        // keys.registerAction{action:{id,label}} → RegisterAction; result carries actionId.
+        // keys.registerAction{action:{id,label,defaultKey?}} → RegisterAction; result carries actionId + binding.
         assertEquals(
             NappletRequest.RegisterAction("save", "Save"),
             NappletProtocolJson.decodeRequest("""{"type":"keys.registerAction","id":"1","action":{"id":"save","label":"Save"}}"""),
         )
         assertEquals(
+            NappletRequest.RegisterAction("save", "Save", "Ctrl+S"),
+            NappletProtocolJson.decodeRequest("""{"type":"keys.registerAction","id":"1","action":{"id":"save","label":"Save","defaultKey":"Ctrl+S"}}"""),
+        )
+        assertEquals(
             NappletRequest.UnregisterAction("save"),
             NappletProtocolJson.decodeRequest("""{"type":"keys.unregisterAction","actionId":"save"}"""),
         )
-        assertEquals("save", result("keys.registerAction", NappletResponse.ActionRegistered("save"))["actionId"]?.jsonPrimitive?.content)
+        val registered = result("keys.registerAction", NappletResponse.ActionRegistered("save", "Ctrl+S"))
+        assertEquals("save", registered["actionId"]?.jsonPrimitive?.content)
+        assertEquals("Ctrl+S", registered["binding"]?.jsonPrimitive?.content)
     }
 
     // ---------- upload (UploadUploadMessage / UploadResult) ----------

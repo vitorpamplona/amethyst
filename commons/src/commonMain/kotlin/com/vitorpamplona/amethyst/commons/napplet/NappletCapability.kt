@@ -38,9 +38,10 @@ enum class NappletCapability {
     IDENTITY,
 
     /**
-     * `keys` — keyboard / command action binding (`registerAction`, `onAction`). This is **not**
-     * signing: the upstream `@napplet/shim` deliberately has no `sign()` method, and napplets never
-     * get direct key access. Signing happens only inside the shell via [RELAY] `publish`.
+     * `keys` — keyboard / command action binding (`registerAction` with a key combo, `onAction`).
+     * This is **not** signing: the upstream `@napplet/shim` deliberately has no `sign()` method, and
+     * napplets never get direct key access — only a `keys.action` push for their own named action.
+     * Signing happens only inside the shell via [RELAY] `publish`.
      */
     KEYS,
 
