@@ -31,8 +31,9 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
-import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionState
 import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionStateChangedListener
@@ -61,6 +62,9 @@ class EmbeddedBrowserController(
     private var sandboxedSdkView: SandboxedSdkView? = null
     private var pendingAdapter: SandboxedUiAdapter? = null
     private var startUrl: String = "about:blank"
+
+    private val readyState = mutableStateOf(false)
+    override val ready: State<Boolean> = readyState
 
     /** Invoked on the main thread when the page navigates: (url, canGoBack). */
     var onUrlChanged: ((String, Boolean) -> Unit)? = null
@@ -101,11 +105,15 @@ class EmbeddedBrowserController(
         // Paint the surface placeholder in the app's theme background so there's no white flash before
         // the remote WebView delivers its first frame.
         view.setBackgroundColor(backgroundColor)
-        // DIAGNOSTIC (scrolling): log the surface session lifecycle so we can see if it reaches Active.
+        // Order the streamed surface BELOW this window's UI so the floating control puck and the loading
+        // placeholder can draw on top of it. Touch still reaches the remote WebView via the
+        // SurfaceControlViewHost input token (z-order is visual only).
+        view.orderProviderUiAboveClientUi(false)
+        // Flip ready once the session opens, so the tab layer can drop its loading placeholder.
         view.addStateChangedListener(
             object : SandboxedSdkUiSessionStateChangedListener {
                 override fun onStateChanged(state: SandboxedSdkUiSessionState) {
-                    Log.w("BrowserSurfaceDiag", "DIAG session state: $state")
+                    if (state is SandboxedSdkUiSessionState.Active) readyState.value = true
                 }
             },
         )

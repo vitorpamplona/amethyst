@@ -39,18 +39,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
-
-/**
- * Vertical space a collapsed [AppControlPuck] occupies (the 48dp touch target + its 8dp inset). Embedded
- * tabs inset their reserved surface bounds by this at the top so the warm surface — which the tab layer
- * draws *over* those bounds, above the whole nav tree — doesn't cover the puck. Full-screen activities
- * don't need it: there the puck is a sibling drawn on top of the surface.
- */
-val AppControlPuckReserve: Dp = 56.dp
 
 /**
  * A floating, collapsible control chip for a running app surface (web client / nsite / napplet) — the

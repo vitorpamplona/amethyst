@@ -21,11 +21,17 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
 import android.os.Build
+import android.view.ViewGroup
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,14 +39,19 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 
 /**
  * The persistent surface layer: a full-window overlay (mounted once in the app shell, below the
@@ -66,6 +77,8 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
     val bounds = EmbeddedTabHost.contentBounds
     var layerOrigin by remember { mutableStateOf(Offset.Zero) }
 
+    val density = LocalDensity.current
+
     Box(
         Modifier
             .fillMaxSize()
@@ -79,7 +92,6 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                     if (active) session.controller.onShown() else session.controller.onHidden()
                 }
 
-                val density = LocalDensity.current
                 val placement =
                     if (active && bounds.width > 0f && bounds.height > 0f) {
                         with(density) {
@@ -97,10 +109,85 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                     }
 
                 AndroidView(
-                    factory = { ctx -> SandboxedSdkView(ctx).also { session.controller.attachView(it) } },
+                    // Wrap the surface so it claims scroll gestures from host-side ancestors (the
+                    // cross-process WebView can't request-disallow-intercept itself).
+                    factory = { ctx ->
+                        EmbeddedSurfaceTouchHolder(ctx).apply {
+                            val surface = SandboxedSdkView(ctx)
+                            addView(surface, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                            session.controller.attachView(surface)
+                        }
+                    },
                     modifier = placement,
                 )
             }
+        }
+
+        // Active-tab overlays, drawn over the surface (which is ordered below this window's UI): a themed
+        // loading placeholder until the session opens, and the floating control puck. Positioned over the
+        // active tab's reserved bounds so they track it.
+        val activeSession = EmbeddedTabHost.sessions.firstOrNull { it.id == activeId }
+        if (activeSession != null && bounds.width > 0f && bounds.height > 0f) {
+            val overlayModifier =
+                with(density) {
+                    Modifier
+                        .absoluteOffset(
+                            (bounds.left - layerOrigin.x).toDp(),
+                            (bounds.top - layerOrigin.y).toDp(),
+                        ).size(bounds.width.toDp(), bounds.height.toDp())
+                }
+            Box(overlayModifier) {
+                val ready by activeSession.controller.ready
+                if (!ready) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+                EmbeddedTabHost.activeChrome?.let { chrome ->
+                    EmbeddedTabChromePuck(
+                        chrome = chrome,
+                        modifier =
+                            Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(8.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Builds the floating [AppControlPuck] for the active tab from its [EmbeddedTabChrome] description. */
+@Composable
+private fun EmbeddedTabChromePuck(
+    chrome: EmbeddedTabChrome,
+    modifier: Modifier,
+) {
+    val isShield = chrome.marker == EmbeddedTabChrome.Marker.SHIELD
+    AppControlPuck(
+        trustedIcon = if (isShield) MaterialSymbols.Security else MaterialSymbols.Public,
+        trustedTint = if (isShield) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        trustedDescription = chrome.description,
+        modifier = modifier,
+    ) {
+        chrome.torOn?.let { torOn ->
+            TorToggleButton(torOn) { chrome.onToggleTor() }
+        }
+        IconButton(onClick = chrome.onReload) {
+            Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
+        }
+        chrome.onInfo?.let { info ->
+            IconButton(onClick = info) {
+                Icon(MaterialSymbols.Info, contentDescription = stringResource(R.string.favorite_app_access_show))
+            }
+        }
+        IconButton(onClick = chrome.onPopOut) {
+            Icon(MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = stringResource(R.string.favorite_app_open_window))
         }
     }
 }

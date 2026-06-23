@@ -27,7 +27,6 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -45,11 +44,8 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -57,10 +53,8 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.AppControlPuck
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.AppControlPuckReserve
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.TorToggleButton
 
 /**
  * A pinned web client rendered as an **in-app tab**. The embedded `:napplet` browser surface is drawn
@@ -128,11 +122,33 @@ private fun EmbeddedFavoriteTab(
         }
     }
 
+    // Publish the floating controls to the tab layer, which draws them on top of the surface (an
+    // embedded tab can't draw chrome above its own warm surface). Refreshed each recomposition so the
+    // Tor state / title stay current; cleared when the tab leaves.
+    SideEffect {
+        EmbeddedTabHost.setActiveChrome(
+            id,
+            EmbeddedTabChrome(
+                marker = EmbeddedTabChrome.Marker.GLOBE,
+                description = hostLabel(currentUrl),
+                onReload = { controller.reload() },
+                onPopOut = { FavoriteAppLauncher.launchUrl(context, url) },
+                torOn = if (proxyAvailable) torOn else null,
+                onToggleTor = {
+                    torOn = !torOn
+                    controller.setTor(torOn)
+                    WebUrlNetworkRegistry.set(url, torOn)
+                },
+            ),
+        )
+    }
+
     val bottomBarFlow = accountViewModel.settings.uiSettingsFlow.bottomBarItems
     DisposableEffect(id) {
         EmbeddedTabHost.setActive(id)
         onDispose {
             EmbeddedTabHost.clearActiveIfMatches(id)
+            EmbeddedTabHost.clearActiveChrome(id)
             // Only bottom-row apps stay warm; anything else restarts when it leaves.
             if (id !in bottomBarFlow.value.favoriteIds()) EmbeddedTabHost.evict(id)
         }
@@ -145,46 +161,14 @@ private fun EmbeddedFavoriteTab(
             AppBottomBar(Route.FavoriteWebApp(url), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
+        // Reserve the full content area; the warm surface + its floating chrome are drawn over these
+        // bounds by the tab layer.
         Box(
             Modifier
                 .fillMaxSize()
-                .padding(padding),
-        ) {
-            // Reserve the content area; the warm surface is positioned over these bounds by the tab
-            // layer. Inset the top by the puck's height so the surface (drawn over these bounds, above
-            // the nav tree) doesn't cover the floating puck.
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .padding(top = AppControlPuckReserve)
-                    .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
-            )
-            // Floating controls instead of a top bar — the web client already titles itself. The globe is
-            // the trusted "external web page" marker (the page can't draw over it); tap to reveal actions.
-            AppControlPuck(
-                trustedIcon = MaterialSymbols.Public,
-                trustedTint = MaterialTheme.colorScheme.onSurfaceVariant,
-                trustedDescription = hostLabel(currentUrl),
-                modifier =
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
-            ) {
-                if (proxyAvailable) {
-                    TorToggleButton(torOn) {
-                        torOn = !torOn
-                        controller.setTor(torOn)
-                        WebUrlNetworkRegistry.set(url, torOn)
-                    }
-                }
-                IconButton(onClick = { controller.reload() }) {
-                    Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
-                }
-                IconButton(onClick = { FavoriteAppLauncher.launchUrl(context, url) }) {
-                    Icon(MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = stringResource(R.string.favorite_app_open_window))
-                }
-            }
-        }
+                .padding(padding)
+                .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
+        )
     }
 }
 

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.browser
 
 import android.os.Build
+import android.view.ViewGroup
 import androidx.annotation.RequiresApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -34,6 +35,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceTouchHolder
 
 /**
  * Reusable, chrome-free embedded-browser surface. The page renders in the keyless `:napplet` process
@@ -49,7 +51,16 @@ fun EmbeddedBrowserSurface(
     modifier: Modifier = Modifier,
 ) {
     AndroidView(
-        factory = { ctx -> SandboxedSdkView(ctx).also { controller.attachView(it) } },
+        // Wrap the surface so it claims the scroll gesture from any host-side ancestor (see
+        // EmbeddedSurfaceTouchHolder) — the cross-process WebView can't do that itself, and without it an
+        // ancestor steals the drag and the page never scrolls.
+        factory = { ctx ->
+            EmbeddedSurfaceTouchHolder(ctx).apply {
+                val surface = SandboxedSdkView(ctx)
+                addView(surface, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                controller.attachView(surface)
+            }
+        },
         modifier = modifier,
     )
 }

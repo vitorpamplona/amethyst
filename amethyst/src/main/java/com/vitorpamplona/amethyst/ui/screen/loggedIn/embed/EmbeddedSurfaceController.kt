@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.State
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 
 /**
@@ -36,6 +37,13 @@ import androidx.privacysandbox.ui.client.view.SandboxedSdkView
  */
 @RequiresApi(Build.VERSION_CODES.R)
 interface EmbeddedSurfaceController {
+    /**
+     * True once the cross-process surface session is open (the SandboxedSdkView reaches `Active`), so
+     * [EmbeddedTabLayer] can cover the surface with a themed loading placeholder until then instead of
+     * showing the surface's raw (black) buffer while the session binds and the WebView starts.
+     */
+    val ready: State<Boolean>
+
     fun attachView(view: SandboxedSdkView)
 
     /** The session became the visible tab. */

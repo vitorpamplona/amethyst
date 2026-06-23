@@ -30,9 +30,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -135,6 +137,8 @@ private fun BrowserHostScreen(
     // In-page back first; once there's no page history, the system back closes the activity.
     BackHandler(enabled = canGoBack) { controller.back() }
 
+    val ready by controller.ready
+
     // No top bar — the page titles itself. The surface fills the safe area; a floating puck (globe =
     // trusted external-web marker, tap to reveal Tor/reload/close) carries the actions.
     Scaffold { padding ->
@@ -147,6 +151,18 @@ private fun BrowserHostScreen(
                 controller = controller,
                 modifier = Modifier.fillMaxSize(),
             )
+            // Themed loading placeholder over the surface until the session opens, so there's no black
+            // flash while it binds and the page starts.
+            if (!ready) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
             AppControlPuck(
                 trustedIcon = MaterialSymbols.Public,
                 trustedTint = MaterialTheme.colorScheme.onSurfaceVariant,

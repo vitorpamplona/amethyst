@@ -32,7 +32,11 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
+import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionState
+import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionStateChangedListener
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
@@ -60,6 +64,9 @@ class EmbeddedNappletController(
 
     private var sandboxedSdkView: SandboxedSdkView? = null
     private var pendingAdapter: SandboxedUiAdapter? = null
+
+    private val readyState = mutableStateOf(false)
+    override val ready: State<Boolean> = readyState
 
     /** (canGoBack) — drives the in-tab back gesture. */
     var onStateChanged: ((Boolean) -> Unit)? = null
@@ -99,6 +106,18 @@ class EmbeddedNappletController(
         // Paint the surface placeholder in the app's theme background so there's no white flash before
         // the remote WebView delivers its first frame.
         view.setBackgroundColor(params.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE))
+        // Order the streamed surface BELOW this window's UI so the floating control puck and the loading
+        // placeholder can draw on top of it. Touch still reaches the remote WebView via the
+        // SurfaceControlViewHost input token (z-order is visual only).
+        view.orderProviderUiAboveClientUi(false)
+        // Flip ready once the session opens, so the tab layer can drop its loading placeholder.
+        view.addStateChangedListener(
+            object : SandboxedSdkUiSessionStateChangedListener {
+                override fun onStateChanged(state: SandboxedSdkUiSessionState) {
+                    if (state is SandboxedSdkUiSessionState.Active) readyState.value = true
+                }
+            },
+        )
         pendingAdapter?.let {
             view.setAdapter(it)
             pendingAdapter = null

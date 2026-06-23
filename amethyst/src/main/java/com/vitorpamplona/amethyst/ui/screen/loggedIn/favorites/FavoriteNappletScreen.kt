@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -56,8 +55,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
@@ -66,8 +63,7 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.AppControlPuck
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.AppControlPuckReserve
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 
 /**
@@ -142,6 +138,19 @@ private fun EmbeddedNappletTab(
         controller.onNotice = { notice ->
             noticeResId(notice)?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
         }
+        // Publish the floating controls to the tab layer, which draws them on top of the surface. The
+        // shield is the always-visible trusted sandbox marker; its actions are reload, the access sheet,
+        // and pop-out. (No Tor toggle here — embedded napplets keep their launch routing.)
+        EmbeddedTabHost.setActiveChrome(
+            id,
+            EmbeddedTabChrome(
+                marker = EmbeddedTabChrome.Marker.SHIELD,
+                description = title.ifBlank { coordinate },
+                onReload = { controller.reload() },
+                onPopOut = { FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis())) },
+                onInfo = { showAccess = true },
+            ),
+        )
     }
 
     val bottomBarFlow = accountViewModel.settings.uiSettingsFlow.bottomBarItems
@@ -149,6 +158,7 @@ private fun EmbeddedNappletTab(
         EmbeddedTabHost.setActive(id)
         onDispose {
             EmbeddedTabHost.clearActiveIfMatches(id)
+            EmbeddedTabHost.clearActiveChrome(id)
             // Only bottom-row apps stay warm; anything else restarts when it leaves.
             if (id !in bottomBarFlow.value.favoriteIds()) EmbeddedTabHost.evict(id)
         }
@@ -182,45 +192,14 @@ private fun EmbeddedNappletTab(
             AppBottomBar(Route.FavoriteNostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
+        // Reserve the full content area; the warm surface + its floating chrome are drawn over these
+        // bounds by the tab layer.
         Box(
             Modifier
                 .fillMaxSize()
-                .padding(padding),
-        ) {
-            // Reserve the content area; the warm surface is positioned over these bounds by the tab
-            // layer. Inset the top by the puck's height so the surface (drawn over these bounds, above
-            // the nav tree) doesn't cover the floating puck.
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .padding(top = AppControlPuckReserve)
-                    .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
-            )
-            // Floating controls instead of a top bar — the napplet already titles itself. The shield is
-            // the always-visible trusted sandbox marker (the page can't draw over it); tap to reveal the
-            // "what it can access" sheet, reload, and pop-out.
-            AppControlPuck(
-                trustedIcon = MaterialSymbols.Security,
-                trustedTint = MaterialTheme.colorScheme.primary,
-                trustedDescription = stringResource(R.string.favorite_app_access_show),
-                modifier =
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
-            ) {
-                IconButton(onClick = { controller.reload() }) {
-                    Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
-                }
-                IconButton(onClick = { showAccess = true }) {
-                    Icon(MaterialSymbols.Info, contentDescription = stringResource(R.string.favorite_app_access_show))
-                }
-                IconButton(onClick = {
-                    FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()))
-                }) {
-                    Icon(MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = stringResource(R.string.favorite_app_open_window))
-                }
-            }
-        }
+                .padding(padding)
+                .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
+        )
     }
 }
 
