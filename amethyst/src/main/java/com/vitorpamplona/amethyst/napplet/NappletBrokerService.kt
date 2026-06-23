@@ -99,11 +99,38 @@ class NappletBrokerService : Service() {
     override fun onDestroy() {
         liveSubscriptions.closeAll()
         identityWatch.stop()
+        // Drop any foreground holds this broker still owns so they don't leak past the service.
+        synchronized(foregroundTokens) {
+            repeat(foregroundTokens.size) { SandboxForegroundHold.release() }
+            foregroundTokens.clear()
+        }
         scope.cancel()
         super.onDestroy()
     }
 
+    // Launch tokens of the sandbox surfaces currently reporting themselves foreground. While this set
+    // is non-empty the main process is held resumed (Tor/relays/AUTH up) via SandboxForegroundHold —
+    // the napplet host lives in :napplet and can't touch that lifecycle itself, so it signals over IPC.
+    // Set semantics make repeated "foreground" reports idempotent (no double-acquire).
+    private val foregroundTokens = mutableSetOf<String>()
+
     private fun handleMessage(msg: Message): Boolean {
+        // A sandbox surface (full-screen :napplet host) entered or left the foreground. Hold the main
+        // process resumed while at least one is foreground, so opening it doesn't tear down Tor/relays.
+        if (msg.what == NappletIpc.MSG_SET_FOREGROUND) {
+            val data = msg.data ?: return true
+            val token = data.getString(NappletIpc.KEY_LAUNCH_TOKEN) ?: return true
+            val foreground = data.getBoolean(NappletIpc.KEY_FOREGROUND, false)
+            synchronized(foregroundTokens) {
+                if (foreground) {
+                    if (foregroundTokens.add(token)) SandboxForegroundHold.acquire()
+                } else {
+                    if (foregroundTokens.remove(token)) SandboxForegroundHold.release()
+                }
+            }
+            return true
+        }
+
         // The sandbox relays the user's per-site network choice; persist it against the trusted
         // coordinate the launch token resolves to (the sandbox can't state its own coordinate).
         if (msg.what == NappletIpc.MSG_SET_NETWORK_MODE) {

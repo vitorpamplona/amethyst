@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.napplet.SandboxForegroundHold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.TorToggleButton
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
@@ -80,6 +81,19 @@ class BrowserHostActivity : ComponentActivity() {
                 BrowserHostScreen(startUrl = startUrl, onClose = { finish() })
             }
         }
+    }
+
+    // This full-screen host runs in the main process but backgrounds MainActivity, stopping its
+    // resource collectors. Hold the main process resumed (Tor/relays/AUTH) while it's in front so the
+    // embedded web client keeps its network up, then release on background to resume normal scaling.
+    override fun onResume() {
+        super.onResume()
+        SandboxForegroundHold.acquire()
+    }
+
+    override fun onPause() {
+        SandboxForegroundHold.release()
+        super.onPause()
     }
 
     companion object {

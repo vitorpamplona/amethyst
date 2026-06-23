@@ -57,8 +57,20 @@ object NappletIpc {
     /** Broker → host: the [KEY_LAUNCH_TOKEN] minted for [KEY_BROWSER_ORIGIN]. */
     const val MSG_BROWSER_TOKEN = 6
 
+    /**
+     * Host → broker: this sandbox surface entered ([KEY_FOREGROUND] true) or left ([KEY_FOREGROUND]
+     * false) the foreground. The `:napplet` host runs in its own process and so can't touch the main
+     * process's resource lifecycle directly; this lets the broker hold the main process resumed (Tor,
+     * relays, AUTH) while a napplet/nSite is foreground, since launching it backgrounded `MainActivity`.
+     * Keyed by [KEY_LAUNCH_TOKEN] so the broker tracks each surface independently.
+     */
+    const val MSG_SET_FOREGROUND = 7
+
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
+
+    /** Boolean: this sandbox surface is now foreground (true) or backgrounded (false). */
+    const val KEY_FOREGROUND = "foreground"
 
     /** The visited web origin (e.g. `https://example.com`) a browser-mode request belongs to. */
     const val KEY_BROWSER_ORIGIN = "browserOrigin"

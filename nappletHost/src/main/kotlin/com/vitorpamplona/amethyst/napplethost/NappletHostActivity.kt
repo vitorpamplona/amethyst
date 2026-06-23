@@ -164,6 +164,10 @@ class NappletHostActivity : ComponentActivity() {
         if (this::webView.isInitialized) backCallback.isEnabled = webView.canGoBack()
     }
 
+    // True between onResume and onPause. Sent to the broker (foreground hold) on connect too, in case
+    // the broker binds after this surface is already resumed (bindService is async).
+    private var resumed = false
+
     private val brokerConnection =
         object : ServiceConnection {
             override fun onServiceConnected(
@@ -173,6 +177,9 @@ class NappletHostActivity : ComponentActivity() {
                 brokerMessenger = Messenger(service)
                 pendingRequests.forEach { sendToBroker(it) }
                 pendingRequests.clear()
+                // If we're already foreground by the time the broker binds, report it now so the
+                // main-process resource hold is acquired for this session.
+                if (resumed) setBrokerForeground(true)
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
@@ -295,6 +302,10 @@ class NappletHostActivity : ComponentActivity() {
             webView.onResume()
             webView.resumeTimers()
         }
+        // Launching this :napplet-process surface backgrounded the main process; tell the broker to
+        // hold the main process resumed (Tor/relays/AUTH) while this napplet/nSite is in front.
+        resumed = true
+        setBrokerForeground(true)
     }
 
     override fun onPause() {
@@ -305,7 +316,25 @@ class NappletHostActivity : ComponentActivity() {
             webView.onPause()
             webView.pauseTimers()
         }
+        // No longer foreground: let the main process resume its normal background resource scaling.
+        resumed = false
+        setBrokerForeground(false)
         super.onPause()
+    }
+
+    /** Reports this surface's foreground state to the broker so it can hold the main process resumed. */
+    private fun setBrokerForeground(foreground: Boolean) {
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_SET_FOREGROUND).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_LAUNCH_TOKEN, launchToken)
+                        putBoolean(NappletIpc.KEY_FOREGROUND, foreground)
+                    }
+            }
+        // Before the broker binds, the surface isn't really up yet; the matching onPause(false) is a
+        // no-op on the broker's empty set, so dropping a pre-bind report is harmless.
+        if (brokerMessenger != null) sendToBroker(msg)
     }
 
     override fun onDestroy() {
