@@ -25,11 +25,13 @@ import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.BrowserHostActivity
+import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
+import com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
@@ -40,8 +42,9 @@ import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
  * Turns a [FavoriteApp] back into a running app. The two cases map to the two launch paths in the
  * codebase, nothing more:
  *
- * - [FavoriteApp.WebUrl] → a full-screen [BrowserHostActivity] (its own task/recents entry), so the
- *   web client owns the whole screen with no competing chrome.
+ * - [FavoriteApp.WebUrl] → a full-screen direct-WebView
+ *   [NappletBrowserActivity][com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity] (its own
+ *   task/recents entry), so the web client owns the whole screen and scrolls/zooms natively.
  * - [FavoriteApp.NostrApp] → re-resolve the live event from [LocalCache] by coordinate, read its
  *   `requires`/website-mode off the event, then hand to [NappletLauncher] (the sandboxed `:napplet`
  *   host). nsite vs napplet is decided *here*, from the event, never from stored state.
@@ -60,13 +63,19 @@ object FavoriteAppLauncher {
         }
     }
 
-    /** Opens [url] full-screen in its own task, so back/recents treat it like a separate app. */
+    /**
+     * Opens [url] full-screen in its own task, so back/recents treat it like a separate app. Uses the
+     * direct-WebView [NappletBrowserActivity] (page scrolls/zooms and the keyboard resizes natively),
+     * resolving the proxy port + this site's remembered Tor choice here in the main process.
+     */
     fun launchUrl(
         context: Context,
         url: String,
     ) {
+        val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
+        val useTor = proxyPort > 0 && WebUrlNetworkRegistry.useTor(url)
         val intent =
-            BrowserHostActivity.intent(context, url).apply {
+            NappletBrowserActivity.intent(context, url, proxyPort, useTor).apply {
                 if (context !is Activity) addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         context.startActivity(intent)

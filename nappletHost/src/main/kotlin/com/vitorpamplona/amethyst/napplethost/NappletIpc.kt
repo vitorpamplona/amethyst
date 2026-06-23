@@ -66,8 +66,18 @@ object NappletIpc {
      */
     const val MSG_SET_FOREGROUND = 7
 
+    /**
+     * Host → broker: persist the per-host Tor choice for the direct-WebView browser
+     * ([NappletBrowserActivity]). Carries [KEY_WEB_HOST] and [KEY_NETWORK_USE_TOR]. The `:napplet`
+     * process can't touch the main process's preference store, so it relays the choice here.
+     */
+    const val MSG_SET_WEB_TOR = 8
+
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
+
+    /** The bare host (e.g. `example.com`) a browser Tor choice belongs to. */
+    const val KEY_WEB_HOST = "webHost"
 
     /** Boolean: this sandbox surface is now foreground (true) or backgrounded (false). */
     const val KEY_FOREGROUND = "foreground"

@@ -424,6 +424,19 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
             android:theme="@style/Theme.Amethyst" />
 
+        <!-- Direct-WebView browser for a single web client. Runs in the isolated, keyless `:napplet`
+             process and hosts the WebView directly (not a streamed surface), so scroll/zoom/keyboard work
+             natively. adjustResize shrinks the window for the soft keyboard. Its own task/recents entry. -->
+        <activity
+            android:name="com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity"
+            android:process=":napplet"
+            android:exported="false"
+            android:autoRemoveFromRecents="true"
+            android:documentLaunchMode="intoExisting"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Amethyst" />
+
         <!-- Capability-consent dialog. Runs in the main process (the only side trusted to grant). -->
         <activity
             android:name=".napplet.NappletConsentActivity"

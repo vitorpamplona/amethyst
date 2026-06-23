@@ -146,6 +146,15 @@ class NappletBrokerService : Service() {
             return true
         }
 
+        // The direct-WebView browser relays its per-host Tor choice; persist it (main process only).
+        if (msg.what == NappletIpc.MSG_SET_WEB_TOR) {
+            val data = msg.data ?: return true
+            val host = data.getString(NappletIpc.KEY_WEB_HOST)?.takeIf { it.isNotBlank() } ?: return true
+            WebUrlNetworkRegistry.init(applicationContext)
+            WebUrlNetworkRegistry.set(host, data.getBoolean(NappletIpc.KEY_NETWORK_USE_TOR, true))
+            return true
+        }
+
         // The sandbox relays the user's per-site network choice; persist it against the trusted
         // coordinate the launch token resolves to (the sandbox can't state its own coordinate).
         if (msg.what == NappletIpc.MSG_SET_NETWORK_MODE) {
