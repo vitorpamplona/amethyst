@@ -71,8 +71,10 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -167,6 +169,10 @@ class NappletHostActivity : ComponentActivity() {
     // True between onResume and onPause. Sent to the broker (foreground hold) on connect too, in case
     // the broker binds after this surface is already resumed (bindService is async).
     private var resumed = false
+
+    // Renews the broker's foreground lease while resumed. If this process dies, the heartbeat stops and
+    // the broker reaps the stale lease, so a crash can't pin the main process's network up forever.
+    private var foregroundHeartbeat: Job? = null
 
     private val brokerConnection =
         object : ServiceConnection {
@@ -303,9 +309,10 @@ class NappletHostActivity : ComponentActivity() {
             webView.resumeTimers()
         }
         // Launching this :napplet-process surface backgrounded the main process; tell the broker to
-        // hold the main process resumed (Tor/relays/AUTH) while this napplet/nSite is in front.
+        // hold the main process resumed (Tor/relays/AUTH) while this napplet/nSite is in front, and
+        // keep renewing that lease so a crash here can't pin the network up forever.
         resumed = true
-        setBrokerForeground(true)
+        startForegroundHeartbeat()
     }
 
     override fun onPause() {
@@ -316,10 +323,28 @@ class NappletHostActivity : ComponentActivity() {
             webView.onPause()
             webView.pauseTimers()
         }
-        // No longer foreground: let the main process resume its normal background resource scaling.
+        // No longer foreground: stop renewing and let the main process resume normal background scaling.
         resumed = false
+        stopForegroundHeartbeat()
         setBrokerForeground(false)
         super.onPause()
+    }
+
+    /** Reports foreground=true immediately and then re-reports on a heartbeat to renew the broker lease. */
+    private fun startForegroundHeartbeat() {
+        foregroundHeartbeat?.cancel()
+        foregroundHeartbeat =
+            uiScope.launch {
+                while (true) {
+                    setBrokerForeground(true)
+                    delay(FOREGROUND_HEARTBEAT_MS)
+                }
+            }
+    }
+
+    private fun stopForegroundHeartbeat() {
+        foregroundHeartbeat?.cancel()
+        foregroundHeartbeat = null
     }
 
     /** Reports this surface's foreground state to the broker so it can hold the main process resumed. */
@@ -333,7 +358,8 @@ class NappletHostActivity : ComponentActivity() {
                     }
             }
         // Before the broker binds, the surface isn't really up yet; the matching onPause(false) is a
-        // no-op on the broker's empty set, so dropping a pre-bind report is harmless.
+        // no-op on the broker's empty map, so dropping a pre-bind report is harmless — the heartbeat
+        // re-reports once connected (and onServiceConnected seeds it too).
         if (brokerMessenger != null) sendToBroker(msg)
     }
 
@@ -812,5 +838,12 @@ class NappletHostActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "NappletHostActivity"
+
+        /**
+         * How often a resumed host renews its foreground lease with the broker. Comfortably shorter than
+         * the broker's lease TTL so a couple of dropped/delayed beats don't expire a still-foreground
+         * surface, while a dead process (heartbeat stopped) is reaped within the TTL.
+         */
+        const val FOREGROUND_HEARTBEAT_MS = 30_000L
     }
 }
