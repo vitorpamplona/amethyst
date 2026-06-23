@@ -106,11 +106,7 @@ class EmbeddedNappletController(
         // Paint the surface placeholder in the app's theme background so there's no white flash before
         // the remote WebView delivers its first frame.
         view.setBackgroundColor(params.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE))
-        // Order the streamed surface BELOW this window's UI so the floating control puck and the loading
-        // placeholder can draw on top of it. Touch still reaches the remote WebView via the
-        // SurfaceControlViewHost input token (z-order is visual only).
-        view.orderProviderUiAboveClientUi(false)
-        // Flip ready once the session opens, so the tab layer can drop its loading placeholder.
+        // Flip ready once the session opens, so callers can drop their loading placeholder.
         view.addStateChangedListener(
             object : SandboxedSdkUiSessionStateChangedListener {
                 override fun onStateChanged(state: SandboxedSdkUiSessionState) {

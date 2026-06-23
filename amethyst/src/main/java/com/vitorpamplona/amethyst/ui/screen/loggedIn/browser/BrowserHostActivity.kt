@@ -30,11 +30,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -137,56 +137,46 @@ private fun BrowserHostScreen(
     // In-page back first; once there's no page history, the system back closes the activity.
     BackHandler(enabled = canGoBack) { controller.back() }
 
-    val ready by controller.ready
-
-    // No top bar — the page titles itself. The surface fills the safe area; a floating puck (globe =
-    // trusted external-web marker, tap to reveal Tor/reload/close) carries the actions.
-    Scaffold { padding ->
-        Box(
-            Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            EmbeddedBrowserSurface(
-                controller = controller,
-                modifier = Modifier.fillMaxSize(),
-            )
-            // Themed loading placeholder over the surface until the session opens, so there's no black
-            // flash while it binds and the page starts.
-            if (!ready) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-            AppControlPuck(
-                trustedIcon = MaterialSymbols.Public,
-                trustedTint = MaterialTheme.colorScheme.onSurfaceVariant,
-                trustedDescription = hostOf(currentUrl),
-                modifier =
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
+    // The surface is z-ordered on top, so the controls live in a slim bar above it (no title; the page
+    // titles itself). The globe is the trusted external-web marker; it expands to Tor/reload/close.
+    Scaffold(
+        topBar = {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
             ) {
-                if (proxyAvailable) {
-                    TorToggleButton(torOn) {
-                        torOn = !torOn
-                        controller.setTor(torOn)
-                        WebUrlNetworkRegistry.set(startUrl, torOn)
+                AppControlPuck(
+                    trustedIcon = MaterialSymbols.Public,
+                    trustedTint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    trustedDescription = hostOf(currentUrl),
+                    modifier = Modifier.align(Alignment.TopEnd),
+                ) {
+                    if (proxyAvailable) {
+                        TorToggleButton(torOn) {
+                            torOn = !torOn
+                            controller.setTor(torOn)
+                            WebUrlNetworkRegistry.set(startUrl, torOn)
+                        }
+                    }
+                    IconButton(onClick = { controller.reload() }) {
+                        Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
+                    }
+                    IconButton(onClick = onClose) {
+                        Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.back))
                     }
                 }
-                IconButton(onClick = { controller.reload() }) {
-                    Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
-                }
-                IconButton(onClick = onClose) {
-                    Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.back))
-                }
             }
-        }
+        },
+    ) { padding ->
+        EmbeddedBrowserSurface(
+            controller = controller,
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+        )
     }
 }
 

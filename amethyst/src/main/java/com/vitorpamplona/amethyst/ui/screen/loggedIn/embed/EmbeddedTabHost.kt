@@ -60,28 +60,6 @@ object EmbeddedTabHost {
     var contentBounds by mutableStateOf(Rect.Zero)
         private set
 
-    /** The active tab's floating controls, drawn by [EmbeddedTabLayer] over the surface. Null = none. */
-    var activeChrome by mutableStateOf<EmbeddedTabChrome?>(null)
-        private set
-
-    private var chromeOwner: String? = null
-
-    /** The active screen publishes its controls here so the layer can draw them on top of the surface. */
-    fun setActiveChrome(
-        id: String,
-        chrome: EmbeddedTabChrome,
-    ) {
-        chromeOwner = id
-        activeChrome = chrome
-    }
-
-    fun clearActiveChrome(id: String) {
-        if (chromeOwner == id) {
-            chromeOwner = null
-            activeChrome = null
-        }
-    }
-
     /** Returns the existing warm controller for [id], or creates + registers one via [factory]. */
     fun acquire(
         id: String,

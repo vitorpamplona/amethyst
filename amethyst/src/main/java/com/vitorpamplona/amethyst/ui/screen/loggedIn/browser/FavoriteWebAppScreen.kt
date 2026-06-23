@@ -26,7 +26,10 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -44,8 +47,11 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -53,15 +59,17 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.AppControlPuck
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.TorToggleButton
 
 /**
  * A pinned web client rendered as an **in-app tab**. The embedded `:napplet` browser surface is drawn
  * by the persistent [EmbeddedTabHost]/[com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer]
- * layer, which keeps the session warm across tab swaps. This screen owns only the chrome — a floating
- * [AppControlPuck] (globe marker, expands to Tor/reload/pop-out) instead of a top bar. Deliberately no
- * editable address bar.
+ * layer, which keeps the session warm across tab swaps. This screen owns only the chrome — a slim bar
+ * with an [AppControlPuck] (globe marker, expands to Tor/reload/pop-out) and no title or editable
+ * address bar. The bar sits above the surface because the surface is z-ordered on top and can't be
+ * drawn over.
  *
  * Only bottom-row favorites stay warm; if this URL isn't a bottom-bar favorite, its session is evicted
  * (restarted) when the screen leaves. Requires API 30+ for the cross-process surface.
@@ -122,33 +130,11 @@ private fun EmbeddedFavoriteTab(
         }
     }
 
-    // Publish the floating controls to the tab layer, which draws them on top of the surface (an
-    // embedded tab can't draw chrome above its own warm surface). Refreshed each recomposition so the
-    // Tor state / title stay current; cleared when the tab leaves.
-    SideEffect {
-        EmbeddedTabHost.setActiveChrome(
-            id,
-            EmbeddedTabChrome(
-                marker = EmbeddedTabChrome.Marker.GLOBE,
-                description = hostLabel(currentUrl),
-                onReload = { controller.reload() },
-                onPopOut = { FavoriteAppLauncher.launchUrl(context, url) },
-                torOn = if (proxyAvailable) torOn else null,
-                onToggleTor = {
-                    torOn = !torOn
-                    controller.setTor(torOn)
-                    WebUrlNetworkRegistry.set(url, torOn)
-                },
-            ),
-        )
-    }
-
     val bottomBarFlow = accountViewModel.settings.uiSettingsFlow.bottomBarItems
     DisposableEffect(id) {
         EmbeddedTabHost.setActive(id)
         onDispose {
             EmbeddedTabHost.clearActiveIfMatches(id)
-            EmbeddedTabHost.clearActiveChrome(id)
             // Only bottom-row apps stay warm; anything else restarts when it leaves.
             if (id !in bottomBarFlow.value.favoriteIds()) EmbeddedTabHost.evict(id)
         }
@@ -157,18 +143,61 @@ private fun EmbeddedFavoriteTab(
     BackHandler(enabled = canGoBack) { controller.back() }
 
     Scaffold(
+        // The surface is z-ordered on top, so the controls can't float over it — they live in a slim bar
+        // above it (no title; the web client titles itself). The globe is the trusted external-web marker.
+        topBar = {
+            WebClientControlBar(currentUrl, proxyAvailable, torOn, onReload = { controller.reload() }, onPopOut = { FavoriteAppLauncher.launchUrl(context, url) }) {
+                torOn = !torOn
+                controller.setTor(torOn)
+                WebUrlNetworkRegistry.set(url, torOn)
+            }
+        },
         bottomBar = {
             AppBottomBar(Route.FavoriteWebApp(url), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
-        // Reserve the full content area; the warm surface + its floating chrome are drawn over these
-        // bounds by the tab layer.
+        // Reserve the content area below the bar; the warm surface is positioned over these bounds.
         Box(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
         )
+    }
+}
+
+/** The slim control bar for an embedded web client: a globe marker that expands to Tor/reload/pop-out. */
+@Composable
+private fun WebClientControlBar(
+    currentUrl: String,
+    proxyAvailable: Boolean,
+    torOn: Boolean,
+    onReload: () -> Unit,
+    onPopOut: () -> Unit,
+    onToggleTor: () -> Unit,
+) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+    ) {
+        AppControlPuck(
+            trustedIcon = MaterialSymbols.Public,
+            trustedTint = MaterialTheme.colorScheme.onSurfaceVariant,
+            trustedDescription = hostLabel(currentUrl),
+            modifier = Modifier.align(Alignment.TopEnd),
+        ) {
+            if (proxyAvailable) {
+                TorToggleButton(torOn, onToggleTor)
+            }
+            IconButton(onClick = onReload) {
+                Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
+            }
+            IconButton(onClick = onPopOut) {
+                Icon(MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = stringResource(R.string.favorite_app_open_window))
+            }
+        }
     }
 }
 
