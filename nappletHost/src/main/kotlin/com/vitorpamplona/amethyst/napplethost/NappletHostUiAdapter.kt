@@ -28,8 +28,8 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.view.View
-import android.view.ViewGroup
 import android.webkit.WebView
+import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import androidx.privacysandbox.ui.provider.AbstractSandboxedUiAdapter
@@ -60,7 +60,9 @@ class NappletHostUiAdapter(
         mainHandler.post {
             runCatching {
                 val webView = service.createHostWebView(context)
-                webView.layoutParams = ViewGroup.LayoutParams(initialWidth, initialHeight)
+                // FrameLayout.LayoutParams (a MarginLayoutParams) — the SurfaceControlViewHost container
+                // measures children with measureChildWithMargins, which casts to MarginLayoutParams.
+                webView.layoutParams = FrameLayout.LayoutParams(initialWidth, initialHeight)
                 HostSession(webView, service)
             }.onSuccess { session -> clientExecutor.execute { client.onSessionOpened(session) } }
                 .onFailure { t -> clientExecutor.execute { client.onSessionError(t) } }
@@ -82,7 +84,7 @@ private class HostSession(
         width: Int,
         height: Int,
     ) {
-        webView.layoutParams = ViewGroup.LayoutParams(width, height)
+        webView.layoutParams = FrameLayout.LayoutParams(width, height)
         webView.requestLayout()
     }
 
