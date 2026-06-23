@@ -212,9 +212,6 @@ android {
         }
         create("benchmark") {
             initWith(getByName("release"))
-            // Plain AGP library deps (e.g. :nappletHost) only declare debug/release build types,
-            // so fall back to their `release` variant when resolving the benchmark build type.
-            matchingFallbacks += "release"
             applicationIdSuffix = ".benchmark"
             versionNameSuffix = "-BENCHMARK"
             resValue("string", "app_name", "@string/app_name_benchmark")

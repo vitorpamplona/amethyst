@@ -16,6 +16,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
+
+    buildTypes {
+        // :amethyst defines a `benchmark` build type (release + profileable) for macrobenchmarks.
+        // Declare a matching variant here so the app can resolve this library for benchmark builds.
+        create("benchmark") {
+            initWith(getByName("release"))
+        }
+    }
 }
 
 kotlin {
