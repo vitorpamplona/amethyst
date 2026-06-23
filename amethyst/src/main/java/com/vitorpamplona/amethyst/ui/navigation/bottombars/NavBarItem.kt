@@ -56,6 +56,7 @@ enum class NavBarItem {
     NAPPLETS,
     NSITES,
     BROWSER,
+    FAVORITE_APPS,
     CALENDARS,
     CALENDAR_COLLECTIONS,
     SHORTS,
@@ -246,6 +247,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Language,
                 resolveRoute = { Route.Browser },
             ),
+        NavBarItem.FAVORITE_APPS to
+            NavBarItemDef(
+                id = NavBarItem.FAVORITE_APPS,
+                labelRes = R.string.favorite_apps,
+                icon = MaterialSymbols.Star,
+                resolveRoute = { Route.FavoriteApps },
+            ),
         NavBarItem.CALENDARS to
             NavBarItemDef(
                 id = NavBarItem.CALENDARS,
@@ -414,6 +422,9 @@ val DrawerFeedsItems: List<NavBarItem> =
         // The embedded browser renders a cross-process surface (SurfaceControlViewHost), which needs
         // API 30+. Below that the item is hidden so the feature can't be pinned or opened.
         NavBarItem.BROWSER.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
+        // Favorites can include arbitrary-URL web clients, which render on the same cross-process
+        // surface as the browser (API 30+). Gate the whole grid on R+ for the same reason.
+        NavBarItem.FAVORITE_APPS.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
         NavBarItem.SHORTS,

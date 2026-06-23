@@ -412,6 +412,18 @@
             android:launchMode="singleTask"
             android:theme="@style/Theme.Amethyst" />
 
+        <!-- Full-screen host for a single web client. Runs in the MAIN process but only embeds the
+             keyless `:napplet` browser surface, so page JS still executes in the sandbox. Each opened
+             app gets its own task/recents entry (documentLaunchMode=intoExisting, keyed by the URL),
+             so the user swaps between open clients the normal Android way. -->
+        <activity
+            android:name=".ui.screen.loggedIn.browser.BrowserHostActivity"
+            android:exported="false"
+            android:autoRemoveFromRecents="true"
+            android:documentLaunchMode="intoExisting"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
+            android:theme="@style/Theme.Amethyst" />
+
         <!-- Capability-consent dialog. Runs in the main process (the only side trusted to grant). -->
         <activity
             android:name=".napplet.NappletConsentActivity"

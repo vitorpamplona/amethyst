@@ -93,6 +93,8 @@ sealed class Route {
 
     @Serializable object Browser : Route()
 
+    @Serializable object FavoriteApps : Route()
+
     @Serializable object NappletPermissions : Route()
 
     @Serializable data class SoftwareAppDetail(

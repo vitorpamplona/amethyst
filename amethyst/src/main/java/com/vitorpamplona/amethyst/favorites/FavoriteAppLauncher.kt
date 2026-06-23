@@ -1,0 +1,128 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.favorites
+
+import android.app.Activity
+import android.content.Context
+import android.util.Log
+import android.widget.Toast
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.napplet.NappletLauncher
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.BrowserHostActivity
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+
+/**
+ * Turns a [FavoriteApp] back into a running app. The two cases map to the two launch paths in the
+ * codebase, nothing more:
+ *
+ * - [FavoriteApp.WebUrl] → a full-screen [BrowserHostActivity] (its own task/recents entry), so the
+ *   web client owns the whole screen with no competing chrome.
+ * - [FavoriteApp.NostrApp] → re-resolve the live event from [LocalCache] by coordinate, read its
+ *   `requires`/website-mode off the event, then hand to [NappletLauncher] (the sandboxed `:napplet`
+ *   host). nsite vs napplet is decided *here*, from the event, never from stored state.
+ *
+ * A [FavoriteApp.NostrApp] whose event hasn't loaded yet can't launch; we surface that instead of
+ * failing silently.
+ */
+object FavoriteAppLauncher {
+    fun launch(
+        context: Context,
+        app: FavoriteApp,
+    ) {
+        when (app) {
+            is FavoriteApp.WebUrl -> launchUrl(context, app.url)
+            is FavoriteApp.NostrApp -> launchNostrApp(context, app.coordinate)
+        }
+    }
+
+    /** Opens [url] full-screen in its own task, so back/recents treat it like a separate app. */
+    fun launchUrl(
+        context: Context,
+        url: String,
+    ) {
+        val intent =
+            BrowserHostActivity.intent(context, url).apply {
+                if (context !is Activity) addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        context.startActivity(intent)
+    }
+
+    private fun launchNostrApp(
+        context: Context,
+        coordinate: String,
+    ) {
+        val event = LocalCache.getAddressableNoteIfExists(coordinate)?.event
+        when (event) {
+            is RootNappletEvent ->
+                NappletLauncher.launch(context, event, event.pubKey, "")
+            is NamedNappletEvent ->
+                NappletLauncher.launch(context, event, event.pubKey, event.identifier())
+            is RootSiteEvent ->
+                NappletLauncher.launch(
+                    context = context,
+                    paths = event.paths(),
+                    servers = event.servers(),
+                    authorPubKey = event.pubKey,
+                    identifier = "",
+                    aggregateHash = null,
+                    title = event.title() ?: "nsite",
+                    requires = emptyList(),
+                    websiteMode = true,
+                )
+            is NamedSiteEvent ->
+                NappletLauncher.launch(
+                    context = context,
+                    paths = event.paths(),
+                    servers = event.servers(),
+                    authorPubKey = event.pubKey,
+                    identifier = event.identifier(),
+                    aggregateHash = null,
+                    title = event.title() ?: event.identifier(),
+                    requires = emptyList(),
+                    websiteMode = true,
+                )
+            else -> {
+                Log.w("FavoriteAppLauncher", "Favorited app not resolvable yet: $coordinate")
+                Toast.makeText(context, R.string.favorite_app_still_loading, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    /**
+     * The addressable coordinate `kind:pubkey:dtag` used to key an nsite/napplet favorite. Stored
+     * instead of the content hash so the favorite survives routine code/manifest updates.
+     */
+    fun coordinateOf(event: Event): String {
+        val dTag =
+            when (event) {
+                is NamedNappletEvent -> event.identifier()
+                is NamedSiteEvent -> event.identifier()
+                else -> ""
+            }
+        return "${event.kind}:${event.pubKey}:$dTag"
+    }
+}

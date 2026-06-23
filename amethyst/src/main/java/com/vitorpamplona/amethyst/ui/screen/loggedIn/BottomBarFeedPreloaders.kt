@@ -104,6 +104,9 @@ private fun PreloadFor(
         // The browser is a "new tab" launcher with no feed to preload.
         NavBarItem.BROWSER -> {}
 
+        // Favorite apps is a device-local launcher grid — nothing to preload from relays.
+        NavBarItem.FAVORITE_APPS -> {}
+
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
         -> CalendarsFilterAssemblerSubscription(accountViewModel)

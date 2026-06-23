@@ -20,9 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.browser
 
+import android.net.Uri
 import android.os.Build
-import androidx.activity.compose.BackHandler
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,7 +36,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,23 +48,27 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.privacysandbox.ui.client.view.SandboxedSdkView
-import com.vitorpamplona.amethyst.Amethyst
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
+import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteAppsGrid
 
 /**
- * The in-app web browser tab. The page renders in the keyless `:napplet` process and is streamed into
- * this (key-holding) main process as a surface (see [EmbeddedBrowserController]); the trusted address
- * bar is drawn here, around the embedded surface, so the sandbox can never spoof the URL. NIP-07
- * `window.nostr` is injected in the sandbox, consent-gated and scoped per visited origin.
+ * The Browser tab — a **launcher**, not a content surface. The user types a URL here and each opened
+ * site lands in its own full-screen [BrowserHostActivity] (its own task/recents entry), so apps are
+ * swapped the normal Android way and a running app never carries an editable address bar. Below the
+ * omnibox sits the shared [FavoriteAppsGrid] for one-tap access to pinned clients.
  *
- * Requires API 30+ (SurfaceControlViewHost); below that the Browser nav item is hidden, so this screen
- * is unreachable — the fallback message is just defense in depth.
+ * Requires API 30+ (the host activity embeds a SurfaceControlViewHost surface); below that the Browser
+ * nav item is hidden, so this screen is unreachable — the fallback message is just defense in depth.
  */
 @Composable
 fun BrowserScreen(
@@ -74,7 +76,7 @@ fun BrowserScreen(
     nav: INav,
 ) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        EmbeddedBrowser()
+        BrowserLauncher(accountViewModel, nav)
     } else {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
@@ -85,72 +87,72 @@ fun BrowserScreen(
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.R)
 @Composable
-private fun EmbeddedBrowser() {
+private fun BrowserLauncher(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val context = LocalContext.current
-    val proxyPort = remember { Amethyst.instance.torManager.activePortOrNull.value ?: -1 }
+    val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
 
-    var address by remember { mutableStateOf("") }
-    var canGoBack by remember { mutableStateOf(false) }
-    var torOn by remember { mutableStateOf(proxyPort > 0) }
+    var query by remember { mutableStateOf("") }
 
-    val controller =
-        remember {
-            EmbeddedBrowserController(context.applicationContext, proxyPort, proxyPort > 0).apply {
-                onUrlChanged = { url, back ->
-                    if (url != "about:blank") address = url
-                    canGoBack = back
-                }
-            }
-        }
-
-    DisposableEffect(Unit) {
-        controller.bind("about:blank")
-        onDispose { controller.unbind() }
+    fun open() {
+        val url = normalizeUrl(query) ?: return
+        FavoriteAppLauncher.launchUrl(context, url)
     }
-
-    BackHandler(enabled = canGoBack) { controller.back() }
 
     Scaffold(
         topBar = {
-            BrowserAddressBar(
-                address = address,
-                onAddressChange = { address = it },
-                onGo = { controller.navigate(address) },
-                onReload = { controller.reload() },
-                onBack = { controller.back() },
-                canGoBack = canGoBack,
-                showTor = proxyPort > 0,
-                torOn = torOn,
-                onToggleTor = {
-                    torOn = !torOn
-                    controller.setTor(torOn)
+            OmniBar(
+                query = query,
+                onQueryChange = { query = it },
+                onOpen = ::open,
+                onFavorite = {
+                    val url = normalizeUrl(query) ?: return@OmniBar
+                    FavoriteAppsRegistry.add(
+                        FavoriteApp.WebUrl(url = url, label = hostOf(url), addedAt = System.currentTimeMillis()),
+                    )
                 },
             )
         },
+        bottomBar = {
+            AppBottomBar(Route.Browser, nav, accountViewModel) { route -> nav.navBottomBar(route) }
+        },
     ) { padding ->
-        AndroidView(
-            factory = { ctx -> SandboxedSdkView(ctx).also { controller.attachView(it) } },
-            modifier =
+        if (apps.isEmpty()) {
+            Box(
                 Modifier
                     .fillMaxSize()
-                    .padding(padding),
-        )
+                    .padding(padding)
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    stringResource(R.string.favorite_apps_empty),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            FavoriteAppsGrid(
+                apps = apps,
+                onOpen = { FavoriteAppLauncher.launch(context, it) },
+                onRemove = { FavoriteAppsRegistry.remove(it.id) },
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+            )
+        }
     }
 }
 
 @Composable
-private fun BrowserAddressBar(
-    address: String,
-    onAddressChange: (String) -> Unit,
-    onGo: () -> Unit,
-    onReload: () -> Unit,
-    onBack: () -> Unit,
-    canGoBack: Boolean,
-    showTor: Boolean,
-    torOn: Boolean,
-    onToggleTor: () -> Unit,
+private fun OmniBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onOpen: () -> Unit,
+    onFavorite: () -> Unit,
 ) {
     Row(
         modifier =
@@ -159,12 +161,9 @@ private fun BrowserAddressBar(
                 .padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onBack, enabled = canGoBack) {
-            Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringResource(R.string.back))
-        }
         TextField(
-            value = address,
-            onValueChange = onAddressChange,
+            value = query,
+            onValueChange = onQueryChange,
             modifier = Modifier.weight(1f),
             singleLine = true,
             placeholder = { Text(stringResource(R.string.browser_address_hint)) },
@@ -173,24 +172,33 @@ private fun BrowserAddressBar(
                     keyboardType = KeyboardType.Uri,
                     imeAction = ImeAction.Go,
                 ),
-            keyboardActions = KeyboardActions(onGo = { onGo() }),
+            keyboardActions = KeyboardActions(onGo = { onOpen() }),
             colors =
                 TextFieldDefaults.colors(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
         )
-        if (showTor) {
-            IconButton(onClick = onToggleTor) {
-                Icon(
-                    MaterialSymbols.Security,
-                    contentDescription = stringResource(if (torOn) R.string.browser_tor_on else R.string.browser_tor_off),
-                    tint = if (torOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        if (query.isNotBlank()) {
+            IconButton(onClick = onFavorite) {
+                Icon(MaterialSymbols.StarBorder, contentDescription = stringResource(R.string.favorite_app_add))
+            }
+            IconButton(onClick = onOpen) {
+                Icon(MaterialSymbols.AutoMirrored.ArrowForward, contentDescription = stringResource(R.string.browser_go))
             }
         }
-        IconButton(onClick = onReload) {
-            Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
-        }
     }
+}
+
+/** The host of [url] for a favorite's default label, falling back to the raw string. */
+private fun hostOf(url: String): String = runCatching { Uri.parse(url).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
+
+/**
+ * Turns raw omnibox text into a loadable URL: trims, rejects blanks, and prepends `https://` when no
+ * scheme is present (so `example.com` works). Returns null when there's nothing to open.
+ */
+private fun normalizeUrl(input: String): String? {
+    val trimmed = input.trim()
+    if (trimmed.isEmpty()) return null
+    return if (trimmed.contains("://")) trimmed else "https://$trimmed"
 }
