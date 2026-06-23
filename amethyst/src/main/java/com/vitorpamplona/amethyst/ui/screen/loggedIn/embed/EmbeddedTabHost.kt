@@ -1,0 +1,106 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
+
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Rect
+
+/**
+ * Process-level holder of **warm embedded sessions** — the persistent-surface-layer half of keep-warm.
+ * Each warm session's [SandboxedSdkView][androidx.privacysandbox.ui.client.view.SandboxedSdkView] is
+ * rendered by [EmbeddedTabLayer] and stays attached to the window the whole time, so its WebView (in
+ * the keyless `:napplet` process) keeps its full JS state; the active one is positioned over the
+ * current tab's content area, the rest sit off-screen but alive.
+ *
+ * Warm-keep is scoped to **bottom-row apps**: a session is retained only while its app is a bottom-bar
+ * favorite (see [retainOnly], driven by the bottom-bar settings). A favorite opened outside the bottom
+ * row restarts when it leaves, and a low-memory trim ([evictAll]) drops everything.
+ *
+ * State is Compose snapshot state so [EmbeddedTabLayer] recomposes as sessions / the active id / the
+ * content bounds change. Main-thread only.
+ */
+@RequiresApi(Build.VERSION_CODES.R)
+object EmbeddedTabHost {
+    class Warm(
+        val id: String,
+        val controller: EmbeddedSurfaceController,
+    )
+
+    private val warm = mutableStateListOf<Warm>()
+    val sessions: List<Warm> get() = warm
+
+    /** Id of the session shown over the current content area, or null when no embedded tab is on top. */
+    var activeId by mutableStateOf<String?>(null)
+        private set
+
+    /** Window-space bounds of the active tab's reserved content area. */
+    var contentBounds by mutableStateOf(Rect.Zero)
+        private set
+
+    /** Returns the existing warm controller for [id], or creates + registers one via [factory]. */
+    fun acquire(
+        id: String,
+        factory: () -> EmbeddedSurfaceController,
+    ): EmbeddedSurfaceController {
+        warm.firstOrNull { it.id == id }?.let { return it.controller }
+        val controller = factory()
+        warm.add(Warm(id, controller))
+        return controller
+    }
+
+    fun setActive(id: String) {
+        activeId = id
+    }
+
+    fun clearActiveIfMatches(id: String) {
+        if (activeId == id) activeId = null
+    }
+
+    fun reportBounds(bounds: Rect) {
+        contentBounds = bounds
+    }
+
+    fun evict(id: String) {
+        val w = warm.firstOrNull { it.id == id } ?: return
+        if (activeId == id) activeId = null
+        warm.remove(w)
+        w.controller.teardown()
+    }
+
+    /** Drops every warm session whose id isn't in [keep] (bottom-row membership + the active tab). */
+    fun retainOnly(keep: Set<String>) {
+        warm
+            .filter { it.id !in keep }
+            .forEach { evict(it.id) }
+    }
+
+    fun evictAll() {
+        activeId = null
+        val copy = warm.toList()
+        warm.clear()
+        copy.forEach { it.controller.teardown() }
+    }
+}

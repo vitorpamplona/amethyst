@@ -22,9 +22,12 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -34,9 +37,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.IntentCompat
 import androidx.core.util.Consumer
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
@@ -112,6 +117,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.N
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.favorites.FavoriteAlgoFeedsListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.BrowseEmojiSetsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.display.EmojiPackScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.ListOfEmojiPacksScreen
@@ -242,7 +248,17 @@ fun AppNavigation(
     val nav = rememberNav()
 
     AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
-        BuildNavigation(accountViewModel, nav)
+        Box(Modifier.fillMaxSize()) {
+            BuildNavigation(accountViewModel, nav)
+            // Persistent layer that keeps pinned embedded tabs (browser / nsite / napplet) warm by
+            // holding their surfaces attached. Below the drawer (drawn by the layout above) and below
+            // dialogs (separate windows). API 30+ only, matching the embedded-surface feature.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val barFavoriteIds by accountViewModel.settings.uiSettingsFlow.bottomBarFavoriteIds
+                    .collectAsStateWithLifecycle()
+                EmbeddedTabLayer(barFavoriteIds)
+            }
+        }
     }
 
     NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)

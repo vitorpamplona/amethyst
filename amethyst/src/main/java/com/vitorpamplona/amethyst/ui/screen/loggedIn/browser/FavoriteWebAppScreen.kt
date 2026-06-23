@@ -34,12 +34,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,16 +56,17 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 
 /**
- * A pinned web client rendered as an **in-app tab**: the embedded `:napplet` browser surface fills the
- * screen, but the app's bottom bar stays put, so switching to and from it is an ordinary tab swap — no
- * new activity, no jarring task switch. The pop-out action hands the same URL to the full-screen
- * [BrowserHostActivity] for users who want it as its own window/recents entry.
+ * A pinned web client rendered as an **in-app tab**. The embedded `:napplet` browser surface is drawn
+ * by the persistent [EmbeddedTabHost]/[com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer]
+ * layer, which keeps the session warm across tab swaps (the surface stays attached, just moved over the
+ * area this screen reserves). This screen owns only the chrome: a read-only title + Tor/reload, plus a
+ * pop-out to the full-screen [BrowserHostActivity]. Deliberately no editable address bar.
  *
- * Only [FavoriteApp.WebUrl][com.vitorpamplona.amethyst.commons.favorites.FavoriteApp.WebUrl] favorites
- * reach this screen (they're the only ones pinnable to the bottom bar today); requires API 30+ for the
- * cross-process surface.
+ * Only bottom-row favorites stay warm; if this URL isn't a bottom-bar favorite, its session is evicted
+ * (restarted) when the screen leaves. Requires API 30+ for the cross-process surface.
  */
 @Composable
 fun FavoriteWebAppScreen(
@@ -90,6 +95,8 @@ private fun EmbeddedFavoriteTab(
     nav: INav,
 ) {
     val context = LocalContext.current
+    // Matches FavoriteApp.WebUrl.id, so warm-keep membership lines up with the bottom-bar favorites.
+    val id = "url:$url"
 
     var currentUrl by remember { mutableStateOf(url) }
     var canGoBack by remember { mutableStateOf(false) }
@@ -98,10 +105,30 @@ private fun EmbeddedFavoriteTab(
     var torOn by remember { mutableStateOf(proxyAvailable) }
 
     val controller =
-        rememberBrowserController(startUrl = url) { newUrl, back ->
+        remember(id) {
+            EmbeddedTabHost.acquire(id) {
+                val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
+                EmbeddedBrowserController(context.applicationContext, proxyPort, proxyPort > 0).also { it.bind(url) }
+            } as EmbeddedBrowserController
+        }
+
+    // Keep the URL/back callback fresh without re-binding the warm session.
+    SideEffect {
+        controller.onUrlChanged = { newUrl, back ->
             if (newUrl != "about:blank") currentUrl = newUrl
             canGoBack = back
         }
+    }
+
+    val barFavoritesFlow = accountViewModel.settings.uiSettingsFlow.bottomBarFavoriteIds
+    DisposableEffect(id) {
+        EmbeddedTabHost.setActive(id)
+        onDispose {
+            EmbeddedTabHost.clearActiveIfMatches(id)
+            // Only bottom-row apps stay warm; anything else restarts when it leaves.
+            if (id !in barFavoritesFlow.value) EmbeddedTabHost.evict(id)
+        }
+    }
 
     BackHandler(enabled = canGoBack) { controller.back() }
 
@@ -109,11 +136,7 @@ private fun EmbeddedFavoriteTab(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = hostLabel(currentUrl),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Text(text = hostLabel(currentUrl), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 actions = {
                     if (proxyAvailable) {
@@ -141,12 +164,12 @@ private fun EmbeddedFavoriteTab(
             AppBottomBar(Route.FavoriteWebApp(url), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
-        EmbeddedBrowserSurface(
-            controller = controller,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+        // Reserve the content area; the warm surface is positioned over these bounds by the tab layer.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
         )
     }
 }

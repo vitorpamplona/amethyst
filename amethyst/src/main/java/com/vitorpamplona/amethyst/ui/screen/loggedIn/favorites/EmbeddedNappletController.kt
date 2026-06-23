@@ -36,6 +36,7 @@ import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
 
 /**
  * Client-side handle to an embedded nsite/napplet. Binds [NappletHostService][com.vitorpamplona.amethyst.napplethost.NappletHostService]
@@ -51,7 +52,7 @@ import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 class EmbeddedNappletController(
     private val appContext: Context,
     private val params: Bundle,
-) {
+) : EmbeddedSurfaceController {
     private val incoming = Messenger(Handler(Looper.getMainLooper(), ::onServiceMessage))
     private var serviceMessenger: Messenger? = null
     private var bound = false
@@ -92,13 +93,19 @@ class EmbeddedNappletController(
         }
     }
 
-    fun attachView(view: SandboxedSdkView) {
+    override fun attachView(view: SandboxedSdkView) {
         sandboxedSdkView = view
         pendingAdapter?.let {
             view.setAdapter(it)
             pendingAdapter = null
         }
     }
+
+    override fun onShown() = resume()
+
+    override fun onHidden() = pause()
+
+    override fun teardown() = unbind()
 
     private fun sendCreateSession() {
         val msg =

@@ -44,16 +44,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -65,16 +65,18 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 
 /**
- * A favorited nsite/napplet rendered as an **in-app tab**: the verified-blob sandbox surface (hosted in
- * the keyless `:napplet` process by `NappletHostService`) fills the screen while the app's bottom bar
- * stays, so switching to/from it is an ordinary tab swap. The **trusted chrome** — the sandbox shield,
- * the app name, and the "what it can access" sheet — is drawn here in the main process, around the
- * surface, exactly because the sandbox must never draw chrome the user is meant to trust. The pop-out
- * hands the app to the full-screen `NappletHostActivity`.
+ * A favorited nsite/napplet rendered as an **in-app tab**. The verified-blob sandbox surface (hosted in
+ * the keyless `:napplet` process by `NappletHostService`) is drawn by the persistent [EmbeddedTabHost]
+ * layer, which keeps the session warm across tab swaps — the surface stays attached and just moves over
+ * the area this screen reserves. The **trusted chrome** (sandbox shield, app name, "what it can access")
+ * is drawn here in the main process; the sandbox must never draw chrome the user is meant to trust. The
+ * pop-out hands the app to the full-screen `NappletHostActivity`.
  *
- * Requires API 30+ for the cross-process surface; the favorite is only reachable above that.
+ * Only bottom-row favorites stay warm; otherwise the session is evicted (restarted) when the screen
+ * leaves. Requires API 30+ for the cross-process surface.
  */
 @Composable
 fun FavoriteNappletScreen(
@@ -103,8 +105,10 @@ private fun EmbeddedNappletTab(
     nav: INav,
 ) {
     val context = LocalContext.current
+    // Matches FavoriteApp.NostrApp.id, so warm-keep membership lines up with the bottom-bar favorites.
+    val id = "nostr:$coordinate"
 
-    // Mint the verified launch params once (a fresh token per resolve); null until the event loads.
+    // Mint the verified launch params (a fresh token per resolve); null until the event loads.
     val params = remember(coordinate) { FavoriteAppLauncher.embedParams(context, coordinate) }
     if (params == null) {
         UnavailableTab(coordinate, accountViewModel, nav)
@@ -119,9 +123,13 @@ private fun EmbeddedNappletTab(
     var canGoBack by remember { mutableStateOf(false) }
     var showAccess by remember { mutableStateOf(false) }
 
-    val controller = remember(coordinate) { EmbeddedNappletController(context.applicationContext, params) }
+    val controller =
+        remember(id) {
+            EmbeddedTabHost.acquire(id) {
+                EmbeddedNappletController(context.applicationContext, params).also { it.bind() }
+            } as EmbeddedNappletController
+        }
 
-    // Keep callbacks fresh without re-binding.
     SideEffect {
         controller.onStateChanged = { canGoBack = it }
         controller.onNotice = { notice ->
@@ -129,13 +137,19 @@ private fun EmbeddedNappletTab(
         }
     }
 
-    DisposableEffect(coordinate) {
-        controller.bind()
-        onDispose { controller.unbind() }
+    val barFavoritesFlow = accountViewModel.settings.uiSettingsFlow.bottomBarFavoriteIds
+    DisposableEffect(id) {
+        EmbeddedTabHost.setActive(id)
+        onDispose {
+            EmbeddedTabHost.clearActiveIfMatches(id)
+            // Only bottom-row apps stay warm; anything else restarts when it leaves.
+            if (id !in barFavoritesFlow.value) EmbeddedTabHost.evict(id)
+        }
     }
 
-    // Pause the applet's JS while the app is backgrounded, so an "allow always" napplet can't act on
-    // the user's behalf when they aren't looking — parity with NappletHostActivity's onPause gating.
+    // Pause the applet's JS while the app is backgrounded (parity with NappletHostActivity's onPause):
+    // an "allow always" napplet can't act on the user's behalf when they aren't looking. (The tab layer
+    // separately pauses it whenever it isn't the visible tab.)
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, controller) {
         val observer =
@@ -184,12 +198,12 @@ private fun EmbeddedNappletTab(
             AppBottomBar(Route.FavoriteNostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
-        AndroidView(
-            factory = { ctx -> SandboxedSdkView(ctx).also { controller.attachView(it) } },
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+        // Reserve the content area; the warm surface is positioned over these bounds by the tab layer.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
         )
     }
 }

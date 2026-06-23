@@ -36,6 +36,7 @@ import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
 
 /**
  * Client-side handle to the embedded browser. Binds [NappletBrowserService] (in the keyless `:napplet`
@@ -48,7 +49,7 @@ class EmbeddedBrowserController(
     private val appContext: Context,
     private val proxyPort: Int,
     private val initialUseTor: Boolean,
-) {
+) : EmbeddedSurfaceController {
     private val incoming = Messenger(Handler(Looper.getMainLooper(), ::onServiceMessage))
     private var serviceMessenger: Messenger? = null
     private var bound = false
@@ -88,8 +89,10 @@ class EmbeddedBrowserController(
         }
     }
 
+    override fun teardown() = unbind()
+
     /** Hands the surface view to the controller; applies the adapter if it already arrived. */
-    fun attachView(view: SandboxedSdkView) {
+    override fun attachView(view: SandboxedSdkView) {
         sandboxedSdkView = view
         pendingAdapter?.let {
             view.setAdapter(it)
