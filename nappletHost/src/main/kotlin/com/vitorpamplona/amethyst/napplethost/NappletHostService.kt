@@ -190,6 +190,7 @@ class NappletHostService : Service() {
 
         val wv = WebView(context)
         hardenWebView(wv)
+        wv.dropSystemBarInsets()
         if (websiteMode) applyWebViewProxy(effectiveProxy)
         WebViewCompat.addWebMessageListener(wv, NappletWebContract.BRIDGE_NAME, setOf(NappletWebContract.ORIGIN), ::onShellMessage)
         webView = wv

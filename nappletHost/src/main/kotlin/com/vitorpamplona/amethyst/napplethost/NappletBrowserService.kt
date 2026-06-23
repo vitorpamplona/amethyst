@@ -154,6 +154,7 @@ class NappletBrowserService : Service() {
     fun createBrowserWebView(context: Context): WebView {
         val wv = WebView(context)
         configureWebView(wv)
+        wv.dropSystemBarInsets()
         applyWebViewProxy(if (useTor) proxyPort else -1)
         val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
         WebViewCompat.addWebMessageListener(wv, NappletWebContract.BRIDGE_NAME, setOf("*"), ::onBridgeMessage)
