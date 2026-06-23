@@ -136,6 +136,9 @@
     <string name="mark_all_known_as_read">Tüm bilinenleri okundu olarak işaretle</string>
     <string name="mark_all_new_as_read">Tüm yenileri okundu olarak işaretle</string>
     <string name="mark_all_as_read">Tümünü okundu olarak işaretle</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <!-- Call notifications and UI -->
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the

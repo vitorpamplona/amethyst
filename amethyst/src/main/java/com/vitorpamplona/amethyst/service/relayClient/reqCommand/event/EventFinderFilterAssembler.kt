@@ -23,9 +23,12 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.AddressableAuthorRelayLoaderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.NoteEventLoaderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers.EventWatcherSubAssembler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
@@ -38,11 +41,14 @@ class EventFinderQueryState(
 @Stable
 class EventFinderFilterAssembler(
     client: INostrClient,
+    cache: LocalCache,
+    userFinder: UserFinderFilterAssembler,
 ) : ComposeSubscriptionManager<EventFinderQueryState>() {
     val group =
         listOf(
             NoteEventLoaderSubAssembler(client, ::allKeys),
             EventWatcherSubAssembler(client, ::allKeys),
+            AddressableAuthorRelayLoaderSubAssembler(cache, ::allKeys, userFinder),
         )
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }

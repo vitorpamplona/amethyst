@@ -85,6 +85,9 @@
     <string name="report_dialog_title">Bloķēt un sūdzēties</string>
     <string name="block_only">Bloķēt</string>
     <string name="bookmarks">Grāmatzīmes</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="content_description_add_image">Pievienot attēlu</string>
     <string name="content_description_add_video">Pievienot video</string>
     <string name="content_description_add_document">Pievienot dokumentu</string>

@@ -566,6 +566,9 @@
     <string name="exercise_yoga">Yoga</string>
     <string name="exercise_meditation">Meditación</string>
     <string name="exercise_diet">Dieta</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="shorts">Cortos</string>
     <string name="nest_mic_unmute">Reactivar micrófono</string>
     <string name="nest_broadcast_connecting">Transmitir en vivo…</string>

@@ -198,6 +198,9 @@
     <string name="report_dialog_title">Blokir dan Laporkan</string>
     <string name="block_only">Blokir</string>
     <string name="bookmarks">Markah</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="private_bookmarks">Markah Privat</string>
     <string name="public_bookmarks">Markah Publik</string>
     <string name="add_to_private_bookmarks">Tambahkan ke Markah Privat</string>

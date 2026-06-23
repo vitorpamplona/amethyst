@@ -22,14 +22,12 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.app.Service
 import android.content.Intent
-import android.os.Binder
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
-import android.os.Process
 import android.os.RemoteException
 import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
@@ -93,11 +91,10 @@ class NappletBrokerService : Service() {
                 .map { (it as? AccountState.LoggedIn)?.account?.signer?.pubKey ?: "" }
         }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        // Defense in depth on top of exported=false: only our own UID may bind.
-        if (Binder.getCallingUid() != Process.myUid()) return null
-        return incoming.binder
-    }
+    // Binding is restricted to our own UID by exported=false in the manifest, enforced by the OS.
+    // A UID check here would be useless: onBind() runs once (the binder is cached and reused for all
+    // later clients) and outside any binder transaction, so getCallingUid() returns our own UID anyway.
+    override fun onBind(intent: Intent?): IBinder? = incoming.binder
 
     override fun onDestroy() {
         liveSubscriptions.closeAll()

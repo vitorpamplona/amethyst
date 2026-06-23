@@ -77,15 +77,33 @@
     "since": "2026-06-19T19:01:59-04:00",
     "translators": [
       {
+        "user": "rajs19420616",
+        "languages": [
+          "Hindi"
+        ]
+      },
+      {
         "user": "anthony-robin",
         "languages": [
           "French"
         ]
       },
       {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
+        ]
+      },
+      {
         "user": "maxblake2015",
         "languages": [
           "Polish"
+        ]
+      },
+      {
+        "user": "BitByBit21",
+        "languages": [
+          "Spanish"
         ]
       },
       {
@@ -101,14 +119,19 @@
         ]
       },
       {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
-        ]
-      },
-      {
         "user": "vitorpamplona",
-        "languages": []
+        "languages": [
+          "Chinese Simplified",
+          "Czech",
+          "Dutch",
+          "German",
+          "Hindi",
+          "Hungarian",
+          "Polish",
+          "Portuguese, Brazilian",
+          "Slovenian",
+          "Swedish"
+        ]
       },
       {
         "user": "greenart7c3",
@@ -187,10 +210,6 @@
         "languages": []
       },
       {
-        "user": "BitByBit21",
-        "languages": []
-      },
-      {
         "user": "csavastel",
         "languages": []
       },
@@ -244,10 +263,6 @@
       },
       {
         "user": "flobstr",
-        "languages": []
-      },
-      {
-        "user": "rajs19420616",
         "languages": []
       },
       {
