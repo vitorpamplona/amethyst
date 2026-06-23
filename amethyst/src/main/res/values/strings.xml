@@ -678,7 +678,6 @@
     <string name="favorite_app_add">Add to favorites</string>
     <string name="favorite_app_remove">Remove from favorites</string>
     <string name="favorite_app_open_window">Open in its own window</string>
-    <string name="bottom_bar_settings_favorite_apps">Favorite apps</string>
     <string name="favorite_app_access_title">What this app can access</string>
     <string name="favorite_app_access_static">Runs sandboxed with no special access to your account.</string>
     <string name="favorite_app_access_show">What it can access</string>

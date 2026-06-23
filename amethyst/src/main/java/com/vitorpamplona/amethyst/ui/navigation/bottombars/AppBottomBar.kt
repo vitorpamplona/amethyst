@@ -90,34 +90,25 @@ fun AppBottomBar(
         return
     }
 
-    // Favorite apps the user activated as bottom-bar tabs (configured in the bottom-bar settings page,
-    // stored in ui settings — not auto-appended). Both kinds embed in-process (WebUrl → browser
-    // surface, NostrApp → napplet surface), so such a tab swaps in place rather than launching an
-    // activity from the bottom row.
+    // Favorite entries in the unified list resolve to a live favorite for their icon/label and to an
+    // embedded-tab route. Both kinds embed in-process (WebUrl → browser surface, NostrApp → napplet
+    // surface), so such a tab swaps in place rather than launching an activity from the bottom row.
     val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
-    val favoriteBarIds by accountViewModel.settings.uiSettingsFlow.bottomBarFavoriteIds
-        .collectAsStateWithLifecycle()
-    val favoriteTabs =
-        remember(favorites, favoriteBarIds) {
-            favoriteBarIds.mapNotNull { id -> favorites.firstOrNull { it.id == id } }
-        }
 
     val isKeyboardState by keyboardAsState()
     if (isKeyboardState == KeyboardState.Closed) {
-        RenderBottomMenu(items, favoriteTabs, selectedRoute, accountViewModel, onClick)
+        RenderBottomMenu(items, favorites, selectedRoute, accountViewModel, onClick)
     }
 }
 
 @Composable
 private fun RenderBottomMenu(
-    items: List<NavBarItem>,
-    favoriteTabs: List<FavoriteApp>,
+    items: List<BottomBarEntry>,
+    favorites: List<FavoriteApp>,
     selectedRoute: Route?,
     accountViewModel: AccountViewModel,
     nav: (Route) -> Unit,
 ) {
-    val defs = remember(items) { items.mapNotNull(NavBarCatalog::get) }
-
     Column(
         modifier =
             Modifier
@@ -135,18 +126,25 @@ private fun RenderBottomMenu(
             containerColor = MaterialTheme.colorScheme.background,
             tonalElevation = Size0dp,
         ) {
-            defs.forEach { def ->
-                val destination = remember(def, accountViewModel) { def.resolveRoute(accountViewModel) }
-                HasNewItemsIcon(destination == selectedRoute, def, destination, accountViewModel, nav)
-            }
-            favoriteTabs.forEach { fav ->
-                val destination =
-                    when (fav) {
-                        is FavoriteApp.WebUrl -> Route.FavoriteWebApp(fav.url)
-                        is FavoriteApp.NostrApp -> Route.FavoriteNostrApp(fav.coordinate)
+            // Render in the user's saved order, built-ins and favorites interleaved.
+            items.forEach { entry ->
+                when (entry) {
+                    is BottomBarEntry.BuiltIn -> {
+                        val def = NavBarCatalog[entry.item] ?: return@forEach
+                        val destination = remember(def, accountViewModel) { def.resolveRoute(accountViewModel) }
+                        HasNewItemsIcon(destination == selectedRoute, def, destination, accountViewModel, nav)
                     }
-                val icon = if (fav is FavoriteApp.NostrApp) MaterialSymbols.Apps else MaterialSymbols.Public
-                FavoriteNavItem(destination == selectedRoute, fav.label, icon, destination, nav)
+                    is BottomBarEntry.Favorite -> {
+                        val fav = favorites.firstOrNull { it.id == entry.favoriteId } ?: return@forEach
+                        val destination =
+                            when (fav) {
+                                is FavoriteApp.WebUrl -> Route.FavoriteWebApp(fav.url)
+                                is FavoriteApp.NostrApp -> Route.FavoriteNostrApp(fav.coordinate)
+                            }
+                        val icon = if (fav is FavoriteApp.NostrApp) MaterialSymbols.Apps else MaterialSymbols.Public
+                        FavoriteNavItem(destination == selectedRoute, fav.label, icon, destination, nav)
+                    }
+                }
             }
         }
     }

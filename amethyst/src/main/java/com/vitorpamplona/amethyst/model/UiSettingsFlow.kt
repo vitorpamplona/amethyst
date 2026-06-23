@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -44,7 +44,7 @@ class UiSettingsFlow(
     val automaticallyProposeAiImprovements: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val useTrackedBroadcasts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val automaticallyCreateDrafts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
-    val bottomBarItems: MutableStateFlow<List<NavBarItem>> = MutableStateFlow(DefaultBottomBarItems),
+    val bottomBarItems: MutableStateFlow<List<BottomBarEntry>> = MutableStateFlow(DefaultBottomBarEntries),
     val showHomeNewThreadsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showHomeConversationsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showHomeEverythingTab: MutableStateFlow<Boolean> = MutableStateFlow(false),
@@ -54,7 +54,6 @@ class UiSettingsFlow(
     val showProfileFollowersFeed: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val dontShowOnchainPublicWarning: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val suggestWorkoutsFromHealthConnect: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
-    val bottomBarFavoriteIds: MutableStateFlow<List<String>> = MutableStateFlow(emptyList()),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -83,7 +82,6 @@ class UiSettingsFlow(
             showProfileFollowersFeed,
             dontShowOnchainPublicWarning,
             suggestWorkoutsFromHealthConnect,
-            bottomBarFavoriteIds,
         )
 
     // emits at every change in any of the propertyes.
@@ -106,7 +104,7 @@ class UiSettingsFlow(
                 flows[12] as BooleanType,
                 flows[13] as BooleanType,
                 flows[14] as BooleanType,
-                flows[15] as List<NavBarItem>,
+                flows[15] as List<BottomBarEntry>,
                 flows[16] as Boolean,
                 flows[17] as Boolean,
                 flows[18] as Boolean,
@@ -116,7 +114,6 @@ class UiSettingsFlow(
                 flows[22] as Boolean,
                 flows[23] as Boolean,
                 flows[24] as BooleanType,
-                flows[25] as List<String>,
             )
         }
 
@@ -147,7 +144,6 @@ class UiSettingsFlow(
             showProfileFollowersFeed.value,
             dontShowOnchainPublicWarning.value,
             suggestWorkoutsFromHealthConnect.value,
-            bottomBarFavoriteIds.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -253,10 +249,6 @@ class UiSettingsFlow(
             suggestWorkoutsFromHealthConnect.tryEmit(torSettings.suggestWorkoutsFromHealthConnect)
             any = true
         }
-        if (bottomBarFavoriteIds.value != torSettings.bottomBarFavoriteIds) {
-            bottomBarFavoriteIds.tryEmit(torSettings.bottomBarFavoriteIds)
-            any = true
-        }
 
         return any
     }
@@ -307,7 +299,6 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.showProfileFollowersFeed),
                 MutableStateFlow(uiSettings.dontShowOnchainPublicWarning),
                 MutableStateFlow(uiSettings.suggestWorkoutsFromHealthConnect),
-                MutableStateFlow(uiSettings.bottomBarFavoriteIds),
             )
     }
 }

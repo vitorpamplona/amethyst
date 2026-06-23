@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -254,9 +255,9 @@ fun AppNavigation(
             // holding their surfaces attached. Below the drawer (drawn by the layout above) and below
             // dialogs (separate windows). API 30+ only, matching the embedded-surface feature.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val barFavoriteIds by accountViewModel.settings.uiSettingsFlow.bottomBarFavoriteIds
+                val bottomBarItems by accountViewModel.settings.uiSettingsFlow.bottomBarItems
                     .collectAsStateWithLifecycle()
-                EmbeddedTabLayer(barFavoriteIds)
+                EmbeddedTabLayer(bottomBarItems.favoriteIds())
             }
         }
     }

@@ -385,6 +385,9 @@ val DefaultBottomBarItems: List<NavBarItem> =
         NavBarItem.NOTIFICATIONS,
     )
 
+/** The default bottom bar as unified entries (all built-in; favorites are added by the user). */
+val DefaultBottomBarEntries: List<BottomBarEntry> = DefaultBottomBarItems.map { BottomBarEntry.BuiltIn(it) }
+
 // Ordered membership lists for each drawer section. The drawer renders these by looking up
 // each id in NavBarCatalog, so adding a new screen only requires editing the catalog + the
 // matching section list below — not two separate files.

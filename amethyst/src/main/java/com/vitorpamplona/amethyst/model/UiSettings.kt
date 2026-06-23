@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 import kotlinx.serialization.Serializable
 
 @Stable
@@ -44,7 +44,7 @@ data class UiSettings(
     val automaticallyProposeAiImprovements: BooleanType = BooleanType.ALWAYS,
     val useTrackedBroadcasts: BooleanType = BooleanType.ALWAYS,
     val automaticallyCreateDrafts: BooleanType = BooleanType.ALWAYS,
-    val bottomBarItems: List<NavBarItem> = DefaultBottomBarItems,
+    val bottomBarItems: List<BottomBarEntry> = DefaultBottomBarEntries,
     val showHomeNewThreadsTab: Boolean = true,
     val showHomeConversationsTab: Boolean = true,
     val showHomeEverythingTab: Boolean = false,
@@ -54,11 +54,6 @@ data class UiSettings(
     val showProfileFollowersFeed: Boolean = true,
     val dontShowOnchainPublicWarning: Boolean = false,
     val suggestWorkoutsFromHealthConnect: BooleanType = BooleanType.ALWAYS,
-    // Ids ([FavoriteApp.id][com.vitorpamplona.amethyst.commons.favorites.FavoriteApp.id]) of favorite
-    // apps the user activated as bottom-bar tabs, configured in the bottom-bar settings page. Kept
-    // separate from [bottomBarItems] (the built-in destinations) because favorites are dynamic data,
-    // not a fixed enum.
-    val bottomBarFavoriteIds: List<String> = emptyList(),
 )
 
 enum class ThemeType(

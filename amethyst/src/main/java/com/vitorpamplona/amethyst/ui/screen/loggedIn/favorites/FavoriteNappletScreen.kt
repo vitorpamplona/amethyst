@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -137,13 +138,13 @@ private fun EmbeddedNappletTab(
         }
     }
 
-    val barFavoritesFlow = accountViewModel.settings.uiSettingsFlow.bottomBarFavoriteIds
+    val bottomBarFlow = accountViewModel.settings.uiSettingsFlow.bottomBarItems
     DisposableEffect(id) {
         EmbeddedTabHost.setActive(id)
         onDispose {
             EmbeddedTabHost.clearActiveIfMatches(id)
             // Only bottom-row apps stay warm; anything else restarts when it leaves.
-            if (id !in barFavoritesFlow.value) EmbeddedTabHost.evict(id)
+            if (id !in bottomBarFlow.value.favoriteIds()) EmbeddedTabHost.evict(id)
         }
     }
 

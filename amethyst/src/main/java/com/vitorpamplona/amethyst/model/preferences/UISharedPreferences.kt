@@ -38,8 +38,10 @@ import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -109,7 +111,6 @@ class UiSharedPreferences(
         val UI_USE_TRACKED_BROADCASTS = stringPreferencesKey("ui.use_tracked_broadcasts")
         val UI_AUTOMATICALLY_CREATE_DRAFTS = stringPreferencesKey("ui.automatically_create_drafts")
         val UI_BOTTOM_BAR_ITEMS = stringPreferencesKey("ui.bottom_bar_items")
-        val UI_BOTTOM_BAR_FAVORITES = stringPreferencesKey("ui.bottom_bar_favorites")
         val UI_SHOW_HOME_NEW_THREADS_TAB = booleanPreferencesKey("ui.show_home_new_threads_tab")
         val UI_SHOW_HOME_CONVERSATIONS_TAB = booleanPreferencesKey("ui.show_home_conversations_tab")
         val UI_SHOW_HOME_EVERYTHING_TAB = booleanPreferencesKey("ui.show_home_everything_tab")
@@ -145,8 +146,7 @@ class UiSharedPreferences(
                         preferences[UI_USE_TRACKED_BROADCASTS]?.let { BooleanType.valueOf(it) }
                             ?: if (featureSet == FeatureSetType.COMPLETE) BooleanType.ALWAYS else BooleanType.NEVER,
                     automaticallyCreateDrafts = preferences[UI_AUTOMATICALLY_CREATE_DRAFTS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
-                    bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarItems,
-                    bottomBarFavoriteIds = preferences[UI_BOTTOM_BAR_FAVORITES]?.let { decodeFavoriteIds(it) } ?: emptyList(),
+                    bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarEntries,
                     showHomeNewThreadsTab = preferences[UI_SHOW_HOME_NEW_THREADS_TAB] ?: true,
                     showHomeConversationsTab = preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] ?: true,
                     showHomeEverythingTab = preferences[UI_SHOW_HOME_EVERYTHING_TAB] ?: false,
@@ -196,10 +196,7 @@ class UiSharedPreferences(
                     preferences[UI_PROPOSE_AI_IMPROVEMENTS] = sharedSettings.automaticallyProposeAiImprovements.name
                     preferences[UI_USE_TRACKED_BROADCASTS] = sharedSettings.useTrackedBroadcasts.name
                     preferences[UI_AUTOMATICALLY_CREATE_DRAFTS] = sharedSettings.automaticallyCreateDrafts.name
-                    preferences[UI_BOTTOM_BAR_ITEMS] = sharedSettings.bottomBarItems.joinToString(",") { it.name }
-                    // Favorite ids contain ':' and '/' (urls / coordinates) but never a newline, so a
-                    // newline is a safe separator.
-                    preferences[UI_BOTTOM_BAR_FAVORITES] = sharedSettings.bottomBarFavoriteIds.joinToString("\n")
+                    preferences[UI_BOTTOM_BAR_ITEMS] = JsonMapper.toJson(sharedSettings.bottomBarItems)
                     preferences[UI_SHOW_HOME_NEW_THREADS_TAB] = sharedSettings.showHomeNewThreadsTab
                     preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] = sharedSettings.showHomeConversationsTab
                     preferences[UI_SHOW_HOME_EVERYTHING_TAB] = sharedSettings.showHomeEverythingTab
@@ -217,19 +214,17 @@ class UiSharedPreferences(
             }
         }
 
-        private fun decodeFavoriteIds(raw: String): List<String> = raw.split("\n").filter { it.isNotBlank() }
-
-        private fun decodeBottomBarItems(raw: String): List<NavBarItem> {
-            if (raw.isEmpty()) return emptyList()
-            return raw
-                .split(",")
-                .mapNotNull { name ->
-                    try {
-                        NavBarItem.valueOf(name)
-                    } catch (_: IllegalArgumentException) {
-                        null
-                    }
-                }
+        private fun decodeBottomBarItems(raw: String): List<BottomBarEntry>? {
+            if (raw.isBlank()) return emptyList()
+            // Current format: a JSON list of BottomBarEntry (built-ins + favorites).
+            runCatching { return JsonMapper.fromJson<List<BottomBarEntry>>(raw) }
+            // Legacy format: comma-joined NavBarItem enum names (before favorites/unified entries).
+            return runCatching {
+                raw
+                    .split(",")
+                    .mapNotNull { name -> runCatching { NavBarItem.valueOf(name) }.getOrNull() }
+                    .map { BottomBarEntry.BuiltIn(it) }
+            }.getOrNull()
         }
     }
 }
