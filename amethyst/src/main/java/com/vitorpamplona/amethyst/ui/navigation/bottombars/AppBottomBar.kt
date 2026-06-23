@@ -90,19 +90,21 @@ fun AppBottomBar(
         return
     }
 
-    // User-pinned favorite apps appear as extra tabs after the built-in items. Both kinds embed
-    // in-process (WebUrl → browser surface, NostrApp → napplet surface), so a pinned tab always
-    // swaps in place rather than launching an activity from the bottom row.
+    // Favorite apps the user activated as bottom-bar tabs (configured in the bottom-bar settings page,
+    // stored in ui settings — not auto-appended). Both kinds embed in-process (WebUrl → browser
+    // surface, NostrApp → napplet surface), so such a tab swaps in place rather than launching an
+    // activity from the bottom row.
     val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
-    val pinnedIds by FavoriteAppsRegistry.pinnedIds.collectAsStateWithLifecycle()
-    val pinnedFavorites =
-        remember(favorites, pinnedIds) {
-            pinnedIds.mapNotNull { id -> favorites.firstOrNull { it.id == id } }
+    val favoriteBarIds by accountViewModel.settings.uiSettingsFlow.bottomBarFavoriteIds
+        .collectAsStateWithLifecycle()
+    val favoriteTabs =
+        remember(favorites, favoriteBarIds) {
+            favoriteBarIds.mapNotNull { id -> favorites.firstOrNull { it.id == id } }
         }
 
     val isKeyboardState by keyboardAsState()
     if (isKeyboardState == KeyboardState.Closed) {
-        RenderBottomMenu(items, pinnedFavorites, selectedRoute, accountViewModel, onClick)
+        RenderBottomMenu(items, favoriteTabs, selectedRoute, accountViewModel, onClick)
     }
 }
 

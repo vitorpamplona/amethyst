@@ -58,9 +58,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
@@ -258,7 +261,61 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
             }
         }
 
+        FavoriteAppsSection(accountViewModel)
+
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+/**
+ * Lets the user activate individual favorite apps (nsites / napplets / web clients) as bottom-bar tabs.
+ * A separate section from the built-in destinations above: favorites are dynamic data, stored as
+ * [com.vitorpamplona.amethyst.model.UiSettings.bottomBarFavoriteIds], not the fixed [NavBarItem] enum.
+ * (The "All apps" grid itself is a built-in destination in the list above.)
+ */
+@Composable
+private fun FavoriteAppsSection(accountViewModel: AccountViewModel) {
+    val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    if (favorites.isEmpty()) return
+
+    val flow = accountViewModel.settings.uiSettingsFlow.bottomBarFavoriteIds
+    val activeIds by flow.collectAsStateWithLifecycle()
+
+    SectionDivider(R.string.bottom_bar_settings_favorite_apps)
+
+    favorites.forEach { app ->
+        val checked = app.id in activeIds
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp, horizontal = Size20dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+                Icon(
+                    symbol = if (app is FavoriteApp.NostrApp) MaterialSymbols.Apps else MaterialSymbols.Public,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+            Text(
+                text = app.label,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = checked,
+                onCheckedChange = { on ->
+                    flow.tryEmit(if (on) activeIds + app.id else activeIds - app.id)
+                },
+            )
+        }
+        HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
     }
 }
 

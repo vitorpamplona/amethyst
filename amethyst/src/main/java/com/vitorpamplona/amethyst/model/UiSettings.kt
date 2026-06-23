@@ -54,6 +54,11 @@ data class UiSettings(
     val showProfileFollowersFeed: Boolean = true,
     val dontShowOnchainPublicWarning: Boolean = false,
     val suggestWorkoutsFromHealthConnect: BooleanType = BooleanType.ALWAYS,
+    // Ids ([FavoriteApp.id][com.vitorpamplona.amethyst.commons.favorites.FavoriteApp.id]) of favorite
+    // apps the user activated as bottom-bar tabs, configured in the bottom-bar settings page. Kept
+    // separate from [bottomBarItems] (the built-in destinations) because favorites are dynamic data,
+    // not a fixed enum.
+    val bottomBarFavoriteIds: List<String> = emptyList(),
 )
 
 enum class ThemeType(

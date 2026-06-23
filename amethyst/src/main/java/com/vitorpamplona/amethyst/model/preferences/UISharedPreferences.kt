@@ -109,6 +109,7 @@ class UiSharedPreferences(
         val UI_USE_TRACKED_BROADCASTS = stringPreferencesKey("ui.use_tracked_broadcasts")
         val UI_AUTOMATICALLY_CREATE_DRAFTS = stringPreferencesKey("ui.automatically_create_drafts")
         val UI_BOTTOM_BAR_ITEMS = stringPreferencesKey("ui.bottom_bar_items")
+        val UI_BOTTOM_BAR_FAVORITES = stringPreferencesKey("ui.bottom_bar_favorites")
         val UI_SHOW_HOME_NEW_THREADS_TAB = booleanPreferencesKey("ui.show_home_new_threads_tab")
         val UI_SHOW_HOME_CONVERSATIONS_TAB = booleanPreferencesKey("ui.show_home_conversations_tab")
         val UI_SHOW_HOME_EVERYTHING_TAB = booleanPreferencesKey("ui.show_home_everything_tab")
@@ -145,6 +146,7 @@ class UiSharedPreferences(
                             ?: if (featureSet == FeatureSetType.COMPLETE) BooleanType.ALWAYS else BooleanType.NEVER,
                     automaticallyCreateDrafts = preferences[UI_AUTOMATICALLY_CREATE_DRAFTS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
                     bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarItems,
+                    bottomBarFavoriteIds = preferences[UI_BOTTOM_BAR_FAVORITES]?.let { decodeFavoriteIds(it) } ?: emptyList(),
                     showHomeNewThreadsTab = preferences[UI_SHOW_HOME_NEW_THREADS_TAB] ?: true,
                     showHomeConversationsTab = preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] ?: true,
                     showHomeEverythingTab = preferences[UI_SHOW_HOME_EVERYTHING_TAB] ?: false,
@@ -195,6 +197,9 @@ class UiSharedPreferences(
                     preferences[UI_USE_TRACKED_BROADCASTS] = sharedSettings.useTrackedBroadcasts.name
                     preferences[UI_AUTOMATICALLY_CREATE_DRAFTS] = sharedSettings.automaticallyCreateDrafts.name
                     preferences[UI_BOTTOM_BAR_ITEMS] = sharedSettings.bottomBarItems.joinToString(",") { it.name }
+                    // Favorite ids contain ':' and '/' (urls / coordinates) but never a newline, so a
+                    // newline is a safe separator.
+                    preferences[UI_BOTTOM_BAR_FAVORITES] = sharedSettings.bottomBarFavoriteIds.joinToString("\n")
                     preferences[UI_SHOW_HOME_NEW_THREADS_TAB] = sharedSettings.showHomeNewThreadsTab
                     preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] = sharedSettings.showHomeConversationsTab
                     preferences[UI_SHOW_HOME_EVERYTHING_TAB] = sharedSettings.showHomeEverythingTab
@@ -211,6 +216,8 @@ class UiSharedPreferences(
                 Log.e("SharedPreferences") { "Error saving DataStore preferences: ${e.message}" }
             }
         }
+
+        private fun decodeFavoriteIds(raw: String): List<String> = raw.split("\n").filter { it.isNotBlank() }
 
         private fun decodeBottomBarItems(raw: String): List<NavBarItem> {
             if (raw.isEmpty()) return emptyList()

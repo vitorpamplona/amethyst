@@ -134,9 +134,6 @@ fun FavoriteAppsGrid(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(12.dp),
 ) {
-    // Any favorite can be pinned as a bottom-bar tab — both kinds embed in-process.
-    val pinnedIds by FavoriteAppsRegistry.pinnedIds.collectAsStateWithLifecycle()
-
     LazyVerticalGrid(
         columns = GridCells.Adaptive(96.dp),
         modifier = modifier,
@@ -147,8 +144,6 @@ fun FavoriteAppsGrid(
         items(apps, key = { it.id }) { app ->
             FavoriteAppCell(
                 app = app,
-                isPinned = pinnedIds.contains(app.id),
-                onTogglePin = { FavoriteAppsRegistry.setPinned(app.id, !FavoriteAppsRegistry.isPinned(app.id)) },
                 onOpen = { onOpen(app) },
                 onRemove = { onRemove(app) },
             )
@@ -160,8 +155,6 @@ fun FavoriteAppsGrid(
 @Composable
 private fun FavoriteAppCell(
     app: FavoriteApp,
-    isPinned: Boolean,
-    onTogglePin: (() -> Unit)?,
     onOpen: () -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -203,16 +196,6 @@ private fun FavoriteAppCell(
         )
 
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            onTogglePin?.let { toggle ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(if (isPinned) R.string.favorite_app_unpin else R.string.favorite_app_pin)) },
-                    leadingIcon = { Icon(if (isPinned) MaterialSymbols.Star else MaterialSymbols.StarBorder, contentDescription = null) },
-                    onClick = {
-                        menuOpen = false
-                        toggle()
-                    },
-                )
-            }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.favorite_app_remove)) },
                 leadingIcon = { Icon(MaterialSymbols.Delete, contentDescription = null) },
