@@ -163,6 +163,9 @@ object NappletProtocolJson {
             "storage.set" -> NappletRequest.StorageSet(o.req("key"), o.req("value"))
             "storage.remove" -> NappletRequest.StorageRemove(o.req("key"))
             "storage.keys" -> NappletRequest.StorageKeys
+            "notify.create" -> NappletRequest.NotifyCreate(o.str("title") ?: "", o.str("body") ?: "")
+            "notify.list" -> NappletRequest.NotifyList
+            "notify.dismiss" -> NappletRequest.NotifyDismiss(o.str("notificationId") ?: o.str("id") ?: "")
             "keys.registerAction" -> {
                 val action = o.getValue("action").jsonObject
                 NappletRequest.RegisterAction(action.req("id"), action.str("label") ?: "", action.str("defaultKey"))
@@ -199,7 +202,15 @@ object NappletProtocolJson {
         response: NappletResponse,
     ): String =
         buildJsonObject {
-            put("type", "$requestType.result")
+            // Most replies are `<requestType>.result`; a few NAP domains use a bespoke past-tense
+            // reply type the client listens for instead (e.g. notify.create → notify.created).
+            val responseType =
+                when (response) {
+                    is NappletResponse.NotifyCreated -> "notify.created"
+                    is NappletResponse.NotifyListed -> "notify.listed"
+                    else -> "$requestType.result"
+                }
+            put("type", responseType)
             when (response) {
                 is NappletResponse.PublicKey -> {
                     put("ok", true)
@@ -269,6 +280,27 @@ object NappletProtocolJson {
                             put("primary", response.primary)
                         }
                     }
+                }
+                is NappletResponse.NotifyCreated -> {
+                    put("ok", true)
+                    put("id", response.id)
+                }
+                is NappletResponse.NotifyListed -> {
+                    put("ok", true)
+                    put(
+                        "notifications",
+                        buildJsonArray {
+                            response.notifications.forEach {
+                                add(
+                                    buildJsonObject {
+                                        put("id", it.id)
+                                        put("title", it.title)
+                                        put("body", it.body)
+                                    },
+                                )
+                            }
+                        },
+                    )
                 }
                 is NappletResponse.Done -> {
                     put("ok", true)

@@ -120,6 +120,36 @@ fun interface NappletThemeGateway {
     suspend fun current(): NappletThemeColors
 }
 
+/** A user-facing notification a napplet created, tracked per applet coordinate. */
+class NappletNotification(
+    val id: String,
+    val title: String,
+    val body: String,
+)
+
+/**
+ * Bridges the broker to user-facing notifications for [NappletCapability.NOTIFY] (`notify.*`). The
+ * host shows the notification and keeps a per-coordinate registry so a napplet can list and dismiss
+ * its own (and only its own). A `null` gateway answers `Unsupported`.
+ */
+interface NappletNotifyGateway {
+    /** Creates a notification for [coordinate]; returns the host-assigned id. */
+    suspend fun create(
+        coordinate: String,
+        title: String,
+        body: String,
+    ): String
+
+    /** Lists [coordinate]'s active notifications. */
+    suspend fun list(coordinate: String): List<NappletNotification>
+
+    /** Dismisses [coordinate]'s notification [id] (no-op if unknown). */
+    suspend fun dismiss(
+        coordinate: String,
+        id: String,
+    )
+}
+
 /** A fetched resource: its [bytes] and best-effort [contentType]. */
 class NappletResource(
     val bytes: ByteArray,

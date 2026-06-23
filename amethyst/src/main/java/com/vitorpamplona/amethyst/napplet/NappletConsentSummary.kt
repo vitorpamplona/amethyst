@@ -75,6 +75,11 @@ class NappletConsentSummary(
             is NappletRequest.QueryEvents, is NappletRequest.Subscribe -> context.getString(R.string.napplet_consent_query)
             is NappletRequest.StorageGet, is NappletRequest.StorageSet, is NappletRequest.StorageRemove, is NappletRequest.StorageKeys ->
                 context.getString(R.string.napplet_consent_storage)
+            is NappletRequest.NotifyCreate -> {
+                val preview = request.title.take(80).trim()
+                if (preview.isEmpty()) context.getString(R.string.napplet_consent_notify) else context.getString(R.string.napplet_consent_notify) + "\n“$preview”"
+            }
+            is NappletRequest.NotifyList, is NappletRequest.NotifyDismiss -> context.getString(R.string.napplet_consent_notify)
             is NappletRequest.PayInvoice -> {
                 val sats = runCatching { LnInvoiceUtil.getAmountInSats(request.invoice).toLong() }.getOrNull()
                 if (sats != null) {

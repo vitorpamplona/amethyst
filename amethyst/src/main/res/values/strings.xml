@@ -716,6 +716,7 @@
     <string name="napplet_consent_pay">This nApplet wants to pay a Lightning invoice.</string>
     <string name="napplet_consent_resource">This nApplet wants to fetch a web resource.</string>
     <string name="napplet_consent_upload">This nApplet wants to upload a file to your media server.</string>
+    <string name="napplet_consent_notify">This nApplet wants to show you notifications.</string>
     <string name="napplet_consent_sign">This site wants to sign a kind %1$d event with your Nostr key.</string>
     <plurals name="napplet_consent_pay_amount">
         <item quantity="one">This nApplet wants to pay a Lightning invoice for %1$d sat.</item>

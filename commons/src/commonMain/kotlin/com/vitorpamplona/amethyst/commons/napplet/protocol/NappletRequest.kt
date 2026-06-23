@@ -222,6 +222,26 @@ sealed interface NappletRequest {
         override val capability get() = NappletCapability.STORAGE
     }
 
+    /** `notify.create` — post a user-facing notification; replies `notify.created { id }`. */
+    data class NotifyCreate(
+        val title: String,
+        val body: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.NOTIFY
+    }
+
+    /** `notify.list` — enumerate this napplet's active notifications; replies `notify.listed { notifications }`. */
+    data object NotifyList : NappletRequest {
+        override val capability get() = NappletCapability.NOTIFY
+    }
+
+    /** `notify.dismiss` — dismiss a notification by id (fire-and-forget on the client). */
+    data class NotifyDismiss(
+        val id: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.NOTIFY
+    }
+
     /**
      * `keys.registerAction` — register a named keyboard/command action. This is a shell-mediated UI
      * affordance, **not** signing (the `keys` domain has no key access). [actionId] is the napplet's

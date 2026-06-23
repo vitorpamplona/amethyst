@@ -22,10 +22,16 @@ package com.vitorpamplona.amethyst.napplet.gateways
 
 import android.content.Context
 import android.content.res.Configuration
+import androidx.core.app.NotificationChannelCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityGateway
+import com.vitorpamplona.amethyst.commons.napplet.NappletNotification
+import com.vitorpamplona.amethyst.commons.napplet.NappletNotifyGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletResourceGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
@@ -38,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletConsentSummary
+import com.vitorpamplona.amethyst.napplet.NappletNotificationStore
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -93,8 +100,58 @@ class AccountNappletGateways(
         val identityReads = NappletIdentityGateway { method, argument -> identityReader.read(method, argument) }
         val upload = NappletUploadGateway { bytes, contentType, filename -> uploadBlob(bytes, contentType, filename) }
         val theme = NappletThemeGateway { currentThemeColors() }
+        val notify =
+            object : NappletNotifyGateway {
+                override suspend fun create(
+                    coordinate: String,
+                    title: String,
+                    body: String,
+                ): String {
+                    val id = NappletNotificationStore.create(coordinate, title, body)
+                    runCatching { postSystemNotification(id, title, body) }
+                    return id
+                }
 
-        return NappletBroker(account.signer, ledger, consent, relay, storage, wallet, resource, upload = upload, identityReads = identityReads, theme = theme)
+                override suspend fun list(coordinate: String): List<NappletNotification> = NappletNotificationStore.list(coordinate)
+
+                override suspend fun dismiss(
+                    coordinate: String,
+                    id: String,
+                ) {
+                    NappletNotificationStore.dismiss(coordinate, id)
+                    runCatching { NotificationManagerCompat.from(context).cancel(id.hashCode()) }
+                }
+            }
+
+        return NappletBroker(account.signer, ledger, consent, relay, storage, wallet, resource, upload = upload, identityReads = identityReads, theme = theme, notify = notify)
+    }
+
+    /**
+     * Posts a napplet's notification to the system tray (best-effort: a missing POST_NOTIFICATIONS
+     * grant just no-ops). The in-app registry in [NappletNotificationStore] is the source of truth for
+     * the napplet's own `notify.list`/`dismiss`; this is the user-visible surface.
+     */
+    private fun postSystemNotification(
+        id: String,
+        title: String,
+        body: String,
+    ) {
+        val manager = NotificationManagerCompat.from(context)
+        val channel =
+            NotificationChannelCompat
+                .Builder(NOTIFY_CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+                .setName(context.getString(R.string.napplet_cap_notify))
+                .build()
+        manager.createNotificationChannel(channel)
+        val notification =
+            NotificationCompat
+                .Builder(context, NOTIFY_CHANNEL_ID)
+                .setSmallIcon(R.drawable.amethyst)
+                .setContentTitle(title.ifBlank { context.getString(R.string.napplet_cap_notify) })
+                .setContentText(body)
+                .setAutoCancel(true)
+                .build()
+        manager.notify(id.hashCode(), notification)
     }
 
     /**
@@ -197,5 +254,8 @@ class AccountNappletGateways(
 
         /** Amethyst's brand purple (`AmethystPurple`, commons Colors.kt), exposed as the theme primary. */
         private const val AMETHYST_PURPLE = "#9A82DB"
+
+        /** Notification channel for napplet-originated notifications (NAP `notify`). */
+        private const val NOTIFY_CHANNEL_ID = "napplet_notifications"
     }
 }

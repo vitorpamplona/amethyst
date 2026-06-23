@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.napplet.protocol
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
+import com.vitorpamplona.amethyst.commons.napplet.NappletNotification
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
@@ -114,6 +115,16 @@ sealed interface NappletResponse {
         val background: String,
         val text: String,
         val primary: String,
+    ) : NappletResponse
+
+    /** Result of `notify.create`: encoded as `notify.created { id }` (not the generic `.result`). */
+    data class NotifyCreated(
+        val id: String,
+    ) : NappletResponse
+
+    /** Result of `notify.list`: encoded as `notify.listed { notifications }` (not the generic `.result`). */
+    data class NotifyListed(
+        val notifications: List<NappletNotification>,
     ) : NappletResponse
 
     /** A successful operation with no return value (e.g. a storage write/remove). */

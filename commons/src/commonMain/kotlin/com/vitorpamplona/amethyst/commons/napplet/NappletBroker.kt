@@ -70,6 +70,7 @@ class NappletBroker(
     private val upload: NappletUploadGateway? = null,
     private val identityReads: NappletIdentityGateway? = null,
     private val theme: NappletThemeGateway? = null,
+    private val notify: NappletNotifyGateway? = null,
 ) {
     // Serializes the consent-prompt path so concurrent requests queue into one dialog at a time
     // (see [authorizeWithConsent]). Only the prompt is held here; non-prompting paths and execute()
@@ -242,6 +243,22 @@ class NappletBroker(
             is NappletRequest.StorageKeys -> {
                 val store = storage ?: return NappletResponse.Unsupported("storage.keys")
                 NappletResponse.Strings(store.keys(identity.coordinate))
+            }
+
+            is NappletRequest.NotifyCreate -> {
+                val gateway = notify ?: return NappletResponse.Unsupported("notify.create")
+                NappletResponse.NotifyCreated(gateway.create(identity.coordinate, request.title, request.body))
+            }
+
+            is NappletRequest.NotifyList -> {
+                val gateway = notify ?: return NappletResponse.Unsupported("notify.list")
+                NappletResponse.NotifyListed(gateway.list(identity.coordinate))
+            }
+
+            is NappletRequest.NotifyDismiss -> {
+                val gateway = notify ?: return NappletResponse.Unsupported("notify.dismiss")
+                gateway.dismiss(identity.coordinate, request.id)
+                NappletResponse.Done
             }
 
             // Keyboard actions are acknowledged (with the honored binding) so SDK napplets'
