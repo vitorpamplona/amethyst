@@ -28,8 +28,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.AddressableAuthorRelayLoaderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.NoteEventLoaderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers.EventWatcherSubAssembler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 
 // This allows multiple screen to be listening to tags, even the same tag
 @Stable
@@ -42,13 +42,13 @@ class EventFinderQueryState(
 class EventFinderFilterAssembler(
     client: INostrClient,
     cache: LocalCache,
-    failureTracker: RelayOfflineTracker,
+    userFinder: UserFinderFilterAssembler,
 ) : ComposeSubscriptionManager<EventFinderQueryState>() {
     val group =
         listOf(
             NoteEventLoaderSubAssembler(client, ::allKeys),
             EventWatcherSubAssembler(client, ::allKeys),
-            AddressableAuthorRelayLoaderSubAssembler(client, cache, failureTracker, ::allKeys),
+            AddressableAuthorRelayLoaderSubAssembler(cache, ::allKeys, userFinder),
         )
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
