@@ -134,7 +134,7 @@ fun FavoriteAppsGrid(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(12.dp),
 ) {
-    // Only WebUrl favorites can be pinned as bottom-bar tabs today (they embed in-process).
+    // Any favorite can be pinned as a bottom-bar tab — both kinds embed in-process.
     val pinnedIds by FavoriteAppsRegistry.pinnedIds.collectAsStateWithLifecycle()
 
     LazyVerticalGrid(
@@ -145,11 +145,10 @@ fun FavoriteAppsGrid(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(apps, key = { it.id }) { app ->
-            val pinnable = app is FavoriteApp.WebUrl
             FavoriteAppCell(
                 app = app,
-                isPinned = pinnable && pinnedIds.contains(app.id),
-                onTogglePin = if (pinnable) ({ FavoriteAppsRegistry.setPinned(app.id, !FavoriteAppsRegistry.isPinned(app.id)) }) else null,
+                isPinned = pinnedIds.contains(app.id),
+                onTogglePin = { FavoriteAppsRegistry.setPinned(app.id, !FavoriteAppsRegistry.isPinned(app.id)) },
                 onOpen = { onOpen(app) },
                 onRemove = { onRemove(app) },
             )

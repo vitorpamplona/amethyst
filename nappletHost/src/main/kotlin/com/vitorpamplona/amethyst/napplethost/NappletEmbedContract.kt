@@ -1,0 +1,78 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.napplethost
+
+/**
+ * Messenger contract between the main app (client) and [NappletHostService] (provider, in the keyless
+ * `:napplet` process) for an **embedded** nsite/napplet — the in-app-tab counterpart of the full-screen
+ * [NappletHostActivity]. The provider hosts the verified-blob WebView and ships its rendered surface
+ * back through `androidx.privacysandbox.ui` (SurfaceControlViewHost), so applet JS never runs in the
+ * key-holding main process. The session config (verified manifest paths/hashes/servers, identity,
+ * launch token, …) is carried in the [MSG_CREATE_SESSION] bundle using the same keys as
+ * [NappletHostContract] (the activity's intent extras), so the two host paths stay in lockstep.
+ *
+ * The trusted chrome (shield, title, "what it can access") is drawn by the main process around the
+ * embedded surface — the sandbox can't draw chrome the user should trust.
+ */
+object NappletEmbedContract {
+    /** FQN of the provider service, bound by name so the client needs no compile-time reference. */
+    const val SERVICE_CLASS = "com.vitorpamplona.amethyst.napplethost.NappletHostService"
+
+    /** Client → provider: create the session. Bundle uses [NappletHostContract] EXTRA_* keys. */
+    const val MSG_CREATE_SESSION = 1
+
+    /** Client → provider: go back in the applet's page history. */
+    const val MSG_BACK = 2
+
+    /** Client → provider: reload. */
+    const val MSG_RELOAD = 3
+
+    /**
+     * Client → provider: pause the applet's JS + timers (the tab left the foreground). Mirrors
+     * [NappletHostActivity]'s onPause gating, so a backgrounded napplet — even one with an "allow
+     * always" capability — can't act on the user's behalf while they aren't looking at it.
+     */
+    const val MSG_PAUSE = 4
+
+    /** Client → provider: resume the applet's JS + timers (the tab returned to the foreground). */
+    const val MSG_RESUME = 5
+
+    /** Provider → client: the session's [KEY_CORE_LIB_INFO] (the SandboxedUiAdapter handle). */
+    const val MSG_SESSION_READY = 10
+
+    /** Provider → client: navigation state changed; carries [KEY_CAN_GO_BACK]. */
+    const val MSG_STATE = 11
+
+    /**
+     * Provider → client: a sensitive "allow always" capability just acted on the user's behalf
+     * (carries [KEY_NOTICE] — one of [NOTICE_PUBLISHED] / [NOTICE_UPLOADED] / [NOTICE_PAID]). The main
+     * process surfaces it so a granted relay-publish / upload / payment can never run fully silently.
+     */
+    const val MSG_NOTICE = 12
+
+    const val KEY_CORE_LIB_INFO = "coreLibInfo"
+    const val KEY_CAN_GO_BACK = "canGoBack"
+    const val KEY_NOTICE = "notice"
+
+    const val NOTICE_PUBLISHED = "published"
+    const val NOTICE_UPLOADED = "uploaded"
+    const val NOTICE_PAID = "paid"
+}

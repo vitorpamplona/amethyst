@@ -680,6 +680,15 @@
     <string name="favorite_app_open_window">Open in its own window</string>
     <string name="favorite_app_pin">Pin to bottom bar</string>
     <string name="favorite_app_unpin">Unpin from bottom bar</string>
+    <string name="favorite_app_access_title">What this app can access</string>
+    <string name="favorite_app_access_static">Runs sandboxed with no special access to your account.</string>
+    <string name="favorite_app_access_show">What it can access</string>
+    <string name="favorite_app_network_tor">Loads over Tor.</string>
+    <string name="favorite_app_network_open">Loads over the open web.</string>
+    <string name="favorite_app_unavailable">This app isn\'t loaded yet. Open it from its card, or try again in a moment.</string>
+    <string name="favorite_notice_published">Published to relays</string>
+    <string name="favorite_notice_uploaded">Uploaded a file</string>
+    <string name="favorite_notice_paid">Made a payment</string>
     <string name="favorite_app_still_loading">That app isn\'t loaded yet. Try again in a moment.</string>
     <string name="favorite_app_recent">Recent</string>
     <string name="napplet_permissions">nApplet permissions</string>

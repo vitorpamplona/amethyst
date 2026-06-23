@@ -99,6 +99,10 @@ sealed class Route {
         val url: String,
     ) : Route()
 
+    @Serializable data class FavoriteNostrApp(
+        val coordinate: String,
+    ) : Route()
+
     @Serializable object NappletPermissions : Route()
 
     @Serializable data class SoftwareAppDetail(

@@ -444,6 +444,14 @@
             android:process=":napplet"
             android:exported="false" />
 
+        <!-- Embedded nsite/napplet provider: hosts the verified-blob WebView in the isolated, keyless
+             process and ships its surface to the main app, so a favorited nsite/napplet can render as
+             an in-app tab instead of taking over the screen. Same trust model as NappletHostActivity. -->
+        <service
+            android:name="com.vitorpamplona.amethyst.napplethost.NappletHostService"
+            android:process=":napplet"
+            android:exported="false" />
+
     </application>
 
 

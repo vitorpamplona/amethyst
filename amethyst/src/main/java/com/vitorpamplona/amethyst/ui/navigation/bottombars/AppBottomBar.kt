@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -89,13 +90,14 @@ fun AppBottomBar(
         return
     }
 
-    // User-pinned favorite web apps appear as extra tabs after the built-in items. Only WebUrl
-    // favorites are pinnable (they embed in-process), so a pinned tab always swaps in place.
+    // User-pinned favorite apps appear as extra tabs after the built-in items. Both kinds embed
+    // in-process (WebUrl → browser surface, NostrApp → napplet surface), so a pinned tab always
+    // swaps in place rather than launching an activity from the bottom row.
     val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
     val pinnedIds by FavoriteAppsRegistry.pinnedIds.collectAsStateWithLifecycle()
     val pinnedFavorites =
         remember(favorites, pinnedIds) {
-            pinnedIds.mapNotNull { id -> favorites.firstOrNull { it.id == id } as? FavoriteApp.WebUrl }
+            pinnedIds.mapNotNull { id -> favorites.firstOrNull { it.id == id } }
         }
 
     val isKeyboardState by keyboardAsState()
@@ -107,7 +109,7 @@ fun AppBottomBar(
 @Composable
 private fun RenderBottomMenu(
     items: List<NavBarItem>,
-    favoriteTabs: List<FavoriteApp.WebUrl>,
+    favoriteTabs: List<FavoriteApp>,
     selectedRoute: Route?,
     accountViewModel: AccountViewModel,
     nav: (Route) -> Unit,
@@ -136,8 +138,13 @@ private fun RenderBottomMenu(
                 HasNewItemsIcon(destination == selectedRoute, def, destination, accountViewModel, nav)
             }
             favoriteTabs.forEach { fav ->
-                val destination = Route.FavoriteWebApp(fav.url)
-                FavoriteNavItem(destination == selectedRoute, fav, destination, nav)
+                val destination =
+                    when (fav) {
+                        is FavoriteApp.WebUrl -> Route.FavoriteWebApp(fav.url)
+                        is FavoriteApp.NostrApp -> Route.FavoriteNostrApp(fav.coordinate)
+                    }
+                val icon = if (fav is FavoriteApp.NostrApp) MaterialSymbols.Apps else MaterialSymbols.Public
+                FavoriteNavItem(destination == selectedRoute, fav.label, icon, destination, nav)
             }
         }
     }
@@ -146,7 +153,8 @@ private fun RenderBottomMenu(
 @Composable
 private fun RowScope.FavoriteNavItem(
     selected: Boolean,
-    fav: FavoriteApp.WebUrl,
+    label: String,
+    icon: MaterialSymbol,
     destination: Route,
     nav: (Route) -> Unit,
 ) {
@@ -155,14 +163,14 @@ private fun RowScope.FavoriteNavItem(
         icon = {
             Box(Size27Modifier, contentAlignment = Alignment.Center) {
                 Icon(
-                    symbol = MaterialSymbols.Public,
-                    contentDescription = fav.label,
+                    symbol = icon,
+                    contentDescription = label,
                     modifier = Size25Modifier,
                     tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface65,
                 )
             }
         },
-        label = { Text(fav.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         selected = selected,
         onClick = { nav(destination) },
     )

@@ -119,6 +119,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.metadata.Em
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.membershipManagement.EmojiPackSelectionScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.membershipManagement.MyEmojiListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteAppsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteNappletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.FollowPackFeedScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.FollowPacksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashPostScreen
@@ -299,6 +300,7 @@ fun BuildNavigation(
         composableFromEnd<Route.Browser> { BrowserScreen(accountViewModel, nav) }
         composableFromEnd<Route.FavoriteApps> { FavoriteAppsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.FavoriteWebApp> { FavoriteWebAppScreen(it.url, accountViewModel, nav) }
+        composableFromEndArgs<Route.FavoriteNostrApp> { FavoriteNappletScreen(it.coordinate, accountViewModel, nav) }
         composableFromEnd<Route.NappletPermissions> { NappletPermissionsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.SoftwareAppDetail> { SoftwareAppDetailScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Calendars> { CalendarsScreen(accountViewModel, nav) }

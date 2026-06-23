@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.favorites
 
 import android.app.Activity
 import android.content.Context
+import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import com.vitorpamplona.amethyst.R
@@ -109,6 +110,70 @@ object FavoriteAppLauncher {
                 Log.w("FavoriteAppLauncher", "Favorited app not resolvable yet: $coordinate")
                 Toast.makeText(context, R.string.favorite_app_still_loading, Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    /**
+     * Builds the main-process-minted launch parameters for embedding the nsite/napplet at [coordinate]
+     * as an in-app tab (see `NappletHostService`). Returns null when the event isn't resolvable in
+     * [LocalCache] yet — the caller shows a loading state. nsite vs napplet (and website mode) is decided
+     * here from the live event, exactly as in [launchNostrApp].
+     */
+    fun embedParams(
+        context: Context,
+        coordinate: String,
+    ): Bundle? {
+        val event = LocalCache.getAddressableNoteIfExists(coordinate)?.event
+        return when (event) {
+            is RootNappletEvent ->
+                NappletLauncher.buildLaunchParams(
+                    context,
+                    event.paths(),
+                    event.servers(),
+                    event.pubKey,
+                    "",
+                    event.declaredAggregateHash() ?: event.computeAggregateHash(),
+                    event.title() ?: "Napplet",
+                    event.requires(),
+                    false,
+                )
+            is NamedNappletEvent ->
+                NappletLauncher.buildLaunchParams(
+                    context,
+                    event.paths(),
+                    event.servers(),
+                    event.pubKey,
+                    event.identifier(),
+                    event.declaredAggregateHash() ?: event.computeAggregateHash(),
+                    event.title() ?: event.identifier(),
+                    event.requires(),
+                    false,
+                )
+            is RootSiteEvent ->
+                NappletLauncher.buildLaunchParams(
+                    context,
+                    event.paths(),
+                    event.servers(),
+                    event.pubKey,
+                    "",
+                    null,
+                    event.title() ?: "nsite",
+                    emptyList(),
+                    true,
+                )
+            is NamedSiteEvent ->
+                NappletLauncher.buildLaunchParams(
+                    context,
+                    event.paths(),
+                    event.servers(),
+                    event.pubKey,
+                    event.identifier(),
+                    null,
+                    event.title() ?: event.identifier(),
+                    emptyList(),
+                    true,
+                )
+            else -> null
         }
     }
 
