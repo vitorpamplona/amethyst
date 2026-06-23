@@ -81,6 +81,9 @@ class NappletBrokerService : Service() {
     // Live relay subscriptions, keyed by the applet's subId; reads the current account live.
     private val liveSubscriptions = NappletLiveSubscriptions { Amethyst.instance.sessionManager.loggedInAccount() }
 
+    // The app-wide inc pub/sub bus: routes inc.emit between live napplet sessions as inc.event pushes.
+    private val incBus = NappletIncBus { replyTo, payload -> push(replyTo, payload) }
+
     // Streams identity.changed pushes (account switch / connect / disconnect) to a watching applet.
     private val identityWatch =
         NappletIdentityWatch(scope) {
@@ -149,6 +152,9 @@ class NappletBrokerService : Service() {
                 is NappletRequestRouter.Outcome.WatchIdentity -> identityWatch.start { push(replyTo, it) }
                 is NappletRequestRouter.Outcome.UnwatchIdentity -> identityWatch.stop()
                 is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
+                is NappletRequestRouter.Outcome.SubscribeInc -> incBus.subscribe(replyTo, outcome.topic)
+                is NappletRequestRouter.Outcome.UnsubscribeInc -> incBus.unsubscribe(replyTo, outcome.topic)
+                is NappletRequestRouter.Outcome.EmitInc -> incBus.emit(replyTo, identity.coordinate, outcome.topic, outcome.payloadRaw)
             }
         }
         return true

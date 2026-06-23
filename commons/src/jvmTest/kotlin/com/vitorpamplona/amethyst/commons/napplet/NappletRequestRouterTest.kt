@@ -93,9 +93,33 @@ class NappletRequestRouterTest {
         }
 
     @Test
+    fun incSubscribeAndEmitBecomeBusOps() =
+        runTest {
+            assertEquals(
+                NappletRequestRouter.Outcome.SubscribeInc("news"),
+                route("""{"type":"inc.subscribe","topic":"news"}"""),
+            )
+            assertEquals(
+                NappletRequestRouter.Outcome.UnsubscribeInc("news"),
+                route("""{"type":"inc.unsubscribe","topic":"news"}"""),
+            )
+            val emit = route("""{"type":"inc.emit","topic":"news","payload":{"text":"hi"}}""")
+            assertIs<NappletRequestRouter.Outcome.EmitInc>(emit)
+            assertEquals("news", emit.topic)
+            assertTrue(emit.payloadRaw.contains("hi"))
+        }
+
+    @Test
+    fun incIsIgnoredWhenNotDeclared() =
+        runTest {
+            val outcome = NappletRequestRouter.route(broker(), applet, emptySet(), """{"type":"inc.emit","topic":"t","payload":1}""")
+            assertEquals(NappletRequestRouter.Outcome.Ignore, outcome)
+        }
+
+    @Test
     fun malformedRequestRepliesFailed() =
         runTest {
-            val outcome = route("""{"type":"inc.emit","topic":"t"}""")
+            val outcome = route("""{"type":"totally.unknown"}""")
             assertIs<NappletRequestRouter.Outcome.Reply>(outcome)
             assertTrue(outcome.payload.contains("failed"))
         }

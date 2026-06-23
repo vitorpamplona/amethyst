@@ -37,12 +37,14 @@ class NappletCapabilityTest {
         assertEquals(NappletCapability.STORAGE, NappletCapability.fromNapDomain("  STORAGE  "))
         assertEquals(NappletCapability.RESOURCE, NappletCapability.fromNapDomain("resource"))
         assertEquals(NappletCapability.UPLOAD, NappletCapability.fromNapDomain("upload"))
+        assertEquals(NappletCapability.THEME, NappletCapability.fromNapDomain("theme"))
+        assertEquals(NappletCapability.NOTIFY, NappletCapability.fromNapDomain("notify"))
+        assertEquals(NappletCapability.INC, NappletCapability.fromNapDomain("inc"))
     }
 
     @Test
     fun unknownDomainMapsToNullNotAFallbackGrant() {
         // Domains we don't broker yet must stay unknown (default-deny), not fall through.
-        assertNull(NappletCapability.fromNapDomain("inc"))
         assertNull(NappletCapability.fromNapDomain("intent"))
         assertNull(NappletCapability.fromNapDomain("cvm"))
         assertNull(NappletCapability.fromNapDomain("filesystem"))

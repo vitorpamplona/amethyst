@@ -80,6 +80,28 @@ object NappletProtocolJson {
             put("subId", subId)
         }.toString()
 
+    /** The `topic` of an `inc.*` envelope (the pub/sub topic the napplet emits to or subscribes on). */
+    fun readTopic(envelopeJson: String): String? = json.parseToJsonElement(envelopeJson).jsonObject.str("topic")
+
+    /** The raw `payload` JSON element of an `inc.emit`, serialized back to a string (`"null"` if absent). */
+    fun readPayloadRaw(envelopeJson: String): String = (json.parseToJsonElement(envelopeJson).jsonObject["payload"] ?: JsonNull).toString()
+
+    /**
+     * An `inc.event` push: delivers [topic]'s [payloadRaw] (a raw JSON value) to a subscriber, tagged
+     * with the emitting napplet's [sender] coordinate. Mirrors the kehto runtime's inc-bus contract.
+     */
+    fun encodeIncEvent(
+        topic: String,
+        payloadRaw: String,
+        sender: String,
+    ): String =
+        buildJsonObject {
+            put("type", "inc.event")
+            put("topic", topic)
+            put("payload", runCatching { json.parseToJsonElement(payloadRaw) }.getOrDefault(JsonNull))
+            put("sender", sender)
+        }.toString()
+
     /** A `keys.action` push: the user triggered the registered keyboard/command action [actionId]. */
     fun encodeKeysAction(actionId: String): String =
         buildJsonObject {

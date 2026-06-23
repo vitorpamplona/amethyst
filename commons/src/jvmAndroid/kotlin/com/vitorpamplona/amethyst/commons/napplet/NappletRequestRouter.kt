@@ -65,6 +65,22 @@ object NappletRequestRouter {
         data class Push(
             val payloads: List<String>,
         ) : Outcome
+
+        /** Subscribe this napplet to the inc bus [topic]; it then receives `inc.event` pushes (fire-and-forget). */
+        data class SubscribeInc(
+            val topic: String,
+        ) : Outcome
+
+        /** Stop receiving inc-bus [topic] events (fire-and-forget). */
+        data class UnsubscribeInc(
+            val topic: String,
+        ) : Outcome
+
+        /** Emit [payloadRaw] on inc-bus [topic]; the host fans it out as `inc.event` to other subscribers. */
+        data class EmitInc(
+            val topic: String,
+            val payloadRaw: String,
+        ) : Outcome
     }
 
     suspend fun route(
@@ -89,6 +105,24 @@ object NappletRequestRouter {
                 return if (NappletCapability.IDENTITY in declared) Outcome.WatchIdentity else Outcome.Ignore
             "identity.unwatch" ->
                 return Outcome.UnwatchIdentity
+            // inc bus: a topic pub/sub between napplets/services, authorized on the INC declaration
+            // alone (like identity.watch) — no per-call consent. The host owns the cross-session fan-out.
+            "inc.subscribe" -> {
+                val topic = runCatching { NappletProtocolJson.readTopic(payload) }.getOrNull()
+                return if (topic != null && NappletCapability.INC in declared) Outcome.SubscribeInc(topic) else Outcome.Ignore
+            }
+            "inc.unsubscribe" -> {
+                val topic = runCatching { NappletProtocolJson.readTopic(payload) }.getOrNull()
+                return if (topic != null) Outcome.UnsubscribeInc(topic) else Outcome.Ignore
+            }
+            "inc.emit" -> {
+                val topic = runCatching { NappletProtocolJson.readTopic(payload) }.getOrNull()
+                return if (topic != null && NappletCapability.INC in declared) {
+                    Outcome.EmitInc(topic, runCatching { NappletProtocolJson.readPayloadRaw(payload) }.getOrDefault("null"))
+                } else {
+                    Outcome.Ignore
+                }
+            }
         }
 
         val request =
