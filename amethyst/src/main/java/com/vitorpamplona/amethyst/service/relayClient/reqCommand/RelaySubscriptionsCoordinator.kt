@@ -99,7 +99,7 @@ class RelaySubscriptionsCoordinator(
     // loaders of content that is not yet in the device.
     // they are active when looking at events, users, channels.
     val channelFinder = ChannelFinderFilterAssemblyGroup(client)
-    val eventFinder = EventFinderFilterAssembler(client)
+    val eventFinder = EventFinderFilterAssembler(client, cache, failureTracker)
     val userFinder = UserFinderFilterAssembler(client, cache, failureTracker)
 
     // active when searching or tagging users.
