@@ -681,6 +681,9 @@
     <string name="favorite_app_access_title">What this app can access</string>
     <string name="favorite_app_access_static">Runs sandboxed with no special access to your account.</string>
     <string name="favorite_app_access_show">What it can access</string>
+    <string name="embedded_tab_security">Security &amp; privacy</string>
+    <string name="favorite_web_security_body">This site runs sandboxed in a keyless process and signs in per site (NIP-07).</string>
+    <string name="favorite_web_tor">Load over Tor</string>
     <string name="favorite_app_network_tor">Loads over Tor.</string>
     <string name="favorite_app_network_open">Loads over the open web.</string>
     <string name="favorite_app_unavailable">This app isn\'t loaded yet. Open it from its card, or try again in a moment.</string>

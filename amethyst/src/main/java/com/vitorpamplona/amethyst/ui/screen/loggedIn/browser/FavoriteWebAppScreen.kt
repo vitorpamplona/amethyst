@@ -25,14 +25,18 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -46,11 +50,9 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
@@ -58,13 +60,14 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabTopBar
 
 /**
  * A pinned web client rendered as an **in-app tab**. The embedded `:napplet` browser surface is drawn
  * by the persistent [EmbeddedTabHost]/[com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer]
- * layer, which keeps the session warm across tab swaps (the surface stays attached, just moved over the
- * area this screen reserves). This screen owns only the chrome: a read-only title + Tor/reload, plus a
- * pop-out to the full-screen [BrowserHostActivity]. Deliberately no editable address bar.
+ * layer, which keeps the session warm across tab swaps. This screen owns only the chrome — the shared
+ * [EmbeddedTabTopBar] (sandbox shield + reload + pop-out), identical to the nsite/napplet tab — plus a
+ * security & privacy sheet where Tor lives. Deliberately no editable address bar.
  *
  * Only bottom-row favorites stay warm; if this URL isn't a bottom-bar favorite, its session is evicted
  * (restarted) when the screen leaves. Requires API 30+ for the cross-process surface.
@@ -88,7 +91,6 @@ fun FavoriteWebAppScreen(
 }
 
 @RequiresApi(Build.VERSION_CODES.R)
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EmbeddedFavoriteTab(
     url: String,
@@ -101,6 +103,7 @@ private fun EmbeddedFavoriteTab(
 
     var currentUrl by remember { mutableStateOf(url) }
     var canGoBack by remember { mutableStateOf(false) }
+    var showSecurity by remember { mutableStateOf(false) }
 
     val proxyAvailable = remember { Amethyst.instance.torManager.activePortOrNull.value != null }
     var torOn by remember { mutableStateOf(proxyAvailable) }
@@ -133,32 +136,26 @@ private fun EmbeddedFavoriteTab(
 
     BackHandler(enabled = canGoBack) { controller.back() }
 
+    if (showSecurity) {
+        WebAppSecurityDialog(
+            host = hostLabel(currentUrl),
+            proxyAvailable = proxyAvailable,
+            torOn = torOn,
+            onToggleTor = {
+                torOn = !torOn
+                controller.setTor(torOn)
+            },
+            onDismiss = { showSecurity = false },
+        )
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(text = hostLabel(currentUrl), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                },
-                actions = {
-                    if (proxyAvailable) {
-                        IconButton(onClick = {
-                            torOn = !torOn
-                            controller.setTor(torOn)
-                        }) {
-                            Icon(
-                                MaterialSymbols.Security,
-                                contentDescription = stringResource(if (torOn) R.string.browser_tor_on else R.string.browser_tor_off),
-                                tint = if (torOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    IconButton(onClick = { controller.reload() }) {
-                        Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
-                    }
-                    IconButton(onClick = { FavoriteAppLauncher.launchUrl(context, url) }) {
-                        Icon(MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = stringResource(R.string.favorite_app_open_window))
-                    }
-                },
+            EmbeddedTabTopBar(
+                title = hostLabel(currentUrl),
+                onSecurity = { showSecurity = true },
+                onReload = { controller.reload() },
+                onPopOut = { FavoriteAppLauncher.launchUrl(context, url) },
             )
         },
         bottomBar = {
@@ -173,6 +170,35 @@ private fun EmbeddedFavoriteTab(
                 .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
         )
     }
+}
+
+@Composable
+private fun WebAppSecurityDialog(
+    host: String,
+    proxyAvailable: Boolean,
+    torOn: Boolean,
+    onToggleTor: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(host) },
+        text = {
+            Column {
+                Text(stringResource(R.string.favorite_web_security_body))
+                if (proxyAvailable) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.favorite_web_tor), modifier = Modifier.weight(1f))
+                        Switch(checked = torOn, onCheckedChange = { onToggleTor() })
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.ok)) }
+        },
+    )
 }
 
 /** The host of [url] for the tab title, falling back to the raw string. */
