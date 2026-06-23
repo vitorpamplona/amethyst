@@ -41,28 +41,6 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
  * declared capabilities, and a display title. No account state crosses into the sandbox process.
  */
 object NappletLauncher {
-    /**
-     * Opens the in-app web browser at [url] in the sandboxed [NappletHostActivity] (the keyless
-     * `:napplet` process). Unlike an nSite, it loads an arbitrary **live** URL behind an editable
-     * address bar; it still injects the consent-gated NIP-07 `window.nostr`, scoped per visited origin
-     * (the sandbox mints a per-origin token from the broker). Routes through Tor when Tor is active.
-     */
-    fun launchBrowser(
-        context: Context,
-        url: String,
-    ) {
-        val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-        val intent =
-            Intent(context, NappletHostActivity::class.java).apply {
-                putExtra(NappletHostContract.EXTRA_BROWSER_MODE, true)
-                putExtra(NappletHostContract.EXTRA_BROWSER_URL, url)
-                putExtra(NappletHostContract.EXTRA_PROXY_PORT, proxyPort)
-                putExtra(NappletHostContract.EXTRA_USE_TOR, proxyPort > 0)
-                if (context !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-        context.startActivity(intent)
-    }
-
     /** Opens a NIP-5D napplet, forwarding its declared capabilities to the broker. */
     fun launch(
         context: Context,

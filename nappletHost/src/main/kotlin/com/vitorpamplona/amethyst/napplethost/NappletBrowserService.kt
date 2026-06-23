@@ -54,9 +54,10 @@ import org.json.JSONObject
  * JS context, cookies, or the NIP-07 bridge). Keys still live only in the main process; every NIP-07
  * `window.nostr` call is brokered and consent-gated there, per visited origin.
  *
- * Mirrors [NappletHostActivity]'s browser path, but as a windowless Service so the surface can be
- * embedded in the main activity rather than taking over the screen. Requires API 30+
- * (SurfaceControlViewHost); the feature is hidden below that.
+ * Shares the keyless-sandbox trust model of [NappletHostActivity] (the verified-blob nSite/napplet
+ * host), but as a windowless Service rendering an arbitrary live URL, so the surface can be embedded in
+ * the main activity rather than taking over the screen. Requires API 30+ (SurfaceControlViewHost); the
+ * feature is hidden below that.
  */
 @RequiresApi(Build.VERSION_CODES.R)
 class NappletBrowserService : Service() {

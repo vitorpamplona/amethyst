@@ -67,18 +67,6 @@ object NappletHostContract {
     const val EXTRA_USE_TOR = "napplet_use_tor"
 
     /**
-     * "Browser mode": the host renders an arbitrary **live** URL ([EXTRA_BROWSER_URL]) with an editable
-     * address bar instead of a verified-blob nSite/napplet. It still runs in the keyless `:napplet`
-     * process and injects the same consent-gated NIP-07 `window.nostr`, but per **visited origin** — the
-     * sandbox mints a separate launch token per origin from the broker, so a grant to one site never
-     * leaks to another. No manifest, content server, or launch token is passed up front.
-     */
-    const val EXTRA_BROWSER_MODE = "napplet_browser_mode"
-
-    /** The initial URL to load in [EXTRA_BROWSER_MODE]. */
-    const val EXTRA_BROWSER_URL = "napplet_browser_url"
-
-    /**
      * FQN of the main-process broker service (in `:amethyst`). The sandbox binds it by name so it
      * needs no compile-time reference to `:amethyst`. Must match the manifest `<service>` declaration.
      */
