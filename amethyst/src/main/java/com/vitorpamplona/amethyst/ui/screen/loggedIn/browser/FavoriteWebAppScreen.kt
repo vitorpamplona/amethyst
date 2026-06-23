@@ -27,6 +27,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -44,24 +45,29 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
+import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.AppControlPuck
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.AppControlPuckReserve
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.TorToggleButton
 
 /**
  * A pinned web client rendered as an **in-app tab**. The embedded `:napplet` browser surface is drawn
  * by the persistent [EmbeddedTabHost]/[com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer]
- * layer, which keeps the session warm across tab swaps. This screen owns only the chrome — the shared
- * [EmbeddedTabTopBar] with the Tor onion as its leading affordance, plus reload + pop-out. Deliberately
- * no editable address bar.
+ * layer, which keeps the session warm across tab swaps. This screen owns only the chrome — a floating
+ * [AppControlPuck] (globe marker, expands to Tor/reload/pop-out) instead of a top bar. Deliberately no
+ * editable address bar.
  *
  * Only bottom-row favorites stay warm; if this URL isn't a bottom-bar favorite, its session is evicted
  * (restarted) when the screen leaves. Requires API 30+ for the cross-process surface.
@@ -99,7 +105,9 @@ private fun EmbeddedFavoriteTab(
     var canGoBack by remember { mutableStateOf(false) }
 
     val proxyAvailable = remember { Amethyst.instance.torManager.activePortOrNull.value != null }
-    var torOn by remember { mutableStateOf(proxyAvailable) }
+    // Start from this site's remembered Tor choice (some sites' servers reject Tor exits, so the user
+    // can opt one out and it must stick). Only meaningful when Tor is actually available.
+    var torOn by remember { mutableStateOf(proxyAvailable && WebUrlNetworkRegistry.useTor(url)) }
 
     val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
@@ -107,7 +115,8 @@ private fun EmbeddedFavoriteTab(
         remember(id) {
             EmbeddedTabHost.acquire(id) {
                 val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-                EmbeddedBrowserController(context.applicationContext, proxyPort, proxyPort > 0, backgroundColor).also { it.bind(url) }
+                val initialUseTor = proxyPort > 0 && WebUrlNetworkRegistry.useTor(url)
+                EmbeddedBrowserController(context.applicationContext, proxyPort, initialUseTor, backgroundColor).also { it.bind(url) }
             } as EmbeddedBrowserController
         }
 
@@ -132,32 +141,50 @@ private fun EmbeddedFavoriteTab(
     BackHandler(enabled = canGoBack) { controller.back() }
 
     Scaffold(
-        topBar = {
-            EmbeddedTabTopBar(
-                title = hostLabel(currentUrl),
-                leading = {
-                    if (proxyAvailable) {
-                        TorToggleButton(torOn) {
-                            torOn = !torOn
-                            controller.setTor(torOn)
-                        }
-                    }
-                },
-                onReload = { controller.reload() },
-                onPopOut = { FavoriteAppLauncher.launchUrl(context, url) },
-            )
-        },
         bottomBar = {
             AppBottomBar(Route.FavoriteWebApp(url), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
-        // Reserve the content area; the warm surface is positioned over these bounds by the tab layer.
         Box(
             Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
-        )
+                .padding(padding),
+        ) {
+            // Reserve the content area; the warm surface is positioned over these bounds by the tab
+            // layer. Inset the top by the puck's height so the surface (drawn over these bounds, above
+            // the nav tree) doesn't cover the floating puck.
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(top = AppControlPuckReserve)
+                    .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
+            )
+            // Floating controls instead of a top bar — the web client already titles itself. The globe is
+            // the trusted "external web page" marker (the page can't draw over it); tap to reveal actions.
+            AppControlPuck(
+                trustedIcon = MaterialSymbols.Public,
+                trustedTint = MaterialTheme.colorScheme.onSurfaceVariant,
+                trustedDescription = hostLabel(currentUrl),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp),
+            ) {
+                if (proxyAvailable) {
+                    TorToggleButton(torOn) {
+                        torOn = !torOn
+                        controller.setTor(torOn)
+                        WebUrlNetworkRegistry.set(url, torOn)
+                    }
+                }
+                IconButton(onClick = { controller.reload() }) {
+                    Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
+                }
+                IconButton(onClick = { FavoriteAppLauncher.launchUrl(context, url) }) {
+                    Icon(MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = stringResource(R.string.favorite_app_open_window))
+                }
+            }
+        }
     }
 }
 

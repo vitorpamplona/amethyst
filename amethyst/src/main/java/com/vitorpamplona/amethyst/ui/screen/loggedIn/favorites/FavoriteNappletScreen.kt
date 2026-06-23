@@ -66,8 +66,9 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.AppControlPuck
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.AppControlPuckReserve
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabTopBar
 
 /**
  * A favorited nsite/napplet rendered as an **in-app tab**. The verified-blob sandbox surface (hosted in
@@ -177,32 +178,49 @@ private fun EmbeddedNappletTab(
     }
 
     Scaffold(
-        topBar = {
-            EmbeddedTabTopBar(
-                title = title,
-                leading = {
-                    // The shield is the sandbox-access affordance here (capabilities + network).
-                    IconButton(onClick = { showAccess = true }) {
-                        Icon(MaterialSymbols.Security, contentDescription = stringResource(R.string.favorite_app_access_show))
-                    }
-                },
-                onReload = { controller.reload() },
-                onPopOut = {
-                    FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()))
-                },
-            )
-        },
         bottomBar = {
             AppBottomBar(Route.FavoriteNostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
-        // Reserve the content area; the warm surface is positioned over these bounds by the tab layer.
         Box(
             Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
-        )
+                .padding(padding),
+        ) {
+            // Reserve the content area; the warm surface is positioned over these bounds by the tab
+            // layer. Inset the top by the puck's height so the surface (drawn over these bounds, above
+            // the nav tree) doesn't cover the floating puck.
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(top = AppControlPuckReserve)
+                    .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
+            )
+            // Floating controls instead of a top bar — the napplet already titles itself. The shield is
+            // the always-visible trusted sandbox marker (the page can't draw over it); tap to reveal the
+            // "what it can access" sheet, reload, and pop-out.
+            AppControlPuck(
+                trustedIcon = MaterialSymbols.Security,
+                trustedTint = MaterialTheme.colorScheme.primary,
+                trustedDescription = stringResource(R.string.favorite_app_access_show),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp),
+            ) {
+                IconButton(onClick = { controller.reload() }) {
+                    Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
+                }
+                IconButton(onClick = { showAccess = true }) {
+                    Icon(MaterialSymbols.Info, contentDescription = stringResource(R.string.favorite_app_access_show))
+                }
+                IconButton(onClick = {
+                    FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()))
+                }) {
+                    Icon(MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = stringResource(R.string.favorite_app_open_window))
+                }
+            }
+        }
     }
 }
 

@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
 
 /**
  * Reusable, chrome-free embedded-browser surface. The page renders in the keyless `:napplet` process
@@ -70,7 +71,9 @@ fun rememberBrowserController(
 
     val controller =
         remember {
-            EmbeddedBrowserController(context.applicationContext, proxyPort, proxyPort > 0, backgroundColor)
+            // Honor this site's remembered Tor choice on first load (some servers reject Tor exits).
+            val initialUseTor = proxyPort > 0 && WebUrlNetworkRegistry.useTor(startUrl)
+            EmbeddedBrowserController(context.applicationContext, proxyPort, initialUseTor, backgroundColor)
         }
 
     // Keep the callback current without re-binding the service.

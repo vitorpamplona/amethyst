@@ -30,26 +30,28 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.napplet.SandboxForegroundHold
+import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.AppControlPuck
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.TorToggleButton
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
@@ -112,7 +114,6 @@ class BrowserHostActivity : ComponentActivity() {
 }
 
 @RequiresApi(Build.VERSION_CODES.R)
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BrowserHostScreen(
     startUrl: String,
@@ -122,7 +123,8 @@ private fun BrowserHostScreen(
     var canGoBack by remember { mutableStateOf(false) }
 
     val proxyAvailable = remember { Amethyst.instance.torManager.activePortOrNull.value != null }
-    var torOn by remember { mutableStateOf(proxyAvailable) }
+    // Start from this site's remembered Tor choice (some servers reject Tor exits, so an opt-out sticks).
+    var torOn by remember { mutableStateOf(proxyAvailable && WebUrlNetworkRegistry.useTor(startUrl)) }
 
     val controller =
         rememberBrowserController(startUrl = startUrl) { url, back ->
@@ -133,42 +135,42 @@ private fun BrowserHostScreen(
     // In-page back first; once there's no page history, the system back closes the activity.
     BackHandler(enabled = canGoBack) { controller.back() }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
-                title = {
-                    Text(
-                        text = hostOf(currentUrl),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                actions = {
-                    if (proxyAvailable) {
-                        TorToggleButton(torOn) {
-                            torOn = !torOn
-                            controller.setTor(torOn)
-                        }
-                    }
-                    IconButton(onClick = { controller.reload() }) {
-                        Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
-                    }
-                },
+    // No top bar — the page titles itself. The surface fills the safe area; a floating puck (globe =
+    // trusted external-web marker, tap to reveal Tor/reload/close) carries the actions.
+    Scaffold { padding ->
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            EmbeddedBrowserSurface(
+                controller = controller,
+                modifier = Modifier.fillMaxSize(),
             )
-        },
-    ) { padding ->
-        EmbeddedBrowserSurface(
-            controller = controller,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-        )
+            AppControlPuck(
+                trustedIcon = MaterialSymbols.Public,
+                trustedTint = MaterialTheme.colorScheme.onSurfaceVariant,
+                trustedDescription = hostOf(currentUrl),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp),
+            ) {
+                if (proxyAvailable) {
+                    TorToggleButton(torOn) {
+                        torOn = !torOn
+                        controller.setTor(torOn)
+                        WebUrlNetworkRegistry.set(startUrl, torOn)
+                    }
+                }
+                IconButton(onClick = { controller.reload() }) {
+                    Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
+                }
+                IconButton(onClick = onClose) {
+                    Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.back))
+                }
+            }
+        }
     }
 }
 

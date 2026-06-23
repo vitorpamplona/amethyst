@@ -248,14 +248,21 @@ class NappletHostActivity : ComponentActivity() {
         // Route the back gesture into the WebView's history first (see backCallback).
         onBackPressedDispatcher.addCallback(this, backCallback)
 
-        // Persistent trusted chrome (anti-phishing bar the applet can't draw over) over a content
-        // frame that shows a loading screen → the applet's WebView, or an "unavailable" screen.
+        // The applet titles itself, so instead of a full-width bar we float a single trusted control
+        // chip (the anti-phishing shield the applet can't draw over) over the content frame, which shows
+        // a loading screen → the applet's WebView, or an "unavailable" screen.
         val root =
-            LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                addView(buildSandboxBar())
-                addView(buildDivider())
-                addView(contentFrame, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+            FrameLayout(this).apply {
+                addView(contentFrame, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+                addView(
+                    buildFloatingChip(),
+                    FrameLayout
+                        .LayoutParams(
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            Gravity.TOP or Gravity.END,
+                        ).apply { setMargins(dp(8), dp(8), dp(8), dp(8)) },
+                )
             }
         setContentView(root)
         // Activities are edge-to-edge by default on recent Android; pad by the system bar and
@@ -702,46 +709,33 @@ class NappletHostActivity : ComponentActivity() {
 
     private fun barTitle(): String = title.ifBlank { getString(R.string.napplet_untitled) }
 
-    /** The always-visible bar: a shield, the napplet's name, and an info affordance to see its access. */
-    private fun buildSandboxBar(): View {
+    /**
+     * The floating trusted control chip: the sandbox **shield** is always visible (the anti-phishing
+     * marker the applet can't draw over); tapping it reveals the actions — the nSite network/Tor toggle
+     * (website mode only), reload, and the "what it can access" sheet. Replaces the old full-width bar,
+     * since the applet already titles itself.
+     */
+    private fun buildFloatingChip(): View {
         val onSurface = resolveThemeColor(android.R.attr.textColorPrimary)
-        val bar =
+        val dimmed = resolveThemeColor(android.R.attr.textColorSecondary)
+
+        // Hidden until the shield is tapped.
+        val actions =
             LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
-                setPadding(dp(14), dp(10), dp(14), dp(10))
-                isClickable = true
-                setOnClickListener { showAccessDialog() }
-                contentDescription = getString(R.string.napplet_chrome_permissions_desc)
+                visibility = View.GONE
             }
-        bar.addView(
-            TextView(this).apply {
-                text = "🛡" // shield
-                setPadding(0, 0, dp(10), 0)
-            },
-        )
-        bar.addView(
-            TextView(this).apply {
-                text = barTitle()
-                setTextColor(onSurface)
-                textSize = 16f
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            },
-        )
-        // nSite network indicator + toggle: the Tor logo, lit when routing through Tor and dimmed when
-        // the site loads over the open web. Only shown for a website-mode nSite when Tor is active —
-        // otherwise there is nothing to route through. Its own click opens the network dialog (and, by
-        // consuming the click, doesn't also fire the access sheet bound to the bar).
+
+        // nSite network indicator + toggle: the Tor logo, lit over Tor and dimmed over the open web.
+        // Only for a website-mode nSite when Tor is active — otherwise there is nothing to route through.
         if (websiteMode && proxyPort > 0) {
-            bar.addView(
+            actions.addView(
                 ImageView(this).apply {
                     setImageResource(R.drawable.ic_tor)
-                    setColorFilter(if (useTor) onSurface else resolveThemeColor(android.R.attr.textColorSecondary))
+                    setColorFilter(if (useTor) onSurface else dimmed)
                     alpha = if (useTor) 1f else 0.4f
-                    setPadding(0, 0, dp(12), 0)
+                    setPadding(dp(8), 0, dp(8), 0)
                     isClickable = true
                     setOnClickListener { showNetworkDialog() }
                     contentDescription = getString(if (useTor) R.string.napplet_net_tor_desc else R.string.napplet_net_open_desc)
@@ -749,15 +743,52 @@ class NappletHostActivity : ComponentActivity() {
                 },
             )
         }
-        bar.addView(
+        actions.addView(chipGlyph("↻", onSurface, getString(R.string.napplet_chrome_reload)) { if (this::webView.isInitialized) webView.reload() })
+        actions.addView(chipGlyph("ⓘ", onSurface, getString(R.string.napplet_chrome_permissions_desc)) { showAccessDialog() })
+
+        val shield =
             TextView(this).apply {
-                text = "ⓘ" // circled info
-                setTextColor(onSurface)
-                textSize = 18f
-            },
-        )
-        return bar
+                text = "🛡"
+                textSize = 16f
+                setPadding(dp(4), dp(2), dp(4), dp(2))
+                isClickable = true
+                contentDescription = getString(R.string.napplet_chrome_permissions_desc)
+                setOnClickListener {
+                    actions.visibility = if (actions.visibility == View.GONE) View.VISIBLE else View.GONE
+                }
+            }
+
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(6), dp(8), dp(6))
+            elevation = dp(4).toFloat()
+            background =
+                android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = dp(24).toFloat()
+                    setColor(resolveThemeColor(android.R.attr.colorBackground))
+                }
+            addView(shield)
+            addView(actions)
+        }
     }
+
+    /** A single tappable glyph button for the floating chip (reload, info). */
+    private fun chipGlyph(
+        glyph: String,
+        color: Int,
+        desc: String,
+        onClick: () -> Unit,
+    ): TextView =
+        TextView(this).apply {
+            text = glyph
+            setTextColor(color)
+            textSize = 18f
+            setPadding(dp(8), 0, dp(8), 0)
+            isClickable = true
+            contentDescription = desc
+            setOnClickListener { onClick() }
+        }
 
     /**
      * Explains the site's current network routing and offers to switch it. Switching persists the
@@ -792,12 +823,6 @@ class NappletHostActivity : ComponentActivity() {
         intent.putExtra(NappletHostContract.EXTRA_USE_TOR, newUseTor)
         recreate()
     }
-
-    private fun buildDivider(): View =
-        View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1))
-            setBackgroundColor(resolveThemeColor(android.R.attr.textColorPrimary) and 0x22FFFFFF)
-        }
 
     /** Lists, in plain language, exactly which capabilities this napplet was launched with. */
     private fun showAccessDialog() {
