@@ -16,6 +16,10 @@
         <item quantity="one">%1$d activo incluido</item>
         <item quantity="other">%1$d activos incluidos</item>
     </plurals>
+    <plurals name="thread_collapsed_reply_count">
+        <item quantity="one">+%1$d\nrespuesta</item>
+        <item quantity="other">+%1$d\nrespuestas</item>
+    </plurals>
     <string name="post_not_found">El evento se está cargando o no se puede encontrar en la lista de relés</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Imagen del canal</string>
@@ -34,7 +38,7 @@
     <string name="violence">Violencia</string>
     <string name="unknown_author">Autor desconocido</string>
     <string name="copy_text">Copiar texto</string>
-    <string name="copy_user_pubkey">Copiar PubKey del usuario</string>
+    <string name="copy_user_pubkey">Copiar pubkey del usuario</string>
     <string name="copy_note_id">Copiar ID de la nota</string>
     <string name="copy_raw_json">Copiar JSON sin procesar</string>
     <string name="broadcast">Transmisión</string>
@@ -218,6 +222,7 @@
     <string name="upload_file">Cargar archivo</string>
     <string name="take_a_picture">Hacer una foto</string>
     <string name="record_a_video">Grabar un video</string>
+    <string name="no_camera_app_found">No se ha encontrado ninguna aplicación de cámara en este dispositivo</string>
     <string name="record_a_message">Grabar un mensaje</string>
     <string name="record_a_message_description">Haz clic y mantén pulsado para grabar un mensaje</string>
     <string name="re_record">Volver a grabar</string>
@@ -265,6 +270,7 @@
     <string name="unblock">Desbloquear</string>
     <string name="copy_user_id">Copiar ID de usuario</string>
     <string name="unblock_user">Desbloquear usuario</string>
+    <string name="user_is_blocked_hidden">Este usuario está bloqueado/silenciado. Sus publicaciones están ocultas.</string>
     <string name="npub_hex_username">"npub, hex, username "</string>
     <string name="clear">Limpiar</string>
     <string name="app_logo">Logo de la app</string>
@@ -387,6 +393,10 @@
     <string name="quick_action_select">Seleccionar</string>
     <string name="quick_action_share_browser_link">Compartir enlace del navegador</string>
     <string name="quick_action_share">Compartir</string>
+    <string name="share_as_image">Compartir como imagen</string>
+    <string name="share_as_image_url">Compartir como Url de Imagen</string>
+    <string name="share_as_image_generating">Generando vista previa…</string>
+    <string name="share_as_image_watermark">Compartido a través de Amethyst</string>
     <string name="quick_action_copy_user_id">ID del autor</string>
     <string name="quick_action_copy_note_id">ID de la nota</string>
     <string name="quick_action_copy_text">Copiar texto</string>
@@ -512,12 +522,31 @@
     <string name="new_community_relay_marker_approvals">Aprobaciones</string>
     <string name="new_community_rules_section">Reglas verificables (opcional)</string>
     <string name="new_community_rules_hint">Publica un documento de reglas legibles automáticamente (NIP-9B) junto con la comunidad. Los clientes que lo admiten bloquean las publicaciones que no coinciden antes de enviarlas.</string>
+    <string name="new_community_rules_kinds_section">Kinds de eventos permitidos</string>
+    <string name="new_community_rules_kinds_hint">Tocar para permitir un tipo. Mantener pulsado un tipo para establecer el tamaño por evento o los límites de publicación diarios.</string>
+    <string name="new_community_rules_kind_short_text">Texto corto (1)</string>
+    <string name="new_community_rules_kind_long_form">Artículo de formato extenso (30023)</string>
+    <string name="new_community_rules_kind_picture">Publicación de imagen (20)</string>
+    <string name="new_community_rules_kind_video">Publicación de video (21)</string>
+    <string name="new_community_rules_kind_short_video">Vídeo corto (22)</string>
+    <string name="new_community_rules_kind_comment">Comentario de la comunidad (1111)</string>
+    <string name="new_community_rules_kind_custom_label">Tipo personalizado</string>
+    <string name="new_community_rules_kind_add">Añadir tipo</string>
+    <string name="new_community_rules_limits_title">Límites para el tipo %1$d</string>
+    <string name="new_community_rules_limits_max_bytes">Tamaño máximo de evento (bytes)</string>
+    <string name="new_community_rules_limits_max_per_day">Número máximo de publicaciones por autor por día</string>
+    <string name="new_community_rules_limits_unlimited">Dejar en blanco sin límite</string>
     <string name="new_community_rules_limits_save">Guardar límites</string>
     <string name="new_community_rules_banned_section">Usuarios bloqueados</string>
-    <string name="new_community_rules_banned_hint">Estas claves públicas no pueden publicar en la comunidad.</string>
+    <string name="new_community_rules_banned_hint">Estas pubkeys no pueden publicar en la comunidad.</string>
     <string name="new_community_rules_banned_add">Agregar un usuario bloqueado</string>
     <string name="new_community_rules_banned_placeholder">Nombre, npub, o NIP-05</string>
     <string name="new_community_rules_wot_section">Portal de red de confianza (opcional)</string>
+    <string name="new_community_rules_wot_hint">Solo permite el acceso a autores accesibles desde una pubkey raíz en un máximo de N saltos. Varias puertas se consideran válidas si alguna de ellas lo es.</string>
+    <string name="new_community_rules_wot_root">Npub raíz o pubkey hexadecimal</string>
+    <string name="new_community_rules_wot_depth">Profundidad</string>
+    <string name="new_community_rules_wot_add">Añadir compuerta WoT</string>
+    <string name="new_community_rules_max_event_size_section">Tamaño máximo de evento global (opcional)</string>
     <string name="profile_badges_header">Insignias · %1$d</string>
     <string name="profile_badges_description">Elige cuál de las insignias que has recibido aparecen en tu perfil.</string>
     <string name="profile_badges_empty">Aún no has recibido ninguna insignia.</string>
@@ -897,7 +926,7 @@
     <string name="relay_monitor_supported_nips">NIP compatibles</string>
     <string name="relay_monitor_requirements">Requisitos</string>
     <string name="relay_monitor_ms">%1$d ms</string>
-    <string name="relay_discovery_accepted_kinds">Kinds aceptados</string>
+    <string name="relay_discovery_accepted_kinds">Tipos aceptados</string>
     <string name="relay_active_subscriptions">Suscripciones activas</string>
     <string name="relay_req_subscriptions">Suscripciones REQ (%1$d)</string>
     <string name="relay_count_subscriptions">Suscripciones COUNT (%1$d)</string>

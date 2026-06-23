@@ -77,9 +77,21 @@
     "since": "2026-06-19T19:01:59-04:00",
     "translators": [
       {
+        "user": "rajs19420616",
+        "languages": [
+          "Hindi"
+        ]
+      },
+      {
         "user": "anthony-robin",
         "languages": [
           "French"
+        ]
+      },
+      {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
         ]
       },
       {
@@ -101,9 +113,9 @@
         ]
       },
       {
-        "user": "summoner001",
+        "user": "BitByBit21",
         "languages": [
-          "Hungarian"
+          "Spanish"
         ]
       },
       {
@@ -198,10 +210,6 @@
         "languages": []
       },
       {
-        "user": "BitByBit21",
-        "languages": []
-      },
-      {
         "user": "csavastel",
         "languages": []
       },
@@ -255,10 +263,6 @@
       },
       {
         "user": "flobstr",
-        "languages": []
-      },
-      {
-        "user": "rajs19420616",
         "languages": []
       },
       {
