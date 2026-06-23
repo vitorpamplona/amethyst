@@ -68,6 +68,46 @@ class CachedRichTextParserMarkdownTest {
 
     @Test fun atxAfterNewlineIsMarkdown() = assertTrue(CachedRichTextParser.isMarkdown("intro\n# Heading"))
 
+    // ---- Line-leading markers after a BLANK line ------------------------
+    // Regression: the standard `\n\n#` spacing (a blank line before a
+    // heading) was undetected because the blank line's second '\n' flipped
+    // the line-start tracker off. NIP-23 long-form articles that are pure
+    // prose plus `## Section` headings rendered as raw text as a result.
+
+    @Test fun atxAfterBlankLineIsMarkdown() = assertTrue(CachedRichTextParser.isMarkdown("intro\n\n# Heading"))
+
+    @Test fun atxH3AfterBlankLineIsMarkdown() = assertTrue(CachedRichTextParser.isMarkdown("intro\n\n### Heading"))
+
+    @Test fun atxAfterMultipleBlankLinesIsMarkdown() = assertTrue(CachedRichTextParser.isMarkdown("intro\n\n\n\n## Heading"))
+
+    @Test fun atxAfterCrlfBlankLineIsMarkdown() = assertTrue(CachedRichTextParser.isMarkdown("intro\r\n\r\n## Heading"))
+
+    @Test fun blockquoteAfterBlankLineIsMarkdown() = assertTrue(CachedRichTextParser.isMarkdown("intro\n\n> quoted"))
+
+    @Test fun bulletAfterBlankLineIsMarkdown() = assertTrue(CachedRichTextParser.isMarkdown("intro\n\n- item"))
+
+    @Test fun orderedListAfterBlankLineIsMarkdown() = assertTrue(CachedRichTextParser.isMarkdown("intro\n\n1. first"))
+
+    @Test
+    fun proseArticleWithHeadingAfterBlankLineIsMarkdown() =
+        assertTrue(
+            CachedRichTextParser.isMarkdown(
+                "The cryptographic part of commerce has been solved.\n\n" +
+                    "What follows is a history.\n\n" +
+                    "### The merchant posts of the Hansa\n\n" +
+                    "Long before any king claimed a monopoly on letters.",
+            ),
+        )
+
+    // Blank lines alone must NOT promote ordinary prose to markdown.
+    @Test
+    fun plainProseWithBlankLinesIsNotMarkdown() =
+        assertFalse(
+            CachedRichTextParser.isMarkdown(
+                "Just a normal sentence.\n\nAnother paragraph with no markdown at all.",
+            ),
+        )
+
     // ---- Blockquote -----------------------------------------------------
 
     @Test fun blockquoteIsMarkdown() = assertTrue(CachedRichTextParser.isMarkdown("> a quote"))
