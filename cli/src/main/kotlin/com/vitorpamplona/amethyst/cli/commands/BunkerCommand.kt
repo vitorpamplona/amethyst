@@ -233,12 +233,20 @@ object BunkerCommand {
         val response: BunkerResponse =
             try {
                 when (request) {
-                    is BunkerRequestConnect ->
+                    is BunkerRequestConnect -> {
+                        // NIP-46 client metadata is a display-only hint (the client
+                        // pubkey is unauthenticated in bunker:// pairing), so we only
+                        // surface it — never gate the ACK on it.
+                        request.clientMetadata?.let { meta ->
+                            val label = listOfNotNull(meta.name, meta.url).joinToString(" — ").ifEmpty { "unnamed client" }
+                            System.err.println("[bunker] connect request identifies as: $label")
+                        }
                         if (request.secret == secret) {
                             BunkerResponseAck(request.id)
                         } else {
                             BunkerResponseError(request.id, "invalid secret")
                         }
+                    }
                     is BunkerRequestGetPublicKey -> BunkerResponsePublicKey(request.id, signer.pubKey)
                     is BunkerRequestGetRelays -> BunkerResponseGetRelays(request.id, relays.associate { it.url to ReadWrite(read = true, write = true) })
                     is BunkerRequestPing -> BunkerResponsePong(request.id)
