@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.IconButton
@@ -158,6 +159,9 @@ private fun OmniBar(
         modifier =
             Modifier
                 .fillMaxWidth()
+                // The omnibox is a plain Row in the topBar slot (not a Material3 TopAppBar), so it must
+                // apply the status-bar inset itself — otherwise it draws under the status bar.
+                .statusBarsPadding()
                 .padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
