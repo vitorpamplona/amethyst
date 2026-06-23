@@ -340,4 +340,7 @@ private fun NappletCapability.symbol(): MaterialSymbol =
         NappletCapability.VALUE -> MaterialSymbols.Bolt
         NappletCapability.RESOURCE -> MaterialSymbols.Language
         NappletCapability.UPLOAD -> MaterialSymbols.Upload
+        NappletCapability.THEME -> MaterialSymbols.Image
+        NappletCapability.NOTIFY -> MaterialSymbols.Notifications
+        NappletCapability.INC -> MaterialSymbols.SwapHoriz
     }

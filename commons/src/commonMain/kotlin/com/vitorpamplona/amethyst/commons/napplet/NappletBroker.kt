@@ -69,6 +69,7 @@ class NappletBroker(
     private val resource: NappletResourceGateway? = null,
     private val upload: NappletUploadGateway? = null,
     private val identityReads: NappletIdentityGateway? = null,
+    private val theme: NappletThemeGateway? = null,
 ) {
     // Serializes the consent-prompt path so concurrent requests queue into one dialog at a time
     // (see [authorizeWithConsent]). Only the prompt is held here; non-prompting paths and execute()
@@ -108,6 +109,8 @@ class NappletBroker(
                 // Keyboard/command action registration is a shell-mediated UI affordance, not key
                 // access — declared is enough; it never prompts.
                 request is NappletRequest.RegisterAction || request is NappletRequest.UnregisterAction -> true
+                // Cosmetic/negotiation capabilities (theme) never prompt.
+                !capability.requiresConsent -> true
                 // Remote/external signers run their own per-request consent UI — defer to them.
                 signerSelfGates(request) -> true
                 // A standing allow short-circuits, except for per-use capabilities (e.g. payments).
@@ -177,6 +180,12 @@ class NappletBroker(
             is NappletRequest.ShellSupports -> NappletResponse.Supported(true)
 
             is NappletRequest.GetPublicKey -> NappletResponse.PublicKey(signer.pubKey)
+
+            is NappletRequest.ThemeGet -> {
+                val gateway = theme ?: return NappletResponse.Unsupported("theme.get")
+                val colors = gateway.current()
+                NappletResponse.Theme(colors.background, colors.text, colors.primary)
+            }
 
             is NappletRequest.IdentityRead -> {
                 val gateway = identityReads ?: return NappletResponse.Unsupported("identity.${request.method}")

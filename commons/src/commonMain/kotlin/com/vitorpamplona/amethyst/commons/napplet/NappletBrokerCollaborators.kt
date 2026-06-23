@@ -105,6 +105,21 @@ fun interface NappletWalletGateway {
     suspend fun payInvoice(invoice: String): String?
 }
 
+/** The host's current theme, as hex color strings the applet maps to CSS variables. */
+class NappletThemeColors(
+    val background: String,
+    val text: String,
+    val primary: String,
+)
+
+/**
+ * Bridges the broker to the host's current theme for [NappletCapability.THEME] (`theme.get`). A
+ * `null` gateway answers `Unsupported`. Read-only and never prompts — it exposes only cosmetic colors.
+ */
+fun interface NappletThemeGateway {
+    suspend fun current(): NappletThemeColors
+}
+
 /** A fetched resource: its [bytes] and best-effort [contentType]. */
 class NappletResource(
     val bytes: ByteArray,

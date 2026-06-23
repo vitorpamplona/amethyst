@@ -36,6 +36,9 @@ fun NappletCapability.labelRes(): Int =
         NappletCapability.VALUE -> R.string.napplet_cap_value
         NappletCapability.RESOURCE -> R.string.napplet_cap_resource
         NappletCapability.UPLOAD -> R.string.napplet_cap_upload
+        NappletCapability.THEME -> R.string.napplet_cap_theme
+        NappletCapability.NOTIFY -> R.string.napplet_cap_notify
+        NappletCapability.INC -> R.string.napplet_cap_inc
     }
 
 /** Localized one-line description of what a capability lets a napplet do. */
@@ -50,4 +53,7 @@ fun NappletCapability.descriptionRes(): Int =
         NappletCapability.VALUE -> R.string.napplet_cap_value_desc
         NappletCapability.RESOURCE -> R.string.napplet_cap_resource_desc
         NappletCapability.UPLOAD -> R.string.napplet_cap_upload_desc
+        NappletCapability.THEME -> R.string.napplet_cap_theme_desc
+        NappletCapability.NOTIFY -> R.string.napplet_cap_notify_desc
+        NappletCapability.INC -> R.string.napplet_cap_inc_desc
     }

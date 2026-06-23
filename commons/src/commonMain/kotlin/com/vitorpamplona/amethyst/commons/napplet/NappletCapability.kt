@@ -27,8 +27,7 @@ package com.vitorpamplona.amethyst.commons.napplet
  *
  * The mapping is **default-deny**: an unrecognized NAP domain maps to `null` and the shell must
  * surface it as unknown rather than silently granting it. Domains we don't yet broker
- * (`inc`, `intent`, `theme`, `notify`, `media`, `config`, `outbox`, `ifc`, `cvm`) therefore
- * resolve to `null` for now.
+ * (`intent`, `media`, `config`, `outbox`, `ifc`, `cvm`) therefore resolve to `null` for now.
  */
 enum class NappletCapability {
     /** `shell` — capability negotiation (`shell.supports`). Always available; needs no consent. */
@@ -59,7 +58,25 @@ enum class NappletCapability {
 
     /** `upload` — shell-mediated blob upload (Blossom). */
     UPLOAD,
+
+    /** `theme` — read the host's current theme colors (`theme.get`). Cosmetic, read-only, no consent. */
+    THEME,
+
+    /** `notify` — create/list/dismiss user-facing notifications (`notify.*`). */
+    NOTIFY,
+
+    /** `inc` — a topic pub/sub bus between napplets/services (`inc.emit`/`inc.event`). */
+    INC,
     ;
+
+    /**
+     * Whether using this capability requires user consent. Negotiation ([SHELL]) and the cosmetic,
+     * read-only theme read ([THEME]) never prompt; everything else does (subject to the broker's
+     * signer-self-gating and standing-grant rules). [INC] is authorized at the router edge on its
+     * declaration alone, so it never reaches the consent path regardless of this flag.
+     */
+    val requiresConsent: Boolean
+        get() = this != SHELL && this != THEME
 
     /**
      * Whether the user must confirm **every single use** — no standing auto-approval. True for
@@ -93,6 +110,9 @@ enum class NappletCapability {
                 "value" -> VALUE
                 "resource" -> RESOURCE
                 "upload" -> UPLOAD
+                "theme" -> THEME
+                "notify" -> NOTIFY
+                "inc" -> INC
                 else -> null
             }
     }

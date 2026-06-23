@@ -109,6 +109,13 @@ sealed interface NappletResponse {
         val preimage: String?,
     ) : NappletResponse
 
+    /** Result of `theme.get`: the host's current theme colors (hex strings). */
+    data class Theme(
+        val background: String,
+        val text: String,
+        val primary: String,
+    ) : NappletResponse
+
     /** A successful operation with no return value (e.g. a storage write/remove). */
     data object Done : NappletResponse
 

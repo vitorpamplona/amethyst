@@ -85,7 +85,7 @@ class NappletConsentSummary(
             }
             is NappletRequest.ResourceBytes -> context.getString(R.string.napplet_consent_resource)
             is NappletRequest.UploadBlob -> context.getString(R.string.napplet_consent_upload)
-            // Resolved in the broker before consent (negotiation / shell-mediated); never shown.
-            is NappletRequest.ShellSupports, is NappletRequest.RegisterAction, is NappletRequest.UnregisterAction -> ""
+            // Resolved in the broker before consent (negotiation / shell-mediated / cosmetic); never shown.
+            is NappletRequest.ShellSupports, is NappletRequest.RegisterAction, is NappletRequest.UnregisterAction, is NappletRequest.ThemeGet -> ""
         }
 }

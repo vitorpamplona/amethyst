@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.napplet.gateways
 
 import android.content.Context
+import android.content.res.Configuration
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
@@ -28,6 +29,8 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletResourceGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
+import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
+import com.vitorpamplona.amethyst.commons.napplet.NappletThemeGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletUploadGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletUploadResult
 import com.vitorpamplona.amethyst.commons.napplet.NappletWalletGateway
@@ -89,8 +92,23 @@ class AccountNappletGateways(
         val resource = NappletResourceGateway { url -> resourceFetcher.fetch(url) }
         val identityReads = NappletIdentityGateway { method, argument -> identityReader.read(method, argument) }
         val upload = NappletUploadGateway { bytes, contentType, filename -> uploadBlob(bytes, contentType, filename) }
+        val theme = NappletThemeGateway { currentThemeColors() }
 
-        return NappletBroker(account.signer, ledger, consent, relay, storage, wallet, resource, upload = upload, identityReads = identityReads)
+        return NappletBroker(account.signer, ledger, consent, relay, storage, wallet, resource, upload = upload, identityReads = identityReads, theme = theme)
+    }
+
+    /**
+     * The host theme colors a napplet maps to its CSS variables (`theme.get`): Amethyst's brand
+     * purple plus a background/text pair chosen from the current dark/light mode. Read-only and
+     * cheap; the napplet falls back to its own defaults if this is ever unavailable.
+     */
+    private fun currentThemeColors(): NappletThemeColors {
+        val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        return if (night) {
+            NappletThemeColors(background = "#0E0E10", text = "#E6E6E6", primary = AMETHYST_PURPLE)
+        } else {
+            NappletThemeColors(background = "#FFFFFF", text = "#1A1A1A", primary = AMETHYST_PURPLE)
+        }
     }
 
     /**
@@ -176,5 +194,8 @@ class AccountNappletGateways(
     companion object {
         private const val QUERY_TIMEOUT_MS = 8_000L
         private const val WALLET_TIMEOUT_MS = 60_000L
+
+        /** Amethyst's brand purple (`AmethystPurple`, commons Colors.kt), exposed as the theme primary. */
+        private const val AMETHYST_PURPLE = "#9A82DB"
     }
 }

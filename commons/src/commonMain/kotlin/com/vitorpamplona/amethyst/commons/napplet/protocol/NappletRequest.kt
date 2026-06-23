@@ -63,6 +63,11 @@ sealed interface NappletRequest {
         override val capability get() = NappletCapability.IDENTITY
     }
 
+    /** `theme.get` — read the host's current theme colors. Cosmetic, read-only, never prompts. */
+    data object ThemeGet : NappletRequest {
+        override val capability get() = NappletCapability.THEME
+    }
+
     /** `shell.supports(domain, protocol?)` — capability negotiation; always answerable, no consent. */
     data class ShellSupports(
         val domain: String,

@@ -131,6 +131,7 @@ object NappletProtocolJson {
         val o = json.parseToJsonElement(envelopeJson).jsonObject
         return when (o.str("type")) {
             "shell.supports" -> NappletRequest.ShellSupports(o.req("domain"), o.str("protocol"))
+            "theme.get" -> NappletRequest.ThemeGet
             "identity.getPublicKey" -> NappletRequest.GetPublicKey
             "relay.publish" -> {
                 val t = o.eventTemplate()
@@ -258,6 +259,16 @@ object NappletProtocolJson {
                 is NappletResponse.Paid -> {
                     put("ok", true)
                     put("preimage", response.preimage)
+                }
+                is NappletResponse.Theme -> {
+                    put("ok", true)
+                    putJsonObject("theme") {
+                        putJsonObject("colors") {
+                            put("background", response.background)
+                            put("text", response.text)
+                            put("primary", response.primary)
+                        }
+                    }
                 }
                 is NappletResponse.Done -> {
                     put("ok", true)

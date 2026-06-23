@@ -694,6 +694,12 @@
     <string name="napplet_cap_value_desc">Pay Lightning invoices</string>
     <string name="napplet_cap_resource_desc">Fetch web and Blossom resources</string>
     <string name="napplet_cap_upload_desc">Upload files to your media server</string>
+    <string name="napplet_cap_theme">Theme</string>
+    <string name="napplet_cap_notify">Notifications</string>
+    <string name="napplet_cap_inc">Messaging</string>
+    <string name="napplet_cap_theme_desc">Match your app\'s colors</string>
+    <string name="napplet_cap_notify_desc">Show you notifications</string>
+    <string name="napplet_cap_inc_desc">Exchange messages with other napplets</string>
     <!-- Napplet consent dialog -->
     <string name="napplet_consent_capability">Capability: %1$s</string>
     <string name="napplet_consent_allow_always">Always allow</string>
