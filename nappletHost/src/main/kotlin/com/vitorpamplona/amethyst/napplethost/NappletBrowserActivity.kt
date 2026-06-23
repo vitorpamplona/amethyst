@@ -189,6 +189,17 @@ class NappletBrowserActivity : ComponentActivity() {
         webView.loadUrl(startUrl)
     }
 
+    // Renews the broker's foreground lease while resumed; without it the broker's watchdog would reap the
+    // lease (tearing down Tor/relays) while the browser is still genuinely foreground.
+    private val heartbeatHandler = Handler(Looper.getMainLooper())
+    private val heartbeat =
+        object : Runnable {
+            override fun run() {
+                setBrokerForeground(true)
+                heartbeatHandler.postDelayed(this, FOREGROUND_HEARTBEAT_MS)
+            }
+        }
+
     override fun onResume() {
         super.onResume()
         if (this::webView.isInitialized) {
@@ -196,7 +207,8 @@ class NappletBrowserActivity : ComponentActivity() {
             webView.resumeTimers()
         }
         resumed = true
-        setBrokerForeground(true)
+        heartbeatHandler.removeCallbacks(heartbeat)
+        heartbeat.run()
     }
 
     override fun onPause() {
@@ -205,6 +217,7 @@ class NappletBrowserActivity : ComponentActivity() {
             webView.pauseTimers()
         }
         resumed = false
+        heartbeatHandler.removeCallbacks(heartbeat)
         setBrokerForeground(false)
         super.onPause()
     }
@@ -400,7 +413,10 @@ class NappletBrowserActivity : ComponentActivity() {
         useTor = newUseTor
         applyWebViewProxy(if (useTor) proxyPort else -1)
         if (this::webView.isInitialized) webView.reload()
-        val host = runCatching { Uri.parse(startUrl).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
+        // Key the persisted choice on the host actually displayed (which may differ from startUrl after
+        // in-page navigation), so the preference sticks to the right site.
+        val liveUrl = if (this::webView.isInitialized) webView.url ?: startUrl else startUrl
+        val host = runCatching { Uri.parse(liveUrl).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
         val msg =
             Message.obtain(null, NappletIpc.MSG_SET_WEB_TOR).apply {
                 data =
@@ -521,6 +537,10 @@ class NappletBrowserActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "NappletBrowserActivity"
+
+        /** How often a resumed browser renews its foreground lease (well under the broker's 90s TTL). */
+        private const val FOREGROUND_HEARTBEAT_MS = 30_000L
+
         private const val EXTRA_URL = "url"
         private const val EXTRA_PROXY_PORT = "proxyPort"
         private const val EXTRA_USE_TOR = "useTor"

@@ -161,12 +161,6 @@ class NappletBrowserService : Service() {
         configureWebView(wv)
         // Theme the pre-load background so a blank/loading page shows Amethyst's background, not white.
         wv.setBackgroundColor(bgColor)
-        // DIAGNOSTIC (scrolling): log whether touch input crosses the SurfaceControlViewHost boundary to
-        // the remote WebView at all. Returns false so it never consumes — the WebView still scrolls.
-        wv.setOnTouchListener { _, event ->
-            Log.w(TAG, "DIAG browser WebView touch action=${event.actionMasked} x=${event.x} y=${event.y}")
-            false
-        }
         wv.dropSystemBarInsets()
         applyWebViewProxy(if (useTor) proxyPort else -1)
         val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
@@ -242,14 +236,7 @@ class NappletBrowserService : Service() {
         override fun onPageFinished(
             view: WebView,
             url: String,
-        ) {
-            // DIAGNOSTIC (zoom): a responsive page rendering too large points to a density/viewport
-            // mismatch from streaming the WebView through SurfaceControlViewHost. scale≈4 confirms 400%.
-            val dm = view.resources.displayMetrics
-            @Suppress("DEPRECATION")
-            Log.w(TAG, "DIAG zoom: scale=${view.scale} density=${dm.density} dmWidthPx=${dm.widthPixels} webViewWidthPx=${view.width}")
-            pushUrl(view)
-        }
+        ) = pushUrl(view)
     }
 
     private fun pushUrl(view: WebView) {
