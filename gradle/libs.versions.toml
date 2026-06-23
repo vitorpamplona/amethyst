@@ -78,7 +78,7 @@ zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
 webkit = "1.12.1"
 # Cross-process UI embedding (SurfaceControlViewHost wrapper) for the in-app browser surface. Apache-2.0.
-privacysandboxUi = "1.0.0-alpha10"
+privacysandboxUi = "1.0.0-alpha17"
 windowCoreAndroid = "1.5.1"
 workRuntime = "2.11.2"
 androidxCamera = "1.6.1"

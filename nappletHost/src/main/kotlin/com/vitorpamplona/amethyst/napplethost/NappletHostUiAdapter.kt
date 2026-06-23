@@ -25,13 +25,13 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
-import android.os.IBinder
 import android.os.Looper
 import android.view.View
 import android.webkit.WebView
 import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import androidx.privacysandbox.ui.core.SessionData
 import androidx.privacysandbox.ui.provider.AbstractSandboxedUiAdapter
 import java.util.concurrent.Executor
 
@@ -49,7 +49,7 @@ class NappletHostUiAdapter(
 
     override fun openSession(
         context: Context,
-        windowInputToken: IBinder,
+        sessionData: SessionData,
         initialWidth: Int,
         initialHeight: Int,
         isZOrderOnTop: Boolean,
@@ -79,6 +79,8 @@ private class HostSession(
     override val view: View get() = webView
 
     override val signalOptions: Set<String> = emptySet()
+
+    override fun notifySessionRendered(supportedSignalOptions: Set<String>) {}
 
     override fun notifyResized(
         width: Int,

@@ -35,9 +35,8 @@ import androidx.annotation.RequiresApi
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
-import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionState
-import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionStateChangedListener
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
+import androidx.privacysandbox.ui.client.view.SandboxedSdkViewEventListener
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
@@ -106,12 +105,16 @@ class EmbeddedNappletController(
         // Paint the surface placeholder in the app's theme background so there's no white flash before
         // the remote WebView delivers its first frame.
         view.setBackgroundColor(params.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE))
-        // Flip ready once the session opens, so callers can drop their loading placeholder.
-        view.addStateChangedListener(
-            object : SandboxedSdkUiSessionStateChangedListener {
-                override fun onStateChanged(state: SandboxedSdkUiSessionState) {
-                    if (state is SandboxedSdkUiSessionState.Active) readyState.value = true
+        // Flip ready once the remote UI is displayed, so callers can drop their loading placeholder.
+        view.setEventListener(
+            object : SandboxedSdkViewEventListener {
+                override fun onUiDisplayed() {
+                    readyState.value = true
                 }
+
+                override fun onUiError(error: Throwable) {}
+
+                override fun onUiClosed() {}
             },
         )
         pendingAdapter?.let {
