@@ -47,7 +47,23 @@
   })();
 
   var seq = 0, pending = {}, subs = {}, actions = {}, identityHandlers = [];
-  function send(env){ env.id = env.id || ('r' + (seq++)); parent.postMessage(JSON.stringify(env), '*'); return env.id; }
+  // Transport. A napplet/nSite runs inside the trusted shell's iframe and talks to the shell via
+  // postMessage (the shell relays to the native bridge). A top-level page opened in the in-app browser
+  // has no shell parent, so it talks to the origin-scoped native bridge object (__nappletBridge,
+  // injected for the page) directly. __nappletDirectBridge selects that path.
+  var DIRECT = false; try { DIRECT = !!window.__nappletDirectBridge; } catch (_) {}
+  var recvWired = false;
+  function rawSend(s){
+    if (DIRECT) {
+      var b = window.__nappletBridge; if (!b) return;
+      // Wire the reply channel before the first send, so no reply can arrive before we listen.
+      if (!recvWired) { recvWired = true; b.onmessage = function(e){ onIncoming(e.data); }; }
+      b.postMessage(s);
+    } else {
+      parent.postMessage(s, '*');
+    }
+  }
+  function send(env){ env.id = env.id || ('r' + (seq++)); rawSend(JSON.stringify(env)); return env.id; }
   function call(type, fields){
     return new Promise(function(resolve, reject){
       var env = { type: type }; if (fields) for (var k in fields) env[k] = fields[k];
@@ -57,9 +73,8 @@
   }
   // Fire-and-forget (no .result awaited), used for subscribe/unsubscribe.
   function post(type, fields){ var env = { type: type }; if (fields) for (var k in fields) env[k] = fields[k]; send(env); }
-  window.addEventListener('message', function(e){
-    if (e.source !== parent) return;
-    var msg; if (typeof e.data === 'string') { try { msg = JSON.parse(e.data); } catch (_) { return; } } else { msg = e.data; }
+  function onIncoming(raw){
+    var msg; if (typeof raw === 'string') { try { msg = JSON.parse(raw); } catch (_) { return; } } else { msg = raw; }
     if (!msg) return;
     // Subscription pushes are keyed by subId, not a request id.
     if (msg.type === 'relay.event' || msg.type === 'relay.eose' || msg.type === 'relay.closed') {
@@ -77,7 +92,12 @@
     var p = pending[msg.id]; if (!p) return; delete pending[msg.id];
     if (msg.ok) p.resolve(msg);
     else { var err = new Error(msg.reason || msg.operation || msg.error || 'napplet error'); err.napplet = msg; p.reject(err); }
-  });
+  }
+  // The shell-relayed path listens for window messages from the parent; the direct-bridge path wires
+  // its receive channel in rawSend (above) the first time it posts.
+  if (!DIRECT) {
+    window.addEventListener('message', function(e){ if (e.source !== parent) return; onIncoming(e.data); });
+  }
   function field(promise, name){ return promise.then(function(m){ return m[name]; }); }
   function normFilters(filters){ return Array.isArray(filters) ? { filters: filters } : { filter: filters || {} }; }
   function bytesToB64(bytes){ var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); var s=''; for (var i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return btoa(s); }

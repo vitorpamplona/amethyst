@@ -101,6 +101,9 @@ private fun PreloadFor(
 
         NavBarItem.NSITES -> {}
 
+        // The browser is a "new tab" launcher with no feed to preload.
+        NavBarItem.BROWSER -> {}
+
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
         -> CalendarsFilterAssemblerSubscription(accountViewModel)

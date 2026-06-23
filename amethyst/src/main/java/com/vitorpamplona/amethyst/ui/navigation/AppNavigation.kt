@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.metadat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.ArticleBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.PostBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.OldBookmarkListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.BrowserScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsScreen
@@ -293,6 +294,7 @@ fun BuildNavigation(
         composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nsites> { NsitesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Browser> { BrowserScreen(accountViewModel, nav) }
         composableFromEnd<Route.NappletPermissions> { NappletPermissionsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.SoftwareAppDetail> { SoftwareAppDetailScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Calendars> { CalendarsScreen(accountViewModel, nav) }

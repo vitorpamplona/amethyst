@@ -34,6 +34,8 @@ import android.os.RemoteException
 import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
+import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
+import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
@@ -112,6 +114,27 @@ class NappletBrokerService : Service() {
             val session = NappletLaunchRegistry.resolve(data.getString(NappletIpc.KEY_LAUNCH_TOKEN)) ?: return true
             NappletNetworkRegistry.init(applicationContext)
             NappletNetworkRegistry.set(session.identity.coordinate, data.getBoolean(NappletIpc.KEY_NETWORK_USE_TOR, true))
+            return true
+        }
+
+        // Browser mode mints a fresh launch token per visited origin, so NIP-07 consent is scoped to the
+        // one site the request came from. The origin is the trusted source origin the WebView reported
+        // (the sandbox can't forge it), and the synthetic identity keys the permission ledger per host.
+        if (msg.what == NappletIpc.MSG_MINT_BROWSER_TOKEN) {
+            val data = msg.data ?: return true
+            val replyTo = msg.replyTo ?: return true
+            val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN)?.takeIf { it.isNotBlank() } ?: return true
+            val identity = NappletIdentity(authorPubKey = BROWSER_IDENTITY_AUTHOR, identifier = origin)
+            val token = NappletLaunchRegistry.register(identity, setOf(NappletCapability.IDENTITY, NappletCapability.RELAY))
+            val response =
+                Message.obtain(null, NappletIpc.MSG_BROWSER_TOKEN).apply {
+                    this.data =
+                        Bundle().apply {
+                            putString(NappletIpc.KEY_BROWSER_ORIGIN, origin)
+                            putString(NappletIpc.KEY_LAUNCH_TOKEN, token)
+                        }
+                }
+            runCatching { replyTo.send(response) }
             return true
         }
 
@@ -215,5 +238,15 @@ class NappletBrokerService : Service() {
         } catch (e: RemoteException) {
             Log.w("NappletBrokerService", "Applet host went away before push could be delivered", e)
         }
+    }
+
+    companion object {
+        /**
+         * Sentinel "author" for a browser-mode per-origin identity. The real key is the visited origin,
+         * carried in the identity's identifier (which the consent dialog shows); this constant only fills
+         * the coordinate's author slot so each origin keys the permission ledger separately as
+         * `browser:<origin>`. It is never treated as a real pubkey.
+         */
+        private const val BROWSER_IDENTITY_AUTHOR = "browser"
     }
 }

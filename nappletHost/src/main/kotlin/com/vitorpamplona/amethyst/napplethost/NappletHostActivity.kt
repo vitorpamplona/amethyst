@@ -24,6 +24,7 @@ import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -31,18 +32,22 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import android.text.InputType
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -110,6 +115,22 @@ class NappletHostActivity : ComponentActivity() {
 
     // nSite "website mode": a normal web app (NIP-07 window.nostr + normal network), vs a locked napplet.
     private var websiteMode: Boolean = false
+
+    // "Browser mode": render an arbitrary live URL with an editable address bar (see EXTRA_BROWSER_MODE).
+    // No manifest/content server; NIP-07 is injected per visited origin.
+    private var browserMode: Boolean = false
+
+    // The address bar shown in browser mode.
+    private var addressBar: android.widget.EditText? = null
+
+    // Visited origin (e.g. https://example.com) → its broker-minted launch token, plus the requests that
+    // arrived for an origin before its token was minted, and the set of origins a mint is in flight for.
+    private val browserOriginTokens = mutableMapOf<String, String>()
+    private val browserPendingByOrigin = mutableMapOf<String, MutableList<Message>>()
+    private val browserMintInFlight = mutableSetOf<String>()
+
+    // The onion toggle in the browser bar, kept so its tint can follow the live useTor state.
+    private var browserTorIcon: ImageView? = null
 
     // Per-site network choice: route this site's traffic through Tor (default) or over the open web.
     // Applied to both the WebView proxy and the blob-fetch client; toggled from the top-bar onion.
@@ -183,6 +204,11 @@ class NappletHostActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        if (intent.getBooleanExtra(NappletHostContract.EXTRA_BROWSER_MODE, false)) {
+            setupBrowser()
+            return
+        }
+
         if (!readManifestExtras()) {
             Toast.makeText(this, getString(R.string.napplet_invalid), Toast.LENGTH_SHORT).show()
             finish()
@@ -199,8 +225,7 @@ class NappletHostActivity : ComponentActivity() {
         // once up front so the WebView worker threads that serve them never block on resource I/O.
         // This isolated `:napplet` process skips app init (to stay key-free), so the compose-resources
         // Android context is never set here and `Res.readBytes` would crash — read the contract bytes
-        // straight from the APK assets, where compose-resources packages them.
-        fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
+        // straight from the APK assets, where compose-resources packages them (see [readContractAsset]).
         val shellHtml = readContractAsset(NappletWebContract.SHELL_HTML_PATH)
         val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
         val appOrigin = NappletWebContract.appOrigin(deriveAppId(author, identifier))
@@ -359,6 +384,315 @@ class NappletHostActivity : ComponentActivity() {
     }
 
     /**
+     * Reads a shared napplet web-contract asset (shell HTML / shim JS) straight from the APK assets. This
+     * isolated `:napplet` process skips app init to stay key-free, so the compose-resources Android context
+     * is never set and `Res.readBytes` would crash; the bytes are packaged under
+     * [NappletWebContract.RESOURCE_ASSET_ROOT].
+     */
+    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
+
+    // ---- browser mode ----
+
+    /**
+     * Sets up the in-app web browser: a hardened, keyless WebView behind an editable address bar, loading
+     * an arbitrary live URL. The same consent-gated NIP-07 `window.nostr` shim the shell injects is
+     * injected here at document start for every origin, but each visited origin gets its own broker-minted
+     * launch token (see [onBrowserMessage]) so a grant to one site never leaks to another.
+     */
+    private fun setupBrowser() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) ||
+            !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+        ) {
+            Toast.makeText(this, getString(R.string.napplet_webview_too_old), Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
+        browserMode = true
+        proxyPort = intent.getIntExtra(NappletHostContract.EXTRA_PROXY_PORT, -1)
+        useTor = intent.getBooleanExtra(NappletHostContract.EXTRA_USE_TOR, proxyPort > 0)
+        val startUrl = normalizeUrl(intent.getStringExtra(NappletHostContract.EXTRA_BROWSER_URL).orEmpty())
+
+        webView = WebView(this)
+        configureBrowserWebView(webView)
+        applyWebViewProxy(if (useTor) proxyPort else -1)
+
+        // Inject the NIP-07 shim at document start for every origin, and let it reach native directly (no
+        // shell). addWebMessageListener exposes the bridge object the shim posts to.
+        val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
+        WebViewCompat.addWebMessageListener(webView, NappletWebContract.BRIDGE_NAME, setOf("*"), ::onShellMessage)
+        // Only the TOP frame becomes an Amethyst-aware Nostr page; sub-frames get neither flag, so they
+        // don't try (and fail) to reach native — their NIP-07 calls would otherwise hang on isMainFrame.
+        val startScript = "if (window.top === window) { window.__nappletDirectBridge = true; window.__nappletNip07 = true; }\n$shim"
+        WebViewCompat.addDocumentStartJavaScript(webView, startScript, setOf("*"))
+
+        bindService(Intent().setClassName(this, NappletHostContract.BROKER_SERVICE_CLASS), brokerConnection, BIND_AUTO_CREATE)
+        onBackPressedDispatcher.addCallback(this, backCallback)
+
+        val root =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(buildBrowserBar())
+                addView(buildDivider())
+                addView(contentFrame, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+            }
+        setContentView(root)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val applied = WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            val bars = insets.getInsets(applied)
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            WindowInsetsCompat.Builder(insets).setInsets(applied, Insets.NONE).build()
+        }
+
+        contentFrame.addView(webView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        started = true
+        webView.loadUrl(startUrl)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // singleTask: relaunching the browser with a new URL reuses this instance, so load the new URL.
+        if (browserMode && intent.getBooleanExtra(NappletHostContract.EXTRA_BROWSER_MODE, false)) {
+            val url = intent.getStringExtra(NappletHostContract.EXTRA_BROWSER_URL)
+            if (!url.isNullOrBlank() && this::webView.isInitialized) webView.loadUrl(normalizeUrl(url))
+        }
+    }
+
+    @Suppress("SetJavaScriptEnabled")
+    private fun configureBrowserWebView(webView: WebView) {
+        webView.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            databaseEnabled = false
+            allowFileAccess = false
+            allowContentAccess = false
+            @Suppress("DEPRECATION")
+            allowFileAccessFromFileURLs = false
+            @Suppress("DEPRECATION")
+            allowUniversalAccessFromFileURLs = false
+            javaScriptCanOpenWindowsAutomatically = false
+            setSupportMultipleWindows(false)
+            setGeolocationEnabled(false)
+            mediaPlaybackRequiresUserGesture = true
+            builtInZoomControls = true
+            displayZoomControls = false
+            loadWithOverviewMode = true
+            useWideViewPort = true
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
+                safeBrowsingEnabled = true
+            }
+        }
+        WebView.setWebContentsDebuggingEnabled(false)
+        webView.webViewClient = BrowserWebViewClient()
+    }
+
+    /** Loads live web pages in-WebView (http/https) and hands other schemes to the system on a user tap. */
+    private inner class BrowserWebViewClient : WebViewClient() {
+        override fun shouldOverrideUrlLoading(
+            view: WebView,
+            request: WebResourceRequest,
+        ): Boolean {
+            val uri = request.url
+            val scheme = uri.scheme?.lowercase()
+            if (scheme == "http" || scheme == "https") return false // navigate inside the browser
+            // Non-web schemes (mailto:, tel:, lightning:, bitcoin:, intent:, …) only on a real user tap, so
+            // a hostile page can't silently fire intents.
+            if (request.hasGesture()) {
+                runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
+            return true
+        }
+
+        override fun onPageStarted(
+            view: WebView,
+            url: String,
+            favicon: Bitmap?,
+        ) {
+            updateAddressBar(url)
+            syncBackState()
+        }
+
+        override fun doUpdateVisitedHistory(
+            view: WebView,
+            url: String,
+            isReload: Boolean,
+        ) {
+            updateAddressBar(url)
+            syncBackState()
+        }
+
+        override fun onPageFinished(
+            view: WebView,
+            url: String,
+        ) {
+            updateAddressBar(url)
+            syncBackState()
+        }
+    }
+
+    /** Reflects the WebView's current URL in the address bar, unless the user is editing it. */
+    private fun updateAddressBar(url: String) {
+        val bar = addressBar ?: return
+        if (bar.hasFocus()) return
+        if (url == "about:blank") return
+        bar.setText(url)
+    }
+
+    /** Editable address bar + reload, plus the Tor onion toggle when Tor is available. */
+    private fun buildBrowserBar(): View {
+        val onSurface = resolveThemeColor(android.R.attr.textColorPrimary)
+        val bar =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
+                setPadding(dp(10), dp(8), dp(10), dp(8))
+            }
+
+        val input =
+            EditText(this).apply {
+                setSingleLine()
+                hint = getString(R.string.napplet_browser_address_hint)
+                setHintTextColor(resolveThemeColor(android.R.attr.textColorSecondary))
+                setTextColor(onSurface)
+                textSize = 15f
+                inputType = InputType.TYPE_TEXT_VARIATION_URI
+                imeOptions = EditorInfo.IME_ACTION_GO
+                setSelectAllOnFocus(true)
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                setOnEditorActionListener { v, actionId, _ ->
+                    if (actionId == EditorInfo.IME_ACTION_GO) {
+                        navigateTo(v.text.toString())
+                        clearFocus()
+                        hideKeyboard(v)
+                        true
+                    } else {
+                        false
+                    }
+                }
+            }
+        addressBar = input
+        bar.addView(input)
+
+        bar.addView(
+            TextView(this).apply {
+                text = "⟳" // reload
+                setTextColor(onSurface)
+                textSize = 20f
+                setPadding(dp(12), 0, dp(4), 0)
+                isClickable = true
+                contentDescription = getString(R.string.napplet_browser_reload_desc)
+                setOnClickListener { if (this@NappletHostActivity::webView.isInitialized) webView.reload() }
+            },
+        )
+
+        // Tor onion: lit when routing through Tor, dimmed over the open web. Tap flips it for the session.
+        if (proxyPort > 0) {
+            browserTorIcon =
+                ImageView(this).apply {
+                    setImageResource(R.drawable.ic_tor)
+                    applyTorTint(this)
+                    setPadding(dp(8), 0, dp(4), 0)
+                    isClickable = true
+                    setOnClickListener { toggleBrowserTor() }
+                    contentDescription = getString(if (useTor) R.string.napplet_net_tor_desc else R.string.napplet_net_open_desc)
+                    layoutParams = LinearLayout.LayoutParams(dp(34), dp(22))
+                }
+            bar.addView(browserTorIcon)
+        }
+        return bar
+    }
+
+    private fun applyTorTint(icon: ImageView) {
+        icon.setColorFilter(if (useTor) resolveThemeColor(android.R.attr.textColorPrimary) else resolveThemeColor(android.R.attr.textColorSecondary))
+        icon.alpha = if (useTor) 1f else 0.4f
+    }
+
+    /** Flips this browser session between Tor and the open web, re-applies the proxy, and reloads. */
+    private fun toggleBrowserTor() {
+        useTor = !useTor
+        applyWebViewProxy(if (useTor) proxyPort else -1)
+        browserTorIcon?.let {
+            applyTorTint(it)
+            it.contentDescription = getString(if (useTor) R.string.napplet_net_tor_desc else R.string.napplet_net_open_desc)
+        }
+        if (this::webView.isInitialized) webView.reload()
+    }
+
+    private fun navigateTo(input: String) {
+        if (this::webView.isInitialized) webView.loadUrl(normalizeUrl(input))
+    }
+
+    /**
+     * Turns address-bar text into a URL: keeps an explicit scheme, prefixes a bare domain with `https://`,
+     * and treats anything else (spaces, or no dot) as a DuckDuckGo search.
+     */
+    private fun normalizeUrl(input: String): String {
+        val text = input.trim()
+        if (text.isEmpty()) return "about:blank"
+        if (text.contains("://")) return text
+        if (!text.contains(' ') && text.contains('.')) return "https://$text"
+        return "https://duckduckgo.com/?q=" + Uri.encode(text)
+    }
+
+    private fun hideKeyboard(view: View) {
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(view.windowToken, 0)
+    }
+
+    /**
+     * Browser-mode bridge handler: a top-frame NIP-07 call from [sourceOrigin]. The origin is the trusted
+     * value the WebView reports (the page can't forge it), so it keys consent. Each origin uses its own
+     * broker-minted launch token; until that token arrives the request is queued and a mint is requested.
+     */
+    private fun onBrowserMessage(
+        message: WebMessageCompat,
+        sourceOrigin: Uri,
+        isMainFrame: Boolean,
+        replyProxy: JavaScriptReplyProxy,
+    ) {
+        if (!isMainFrame) return
+        bridgeReplyProxy = replyProxy
+        val raw = message.data ?: return
+        val envelope = runCatching { JSONObject(raw) }.getOrNull() ?: return
+
+        val scheme = sourceOrigin.scheme ?: return
+        val host = sourceOrigin.host ?: return
+        val origin = "$scheme://$host" + if (sourceOrigin.port > 0) ":${sourceOrigin.port}" else ""
+
+        val id = envelope.optString("id").ifEmpty { "fire-${fireSeq++}" }
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_REQUEST).apply {
+                replyTo = replyMessenger
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_REQUEST_ID, id)
+                        putString(NappletIpc.KEY_PAYLOAD, raw)
+                    }
+            }
+
+        val token = browserOriginTokens[origin]
+        if (token != null) {
+            msg.data.putString(NappletIpc.KEY_LAUNCH_TOKEN, token)
+            if (brokerMessenger == null) pendingRequests.add(msg) else sendToBroker(msg)
+        } else {
+            browserPendingByOrigin.getOrPut(origin) { mutableListOf() }.add(msg)
+            requestBrowserToken(origin)
+        }
+    }
+
+    /** Asks the broker (once per origin) to mint a per-origin launch token. */
+    private fun requestBrowserToken(origin: String) {
+        if (!browserMintInFlight.add(origin)) return
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_MINT_BROWSER_TOKEN).apply {
+                replyTo = replyMessenger
+                data = Bundle().apply { putString(NappletIpc.KEY_BROWSER_ORIGIN, origin) }
+            }
+        if (brokerMessenger == null) pendingRequests.add(msg) else sendToBroker(msg)
+    }
+
+    /**
      * Stable, unique, DNS-label-safe id for this applet's sandbox origin: a sha256 of
      * `author:identifier`, hex, truncated to 31 chars and letter-prefixed (`n`). The leading letter
      * avoids any numeric-host parsing quirk and keeps it ≤63 chars (a valid DNS label). The same
@@ -479,6 +813,10 @@ class NappletHostActivity : ComponentActivity() {
         isMainFrame: Boolean,
         replyProxy: JavaScriptReplyProxy,
     ) {
+        if (browserMode) {
+            onBrowserMessage(message, sourceOrigin, isMainFrame, replyProxy)
+            return
+        }
         if (!isMainFrame) return // only the trusted shell, never a sub-frame
         bridgeReplyProxy = replyProxy
 
@@ -554,6 +892,18 @@ class NappletHostActivity : ComponentActivity() {
             NappletIpc.MSG_PUSH -> {
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
                 bridgeReplyProxy?.postMessage(payload)
+            }
+            // Browser mode: the broker minted the per-origin launch token; cache it and flush the requests
+            // that were waiting on it (each now carries the token, so the broker can resolve their identity).
+            NappletIpc.MSG_BROWSER_TOKEN -> {
+                val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN) ?: return true
+                val token = data.getString(NappletIpc.KEY_LAUNCH_TOKEN) ?: return true
+                browserOriginTokens[origin] = token
+                browserMintInFlight.remove(origin)
+                browserPendingByOrigin.remove(origin)?.forEach { queued ->
+                    queued.data.putString(NappletIpc.KEY_LAUNCH_TOKEN, token)
+                    sendToBroker(queued)
+                }
             }
             else -> return false
         }

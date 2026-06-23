@@ -77,6 +77,8 @@ thumbnailator = "0.4.21"
 zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
 webkit = "1.12.1"
+# Cross-process UI embedding (SurfaceControlViewHost wrapper) for the in-app browser surface. Apache-2.0.
+privacysandboxUi = "1.0.0-alpha10"
 windowCoreAndroid = "1.5.1"
 workRuntime = "2.11.2"
 androidxCamera = "1.6.1"
@@ -210,6 +212,9 @@ unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", ve
 play-services-cast-framework = { group = "com.google.android.gms", name = "play-services-cast-framework", version.ref = "playServicesCast" }
 vico-charts-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico-charts-compose" }
 androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
+androidx-privacysandbox-ui-core = { group = "androidx.privacysandbox.ui", name = "ui-core", version.ref = "privacysandboxUi" }
+androidx-privacysandbox-ui-client = { group = "androidx.privacysandbox.ui", name = "ui-client", version.ref = "privacysandboxUi" }
+androidx-privacysandbox-ui-provider = { group = "androidx.privacysandbox.ui", name = "ui-provider", version.ref = "privacysandboxUi" }
 vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico-charts-compose" }
 zelory-image-compressor = { group = "id.zelory", name = "compressor", version.ref = "zelory" }
 zoomable = { group = "net.engawapg.lib", name = "zoomable", version.ref = "zoomable" }

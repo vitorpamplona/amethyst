@@ -666,6 +666,12 @@
     <string name="napplets">nApplets</string>
     <string name="nsites">nSites</string>
     <string name="nsite_none_found">No nSites found yet.</string>
+    <string name="browser">Browser</string>
+    <string name="browser_address_hint">Search or enter address</string>
+    <string name="browser_reload">Reload</string>
+    <string name="browser_tor_on">Loading over Tor. Tap to use the open web.</string>
+    <string name="browser_tor_off">Loading over the open web. Tap to use Tor.</string>
+    <string name="browser_unsupported">The in-app browser needs Android 11 or newer.</string>
     <string name="napplet_permissions">nApplet permissions</string>
     <string name="napplet_manage_permissions">Manage permissions</string>
     <string name="napplet_permissions_empty">No nApplet permissions yet</string>

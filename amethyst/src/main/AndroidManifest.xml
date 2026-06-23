@@ -425,6 +425,13 @@
             android:name=".napplet.NappletBrokerService"
             android:exported="false" />
 
+        <!-- Embedded-browser provider: hosts the in-app browser WebView in the isolated, keyless
+             process and ships its rendered surface to the main app (SurfaceControlViewHost). -->
+        <service
+            android:name="com.vitorpamplona.amethyst.napplethost.NappletBrowserService"
+            android:process=":napplet"
+            android:exported="false" />
+
     </application>
 
 

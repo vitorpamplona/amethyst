@@ -47,8 +47,21 @@ object NappletIpc {
      */
     const val MSG_SET_NETWORK_MODE = 4
 
+    /**
+     * Host → broker (browser mode): mint a per-origin launch token for the visited origin in
+     * [KEY_BROWSER_ORIGIN]. The broker registers a synthetic per-origin identity (so NIP-07 consent is
+     * scoped to that one site) and answers with [MSG_BROWSER_TOKEN].
+     */
+    const val MSG_MINT_BROWSER_TOKEN = 5
+
+    /** Broker → host: the [KEY_LAUNCH_TOKEN] minted for [KEY_BROWSER_ORIGIN]. */
+    const val MSG_BROWSER_TOKEN = 6
+
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
+
+    /** The visited web origin (e.g. `https://example.com`) a browser-mode request belongs to. */
+    const val KEY_BROWSER_ORIGIN = "browserOrigin"
 
     /** Boolean: route this site through Tor (true) or over the open web (false). */
     const val KEY_NETWORK_USE_TOR = "networkUseTor"

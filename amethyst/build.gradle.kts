@@ -341,6 +341,11 @@ dependencies {
     // Hardened WebView host for sandboxed napplet/nsite rendering (origin-restricted message bridge).
     implementation(libs.androidx.webkit)
 
+    // Client side of the cross-process UI embedding: renders the sandboxed browser surface (hosted in
+    // the keyless `:napplet` process) inside a Compose component in the main app.
+    implementation(libs.androidx.privacysandbox.ui.core)
+    implementation(libs.androidx.privacysandbox.ui.client)
+
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)

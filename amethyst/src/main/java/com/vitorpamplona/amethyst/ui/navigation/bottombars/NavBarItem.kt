@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
+import android.os.Build
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -54,6 +55,7 @@ enum class NavBarItem {
     SOFTWARE_APPS,
     NAPPLETS,
     NSITES,
+    BROWSER,
     CALENDARS,
     CALENDAR_COLLECTIONS,
     SHORTS,
@@ -237,6 +239,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Language,
                 resolveRoute = { Route.Nsites },
             ),
+        NavBarItem.BROWSER to
+            NavBarItemDef(
+                id = NavBarItem.BROWSER,
+                labelRes = R.string.browser,
+                icon = MaterialSymbols.Language,
+                resolveRoute = { Route.Browser },
+            ),
         NavBarItem.CALENDARS to
             NavBarItemDef(
                 id = NavBarItem.CALENDARS,
@@ -402,6 +411,9 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.SOFTWARE_APPS,
         NavBarItem.NAPPLETS,
         NavBarItem.NSITES,
+        // The embedded browser renders a cross-process surface (SurfaceControlViewHost), which needs
+        // API 30+. Below that the item is hidden so the feature can't be pinned or opened.
+        NavBarItem.BROWSER.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
         NavBarItem.SHORTS,
