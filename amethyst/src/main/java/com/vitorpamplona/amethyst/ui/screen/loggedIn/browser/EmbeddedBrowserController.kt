@@ -31,8 +31,11 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
+import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionState
+import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionStateChangedListener
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
@@ -98,6 +101,14 @@ class EmbeddedBrowserController(
         // Paint the surface placeholder in the app's theme background so there's no white flash before
         // the remote WebView delivers its first frame.
         view.setBackgroundColor(backgroundColor)
+        // DIAGNOSTIC (scrolling): log the surface session lifecycle so we can see if it reaches Active.
+        view.addStateChangedListener(
+            object : SandboxedSdkUiSessionStateChangedListener {
+                override fun onStateChanged(state: SandboxedSdkUiSessionState) {
+                    Log.w("BrowserSurfaceDiag", "DIAG session state: $state")
+                }
+            },
+        )
         pendingAdapter?.let {
             view.setAdapter(it)
             pendingAdapter = null
