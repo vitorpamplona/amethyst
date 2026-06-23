@@ -20,12 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 
 /**
@@ -42,6 +45,9 @@ fun TorToggleButton(
         Icon(
             painter = painterResource(R.drawable.ic_tor),
             contentDescription = stringResource(if (torOn) R.string.browser_tor_on else R.string.browser_tor_off),
+            // A vector painter renders at its intrinsic size unless constrained; pin to the standard
+            // 24dp icon size so it matches the reload icon next to it.
+            modifier = Modifier.size(24.dp),
             tint = if (torOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
