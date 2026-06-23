@@ -173,7 +173,7 @@ private fun EmbeddedFavoriteTab(
 }
 
 @Composable
-private fun WebAppSecurityDialog(
+internal fun WebAppSecurityDialog(
     host: String,
     proxyAvailable: Boolean,
     torOn: Boolean,

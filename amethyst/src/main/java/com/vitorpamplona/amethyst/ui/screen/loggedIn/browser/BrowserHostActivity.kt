@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -109,6 +108,7 @@ private fun BrowserHostScreen(
 
     val proxyAvailable = remember { Amethyst.instance.torManager.activePortOrNull.value != null }
     var torOn by remember { mutableStateOf(proxyAvailable) }
+    var showSecurity by remember { mutableStateOf(false) }
 
     val controller =
         rememberBrowserController(startUrl = startUrl) { url, back ->
@@ -118,6 +118,19 @@ private fun BrowserHostScreen(
 
     // In-page back first; once there's no page history, the system back closes the activity.
     BackHandler(enabled = canGoBack) { controller.back() }
+
+    if (showSecurity) {
+        WebAppSecurityDialog(
+            host = hostOf(currentUrl),
+            proxyAvailable = proxyAvailable,
+            torOn = torOn,
+            onToggleTor = {
+                torOn = !torOn
+                controller.setTor(torOn)
+            },
+            onDismiss = { showSecurity = false },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -135,17 +148,9 @@ private fun BrowserHostScreen(
                     )
                 },
                 actions = {
-                    if (proxyAvailable) {
-                        IconButton(onClick = {
-                            torOn = !torOn
-                            controller.setTor(torOn)
-                        }) {
-                            Icon(
-                                MaterialSymbols.Security,
-                                contentDescription = stringResource(if (torOn) R.string.browser_tor_on else R.string.browser_tor_off),
-                                tint = if (torOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                    // Same shield = "Security & privacy" (Tor lives inside) as the embedded web tab.
+                    IconButton(onClick = { showSecurity = true }) {
+                        Icon(MaterialSymbols.Security, contentDescription = stringResource(R.string.embedded_tab_security))
                     }
                     IconButton(onClick = { controller.reload() }) {
                         Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
