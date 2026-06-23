@@ -207,7 +207,14 @@ object CachedRichTextParser {
             // checks that need to know "how much non-space text has
             // appeared on the current line".
             if (isNewLine) {
-                if (c != ' ' && c != '\t') {
+                // A blank line is still "at line start": skipping '\n'/'\r'
+                // here keeps isNewLine true so a heading/blockquote/list
+                // marker on the next line (the standard `\n\n#` spacing) is
+                // still recognized as line-leading. Without the newline
+                // exclusion, the second '\n' of a blank line flipped
+                // isNewLine to false and ATX headings after a blank line
+                // went undetected.
+                if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
                     isNewLine = false
                     nonSpaceCharCountOnLine = 1
                     lastNonSpaceChar = c
