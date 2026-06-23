@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.TorToggleButton
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
 /**
@@ -108,7 +109,6 @@ private fun BrowserHostScreen(
 
     val proxyAvailable = remember { Amethyst.instance.torManager.activePortOrNull.value != null }
     var torOn by remember { mutableStateOf(proxyAvailable) }
-    var showSecurity by remember { mutableStateOf(false) }
 
     val controller =
         rememberBrowserController(startUrl = startUrl) { url, back ->
@@ -118,19 +118,6 @@ private fun BrowserHostScreen(
 
     // In-page back first; once there's no page history, the system back closes the activity.
     BackHandler(enabled = canGoBack) { controller.back() }
-
-    if (showSecurity) {
-        WebAppSecurityDialog(
-            host = hostOf(currentUrl),
-            proxyAvailable = proxyAvailable,
-            torOn = torOn,
-            onToggleTor = {
-                torOn = !torOn
-                controller.setTor(torOn)
-            },
-            onDismiss = { showSecurity = false },
-        )
-    }
 
     Scaffold(
         topBar = {
@@ -148,9 +135,11 @@ private fun BrowserHostScreen(
                     )
                 },
                 actions = {
-                    // Same shield = "Security & privacy" (Tor lives inside) as the embedded web tab.
-                    IconButton(onClick = { showSecurity = true }) {
-                        Icon(MaterialSymbols.Security, contentDescription = stringResource(R.string.embedded_tab_security))
+                    if (proxyAvailable) {
+                        TorToggleButton(torOn) {
+                            torOn = !torOn
+                            controller.setTor(torOn)
+                        }
                     }
                     IconButton(onClick = { controller.reload() }) {
                         Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))

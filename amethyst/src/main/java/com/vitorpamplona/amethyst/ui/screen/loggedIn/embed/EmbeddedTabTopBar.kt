@@ -33,27 +33,23 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 
 /**
  * The shared chrome for an embedded web tab — the browser/web-app tab and the nsite/napplet tab use the
- * exact same bar so they read as one consistent surface: a **sandbox shield** (security & privacy: what
- * the app can access, and its network/Tor routing), the title, **reload**, and **open-in-own-window**.
+ * same bar so they read as one consistent surface: a **leading** affordance specific to the surface
+ * (the napplet/nsite tab puts its sandbox-access **shield** here; the web-app tab puts the Tor onion),
+ * the title, **reload**, and **open-in-own-window**.
  *
- * Tor deliberately lives *inside* the shield's sheet rather than as its own top-bar icon, so the shield
- * is never confused with a Tor toggle (the onion `ic_tor` is the Tor mark elsewhere; the shield is the
- * sandbox/security mark).
+ * Tor uses the app's onion (`ic_tor`) rather than the shield, so the shield always means "sandbox
+ * access" and is never mistaken for a Tor toggle.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmbeddedTabTopBar(
     title: String,
-    onSecurity: () -> Unit,
+    leading: @Composable () -> Unit,
     onReload: () -> Unit,
     onPopOut: () -> Unit,
 ) {
     TopAppBar(
-        navigationIcon = {
-            IconButton(onClick = onSecurity) {
-                Icon(MaterialSymbols.Security, contentDescription = stringResource(R.string.embedded_tab_security))
-            }
-        },
+        navigationIcon = leading,
         title = {
             Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
