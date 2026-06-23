@@ -26,12 +26,9 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -58,8 +55,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
@@ -68,7 +63,7 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.AppControlPuck
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 
 /**
@@ -143,6 +138,17 @@ private fun EmbeddedNappletTab(
         controller.onNotice = { notice ->
             noticeResId(notice)?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
         }
+        // Publish the top-sheet controls to the tab layer, which draws them over the z-below surface.
+        EmbeddedTabHost.setActiveChrome(
+            id,
+            EmbeddedTabChrome(
+                title = title.ifBlank { coordinate },
+                isSandbox = true,
+                onReload = { controller.reload() },
+                onOpenFull = { FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis())) },
+                onInfo = { showAccess = true },
+            ),
+        )
     }
 
     val bottomBarFlow = accountViewModel.settings.uiSettingsFlow.bottomBarItems
@@ -150,6 +156,7 @@ private fun EmbeddedNappletTab(
         EmbeddedTabHost.setActive(id)
         onDispose {
             EmbeddedTabHost.clearActiveIfMatches(id)
+            EmbeddedTabHost.clearActiveChrome(id)
             // Only bottom-row apps stay warm; anything else restarts when it leaves.
             if (id !in bottomBarFlow.value.favoriteIds()) EmbeddedTabHost.evict(id)
         }
@@ -179,52 +186,17 @@ private fun EmbeddedNappletTab(
     }
 
     Scaffold(
-        // The surface is z-ordered on top, so the controls live in a slim bar above it (no title; the
-        // napplet titles itself). The shield is the always-visible trusted sandbox marker.
-        topBar = { NappletControlBar(onReload = { controller.reload() }, onInfo = { showAccess = true }, onPopOut = { FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis())) }) },
         bottomBar = {
             AppBottomBar(Route.FavoriteNostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
-        // Reserve the content area below the bar; the warm surface is positioned over these bounds.
+        // Reserve the full content area; the warm surface + its top sheet are drawn over these bounds.
         Box(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
         )
-    }
-}
-
-/** The slim control bar for an embedded napplet/nsite: a shield that expands to access/reload/pop-out. */
-@Composable
-private fun NappletControlBar(
-    onReload: () -> Unit,
-    onInfo: () -> Unit,
-    onPopOut: () -> Unit,
-) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-    ) {
-        AppControlPuck(
-            trustedIcon = MaterialSymbols.Security,
-            trustedTint = MaterialTheme.colorScheme.primary,
-            trustedDescription = stringResource(R.string.favorite_app_access_show),
-            modifier = Modifier.align(Alignment.TopEnd),
-        ) {
-            IconButton(onClick = onReload) {
-                Icon(MaterialSymbols.Refresh, contentDescription = stringResource(R.string.browser_reload))
-            }
-            IconButton(onClick = onInfo) {
-                Icon(MaterialSymbols.Info, contentDescription = stringResource(R.string.favorite_app_access_show))
-            }
-            IconButton(onClick = onPopOut) {
-                Icon(MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = stringResource(R.string.favorite_app_open_window))
-            }
-        }
     }
 }
 

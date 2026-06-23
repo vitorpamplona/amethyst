@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -120,6 +121,23 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                         }
                     },
                     modifier = placement,
+                )
+            }
+        }
+
+        // The active tab's top pull-down sheet, drawn AFTER the surfaces so it sits on top of the
+        // (z-below) surface, anchored to the top of the active tab's reserved bounds.
+        val chrome = EmbeddedTabHost.activeChrome
+        if (chrome != null && bounds.width > 0f && bounds.height > 0f) {
+            with(density) {
+                TopControlSheet(
+                    chrome = chrome,
+                    modifier =
+                        Modifier
+                            .absoluteOffset(
+                                (bounds.left - layerOrigin.x).toDp(),
+                                (bounds.top - layerOrigin.y).toDp(),
+                            ).width(bounds.width.toDp()),
                 )
             }
         }
