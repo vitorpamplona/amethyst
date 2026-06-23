@@ -255,6 +255,9 @@
     <string name="block_only">حظر </string>
     <string name="bookmarks">المفضلة</string>
     <string name="drafts">المسودات</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="private_bookmarks">المفضلة الخاصة</string>
     <string name="public_bookmarks">المفضلة العامة</string>
     <string name="add_to_private_bookmarks">إضافة إلى المفضلات الخاصة</string>

@@ -190,6 +190,9 @@
     <string name="report_dialog_title">阻止與舉報</string>
     <string name="block_only">僅阻止</string>
     <string name="bookmarks">書籤</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="private_bookmarks">私人書籤</string>
     <string name="public_bookmarks">公開書籤</string>
     <string name="add_to_private_bookmarks">添加到私人書籤</string>

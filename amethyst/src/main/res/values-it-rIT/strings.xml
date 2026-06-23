@@ -191,6 +191,9 @@
     <string name="report_dialog_title">Blocca e Segnala</string>
     <string name="block_only">Blocca</string>
     <string name="bookmarks">Segnalibri</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="private_bookmarks">Segnalibri privati</string>
     <string name="public_bookmarks">Segnalibri pubblici</string>
     <string name="add_to_private_bookmarks">Aggiungi ai segnalibri privati</string>

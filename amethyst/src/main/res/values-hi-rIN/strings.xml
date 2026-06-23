@@ -606,6 +606,9 @@
     <string name="exercise_diet">आहार</string>
     <string name="exercise_fasting">उपवास</string>
     <string name="software_apps">क्रमक</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="nip82_repository_label">स्रोत : %1$s</string>
     <string name="nip82_version_label">संस्करण %1$s</string>
     <string name="nip82_download">अवरोहण</string>

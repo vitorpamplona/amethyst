@@ -586,6 +586,9 @@
     <string name="exercise_meditation">Meditatie</string>
     <string name="exercise_diet">Dieet</string>
     <string name="exercise_fasting">Vasten</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="nip82_repository_label">Bron: %1$s</string>
     <string name="nip82_download">Downloaden</string>
     <string name="nip82_section_about">Over</string>

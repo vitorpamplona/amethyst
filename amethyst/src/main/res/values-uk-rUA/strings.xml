@@ -208,6 +208,9 @@
     <string name="report_dialog_title">Заблокувати та поскаржитися</string>
     <string name="block_only">Заблокувати</string>
     <string name="bookmarks">Закладки</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="private_bookmarks">Особисті закладки</string>
     <string name="public_bookmarks">Публічні закладки</string>
     <string name="add_to_private_bookmarks">Додати в Особисті закладки</string>

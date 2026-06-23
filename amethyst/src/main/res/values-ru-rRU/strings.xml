@@ -300,6 +300,9 @@
     <string name="drafts">Черновики</string>
     <string name="polls">Опросы</string>
     <string name="pictures">Изображения</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="longs">Видео</string>
     <string name="private_bookmarks">Личные закладки</string>
     <string name="public_bookmarks">Публичные закладки</string>

@@ -267,6 +267,7 @@
     <string name="unblock">不隐藏</string>
     <string name="copy_user_id">复制用户ID</string>
     <string name="unblock_user">隐藏该用户</string>
+    <string name="user_is_blocked_hidden">此用户被屏蔽/静音。他们的帖子被隐藏。</string>
     <string name="npub_hex_username">"npub，hex，用户名"</string>
     <string name="clear">清除</string>
     <string name="app_logo">应用图标</string>
@@ -623,6 +624,9 @@
     <string name="exercise_emom">EMOM</string>
     <string name="exercise_amrap">AMRAP</string>
     <string name="software_apps">应用</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="nip82_repository_label">来源： %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">下载</string>

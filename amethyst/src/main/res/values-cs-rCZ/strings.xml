@@ -628,6 +628,9 @@
     <string name="exercise_diet">Dieta</string>
     <string name="exercise_fasting">Půst</string>
     <string name="software_apps">Aplikace</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="nip82_repository_label">Zdroj: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Stáhnout</string>

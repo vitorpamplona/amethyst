@@ -188,6 +188,9 @@
     <string name="report_dialog_title">தடு மற்றும் புகாரளி</string>
     <string name="block_only">தடு</string>
     <string name="bookmarks">புக்மார்க்குகள்</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="private_bookmarks">தனிப்பட்ட புக்மார்க்குகள்</string>
     <string name="public_bookmarks">பொது புக்மார்க்குகள்</string>
     <string name="add_to_private_bookmarks">தனிப்பட்ட புக்மார்க்குகளில் சேர்க்கவும்</string>

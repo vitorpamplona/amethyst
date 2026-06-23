@@ -32,6 +32,9 @@
     <string name="no_zap_amount_setup_long_press_to_change">Нема подешавања износа Зап. Дуго притисните да бисте променили</string>
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <!-- Call notifications and UI -->
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
