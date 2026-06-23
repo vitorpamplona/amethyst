@@ -242,7 +242,14 @@ class NappletBrowserService : Service() {
         override fun onPageFinished(
             view: WebView,
             url: String,
-        ) = pushUrl(view)
+        ) {
+            // DIAGNOSTIC (zoom): a responsive page rendering too large points to a density/viewport
+            // mismatch from streaming the WebView through SurfaceControlViewHost. scale≈4 confirms 400%.
+            val dm = view.resources.displayMetrics
+            @Suppress("DEPRECATION")
+            Log.w(TAG, "DIAG zoom: scale=${view.scale} density=${dm.density} dmWidthPx=${dm.widthPixels} webViewWidthPx=${view.width}")
+            pushUrl(view)
+        }
     }
 
     private fun pushUrl(view: WebView) {
