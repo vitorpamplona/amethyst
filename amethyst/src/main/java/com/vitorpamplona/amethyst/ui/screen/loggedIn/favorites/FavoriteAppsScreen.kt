@@ -134,6 +134,9 @@ fun FavoriteAppsGrid(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(12.dp),
 ) {
+    // Only WebUrl favorites can be pinned as bottom-bar tabs today (they embed in-process).
+    val pinnedIds by FavoriteAppsRegistry.pinnedIds.collectAsStateWithLifecycle()
+
     LazyVerticalGrid(
         columns = GridCells.Adaptive(96.dp),
         modifier = modifier,
@@ -142,8 +145,11 @@ fun FavoriteAppsGrid(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(apps, key = { it.id }) { app ->
+            val pinnable = app is FavoriteApp.WebUrl
             FavoriteAppCell(
                 app = app,
+                isPinned = pinnable && pinnedIds.contains(app.id),
+                onTogglePin = if (pinnable) ({ FavoriteAppsRegistry.setPinned(app.id, !FavoriteAppsRegistry.isPinned(app.id)) }) else null,
                 onOpen = { onOpen(app) },
                 onRemove = { onRemove(app) },
             )
@@ -155,6 +161,8 @@ fun FavoriteAppsGrid(
 @Composable
 private fun FavoriteAppCell(
     app: FavoriteApp,
+    isPinned: Boolean,
+    onTogglePin: (() -> Unit)?,
     onOpen: () -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -196,6 +204,16 @@ private fun FavoriteAppCell(
         )
 
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            onTogglePin?.let { toggle ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(if (isPinned) R.string.favorite_app_unpin else R.string.favorite_app_pin)) },
+                    leadingIcon = { Icon(if (isPinned) MaterialSymbols.Star else MaterialSymbols.StarBorder, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        toggle()
+                    },
+                )
+            }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.favorite_app_remove)) },
                 leadingIcon = { Icon(MaterialSymbols.Delete, contentDescription = null) },

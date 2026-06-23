@@ -35,14 +35,19 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -83,15 +88,26 @@ fun AppBottomBar(
         )
         return
     }
+
+    // User-pinned favorite web apps appear as extra tabs after the built-in items. Only WebUrl
+    // favorites are pinnable (they embed in-process), so a pinned tab always swaps in place.
+    val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val pinnedIds by FavoriteAppsRegistry.pinnedIds.collectAsStateWithLifecycle()
+    val pinnedFavorites =
+        remember(favorites, pinnedIds) {
+            pinnedIds.mapNotNull { id -> favorites.firstOrNull { it.id == id } as? FavoriteApp.WebUrl }
+        }
+
     val isKeyboardState by keyboardAsState()
     if (isKeyboardState == KeyboardState.Closed) {
-        RenderBottomMenu(items, selectedRoute, accountViewModel, onClick)
+        RenderBottomMenu(items, pinnedFavorites, selectedRoute, accountViewModel, onClick)
     }
 }
 
 @Composable
 private fun RenderBottomMenu(
     items: List<NavBarItem>,
+    favoriteTabs: List<FavoriteApp.WebUrl>,
     selectedRoute: Route?,
     accountViewModel: AccountViewModel,
     nav: (Route) -> Unit,
@@ -119,8 +135,37 @@ private fun RenderBottomMenu(
                 val destination = remember(def, accountViewModel) { def.resolveRoute(accountViewModel) }
                 HasNewItemsIcon(destination == selectedRoute, def, destination, accountViewModel, nav)
             }
+            favoriteTabs.forEach { fav ->
+                val destination = Route.FavoriteWebApp(fav.url)
+                FavoriteNavItem(destination == selectedRoute, fav, destination, nav)
+            }
         }
     }
+}
+
+@Composable
+private fun RowScope.FavoriteNavItem(
+    selected: Boolean,
+    fav: FavoriteApp.WebUrl,
+    destination: Route,
+    nav: (Route) -> Unit,
+) {
+    NavigationBarItem(
+        alwaysShowLabel = false,
+        icon = {
+            Box(Size27Modifier, contentAlignment = Alignment.Center) {
+                Icon(
+                    symbol = MaterialSymbols.Public,
+                    contentDescription = fav.label,
+                    modifier = Size25Modifier,
+                    tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface65,
+                )
+            }
+        },
+        label = { Text(fav.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        selected = selected,
+        onClick = { nav(destination) },
+    )
 }
 
 @Composable

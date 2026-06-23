@@ -678,6 +678,8 @@
     <string name="favorite_app_add">Add to favorites</string>
     <string name="favorite_app_remove">Remove from favorites</string>
     <string name="favorite_app_open_window">Open in its own window</string>
+    <string name="favorite_app_pin">Pin to bottom bar</string>
+    <string name="favorite_app_unpin">Unpin from bottom bar</string>
     <string name="favorite_app_still_loading">That app isn\'t loaded yet. Try again in a moment.</string>
     <string name="favorite_app_recent">Recent</string>
     <string name="napplet_permissions">nApplet permissions</string>
