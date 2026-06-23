@@ -67,7 +67,7 @@ fun RenderRootNappletEvent(
             } else {
                 null
             },
-        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: "Napplet") },
+        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: "Napplet", event.icon()) },
     )
 }
 
@@ -97,7 +97,7 @@ fun RenderNamedNappletEvent(
             } else {
                 null
             },
-        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: event.identifier()) },
+        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: event.identifier(), event.icon()) },
     )
 }
 
@@ -138,7 +138,7 @@ fun RenderRootSiteEvent(
             } else {
                 null
             },
-        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: "nsite") },
+        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: "nsite", event.icon()) },
     )
 }
 
@@ -179,7 +179,7 @@ fun RenderNamedSiteEvent(
             } else {
                 null
             },
-        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: event.identifier()) },
+        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: event.identifier(), event.icon()) },
     )
 }
 

@@ -47,6 +47,9 @@ sealed interface FavoriteApp {
     /** Epoch millis the favorite was added; used as the default ordering tiebreaker. */
     val addedAt: Long
 
+    /** The app's own icon URL (the nsite/napplet manifest icon), or null to fall back to a glyph. */
+    val iconUrl: String?
+
     /** Stable, type-discriminated identity used for de-duplication and as a UI key. */
     val id: String
 
@@ -60,6 +63,7 @@ sealed interface FavoriteApp {
         val coordinate: String,
         override val label: String,
         override val addedAt: Long,
+        override val iconUrl: String? = null,
     ) : FavoriteApp {
         override val id: String get() = "nostr:$coordinate"
     }
@@ -70,6 +74,7 @@ sealed interface FavoriteApp {
         val url: String,
         override val label: String,
         override val addedAt: Long,
+        override val iconUrl: String? = null,
     ) : FavoriteApp {
         override val id: String get() = "url:$url"
     }

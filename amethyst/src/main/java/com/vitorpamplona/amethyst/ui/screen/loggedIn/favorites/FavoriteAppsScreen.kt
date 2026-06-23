@@ -61,8 +61,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
@@ -179,11 +179,10 @@ private fun FavoriteAppCell(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                iconFor(app),
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
+            FavoriteAppIcon(
+                app = app,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(28.dp),
             )
         }
         Spacer(Modifier.height(6.dp))
@@ -207,9 +206,3 @@ private fun FavoriteAppCell(
         }
     }
 }
-
-private fun iconFor(app: FavoriteApp): MaterialSymbol =
-    when (app) {
-        is FavoriteApp.NostrApp -> MaterialSymbols.Apps
-        is FavoriteApp.WebUrl -> MaterialSymbols.Public
-    }

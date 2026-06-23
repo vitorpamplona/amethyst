@@ -35,19 +35,16 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -141,8 +138,7 @@ private fun RenderBottomMenu(
                                 is FavoriteApp.WebUrl -> Route.FavoriteWebApp(fav.url)
                                 is FavoriteApp.NostrApp -> Route.FavoriteNostrApp(fav.coordinate)
                             }
-                        val icon = if (fav is FavoriteApp.NostrApp) MaterialSymbols.Apps else MaterialSymbols.Public
-                        FavoriteNavItem(destination == selectedRoute, fav.label, icon, destination, nav)
+                        FavoriteNavItem(destination == selectedRoute, fav, destination, nav)
                     }
                 }
             }
@@ -153,8 +149,7 @@ private fun RenderBottomMenu(
 @Composable
 private fun RowScope.FavoriteNavItem(
     selected: Boolean,
-    label: String,
-    icon: MaterialSymbol,
+    fav: FavoriteApp,
     destination: Route,
     nav: (Route) -> Unit,
 ) {
@@ -162,15 +157,15 @@ private fun RowScope.FavoriteNavItem(
         alwaysShowLabel = false,
         icon = {
             Box(Size27Modifier, contentAlignment = Alignment.Center) {
-                Icon(
-                    symbol = icon,
-                    contentDescription = label,
-                    modifier = Size25Modifier,
+                // The app's own icon (nsite/napplet manifest icon) when it has one, else a type glyph.
+                FavoriteAppIcon(
+                    app = fav,
                     tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface65,
+                    modifier = Size25Modifier,
                 )
             }
         },
-        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        // No label — favorite tabs match the built-in items, which show icon only.
         selected = selected,
         onClick = { nav(destination) },
     )

@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 fun FavoriteToggleButton(
     coordinate: String,
     label: String,
+    iconUrl: String? = null,
 ) {
     val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
     val id = "nostr:$coordinate"
@@ -53,7 +54,7 @@ fun FavoriteToggleButton(
             if (isFavorite) {
                 FavoriteAppsRegistry.remove(id)
             } else {
-                FavoriteAppsRegistry.add(FavoriteApp.NostrApp(coordinate, label, System.currentTimeMillis()))
+                FavoriteAppsRegistry.add(FavoriteApp.NostrApp(coordinate, label, System.currentTimeMillis(), iconUrl))
             }
         },
     ) {

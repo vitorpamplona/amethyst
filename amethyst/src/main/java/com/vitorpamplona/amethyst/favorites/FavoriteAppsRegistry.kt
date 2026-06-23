@@ -107,14 +107,15 @@ object FavoriteAppsRegistry {
         val ref: String,
         val label: String,
         val addedAt: Long,
+        val iconUrl: String? = null,
     )
 
     private fun encode(list: List<FavoriteApp>): String =
         JsonMapper.toJson(
             list.map {
                 when (it) {
-                    is FavoriteApp.NostrApp -> Entry(TYPE_NOSTR, it.coordinate, it.label, it.addedAt)
-                    is FavoriteApp.WebUrl -> Entry(TYPE_URL, it.url, it.label, it.addedAt)
+                    is FavoriteApp.NostrApp -> Entry(TYPE_NOSTR, it.coordinate, it.label, it.addedAt, it.iconUrl)
+                    is FavoriteApp.WebUrl -> Entry(TYPE_URL, it.url, it.label, it.addedAt, it.iconUrl)
                 }
             },
         )
@@ -123,8 +124,8 @@ object FavoriteAppsRegistry {
         try {
             JsonMapper.fromJson<List<Entry>>(json).mapNotNull { entry ->
                 when (entry.type) {
-                    TYPE_NOSTR -> FavoriteApp.NostrApp(entry.ref, entry.label, entry.addedAt)
-                    TYPE_URL -> FavoriteApp.WebUrl(entry.ref, entry.label, entry.addedAt)
+                    TYPE_NOSTR -> FavoriteApp.NostrApp(entry.ref, entry.label, entry.addedAt, entry.iconUrl)
+                    TYPE_URL -> FavoriteApp.WebUrl(entry.ref, entry.label, entry.addedAt, entry.iconUrl)
                     else -> null
                 }
             }
