@@ -620,6 +620,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="exercise_diet">Diät</string>
     <string name="exercise_fasting">Fasten</string>
     <string name="software_apps">Apps</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="nip82_repository_label">Quelle: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Herunterladen</string>

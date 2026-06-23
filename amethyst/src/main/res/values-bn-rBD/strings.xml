@@ -239,6 +239,9 @@
     <string name="report_dialog_title">ব্লক করুন এবং অভিযোগ পেশ করুন</string>
     <string name="block_only">ব্লক করুন</string>
     <string name="bookmarks">বুকমার্ক করুন</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="private_bookmarks">ব্যক্তিগত বুকমার্ক</string>
     <string name="public_bookmarks">সর্বজনীন বুকমার্ক</string>
     <string name="add_to_private_bookmarks">ব্যক্তিগত বুকমার্কে যুক্ত করুন</string>

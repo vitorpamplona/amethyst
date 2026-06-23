@@ -286,6 +286,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="unblock">Deblokiraj</string>
     <string name="copy_user_id">Kopiraj uporabnikov ID</string>
     <string name="unblock_user">Deblokiraj uporabnika</string>
+    <string name="user_is_blocked_hidden">Ta uporabnik je blokiran/utišan. Njegove objave so skrite.</string>
     <string name="npub_hex_username">"npub, uporabniško ime, tekst"</string>
     <string name="clear">Počisti</string>
     <string name="app_logo">Logo aplikacije</string>
@@ -631,6 +632,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="workout_sets">Serije</string>
     <string name="workout_reps">Ponovitve</string>
     <string name="workout_weight">Teža</string>
+    <string name="workout_exercises">Vadbe</string>
+    <string name="workout_volume">Volumen vadbe</string>
     <string name="workout_notes">Zapiski</string>
     <string name="workout_hours">Ur</string>
     <string name="workout_minutes">Minut</string>
@@ -651,7 +654,13 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="exercise_meditation">Meditacija</string>
     <string name="exercise_diet">Dieta</string>
     <string name="exercise_fasting">Post</string>
+    <string name="exercise_circuit">Krožna vadba</string>
+    <string name="exercise_emom">EMOM</string>
+    <string name="exercise_amrap">AMRAP</string>
     <string name="software_apps">Aplikacije</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="nip82_repository_label">Vir: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Prenos</string>

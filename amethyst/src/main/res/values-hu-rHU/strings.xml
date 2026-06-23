@@ -623,6 +623,9 @@
     <string name="exercise_diet">Étrend</string>
     <string name="exercise_fasting">Böjt</string>
     <string name="software_apps">Alkalmazások</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="nip82_repository_label">Forrás: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Letöltés</string>

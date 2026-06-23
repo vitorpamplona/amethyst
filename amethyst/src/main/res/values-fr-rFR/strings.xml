@@ -129,6 +129,9 @@
     <string name="send_payment_receipt_section">Reçu de Zap</string>
     <string name="send_payment_receipt_clink">Paiement direct en Lightning — aucun reçu zap n\'est publié sur Nostr.</string>
     <string name="send_payment_receipt_onchain">Un reçu zap on-chain est publié sur Nostr afin que le destinataire puisse trouver le paiement.</string>
+    <string name="send_payment_paying_via">Payement via %1$s…</string>
+    <string name="send_payment_sending_nutzap">Verrouillage et envoi des ecash…</string>
+    <string name="send_payment_building_tx">Construction et diffusion de la transaction…</string>
     <string name="send_payment_success">Paiement envoyé !</string>
     <string name="send_payment_failed">Paiement échoué</string>
     <string name="send_payment_try_again">Essayer à nouveau</string>
@@ -269,7 +272,9 @@
     <string name="loading_feed">Chargement du flux</string>
     <string name="loading_account">Chargement du compte</string>
     <string name="chats_history_proto_nip17">chiffré</string>
+    <string name="chats_reply_searching_history">Recherche du message d\'origine…</string>
     <!-- A reply whose target was searched for across all reachable history and never found. -->
+    <string name="chats_reply_not_found">Impossible de trouver ce message</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="error_loading_replies">"Erreur lors du chargement des réponses : "</string>
     <string name="try_again">Essayer à nouveau</string>
@@ -406,9 +411,13 @@
     <string name="drafts">Brouillons</string>
     <string name="scheduled_posts">Publications planifiées</string>
     <string name="schedule_post">Planifier</string>
+    <string name="schedule_post_picker_time_title">Heure</string>
+    <string name="schedule_post_button_add">Planifier la publication</string>
+    <string name="schedule_post_button_remove">Annuler la planification</string>
     <string name="schedule_post_preset_in_one_hour">Dans 1 heure</string>
     <string name="schedule_post_preset_tomorrow_morning">Demain à 9 h</string>
     <string name="schedule_post_preset_next_monday_morning">Lundi prochain à 9 h</string>
+    <string name="schedule_post_always_on_prompt_open_settings">Ouvrir les paramètres</string>
     <string name="schedule_post_always_on_prompt_continue">Continuer quand même</string>
     <string name="scheduled_posts_day_tomorrow">Demain</string>
     <string name="scheduled_posts_logout_toast_zero">Déconnecté</string>
@@ -428,6 +437,7 @@
         <item quantity="one">%d en file d\'attente</item>
         <item quantity="other">%d en file d\'attente</item>
     </plurals>
+    <string name="scheduled_posts_event_id_copied">ID de note copié</string>
     <string name="polls">Sondages</string>
     <string name="open_polls">Ouvrir</string>
     <string name="closed_polls">Fermé</string>
@@ -446,6 +456,8 @@
     <string name="new_community_relays_section">Relais</string>
     <string name="new_community_relay_marker_author">Auteur</string>
     <string name="new_community_relay_marker_requests">Requêtes</string>
+    <string name="new_community_rules_banned_section">Utilisateurs bannis</string>
+    <string name="new_community_rules_banned_add">Ajouter un utilisateur banni</string>
     <string name="new_community_rules_banned_placeholder">Nom, npub, ou NIP-05</string>
     <string name="new_badge">Nouveau badge</string>
     <string name="award_badge">Badge de récompense</string>
@@ -471,6 +483,18 @@
     <string name="profile_apps_header">Applications · %1$d</string>
     <string name="profile_apps_header_empty">Applications</string>
     <string name="profile_apps_empty_hint">Recommandez les applications Nostr que vous utilisez pour que les autres puissent les découvrir.</string>
+    <string name="profile_app_recommendations_title">Applications recommandées</string>
+    <string name="profile_app_recommendations_search">Rechercher des applications par nom</string>
+    <string name="profile_app_recommendations_search_empty">Aucune application ne correspond à votre recherche.</string>
+    <string name="profile_app_recommendations_filter_empty">Aucune application recommandée ne correspond à ce filtre.</string>
+    <string name="app_definition_untitled">Application sans nom</string>
+    <string name="app_definition_no_supported_kinds">N\'annonce pas le contenu qu\'il gère</string>
+    <string name="app_definition_recommend">Recommander</string>
+    <string name="app_definition_recommended">Recommandé</string>
+    <string name="app_definition_by">par</string>
+    <string name="app_definition_available_on">Disponible sur</string>
+    <string name="platform_web">Web</string>
+    <string name="platform_android">Android</string>
     <string name="platform_ios">iOS</string>
     <string name="pictures">Images</string>
     <string name="workouts">Entraînements</string>
@@ -486,6 +510,7 @@
     <string name="workout_heart_rate">Rythme cardiaque</string>
     <string name="workout_max_heart_rate">Rythme cardiaque maximum</string>
     <string name="workout_weight">Poids</string>
+    <string name="workout_volume">Volume</string>
     <string name="workout_notes">Notes</string>
     <string name="workout_hours">Heures</string>
     <string name="workout_minutes">Minutes</string>
@@ -500,7 +525,12 @@
     <string name="exercise_meditation">Méditation</string>
     <string name="exercise_diet">Alimentation</string>
     <string name="exercise_fasting">Jeûne</string>
+    <string name="exercise_emom">EMOM</string>
+    <string name="exercise_amrap">AMRAP</string>
     <string name="software_apps">Applications</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
     <string name="nip82_repository_label">Source : %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Télécharger</string>
@@ -513,21 +543,28 @@
     <string name="nip82_by_author">par</string>
     <string name="nip82_older_releases_show">Afficher les anciennes versions</string>
     <string name="nip82_older_releases_hide">Masquer les anciennes versions</string>
+    <string name="shorts">Shorts</string>
     <string name="live_streams">Diffusions en direct</string>
     <string name="nest_raise_hand">Lever la main</string>
+    <string name="nest_reconnecting">Reconnexion…</string>
     <string name="nest_close_room_confirm_title">Fermer ce salon ?</string>
     <string name="nest_close_room_confirm_action">Fermer le salon</string>
     <string name="nest_talk">Discuter</string>
+    <string name="nest_mic_mute">Couper le micro</string>
+    <string name="nest_mic_unmute">Réactiver le micro</string>
     <string name="nest_role_host">Hôte</string>
     <string name="nest_role_moderator">Modérateur</string>
     <string name="nest_state_muted">Microphone désactivé</string>
     <string name="nest_state_speaking">Parler maintenant</string>
     <string name="nest_state_mic_open">Microphone ouvert</string>
     <string name="nest_presence_speaking">parle actuellement</string>
+    <string name="nest_live_chip">EN DIRECT</string>
+    <string name="nest_tab_chat">Chat</string>
     <string name="nest_confirm_cancel">Annuler</string>
     <string name="nest_unjoinable_back">Retour</string>
     <string name="nests_section_recently_ended">Récemment terminé</string>
     <string name="nest_no_server_cancel">Annuler</string>
+    <string name="nest_create_field_summary">De quoi s\'agit-il ?</string>
     <string name="nest_create_cancel">Annuler</string>
     <string name="nests_servers_add_pair_button">Ajouter</string>
     <string name="nests_servers_relay_label">Relais</string>
@@ -610,6 +647,7 @@
     <string name="move_bookmark_to_private_label">Déplacer en privé</string>
     <string name="send_onchain_instead">Envoyer on-chain à la place</string>
     <string name="reload_mint_sats_amount">%1$s sats</string>
+    <string name="reload_mint_retry">Réessayer</string>
     <string name="zap_privacy_section">Confidentialité des Zaps</string>
     <string name="zap_type_section_explainer">Contrôle comment votre identité est affichée lorsque vous envoyez un zap.</string>
     <string name="wallet_connect_connect_app">Connecter le portefeuille</string>
@@ -1211,6 +1249,7 @@
     <string name="cashu_settings_delete_wallet">Supprimer le portefeuille</string>
     <string name="cashu_settings_delete_wallet_confirm_title">Supprimer ce portefeuille ?</string>
     <string name="cashu_pay_invoice">Payer la facture</string>
+    <string name="cashu_done">Terminé</string>
     <string name="wallet_rename">Renommer</string>
     <string name="wallet_rename_title">Renommer le portefeuille</string>
     <string name="wallet_onchain_transactions">Transactions On-chain</string>
@@ -1237,6 +1276,8 @@
     <string name="onchain_send_fee_eta_slow">~1 h</string>
     <string name="onchain_send_fee_eta_normal">~30 min</string>
     <string name="onchain_send_fee_eta_fast">~10 min</string>
+    <string name="onchain_send_loading_fees">Chargement de l\'estimation des frais…</string>
+    <string name="onchain_send_button_amount">Envoyer %1$s sats</string>
     <string name="new_post">Nouveau Message</string>
     <string name="new_short">Nouveaux Shorts : images ou vidéos</string>
     <string name="new_community_note">Nouvelle Note Communautaire</string>
@@ -1292,6 +1333,7 @@
     <string name="calendar_reminder_settings_title">Rappels du calendrier</string>
     <string name="calendar_reminder_settings_enabled_title">Envoyer des rappels</string>
     <string name="calendar_filter_all">Tous les calendriers</string>
+    <string name="calendar_filter_sheet_title">Afficher les événements de…</string>
     <string name="calendar_filter_no_calendars">Vous n\'avez pas encore créé de calendriers.</string>
     <string name="calendar_open_in_maps">Ouvrir dans la carte</string>
     <string name="calendar_open_link">Ouvrir le lien</string>
