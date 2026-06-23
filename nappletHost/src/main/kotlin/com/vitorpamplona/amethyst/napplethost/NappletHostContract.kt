@@ -54,6 +54,13 @@ object NappletHostContract {
     const val EXTRA_PROXY_PORT = "napplet_proxy_port"
 
     /**
+     * ARGB of Amethyst's theme background, passed from the main process so the keyless `:napplet` WebView
+     * (and the surface before its first frame) paints the app's background instead of the default white
+     * while the shell/app is still loading.
+     */
+    const val EXTRA_BG_COLOR = "napplet_bg_color"
+
+    /**
      * nSite "website mode": treat the content as a normal web app — install the NIP-07 `window.nostr`
      * provider and allow normal network (no app CSP). Off for locked napplets.
      */

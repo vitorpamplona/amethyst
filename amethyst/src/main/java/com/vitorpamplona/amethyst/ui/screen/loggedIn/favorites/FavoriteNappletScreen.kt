@@ -44,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -115,6 +116,10 @@ private fun EmbeddedNappletTab(
         UnavailableTab(coordinate, accountViewModel, nav)
         return
     }
+
+    // Carry the app's theme background into the keyless sandbox so its WebView doesn't flash white
+    // before the app paints. Idempotent across recompositions (the params bundle is remembered).
+    params.putInt(NappletHostContract.EXTRA_BG_COLOR, MaterialTheme.colorScheme.background.toArgb())
 
     val title = params.getString(NappletHostContract.EXTRA_TITLE).orEmpty()
     val capLabels = params.getStringArrayList(NappletHostContract.EXTRA_CAP_LABELS).orEmpty()

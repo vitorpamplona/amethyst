@@ -227,6 +227,9 @@ class NappletHostActivity : ComponentActivity() {
         // it. Binding the broker early overlaps too. The WebView is attached once the probe succeeds.
         webView = WebView(this)
         hardenWebView(webView)
+        // Theme the WebView's pre-paint background to the app's so it doesn't flash white when the shell
+        // mounts. This activity has a themed context, so it resolves the color locally (no IPC needed).
+        webView.setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
         // Route the WebView's own (off-origin) traffic through Tor for an nSite, unless this site was
         // opted out to the open web. Set process-wide before any page navigation; the shell + blobs are
         // served from cache via shouldInterceptRequest, so only the site's external requests hit this.

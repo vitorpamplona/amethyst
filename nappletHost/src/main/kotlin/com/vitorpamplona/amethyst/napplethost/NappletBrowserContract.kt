@@ -32,7 +32,7 @@ object NappletBrowserContract {
     /** FQN of the provider service, bound by name so the client needs no compile-time reference. */
     const val BROWSER_SERVICE_CLASS = "com.vitorpamplona.amethyst.napplethost.NappletBrowserService"
 
-    /** Client → provider: create a browser session. Carries [KEY_URL], [KEY_PROXY_PORT], [KEY_USE_TOR]. */
+    /** Client → provider: create a browser session. Carries [KEY_URL], [KEY_PROXY_PORT], [KEY_USE_TOR], [KEY_BG_COLOR]. */
     const val MSG_CREATE_SESSION = 1
 
     /** Provider → client: the session's [KEY_CORE_LIB_INFO] Bundle (the SandboxedUiAdapter handle). */
@@ -58,4 +58,12 @@ object NappletBrowserContract {
     const val KEY_USE_TOR = "useTor"
     const val KEY_CORE_LIB_INFO = "coreLibInfo"
     const val KEY_CAN_GO_BACK = "canGoBack"
+
+    /**
+     * ARGB of Amethyst's theme background, passed from the main process. The WebView (and the surface
+     * before its first frame) lives in the keyless `:napplet` process, which has no access to the main
+     * app's Compose theme, so without this the pre-load background defaults to white instead of the
+     * app's (often dark) background.
+     */
+    const val KEY_BG_COLOR = "bgColor"
 }

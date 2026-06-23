@@ -22,11 +22,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.browser
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
@@ -64,10 +66,11 @@ fun rememberBrowserController(
 ): EmbeddedBrowserController {
     val context = LocalContext.current
     val proxyPort = remember { Amethyst.instance.torManager.activePortOrNull.value ?: -1 }
+    val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
     val controller =
         remember {
-            EmbeddedBrowserController(context.applicationContext, proxyPort, proxyPort > 0)
+            EmbeddedBrowserController(context.applicationContext, proxyPort, proxyPort > 0, backgroundColor)
         }
 
     // Keep the callback current without re-binding the service.

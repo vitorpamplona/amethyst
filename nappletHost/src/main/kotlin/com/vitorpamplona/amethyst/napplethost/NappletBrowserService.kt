@@ -71,6 +71,10 @@ class NappletBrowserService : Service() {
     private var proxyPort: Int = -1
     private var useTor: Boolean = false
 
+    // Amethyst's theme background (ARGB), passed from the main process; paints the WebView before the
+    // page renders so it matches the app instead of flashing the WebView default white.
+    private var bgColor: Int = android.graphics.Color.WHITE
+
     private var webView: WebView? = null
 
     // ---- broker bridge (identical trust model to NappletHostActivity) ----
@@ -119,6 +123,7 @@ class NappletBrowserService : Service() {
                 pendingUrl = data.getString(NappletBrowserContract.KEY_URL)?.ifBlank { "about:blank" } ?: "about:blank"
                 proxyPort = data.getInt(NappletBrowserContract.KEY_PROXY_PORT, -1)
                 useTor = data.getBoolean(NappletBrowserContract.KEY_USE_TOR, false)
+                bgColor = data.getInt(NappletBrowserContract.KEY_BG_COLOR, android.graphics.Color.WHITE)
                 bindService(Intent().setClassName(this, NappletHostContract.BROKER_SERVICE_CLASS), brokerConnection, BIND_AUTO_CREATE)
                 replyWithAdapter()
             }
@@ -154,6 +159,8 @@ class NappletBrowserService : Service() {
     fun createBrowserWebView(context: Context): WebView {
         val wv = WebView(context)
         configureWebView(wv)
+        // Theme the pre-load background so a blank/loading page shows Amethyst's background, not white.
+        wv.setBackgroundColor(bgColor)
         wv.dropSystemBarInsets()
         applyWebViewProxy(if (useTor) proxyPort else -1)
         val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()

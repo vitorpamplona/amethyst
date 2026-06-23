@@ -39,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -100,11 +101,13 @@ private fun EmbeddedFavoriteTab(
     val proxyAvailable = remember { Amethyst.instance.torManager.activePortOrNull.value != null }
     var torOn by remember { mutableStateOf(proxyAvailable) }
 
+    val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
+
     val controller =
         remember(id) {
             EmbeddedTabHost.acquire(id) {
                 val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-                EmbeddedBrowserController(context.applicationContext, proxyPort, proxyPort > 0).also { it.bind(url) }
+                EmbeddedBrowserController(context.applicationContext, proxyPort, proxyPort > 0, backgroundColor).also { it.bind(url) }
             } as EmbeddedBrowserController
         }
 

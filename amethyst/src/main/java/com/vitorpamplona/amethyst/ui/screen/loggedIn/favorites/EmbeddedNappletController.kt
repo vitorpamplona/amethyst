@@ -36,6 +36,7 @@ import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
+import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
 
 /**
@@ -95,6 +96,9 @@ class EmbeddedNappletController(
 
     override fun attachView(view: SandboxedSdkView) {
         sandboxedSdkView = view
+        // Paint the surface placeholder in the app's theme background so there's no white flash before
+        // the remote WebView delivers its first frame.
+        view.setBackgroundColor(params.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE))
         pendingAdapter?.let {
             view.setAdapter(it)
             pendingAdapter = null

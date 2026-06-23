@@ -49,6 +49,7 @@ class EmbeddedBrowserController(
     private val appContext: Context,
     private val proxyPort: Int,
     private val initialUseTor: Boolean,
+    private val backgroundColor: Int,
 ) : EmbeddedSurfaceController {
     private val incoming = Messenger(Handler(Looper.getMainLooper(), ::onServiceMessage))
     private var serviceMessenger: Messenger? = null
@@ -94,6 +95,9 @@ class EmbeddedBrowserController(
     /** Hands the surface view to the controller; applies the adapter if it already arrived. */
     override fun attachView(view: SandboxedSdkView) {
         sandboxedSdkView = view
+        // Paint the surface placeholder in the app's theme background so there's no white flash before
+        // the remote WebView delivers its first frame.
+        view.setBackgroundColor(backgroundColor)
         pendingAdapter?.let {
             view.setAdapter(it)
             pendingAdapter = null
@@ -109,6 +113,7 @@ class EmbeddedBrowserController(
                         putString(NappletBrowserContract.KEY_URL, startUrl)
                         putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort)
                         putBoolean(NappletBrowserContract.KEY_USE_TOR, initialUseTor)
+                        putInt(NappletBrowserContract.KEY_BG_COLOR, backgroundColor)
                     }
             }
         runCatching { serviceMessenger?.send(msg) }

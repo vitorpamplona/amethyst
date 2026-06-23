@@ -82,6 +82,7 @@ class NappletHostService : Service() {
     private var websiteMode = false
     private var useTor = true
     private var proxyPort = -1
+    private var bgColor = android.graphics.Color.WHITE
     private var declaredDomains: List<String> = emptyList()
 
     private lateinit var contentServer: NappletContentServer
@@ -157,6 +158,7 @@ class NappletHostService : Service() {
         websiteMode = data.getBoolean(NappletHostContract.EXTRA_WEBSITE_MODE, false)
         useTor = data.getBoolean(NappletHostContract.EXTRA_USE_TOR, true)
         proxyPort = data.getInt(NappletHostContract.EXTRA_PROXY_PORT, -1)
+        bgColor = data.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE)
         launchToken = data.getString(NappletHostContract.EXTRA_LAUNCH_TOKEN).orEmpty()
 
         val requires = data.getStringArrayList(NappletHostContract.EXTRA_REQUIRES) ?: emptyList()
@@ -190,6 +192,8 @@ class NappletHostService : Service() {
 
         val wv = WebView(context)
         hardenWebView(wv)
+        // Theme the pre-load background so the shell/app loading shows Amethyst's background, not white.
+        wv.setBackgroundColor(bgColor)
         wv.dropSystemBarInsets()
         if (websiteMode) applyWebViewProxy(effectiveProxy)
         WebViewCompat.addWebMessageListener(wv, NappletWebContract.BRIDGE_NAME, setOf(NappletWebContract.ORIGIN), ::onShellMessage)
