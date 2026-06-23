@@ -136,10 +136,13 @@ object StaticSiteResolver {
                 } ?: continue
 
             if (verify(bytes, match.hash)) {
+                // Prefer the extension; only sniff magic bytes when the extension gives no type.
+                val byExtension = guessStaticContentType(match.path)
+                val contentType = if (byExtension == GENERIC_CONTENT_TYPE) sniffContentType(bytes) ?: byExtension else byExtension
                 return StaticSiteResolution.Resolved(
                     path = match.path,
                     hash = match.hash,
-                    contentType = guessStaticContentType(match.path),
+                    contentType = contentType,
                     bytes = bytes,
                     server = url.substringBeforeLast('/'),
                 )

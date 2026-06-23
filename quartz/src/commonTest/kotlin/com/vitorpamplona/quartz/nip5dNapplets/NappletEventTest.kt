@@ -57,6 +57,7 @@ class NappletEventTest {
                     title = "Calc",
                     description = "a calculator",
                     source = "https://github.com/x/calc",
+                    icon = "https://example.com/calc.png",
                 ),
                 ::NamedNappletEvent,
             )
@@ -70,6 +71,7 @@ class NappletEventTest {
         assertEquals("Calc", event.title())
         assertEquals("a calculator", event.description())
         assertEquals("https://github.com/x/calc", event.source())
+        assertEquals("https://example.com/calc.png", event.icon())
 
         // build() stamps the x aggregate, and it verifies against the path tags.
         assertNotNull(event.declaredAggregateHash())

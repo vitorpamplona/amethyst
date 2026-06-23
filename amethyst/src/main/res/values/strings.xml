@@ -662,6 +662,67 @@
     <string name="exercise_emom">EMOM</string>
     <string name="exercise_amrap">AMRAP</string>
     <string name="software_apps">Apps</string>
+    <string name="route_software_apps">Apps</string>
+    <string name="napplets">nApplets</string>
+    <string name="nsites">nSites</string>
+    <string name="nsite_none_found">No nSites found yet.</string>
+    <string name="napplet_permissions">nApplet permissions</string>
+    <string name="napplet_manage_permissions">Manage permissions</string>
+    <string name="napplet_permissions_empty">No nApplet permissions yet</string>
+    <string name="napplet_permissions_empty_subtitle">Permissions you grant to nApplets will appear here.</string>
+    <string name="napplet_permissions_forget">Forget this nApplet</string>
+    <string name="napplet_permissions_blocked">Blocked</string>
+    <string name="napplet_permissions_revoke">Revoke</string>
+    <string name="napplet_untitled">Untitled nApplet</string>
+    <string name="napplet_none_found">No nApplets found yet.</string>
+    <string name="napplet_fallback_title">nApplet %1$s…</string>
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+
+    <!-- Napplet capability names -->
+    <string name="napplet_cap_shell">Shell</string>
+    <string name="napplet_cap_identity">Identity</string>
+    <string name="napplet_cap_keys">Keyboard actions</string>
+    <string name="napplet_cap_relay">Relays</string>
+    <string name="napplet_cap_storage">Storage</string>
+    <string name="napplet_cap_value">Payments</string>
+    <string name="napplet_cap_resource">Network</string>
+    <string name="napplet_cap_upload">Uploads</string>
+    <string name="napplet_cap_shell_desc">Ask which capabilities are available</string>
+    <string name="napplet_cap_identity_desc">Read your public key</string>
+    <string name="napplet_cap_keys_desc">Bind keyboard shortcuts</string>
+    <string name="napplet_cap_relay_desc">Read, and sign &amp; publish your events</string>
+    <string name="napplet_cap_storage_desc">Its own private storage</string>
+    <string name="napplet_cap_value_desc">Pay Lightning invoices</string>
+    <string name="napplet_cap_resource_desc">Fetch web and Blossom resources</string>
+    <string name="napplet_cap_upload_desc">Upload files to your media server</string>
+    <string name="napplet_cap_theme">Theme</string>
+    <string name="napplet_cap_notify">Notifications</string>
+    <string name="napplet_cap_inc">Messaging</string>
+    <string name="napplet_cap_theme_desc">Match your app\'s colors</string>
+    <string name="napplet_cap_notify_desc">Show you notifications</string>
+    <string name="napplet_cap_inc_desc">Exchange messages with other napplets</string>
+    <!-- Napplet consent dialog -->
+    <string name="napplet_consent_capability">Capability: %1$s</string>
+    <string name="napplet_consent_allow_always">Always allow</string>
+    <string name="napplet_consent_allow_once">Allow once</string>
+    <string name="napplet_consent_deny_always">Never allow</string>
+    <string name="napplet_consent_not_now">Not now</string>
+    <string name="napplet_consent_get_pubkey">This nApplet wants to read your public key.</string>
+    <string name="napplet_consent_identity_read">This nApplet wants to read your profile and account data.</string>
+    <string name="napplet_consent_publish">This nApplet wants to sign and publish a kind %1$d event as you.</string>
+    <string name="napplet_consent_publish_preview">This nApplet wants to sign and publish a kind %1$d event as you:</string>
+    <string name="napplet_consent_publish_encrypted">This nApplet wants to send an encrypted event as you.</string>
+    <string name="napplet_consent_query">This nApplet wants to read events from your relays.</string>
+    <string name="napplet_consent_storage">This nApplet wants to use its private storage.</string>
+    <string name="napplet_consent_pay">This nApplet wants to pay a Lightning invoice.</string>
+    <string name="napplet_consent_resource">This nApplet wants to fetch a web resource.</string>
+    <string name="napplet_consent_upload">This nApplet wants to upload a file to your media server.</string>
+    <string name="napplet_consent_notify">This nApplet wants to show you notifications.</string>
+    <string name="napplet_consent_sign">This site wants to sign a kind %1$d event with your Nostr key.</string>
+    <plurals name="napplet_consent_pay_amount">
+        <item quantity="one">This nApplet wants to pay a Lightning invoice for %1$d sat.</item>
+        <item quantity="other">This nApplet wants to pay a Lightning invoice for %1$d sats.</item>
+    </plurals>
     <string name="nip82_repository_label">Source: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Download</string>
@@ -2459,10 +2520,14 @@
     <string name="git_repo_section_maintainers">Maintainers</string>
     <string name="git_repo_section_topics">Topics</string>
     <string name="git_repo_personal_fork">Personal fork</string>
-    <string name="nsite_title">Static Website: %1$s</string>
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_permissions">Permissions:</string>
+    <string name="profile_tab_apps">Apps &amp; Sites</string>
     <string name="nsite_root_site">Root Site</string>
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
+    <string name="nsite_open">Open</string>
 <string name="existed_since">OTS: %1$s</string>
 
     <string name="ots_info_title">Timestamp Proof</string>

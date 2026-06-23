@@ -52,6 +52,8 @@ class NamedSiteEvent(
 
     fun source() = tags.siteSource()
 
+    fun icon() = tags.siteIcon()
+
     fun identifier() = dTag()
 
     companion object {
@@ -64,6 +66,7 @@ class NamedSiteEvent(
             title: String? = null,
             description: String? = null,
             source: String? = null,
+            icon: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NamedSiteEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
@@ -73,6 +76,7 @@ class NamedSiteEvent(
             title?.let { siteTitle(it) }
             description?.let { siteDescription(it) }
             source?.let { siteSource(it) }
+            icon?.let { siteIcon(it) }
             initializer()
         }
     }

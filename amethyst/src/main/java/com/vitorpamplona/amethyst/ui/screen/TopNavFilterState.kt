@@ -322,6 +322,22 @@ class TopNavFilterState(
             )
         }
 
+    // Author-only catalog for browse screens whose events carry no topical tags (no `t`/`g`/`a`),
+    // e.g. the nApplet (NIP-5D) and nSite (NIP-5A) manifests. These can only be narrowed by author,
+    // so the interest entries (hashtags, geohashes, communities, relays, favorites, interest sets)
+    // and AroundMe — none of which can match a tag-less manifest — are deliberately left out.
+    private val _authorOnlyRoutes =
+        livePeopleListsFlow.transform { peopleLists ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
+                    peopleLists,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
     private val _notificationLists =
         livePeopleListsFlow.transform { peopleLists ->
             checkNotInMainThread()
@@ -343,6 +359,11 @@ class TopNavFilterState(
         _kind3GlobalPeople
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, defaultLists)
+
+    val authorOnlyRoutes =
+        _authorOnlyRoutes
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow, muteListFollow))
 
     val notificationLists =
         _notificationLists

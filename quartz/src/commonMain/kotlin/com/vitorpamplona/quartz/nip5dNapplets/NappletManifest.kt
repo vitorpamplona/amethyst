@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteAggregateHash
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteAggregateHash
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteDescription
+import com.vitorpamplona.quartz.nip5aStaticWebsites.siteIcon
 import com.vitorpamplona.quartz.nip5aStaticWebsites.sitePaths
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteServers
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteSource
@@ -58,6 +59,9 @@ interface NappletManifest {
     fun description(): String? = tags.siteDescription()
 
     fun source(): String? = tags.siteSource()
+
+    /** `icon` tag: URL to the napplet's square app icon, when the publisher supplied one. */
+    fun icon(): String? = tags.siteIcon()
 
     /** The NIP-5A aggregate hash recomputed from this manifest's [paths]. */
     fun computeAggregateHash(): HexKey = SiteAggregateHash.compute(paths())

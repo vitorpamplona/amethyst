@@ -155,6 +155,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderMusicPlaylist
 import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryResponse
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
+import com.vitorpamplona.amethyst.ui.note.types.RenderNamedNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNipContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNutzap
@@ -176,6 +177,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventConfirmation
 import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventReport
+import com.vitorpamplona.amethyst.ui.note.types.RenderRootNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareApplication
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareAsset
@@ -301,6 +303,8 @@ import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
@@ -1165,6 +1169,14 @@ private fun RenderNoteRow(
 
         is NamedSiteEvent -> {
             RenderNamedSiteEvent(baseNote, accountViewModel, nav)
+        }
+
+        is RootNappletEvent -> {
+            RenderRootNappletEvent(baseNote, accountViewModel, nav)
+        }
+
+        is NamedNappletEvent -> {
+            RenderNamedNappletEvent(baseNote, accountViewModel, nav)
         }
 
         is GitPatchEvent -> {

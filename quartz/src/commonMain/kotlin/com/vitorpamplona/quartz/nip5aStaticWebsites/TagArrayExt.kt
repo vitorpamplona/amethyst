@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip5aStaticWebsites
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.IconTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.ServerTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.SourceTag
@@ -37,5 +38,7 @@ fun TagArray.siteTitle() = firstNotNullOfOrNull(TitleTag::parse)
 fun TagArray.siteDescription() = firstNotNullOfOrNull(DescriptionTag::parse)
 
 fun TagArray.siteSource() = firstNotNullOfOrNull(SourceTag::parse)
+
+fun TagArray.siteIcon() = firstNotNullOfOrNull(IconTag::parse)
 
 fun TagArray.siteAggregateHash() = firstNotNullOfOrNull(XTag::parse)

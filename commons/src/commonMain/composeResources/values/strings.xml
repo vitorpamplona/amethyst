@@ -79,4 +79,15 @@
 
     <!-- Notes & Replies -->
     <string name="replying_to">replying to </string>
+
+    <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_kind">nApplet</string>
+    <string name="nsite_website_kind">nSite</string>
+    <string name="napplet_card_permissions">What it can access</string>
+    <string name="nsite_root_site">Root Site</string>
+    <string name="nsite_source">Source:</string>
+    <string name="nsite_servers">Servers:</string>
+    <string name="nsite_open">Open</string>
 </resources>

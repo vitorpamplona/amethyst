@@ -334,8 +334,12 @@ dependencies {
     implementation(project(":quartz"))
     implementation(project(":commons"))
     implementation(project(":nestsClient"))
+    implementation(project(":nappletHost"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // Hardened WebView host for sandboxed napplet/nsite rendering (origin-restricted message bridge).
+    implementation(libs.androidx.webkit)
 
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)

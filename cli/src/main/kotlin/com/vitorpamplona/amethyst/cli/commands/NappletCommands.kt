@@ -57,11 +57,123 @@ object NappletCommands {
         route(
             "napplet",
             tail,
-            "napplet <fetch> …",
+            "napplet <fetch|publish|serve|list> …",
             mapOf(
                 "fetch" to { rest -> fetch(dataDir, rest) },
+                "publish" to { rest -> publish(dataDir, rest) },
+                "serve" to { rest -> serve(dataDir, rest) },
+                "list" to { rest -> list(dataDir, rest) },
             ),
         )
+
+    /**
+     * `amy napplet list <author> [--relay R] [--timeout S]` — enumerate an author's published
+     * napplets: the root (kind 15129) and every named one (kind 35129), latest per identifier.
+     */
+    private suspend fun list(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val author = args.positionalOrNull(0) ?: return Output.error("bad_args", "napplet list <author> [--relay R] [--timeout S]")
+        val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
+        val timeoutSecs = args.longFlag("timeout", 8L)
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val authorHex = ctx.requireUserHex(author)
+            val relays =
+                extraRelays
+                    .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                    .toSet()
+                    .ifEmpty { ctx.bootstrapRelays() }
+            val filter = Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND), authors = listOf(authorHex))
+            val items =
+                ctx
+                    .drain(relays.associateWith { listOf(filter) }, timeoutSecs * 1000)
+                    .map { (_, ev) -> ev }
+                    .filter { it.pubKey == authorHex && it is NappletManifest }
+                    .groupBy { it.kind to (it as? NamedNappletEvent)?.identifier() }
+                    .mapNotNull { (_, dupes) -> dupes.maxByOrNull { it.createdAt } }
+                    .sortedByDescending { it.createdAt }
+                    .map { ev ->
+                        val m = ev as NappletManifest
+                        mapOf(
+                            "kind" to ev.kind,
+                            "d" to (ev as? NamedNappletEvent)?.identifier(),
+                            "title" to m.title(),
+                            "description" to m.description(),
+                            "paths" to m.paths().size,
+                            "servers" to m.servers(),
+                            "requires" to m.requires(),
+                            "aggregate_sha256" to m.declaredAggregateHash(),
+                            "aggregate_verified" to m.verifyAggregate(),
+                            "event_id" to ev.id,
+                            "created_at" to ev.createdAt,
+                        )
+                    }
+            Output.emit(mapOf("pubkey" to authorHex, "count" to items.size, "napplets" to items))
+            return 0
+        }
+    }
+
+    /**
+     * `amy napplet serve <author> [--d ID] [--port N]` — fetch + aggregate-verify the manifest and
+     * serve its static content over a local HTTP server. NOTE: the napplet's window.napplet.* runtime
+     * needs the Amethyst host; this serves the files only, for inspecting that they load/route.
+     */
+    private suspend fun serve(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val author = args.positionalOrNull(0) ?: return Output.error("bad_args", "napplet serve <author> [--d ID] [--port N] [--server S] [--relay R]")
+        val identifier = args.flag("d")
+        val port = args.intFlag("port", 8080)
+        val extraServers = StaticSiteFetch.commaList(args.flag("server"))
+        val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
+        val timeoutSecs = args.longFlag("timeout", 8L)
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val authorHex = ctx.requireUserHex(author)
+            val relays =
+                extraRelays
+                    .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                    .toSet()
+                    .ifEmpty { ctx.bootstrapRelays() }
+            val event =
+                fetchByAuthor(ctx, authorHex, identifier, relays, timeoutSecs * 1000)
+                    ?: return Output.error("not_found", "no napplet manifest found", mapOf("pubkey" to authorHex, "d" to identifier))
+            val manifest = event as NappletManifest
+            if (!manifest.verifyAggregate()) {
+                return Output.error("aggregate_mismatch", "manifest x aggregate does not match its path tags")
+            }
+            return StaticSiteServe.serve(manifest.paths(), (manifest.servers() + extraServers).distinct(), port)
+        }
+    }
+
+    /**
+     * `amy napplet publish <dir> --server <blossom> [--requires identity,relay,…] [--d ID] [--relay …]`
+     * — upload a napplet directory to Blossom and broadcast its NIP-5D manifest (kind 15129 root, or
+     * 35129 named with `--d`). The builder adds the `x` aggregate hash and the `requires` capability
+     * tags the shell gates on.
+     */
+    private suspend fun publish(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int =
+        StaticSitePublish.run(
+            dataDir,
+            rest,
+            "napplet publish <dir> --server <blossom-url> [--requires identity,relay,…] [--d ID] [--relay R] [--title T] [--icon URL]",
+        ) { m ->
+            if (m.identifier != null) {
+                NamedNappletEvent.build(m.identifier, m.paths, m.servers, m.requires, m.title, m.description, m.source, m.icon)
+            } else {
+                RootNappletEvent.build(m.paths, m.servers, m.requires, m.title, m.description, m.source, m.icon)
+            }
+        }
 
     private suspend fun fetch(
         dataDir: DataDir,

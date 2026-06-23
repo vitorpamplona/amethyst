@@ -83,7 +83,7 @@ fun UserDrawerSearchTopBar(
 }
 
 @Composable
-private fun LoggedInUserPictureDrawer(
+internal fun LoggedInUserPictureDrawer(
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {

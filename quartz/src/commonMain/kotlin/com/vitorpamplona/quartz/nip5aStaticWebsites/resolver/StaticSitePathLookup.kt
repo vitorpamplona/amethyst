@@ -101,3 +101,43 @@ fun guessStaticContentType(path: String): String {
         else -> "application/octet-stream"
     }
 }
+
+/** The fallback type [guessStaticContentType] returns when the extension is unknown. */
+const val GENERIC_CONTENT_TYPE = "application/octet-stream"
+
+/**
+ * Best-effort content sniff from the leading magic bytes, used **only** when the path extension
+ * yields no type ([GENERIC_CONTENT_TYPE]). Deliberately conservative: it recognises well-known
+ * binary signatures and never returns a text/markup type, so HTML detection (and the shell's shim
+ * injection) keeps keying off the extension. Returns `null` when nothing matches.
+ */
+fun sniffContentType(bytes: ByteArray): String? {
+    fun match(vararg sig: Int): Boolean {
+        if (bytes.size < sig.size) return false
+        for (i in sig.indices) if ((bytes[i].toInt() and 0xFF) != sig[i]) return false
+        return true
+    }
+
+    fun at(
+        offset: Int,
+        vararg sig: Int,
+    ): Boolean {
+        if (bytes.size < offset + sig.size) return false
+        for (i in sig.indices) if ((bytes[offset + i].toInt() and 0xFF) != sig[i]) return false
+        return true
+    }
+
+    return when {
+        match(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A) -> "image/png"
+        match(0xFF, 0xD8, 0xFF) -> "image/jpeg"
+        match(0x47, 0x49, 0x46, 0x38) -> "image/gif" // GIF8
+        match(0x52, 0x49, 0x46, 0x46) && at(8, 0x57, 0x45, 0x42, 0x50) -> "image/webp" // RIFF….WEBP
+        match(0x25, 0x50, 0x44, 0x46) -> "application/pdf" // %PDF
+        match(0x00, 0x61, 0x73, 0x6D) -> "application/wasm" // \0asm
+        match(0x1F, 0x8B) -> "application/gzip"
+        match(0x42, 0x4D) -> "image/bmp"
+        match(0x4F, 0x67, 0x67, 0x53) -> "audio/ogg" // OggS
+        at(4, 0x66, 0x74, 0x79, 0x70) -> "video/mp4" // ….ftyp
+        else -> null
+    }
+}
