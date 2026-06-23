@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeout
 import java.io.ByteArrayInputStream
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * The account adapter: turns a signed-in [Account] into a configured [NappletBroker] by wiring the
@@ -137,6 +138,8 @@ class AccountNappletGateways(
         body: String,
     ) {
         val manager = NotificationManagerCompat.from(context)
+        if (!manager.areNotificationsEnabled()) return
+
         val channel =
             NotificationChannelCompat
                 .Builder(NOTIFY_CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_DEFAULT)
@@ -151,7 +154,11 @@ class AccountNappletGateways(
                 .setContentText(body)
                 .setAutoCancel(true)
                 .build()
-        manager.notify(id.hashCode(), notification)
+        try {
+            manager.notify(id.hashCode(), notification)
+        } catch (_: SecurityException) {
+            // Best effort: if the user revoked permission between the check and here, just no-op.
+        }
     }
 
     /**
@@ -213,7 +220,7 @@ class AccountNappletGateways(
                 emptyList()
             } else {
                 runCatching {
-                    account.client.fetchAll(filters = relays.associateWith { filters }, timeoutMs = QUERY_TIMEOUT_MS)
+                    account.client.fetchAll(filters = relays.associateWith { filters }, timeoutMs = QUERY_TIMEOUT.inWholeMilliseconds)
                 }.getOrDefault(emptyList())
             }
         val fromCache = filters.flatMap { filter -> account.cache.filter(filter).mapNotNull { it.event } }
@@ -245,12 +252,12 @@ class AccountNappletGateways(
                 else -> result.completeExceptionally(RuntimeException("Unexpected wallet response."))
             }
         }
-        return withTimeout(WALLET_TIMEOUT_MS) { result.await() }
+        return withTimeout(WALLET_TIMEOUT) { result.await() }
     }
 
     companion object {
-        private const val QUERY_TIMEOUT_MS = 8_000L
-        private const val WALLET_TIMEOUT_MS = 60_000L
+        private val QUERY_TIMEOUT = 8.seconds
+        private val WALLET_TIMEOUT = 60.seconds
 
         /** Amethyst's brand purple (`AmethystPurple`, commons Colors.kt), exposed as the theme primary. */
         private const val AMETHYST_PURPLE = "#9A82DB"
