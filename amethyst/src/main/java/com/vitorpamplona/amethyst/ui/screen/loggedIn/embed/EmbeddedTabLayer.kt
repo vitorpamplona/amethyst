@@ -43,6 +43,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 
+// How far off-screen a parked (inactive) warm tab is shifted — well past any real screen width.
+private val OFFSCREEN_SHIFT = 10_000.dp
+
 /**
  * The persistent surface layer: a full-window overlay (mounted once in the app shell, below the
  * navigation drawer and dialogs) that renders **every** warm embedded session's [SandboxedSdkView] and
@@ -88,16 +91,19 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                 }
 
                 val placement =
-                    if (active && bounds.width > 0f && bounds.height > 0f) {
+                    if (bounds.width > 0f && bounds.height > 0f) {
                         with(density) {
+                            // Parked tabs keep the SAME size as the active one and are only shoved
+                            // off-screen, so bringing one back is a pure translation — no resize, no
+                            // surface re-render, no black flash between tabs. (Parking at 1dp forced a
+                            // resize + re-render on every switch, which flashed black for ~1s.)
+                            val left = (bounds.left - layerOrigin.x).toDp() + (if (active) 0.dp else OFFSCREEN_SHIFT)
                             Modifier
-                                .absoluteOffset(
-                                    (bounds.left - layerOrigin.x).toDp(),
-                                    (bounds.top - layerOrigin.y).toDp(),
-                                ).size(bounds.width.toDp(), bounds.height.toDp())
+                                .absoluteOffset(left, (bounds.top - layerOrigin.y).toDp())
+                                .size(bounds.width.toDp(), bounds.height.toDp())
                         }
                     } else {
-                        // Parked: tiny + far off-screen, but still attached so the session stays warm.
+                        // No content bounds reported yet: park tiny off-screen until a tab is shown.
                         Modifier
                             .absoluteOffset(x = (-10000).dp)
                             .size(1.dp)
