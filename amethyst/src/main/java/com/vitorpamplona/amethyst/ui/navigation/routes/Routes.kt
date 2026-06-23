@@ -369,6 +369,8 @@ sealed class Route {
 
     @Serializable object HomeTabsSettings : Route()
 
+    @Serializable object ReadAloudSettings : Route()
+
     @Serializable object ProfileUiSettings : Route()
 
     @Serializable object VideoPlayerSettings : Route()

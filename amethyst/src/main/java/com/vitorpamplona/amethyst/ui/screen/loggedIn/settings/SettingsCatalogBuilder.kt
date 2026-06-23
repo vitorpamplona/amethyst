@@ -99,6 +99,7 @@ fun buildSettingsCatalog(
                     symEntry(R.string.reactions_settings, MaterialSymbols.ThumbUp, R.string.reactions_settings_search_keywords, Route.ReactionsSettings),
                     symEntry(R.string.bottom_bar_settings, MaterialSymbols.Dashboard, R.string.bottom_bar_search_keywords, Route.BottomBarSettings),
                     symEntry(R.string.home_tabs_settings, MaterialSymbols.Home, R.string.home_tabs_search_keywords, Route.HomeTabsSettings),
+                    symEntry(R.string.read_feed_aloud_settings, MaterialSymbols.Hearing, R.string.read_feed_aloud_search_keywords, Route.ReadAloudSettings),
                     symEntry(R.string.profile_ui_settings, MaterialSymbols.AccountCircle, R.string.profile_ui_search_keywords, Route.ProfileUiSettings),
                 ),
         )

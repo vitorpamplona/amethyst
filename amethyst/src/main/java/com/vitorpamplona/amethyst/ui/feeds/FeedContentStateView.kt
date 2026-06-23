@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -100,6 +101,12 @@ fun RenderFeedContentState(
     onLoading: @Composable () -> Unit = { LoadingFeed() },
 ) {
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
+
+    // Lets the shared top-bar "read aloud" button drive whatever feed is currently on screen.
+    DisposableEffect(feedContentState, listState) {
+        accountViewModel.readAloud.register(feedContentState, listState)
+        onDispose { accountViewModel.readAloud.unregister(feedContentState) }
+    }
 
     CrossfadeIfEnabled(
         targetState = feedState,

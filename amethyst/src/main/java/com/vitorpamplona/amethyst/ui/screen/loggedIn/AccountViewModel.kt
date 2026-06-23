@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
+import com.vitorpamplona.amethyst.ui.feeds.FeedReadAloudState
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
@@ -200,6 +201,9 @@ class AccountViewModel(
     val toastManager = ToastManager()
     val broadcastTracker = BroadcastTracker()
     val feedStates = AccountFeedContentStates(account, viewModelScope)
+
+    /** Shared "read the feed aloud" controller; the on-screen feed registers itself here. */
+    val readAloud = FeedReadAloudState()
 
     /**
      * `true` when feed/note media (images and videos in `MediaUrlContent`)

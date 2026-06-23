@@ -2327,6 +2327,13 @@
     <string name="bottom_bar_settings_restore_default">Restore Default</string>
     <string name="home_tabs_settings">Home Tabs</string>
     <string name="home_tabs_settings_description">Pick which tabs appear on the Home screen. When only one tab is active the tab bar is hidden.</string>
+    <string name="read_feed_aloud_settings">Read Feed Aloud</string>
+    <string name="read_feed_aloud_settings_description">Adds a button next to the search bar that reads the posts in the current feed out loud, one after another, until you stop it. Handy when your hands or eyes are busy.</string>
+    <string name="read_feed_aloud_show_button">Show the read aloud button</string>
+    <string name="read_feed_aloud_search_keywords" translatable="false">read, aloud, speak, text to speech, tts, voice, accessibility, driving, listen</string>
+    <string name="read_feed_aloud_start">Read the feed aloud</string>
+    <string name="read_feed_aloud_stop">Stop reading aloud</string>
+    <string name="read_feed_aloud_media_fallback">Shared a photo or video.</string>
     <string name="home_tab_everything">Everything</string>
     <string name="profile_ui_settings">Profile UI</string>
     <string name="profile_ui_settings_description">Pick which sections and feeds appear on user profile screens. All options are enabled by default.</string>

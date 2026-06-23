@@ -28,11 +28,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -75,11 +80,41 @@ fun UserDrawerSearchTopBar(
             }
         },
         actions = {
+            ReadFeedAloudButton(accountViewModel)
             IconButton(onClick = { nav.nav(Route.Search) }) {
                 SearchIcon(modifier = Size22Modifier, MaterialTheme.colorScheme.placeholderText)
             }
         },
     )
+}
+
+@Composable
+private fun ReadFeedAloudButton(accountViewModel: AccountViewModel) {
+    val showButton by accountViewModel.settings.uiSettingsFlow.showReadFeedAloudButton
+        .collectAsStateWithLifecycle()
+
+    if (!showButton) return
+    if (!accountViewModel.readAloud.hasReadableFeed) return
+
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+
+    val isPlaying = accountViewModel.readAloud.isPlaying
+
+    IconButton(
+        onClick = { accountViewModel.readAloud.toggle(context, lifecycleOwner, scope) },
+    ) {
+        Icon(
+            symbol = if (isPlaying) MaterialSymbols.Stop else MaterialSymbols.PlayCircle,
+            contentDescription =
+                stringRes(
+                    if (isPlaying) R.string.read_feed_aloud_stop else R.string.read_feed_aloud_start,
+                ),
+            modifier = Size22Modifier,
+            tint = MaterialTheme.colorScheme.placeholderText,
+        )
+    }
 }
 
 @Composable

@@ -54,6 +54,7 @@ class UiSettingsFlow(
     val showProfileFollowersFeed: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val dontShowOnchainPublicWarning: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val suggestWorkoutsFromHealthConnect: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
+    val showReadFeedAloudButton: MutableStateFlow<Boolean> = MutableStateFlow(true),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -82,6 +83,7 @@ class UiSettingsFlow(
             showProfileFollowersFeed,
             dontShowOnchainPublicWarning,
             suggestWorkoutsFromHealthConnect,
+            showReadFeedAloudButton,
         )
 
     // emits at every change in any of the propertyes.
@@ -114,6 +116,7 @@ class UiSettingsFlow(
                 flows[22] as Boolean,
                 flows[23] as Boolean,
                 flows[24] as BooleanType,
+                flows[25] as Boolean,
             )
         }
 
@@ -144,6 +147,7 @@ class UiSettingsFlow(
             showProfileFollowersFeed.value,
             dontShowOnchainPublicWarning.value,
             suggestWorkoutsFromHealthConnect.value,
+            showReadFeedAloudButton.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -249,6 +253,10 @@ class UiSettingsFlow(
             suggestWorkoutsFromHealthConnect.tryEmit(torSettings.suggestWorkoutsFromHealthConnect)
             any = true
         }
+        if (showReadFeedAloudButton.value != torSettings.showReadFeedAloudButton) {
+            showReadFeedAloudButton.tryEmit(torSettings.showReadFeedAloudButton)
+            any = true
+        }
 
         return any
     }
@@ -299,6 +307,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.showProfileFollowersFeed),
                 MutableStateFlow(uiSettings.dontShowOnchainPublicWarning),
                 MutableStateFlow(uiSettings.suggestWorkoutsFromHealthConnect),
+                MutableStateFlow(uiSettings.showReadFeedAloudButton),
             )
     }
 }
