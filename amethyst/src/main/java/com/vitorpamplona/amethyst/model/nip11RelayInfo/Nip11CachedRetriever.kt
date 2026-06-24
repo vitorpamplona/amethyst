@@ -36,6 +36,11 @@ class Nip11CachedRetriever(
     private val relayInformationDocumentCache = LruCache<NormalizedRelayUrl, RetrieveResult?>(1000)
     private val retriever = Nip11Retriever(okHttpClient)
 
+    fun trimToSize(maxItems: Int) {
+        relayInformationDocumentCache.trimToSize(maxItems)
+        relayInformationEmptyCache.trimToSize(maxItems)
+    }
+
     fun getEmpty(relay: NormalizedRelayUrl): Nip11RelayInformation {
         relayInformationEmptyCache.get(relay)?.let { return it }
 

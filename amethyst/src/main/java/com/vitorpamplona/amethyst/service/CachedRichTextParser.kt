@@ -58,6 +58,12 @@ object CachedRichTextParser {
         return result
     }
 
+    fun trimToSize(maxItems: Int) {
+        richTextCache.trimToSize(maxItems)
+        // isMarkdownCache is sized at 40% of richTextCache; preserve the ratio
+        isMarkdownCache.trimToSize(maxItems * 2 / 5)
+    }
+
     fun cachedText(
         content: String,
         tags: ImmutableListOfLists<String>,

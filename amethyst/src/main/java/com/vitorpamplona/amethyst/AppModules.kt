@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
+import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
@@ -866,12 +867,26 @@ class AppModules(
             dnsStore.save()
             val loggedIn = accountsCache.accounts.value.values
             trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts(), level)
-            // Trim Coil's in-memory image cache proportional to OS pressure.
-            // trimToSize(0) is equivalent to clear() but avoids a separate code path.
+            // Trim in-process caches proportional to OS memory pressure.
             when {
-                level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> memoryCache.trimToSize(0)
-                level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> memoryCache.trimToSize(memoryCache.maxSize / 4)
-                level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> memoryCache.trimToSize(memoryCache.maxSize / 2)
+                level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> {
+                    memoryCache.trimToSize(0)
+                    CachedRichTextParser.trimToSize(0)
+                    CachedRobohash.trimToSize(0)
+                    nip11Cache.trimToSize(0)
+                }
+                level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> {
+                    memoryCache.trimToSize(memoryCache.maxSize / 4)
+                    CachedRichTextParser.trimToSize(100) // was 500
+                    CachedRobohash.trimToSize(20) // was 100
+                    nip11Cache.trimToSize(200) // was 1000
+                }
+                level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
+                    memoryCache.trimToSize(memoryCache.maxSize / 2)
+                    CachedRichTextParser.trimToSize(250) // was 500
+                    CachedRobohash.trimToSize(50) // was 100
+                    nip11Cache.trimToSize(500) // was 1000
+                }
             }
         }
     }
