@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Decrypt
@@ -57,6 +58,11 @@ class NostrSignerRemote(
     val client: INostrClient,
     val permissions: String? = null,
     val secret: String? = null,
+    /**
+     * Optional NIP-46 client metadata (name/url/image) advertised on the
+     * `connect` request so the bunker can show who is asking to connect.
+     */
+    val clientMetadata: BunkerClientMetadata? = null,
     /**
      * Invoked with the authorization URL when the bunker answers with a NIP-46
      * `auth_url` challenge. Surface it (open a browser / print it); the pending
@@ -263,6 +269,7 @@ class NostrSignerRemote(
                         remoteKey = remotePubkey,
                         permissions = permissions,
                         secret = secret,
+                        clientMetadata = clientMetadata,
                     )
                 },
                 parser = ConnectResponse::parse,
@@ -330,6 +337,7 @@ class NostrSignerRemote(
             signer: NostrSignerInternal,
             client: INostrClient,
             permissions: String? = null,
+            clientMetadata: BunkerClientMetadata? = null,
         ): NostrSignerRemote {
             if (!bunkerUri.startsWith("bunker://")) throw Exception("Invalid bunker uri")
             val splitData = bunkerUri.split("?")
@@ -355,6 +363,7 @@ class NostrSignerRemote(
                 client = client,
                 permissions = permissions,
                 secret = secret,
+                clientMetadata = clientMetadata,
             )
         }
     }

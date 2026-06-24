@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -105,6 +106,14 @@ class AccountManager internal constructor(
         internal const val LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS = "bunker_ephemeral"
         internal const val NIP46_RELAY_CONNECT_TIMEOUT_MS = 15_000L
         internal val NIP46_RELAYS = listOf("wss://relay.nsec.app")
+
+        // Advertised on the NIP-46 `connect` request so a bunker:// signer can
+        // show who is asking to connect (NIP-46 client metadata).
+        internal val NIP46_CLIENT_METADATA =
+            BunkerClientMetadata(
+                name = "Amethyst Desktop",
+                url = "https://amethyst.social",
+            )
     }
 
     private val amethystDir: File by lazy {
@@ -324,7 +333,7 @@ class AccountManager internal constructor(
         val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
 
         val nip46Client = getOrCreateNip46Client()
-        val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, ephemeralSigner, nip46Client)
+        val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, ephemeralSigner, nip46Client, clientMetadata = NIP46_CLIENT_METADATA)
         remoteSigner.openSubscription()
 
         val pubKeyHex =
@@ -377,7 +386,7 @@ class AccountManager internal constructor(
                     relayStatuses = _loginProgress.value?.relayStatuses.orEmpty(),
                 )
 
-            val result = BunkerLoginUseCase.execute(bunkerUri, ephemeralSigner, nip46Client)
+            val result = BunkerLoginUseCase.execute(bunkerUri, ephemeralSigner, nip46Client, clientMetadata = NIP46_CLIENT_METADATA)
 
             val state =
                 AccountState.LoggedIn(
