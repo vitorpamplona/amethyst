@@ -24,6 +24,9 @@
     <string name="napplet_net_open_message">This site loads directly, so it (and the servers it contacts) can see your IP address. Switch it back to Tor to keep your IP private. Your choice is remembered for this site.</string>
     <string name="napplet_net_switch_open">Use open web</string>
     <string name="napplet_net_switch_tor">Use Tor</string>
+    <!-- Short labels for the pull-down sheet's network row -->
+    <string name="napplet_net_tor_label">Loads over Tor</string>
+    <string name="napplet_net_open_label">Loads over the open web</string>
 
     <!-- Loading / unavailable screens -->
     <string name="napplet_unavailable_title">Couldn\'t load “%1$s”</string>

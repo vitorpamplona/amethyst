@@ -44,7 +44,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -248,20 +247,20 @@ class NappletHostActivity : ComponentActivity() {
         // Route the back gesture into the WebView's history first (see backCallback).
         onBackPressedDispatcher.addCallback(this, backCallback)
 
-        // The applet titles itself, so instead of a full-width bar we float a single trusted control
-        // chip (the anti-phishing shield the applet can't draw over) over the content frame, which shows
-        // a loading screen → the applet's WebView, or an "unavailable" screen.
+        // The applet titles itself, so instead of a full-width bar we hang a trusted top pull-down sheet
+        // (the anti-phishing shield the applet can't draw over) over the content frame, which shows a
+        // loading screen → the applet's WebView, or an "unavailable" screen.
         val root =
             FrameLayout(this).apply {
                 addView(contentFrame, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
                 addView(
-                    buildFloatingChip(),
+                    buildControlSheet(),
                     FrameLayout
                         .LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
                             FrameLayout.LayoutParams.WRAP_CONTENT,
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            Gravity.TOP or Gravity.END,
-                        ).apply { setMargins(dp(8), dp(8), dp(8), dp(8)) },
+                            Gravity.TOP,
+                        ),
                 )
             }
         setContentView(root)
@@ -710,85 +709,23 @@ class NappletHostActivity : ComponentActivity() {
     private fun barTitle(): String = title.ifBlank { getString(R.string.napplet_untitled) }
 
     /**
-     * The floating trusted control chip: the sandbox **shield** is always visible (the anti-phishing
-     * marker the applet can't draw over); tapping it reveals the actions — the nSite network/Tor toggle
-     * (website mode only), reload, and the "what it can access" sheet. Replaces the old full-width bar,
-     * since the applet already titles itself.
+     * The trusted top pull-down sheet: a small grabber at the top edge (out of the corner where the app
+     * shows its own avatar) that expands to the sandbox **shield**, the nSite network/Tor row (website
+     * mode only, taps through to the confirm dialog), reload, and the "what it can access" sheet. The
+     * applet can't draw over it. Mirrors the embedded tabs' Compose `TopControlSheet`.
      */
-    private fun buildFloatingChip(): View {
-        val onSurface = resolveThemeColor(android.R.attr.textColorPrimary)
-        val dimmed = resolveThemeColor(android.R.attr.textColorSecondary)
-
-        // Hidden until the shield is tapped.
-        val actions =
-            LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                visibility = View.GONE
-            }
-
-        // nSite network indicator + toggle: the Tor logo, lit over Tor and dimmed over the open web.
-        // Only for a website-mode nSite when Tor is active — otherwise there is nothing to route through.
-        if (websiteMode && proxyPort > 0) {
-            actions.addView(
-                ImageView(this).apply {
-                    setImageResource(R.drawable.ic_tor)
-                    setColorFilter(if (useTor) onSurface else dimmed)
-                    alpha = if (useTor) 1f else 0.4f
-                    setPadding(dp(8), 0, dp(8), 0)
-                    isClickable = true
-                    setOnClickListener { showNetworkDialog() }
-                    contentDescription = getString(if (useTor) R.string.napplet_net_tor_desc else R.string.napplet_net_open_desc)
-                    layoutParams = LinearLayout.LayoutParams(dp(34), dp(22))
-                },
-            )
-        }
-        actions.addView(chipGlyph("↻", onSurface, getString(R.string.napplet_chrome_reload)) { if (this::webView.isInitialized) webView.reload() })
-        actions.addView(chipGlyph("ⓘ", onSurface, getString(R.string.napplet_chrome_permissions_desc)) { showAccessDialog() })
-
-        val shield =
-            TextView(this).apply {
-                text = "🛡"
-                textSize = 16f
-                setPadding(dp(4), dp(2), dp(4), dp(2))
-                isClickable = true
-                contentDescription = getString(R.string.napplet_chrome_permissions_desc)
-                setOnClickListener {
-                    actions.visibility = if (actions.visibility == View.GONE) View.VISIBLE else View.GONE
-                }
-            }
-
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(6), dp(8), dp(6))
-            elevation = dp(4).toFloat()
-            background =
-                android.graphics.drawable.GradientDrawable().apply {
-                    cornerRadius = dp(24).toFloat()
-                    setColor(resolveThemeColor(android.R.attr.colorBackground))
-                }
-            addView(shield)
-            addView(actions)
-        }
-    }
-
-    /** A single tappable glyph button for the floating chip (reload, info). */
-    private fun chipGlyph(
-        glyph: String,
-        color: Int,
-        desc: String,
-        onClick: () -> Unit,
-    ): TextView =
-        TextView(this).apply {
-            text = glyph
-            setTextColor(color)
-            textSize = 18f
-            setPadding(dp(8), 0, dp(8), 0)
-            isClickable = true
-            contentDescription = desc
-            setOnClickListener { onClick() }
-        }
+    private fun buildControlSheet(): View =
+        NappletControlSheet(
+            context = this,
+            title = barTitle(),
+            isSandbox = true,
+            onReload = { if (this::webView.isInitialized) webView.reload() },
+            // Website-mode nSites can re-route over Tor; switching rebuilds the session via a confirm
+            // dialog, so the row taps through rather than toggling inline.
+            torInitiallyOn = if (websiteMode && proxyPort > 0) useTor else null,
+            onNetworkTap = if (websiteMode && proxyPort > 0) ({ showNetworkDialog() }) else null,
+            onInfo = { showAccessDialog() },
+        )
 
     /**
      * Explains the site's current network routing and offers to switch it. Switching persists the

@@ -39,7 +39,6 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -163,13 +162,13 @@ class NappletBrowserActivity : ComponentActivity() {
             FrameLayout(this).apply {
                 addView(contentFrame, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
                 addView(
-                    buildFloatingChip(),
+                    buildControlSheet(),
                     FrameLayout
                         .LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
                             FrameLayout.LayoutParams.WRAP_CONTENT,
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            Gravity.TOP or Gravity.END,
-                        ).apply { setMargins(dp(8), dp(8), dp(8), dp(8)) },
+                            Gravity.TOP,
+                        ),
                 )
             }
         setContentView(root)
@@ -435,77 +434,20 @@ class NappletBrowserActivity : ComponentActivity() {
     private fun barTitle(): String = title.ifBlank { runCatching { Uri.parse(startUrl).host }.getOrNull() ?: getString(R.string.napplet_untitled) }
 
     /**
-     * The floating control chip: a globe (trusted external-web marker) that expands on tap to the Tor
-     * toggle (when Tor is available) and reload. The page can't draw over it.
+     * The top pull-down sheet: a small grabber at the top edge (out of the corner where a site shows its
+     * own avatar) that expands to the Tor toggle (when Tor is available) and reload. The page can't draw
+     * over it. Mirrors the embedded tabs' Compose `TopControlSheet`.
      */
-    private fun buildFloatingChip(): View {
-        val onSurface = resolveThemeColor(android.R.attr.textColorPrimary)
-        val dimmed = resolveThemeColor(android.R.attr.textColorSecondary)
-
-        val actions =
-            LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                visibility = View.GONE
-            }
-        if (proxyPort > 0) {
-            actions.addView(
-                ImageView(this).apply {
-                    setImageResource(R.drawable.ic_tor)
-                    setColorFilter(if (useTor) onSurface else dimmed)
-                    alpha = if (useTor) 1f else 0.4f
-                    setPadding(dp(8), 0, dp(8), 0)
-                    isClickable = true
-                    setOnClickListener { setNetworkMode(!useTor) }
-                    contentDescription = getString(if (useTor) R.string.napplet_net_tor_desc else R.string.napplet_net_open_desc)
-                    layoutParams = LinearLayout.LayoutParams(dp(34), dp(22))
-                },
-            )
-        }
-        actions.addView(chipGlyph("↻", onSurface, getString(R.string.napplet_chrome_reload)) { if (this::webView.isInitialized) webView.reload() })
-
-        val marker =
-            TextView(this).apply {
-                text = "🌐" // globe
-                textSize = 16f
-                setPadding(dp(4), dp(2), dp(4), dp(2))
-                isClickable = true
-                contentDescription = barTitle()
-                setOnClickListener {
-                    actions.visibility = if (actions.visibility == View.GONE) View.VISIBLE else View.GONE
-                }
-            }
-
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(6), dp(8), dp(6))
-            elevation = dp(4).toFloat()
-            background =
-                android.graphics.drawable.GradientDrawable().apply {
-                    cornerRadius = dp(24).toFloat()
-                    setColor(resolveThemeColor(android.R.attr.colorBackground))
-                }
-            addView(marker)
-            addView(actions)
-        }
-    }
-
-    private fun chipGlyph(
-        glyph: String,
-        color: Int,
-        desc: String,
-        onClick: () -> Unit,
-    ): TextView =
-        TextView(this).apply {
-            text = glyph
-            setTextColor(color)
-            textSize = 18f
-            setPadding(dp(8), 0, dp(8), 0)
-            isClickable = true
-            contentDescription = desc
-            setOnClickListener { onClick() }
-        }
+    private fun buildControlSheet(): View =
+        NappletControlSheet(
+            context = this,
+            title = barTitle(),
+            isSandbox = false,
+            onReload = { if (this::webView.isInitialized) webView.reload() },
+            torInitiallyOn = if (proxyPort > 0) useTor else null,
+            onToggleTor = { setNetworkMode(it) },
+            onInfo = null,
+        )
 
     private fun buildLoadingView(): View =
         LinearLayout(this).apply {

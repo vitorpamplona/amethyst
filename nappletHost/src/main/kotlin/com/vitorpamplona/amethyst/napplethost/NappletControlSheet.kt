@@ -1,0 +1,295 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.napplethost
+
+import android.annotation.SuppressLint
+import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.core.content.ContextCompat
+
+/**
+ * The full-screen sandbox surfaces' **top pull-down sheet** — the native-View twin of the embedded
+ * tabs' Compose `TopControlSheet`. Collapsed it's just a small grabber centered at the very top edge,
+ * out of the corner where a site puts its own avatar/menu. Pull it down (or tap) to reveal the page's
+ * controls: route over Tor, reload, and "what it can access" (sandboxed apps).
+ *
+ * Built in code (no XML) because `:nappletHost` hosts plain Android `View`s, not Compose, and must stay
+ * dependency-light. Add it to a `FrameLayout` parent at `Gravity.TOP` filling the width; it manages its
+ * own expand/collapse.
+ */
+class NappletControlSheet(
+    context: Context,
+    private val title: String,
+    private val isSandbox: Boolean,
+    private val onReload: () -> Unit,
+    torInitiallyOn: Boolean?,
+    private val onToggleTor: (Boolean) -> Unit = {},
+    // When non-null, the Tor row taps through to this (e.g. a confirm dialog that relaunches) instead of
+    // toggling inline — used by the nSite host, where switching routing rebuilds the whole session.
+    private val onNetworkTap: (() -> Unit)? = null,
+    private val onInfo: (() -> Unit)? = null,
+) : LinearLayout(context) {
+    private val onSurface = resolveThemeColor(android.R.attr.textColorPrimary)
+    private val dimmed = resolveThemeColor(android.R.attr.textColorSecondary)
+    private val surface = resolveThemeColor(android.R.attr.colorBackground)
+
+    private var expanded = false
+    private var torOn = torInitiallyOn
+
+    private val panel: LinearLayout
+    private var torIcon: ImageView? = null
+    private var torLabel: TextView? = null
+
+    init {
+        orientation = VERTICAL
+        gravity = Gravity.CENTER_HORIZONTAL
+
+        panel = buildPanel().also { addView(it) }
+        addView(buildGrabber())
+    }
+
+    private fun buildPanel(): LinearLayout =
+        LinearLayout(context).apply {
+            orientation = VERTICAL
+            visibility = View.GONE
+            elevation = dp(6).toFloat()
+            background =
+                GradientDrawable().apply {
+                    cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, dp(16).toFloat(), dp(16).toFloat(), dp(16).toFloat(), dp(16).toFloat())
+                    setColor(surface)
+                }
+            setPadding(dp(8), dp(6), dp(8), dp(10))
+
+            addView(titleRow())
+            addView(divider())
+            if (torOn != null) addView(torRow())
+            addView(
+                actionRow("↻", context.getString(R.string.napplet_chrome_reload)) {
+                    collapse()
+                    onReload()
+                },
+            )
+            onInfo?.let { info ->
+                addView(
+                    actionRow("ⓘ", context.getString(R.string.napplet_chrome_permissions_desc)) {
+                        collapse()
+                        info()
+                    },
+                )
+            }
+        }
+
+    private fun titleRow(): View =
+        LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            addView(
+                TextView(context).apply {
+                    text = if (isSandbox) "🛡" else "🌐"
+                    textSize = 16f
+                },
+            )
+            addView(
+                TextView(context).apply {
+                    text = title
+                    setTextColor(onSurface)
+                    textSize = 16f
+                    maxLines = 1
+                    setPadding(dp(10), 0, 0, 0)
+                },
+            )
+        }
+
+    private fun torRow(): View {
+        val icon =
+            ImageView(context).apply {
+                setImageResource(R.drawable.ic_tor)
+                setColorFilter(if (torOn == true) onSurface else dimmed)
+                alpha = if (torOn == true) 1f else 0.4f
+                layoutParams = LayoutParams(dp(24), dp(24))
+            }
+        val label =
+            TextView(context).apply {
+                text = context.getString(if (torOn == true) R.string.napplet_net_tor_label else R.string.napplet_net_open_label)
+                setTextColor(onSurface)
+                textSize = 15f
+                setPadding(dp(14), 0, 0, 0)
+            }
+        torIcon = icon
+        torLabel = label
+        return LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(12), dp(8), dp(12))
+            isClickable = true
+            setOnClickListener {
+                if (onNetworkTap != null) {
+                    collapse()
+                    onNetworkTap.invoke()
+                } else {
+                    toggleTor()
+                }
+            }
+            addView(icon)
+            addView(label)
+        }
+    }
+
+    private fun toggleTor() {
+        val next = !(torOn ?: return)
+        torOn = next
+        torIcon?.setColorFilter(if (next) onSurface else dimmed)
+        torIcon?.alpha = if (next) 1f else 0.4f
+        torLabel?.text = context.getString(if (next) R.string.napplet_net_tor_label else R.string.napplet_net_open_label)
+        onToggleTor(next)
+    }
+
+    private fun actionRow(
+        glyph: String,
+        label: String,
+        onClick: () -> Unit,
+    ): View =
+        LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(12), dp(8), dp(12))
+            isClickable = true
+            setOnClickListener { onClick() }
+            addView(
+                TextView(context).apply {
+                    text = glyph
+                    setTextColor(dimmed)
+                    textSize = 18f
+                    width = dp(28)
+                    gravity = Gravity.CENTER
+                },
+            )
+            addView(
+                TextView(context).apply {
+                    text = label
+                    setTextColor(onSurface)
+                    textSize = 15f
+                    setPadding(dp(8), 0, 0, 0)
+                },
+            )
+        }
+
+    private fun divider(): View =
+        View(context).apply {
+            setBackgroundColor(dimmed and 0x33FFFFFF.toInt())
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, dp(1))
+        }
+
+    /** The grabber: a small rounded bar centered at the top edge; tap toggles, vertical drag opens/closes. */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun buildGrabber(): View {
+        val bar =
+            View(context).apply {
+                background =
+                    GradientDrawable().apply {
+                        cornerRadius = dp(3).toFloat()
+                        setColor(dimmed and 0x99FFFFFF.toInt())
+                    }
+                layoutParams = LayoutParams(dp(36), dp(5))
+            }
+        return LinearLayout(context).apply {
+            orientation = VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(16), dp(7), dp(16), dp(7))
+            background =
+                GradientDrawable().apply {
+                    cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, dp(12).toFloat(), dp(12).toFloat(), dp(12).toFloat(), dp(12).toFloat())
+                    setColor(withAlpha(surface, 0.6f))
+                }
+            isClickable = true
+            contentDescription = title
+            addView(bar)
+
+            var downY = 0f
+            var dragged = false
+            setOnTouchListener { _, ev ->
+                when (ev.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        downY = ev.rawY
+                        dragged = false
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dy = ev.rawY - downY
+                        if (dy > dp(8)) {
+                            expand()
+                            dragged = true
+                        } else if (dy < -dp(8)) {
+                            collapse()
+                            dragged = true
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        if (!dragged) {
+                            if (expanded) {
+                                collapse()
+                            } else {
+                                expand()
+                            }
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }
+    }
+
+    private fun expand() {
+        if (expanded) return
+        expanded = true
+        panel.visibility = View.VISIBLE
+    }
+
+    private fun collapse() {
+        if (!expanded) return
+        expanded = false
+        panel.visibility = View.GONE
+    }
+
+    private fun withAlpha(
+        color: Int,
+        alpha: Float,
+    ): Int = (color and 0x00FFFFFF) or ((alpha * 255).toInt() shl 24)
+
+    private fun resolveThemeColor(attr: Int): Int {
+        val tv = TypedValue()
+        context.theme.resolveAttribute(attr, tv, true)
+        return if (tv.resourceId != 0) ContextCompat.getColor(context, tv.resourceId) else tv.data.takeIf { it != 0 } ?: Color.GRAY
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+}
