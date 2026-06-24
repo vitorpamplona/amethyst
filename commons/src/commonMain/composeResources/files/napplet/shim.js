@@ -189,7 +189,7 @@
   var IME_PROXY = false; try { IME_PROXY = !!window.__nappletImeProxy; } catch (_) {}
   if (DIRECT && IME_PROXY) (function(){
     var el = null;            // the focused editable element, or null
-    var composing = null;     // { start, end } of the active composing region in el's value, or null
+    var inComposition = false;
 
     function isEditable(n){
       if (!n) return false;
@@ -204,30 +204,12 @@
     }
     function isCE(n){ return !!(n && n.isContentEditable); }
     function valOf(n){ return isCE(n) ? n.textContent : (n.value || ''); }
+    function setVal(n, v){ if (isCE(n)) n.textContent = v; else n.value = v; }
     function selOf(n){
       if (isCE(n)) { var v = n.textContent.length; return [v, v]; }
       return [n.selectionStart || 0, n.selectionEnd || 0];
     }
     function setSel(n, s, e){ if (!isCE(n)) { try { n.setSelectionRange(s, e); } catch (_) {} } }
-    function dispatchInput(n, inputType, data){
-      var ev;
-      try { ev = new InputEvent('input', { bubbles: true, cancelable: false, inputType: inputType, data: data }); }
-      catch (_) { ev = new Event('input', { bubbles: true }); }
-      n.__nappletIme = true;
-      try { n.dispatchEvent(ev); } finally { n.__nappletIme = false; }
-    }
-    // Replace [start,end) in n with text, move the caret after it, and fire an input event.
-    function replaceRange(n, start, end, text, inputType){
-      var v = valOf(n);
-      start = Math.max(0, Math.min(start, v.length));
-      end = Math.max(start, Math.min(end, v.length));
-      var next = v.slice(0, start) + text + v.slice(end);
-      if (isCE(n)) { n.textContent = next; } else { n.value = next; }
-      var caret = start + text.length;
-      setSel(n, caret, caret);
-      dispatchInput(n, inputType, text);
-      return caret;
-    }
     function focusInfo(n){
       var t = (n.tagName || '').toUpperCase();
       var multiline = isCE(n) || t === 'TEXTAREA';
@@ -244,72 +226,73 @@
 
     document.addEventListener('focusin', function(e){
       if (isEditable(e.target)) {
-        el = e.target; composing = null; send(focusInfo(el));
+        el = e.target; inComposition = false; send(focusInfo(el));
         // The host shrinks the surface for the keyboard, but also nudge the field into view in case IME
         // insets aren't delivered (some hosts) so it never sits behind the keyboard.
         try { el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (_) {}
-      } else if (el) { el = null; composing = null; send({ type:'ime.blur' }); }
+      } else if (el) { el = null; inComposition = false; send({ type:'ime.blur' }); }
     }, true);
     document.addEventListener('focusout', function(e){
-      if (e.target === el) { el = null; composing = null; send({ type:'ime.blur' }); }
+      if (e.target === el) { el = null; inComposition = false; send({ type:'ime.blur' }); }
     }, true);
     // The page (its own JS, autofill) changed the field: resync the host keyboard's view of it.
     document.addEventListener('input', function(e){ if (e.target === el && !el.__nappletIme) reportState(); }, true);
     document.addEventListener('selectionchange', function(){ if (el && !isCE(el) && !el.__nappletIme) reportState(); }, true);
 
-    function dispatchKey(n, key, kc){
-      ['keydown','keyup'].forEach(function(type){
-        try { n.dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, key: key || '', keyCode: kc, which: kc })); } catch (_) {}
-      });
-    }
     function enter(n){
+      if (!n) return;
       var t = (n.tagName || '').toUpperCase();
-      if (isCE(n) || t === 'TEXTAREA') { var s = selOf(n); replaceRange(n, s[0], s[1], '\n', 'insertLineBreak'); return; }
-      dispatchKey(n, 'Enter', 13);
+      if (isCE(n) || t === 'TEXTAREA') { var v = valOf(n), s = selOf(n); setVal(n, v.slice(0, s[0]) + '\n' + v.slice(s[1])); setSel(n, s[0] + 1, s[0] + 1); fireInput(n, 'insertLineBreak', '\n', false); return; }
+      ['keydown','keyup'].forEach(function(type){ try { n.dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13 })); } catch (_) {} });
       if (n.form) { try { (n.form.requestSubmit ? n.form.requestSubmit() : n.form.submit()); } catch (_) {} }
     }
-
-    // Apply one host->page IME op to the focused field, then echo authoritative state back.
-    window.__nappletImeHandle = function(msg){
+    function fireInput(n, inputType, data, isComposing){
+      try { n.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: inputType, data: data == null ? null : data, isComposing: !!isComposing })); }
+      catch (_) { n.dispatchEvent(new Event('input', { bubbles: true })); }
+    }
+    function fireComp(n, type, data){
+      try { n.dispatchEvent(new CompositionEvent(type, { bubbles: true, cancelable: false, data: data || '' })); } catch (_) {}
+    }
+    // Minimal common-prefix/suffix diff so we can classify the edit (insert vs delete vs replace).
+    function diff(prev, next){
+      var p = 0, pl = prev.length, nl = next.length;
+      while (p < pl && p < nl && prev.charCodeAt(p) === next.charCodeAt(p)) p++;
+      var s1 = pl, s2 = nl;
+      while (s1 > p && s2 > p && prev.charCodeAt(s1 - 1) === next.charCodeAt(s2 - 1)) { s1--; s2--; }
+      return { inserted: next.slice(p, s2), removed: prev.slice(p, s1) };
+    }
+    // Adopt the host's authoritative editing STATE (Flutter's model) and synthesize the matching DOM
+    // input/composition events so the page's framework reacts as if typed natively.
+    function applyState(msg){
       if (!el) return;
-      var n = el, sel = selOf(n);
-      switch (msg.type) {
-        case 'ime.commit': {
-          var cs = composing ? composing.start : sel[0];
-          var ce = composing ? composing.end : sel[1];
-          replaceRange(n, cs, ce, msg.text || '', 'insertText');
-          composing = null;
-          break;
+      var n = el;
+      var prev = valOf(n);
+      var next = (msg.text != null) ? String(msg.text) : prev;
+      var cs = (msg.composingStart != null) ? msg.composingStart : -1;
+      var ce = (msg.composingEnd != null) ? msg.composingEnd : -1;
+      var composingActive = (cs >= 0 && ce > cs);
+      var d = diff(prev, next);
+
+      n.__nappletIme = true;
+      try {
+        if (composingActive && !inComposition) { inComposition = true; fireComp(n, 'compositionstart', ''); }
+        if (next !== prev) {
+          setVal(n, next);
+          var inputType = composingActive ? 'insertCompositionText'
+            : (d.inserted && !d.removed) ? 'insertText'
+            : (d.removed && !d.inserted) ? 'deleteContentBackward'
+            : 'insertReplacementText';
+          if (inComposition) fireComp(n, 'compositionupdate', next.slice(cs, ce));
+          fireInput(n, inputType, d.inserted, composingActive);
         }
-        case 'ime.composing': {
-          var s = composing ? composing.start : sel[0];
-          var e = composing ? composing.end : sel[1];
-          replaceRange(n, s, e, msg.text || '', 'insertCompositionText');
-          composing = (msg.text && msg.text.length) ? { start: s, end: s + msg.text.length } : null;
-          break;
-        }
-        case 'ime.finishComposing': composing = null; break;
-        case 'ime.delete': {
-          var before = msg.before || 0, after = msg.after || 0;
-          if (sel[0] !== sel[1]) { replaceRange(n, sel[0], sel[1], '', 'deleteContentBackward'); }
-          else { replaceRange(n, Math.max(0, sel[0] - before), sel[1] + after, '', 'deleteContentBackward'); }
-          composing = null;
-          break;
-        }
-        case 'ime.setSelection': setSel(n, msg.start, msg.end); break;
-        case 'ime.key': {
-          var kc = msg.keyCode | 0;
-          if (kc === 67) { // Android KEYCODE_DEL (backspace)
-            if (sel[0] !== sel[1]) replaceRange(n, sel[0], sel[1], '', 'deleteContentBackward');
-            else if (sel[0] > 0) replaceRange(n, sel[0] - 1, sel[0], '', 'deleteContentBackward');
-          } else if (kc === 66) { enter(n); } // KEYCODE_ENTER
-          else { dispatchKey(n, msg.key, kc); }
-          composing = null;
-          break;
-        }
-        case 'ime.action': enter(n); break;
-      }
-      reportState();
+        setSel(n, msg.selStart, msg.selEnd);
+        if (!composingActive && inComposition) { inComposition = false; fireComp(n, 'compositionend', d.inserted || ''); }
+      } finally { n.__nappletIme = false; }
+    }
+
+    window.__nappletImeHandle = function(msg){
+      if (msg.type === 'ime.set') applyState(msg);
+      else if (msg.type === 'ime.action') enter(el);
     };
   })();
 

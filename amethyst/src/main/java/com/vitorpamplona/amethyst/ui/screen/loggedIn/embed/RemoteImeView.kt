@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.text.Editable
 import android.text.InputType
-import android.view.KeyEvent
+import android.text.TextWatcher
+import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputConnectionWrapper
@@ -34,14 +36,18 @@ import org.json.JSONObject
 /**
  * The main-app-window home for the soft keyboard when a field is focused inside an embedded WebView. The
  * embedded surface is a cross-process [android.view.SurfaceControlViewHost] window that can't be an IME
- * target, so this invisible [EditText] takes the keyboard in the main window instead and relays every
- * edit to the page.
+ * target, so this invisible [EditText] takes the keyboard in the main window instead and relays editing
+ * to the page.
  *
- * It keeps a real local [android.text.Editable], so the platform handles composing regions, suggestions,
- * selection, and `getTextBeforeCursor` correctly. A thin [InputConnection] wrapper *also* forwards each
- * op (commit / compose / delete / key / editor-action) to the page as a JSON envelope, where the shim
- * applies it with real input/composition events. Page-side changes come back as [ImeEvent.State] and are
- * mirrored into the local buffer so the keyboard stays in sync.
+ * Modeled on Flutter's `TextInputPlugin`/`InputConnectionAdaptor`: a real local [Editable] is the source
+ * of truth (the platform handles composing regions, suggestions, selection, spell-check, and answers
+ * `getTextBeforeCursor`/`getExtractedText` for free), edits are **coalesced across batch boundaries**,
+ * and the whole **editing state** — text, selection, composing region — is shipped to the page (not
+ * individual ops). Going beyond Flutter (whose consumer is a Dart widget), the shim then synthesizes the
+ * matching DOM `input`/composition events so web frameworks react.
+ *
+ * It covers the soft keyboard, hardware keyboards, autofill, paste, and context-menu edits uniformly,
+ * because every one of them mutates the same [Editable] and we flush the resulting state.
  */
 @SuppressLint("ViewConstructor", "AppCompatCustomView")
 class RemoteImeView(
@@ -49,11 +55,18 @@ class RemoteImeView(
 ) : EditText(context) {
     private var bridge: EmbeddedImeBridge? = null
 
-    // True while we mutate our own text from a page-side update, so the resulting edits aren't echoed
-    // back to the page (which would loop).
+    // True while we apply a page-side update, so the resulting local edits aren't echoed back (loop).
     private var applyingRemote = false
 
+    // IME batch-edit depth (Flutter's batchEditNestDepth): coalesce a batch into one state flush.
+    private var batchDepth = 0
+
+    // The last state we sent, so we never ship a no-op (avoids feedback churn with the page).
+    private var lastSent: String? = null
+
     private val imm get() = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+
+    private val flush = Runnable { flushState() }
 
     init {
         // Invisible but focusable: the IME needs a laid-out, visible target, but the user must never see
@@ -64,6 +77,30 @@ class RemoteImeView(
         setTextColor(0x00000000)
         setCursorVisible(false)
         setPadding(0, 0, 0, 0)
+        addTextChangedListener(
+            object : TextWatcher {
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int,
+                ) {}
+
+                override fun onTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int,
+                ) {}
+
+                override fun afterTextChanged(s: Editable?) = schedule()
+            },
+        )
+        // The IME's "Go/Search/Send/Done" — the page submits/handles it (single-line has no newline).
+        setOnEditorActionListener { _, _, _ ->
+            bridge?.sendImeOp(JSONObject().put("type", "ime.action").toString())
+            true
+        }
     }
 
     /** Binds the controller of whatever embedded tab is active; null unbinds (no relay target). */
@@ -74,22 +111,19 @@ class RemoteImeView(
     /** A page field focused: configure the keyboard, seed the buffer, and raise the IME. */
     fun onPageFocus(focus: ImeEvent.Focus) {
         configureFor(focus)
-        applyingRemote = true
-        setText(focus.text)
-        setSelection(clamp(focus.selStart), clamp(focus.selEnd))
-        applyingRemote = false
+        applyRemote(focus.text, focus.selStart, focus.selEnd)
         requestFocus()
         imm.restartInput(this)
-        imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
+        // Post the show so it runs after focus/attachment has settled (showSoftInput can no-op otherwise).
+        post {
+            if (hasFocus()) imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
+        }
     }
 
     /** The page changed the field itself (its JS, autofill): mirror it without echoing back. */
     fun onPageState(state: ImeEvent.State) {
         if (text?.toString() == state.text && selectionStart == state.selStart && selectionEnd == state.selEnd) return
-        applyingRemote = true
-        setText(state.text)
-        setSelection(clamp(state.selStart), clamp(state.selEnd))
-        applyingRemote = false
+        applyRemote(state.text, state.selStart, state.selEnd)
     }
 
     /** The page field blurred: drop the keyboard. */
@@ -98,7 +132,54 @@ class RemoteImeView(
         imm.hideSoftInputFromWindow(windowToken, 0)
     }
 
-    private fun clamp(i: Int): Int = i.coerceIn(0, text?.length ?: 0)
+    private fun applyRemote(
+        newText: String,
+        selStart: Int,
+        selEnd: Int,
+    ) {
+        applyingRemote = true
+        setText(newText)
+        val len = text?.length ?: 0
+        setSelection(selStart.coerceIn(0, len), selEnd.coerceIn(0, len))
+        applyingRemote = false
+        lastSent = stateJson().toString()
+    }
+
+    private fun schedule() {
+        if (applyingRemote || batchDepth > 0) return
+        removeCallbacks(flush)
+        post(flush)
+    }
+
+    override fun onSelectionChanged(
+        selStart: Int,
+        selEnd: Int,
+    ) {
+        super.onSelectionChanged(selStart, selEnd)
+        schedule()
+    }
+
+    private fun stateJson(): JSONObject {
+        val editable = text
+        val composingStart = if (editable != null) BaseInputConnection.getComposingSpanStart(editable) else -1
+        val composingEnd = if (editable != null) BaseInputConnection.getComposingSpanEnd(editable) else -1
+        return JSONObject()
+            .put("type", "ime.set")
+            .put("text", editable?.toString() ?: "")
+            .put("selStart", selectionStart)
+            .put("selEnd", selectionEnd)
+            .put("composingStart", composingStart)
+            .put("composingEnd", composingEnd)
+    }
+
+    private fun flushState() {
+        if (applyingRemote) return
+        val json = stateJson()
+        val str = json.toString()
+        if (str == lastSent) return
+        lastSent = str
+        bridge?.sendImeOp(str)
+    }
 
     private fun configureFor(focus: ImeEvent.Focus) {
         inputType =
@@ -127,77 +208,26 @@ class RemoteImeView(
 
     override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
         val base = super.onCreateInputConnection(outAttrs) ?: return null
-        return ForwardingConnection(base)
+        return BatchAwareConnection(base)
     }
 
-    private fun op(envelope: JSONObject) {
-        if (!applyingRemote) bridge?.sendImeOp(envelope.toString())
-    }
-
-    /** Wraps the platform connection: edits the local buffer (via super) AND relays each op to the page. */
-    private inner class ForwardingConnection(
+    /**
+     * Tracks batch-edit nesting so a multi-op keystroke (e.g. delete-then-insert during composing) is
+     * shipped to the page as ONE coalesced state, exactly like Flutter's `InputConnectionAdaptor`.
+     */
+    private inner class BatchAwareConnection(
         target: InputConnection,
     ) : InputConnectionWrapper(target, true) {
-        override fun commitText(
-            text: CharSequence,
-            newCursorPosition: Int,
-        ): Boolean {
-            op(JSONObject().put("type", "ime.commit").put("text", text.toString()))
-            return super.commitText(text, newCursorPosition)
+        override fun beginBatchEdit(): Boolean {
+            batchDepth++
+            return super.beginBatchEdit()
         }
 
-        override fun setComposingText(
-            text: CharSequence,
-            newCursorPosition: Int,
-        ): Boolean {
-            op(JSONObject().put("type", "ime.composing").put("text", text.toString()))
-            return super.setComposingText(text, newCursorPosition)
+        override fun endBatchEdit(): Boolean {
+            val result = super.endBatchEdit()
+            if (batchDepth > 0) batchDepth--
+            if (batchDepth == 0) schedule()
+            return result
         }
-
-        override fun finishComposingText(): Boolean {
-            op(JSONObject().put("type", "ime.finishComposing"))
-            return super.finishComposingText()
-        }
-
-        override fun deleteSurroundingText(
-            beforeLength: Int,
-            afterLength: Int,
-        ): Boolean {
-            op(JSONObject().put("type", "ime.delete").put("before", beforeLength).put("after", afterLength))
-            return super.deleteSurroundingText(beforeLength, afterLength)
-        }
-
-        override fun setSelection(
-            start: Int,
-            end: Int,
-        ): Boolean {
-            op(JSONObject().put("type", "ime.setSelection").put("start", start).put("end", end))
-            return super.setSelection(start, end)
-        }
-
-        override fun sendKeyEvent(event: KeyEvent): Boolean {
-            if (event.action == KeyEvent.ACTION_DOWN) {
-                op(JSONObject().put("type", "ime.key").put("keyCode", event.keyCode).put("key", keyLabel(event)))
-            }
-            return super.sendKeyEvent(event)
-        }
-
-        override fun performEditorAction(editorAction: Int): Boolean {
-            op(JSONObject().put("type", "ime.action").put("action", editorAction))
-            // Don't call super: the local buffer has no "submit"; the page handles the action.
-            return true
-        }
-
-        private fun keyLabel(event: KeyEvent): String =
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_ENTER -> "Enter"
-                KeyEvent.KEYCODE_DEL -> "Backspace"
-                KeyEvent.KEYCODE_TAB -> "Tab"
-                else ->
-                    event.unicodeChar
-                        .takeIf { it != 0 }
-                        ?.toChar()
-                        ?.toString() ?: ""
-            }
     }
 }
