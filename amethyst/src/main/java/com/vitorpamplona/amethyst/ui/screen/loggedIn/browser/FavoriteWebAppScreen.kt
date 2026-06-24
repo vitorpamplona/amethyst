@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 
 /**
@@ -107,11 +108,7 @@ private fun EmbeddedFavoriteTab(
 
     val controller =
         remember(id) {
-            EmbeddedTabHost.acquire(id) {
-                val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-                val initialUseTor = proxyPort > 0 && WebUrlNetworkRegistry.useTor(url)
-                EmbeddedBrowserController(context.applicationContext, proxyPort, initialUseTor, backgroundColor).also { it.bind(url) }
-            } as EmbeddedBrowserController
+            EmbeddedTabFactory.acquireBrowser(context, url, backgroundColor)
         }
 
     // Keep the URL/back callback fresh (cheap, needs the latest closure).

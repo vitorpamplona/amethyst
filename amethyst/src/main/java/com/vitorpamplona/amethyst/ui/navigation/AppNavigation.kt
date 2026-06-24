@@ -119,6 +119,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.favorites.FavoriteAlgoFeedsListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.BrowseEmojiSetsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.display.EmojiPackScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.ListOfEmojiPacksScreen
@@ -258,6 +259,8 @@ fun AppNavigation(
                 val bottomBarItems by accountViewModel.settings.uiSettingsFlow.bottomBarItems
                     .collectAsStateWithLifecycle()
                 EmbeddedTabLayer(bottomBarItems.favoriteIds())
+                // Warm every pinned tab at startup so the first tap is instant (content already local).
+                EmbeddedTabPreloader(accountViewModel)
             }
         }
     }

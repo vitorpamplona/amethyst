@@ -102,6 +102,19 @@ object EmbeddedTabHost {
         return controller
     }
 
+    /** True if a warm session already exists for [id] (used by the preloader to skip re-acquiring). */
+    fun isWarm(id: String): Boolean = warm.any { it.id == id }
+
+    /**
+     * Seeds [contentBounds] with an approximate full-content rect when no tab has reported real bounds
+     * yet, so surfaces preloaded before the user visits any tab lay out at a realistic viewport (and so
+     * actually download their content) instead of at the 1dp off-screen fallback. A real visit's
+     * [reportBounds] overwrites this with the exact area.
+     */
+    fun seedBoundsIfUnset(bounds: Rect) {
+        if (contentBounds == Rect.Zero) contentBounds = bounds
+    }
+
     // Monotonic ownership token. Double-tapping a bottom-bar tab pops and re-adds the SAME route, so the
     // outgoing screen instance disposes *after* the incoming one has already called setActive with the
     // same id. A plain `clearActiveIfMatches(id)` would then null the active id the new instance just set

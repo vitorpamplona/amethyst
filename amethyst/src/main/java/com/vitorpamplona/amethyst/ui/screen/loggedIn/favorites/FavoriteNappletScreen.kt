@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 
 /**
@@ -114,9 +115,7 @@ private fun EmbeddedNappletTab(
         return
     }
 
-    // Carry the app's theme background into the keyless sandbox so its WebView doesn't flash white
-    // before the app paints. Idempotent across recompositions (the params bundle is remembered).
-    params.putInt(NappletHostContract.EXTRA_BG_COLOR, MaterialTheme.colorScheme.background.toArgb())
+    val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
     val title = params.getString(NappletHostContract.EXTRA_TITLE).orEmpty()
     val capLabels = params.getStringArrayList(NappletHostContract.EXTRA_CAP_LABELS).orEmpty()
@@ -128,9 +127,7 @@ private fun EmbeddedNappletTab(
 
     val controller =
         remember(id) {
-            EmbeddedTabHost.acquire(id) {
-                EmbeddedNappletController(context.applicationContext, params).also { it.bind() }
-            } as EmbeddedNappletController
+            EmbeddedTabFactory.acquireNapplet(context, coordinate, params, backgroundColor)
         }
 
     // Keep the controller callbacks fresh (cheap, need the latest closures).
