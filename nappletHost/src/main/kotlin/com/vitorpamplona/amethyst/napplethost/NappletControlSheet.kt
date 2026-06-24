@@ -30,6 +30,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.Switch
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 
@@ -43,6 +44,7 @@ import androidx.core.content.ContextCompat
  * dependency-light. Add it to a `FrameLayout` parent at `Gravity.TOP` filling the width; it manages its
  * own expand/collapse.
  */
+@SuppressLint("UseSwitchCompatOrMaterialCode") // plain framework Switch: :nappletHost is Compose/Material-free
 class NappletControlSheet(
     context: Context,
     private val title: String,
@@ -63,8 +65,8 @@ class NappletControlSheet(
     private var torOn = torInitiallyOn
 
     private val panel: LinearLayout
-    private var torIcon: ImageView? = null
     private var torLabel: TextView? = null
+    private var torSwitch: Switch? = null
 
     init {
         orientation = VERTICAL
@@ -128,12 +130,13 @@ class NappletControlSheet(
         }
 
     private fun torRow(): View {
+        // Steady, muted icon (the Switch carries the on/off state) — matches the Compose twin, where the
+        // lock icon is a constant onSurfaceVariant tint and the Switch is the state indicator.
         val icon =
             ImageView(context).apply {
                 setImageResource(R.drawable.ic_tor)
-                setColorFilter(if (torOn == true) onSurface else dimmed)
-                alpha = if (torOn == true) 1f else 0.4f
-                layoutParams = LayoutParams(dp(24), dp(24))
+                setColorFilter(dimmed)
+                layoutParams = LayoutParams(dp(22), dp(22))
             }
         val label =
             TextView(context).apply {
@@ -141,13 +144,23 @@ class NappletControlSheet(
                 setTextColor(onSurface)
                 textSize = 15f
                 setPadding(dp(14), 0, 0, 0)
+                // Weight 1 so the label fills and shoves the Switch to the end, like the Compose row.
+                layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
             }
-        torIcon = icon
+        // Display-only: the whole row is the touch target (parity with the Compose row, whose Switch and
+        // row both route to the same onToggle), so the Switch itself doesn't take clicks.
+        val toggle =
+            Switch(context).apply {
+                isChecked = torOn == true
+                isClickable = false
+                isFocusable = false
+            }
         torLabel = label
+        torSwitch = toggle
         return LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(12), dp(8), dp(12))
+            setPadding(dp(8), dp(10), dp(8), dp(10))
             isClickable = true
             setOnClickListener {
                 if (onNetworkTap != null) {
@@ -159,14 +172,14 @@ class NappletControlSheet(
             }
             addView(icon)
             addView(label)
+            addView(toggle)
         }
     }
 
     private fun toggleTor() {
         val next = !(torOn ?: return)
         torOn = next
-        torIcon?.setColorFilter(if (next) onSurface else dimmed)
-        torIcon?.alpha = if (next) 1f else 0.4f
+        torSwitch?.isChecked = next
         torLabel?.text = context.getString(if (next) R.string.napplet_net_tor_label else R.string.napplet_net_open_label)
         onToggleTor(next)
     }
@@ -179,7 +192,8 @@ class NappletControlSheet(
         LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(12), dp(8), dp(12))
+            // Same vertical rhythm as the Tor row and the Compose twin's rows.
+            setPadding(dp(8), dp(10), dp(8), dp(10))
             isClickable = true
             setOnClickListener { onClick() }
             addView(

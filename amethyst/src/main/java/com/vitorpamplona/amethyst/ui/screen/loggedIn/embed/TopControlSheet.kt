@@ -174,7 +174,7 @@ private fun SheetItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 12.dp),
+            .padding(horizontal = 8.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(symbol, contentDescription = null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -195,7 +195,9 @@ private fun SheetSwitchItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .clickable(onClick = onToggle)
-            .padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+            // Same row rhythm as [SheetItem] so every entry lines up; the Switch is taller but the
+            // padding (the inter-item spacing) is identical.
+            .padding(horizontal = 8.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(symbol, contentDescription = null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
