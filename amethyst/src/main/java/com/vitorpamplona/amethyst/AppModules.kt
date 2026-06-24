@@ -873,7 +873,7 @@ class AppModules(
                     memoryCache.trimToSize(0)
                     CachedRichTextParser.trimToSize(0)
                     CachedRobohash.trimToSize(0)
-                    nip11Cache.trimToSize(0)
+                    nip11Cache.trimToSize(100)
                 }
                 level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> {
                     memoryCache.trimToSize(memoryCache.maxSize / 4)

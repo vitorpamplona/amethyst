@@ -38,7 +38,8 @@ class Nip11CachedRetriever(
 
     fun trimToSize(maxItems: Int) {
         relayInformationDocumentCache.trimToSize(maxItems)
-        relayInformationEmptyCache.trimToSize(maxItems)
+        // relayInformationEmptyCache holds only lightweight display-name+favicon-url placeholders;
+        // trimming it saves negligible memory but forces redundant NIP-11 HTTP fetches on resume.
     }
 
     fun getEmpty(relay: NormalizedRelayUrl): Nip11RelayInformation {
