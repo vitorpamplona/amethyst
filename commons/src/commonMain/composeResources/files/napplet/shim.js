@@ -47,7 +47,23 @@
   })();
 
   var seq = 0, pending = {}, subs = {}, actions = {}, identityHandlers = [];
-  function send(env){ env.id = env.id || ('r' + (seq++)); parent.postMessage(JSON.stringify(env), '*'); return env.id; }
+  // Transport. A napplet/nSite runs inside the trusted shell's iframe and talks to the shell via
+  // postMessage (the shell relays to the native bridge). A top-level page opened in the in-app browser
+  // has no shell parent, so it talks to the origin-scoped native bridge object (__nappletBridge,
+  // injected for the page) directly. __nappletDirectBridge selects that path.
+  var DIRECT = false; try { DIRECT = !!window.__nappletDirectBridge; } catch (_) {}
+  var recvWired = false;
+  function rawSend(s){
+    if (DIRECT) {
+      var b = window.__nappletBridge; if (!b) return;
+      // Wire the reply channel before the first send, so no reply can arrive before we listen.
+      if (!recvWired) { recvWired = true; b.onmessage = function(e){ onIncoming(e.data); }; }
+      b.postMessage(s);
+    } else {
+      parent.postMessage(s, '*');
+    }
+  }
+  function send(env){ env.id = env.id || ('r' + (seq++)); rawSend(JSON.stringify(env)); return env.id; }
   function call(type, fields){
     return new Promise(function(resolve, reject){
       var env = { type: type }; if (fields) for (var k in fields) env[k] = fields[k];
@@ -57,9 +73,8 @@
   }
   // Fire-and-forget (no .result awaited), used for subscribe/unsubscribe.
   function post(type, fields){ var env = { type: type }; if (fields) for (var k in fields) env[k] = fields[k]; send(env); }
-  window.addEventListener('message', function(e){
-    if (e.source !== parent) return;
-    var msg; if (typeof e.data === 'string') { try { msg = JSON.parse(e.data); } catch (_) { return; } } else { msg = e.data; }
+  function onIncoming(raw){
+    var msg; if (typeof raw === 'string') { try { msg = JSON.parse(raw); } catch (_) { return; } } else { msg = raw; }
     if (!msg) return;
     // Subscription pushes are keyed by subId, not a request id.
     if (msg.type === 'relay.event' || msg.type === 'relay.eose' || msg.type === 'relay.closed') {
@@ -71,13 +86,20 @@
     }
     // keys.action push: the shell triggers a registered keyboard/command action.
     if (msg.type === 'keys.action') { var cb = actions[msg.actionId]; if (cb) cb(); return; }
+    // IME ops (host keyboard -> focused page field). Only the direct-bridge browser installs the agent.
+    if (msg.type && msg.type.indexOf('ime.') === 0) { if (window.__nappletImeHandle) window.__nappletImeHandle(msg); return; }
     // identity.changed push: the active user's key changed (account switch / connect / disconnect).
     if (msg.type === 'identity.changed') { identityHandlers.slice().forEach(function(h){ try { h(msg.pubkey); } catch (_) {} }); return; }
     if (!msg.id) return;
     var p = pending[msg.id]; if (!p) return; delete pending[msg.id];
     if (msg.ok) p.resolve(msg);
     else { var err = new Error(msg.reason || msg.operation || msg.error || 'napplet error'); err.napplet = msg; p.reject(err); }
-  });
+  }
+  // The shell-relayed path listens for window messages from the parent; the direct-bridge path wires
+  // its receive channel in rawSend (above) the first time it posts.
+  if (!DIRECT) {
+    window.addEventListener('message', function(e){ if (e.source !== parent) return; onIncoming(e.data); });
+  }
   function field(promise, name){ return promise.then(function(m){ return m[name]; }); }
   function normFilters(filters){ return Array.isArray(filters) ? { filters: filters } : { filter: filters || {} }; }
   function bytesToB64(bytes){ var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); var s=''; for (var i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return btoa(s); }
@@ -157,6 +179,198 @@
     }
   };
   window.napplet = Object.freeze(napplet);
+
+  // ---- IME agent (in-app browser only) -------------------------------------------------------
+  // The embedded browser surface renders cross-process via SurfaceControlViewHost, which forwards
+  // touch but NOT the soft keyboard (the embedded window can't be an IME target). So the host shows
+  // the keyboard in the main app window and relays editing here, where we apply it to the focused
+  // field with real input/composition events. Installed on any EMBEDDED surface (browser via the direct
+  // bridge, napplet/nSite via the shell relay); both transports go through send(). The full-screen
+  // hosts set neither flag (they have a native keyboard).
+  var IME_PROXY = false; try { IME_PROXY = !!window.__nappletImeProxy; } catch (_) {}
+  if (IME_PROXY) (function(){
+    var el = null;            // the focused editable element, or null
+    var inComposition = false;
+
+    function isEditable(n){
+      if (!n) return false;
+      if (n.isContentEditable) return true;
+      var t = (n.tagName || '').toUpperCase();
+      if (t === 'TEXTAREA') return true;
+      if (t === 'INPUT') {
+        var ty = (n.type || 'text').toLowerCase();
+        return ['text','search','url','email','tel','password','number',''].indexOf(ty) >= 0;
+      }
+      return false;
+    }
+    function isCE(n){ return !!(n && n.isContentEditable); }
+    function valOf(n){ return isCE(n) ? n.textContent : (n.value || ''); }
+    function setVal(n, v){ if (isCE(n)) n.textContent = v; else n.value = v; }
+
+    // --- contenteditable selection/replacement, mapped through char offsets into textContent ---
+    // We can't use setSelectionRange/value on a contenteditable root; instead we map a char offset
+    // into root.textContent to a DOM (node, offset) position via Range, so we mutate in place and
+    // preserve the surrounding element structure + caret rather than blowing away textContent.
+    function ceTextNodes(root){
+      var out = [], w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false), n;
+      while ((n = w.nextNode())) out.push(n);
+      return out;
+    }
+    // Char offset within root.textContent for a DOM (container, nodeOffset) boundary.
+    function ceOffsetOf(root, container, nodeOffset){
+      try { var r = document.createRange(); r.setStart(root, 0); r.setEnd(container, nodeOffset); return r.toString().length; }
+      catch (_) { return 0; }
+    }
+    // DOM {node, offset} position for a char offset into root.textContent.
+    function cePoint(root, off){
+      var nodes = ceTextNodes(root), acc = 0;
+      for (var i = 0; i < nodes.length; i++){
+        var len = nodes[i].data.length;
+        if (off <= acc + len) return { node: nodes[i], offset: off - acc };
+        acc += len;
+      }
+      if (nodes.length) { var last = nodes[nodes.length - 1]; return { node: last, offset: last.data.length }; }
+      return { node: root, offset: 0 };
+    }
+    function ceSelOf(root){
+      var s = window.getSelection();
+      if (!s || s.rangeCount === 0) { var v = root.textContent.length; return [v, v]; }
+      var r = s.getRangeAt(0);
+      if (!root.contains(r.startContainer) || !root.contains(r.endContainer)) { var v2 = root.textContent.length; return [v2, v2]; }
+      return [ceOffsetOf(root, r.startContainer, r.startOffset), ceOffsetOf(root, r.endContainer, r.endOffset)];
+    }
+    function ceSetSel(root, s, e){
+      try {
+        var a = cePoint(root, s), b = cePoint(root, e), r = document.createRange();
+        r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset);
+        var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      } catch (_) {}
+    }
+    // Replace char range [from, to) in root with ins, leaving the rest of the DOM intact.
+    function ceReplace(root, from, to, ins){
+      try {
+        var a = cePoint(root, from), b = cePoint(root, to), r = document.createRange();
+        r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset);
+        r.deleteContents();
+        if (ins) r.insertNode(document.createTextNode(ins));
+      } catch (_) { root.textContent = root.textContent.slice(0, from) + (ins || '') + root.textContent.slice(to); }
+    }
+
+    function selOf(n){
+      if (isCE(n)) return ceSelOf(n);
+      return [n.selectionStart || 0, n.selectionEnd || 0];
+    }
+    function setSel(n, s, e){
+      if (isCE(n)) ceSetSel(n, s, e);
+      else { try { n.setSelectionRange(s, e); } catch (_) {} }
+    }
+    function focusInfo(n){
+      var t = (n.tagName || '').toUpperCase();
+      var multiline = isCE(n) || t === 'TEXTAREA';
+      var inputType = isCE(n) ? 'text' : (t === 'TEXTAREA' ? 'textarea' : (n.type || 'text').toLowerCase());
+      var sel = selOf(n);
+      return { type:'ime.focus', inputType: inputType, enterKeyHint: (n.enterKeyHint || ''),
+               multiline: multiline, text: valOf(n), selStart: sel[0], selEnd: sel[1] };
+    }
+    // Last selection we either applied (applyState) or already reported, so the asynchronous
+    // selectionchange our own setSel triggers doesn't echo back to the host as a fresh edit.
+    var lastSel = null;
+    function sameSel(a, b){ return !!(a && b && a[0] === b[0] && a[1] === b[1]); }
+    function reportState(){
+      if (!el) return;
+      var sel = selOf(el);
+      lastSel = sel;
+      send({ type:'ime.state', text: valOf(el), selStart: sel[0], selEnd: sel[1] });
+    }
+
+    document.addEventListener('focusin', function(e){
+      if (isEditable(e.target)) {
+        el = e.target; inComposition = false; lastSel = selOf(el); send(focusInfo(el));
+        // The host shrinks the surface for the keyboard, but also nudge the field into view in case IME
+        // insets aren't delivered (some hosts) so it never sits behind the keyboard.
+        try { el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (_) {}
+      } else if (el) { el = null; inComposition = false; send({ type:'ime.blur' }); }
+    }, true);
+    document.addEventListener('focusout', function(e){
+      if (e.target === el) { el = null; inComposition = false; send({ type:'ime.blur' }); }
+    }, true);
+    // The page (its own JS, autofill) changed the field: resync the host keyboard's view of it.
+    document.addEventListener('input', function(e){ if (e.target === el && !el.__nappletIme) reportState(); }, true);
+    document.addEventListener('selectionchange', function(){
+      if (!el || el.__nappletIme) return;
+      if (sameSel(selOf(el), lastSel)) return; // our own applyState/setSel echoing back
+      reportState();
+    }, true);
+
+    function enter(n){
+      if (!n) return;
+      var t = (n.tagName || '').toUpperCase();
+      if (isCE(n) || t === 'TEXTAREA') {
+        var s = selOf(n);
+        if (isCE(n)) ceReplace(n, s[0], s[1], '\n');
+        else { var v = valOf(n); setVal(n, v.slice(0, s[0]) + '\n' + v.slice(s[1])); }
+        setSel(n, s[0] + 1, s[0] + 1); fireInput(n, 'insertLineBreak', '\n', false); return;
+      }
+      ['keydown','keyup'].forEach(function(type){ try { n.dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13 })); } catch (_) {} });
+      if (n.form) { try { (n.form.requestSubmit ? n.form.requestSubmit() : n.form.submit()); } catch (_) {} }
+    }
+    function fireInput(n, inputType, data, isComposing){
+      try { n.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: inputType, data: data == null ? null : data, isComposing: !!isComposing })); }
+      catch (_) { n.dispatchEvent(new Event('input', { bubbles: true })); }
+    }
+    function fireComp(n, type, data){
+      try { n.dispatchEvent(new CompositionEvent(type, { bubbles: true, cancelable: false, data: data || '' })); } catch (_) {}
+    }
+    function isHigh(c){ return c >= 0xD800 && c <= 0xDBFF; }
+    function isLow(c){ return c >= 0xDC00 && c <= 0xDFFF; }
+    // Common-prefix/suffix diff so we can classify the edit (insert vs delete vs replace). Operates on
+    // UTF-16 code units but snaps both boundaries off surrogate halves, so a changed astral char (emoji,
+    // CJK-supplement) is never split into a lone surrogate in `inserted`/`removed` or the replace range.
+    function diff(prev, next){
+      var pl = prev.length, nl = next.length, p = 0;
+      while (p < pl && p < nl && prev.charCodeAt(p) === next.charCodeAt(p)) p++;
+      if (p > 0 && isHigh(prev.charCodeAt(p - 1))) p--; // don't cut a pair at the prefix boundary
+      var s1 = pl, s2 = nl;
+      while (s1 > p && s2 > p && prev.charCodeAt(s1 - 1) === next.charCodeAt(s2 - 1)) { s1--; s2--; }
+      // pl - s1 === nl - s2 (suffixes share length), so s1 < pl iff s2 < nl.
+      if (s1 < pl && (isLow(prev.charCodeAt(s1)) || isLow(next.charCodeAt(s2)))) { s1++; s2++; }
+      return { from: p, prevEnd: s1, inserted: next.slice(p, s2), removed: prev.slice(p, s1) };
+    }
+    // Adopt the host's authoritative editing STATE (Flutter's model) and synthesize the matching DOM
+    // input/composition events so the page's framework reacts as if typed natively.
+    function applyState(msg){
+      if (!el) return;
+      var n = el;
+      var prev = valOf(n);
+      var next = (msg.text != null) ? String(msg.text) : prev;
+      var cs = (msg.composingStart != null) ? msg.composingStart : -1;
+      var ce = (msg.composingEnd != null) ? msg.composingEnd : -1;
+      var composingActive = (cs >= 0 && ce > cs);
+      var d = diff(prev, next);
+
+      n.__nappletIme = true;
+      try {
+        if (composingActive && !inComposition) { inComposition = true; fireComp(n, 'compositionstart', ''); }
+        if (next !== prev) {
+          if (isCE(n)) ceReplace(n, d.from, d.prevEnd, d.inserted); // in-place, preserves structure
+          else setVal(n, next);
+          var inputType = composingActive ? 'insertCompositionText'
+            : (d.inserted && !d.removed) ? 'insertText'
+            : (d.removed && !d.inserted) ? 'deleteContentBackward'
+            : 'insertReplacementText';
+          if (inComposition) fireComp(n, 'compositionupdate', next.slice(cs, ce));
+          fireInput(n, inputType, d.inserted, composingActive);
+        }
+        setSel(n, msg.selStart, msg.selEnd);
+        if (!composingActive && inComposition) { inComposition = false; fireComp(n, 'compositionend', d.inserted || ''); }
+      } finally { n.__nappletIme = false; lastSel = selOf(n); }
+    }
+
+    window.__nappletImeHandle = function(msg){
+      if (msg.type === 'ime.set') applyState(msg);
+      else if (msg.type === 'ime.action') enter(el);
+    };
+  })();
 
   // NIP-07 provider (window.nostr), installed only for nSites in website mode (the host sets
   // window.__nappletNip07 synchronously before this shim). Lets standard Nostr web apps "log in with

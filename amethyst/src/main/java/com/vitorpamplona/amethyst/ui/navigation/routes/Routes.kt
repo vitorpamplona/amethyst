@@ -91,6 +91,18 @@ sealed class Route {
 
     @Serializable object Nsites : Route()
 
+    @Serializable object Browser : Route()
+
+    @Serializable object FavoriteApps : Route()
+
+    @Serializable data class FavoriteWebApp(
+        val url: String,
+    ) : Route()
+
+    @Serializable data class FavoriteNostrApp(
+        val coordinate: String,
+    ) : Route()
+
     @Serializable object NappletPermissions : Route()
 
     @Serializable data class SoftwareAppDetail(

@@ -29,9 +29,12 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.os.RemoteException
+import android.os.SystemClock
 import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
+import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
+import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
@@ -42,8 +45,10 @@ import com.vitorpamplona.amethyst.napplethost.NappletIpc
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -97,11 +102,66 @@ class NappletBrokerService : Service() {
     override fun onDestroy() {
         liveSubscriptions.closeAll()
         identityWatch.stop()
+        // Drop any foreground holds this broker still owns so they don't leak past the service.
+        synchronized(foregroundLeases) {
+            repeat(foregroundLeases.size) { SandboxForegroundHold.release() }
+            foregroundLeases.clear()
+        }
         scope.cancel()
         super.onDestroy()
     }
 
+    // Sandbox surfaces (full-screen :napplet hosts) currently reporting themselves foreground, mapped to
+    // the last time each renewed its lease (monotonic elapsedRealtime). While this map is non-empty the
+    // main process is held resumed (Tor/relays/AUTH up) via SandboxForegroundHold — the napplet host
+    // lives in :napplet and can't touch that lifecycle itself, so it signals over IPC.
+    //
+    // The host re-sends its foreground report on a heartbeat while genuinely resumed. We key on the
+    // launch token, so a repeated report just refreshes the timestamp (idempotent, no double-acquire).
+    // If a host's process dies while foreground it can't send its onPause "false", so the heartbeats
+    // simply stop and [foregroundLeaseWatchdog] reaps the stale lease — bounding any such leak to one
+    // [FOREGROUND_LEASE_TTL_MS] window instead of holding the network up forever.
+    private val foregroundLeases = HashMap<String, Long>()
+    private var foregroundLeaseWatchdog: Job? = null
+
     private fun handleMessage(msg: Message): Boolean {
+        // A sandbox surface (full-screen :napplet host) entered, renewed, or left the foreground. Hold the
+        // main process resumed while at least one is foreground, so opening it doesn't tear down Tor/relays.
+        if (msg.what == NappletIpc.MSG_SET_FOREGROUND) {
+            val data = msg.data ?: return true
+            val token = data.getString(NappletIpc.KEY_LAUNCH_TOKEN) ?: return true
+            val foreground = data.getBoolean(NappletIpc.KEY_FOREGROUND, false)
+            synchronized(foregroundLeases) {
+                if (foreground) {
+                    val firstReport = !foregroundLeases.containsKey(token)
+                    // A foreground lease just pins Tor/relays (no key access), but a misbehaving sandbox
+                    // could still spam distinct keys to keep the network up. Bound the damage: refuse new
+                    // lease keys past the cap. Real usage holds only a handful of foreground surfaces.
+                    if (firstReport && foregroundLeases.size >= MAX_FOREGROUND_LEASES) {
+                        Log.w("NappletBrokerService", "Foreground lease cap reached; ignoring new lease $token")
+                        return true
+                    }
+                    foregroundLeases[token] = SystemClock.elapsedRealtime()
+                    if (firstReport) {
+                        SandboxForegroundHold.acquire()
+                        ensureForegroundLeaseWatchdog()
+                    }
+                } else if (foregroundLeases.remove(token) != null) {
+                    SandboxForegroundHold.release()
+                }
+            }
+            return true
+        }
+
+        // The direct-WebView browser relays its per-host Tor choice; persist it (main process only).
+        if (msg.what == NappletIpc.MSG_SET_WEB_TOR) {
+            val data = msg.data ?: return true
+            val host = data.getString(NappletIpc.KEY_WEB_HOST)?.takeIf { it.isNotBlank() } ?: return true
+            WebUrlNetworkRegistry.init(applicationContext)
+            WebUrlNetworkRegistry.set(host, data.getBoolean(NappletIpc.KEY_NETWORK_USE_TOR, true))
+            return true
+        }
+
         // The sandbox relays the user's per-site network choice; persist it against the trusted
         // coordinate the launch token resolves to (the sandbox can't state its own coordinate).
         if (msg.what == NappletIpc.MSG_SET_NETWORK_MODE) {
@@ -109,6 +169,27 @@ class NappletBrokerService : Service() {
             val session = NappletLaunchRegistry.resolve(data.getString(NappletIpc.KEY_LAUNCH_TOKEN)) ?: return true
             NappletNetworkRegistry.init(applicationContext)
             NappletNetworkRegistry.set(session.identity.coordinate, data.getBoolean(NappletIpc.KEY_NETWORK_USE_TOR, true))
+            return true
+        }
+
+        // Browser mode mints a fresh launch token per visited origin, so NIP-07 consent is scoped to the
+        // one site the request came from. The origin is the trusted source origin the WebView reported
+        // (the sandbox can't forge it), and the synthetic identity keys the permission ledger per host.
+        if (msg.what == NappletIpc.MSG_MINT_BROWSER_TOKEN) {
+            val data = msg.data ?: return true
+            val replyTo = msg.replyTo ?: return true
+            val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN)?.takeIf { it.isNotBlank() } ?: return true
+            val identity = NappletIdentity(authorPubKey = BROWSER_IDENTITY_AUTHOR, identifier = origin)
+            val token = NappletLaunchRegistry.register(identity, setOf(NappletCapability.IDENTITY, NappletCapability.RELAY))
+            val response =
+                Message.obtain(null, NappletIpc.MSG_BROWSER_TOKEN).apply {
+                    this.data =
+                        Bundle().apply {
+                            putString(NappletIpc.KEY_BROWSER_ORIGIN, origin)
+                            putString(NappletIpc.KEY_LAUNCH_TOKEN, token)
+                        }
+                }
+            runCatching { replyTo.send(response) }
             return true
         }
 
@@ -155,6 +236,34 @@ class NappletBrokerService : Service() {
             }
         }
         return true
+    }
+
+    /**
+     * Periodically reaps foreground leases that stopped renewing — the signature of a `:napplet` host
+     * process that died (or was killed) while foreground, so it never sent its onPause "false". Each
+     * reaped lease releases its [SandboxForegroundHold] so the network isn't held up forever by a host
+     * that's already gone. Runs only while at least one lease exists; cancelled with [scope] on destroy.
+     */
+    private fun ensureForegroundLeaseWatchdog() {
+        if (foregroundLeaseWatchdog != null) return
+        foregroundLeaseWatchdog =
+            scope.launch {
+                while (true) {
+                    delay(FOREGROUND_LEASE_CHECK_MS)
+                    synchronized(foregroundLeases) {
+                        val now = SystemClock.elapsedRealtime()
+                        val iterator = foregroundLeases.entries.iterator()
+                        while (iterator.hasNext()) {
+                            val entry = iterator.next()
+                            if (now - entry.value > FOREGROUND_LEASE_TTL_MS) {
+                                Log.w("NappletBrokerService", "Foreground lease ${entry.key} expired (host process gone?); releasing hold")
+                                iterator.remove()
+                                SandboxForegroundHold.release()
+                            }
+                        }
+                    }
+                }
+            }
     }
 
     /**
@@ -212,5 +321,33 @@ class NappletBrokerService : Service() {
         } catch (e: RemoteException) {
             Log.w("NappletBrokerService", "Applet host went away before push could be delivered", e)
         }
+    }
+
+    companion object {
+        /**
+         * Sentinel "author" for a browser-mode per-origin identity. The real key is the visited origin,
+         * carried in the identity's identifier (which the consent dialog shows); this constant only fills
+         * the coordinate's author slot so each origin keys the permission ledger separately as
+         * `browser:<origin>`. It is never treated as a real pubkey.
+         */
+        private const val BROWSER_IDENTITY_AUTHOR = "browser"
+
+        /**
+         * How long a foreground lease stays valid without a renewing heartbeat. A live host re-reports
+         * every [NappletHostActivity.FOREGROUND_HEARTBEAT_MS][com.vitorpamplona.amethyst.napplethost.NappletHostActivity]
+         * (well under this), so only a host that's actually gone lets its lease age past it. Sized to
+         * tolerate a couple of missed/delayed heartbeats while still reaping a dead host's hold promptly.
+         */
+        private const val FOREGROUND_LEASE_TTL_MS = 90_000L
+
+        /** How often [ensureForegroundLeaseWatchdog] sweeps for stale leases. */
+        private const val FOREGROUND_LEASE_CHECK_MS = 20_000L
+
+        /**
+         * Cap on concurrent foreground leases. A foreground lease only keeps Tor/relays up (no key
+         * access), but this bounds how long a misbehaving sandbox can pin the network by spamming
+         * distinct lease keys. Comfortably above any realistic number of foreground sandbox surfaces.
+         */
+        private const val MAX_FOREGROUND_LEASES = 8
     }
 }

@@ -4,6 +4,15 @@
 **Status:** Core (commons) implemented + tested; Android host (`:napplet` process, WebView, broker IPC, consent, DataStore) implemented and compiling — needs on-device verification
 **Companion:** `quartz/plans/2026-06-19-napplet-nip5a-resolver.md` (the bottom half — manifest parsing + verified Blossom resolution — already landed in `quartz`).
 
+> **Update (2026-06-24):** the *rendering* model below (full-screen-only
+> `NappletHostActivity`, host living in `amethyst/androidMain/.../napplet/`) has
+> moved on. The sandbox runtime now lives in its own **`:nappletHost`** module and
+> renders three ways — full-screen, embedded warm bottom-bar tabs, and an arbitrary-URL
+> browser — with a cross-process `SurfaceControlViewHost`, a soft-keyboard IME proxy,
+> and per-site Tor routing. See **`amethyst/plans/2026-06-24-napplet-embedded-tabs.md`**
+> for the current architecture. The **trust model** in this doc (keyless `:napplet`
+> process, brokered consent-gated capabilities, verified-blob serving) is unchanged.
+
 ## Goal
 
 Render NIP-5A static sites (nsites) and NIP-5D napplets *inside* Amethyst, with

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
+import android.os.Build
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -54,6 +55,8 @@ enum class NavBarItem {
     SOFTWARE_APPS,
     NAPPLETS,
     NSITES,
+    BROWSER,
+    FAVORITE_APPS,
     CALENDARS,
     CALENDAR_COLLECTIONS,
     SHORTS,
@@ -237,6 +240,20 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Language,
                 resolveRoute = { Route.Nsites },
             ),
+        NavBarItem.BROWSER to
+            NavBarItemDef(
+                id = NavBarItem.BROWSER,
+                labelRes = R.string.browser,
+                icon = MaterialSymbols.Language,
+                resolveRoute = { Route.Browser },
+            ),
+        NavBarItem.FAVORITE_APPS to
+            NavBarItemDef(
+                id = NavBarItem.FAVORITE_APPS,
+                labelRes = R.string.favorite_apps,
+                icon = MaterialSymbols.Star,
+                resolveRoute = { Route.FavoriteApps },
+            ),
         NavBarItem.CALENDARS to
             NavBarItemDef(
                 id = NavBarItem.CALENDARS,
@@ -368,6 +385,9 @@ val DefaultBottomBarItems: List<NavBarItem> =
         NavBarItem.NOTIFICATIONS,
     )
 
+/** The default bottom bar as unified entries (all built-in; favorites are added by the user). */
+val DefaultBottomBarEntries: List<BottomBarEntry> = DefaultBottomBarItems.map { BottomBarEntry.BuiltIn(it) }
+
 // Ordered membership lists for each drawer section. The drawer renders these by looking up
 // each id in NavBarCatalog, so adding a new screen only requires editing the catalog + the
 // matching section list below — not two separate files.
@@ -402,6 +422,12 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.SOFTWARE_APPS,
         NavBarItem.NAPPLETS,
         NavBarItem.NSITES,
+        // The embedded browser renders a cross-process surface (SurfaceControlViewHost), which needs
+        // API 30+. Below that the item is hidden so the feature can't be pinned or opened.
+        NavBarItem.BROWSER.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
+        // Favorites can include arbitrary-URL web clients, which render on the same cross-process
+        // surface as the browser (API 30+). Gate the whole grid on R+ for the same reason.
+        NavBarItem.FAVORITE_APPS.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
         NavBarItem.SHORTS,

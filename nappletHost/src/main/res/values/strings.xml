@@ -10,6 +10,7 @@
     <string name="napplet_chrome_keys_safe">It can never read your keys, and every sign, publish, upload, or payment was approved by you. Manage access in Settings ▸ nApplets.</string>
     <string name="napplet_chrome_static_site">Static site — it has no special access to your account.</string>
     <string name="napplet_chrome_permissions_desc">What this app can access</string>
+    <string name="napplet_chrome_reload">Reload</string>
     <string name="napplet_action_published">“%1$s” published a note as you</string>
     <string name="napplet_action_uploaded">“%1$s” uploaded a file</string>
     <string name="napplet_action_paid">“%1$s” made a payment</string>
@@ -23,6 +24,9 @@
     <string name="napplet_net_open_message">This site loads directly, so it (and the servers it contacts) can see your IP address. Switch it back to Tor to keep your IP private. Your choice is remembered for this site.</string>
     <string name="napplet_net_switch_open">Use open web</string>
     <string name="napplet_net_switch_tor">Use Tor</string>
+    <!-- Short labels for the pull-down sheet's network row -->
+    <string name="napplet_net_tor_label">Loads over Tor</string>
+    <string name="napplet_net_open_label">Loads over the open web</string>
 
     <!-- Loading / unavailable screens -->
     <string name="napplet_unavailable_title">Couldn\'t load “%1$s”</string>

@@ -95,6 +95,9 @@ fun StaticWebsiteCard(
     requires: List<String> = emptyList(),
     icon: String? = null,
     onOpen: (() -> Unit)? = null,
+    // Optional trailing slot in the header row (e.g. a favorite star). Kept as a slot so the
+    // favorite store + its strings stay in the app layer and never leak into this shared card.
+    headerActions: @Composable (() -> Unit)? = null,
 ) {
     val displayTitle = title?.ifBlank { null } ?: identifier?.ifBlank { null } ?: stringResource(Res.string.nsite_root_site)
     val kindLabel = stringResource(if (isNapplet) Res.string.napplet_card_kind else Res.string.nsite_website_kind)
@@ -127,6 +130,11 @@ fun StaticWebsiteCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+            }
+
+            headerActions?.let {
+                Spacer(Modifier.width(4.dp))
+                it()
             }
 
             onOpen?.let {

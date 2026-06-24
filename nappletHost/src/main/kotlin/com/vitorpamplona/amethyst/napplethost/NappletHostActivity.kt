@@ -44,7 +44,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -71,8 +70,10 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -164,6 +165,14 @@ class NappletHostActivity : ComponentActivity() {
         if (this::webView.isInitialized) backCallback.isEnabled = webView.canGoBack()
     }
 
+    // True between onResume and onPause. Sent to the broker (foreground hold) on connect too, in case
+    // the broker binds after this surface is already resumed (bindService is async).
+    private var resumed = false
+
+    // Renews the broker's foreground lease while resumed. If this process dies, the heartbeat stops and
+    // the broker reaps the stale lease, so a crash can't pin the main process's network up forever.
+    private var foregroundHeartbeat: Job? = null
+
     private val brokerConnection =
         object : ServiceConnection {
             override fun onServiceConnected(
@@ -173,6 +182,9 @@ class NappletHostActivity : ComponentActivity() {
                 brokerMessenger = Messenger(service)
                 pendingRequests.forEach { sendToBroker(it) }
                 pendingRequests.clear()
+                // If we're already foreground by the time the broker binds, report it now so the
+                // main-process resource hold is acquired for this session.
+                if (resumed) setBrokerForeground(true)
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
@@ -214,6 +226,9 @@ class NappletHostActivity : ComponentActivity() {
         // it. Binding the broker early overlaps too. The WebView is attached once the probe succeeds.
         webView = WebView(this)
         hardenWebView(webView)
+        // Theme the WebView's pre-paint background to the app's so it doesn't flash white when the shell
+        // mounts. This activity has a themed context, so it resolves the color locally (no IPC needed).
+        webView.setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
         // Route the WebView's own (off-origin) traffic through Tor for an nSite, unless this site was
         // opted out to the open web. Set process-wide before any page navigation; the shell + blobs are
         // served from cache via shouldInterceptRequest, so only the site's external requests hit this.
@@ -232,14 +247,21 @@ class NappletHostActivity : ComponentActivity() {
         // Route the back gesture into the WebView's history first (see backCallback).
         onBackPressedDispatcher.addCallback(this, backCallback)
 
-        // Persistent trusted chrome (anti-phishing bar the applet can't draw over) over a content
-        // frame that shows a loading screen → the applet's WebView, or an "unavailable" screen.
+        // The applet titles itself, so instead of a full-width bar we hang a trusted top pull-down sheet
+        // (the anti-phishing shield the applet can't draw over) over the content frame, which shows a
+        // loading screen → the applet's WebView, or an "unavailable" screen.
         val root =
-            LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                addView(buildSandboxBar())
-                addView(buildDivider())
-                addView(contentFrame, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+            FrameLayout(this).apply {
+                addView(contentFrame, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+                addView(
+                    buildControlSheet(),
+                    FrameLayout
+                        .LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            Gravity.TOP,
+                        ),
+                )
             }
         setContentView(root)
         // Activities are edge-to-edge by default on recent Android; pad by the system bar and
@@ -295,6 +317,11 @@ class NappletHostActivity : ComponentActivity() {
             webView.onResume()
             webView.resumeTimers()
         }
+        // Launching this :napplet-process surface backgrounded the main process; tell the broker to
+        // hold the main process resumed (Tor/relays/AUTH) while this napplet/nSite is in front, and
+        // keep renewing that lease so a crash here can't pin the network up forever.
+        resumed = true
+        startForegroundHeartbeat()
     }
 
     override fun onPause() {
@@ -305,7 +332,44 @@ class NappletHostActivity : ComponentActivity() {
             webView.onPause()
             webView.pauseTimers()
         }
+        // No longer foreground: stop renewing and let the main process resume normal background scaling.
+        resumed = false
+        stopForegroundHeartbeat()
+        setBrokerForeground(false)
         super.onPause()
+    }
+
+    /** Reports foreground=true immediately and then re-reports on a heartbeat to renew the broker lease. */
+    private fun startForegroundHeartbeat() {
+        foregroundHeartbeat?.cancel()
+        foregroundHeartbeat =
+            uiScope.launch {
+                while (true) {
+                    setBrokerForeground(true)
+                    delay(FOREGROUND_HEARTBEAT_MS)
+                }
+            }
+    }
+
+    private fun stopForegroundHeartbeat() {
+        foregroundHeartbeat?.cancel()
+        foregroundHeartbeat = null
+    }
+
+    /** Reports this surface's foreground state to the broker so it can hold the main process resumed. */
+    private fun setBrokerForeground(foreground: Boolean) {
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_SET_FOREGROUND).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_LAUNCH_TOKEN, launchToken)
+                        putBoolean(NappletIpc.KEY_FOREGROUND, foreground)
+                    }
+            }
+        // Before the broker binds, the surface isn't really up yet; the matching onPause(false) is a
+        // no-op on the broker's empty map, so dropping a pre-bind report is harmless — the heartbeat
+        // re-reports once connected (and onServiceConnected seeds it too).
+        if (brokerMessenger != null) sendToBroker(msg)
     }
 
     override fun onDestroy() {
@@ -644,62 +708,24 @@ class NappletHostActivity : ComponentActivity() {
 
     private fun barTitle(): String = title.ifBlank { getString(R.string.napplet_untitled) }
 
-    /** The always-visible bar: a shield, the napplet's name, and an info affordance to see its access. */
-    private fun buildSandboxBar(): View {
-        val onSurface = resolveThemeColor(android.R.attr.textColorPrimary)
-        val bar =
-            LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
-                setPadding(dp(14), dp(10), dp(14), dp(10))
-                isClickable = true
-                setOnClickListener { showAccessDialog() }
-                contentDescription = getString(R.string.napplet_chrome_permissions_desc)
-            }
-        bar.addView(
-            TextView(this).apply {
-                text = "🛡" // shield
-                setPadding(0, 0, dp(10), 0)
-            },
+    /**
+     * The trusted top pull-down sheet: a small grabber at the top edge (out of the corner where the app
+     * shows its own avatar) that expands to the sandbox **shield**, the nSite network/Tor row (website
+     * mode only, taps through to the confirm dialog), reload, and the "what it can access" sheet. The
+     * applet can't draw over it. Mirrors the embedded tabs' Compose `TopControlSheet`.
+     */
+    private fun buildControlSheet(): View =
+        NappletControlSheet(
+            context = this,
+            title = barTitle(),
+            isSandbox = true,
+            onReload = { if (this::webView.isInitialized) webView.reload() },
+            // Website-mode nSites can re-route over Tor; switching rebuilds the session via a confirm
+            // dialog, so the row taps through rather than toggling inline.
+            torInitiallyOn = if (websiteMode && proxyPort > 0) useTor else null,
+            onNetworkTap = if (websiteMode && proxyPort > 0) ({ showNetworkDialog() }) else null,
+            onInfo = { showAccessDialog() },
         )
-        bar.addView(
-            TextView(this).apply {
-                text = barTitle()
-                setTextColor(onSurface)
-                textSize = 16f
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            },
-        )
-        // nSite network indicator + toggle: the Tor logo, lit when routing through Tor and dimmed when
-        // the site loads over the open web. Only shown for a website-mode nSite when Tor is active —
-        // otherwise there is nothing to route through. Its own click opens the network dialog (and, by
-        // consuming the click, doesn't also fire the access sheet bound to the bar).
-        if (websiteMode && proxyPort > 0) {
-            bar.addView(
-                ImageView(this).apply {
-                    setImageResource(R.drawable.ic_tor)
-                    setColorFilter(if (useTor) onSurface else resolveThemeColor(android.R.attr.textColorSecondary))
-                    alpha = if (useTor) 1f else 0.4f
-                    setPadding(0, 0, dp(12), 0)
-                    isClickable = true
-                    setOnClickListener { showNetworkDialog() }
-                    contentDescription = getString(if (useTor) R.string.napplet_net_tor_desc else R.string.napplet_net_open_desc)
-                    layoutParams = LinearLayout.LayoutParams(dp(34), dp(22))
-                },
-            )
-        }
-        bar.addView(
-            TextView(this).apply {
-                text = "ⓘ" // circled info
-                setTextColor(onSurface)
-                textSize = 18f
-            },
-        )
-        return bar
-    }
 
     /**
      * Explains the site's current network routing and offers to switch it. Switching persists the
@@ -734,12 +760,6 @@ class NappletHostActivity : ComponentActivity() {
         intent.putExtra(NappletHostContract.EXTRA_USE_TOR, newUseTor)
         recreate()
     }
-
-    private fun buildDivider(): View =
-        View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1))
-            setBackgroundColor(resolveThemeColor(android.R.attr.textColorPrimary) and 0x22FFFFFF)
-        }
 
     /** Lists, in plain language, exactly which capabilities this napplet was launched with. */
     private fun showAccessDialog() {
@@ -783,5 +803,12 @@ class NappletHostActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "NappletHostActivity"
+
+        /**
+         * How often a resumed host renews its foreground lease with the broker. Comfortably shorter than
+         * the broker's lease TTL so a couple of dropped/delayed beats don't expire a still-foreground
+         * surface, while a dead process (heartbeat stopped) is reaped within the TTL.
+         */
+        const val FOREGROUND_HEARTBEAT_MS = 30_000L
     }
 }

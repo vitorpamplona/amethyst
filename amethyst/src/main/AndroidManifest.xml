@@ -412,6 +412,19 @@
             android:launchMode="singleTask"
             android:theme="@style/Theme.Amethyst" />
 
+        <!-- Direct-WebView browser for a single web client. Runs in the isolated, keyless `:napplet`
+             process and hosts the WebView directly (not a streamed surface), so scroll/zoom/keyboard work
+             natively. adjustResize shrinks the window for the soft keyboard. Its own task/recents entry. -->
+        <activity
+            android:name="com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity"
+            android:process=":napplet"
+            android:exported="false"
+            android:autoRemoveFromRecents="true"
+            android:documentLaunchMode="intoExisting"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Amethyst" />
+
         <!-- Capability-consent dialog. Runs in the main process (the only side trusted to grant). -->
         <activity
             android:name=".napplet.NappletConsentActivity"
@@ -423,6 +436,21 @@
         <!-- Main-process broker: holds the signer and brokers capabilities for the sandbox. -->
         <service
             android:name=".napplet.NappletBrokerService"
+            android:exported="false" />
+
+        <!-- Embedded-browser provider: hosts the in-app browser WebView in the isolated, keyless
+             process and ships its rendered surface to the main app (SurfaceControlViewHost). -->
+        <service
+            android:name="com.vitorpamplona.amethyst.napplethost.NappletBrowserService"
+            android:process=":napplet"
+            android:exported="false" />
+
+        <!-- Embedded nsite/napplet provider: hosts the verified-blob WebView in the isolated, keyless
+             process and ships its surface to the main app, so a favorited nsite/napplet can render as
+             an in-app tab instead of taking over the screen. Same trust model as NappletHostActivity. -->
+        <service
+            android:name="com.vitorpamplona.amethyst.napplethost.NappletHostService"
+            android:process=":napplet"
             android:exported="false" />
 
     </application>
