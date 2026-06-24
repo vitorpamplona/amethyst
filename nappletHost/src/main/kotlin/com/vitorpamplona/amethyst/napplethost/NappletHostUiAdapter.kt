@@ -44,6 +44,7 @@ import java.util.concurrent.Executor
 @RequiresApi(Build.VERSION_CODES.R)
 class NappletHostUiAdapter(
     private val service: NappletHostService,
+    private val sessionId: String,
 ) : AbstractSandboxedUiAdapter() {
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -59,11 +60,11 @@ class NappletHostUiAdapter(
         // WebView creation must run on the main thread; openSession is called on a binder thread.
         mainHandler.post {
             runCatching {
-                val webView = service.createHostWebView(context)
+                val webView = service.createHostWebView(context, sessionId)
                 // FrameLayout.LayoutParams (a MarginLayoutParams) — the SurfaceControlViewHost container
                 // measures children with measureChildWithMargins, which casts to MarginLayoutParams.
                 webView.layoutParams = FrameLayout.LayoutParams(initialWidth, initialHeight)
-                HostSession(webView, service)
+                HostSession(sessionId, webView, service)
             }.onSuccess { session -> clientExecutor.execute { client.onSessionOpened(session) } }
                 .onFailure { t -> clientExecutor.execute { client.onSessionError(t) } }
         }
@@ -73,6 +74,7 @@ class NappletHostUiAdapter(
 /** A single embedded napplet/nsite session: the WebView is the rendered view; close tears it down. */
 @RequiresApi(Build.VERSION_CODES.R)
 private class HostSession(
+    private val sessionId: String,
     private val webView: WebView,
     private val service: NappletHostService,
 ) : SandboxedUiAdapter.Session {
@@ -97,6 +99,6 @@ private class HostSession(
     override fun notifyUiChanged(uiContainerInfo: Bundle) {}
 
     override fun close() {
-        service.onSessionClosed(webView)
+        service.onSessionClosed(sessionId)
     }
 }

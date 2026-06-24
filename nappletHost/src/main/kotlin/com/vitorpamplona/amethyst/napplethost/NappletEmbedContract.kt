@@ -82,6 +82,13 @@ object NappletEmbedContract {
     const val KEY_NOTICE = "notice"
     const val KEY_IME_PAYLOAD = "imePayload"
 
+    /**
+     * Opaque per-tab session id the client stamps on [MSG_CREATE_SESSION] and every control message. A
+     * single provider instance is shared by all embedded napplet/nSite tabs (they bind the same Intent),
+     * so this scopes a control to the right surface and routes state/notices/IME back to the right tab.
+     */
+    const val KEY_SESSION_ID = "sessionId"
+
     const val NOTICE_PUBLISHED = "published"
     const val NOTICE_UPLOADED = "uploaded"
     const val NOTICE_PAID = "paid"

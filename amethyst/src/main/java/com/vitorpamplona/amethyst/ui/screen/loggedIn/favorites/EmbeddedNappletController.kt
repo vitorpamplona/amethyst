@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
 import org.json.JSONObject
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Client-side handle to an embedded nsite/napplet. Binds [NappletHostService][com.vitorpamplona.amethyst.napplethost.NappletHostService]
@@ -64,6 +65,10 @@ class EmbeddedNappletController(
 
     private var sandboxedSdkView: SandboxedSdkView? = null
     private var pendingAdapter: SandboxedUiAdapter? = null
+
+    // A single NappletHostService instance serves every embedded napplet tab, so each controller stamps
+    // its own id on every message; the provider uses it to route controls/state/IME to this tab.
+    private val sessionId: String = "napplet-${SESSION_SEQ.incrementAndGet()}"
 
     // A parked tab can be hidden (paused) before the service even binds, so the pause message is
     // dropped (no messenger yet). Remember the intent and replay it right after the session is created,
@@ -133,7 +138,7 @@ class EmbeddedNappletController(
         val msg =
             Message.obtain(null, NappletEmbedContract.MSG_CREATE_SESSION).apply {
                 replyTo = incoming
-                data = Bundle(params)
+                data = Bundle(params).apply { putString(NappletEmbedContract.KEY_SESSION_ID, sessionId) }
             }
         runCatching { serviceMessenger?.send(msg) }
         // Replay a pause that was requested before we had a messenger to send it on (parked-before-bound),
@@ -167,10 +172,7 @@ class EmbeddedNappletController(
         return true
     }
 
-    override fun sendImeOp(json: String) {
-        val msg = Message.obtain(null, NappletEmbedContract.MSG_IME_OP).apply { data = Bundle().apply { putString(NappletEmbedContract.KEY_IME_PAYLOAD, json) } }
-        runCatching { serviceMessenger?.send(msg) }
-    }
+    override fun sendImeOp(json: String) = send(NappletEmbedContract.MSG_IME_OP) { putString(NappletEmbedContract.KEY_IME_PAYLOAD, json) }
 
     private fun parseImeEvent(payload: String): ImeEvent? {
         val o = runCatching { JSONObject(payload) }.getOrNull() ?: return null
@@ -210,8 +212,22 @@ class EmbeddedNappletController(
         send(NappletEmbedContract.MSG_RESUME)
     }
 
-    private fun send(what: Int) {
-        val msg = Message.obtain(null, what)
+    private inline fun send(
+        what: Int,
+        crossinline block: Bundle.() -> Unit = {},
+    ) {
+        val msg =
+            Message.obtain(null, what).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletEmbedContract.KEY_SESSION_ID, sessionId)
+                        block()
+                    }
+            }
         runCatching { serviceMessenger?.send(msg) }
+    }
+
+    private companion object {
+        private val SESSION_SEQ = AtomicLong()
     }
 }
