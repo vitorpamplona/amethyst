@@ -382,6 +382,7 @@ fun HomeFeeds(
                 listState = listState,
                 nav = nav,
                 routeForLastRead = routeForLastRead,
+                registerReadAloud = true,
                 onLoaded = { FeedLoaded(it, listState, routeForLastRead, liveSection, accountViewModel, nav) },
                 onEmpty = { HomeFeedEmpty(onRefresh) },
             )

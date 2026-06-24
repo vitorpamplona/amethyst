@@ -95,6 +95,9 @@ fun RenderFeedContentState(
     listState: LazyListState,
     nav: INav,
     routeForLastRead: String?,
+    // Opt-in: only text-note feeds (e.g. Home) enable "read aloud". Media feeds (music, video,
+    // pictures) have their own playback and must not claim the read-aloud button / MediaSession.
+    registerReadAloud: Boolean = false,
     onLoaded: @Composable (FeedState.Loaded) -> Unit = { FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav) },
     onEmpty: @Composable () -> Unit = { FeedEmpty(feedContentState::invalidateData) },
     onError: @Composable (String) -> Unit = { FeedError(it, feedContentState::invalidateData) },
@@ -102,10 +105,12 @@ fun RenderFeedContentState(
 ) {
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
-    // Lets the shared top-bar "read aloud" button drive whatever feed is currently on screen.
-    DisposableEffect(feedContentState, listState) {
-        accountViewModel.readAloud.register(feedContentState, listState)
-        onDispose { accountViewModel.readAloud.unregister(feedContentState) }
+    // Lets the shared top-bar "read aloud" button drive this feed while it's on screen.
+    if (registerReadAloud) {
+        DisposableEffect(feedContentState, listState) {
+            accountViewModel.readAloud.register(feedContentState, listState)
+            onDispose { accountViewModel.readAloud.unregister(feedContentState) }
+        }
     }
 
     CrossfadeIfEnabled(
