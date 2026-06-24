@@ -37,6 +37,7 @@ import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Client-side handle to the embedded browser. Binds [NappletBrowserService] (in the keyless `:napplet`
@@ -58,6 +59,10 @@ class EmbeddedBrowserController(
     private var sandboxedSdkView: SandboxedSdkView? = null
     private var pendingAdapter: SandboxedUiAdapter? = null
     private var startUrl: String = "about:blank"
+
+    // A single NappletBrowserService instance serves every embedded browser tab, so each controller
+    // stamps its own id on every message; the provider uses it to route controls/updates to this tab.
+    private val sessionId: String = "browser-${SESSION_SEQ.incrementAndGet()}"
 
     /** Invoked on the main thread when the page navigates: (url, canGoBack). */
     var onUrlChanged: ((String, Boolean) -> Unit)? = null
@@ -115,6 +120,7 @@ class EmbeddedBrowserController(
                 replyTo = incoming
                 data =
                     Bundle().apply {
+                        putString(NappletBrowserContract.KEY_SESSION_ID, sessionId)
                         putString(NappletBrowserContract.KEY_URL, startUrl)
                         putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort)
                         putBoolean(NappletBrowserContract.KEY_USE_TOR, initialUseTor)
@@ -154,7 +160,18 @@ class EmbeddedBrowserController(
         what: Int,
         crossinline block: Bundle.() -> Unit,
     ) {
-        val msg = Message.obtain(null, what).apply { data = Bundle().apply(block) }
+        val msg =
+            Message.obtain(null, what).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletBrowserContract.KEY_SESSION_ID, sessionId)
+                        block()
+                    }
+            }
         runCatching { serviceMessenger?.send(msg) }
+    }
+
+    private companion object {
+        private val SESSION_SEQ = AtomicLong()
     }
 }
