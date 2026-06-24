@@ -153,6 +153,11 @@ class NappletBrowserService : Service() {
             NappletBrowserContract.MSG_NAVIGATE -> tabFor(msg)?.webView?.loadUrl(normalizeUrl(msg.data?.getString(NappletBrowserContract.KEY_URL).orEmpty()))
             NappletBrowserContract.MSG_RELOAD -> tabFor(msg)?.webView?.reload()
             NappletBrowserContract.MSG_BACK -> tabFor(msg)?.webView?.let { if (it.canGoBack()) it.goBack() }
+            NappletBrowserContract.MSG_IME_OP -> {
+                val tab = tabFor(msg) ?: return true
+                val payload = msg.data?.getString(NappletBrowserContract.KEY_IME_PAYLOAD) ?: return true
+                tab.bridgeReplyProxy?.postMessage(payload)
+            }
             NappletBrowserContract.MSG_SET_TOR -> {
                 val tab = tabFor(msg) ?: return true
                 tab.useTor = msg.data?.getBoolean(NappletBrowserContract.KEY_USE_TOR, false) ?: false
@@ -200,7 +205,10 @@ class NappletBrowserService : Service() {
                 onBridgeMessage(tab, view, message, sourceOrigin, isMainFrame, replyProxy)
             }
         }
-        val startScript = "if (window.top === window) { window.__nappletDirectBridge = true; window.__nappletNip07 = true; }\n$shim"
+        // __nappletImeProxy: this is the EMBEDDED surface (no native keyboard), so install the IME agent
+        // that relays the focused field to the host's keyboard. The full-screen browser activity sets the
+        // direct bridge but NOT this flag (it has a real WebView window with a native keyboard).
+        val startScript = "if (window.top === window) { window.__nappletDirectBridge = true; window.__nappletNip07 = true; window.__nappletImeProxy = true; }\n$shim"
         WebViewCompat.addDocumentStartJavaScript(wv, startScript, setOf("*"))
         tab?.webView = wv
         wv.loadUrl(tab?.url ?: "about:blank")
@@ -347,6 +355,16 @@ class NappletBrowserService : Service() {
         tab.bridgeReplyProxy = replyProxy
         val raw = message.data ?: return
         val envelope = runCatching { JSONObject(raw) }.getOrNull() ?: return
+
+        // IME events aren't brokered — the main app hosts the keyboard. Relay the envelope to the client.
+        if (envelope.optString("type").startsWith("ime.")) {
+            val reply =
+                Message.obtain(null, NappletBrowserContract.MSG_IME_EVENT).apply {
+                    data = Bundle().apply { putString(NappletBrowserContract.KEY_IME_PAYLOAD, raw) }
+                }
+            runCatching { tab.clientMessenger?.send(reply) }
+            return
+        }
 
         val scheme = sourceOrigin.scheme ?: return
         val host = sourceOrigin.host ?: return

@@ -53,6 +53,18 @@ object NappletBrowserContract {
     /** Provider → client: the page navigated; carries [KEY_URL] and [KEY_CAN_GO_BACK]. */
     const val MSG_URL_CHANGED = 7
 
+    /**
+     * Provider → client: the page reported an IME event (a focused editable, a blur, or an external
+     * text change). The raw JSON envelope (`{type:"ime.focus"|...}`) is carried in [KEY_IME_PAYLOAD]; the
+     * embedded surface can't host the soft keyboard, so the main app shows it and relays editing.
+     */
+    const val MSG_IME_EVENT = 8
+
+    /** Client → provider: an IME editing op for the focused field; raw JSON in [KEY_IME_PAYLOAD]. */
+    const val MSG_IME_OP = 9
+
+    const val KEY_IME_PAYLOAD = "imePayload"
+
     const val KEY_URL = "url"
     const val KEY_PROXY_PORT = "proxyPort"
     const val KEY_USE_TOR = "useTor"

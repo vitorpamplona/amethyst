@@ -26,11 +26,14 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -41,7 +44,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
@@ -78,12 +83,21 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
 
     val bounds = EmbeddedTabHost.contentBounds
     var layerOrigin by remember { mutableStateOf(Offset.Zero) }
+    var layerSize by remember { mutableStateOf(IntSize.Zero) }
     val density = LocalDensity.current
+
+    // While the soft keyboard is up (hosted by [RemoteImeView] in this window), shrink the active
+    // surface so its bottom clears the keyboard — the embedded WebView then reflows and scrolls the
+    // focused field into view. Only the portion of the keyboard that overlaps the surface counts.
+    val imeBottomPx = WindowInsets.ime.getBottom(density)
 
     Box(
         Modifier
             .fillMaxSize()
-            .onGloballyPositioned { layerOrigin = it.positionInWindow() },
+            .onGloballyPositioned {
+                layerOrigin = it.positionInWindow()
+                layerSize = it.size
+            },
     ) {
         EmbeddedTabHost.sessions.forEach { session ->
             key(session.id) {
@@ -101,9 +115,10 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                             // surface re-render, no black flash between tabs. (Parking at 1dp forced a
                             // resize + re-render on every switch, which flashed black for ~1s.)
                             val left = (bounds.left - layerOrigin.x).toDp() + (if (active) 0.dp else OFFSCREEN_SHIFT)
+                            val imeOverlap = if (active) (imeBottomPx - (layerOrigin.y + layerSize.height - bounds.bottom)).coerceAtLeast(0f) else 0f
                             Modifier
                                 .absoluteOffset(left, (bounds.top - layerOrigin.y).toDp())
-                                .size(bounds.width.toDp(), bounds.height.toDp())
+                                .size(bounds.width.toDp(), (bounds.height - imeOverlap).coerceAtLeast(1f).toDp())
                         }
                     } else {
                         // No content bounds reported yet: park tiny off-screen until a tab is shown.
@@ -159,6 +174,39 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                             ).width(bounds.width.toDp()),
                 )
             }
+        }
+
+        // The embedded surface can't host the soft keyboard, so an invisible main-window EditText takes
+        // it whenever a field in the ACTIVE tab focuses, relaying edits across [EmbeddedImeBridge]. Lives
+        // here, in the main app window, so it can actually receive the IME.
+        val context = LocalContext.current
+        val imeBridge = EmbeddedTabHost.sessions.firstOrNull { it.id == activeId }?.controller as? EmbeddedImeBridge
+        val imeView = remember { RemoteImeView(context) }
+        DisposableEffect(imeBridge) {
+            imeView.bind(imeBridge)
+            imeBridge?.onImeEvent = { event ->
+                when (event) {
+                    is ImeEvent.Focus -> imeView.onPageFocus(event)
+                    ImeEvent.Blur -> imeView.onPageBlur()
+                    is ImeEvent.State -> imeView.onPageState(event)
+                }
+            }
+            onDispose {
+                imeBridge?.onImeEvent = null
+                imeView.onPageBlur()
+                imeView.bind(null)
+            }
+        }
+        with(density) {
+            AndroidView(
+                factory = { imeView },
+                modifier =
+                    Modifier
+                        .absoluteOffset(
+                            (bounds.left - layerOrigin.x).toDp().coerceAtLeast(0.dp),
+                            (bounds.top - layerOrigin.y).toDp().coerceAtLeast(0.dp),
+                        ).size(1.dp),
+            )
         }
     }
 }

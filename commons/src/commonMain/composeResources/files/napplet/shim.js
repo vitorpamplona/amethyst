@@ -86,6 +86,8 @@
     }
     // keys.action push: the shell triggers a registered keyboard/command action.
     if (msg.type === 'keys.action') { var cb = actions[msg.actionId]; if (cb) cb(); return; }
+    // IME ops (host keyboard -> focused page field). Only the direct-bridge browser installs the agent.
+    if (msg.type && msg.type.indexOf('ime.') === 0) { if (window.__nappletImeHandle) window.__nappletImeHandle(msg); return; }
     // identity.changed push: the active user's key changed (account switch / connect / disconnect).
     if (msg.type === 'identity.changed') { identityHandlers.slice().forEach(function(h){ try { h(msg.pubkey); } catch (_) {} }); return; }
     if (!msg.id) return;
@@ -177,6 +179,139 @@
     }
   };
   window.napplet = Object.freeze(napplet);
+
+  // ---- IME agent (in-app browser only) -------------------------------------------------------
+  // The embedded browser surface renders cross-process via SurfaceControlViewHost, which forwards
+  // touch but NOT the soft keyboard (the embedded window can't be an IME target). So the host shows
+  // the keyboard in the main app window and relays editing here, where we apply it to the focused
+  // field with real input/composition events. Installed only on the EMBEDDED browser surface; the
+  // full-screen browser activity sets the direct bridge but not __nappletImeProxy (it has a native kbd).
+  var IME_PROXY = false; try { IME_PROXY = !!window.__nappletImeProxy; } catch (_) {}
+  if (DIRECT && IME_PROXY) (function(){
+    var el = null;            // the focused editable element, or null
+    var composing = null;     // { start, end } of the active composing region in el's value, or null
+
+    function isEditable(n){
+      if (!n) return false;
+      if (n.isContentEditable) return true;
+      var t = (n.tagName || '').toUpperCase();
+      if (t === 'TEXTAREA') return true;
+      if (t === 'INPUT') {
+        var ty = (n.type || 'text').toLowerCase();
+        return ['text','search','url','email','tel','password','number',''].indexOf(ty) >= 0;
+      }
+      return false;
+    }
+    function isCE(n){ return !!(n && n.isContentEditable); }
+    function valOf(n){ return isCE(n) ? n.textContent : (n.value || ''); }
+    function selOf(n){
+      if (isCE(n)) { var v = n.textContent.length; return [v, v]; }
+      return [n.selectionStart || 0, n.selectionEnd || 0];
+    }
+    function setSel(n, s, e){ if (!isCE(n)) { try { n.setSelectionRange(s, e); } catch (_) {} } }
+    function dispatchInput(n, inputType, data){
+      var ev;
+      try { ev = new InputEvent('input', { bubbles: true, cancelable: false, inputType: inputType, data: data }); }
+      catch (_) { ev = new Event('input', { bubbles: true }); }
+      n.__nappletIme = true;
+      try { n.dispatchEvent(ev); } finally { n.__nappletIme = false; }
+    }
+    // Replace [start,end) in n with text, move the caret after it, and fire an input event.
+    function replaceRange(n, start, end, text, inputType){
+      var v = valOf(n);
+      start = Math.max(0, Math.min(start, v.length));
+      end = Math.max(start, Math.min(end, v.length));
+      var next = v.slice(0, start) + text + v.slice(end);
+      if (isCE(n)) { n.textContent = next; } else { n.value = next; }
+      var caret = start + text.length;
+      setSel(n, caret, caret);
+      dispatchInput(n, inputType, text);
+      return caret;
+    }
+    function focusInfo(n){
+      var t = (n.tagName || '').toUpperCase();
+      var multiline = isCE(n) || t === 'TEXTAREA';
+      var inputType = isCE(n) ? 'text' : (t === 'TEXTAREA' ? 'textarea' : (n.type || 'text').toLowerCase());
+      var sel = selOf(n);
+      return { type:'ime.focus', inputType: inputType, enterKeyHint: (n.enterKeyHint || ''),
+               multiline: multiline, text: valOf(n), selStart: sel[0], selEnd: sel[1] };
+    }
+    function reportState(){
+      if (!el) return;
+      var sel = selOf(el);
+      send({ type:'ime.state', text: valOf(el), selStart: sel[0], selEnd: sel[1] });
+    }
+
+    document.addEventListener('focusin', function(e){
+      if (isEditable(e.target)) {
+        el = e.target; composing = null; send(focusInfo(el));
+        // The host shrinks the surface for the keyboard, but also nudge the field into view in case IME
+        // insets aren't delivered (some hosts) so it never sits behind the keyboard.
+        try { el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (_) {}
+      } else if (el) { el = null; composing = null; send({ type:'ime.blur' }); }
+    }, true);
+    document.addEventListener('focusout', function(e){
+      if (e.target === el) { el = null; composing = null; send({ type:'ime.blur' }); }
+    }, true);
+    // The page (its own JS, autofill) changed the field: resync the host keyboard's view of it.
+    document.addEventListener('input', function(e){ if (e.target === el && !el.__nappletIme) reportState(); }, true);
+    document.addEventListener('selectionchange', function(){ if (el && !isCE(el) && !el.__nappletIme) reportState(); }, true);
+
+    function dispatchKey(n, key, kc){
+      ['keydown','keyup'].forEach(function(type){
+        try { n.dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, key: key || '', keyCode: kc, which: kc })); } catch (_) {}
+      });
+    }
+    function enter(n){
+      var t = (n.tagName || '').toUpperCase();
+      if (isCE(n) || t === 'TEXTAREA') { var s = selOf(n); replaceRange(n, s[0], s[1], '\n', 'insertLineBreak'); return; }
+      dispatchKey(n, 'Enter', 13);
+      if (n.form) { try { (n.form.requestSubmit ? n.form.requestSubmit() : n.form.submit()); } catch (_) {} }
+    }
+
+    // Apply one host->page IME op to the focused field, then echo authoritative state back.
+    window.__nappletImeHandle = function(msg){
+      if (!el) return;
+      var n = el, sel = selOf(n);
+      switch (msg.type) {
+        case 'ime.commit': {
+          var cs = composing ? composing.start : sel[0];
+          var ce = composing ? composing.end : sel[1];
+          replaceRange(n, cs, ce, msg.text || '', 'insertText');
+          composing = null;
+          break;
+        }
+        case 'ime.composing': {
+          var s = composing ? composing.start : sel[0];
+          var e = composing ? composing.end : sel[1];
+          replaceRange(n, s, e, msg.text || '', 'insertCompositionText');
+          composing = (msg.text && msg.text.length) ? { start: s, end: s + msg.text.length } : null;
+          break;
+        }
+        case 'ime.finishComposing': composing = null; break;
+        case 'ime.delete': {
+          var before = msg.before || 0, after = msg.after || 0;
+          if (sel[0] !== sel[1]) { replaceRange(n, sel[0], sel[1], '', 'deleteContentBackward'); }
+          else { replaceRange(n, Math.max(0, sel[0] - before), sel[1] + after, '', 'deleteContentBackward'); }
+          composing = null;
+          break;
+        }
+        case 'ime.setSelection': setSel(n, msg.start, msg.end); break;
+        case 'ime.key': {
+          var kc = msg.keyCode | 0;
+          if (kc === 67) { // Android KEYCODE_DEL (backspace)
+            if (sel[0] !== sel[1]) replaceRange(n, sel[0], sel[1], '', 'deleteContentBackward');
+            else if (sel[0] > 0) replaceRange(n, sel[0] - 1, sel[0], '', 'deleteContentBackward');
+          } else if (kc === 66) { enter(n); } // KEYCODE_ENTER
+          else { dispatchKey(n, msg.key, kc); }
+          composing = null;
+          break;
+        }
+        case 'ime.action': enter(n); break;
+      }
+      reportState();
+    };
+  })();
 
   // NIP-07 provider (window.nostr), installed only for nSites in website mode (the host sets
   // window.__nappletNip07 synchronously before this shim). Lets standard Nostr web apps "log in with

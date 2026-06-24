@@ -36,7 +36,10 @@ import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
+import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -51,7 +54,8 @@ class EmbeddedBrowserController(
     private val proxyPort: Int,
     private val initialUseTor: Boolean,
     private val backgroundColor: Int,
-) : EmbeddedSurfaceController {
+) : EmbeddedSurfaceController,
+    EmbeddedImeBridge {
     private val incoming = Messenger(Handler(Looper.getMainLooper(), ::onServiceMessage))
     private var serviceMessenger: Messenger? = null
     private var bound = false
@@ -66,6 +70,8 @@ class EmbeddedBrowserController(
 
     /** Invoked on the main thread when the page navigates: (url, canGoBack). */
     var onUrlChanged: ((String, Boolean) -> Unit)? = null
+
+    override var onImeEvent: ((ImeEvent) -> Unit)? = null
 
     private val connection =
         object : ServiceConnection {
@@ -98,6 +104,7 @@ class EmbeddedBrowserController(
         sandboxedSdkView = null
         pendingAdapter = null
         onUrlChanged = null
+        onImeEvent = null
     }
 
     override fun teardown() = unbind()
@@ -143,6 +150,10 @@ class EmbeddedBrowserController(
                 val canGoBack = msg.data?.getBoolean(NappletBrowserContract.KEY_CAN_GO_BACK, false) ?: false
                 onUrlChanged?.invoke(url, canGoBack)
             }
+            NappletBrowserContract.MSG_IME_EVENT -> {
+                val payload = msg.data?.getString(NappletBrowserContract.KEY_IME_PAYLOAD) ?: return true
+                parseImeEvent(payload)?.let { event -> onImeEvent?.invoke(event) }
+            }
             else -> return false
         }
         return true
@@ -155,6 +166,31 @@ class EmbeddedBrowserController(
     fun back() = send(NappletBrowserContract.MSG_BACK) {}
 
     fun setTor(useTor: Boolean) = send(NappletBrowserContract.MSG_SET_TOR) { putBoolean(NappletBrowserContract.KEY_USE_TOR, useTor) }
+
+    override fun sendImeOp(json: String) = send(NappletBrowserContract.MSG_IME_OP) { putString(NappletBrowserContract.KEY_IME_PAYLOAD, json) }
+
+    private fun parseImeEvent(payload: String): ImeEvent? {
+        val o = runCatching { JSONObject(payload) }.getOrNull() ?: return null
+        return when (o.optString("type")) {
+            "ime.focus" ->
+                ImeEvent.Focus(
+                    inputType = o.optString("inputType", "text"),
+                    enterKeyHint = o.optString("enterKeyHint", ""),
+                    multiline = o.optBoolean("multiline", false),
+                    text = o.optString("text", ""),
+                    selStart = o.optInt("selStart", 0),
+                    selEnd = o.optInt("selEnd", 0),
+                )
+            "ime.blur" -> ImeEvent.Blur
+            "ime.state" ->
+                ImeEvent.State(
+                    text = o.optString("text", ""),
+                    selStart = o.optInt("selStart", 0),
+                    selEnd = o.optInt("selEnd", 0),
+                )
+            else -> null
+        }
+    }
 
     private inline fun send(
         what: Int,
