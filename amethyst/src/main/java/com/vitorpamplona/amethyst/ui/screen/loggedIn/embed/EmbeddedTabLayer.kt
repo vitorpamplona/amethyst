@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 import android.os.Build
 import android.view.ViewGroup
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
@@ -126,23 +128,36 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         }
 
         // The active tab's top pull-down sheet, drawn AFTER the surfaces so it sits on top of the
-        // (z-below) surface, anchored to the top of the active tab's reserved bounds.
+        // (z-below) surface, anchored to the top of the active tab's reserved bounds. Its expanded state
+        // is owned here (reset per tab) so we can draw a full-area dismiss scrim behind the open sheet —
+        // while collapsed, only the small grabber is interactive and page taps pass through.
         val chrome = EmbeddedTabHost.activeChrome
         if (chrome != null && bounds.width > 0f && bounds.height > 0f) {
+            var sheetExpanded by remember(activeId) { mutableStateOf(false) }
+
+            if (sheetExpanded) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { sheetExpanded = false },
+                )
+            }
+
             with(density) {
-                // Key on the active tab so the sheet's expand/collapse state resets per tab instead of
-                // a previous tab's open sheet bleeding into the next.
-                key(activeId) {
-                    TopControlSheet(
-                        chrome = chrome,
-                        modifier =
-                            Modifier
-                                .absoluteOffset(
-                                    (bounds.left - layerOrigin.x).toDp(),
-                                    (bounds.top - layerOrigin.y).toDp(),
-                                ).width(bounds.width.toDp()),
-                    )
-                }
+                TopControlSheet(
+                    chrome = chrome,
+                    expanded = sheetExpanded,
+                    onExpandedChange = { sheetExpanded = it },
+                    modifier =
+                        Modifier
+                            .absoluteOffset(
+                                (bounds.left - layerOrigin.x).toDp(),
+                                (bounds.top - layerOrigin.y).toDp(),
+                            ).width(bounds.width.toDp()),
+                )
             }
         }
     }

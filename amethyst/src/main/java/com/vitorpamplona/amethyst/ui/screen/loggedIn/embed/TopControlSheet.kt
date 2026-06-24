@@ -46,8 +46,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,10 +67,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 @Composable
 fun TopControlSheet(
     chrome: EmbeddedTabChrome,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -115,40 +113,41 @@ fun TopControlSheet(
                         )
                     }
                     SheetItem(MaterialSymbols.Refresh, stringResource(R.string.browser_reload)) {
-                        expanded = false
+                        onExpandedChange(false)
                         chrome.onReload()
                     }
                     chrome.onInfo?.let { info ->
                         SheetItem(MaterialSymbols.Info, stringResource(R.string.favorite_app_access_show)) {
-                            expanded = false
+                            onExpandedChange(false)
                             info()
                         }
                     }
                     SheetItem(MaterialSymbols.OpenInFull, stringResource(R.string.favorite_app_open_window)) {
-                        expanded = false
+                        onExpandedChange(false)
                         chrome.onOpenFull()
                     }
                 }
             }
         }
 
-        // The grabber: a small rounded bar centered at the top edge. Pull down to open, up to close;
-        // tapping toggles. Wrapped in padding so the touch target is comfortable despite the thin bar.
+        // The grabber: a small rounded bar centered at the top edge. It is the ONLY touch target the sheet
+        // draws — the rest of the top strip stays transparent so page taps pass straight through to the
+        // surface below. Pull down to open, up to close; tapping toggles.
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier =
                 Modifier
                     .clip(RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-                    .clickable { expanded = !expanded }
+                    .clickable { onExpandedChange(!expanded) }
                     .draggable(
                         orientation = Orientation.Vertical,
                         state =
                             rememberDraggableState { delta ->
                                 if (delta > 1f) {
-                                    expanded = true
+                                    onExpandedChange(true)
                                 } else if (delta < -1f) {
-                                    expanded = false
+                                    onExpandedChange(false)
                                 }
                             },
                     ).padding(horizontal = 16.dp, vertical = 7.dp),

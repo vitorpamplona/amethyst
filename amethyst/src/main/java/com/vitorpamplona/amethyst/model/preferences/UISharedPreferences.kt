@@ -218,13 +218,25 @@ class UiSharedPreferences(
             if (raw.isBlank()) return emptyList()
             // Current format: a JSON list of BottomBarEntry (built-ins + favorites).
             runCatching { return JsonMapper.fromJson<List<BottomBarEntry>>(raw) }
-            // Legacy format: comma-joined NavBarItem enum names (before favorites/unified entries).
-            return runCatching {
-                raw
-                    .split(",")
-                    .mapNotNull { name -> runCatching { NavBarItem.valueOf(name) }.getOrNull() }
-                    .map { BottomBarEntry.BuiltIn(it) }
-            }.getOrNull()
+            // Configs written before the stable @SerialName discriminators used the fully-qualified
+            // class name as the polymorphic "type" value. Rewrite it to the short name and retry, so a
+            // customized bar survives the upgrade instead of silently resetting to defaults.
+            runCatching {
+                val migrated =
+                    raw
+                        .replace(LEGACY_BUILTIN_DISCRIMINATOR, "builtIn")
+                        .replace(LEGACY_FAVORITE_DISCRIMINATOR, "favorite")
+                return JsonMapper.fromJson<List<BottomBarEntry>>(migrated)
+            }
+            // Oldest format: comma-joined NavBarItem enum names (before favorites/unified entries).
+            val legacy = raw.split(",").mapNotNull { name -> runCatching { NavBarItem.valueOf(name) }.getOrNull() }
+            if (legacy.isNotEmpty()) return legacy.map { BottomBarEntry.BuiltIn(it) }
+            // Unrecognizable — fall back to the defaults rather than leaving the bar empty.
+            return DefaultBottomBarEntries
         }
+
+        // The pre-@SerialName polymorphic discriminators (fully-qualified class names) for migration.
+        private const val LEGACY_BUILTIN_DISCRIMINATOR = "com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.BuiltIn"
+        private const val LEGACY_FAVORITE_DISCRIMINATOR = "com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.Favorite"
     }
 }
