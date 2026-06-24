@@ -71,6 +71,12 @@ open class BasicRelayClient(
         // immediately drop the socket would otherwise reset the backoff on
         // every onOpen and reconnect in a tight ~3s loop forever.
         const val STABLE_CONNECTION_IN_SECS = TimeUtils.ONE_MINUTE
+
+        // Reject messages larger than this before attempting to parse them.
+        // Parsing a monster kind:3 with tens of thousands of tags allocates
+        // gigabytes of intermediate objects and triggers OOM on constrained
+        // Android devices. 512 KB is well above any legitimate Nostr event.
+        const val MAX_MESSAGE_BYTES = 524_288
     }
 
     private var socket: WebSocket? = null
@@ -147,13 +153,17 @@ open class BasicRelayClient(
         }
 
         override fun onMessage(text: String) {
+            if (text.length > MAX_MESSAGE_BYTES) {
+                Log.w("BasicRelayClient", "Dropping oversized message from ${url.url} (${text.length} chars > $MAX_MESSAGE_BYTES)")
+                return
+            }
             try {
                 val msg = OptimizedJsonMapper.fromJsonToMessage(text)
                 listener.onIncomingMessage(this@BasicRelayClient, text, msg)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
                 // doesn't expose parsing errors to lib users as errors
-                Log.e("BasicRelayClient", "Failure to parse message from ${url.url}: $text", e)
+                Log.e("BasicRelayClient", "Failure to parse message from ${url.url}: ${text.take(200)}", e)
             }
         }
 
