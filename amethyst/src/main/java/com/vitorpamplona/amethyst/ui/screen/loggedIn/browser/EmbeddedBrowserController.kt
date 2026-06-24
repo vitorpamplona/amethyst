@@ -32,11 +32,8 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import androidx.annotation.RequiresApi
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
-import androidx.privacysandbox.ui.client.view.SandboxedSdkViewEventListener
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
@@ -61,9 +58,6 @@ class EmbeddedBrowserController(
     private var sandboxedSdkView: SandboxedSdkView? = null
     private var pendingAdapter: SandboxedUiAdapter? = null
     private var startUrl: String = "about:blank"
-
-    private val readyState = mutableStateOf(false)
-    override val ready: State<Boolean> = readyState
 
     /** Invoked on the main thread when the page navigates: (url, canGoBack). */
     var onUrlChanged: ((String, Boolean) -> Unit)? = null
@@ -94,6 +88,11 @@ class EmbeddedBrowserController(
             runCatching { appContext.unbindService(connection) }
             bound = false
         }
+        // Drop refs so an evicted controller doesn't pin the surface view or the remote messenger.
+        serviceMessenger = null
+        sandboxedSdkView = null
+        pendingAdapter = null
+        onUrlChanged = null
     }
 
     override fun teardown() = unbind()
@@ -104,18 +103,6 @@ class EmbeddedBrowserController(
         // Paint the surface placeholder in the app's theme background so there's no white flash before
         // the remote WebView delivers its first frame.
         view.setBackgroundColor(backgroundColor)
-        // Flip ready once the remote UI is displayed, so callers can drop their loading placeholder.
-        view.setEventListener(
-            object : SandboxedSdkViewEventListener {
-                override fun onUiDisplayed() {
-                    readyState.value = true
-                }
-
-                override fun onUiError(error: Throwable) {}
-
-                override fun onUiClosed() {}
-            },
-        )
         pendingAdapter?.let {
             view.setAdapter(it)
             pendingAdapter = null

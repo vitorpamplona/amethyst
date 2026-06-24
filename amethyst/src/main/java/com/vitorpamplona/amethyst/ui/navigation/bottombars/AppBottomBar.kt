@@ -106,6 +106,9 @@ private fun RenderBottomMenu(
     accountViewModel: AccountViewModel,
     nav: (Route) -> Unit,
 ) {
+    // Index favorites by id so resolving each Favorite entry is a map lookup, not a per-entry scan.
+    val favoritesById = remember(favorites) { favorites.associateBy { it.id } }
+
     Column(
         modifier =
             Modifier
@@ -132,7 +135,7 @@ private fun RenderBottomMenu(
                         HasNewItemsIcon(destination == selectedRoute, def, destination, accountViewModel, nav)
                     }
                     is BottomBarEntry.Favorite -> {
-                        val fav = favorites.firstOrNull { it.id == entry.favoriteId } ?: return@forEach
+                        val fav = favoritesById[entry.favoriteId] ?: return@forEach
                         val destination =
                             when (fav) {
                                 is FavoriteApp.WebUrl -> Route.FavoriteWebApp(fav.url)

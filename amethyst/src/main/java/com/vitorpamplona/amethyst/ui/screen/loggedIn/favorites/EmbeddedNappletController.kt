@@ -32,11 +32,8 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import androidx.annotation.RequiresApi
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
-import androidx.privacysandbox.ui.client.view.SandboxedSdkViewEventListener
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
@@ -64,8 +61,10 @@ class EmbeddedNappletController(
     private var sandboxedSdkView: SandboxedSdkView? = null
     private var pendingAdapter: SandboxedUiAdapter? = null
 
-    private val readyState = mutableStateOf(false)
-    override val ready: State<Boolean> = readyState
+    // A parked tab can be hidden (paused) before the service even binds, so the pause message is
+    // dropped (no messenger yet). Remember the intent and replay it right after the session is created,
+    // otherwise an applet that was never shown comes up running in the background.
+    private var wantPaused = false
 
     /** (canGoBack) — drives the in-tab back gesture. */
     var onStateChanged: ((Boolean) -> Unit)? = null
@@ -98,6 +97,12 @@ class EmbeddedNappletController(
             runCatching { appContext.unbindService(connection) }
             bound = false
         }
+        // Drop refs so an evicted controller doesn't pin the surface view or the remote messenger.
+        serviceMessenger = null
+        sandboxedSdkView = null
+        pendingAdapter = null
+        onStateChanged = null
+        onNotice = null
     }
 
     override fun attachView(view: SandboxedSdkView) {
@@ -105,18 +110,6 @@ class EmbeddedNappletController(
         // Paint the surface placeholder in the app's theme background so there's no white flash before
         // the remote WebView delivers its first frame.
         view.setBackgroundColor(params.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE))
-        // Flip ready once the remote UI is displayed, so callers can drop their loading placeholder.
-        view.setEventListener(
-            object : SandboxedSdkViewEventListener {
-                override fun onUiDisplayed() {
-                    readyState.value = true
-                }
-
-                override fun onUiError(error: Throwable) {}
-
-                override fun onUiClosed() {}
-            },
-        )
         pendingAdapter?.let {
             view.setAdapter(it)
             pendingAdapter = null
@@ -136,6 +129,10 @@ class EmbeddedNappletController(
                 data = Bundle(params)
             }
         runCatching { serviceMessenger?.send(msg) }
+        // Replay a pause that was requested before we had a messenger to send it on (parked-before-bound),
+        // so a never-shown applet doesn't start running. Messenger preserves order, so PAUSE lands after
+        // CREATE in the host.
+        if (wantPaused) send(NappletEmbedContract.MSG_PAUSE)
     }
 
     private fun onServiceMessage(msg: Message): Boolean {
@@ -164,9 +161,15 @@ class EmbeddedNappletController(
     fun reload() = send(NappletEmbedContract.MSG_RELOAD)
 
     /** Pause/resume the applet's JS when the tab leaves/returns to the foreground (background gating). */
-    fun pause() = send(NappletEmbedContract.MSG_PAUSE)
+    fun pause() {
+        wantPaused = true
+        send(NappletEmbedContract.MSG_PAUSE)
+    }
 
-    fun resume() = send(NappletEmbedContract.MSG_RESUME)
+    fun resume() {
+        wantPaused = false
+        send(NappletEmbedContract.MSG_RESUME)
+    }
 
     private fun send(what: Int) {
         val msg = Message.obtain(null, what)

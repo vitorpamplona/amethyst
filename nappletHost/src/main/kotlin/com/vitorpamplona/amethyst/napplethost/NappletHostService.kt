@@ -184,6 +184,9 @@ class NappletHostService : Service() {
      * server, installs the origin-restricted shell bridge, loads the trusted shell URL.
      */
     fun createHostWebView(context: Context): WebView {
+        // If a prior session's WebView is still around (surface reopened without a close), destroy it
+        // first so it doesn't leak.
+        webView?.destroy()
         val shellHtml = readContractAsset(NappletWebContract.SHELL_HTML_PATH)
         val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
         val appOrigin = NappletWebContract.appOrigin(deriveAppId(author, identifier))

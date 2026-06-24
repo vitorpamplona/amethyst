@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -36,12 +37,16 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 sealed interface BottomBarEntry {
+    // Stable discriminators so persisted bottom-bar configs survive class renames/moves (the default
+    // polymorphic discriminator is the fully-qualified class name, which is fragile across refactors).
     @Serializable
+    @SerialName("builtIn")
     data class BuiltIn(
         val item: NavBarItem,
     ) : BottomBarEntry
 
     @Serializable
+    @SerialName("favorite")
     data class Favorite(
         val favoriteId: String,
     ) : BottomBarEntry

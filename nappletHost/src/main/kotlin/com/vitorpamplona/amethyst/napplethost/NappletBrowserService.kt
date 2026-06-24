@@ -79,6 +79,7 @@ class NappletBrowserService : Service() {
 
     // ---- broker bridge (identical trust model to NappletHostActivity) ----
     private var brokerMessenger: Messenger? = null
+    private var brokerBound = false
     private val replyMessenger = Messenger(Handler(Looper.getMainLooper(), ::onBrokerReply))
     private val pendingBrokerRequests = mutableListOf<Message>()
     private var bridgeReplyProxy: JavaScriptReplyProxy? = null
@@ -109,7 +110,10 @@ class NappletBrowserService : Service() {
     override fun onBind(intent: Intent?): IBinder = incoming.binder
 
     override fun onDestroy() {
-        runCatching { unbindService(brokerConnection) }
+        if (brokerBound) {
+            runCatching { unbindService(brokerConnection) }
+            brokerBound = false
+        }
         webView?.destroy()
         webView = null
         super.onDestroy()
@@ -124,7 +128,11 @@ class NappletBrowserService : Service() {
                 proxyPort = data.getInt(NappletBrowserContract.KEY_PROXY_PORT, -1)
                 useTor = data.getBoolean(NappletBrowserContract.KEY_USE_TOR, false)
                 bgColor = data.getInt(NappletBrowserContract.KEY_BG_COLOR, android.graphics.Color.WHITE)
-                bindService(Intent().setClassName(this, NappletHostContract.BROKER_SERVICE_CLASS), brokerConnection, BIND_AUTO_CREATE)
+                // Bind the broker once; a re-sent MSG_CREATE_SESSION (e.g. client reconnect) must not
+                // leak a second binding.
+                if (!brokerBound) {
+                    brokerBound = bindService(Intent().setClassName(this, NappletHostContract.BROKER_SERVICE_CLASS), brokerConnection, BIND_AUTO_CREATE)
+                }
                 replyWithAdapter()
             }
             NappletBrowserContract.MSG_NAVIGATE -> webView?.loadUrl(normalizeUrl(msg.data?.getString(NappletBrowserContract.KEY_URL).orEmpty()))
@@ -132,8 +140,9 @@ class NappletBrowserService : Service() {
             NappletBrowserContract.MSG_BACK -> webView?.let { if (it.canGoBack()) it.goBack() }
             NappletBrowserContract.MSG_SET_TOR -> {
                 useTor = msg.data?.getBoolean(NappletBrowserContract.KEY_USE_TOR, false) ?: false
-                applyWebViewProxy(if (useTor) proxyPort else -1)
-                webView?.reload()
+                // Reload only after the proxy override actually applies — setProxyOverride is async, so
+                // reloading immediately would re-fetch through the old route.
+                applyWebViewProxy(if (useTor) proxyPort else -1) { webView?.reload() }
             }
             else -> return false
         }
@@ -157,6 +166,9 @@ class NappletBrowserService : Service() {
      * start for every origin, reaching the broker directly (no shell). Loads the pending URL.
      */
     fun createBrowserWebView(context: Context): WebView {
+        // If a prior session's WebView is still around (surface reopened without a close), destroy it
+        // first so it doesn't leak.
+        webView?.destroy()
         val wv = WebView(context)
         configureWebView(wv)
         // Theme the pre-load background so a blank/loading page shows Amethyst's background, not white.
@@ -254,10 +266,18 @@ class NappletBrowserService : Service() {
 
     /**
      * Routes WebView traffic through the Tor SOCKS proxy when [port] > 0, else clears the override.
-     * Process-global (this `:napplet` process hosts only sandbox WebViews) and best-effort.
+     * [onApplied] runs on the main thread once the override is in effect (the WebKit callback is async,
+     * so callers that reload must wait for it). Process-global (this `:napplet` process hosts only
+     * sandbox WebViews) and best-effort.
      */
-    private fun applyWebViewProxy(port: Int) {
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) return
+    private fun applyWebViewProxy(
+        port: Int,
+        onApplied: () -> Unit = {},
+    ) {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) {
+            onApplied()
+            return
+        }
         val executor = java.util.concurrent.Executor { it.run() }
         runCatching {
             if (port > 0) {
@@ -268,13 +288,16 @@ class NappletBrowserService : Service() {
                         .build()
                 androidx.webkit.ProxyController
                     .getInstance()
-                    .setProxyOverride(config, executor) {}
+                    .setProxyOverride(config, executor) { onApplied() }
             } else {
                 androidx.webkit.ProxyController
                     .getInstance()
-                    .clearProxyOverride(executor) {}
+                    .clearProxyOverride(executor) { onApplied() }
             }
-        }.onFailure { Log.w(TAG, "Failed to apply WebView proxy override", it) }
+        }.onFailure {
+            Log.w(TAG, "Failed to apply WebView proxy override", it)
+            onApplied()
+        }
     }
 
     /**

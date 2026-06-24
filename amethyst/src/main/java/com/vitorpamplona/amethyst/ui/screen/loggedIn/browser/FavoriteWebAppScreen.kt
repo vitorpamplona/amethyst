@@ -114,15 +114,17 @@ private fun EmbeddedFavoriteTab(
             } as EmbeddedBrowserController
         }
 
-    // Keep the URL/back callback fresh, and publish the top-sheet controls to the tab layer (which draws
-    // them over the z-below surface). Refreshed each recomposition so the Tor state / title stay current.
+    // Keep the URL/back callback fresh (cheap, needs the latest closure).
     SideEffect {
         controller.onUrlChanged = { newUrl, back ->
             if (newUrl != "about:blank") currentUrl = newUrl
             canGoBack = back
         }
-        EmbeddedTabHost.setActiveChrome(
-            id,
+    }
+
+    // Rebuilt only when a displayed value changes, so the tab layer isn't recomposed every frame.
+    val chrome =
+        remember(currentUrl, torOn, proxyAvailable) {
             EmbeddedTabChrome(
                 title = hostLabel(currentUrl),
                 isSandbox = false,
@@ -134,9 +136,11 @@ private fun EmbeddedFavoriteTab(
                     controller.setTor(torOn)
                     WebUrlNetworkRegistry.set(url, torOn)
                 },
-            ),
-        )
-    }
+            )
+        }
+    // Publish the top-sheet controls to the tab layer (which draws them over the z-below surface). In a
+    // SideEffect so it runs after [setActive]; the host short-circuits the identical remembered instance.
+    SideEffect { EmbeddedTabHost.setActiveChrome(id, chrome) }
 
     val bottomBarFlow = accountViewModel.settings.uiSettingsFlow.bottomBarItems
     DisposableEffect(id) {
@@ -161,7 +165,7 @@ private fun EmbeddedFavoriteTab(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
+                .onGloballyPositioned { EmbeddedTabHost.reportBounds(id, it.boundsInWindow()) },
         )
     }
 }

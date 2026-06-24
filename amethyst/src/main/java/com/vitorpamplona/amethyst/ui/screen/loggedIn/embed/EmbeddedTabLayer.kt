@@ -54,11 +54,11 @@ private val OFFSCREEN_SHIFT = 10_000.dp
  * rest are parked off-screen but stay attached, so their sessions never detach/close — that's what
  * preserves their state across tab swaps.
  *
- * The surface is z-ordered on top of the window (required for the SurfaceControlViewHost to receive
- * touch input), so the tab's chrome can't draw over it — each tab reserves its content area *below* a
- * control bar and the surface fills only that area. Here we just render and position the surfaces; each
- * is wrapped in an [EmbeddedSurfaceTouchHolder] so a scroll gesture isn't stolen by a host-side ancestor
- * (the cross-process WebView can't defend its own gesture).
+ * The surface is z-ordered *below* the client window (privacysandbox.ui locks it there), which still
+ * forwards touch input to the provider yet lets Compose draw over it — so the active tab's
+ * [TopControlSheet] is rendered on top of the surface here. Each surface is wrapped in an
+ * [EmbeddedSurfaceTouchHolder] so a scroll gesture isn't stolen by a host-side ancestor (the
+ * cross-process WebView can't defend its own gesture).
  *
  * [barFavoriteIds] are the favorites currently configured as bottom-bar tabs; warm-keep is scoped to
  * them ([EmbeddedTabHost.retainOnly]), plus whatever is momentarily active.
@@ -130,15 +130,19 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         val chrome = EmbeddedTabHost.activeChrome
         if (chrome != null && bounds.width > 0f && bounds.height > 0f) {
             with(density) {
-                TopControlSheet(
-                    chrome = chrome,
-                    modifier =
-                        Modifier
-                            .absoluteOffset(
-                                (bounds.left - layerOrigin.x).toDp(),
-                                (bounds.top - layerOrigin.y).toDp(),
-                            ).width(bounds.width.toDp()),
-                )
+                // Key on the active tab so the sheet's expand/collapse state resets per tab instead of
+                // a previous tab's open sheet bleeding into the next.
+                key(activeId) {
+                    TopControlSheet(
+                        chrome = chrome,
+                        modifier =
+                            Modifier
+                                .absoluteOffset(
+                                    (bounds.left - layerOrigin.x).toDp(),
+                                    (bounds.top - layerOrigin.y).toDp(),
+                                ).width(bounds.width.toDp()),
+                    )
+                }
             }
         }
     }

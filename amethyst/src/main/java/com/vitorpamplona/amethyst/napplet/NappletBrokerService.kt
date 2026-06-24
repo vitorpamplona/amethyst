@@ -134,6 +134,13 @@ class NappletBrokerService : Service() {
             synchronized(foregroundLeases) {
                 if (foreground) {
                     val firstReport = !foregroundLeases.containsKey(token)
+                    // A foreground lease just pins Tor/relays (no key access), but a misbehaving sandbox
+                    // could still spam distinct keys to keep the network up. Bound the damage: refuse new
+                    // lease keys past the cap. Real usage holds only a handful of foreground surfaces.
+                    if (firstReport && foregroundLeases.size >= MAX_FOREGROUND_LEASES) {
+                        Log.w("NappletBrokerService", "Foreground lease cap reached; ignoring new lease $token")
+                        return true
+                    }
                     foregroundLeases[token] = SystemClock.elapsedRealtime()
                     if (firstReport) {
                         SandboxForegroundHold.acquire()
@@ -335,5 +342,12 @@ class NappletBrokerService : Service() {
 
         /** How often [ensureForegroundLeaseWatchdog] sweeps for stale leases. */
         private const val FOREGROUND_LEASE_CHECK_MS = 20_000L
+
+        /**
+         * Cap on concurrent foreground leases. A foreground lease only keeps Tor/relays up (no key
+         * access), but this bounds how long a misbehaving sandbox can pin the network by spamming
+         * distinct lease keys. Comfortably above any realistic number of foreground sandbox surfaces.
+         */
+        private const val MAX_FOREGROUND_LEASES = 8
     }
 }

@@ -70,6 +70,13 @@ object EmbeddedTabHost {
         id: String,
         chrome: EmbeddedTabChrome,
     ) {
+        // During a nav cross-fade the outgoing screen can recompose once more; ignore its publish so it
+        // can't clobber the incoming (now-active) tab's chrome. [setActive] runs before this screen's
+        // first SideEffect, so the active tab's own publish always lands.
+        if (activeId != id) return
+        // Screens publish a remembered chrome instance, so a no-op recomposition hands us the same
+        // object — skip the snapshot write to avoid recomposing the whole tab layer every frame.
+        if (chromeOwner == id && activeChrome === chrome) return
         chromeOwner = id
         activeChrome = chrome
     }
@@ -100,8 +107,12 @@ object EmbeddedTabHost {
         if (activeId == id) activeId = null
     }
 
-    fun reportBounds(bounds: Rect) {
-        contentBounds = bounds
+    fun reportBounds(
+        id: String,
+        bounds: Rect,
+    ) {
+        // Only the active tab positions the surface; a cross-fading outgoing screen must not move it.
+        if (activeId == id) contentBounds = bounds
     }
 
     fun evict(id: String) {

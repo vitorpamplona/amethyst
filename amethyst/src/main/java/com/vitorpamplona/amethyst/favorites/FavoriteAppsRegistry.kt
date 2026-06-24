@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import java.util.concurrent.ConcurrentHashMap
 
 private val Context.favoriteAppsDataStore by preferencesDataStore(name = "favorite_apps")
 
@@ -60,16 +61,25 @@ object FavoriteAppsRegistry {
 
     @Volatile private var appContext: Context? = null
 
+    // Hydration runs async on a background scope, so the user can add/remove before the disk list
+    // merges in. [removedBeforeHydration] tombstones any id removed in that window, so the merge can't
+    // resurrect a just-deleted favorite from disk.
+    @Volatile private var hydrated = false
+    private val removedBeforeHydration = ConcurrentHashMap.newKeySet<String>()
+
     /** Binds the app context and hydrates the on-disk list into [favorites]. Idempotent. */
     fun init(context: Context) {
         if (appContext != null) return
         val ctx = context.applicationContext
         appContext = ctx
         scope.launch {
-            val json = ctx.favoriteAppsDataStore.data.first()[KEY] ?: return@launch
-            val loaded = decode(json)
-            // Don't clobber adds made in this session before hydration finished.
-            update { current -> (loaded + current).distinctBy { it.id } }
+            val json = ctx.favoriteAppsDataStore.data.first()[KEY]
+            val loaded = if (json != null) decode(json) else emptyList()
+            // Don't clobber adds made in this session before hydration finished, and don't resurrect
+            // anything the user removed in that same window.
+            update { current -> (loaded.filterNot { it.id in removedBeforeHydration } + current).distinctBy { it.id } }
+            hydrated = true
+            removedBeforeHydration.clear()
         }
     }
 
@@ -78,7 +88,10 @@ object FavoriteAppsRegistry {
     /** Adds [app] to the end if not already present (by [FavoriteApp.id]). */
     fun add(app: FavoriteApp) = update { current -> if (current.any { it.id == app.id }) current else current + app }
 
-    fun remove(id: String) = update { current -> current.filterNot { it.id == id } }
+    fun remove(id: String) {
+        if (!hydrated) removedBeforeHydration.add(id)
+        update { current -> current.filterNot { it.id == id } }
+    }
 
     /** Replaces the whole list, e.g. after a drag-reorder. */
     fun setOrder(newOrder: List<FavoriteApp>) = update { newOrder }

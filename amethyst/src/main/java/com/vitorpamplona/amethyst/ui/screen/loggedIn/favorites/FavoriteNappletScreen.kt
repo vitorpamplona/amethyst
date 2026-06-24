@@ -133,23 +133,28 @@ private fun EmbeddedNappletTab(
             } as EmbeddedNappletController
         }
 
+    // Keep the controller callbacks fresh (cheap, need the latest closures).
     SideEffect {
         controller.onStateChanged = { canGoBack = it }
         controller.onNotice = { notice ->
             noticeResId(notice)?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
         }
-        // Publish the top-sheet controls to the tab layer, which draws them over the z-below surface.
-        EmbeddedTabHost.setActiveChrome(
-            id,
+    }
+
+    // Stable per app (title/coordinate don't change), so the tab layer isn't recomposed every frame.
+    val chrome =
+        remember(title, coordinate) {
             EmbeddedTabChrome(
                 title = title.ifBlank { coordinate },
                 isSandbox = true,
                 onReload = { controller.reload() },
                 onOpenFull = { FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis())) },
                 onInfo = { showAccess = true },
-            ),
-        )
-    }
+            )
+        }
+    // Publish the top-sheet controls to the tab layer (drawn over the z-below surface). In a SideEffect
+    // so it runs after [setActive]; the host short-circuits the identical remembered instance.
+    SideEffect { EmbeddedTabHost.setActiveChrome(id, chrome) }
 
     val bottomBarFlow = accountViewModel.settings.uiSettingsFlow.bottomBarItems
     DisposableEffect(id) {
@@ -195,7 +200,7 @@ private fun EmbeddedNappletTab(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
+                .onGloballyPositioned { EmbeddedTabHost.reportBounds(id, it.boundsInWindow()) },
         )
     }
 }

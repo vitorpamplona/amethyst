@@ -28,8 +28,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Keeps Amethyst's **main** process in "resumed" resource posture while a full-screen sandbox surface
- * (a [BrowserHostActivity][com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.BrowserHostActivity], or
- * the `:napplet`-process napplet/nSite host) is in the foreground.
+ * (a `:napplet`-process browser/napplet/nSite host) is in the foreground.
  *
  * The problem it solves: opening one of those full-screen surfaces backgrounds `MainActivity`. Its
  * Compose collectors (`ManageRelayServices` / `ManageWebOkHttp`) are lifecycle-aware, so they stop —

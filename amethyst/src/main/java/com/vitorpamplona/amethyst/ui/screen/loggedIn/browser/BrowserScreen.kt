@@ -64,12 +64,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteAppsGrid
 
 /**
  * The Browser tab — a **launcher**, not a content surface. The user types a URL here and each opened
- * site lands in its own full-screen [BrowserHostActivity] (its own task/recents entry), so apps are
- * swapped the normal Android way and a running app never carries an editable address bar. Below the
- * omnibox sits the shared [FavoriteAppsGrid] for one-tap access to pinned clients.
+ * site lands in its own full-screen
+ * [NappletBrowserActivity][com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity] (its own
+ * task/recents entry), so apps are swapped the normal Android way and a running app never carries an
+ * editable address bar. Below the omnibox sits the shared [FavoriteAppsGrid] for one-tap access to
+ * pinned clients.
  *
- * Requires API 30+ (the host activity embeds a SurfaceControlViewHost surface); below that the Browser
- * nav item is hidden, so this screen is unreachable — the fallback message is just defense in depth.
+ * Requires API 30+ (the keyless `:napplet` browser host needs it); below that the Browser nav item is
+ * hidden, so this screen is unreachable — the fallback message is just defense in depth.
  */
 @Composable
 fun BrowserScreen(
