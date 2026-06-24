@@ -146,7 +146,9 @@ class UiSharedPreferences(
                         preferences[UI_USE_TRACKED_BROADCASTS]?.let { BooleanType.valueOf(it) }
                             ?: if (featureSet == FeatureSetType.COMPLETE) BooleanType.ALWAYS else BooleanType.NEVER,
                     automaticallyCreateDrafts = preferences[UI_AUTOMATICALLY_CREATE_DRAFTS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
-                    bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarEntries,
+                    bottomBarItems =
+                        (preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarEntries)
+                            .ifEmpty { DefaultBottomBarEntries },
                     showHomeNewThreadsTab = preferences[UI_SHOW_HOME_NEW_THREADS_TAB] ?: true,
                     showHomeConversationsTab = preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] ?: true,
                     showHomeEverythingTab = preferences[UI_SHOW_HOME_EVERYTHING_TAB] ?: false,
@@ -215,7 +217,7 @@ class UiSharedPreferences(
         }
 
         private fun decodeBottomBarItems(raw: String): List<BottomBarEntry>? {
-            if (raw.isBlank()) return emptyList()
+            if (raw.isBlank()) return DefaultBottomBarEntries
             // Current format: a JSON list of BottomBarEntry (built-ins + favorites).
             runCatching { return JsonMapper.fromJson<List<BottomBarEntry>>(raw) }
             // Configs written before the stable @SerialName discriminators used the fully-qualified
