@@ -411,6 +411,13 @@ class CardFeedContentState(
             val loaded = current.feed.value
             if (loaded.list.size > maxItems) {
                 current.feed.tryEmit(LoadedFeedState(loaded.list.take(maxItems).toImmutableList(), loaded.showHidden))
+                // lastNotes holds strong refs to every raw Note that was ever included in this
+                // feed (used for additive-dedup). Clearing it releases those refs so the Notes
+                // are no longer pinned in memory independently of LocalCache.
+                // The next additive update will find lastNotes == null, skip the fast path, and
+                // call refreshSuspended() — a single controlled rebuild from LocalCache.
+                lastNotes = null
+                lastAccount = null
             }
         }
     }
