@@ -226,7 +226,14 @@ class RemoteImeView(
         override fun endBatchEdit(): Boolean {
             val result = super.endBatchEdit()
             if (batchDepth > 0) batchDepth--
-            if (batchDepth == 0) schedule()
+            // Flush synchronously at the outermost batch close (don't post): a composing keystroke is a
+            // delete+insert inside one batch, and shipping the coalesced state now — within the same frame
+            // — preserves the composing region. A posted flush would race the next batch and could observe
+            // an already-committed (composing-cleared) Editable, breaking the composition lifecycle.
+            if (batchDepth == 0) {
+                removeCallbacks(flush)
+                flushState()
+            }
             return result
         }
     }

@@ -26,10 +26,11 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -70,6 +71,7 @@ private val OFFSCREEN_SHIFT = 10_000.dp
  * [barFavoriteIds] are the favorites currently configured as bottom-bar tabs; warm-keep is scoped to
  * them ([EmbeddedTabHost.retainOnly]), plus whatever is momentarily active.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
 fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
@@ -89,7 +91,10 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
     // While the soft keyboard is up (hosted by [RemoteImeView] in this window), shrink the active
     // surface so its bottom clears the keyboard — the embedded WebView then reflows and scrolls the
     // focused field into view. Only the portion of the keyboard that overlaps the surface counts.
-    val imeBottomPx = WindowInsets.ime.getBottom(density)
+    // Use the *snapped* animation target rather than the animated `ime` inset: the cross-process surface
+    // resize is expensive (a SurfaceControlViewHost reconfigure each frame), so we resize once to the
+    // final height instead of on every frame of the keyboard slide-in/out.
+    val imeBottomPx = WindowInsets.imeAnimationTarget.getBottom(density)
 
     Box(
         Modifier

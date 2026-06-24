@@ -34,11 +34,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
 import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.yield
 
 // Up to PRELOAD_ATTEMPTS sweeps, PRELOAD_RETRY_MS apart, give a slow napplet event or a still-connecting
 // Tor proxy time to settle before we give up and leave that tab to load on first visit (~45 s total).
@@ -76,15 +78,24 @@ fun EmbeddedTabPreloader(accountViewModel: AccountViewModel) {
 
     LaunchedEffect(favoriteIds, backgroundColor) {
         if (favoriteIds.isEmpty()) return@LaunchedEffect
+        // Hydrate the per-site Tor/open-web choices BEFORE the first preload: a cold start otherwise reads
+        // the bare Tor default and would route a site the user pinned to the open web through Tor (or stall
+        // it waiting for Tor), which is exactly what breaks Tor-incompatible servers.
         WebUrlNetworkRegistry.init(context)
+        NappletNetworkRegistry.init(context)
+        WebUrlNetworkRegistry.awaitReady()
+        NappletNetworkRegistry.awaitReady()
         var attempt = 0
         while (isActive) {
             val byId = FavoriteAppsRegistry.favorites.value.associateBy { it.id }
-            val stillPending =
-                favoriteIds.any { id ->
-                    val app = byId[id] ?: return@any false
-                    !EmbeddedTabFactory.preload(context, app, backgroundColor)
-                }
+            var stillPending = false
+            for (id in favoriteIds) {
+                val app = byId[id] ?: continue
+                if (!EmbeddedTabFactory.preload(context, app, backgroundColor)) stillPending = true
+                // Each preload may build + attach a WebView on this (main) thread; yield between favorites
+                // so the startup sweep doesn't monopolize the frame and jank the first paint.
+                yield()
+            }
             if (!stillPending || ++attempt >= PRELOAD_ATTEMPTS) break
             delay(PRELOAD_RETRY_MS)
         }

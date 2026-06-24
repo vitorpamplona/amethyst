@@ -93,6 +93,9 @@ class NappletBrowserService : Service() {
 
     private val tabs = mutableMapOf<String, BrowserTab>()
 
+    // The shim never changes; read+decode it once instead of per tab on the main thread.
+    private val shimJs: String by lazy { readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString() }
+
     // ---- broker bridge: ONE binding shared by all tabs; per-message replyTo scopes the routing ----
     private var brokerMessenger: Messenger? = null
     private var brokerBound = false
@@ -192,32 +195,34 @@ class NappletBrowserService : Service() {
         context: Context,
         sessionId: String,
     ): WebView {
-        val tab = tabs[sessionId]
+        // The session may have been closed between MSG_CREATE_SESSION and this posted call — fail rather
+        // than build a WebView that no tab tracks (it would leak).
+        val tab = tabs[sessionId] ?: error("No browser tab for session $sessionId")
         val wv = WebView(context)
         configureWebView(wv, tab)
         // Theme the pre-load background so a blank/loading page shows Amethyst's background, not white.
-        wv.setBackgroundColor(tab?.bgColor ?: android.graphics.Color.WHITE)
+        wv.setBackgroundColor(tab.bgColor)
         wv.dropSystemBarInsets()
-        applyWebViewProxy(if (tab?.useTor == true) tab.proxyPort else -1)
-        val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
-        if (tab != null) {
-            WebViewCompat.addWebMessageListener(wv, NappletWebContract.BRIDGE_NAME, setOf("*")) { view, message, sourceOrigin, isMainFrame, replyProxy ->
-                onBridgeMessage(tab, view, message, sourceOrigin, isMainFrame, replyProxy)
-            }
+        applyWebViewProxy(if (tab.useTor) tab.proxyPort else -1)
+        WebViewCompat.addWebMessageListener(wv, NappletWebContract.BRIDGE_NAME, setOf("*")) { view, message, sourceOrigin, isMainFrame, replyProxy ->
+            onBridgeMessage(tab, view, message, sourceOrigin, isMainFrame, replyProxy)
         }
         // __nappletImeProxy: this is the EMBEDDED surface (no native keyboard), so install the IME agent
         // that relays the focused field to the host's keyboard. The full-screen browser activity sets the
         // direct bridge but NOT this flag (it has a real WebView window with a native keyboard).
-        val startScript = "if (window.top === window) { window.__nappletDirectBridge = true; window.__nappletNip07 = true; window.__nappletImeProxy = true; }\n$shim"
+        val startScript = "if (window.top === window) { window.__nappletDirectBridge = true; window.__nappletNip07 = true; window.__nappletImeProxy = true; }\n$shimJs"
         WebViewCompat.addDocumentStartJavaScript(wv, startScript, setOf("*"))
-        tab?.webView = wv
-        wv.loadUrl(tab?.url ?: "about:blank")
+        tab.webView = wv
+        wv.loadUrl(tab.url)
         return wv
     }
 
     /** A session closed: drop the tab and destroy its own WebView (never a sibling's). */
     fun onSessionClosed(sessionId: String) {
-        tabs.remove(sessionId)?.webView?.destroy()
+        val tab = tabs.remove(sessionId) ?: return
+        tab.bridgeReplyProxy = null
+        tab.webView?.destroy()
+        tab.webView = null
     }
 
     @Suppress("SetJavaScriptEnabled")
@@ -417,6 +422,9 @@ class NappletBrowserService : Service() {
         tab: BrowserTab,
         msg: Message,
     ): Boolean {
+        // The reply may arrive after the tab closed (its WebView/page is gone) — drop it so we never
+        // postMessage to a dead JavaScriptReplyProxy.
+        if (tabs[tab.sessionId] !== tab) return true
         val data = msg.data ?: return true
         when (msg.what) {
             NappletIpc.MSG_RESPONSE -> {
@@ -424,11 +432,11 @@ class NappletBrowserService : Service() {
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
                 val result = runCatching { JSONObject(payload) }.getOrNull() ?: JSONObject()
                 result.put("id", id)
-                tab.bridgeReplyProxy?.postMessage(result.toString())
+                runCatching { tab.bridgeReplyProxy?.postMessage(result.toString()) }
             }
             NappletIpc.MSG_PUSH -> {
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
-                tab.bridgeReplyProxy?.postMessage(payload)
+                runCatching { tab.bridgeReplyProxy?.postMessage(payload) }
             }
             NappletIpc.MSG_BROWSER_TOKEN -> {
                 val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN) ?: return true

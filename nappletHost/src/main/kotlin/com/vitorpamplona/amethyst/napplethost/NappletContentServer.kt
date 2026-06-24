@@ -98,6 +98,19 @@ class NappletContentServer(
     fun resolve(requestPath: String): StaticSiteResolution = resolveCacheFirst(requestPath)
 
     /**
+     * Releases the per-instance OkHttp client (its dispatcher thread pool + connection pool) and cancels
+     * any in-flight blob fetch. A new content server is built per embedded tab, so without this each
+     * opened-then-closed napplet/nSite tab would leak OkHttp threads and keep-alive connections.
+     */
+    fun close() {
+        runCatching {
+            http.dispatcher.cancelAll()
+            http.dispatcher.executorService.shutdown()
+            http.connectionPool.evictAll()
+        }
+    }
+
+    /**
      * Serves the trusted shell (on the shell origin) or a verified app blob (on the per-applet
      * [appOrigin]); 404s anything else, and returns null (defer to the WebView) for non-GET requests.
      */

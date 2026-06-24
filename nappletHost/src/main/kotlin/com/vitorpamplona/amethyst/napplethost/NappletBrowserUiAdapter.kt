@@ -98,6 +98,8 @@ private class BrowserSession(
     override fun notifyUiChanged(uiContainerInfo: Bundle) {}
 
     override fun close() {
-        service.onSessionClosed(sessionId)
+        // The library may call close() off the main thread; WebView.destroy() (and the tabs mutation)
+        // must run on the main thread.
+        Handler(Looper.getMainLooper()).post { service.onSessionClosed(sessionId) }
     }
 }

@@ -93,7 +93,9 @@ class NappletHostService : Service() {
         val bgColor: Int,
         val declaredDomains: List<String>,
     ) {
-        var contentServer: NappletContentServer? = null
+        // Read on the WebView worker thread in shouldInterceptRequest; written on the main thread in
+        // createHostWebView — @Volatile gives the happens-before so the worker never sees a stale null.
+        @Volatile var contentServer: NappletContentServer? = null
         var webView: WebView? = null
         var bridgeReplyProxy: JavaScriptReplyProxy? = null
         var fireSeq = 0
@@ -101,6 +103,10 @@ class NappletHostService : Service() {
     }
 
     private val tabs = mutableMapOf<String, NappletTab>()
+
+    // The shell HTML and shim never change; read+decode them once instead of per tab on the main thread.
+    private val shellHtml: ByteArray by lazy { readContractAsset(NappletWebContract.SHELL_HTML_PATH) }
+    private val shimJs: String by lazy { readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString() }
 
     // ---- broker bridge: ONE binding shared by all tabs; per-message replyTo scopes the routing ----
     private var brokerMessenger: Messenger? = null
@@ -130,7 +136,10 @@ class NappletHostService : Service() {
             runCatching { unbindService(brokerConnection) }
             brokerBound = false
         }
-        tabs.values.forEach { it.webView?.destroy() }
+        tabs.values.forEach {
+            it.contentServer?.close()
+            it.webView?.destroy()
+        }
         tabs.clear()
         super.onDestroy()
     }
@@ -221,13 +230,13 @@ class NappletHostService : Service() {
         context: Context,
         sessionId: String,
     ): WebView {
+        // The session may have been closed between MSG_CREATE_SESSION and this posted call — fail rather
+        // than build a WebView that no tab tracks (it would leak).
+        val tab = tabs[sessionId] ?: error("No napplet tab for session $sessionId")
         val wv = WebView(context)
-        val tab = tabs[sessionId] ?: return wv
-        val shellHtml = readContractAsset(NappletWebContract.SHELL_HTML_PATH)
-        val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
         val appOrigin = NappletWebContract.appOrigin(deriveAppId(tab.author, tab.identifier))
         val effectiveProxy = if (tab.useTor) tab.proxyPort else -1
-        tab.contentServer = NappletContentServer(tab.paths, tab.servers, effectiveProxy, cacheDir, shellHtml, shim, appOrigin, tab.websiteMode, imeProxy = true)
+        tab.contentServer = NappletContentServer(tab.paths, tab.servers, effectiveProxy, cacheDir, shellHtml, shimJs, appOrigin, tab.websiteMode, imeProxy = true)
 
         hardenWebView(wv, tab)
         // Theme the pre-load background so the shell/app loading shows Amethyst's background, not white.
@@ -240,9 +249,14 @@ class NappletHostService : Service() {
         return wv
     }
 
-    /** A session closed: drop the tab and destroy its own WebView (never a sibling's). */
+    /** A session closed: drop the tab, release its resources, and destroy its own WebView (never a sibling's). */
     fun onSessionClosed(sessionId: String) {
-        tabs.remove(sessionId)?.webView?.destroy()
+        val tab = tabs.remove(sessionId) ?: return
+        tab.bridgeReplyProxy = null
+        tab.contentServer?.close()
+        tab.contentServer = null
+        tab.webView?.destroy()
+        tab.webView = null
     }
 
     @Suppress("SetJavaScriptEnabled")
@@ -390,6 +404,9 @@ class NappletHostService : Service() {
         tab: NappletTab,
         msg: Message,
     ): Boolean {
+        // The reply may arrive after the tab closed (its WebView/page is gone) — drop it so we never
+        // postMessage to a dead JavaScriptReplyProxy.
+        if (tabs[tab.sessionId] !== tab) return true
         val data = msg.data ?: return true
         when (msg.what) {
             NappletIpc.MSG_RESPONSE -> {
@@ -398,11 +415,11 @@ class NappletHostService : Service() {
                 val result = runCatching { JSONObject(payload) }.getOrNull() ?: JSONObject()
                 result.put("id", id)
                 notifyIfSensitive(tab, result)
-                tab.bridgeReplyProxy?.postMessage(result.toString())
+                runCatching { tab.bridgeReplyProxy?.postMessage(result.toString()) }
             }
             NappletIpc.MSG_PUSH -> {
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
-                tab.bridgeReplyProxy?.postMessage(payload)
+                runCatching { tab.bridgeReplyProxy?.postMessage(payload) }
             }
             else -> return false
         }

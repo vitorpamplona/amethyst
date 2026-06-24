@@ -27,6 +27,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -57,17 +58,31 @@ object WebUrlNetworkRegistry {
 
     @Volatile private var appContext: Context? = null
 
+    @Volatile private var hydration: Job? = null
+
     /** Binds the app context and hydrates the on-disk preferences into memory. Idempotent. */
     fun init(context: Context) {
         if (appContext != null) return
         val ctx = context.applicationContext
         appContext = ctx
-        scope.launch {
-            ctx.webUrlNetworkDataStore.data.first().asMap().forEach { (key, value) ->
-                // putIfAbsent: never clobber a choice made in this session before hydration finished.
-                modes.putIfAbsent(key.name, value != OPEN_WEB)
+        hydration =
+            scope.launch {
+                ctx.webUrlNetworkDataStore.data.first().asMap().forEach { (key, value) ->
+                    // putIfAbsent: never clobber a choice made in this session before hydration finished.
+                    modes.putIfAbsent(key.name, value != OPEN_WEB)
+                }
             }
-        }
+    }
+
+    /**
+     * Suspends until [init]'s on-disk hydration has finished, so [useTor] reflects the user's remembered
+     * per-site choices instead of the bare Tor default. The startup preloader awaits this before making
+     * any routing decision, so a site the user pinned to the open web isn't wrongly treated as Tor on a
+     * cold start (which would leave a Tor-incompatible site failing until the next visit). Returns at once
+     * once hydrated, or immediately if [init] was never called.
+     */
+    suspend fun awaitReady() {
+        hydration?.join()
     }
 
     /** The host key for [url] (e.g. `vitorpamplona.com`), or the raw string if it has no host. */
