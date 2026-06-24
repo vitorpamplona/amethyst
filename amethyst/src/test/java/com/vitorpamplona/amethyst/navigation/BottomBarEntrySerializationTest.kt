@@ -1,0 +1,73 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.navigation
+
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * Locks the persisted bottom-bar format. [BottomBarEntry] uses stable `@SerialName` discriminators
+ * (`builtIn` / `favorite`) so the saved config survives class renames/moves. Configs written before the
+ * stable names used the fully-qualified class name as the polymorphic discriminator, so this also pins
+ * the migration that recovers them — otherwise upgrading silently resets the user's bottom bar.
+ */
+class BottomBarEntrySerializationTest {
+    private val sample =
+        listOf(
+            BottomBarEntry.BuiltIn(NavBarItem.HOME),
+            BottomBarEntry.Favorite("url:https://example.com"),
+        )
+
+    @Test
+    fun roundTripsWithStableDiscriminators() {
+        val json = JsonMapper.toJson(sample)
+        // Stable short names, NOT the fragile fully-qualified class name.
+        assertTrue("expected stable discriminators, got: $json", json.contains("\"builtIn\"") && json.contains("\"favorite\""))
+        assertEquals(sample, JsonMapper.fromJson<List<BottomBarEntry>>(json))
+    }
+
+    @Test
+    fun legacyFullyQualifiedDiscriminatorMigratesInsteadOfResetting() {
+        // What an earlier build of this branch persisted: the default polymorphic discriminator is the
+        // fully-qualified class name. Under the stable @SerialName this no longer decodes directly...
+        val legacy =
+            """
+            [
+              {"type":"com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.BuiltIn","item":"HOME"},
+              {"type":"com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.Favorite","favoriteId":"url:https://example.com"}
+            ]
+            """.trimIndent()
+
+        runCatching { JsonMapper.fromJson<List<BottomBarEntry>>(legacy) }
+            .onSuccess { error("legacy discriminator unexpectedly decoded directly: $it") }
+
+        // ...but the migration (rewrite FQN -> short name) recovers the exact same config.
+        val migrated =
+            legacy
+                .replace("com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.BuiltIn", "builtIn")
+                .replace("com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.Favorite", "favorite")
+        assertEquals(sample, JsonMapper.fromJson<List<BottomBarEntry>>(migrated))
+    }
+}

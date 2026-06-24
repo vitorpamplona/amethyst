@@ -25,11 +25,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.note.StaticWebsiteCard
+import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.napplethost.NappletBlobPrefetcher
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteToggleButton
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
@@ -65,6 +67,7 @@ fun RenderRootNappletEvent(
             } else {
                 null
             },
+        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: "Napplet", event.icon()) },
     )
 }
 
@@ -94,6 +97,7 @@ fun RenderNamedNappletEvent(
             } else {
                 null
             },
+        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: event.identifier(), event.icon()) },
     )
 }
 
@@ -134,6 +138,7 @@ fun RenderRootSiteEvent(
             } else {
                 null
             },
+        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: "nsite", event.icon()) },
     )
 }
 
@@ -174,6 +179,7 @@ fun RenderNamedSiteEvent(
             } else {
                 null
             },
+        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: event.identifier(), event.icon()) },
     )
 }
 

@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -44,7 +44,7 @@ class UiSettingsFlow(
     val automaticallyProposeAiImprovements: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val useTrackedBroadcasts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val automaticallyCreateDrafts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
-    val bottomBarItems: MutableStateFlow<List<NavBarItem>> = MutableStateFlow(DefaultBottomBarItems),
+    val bottomBarItems: MutableStateFlow<List<BottomBarEntry>> = MutableStateFlow(DefaultBottomBarEntries),
     val showHomeNewThreadsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showHomeConversationsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showHomeEverythingTab: MutableStateFlow<Boolean> = MutableStateFlow(false),
@@ -104,7 +104,7 @@ class UiSettingsFlow(
                 flows[12] as BooleanType,
                 flows[13] as BooleanType,
                 flows[14] as BooleanType,
-                flows[15] as List<NavBarItem>,
+                flows[15] as List<BottomBarEntry>,
                 flows[16] as Boolean,
                 flows[17] as Boolean,
                 flows[18] as Boolean,

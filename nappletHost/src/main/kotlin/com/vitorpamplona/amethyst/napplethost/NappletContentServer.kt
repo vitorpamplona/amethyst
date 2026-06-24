@@ -60,6 +60,10 @@ class NappletContentServer(
     // nSite "website mode": the applet is a normal web app — it gets a NIP-07 window.nostr provider,
     // normal network (no app CSP; off-origin requests defer to the WebView), unlike a locked napplet.
     private val websiteMode: Boolean = false,
+    // Embedded surfaces (a windowless Service) can't host the soft keyboard, so the shim installs the
+    // IME proxy agent that relays the focused field to the host's keyboard. The full-screen Activity
+    // host has a native keyboard and leaves this false.
+    private val imeProxy: Boolean = false,
 ) {
     private val cache = NappletBlobCache(NappletBlobCache.dirFor(cacheDir))
     private val http = NappletBlobHttp.client(proxyPort)
@@ -92,6 +96,19 @@ class NappletContentServer(
      * side effect, so the subsequent WebView request serves from disk.
      */
     fun resolve(requestPath: String): StaticSiteResolution = resolveCacheFirst(requestPath)
+
+    /**
+     * Releases the per-instance OkHttp client (its dispatcher thread pool + connection pool) and cancels
+     * any in-flight blob fetch. A new content server is built per embedded tab, so without this each
+     * opened-then-closed napplet/nSite tab would leak OkHttp threads and keep-alive connections.
+     */
+    fun close() {
+        runCatching {
+            http.dispatcher.cancelAll()
+            http.dispatcher.executorService.shutdown()
+            http.connectionPool.evictAll()
+        }
+    }
 
     /**
      * Serves the trusted shell (on the shell origin) or a verified app blob (on the per-applet
@@ -177,7 +194,9 @@ class NappletContentServer(
         val style = "<style>html,body{overscroll-behavior:none !important}</style>"
         // In website mode, set the NIP-07 flag synchronously *before* the shim so window.nostr installs.
         val nip07Flag = if (websiteMode) "<script>window.__nappletNip07=true;</script>" else ""
-        val script = "$style$nip07Flag<script>$shimJs</script>"
+        // Embedded surface: turn on the IME proxy agent (set before the shim runs).
+        val imeFlag = if (imeProxy) "<script>window.__nappletImeProxy=true;</script>" else ""
+        val script = "$style$nip07Flag$imeFlag<script>$shimJs</script>"
         val headIdx = text.indexOf("<head", ignoreCase = true)
         val injected =
             when {

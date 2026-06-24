@@ -25,6 +25,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.InetSocketAddress
 import java.net.Proxy
+import java.util.concurrent.TimeUnit
 
 /**
  * Shared Blossom-blob HTTP fetcher, used by both the sandbox content server and the main-process
@@ -37,10 +38,18 @@ object NappletBlobHttp {
 
     /** An OkHttp client routed through the Tor SOCKS proxy when [proxyPort] > 0, else direct. */
     fun client(proxyPort: Int): OkHttpClient {
-        val builder = OkHttpClient.Builder()
+        val builder =
+            OkHttpClient
+                .Builder()
+                // Bound a single blob fetch end-to-end: a stalled Tor exit (which trickles bytes under
+                // the 10s read timeout) must not block the WebView worker thread that called serve()
+                // indefinitely.
+                .callTimeout(BLOB_CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         if (proxyPort > 0) builder.proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", proxyPort)))
         return builder.build()
     }
+
+    private const val BLOB_CALL_TIMEOUT_SECONDS = 45L
 
     /** Downloads [url], or null on error / when the body exceeds [MAX_BLOB_BYTES] (declared length). */
     fun download(

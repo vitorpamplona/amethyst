@@ -42,7 +42,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -83,20 +86,28 @@ fun AppBottomBar(
         )
         return
     }
+
+    // Favorite entries in the unified list resolve to a live favorite for their icon/label and to an
+    // embedded-tab route. Both kinds embed in-process (WebUrl → browser surface, NostrApp → napplet
+    // surface), so such a tab swaps in place rather than launching an activity from the bottom row.
+    val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+
     val isKeyboardState by keyboardAsState()
     if (isKeyboardState == KeyboardState.Closed) {
-        RenderBottomMenu(items, selectedRoute, accountViewModel, onClick)
+        RenderBottomMenu(items, favorites, selectedRoute, accountViewModel, onClick)
     }
 }
 
 @Composable
 private fun RenderBottomMenu(
-    items: List<NavBarItem>,
+    items: List<BottomBarEntry>,
+    favorites: List<FavoriteApp>,
     selectedRoute: Route?,
     accountViewModel: AccountViewModel,
     nav: (Route) -> Unit,
 ) {
-    val defs = remember(items) { items.mapNotNull(NavBarCatalog::get) }
+    // Index favorites by id so resolving each Favorite entry is a map lookup, not a per-entry scan.
+    val favoritesById = remember(favorites) { favorites.associateBy { it.id } }
 
     Column(
         modifier =
@@ -115,12 +126,52 @@ private fun RenderBottomMenu(
             containerColor = MaterialTheme.colorScheme.background,
             tonalElevation = Size0dp,
         ) {
-            defs.forEach { def ->
-                val destination = remember(def, accountViewModel) { def.resolveRoute(accountViewModel) }
-                HasNewItemsIcon(destination == selectedRoute, def, destination, accountViewModel, nav)
+            // Render in the user's saved order, built-ins and favorites interleaved.
+            items.forEach { entry ->
+                when (entry) {
+                    is BottomBarEntry.BuiltIn -> {
+                        val def = NavBarCatalog[entry.item] ?: return@forEach
+                        val destination = remember(def, accountViewModel) { def.resolveRoute(accountViewModel) }
+                        HasNewItemsIcon(destination == selectedRoute, def, destination, accountViewModel, nav)
+                    }
+                    is BottomBarEntry.Favorite -> {
+                        val fav = favoritesById[entry.favoriteId] ?: return@forEach
+                        val destination =
+                            when (fav) {
+                                is FavoriteApp.WebUrl -> Route.FavoriteWebApp(fav.url)
+                                is FavoriteApp.NostrApp -> Route.FavoriteNostrApp(fav.coordinate)
+                            }
+                        FavoriteNavItem(destination == selectedRoute, fav, destination, nav)
+                    }
+                }
             }
         }
     }
+}
+
+@Composable
+private fun RowScope.FavoriteNavItem(
+    selected: Boolean,
+    fav: FavoriteApp,
+    destination: Route,
+    nav: (Route) -> Unit,
+) {
+    NavigationBarItem(
+        alwaysShowLabel = false,
+        icon = {
+            Box(Size27Modifier, contentAlignment = Alignment.Center) {
+                // The app's own icon (nsite/napplet manifest icon) when it has one, else a type glyph.
+                FavoriteAppIcon(
+                    app = fav,
+                    tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface65,
+                    modifier = Size25Modifier,
+                )
+            }
+        },
+        // No label — favorite tabs match the built-in items, which show icon only.
+        selected = selected,
+        onClick = { nav(destination) },
+    )
 }
 
 @Composable

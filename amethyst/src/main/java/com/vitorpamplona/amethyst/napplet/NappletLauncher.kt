@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
@@ -76,6 +77,33 @@ object NappletLauncher {
         // (empty) manifest `requires`. Napplets pass false and keep their declared-only, locked sandbox.
         websiteMode: Boolean = false,
     ) {
+        val params = buildLaunchParams(context, paths, servers, authorPubKey, identifier, aggregateHash, title, requires, websiteMode)
+        val intent =
+            Intent(context, NappletHostActivity::class.java).apply {
+                putExtras(params)
+                if (context !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        context.startActivity(intent)
+    }
+
+    /**
+     * Builds the verified launch parameters — minting the launch token, augmenting the Blossom server
+     * set, resolving the per-site Tor choice and capability labels — as a [Bundle] keyed by the
+     * [NappletHostContract] EXTRA_* names. Used both for the activity intent (above) and for the
+     * embedded [com.vitorpamplona.amethyst.napplethost.NappletHostService] session (carried over
+     * Messenger), so the two host paths launch from identical, main-process-minted parameters.
+     */
+    fun buildLaunchParams(
+        context: Context,
+        paths: List<PathTag>,
+        servers: List<String>,
+        authorPubKey: HexKey,
+        identifier: String,
+        aggregateHash: HexKey?,
+        title: String,
+        requires: List<String>,
+        websiteMode: Boolean,
+    ): Bundle {
         val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
 
         // Augment the manifest's servers with the author's published Blossom list (kind:10063), if
@@ -106,23 +134,20 @@ object NappletLauncher {
         // Resolve capability labels here (the app has the resources) so the sandbox module needs none.
         val capLabels = declared.map { context.getString(it.labelRes()) }
 
-        val intent =
-            Intent(context, NappletHostActivity::class.java).apply {
-                putExtra(NappletHostContract.EXTRA_PATHS, ArrayList(paths.map { it.path }))
-                putExtra(NappletHostContract.EXTRA_HASHES, ArrayList(paths.map { it.hash }))
-                putExtra(NappletHostContract.EXTRA_SERVERS, ArrayList(allServers))
-                putExtra(NappletHostContract.EXTRA_AUTHOR, authorPubKey)
-                putExtra(NappletHostContract.EXTRA_IDENTIFIER, identifier)
-                putExtra(NappletHostContract.EXTRA_AGGREGATE_HASH, aggregateHash)
-                putExtra(NappletHostContract.EXTRA_TITLE, title)
-                putExtra(NappletHostContract.EXTRA_REQUIRES, ArrayList(requires))
-                putExtra(NappletHostContract.EXTRA_CAP_LABELS, ArrayList(capLabels))
-                putExtra(NappletHostContract.EXTRA_LAUNCH_TOKEN, launchToken)
-                putExtra(NappletHostContract.EXTRA_PROXY_PORT, proxyPort)
-                putExtra(NappletHostContract.EXTRA_WEBSITE_MODE, websiteMode)
-                putExtra(NappletHostContract.EXTRA_USE_TOR, useTor)
-                if (context !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-        context.startActivity(intent)
+        return Bundle().apply {
+            putStringArrayList(NappletHostContract.EXTRA_PATHS, ArrayList(paths.map { it.path }))
+            putStringArrayList(NappletHostContract.EXTRA_HASHES, ArrayList(paths.map { it.hash }))
+            putStringArrayList(NappletHostContract.EXTRA_SERVERS, ArrayList(allServers))
+            putString(NappletHostContract.EXTRA_AUTHOR, authorPubKey)
+            putString(NappletHostContract.EXTRA_IDENTIFIER, identifier)
+            putString(NappletHostContract.EXTRA_AGGREGATE_HASH, aggregateHash)
+            putString(NappletHostContract.EXTRA_TITLE, title)
+            putStringArrayList(NappletHostContract.EXTRA_REQUIRES, ArrayList(requires))
+            putStringArrayList(NappletHostContract.EXTRA_CAP_LABELS, ArrayList(capLabels))
+            putString(NappletHostContract.EXTRA_LAUNCH_TOKEN, launchToken)
+            putInt(NappletHostContract.EXTRA_PROXY_PORT, proxyPort)
+            putBoolean(NappletHostContract.EXTRA_WEBSITE_MODE, websiteMode)
+            putBoolean(NappletHostContract.EXTRA_USE_TOR, useTor)
+        }
     }
 }

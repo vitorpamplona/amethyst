@@ -22,9 +22,12 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -34,9 +37,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.IntentCompat
 import androidx.core.util.Consumer
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
@@ -50,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -76,6 +82,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.metadat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.ArticleBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.PostBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.OldBookmarkListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.BrowserScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.FavoriteWebAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsScreen
@@ -110,12 +118,16 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.N
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.favorites.FavoriteAlgoFeedsListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.BrowseEmojiSetsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.display.EmojiPackScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.ListOfEmojiPacksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.metadata.EmojiPackMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.membershipManagement.EmojiPackSelectionScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.membershipManagement.MyEmojiListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteAppsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteNappletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.FollowPackFeedScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.FollowPacksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashPostScreen
@@ -238,7 +250,19 @@ fun AppNavigation(
     val nav = rememberNav()
 
     AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
-        BuildNavigation(accountViewModel, nav)
+        Box(Modifier.fillMaxSize()) {
+            BuildNavigation(accountViewModel, nav)
+            // Persistent layer that keeps pinned embedded tabs (browser / nsite / napplet) warm by
+            // holding their surfaces attached. Below the drawer (drawn by the layout above) and below
+            // dialogs (separate windows). API 30+ only, matching the embedded-surface feature.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val bottomBarItems by accountViewModel.settings.uiSettingsFlow.bottomBarItems
+                    .collectAsStateWithLifecycle()
+                EmbeddedTabLayer(bottomBarItems.favoriteIds())
+                // Warm every pinned tab at startup so the first tap is instant (content already local).
+                EmbeddedTabPreloader(accountViewModel)
+            }
+        }
     }
 
     NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)
@@ -293,6 +317,10 @@ fun BuildNavigation(
         composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nsites> { NsitesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Browser> { BrowserScreen(accountViewModel, nav) }
+        composableFromEnd<Route.FavoriteApps> { FavoriteAppsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.FavoriteWebApp> { FavoriteWebAppScreen(it.url, accountViewModel, nav) }
+        composableFromEndArgs<Route.FavoriteNostrApp> { FavoriteNappletScreen(it.coordinate, accountViewModel, nav) }
         composableFromEnd<Route.NappletPermissions> { NappletPermissionsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.SoftwareAppDetail> { SoftwareAppDetailScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Calendars> { CalendarsScreen(accountViewModel, nav) }
