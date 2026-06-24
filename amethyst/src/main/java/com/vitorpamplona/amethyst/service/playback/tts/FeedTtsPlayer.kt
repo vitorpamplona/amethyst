@@ -231,16 +231,28 @@ class FeedTtsPlayer(
             pendingSpeak = true
             return
         }
-        val text =
-            item.mediaItem.mediaMetadata.extras
-                ?.getString(KEY_TTS_TEXT)
+        val extras = item.mediaItem.mediaMetadata.extras
+        val text = extras?.getString(KEY_TTS_TEXT)
         if (text.isNullOrBlank()) {
             // Nothing to read for this post — move on immediately.
             handler.post { advance() }
             return
         }
+        applyVoiceLanguage(extras.getString(KEY_TTS_LANG))
         utteranceToken += 1
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceToken.toString())
+    }
+
+    /** Switches the voice to [languageTag] (BCP-47) when the engine has it, else the device default. */
+    private fun applyVoiceLanguage(languageTag: String?) {
+        val requested = languageTag?.let { runCatching { Locale.forLanguageTag(it) }.getOrNull() }
+        val locale =
+            if (requested != null && tts.isLanguageAvailable(requested) >= TextToSpeech.LANG_AVAILABLE) {
+                requested
+            } else {
+                DEFAULT_LOCALE
+            }
+        runCatching { tts.language = locale }
     }
 
     private fun onUtteranceDone(token: Int) {
@@ -318,6 +330,9 @@ class FeedTtsPlayer(
         // MediaMetadata.extras key carrying the resolved text to speak for a post.
         const val KEY_TTS_TEXT = "tts_text"
 
+        // MediaMetadata.extras key carrying the post's detected BCP-47 language tag (optional).
+        const val KEY_TTS_LANG = "tts_lang"
+
         val DEFAULT_LOCALE: Locale = Locale.getDefault()
 
         private val AVAILABLE_COMMANDS =
@@ -346,8 +361,13 @@ class FeedTtsPlayer(
             speechText: String,
             title: String?,
             artworkUri: String?,
+            languageTag: String?,
         ): MediaItem {
-            val extras = Bundle().apply { putString(KEY_TTS_TEXT, speechText) }
+            val extras =
+                Bundle().apply {
+                    putString(KEY_TTS_TEXT, speechText)
+                    languageTag?.let { putString(KEY_TTS_LANG, it) }
+                }
             val metadata =
                 androidx.media3.common.MediaMetadata
                     .Builder()

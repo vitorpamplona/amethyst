@@ -59,7 +59,7 @@ fun FeedLoaded(
             key = { _, item -> item.idHex },
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItem()) {
+            Row(Modifier.fillMaxWidth().animateItem().nowReadingHighlight(accountViewModel.readAloud, item.idHex)) {
                 NoteCompose(
                     item,
                     modifier = Modifier.fillMaxWidth(),

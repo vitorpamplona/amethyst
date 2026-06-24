@@ -2333,6 +2333,7 @@
     <string name="read_feed_aloud_speed">Reading speed</string>
     <string name="read_feed_aloud_search_keywords" translatable="false">read, aloud, speak, text to speech, tts, voice, accessibility, driving, listen</string>
     <string name="read_feed_aloud_start">Read the feed aloud</string>
+    <string name="read_feed_aloud_hint">Tap to have this feed read aloud</string>
     <string name="read_feed_aloud_stop">Stop reading aloud</string>
     <string name="read_feed_aloud_media_fallback">Shared a photo or video.</string>
     <string name="read_feed_aloud_quote_intro">Quoting</string>

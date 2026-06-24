@@ -18,15 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.lang
+package com.vitorpamplona.amethyst.ui.feeds
 
-object LanguageTranslatorService {
-    fun clear() {}
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 
-    /**
-     * No on-device language identifier ships in the F-Droid flavor (no ML Kit), so the feed reader
-     * falls back to the device default voice for every post.
-     */
-    @Suppress("RedundantSuspendModifier")
-    suspend fun detectLanguage(text: String): String? = null
+/**
+ * Tints a feed row while the read-aloud reader is speaking that exact post, so a glance shows where
+ * the voice is. Reads the now-reading id at the item level, so only the affected rows recompose when
+ * it changes. A no-op (transparent) when nothing is being read.
+ */
+@Composable
+fun Modifier.nowReadingHighlight(
+    readAloud: FeedReadAloudState,
+    noteId: String,
+): Modifier {
+    val reading = readAloud.nowReadingNoteId == noteId
+    val color = if (reading) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent
+    return this.background(color)
 }

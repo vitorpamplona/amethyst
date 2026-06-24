@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.feeds.nowReadingHighlight
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
@@ -430,7 +431,8 @@ fun FeedLoaded(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .animateItem(),
+                    .animateItem()
+                    .nowReadingHighlight(accountViewModel.readAloud, item.idHex),
             ) {
                 NoteCompose(
                     item,

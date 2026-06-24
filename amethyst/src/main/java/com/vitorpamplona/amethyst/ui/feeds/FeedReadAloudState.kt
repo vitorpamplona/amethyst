@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackService
 import com.vitorpamplona.amethyst.service.playback.tts.FeedTtsPlayer
 import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
@@ -59,6 +60,9 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -173,13 +177,23 @@ class FeedReadAloudState(
             val c = ensureController(context) ?: return@launch
             val items =
                 withContext(Dispatchers.Default) {
-                    notes.map { note ->
-                        FeedTtsPlayer.buildMediaItem(
-                            noteId = note.idHex,
-                            speechText = buildSpeech(note, labels, QUOTE_DEPTH),
-                            title = note.author?.let { realNameOrNull(it) },
-                            artworkUri = note.author?.profilePicture(),
-                        )
+                    coroutineScope {
+                        notes
+                            .map { note ->
+                                async {
+                                    val speech = buildSpeech(note, labels, QUOTE_DEPTH)
+                                    // Detect per post so a multilingual feed reads each one in a
+                                    // matching voice. No-op (null) on F-Droid (no ML Kit).
+                                    val lang = if (speech.isBlank()) null else LanguageTranslatorService.detectLanguage(speech)
+                                    FeedTtsPlayer.buildMediaItem(
+                                        noteId = note.idHex,
+                                        speechText = speech,
+                                        title = note.author?.let { realNameOrNull(it) },
+                                        artworkUri = note.author?.profilePicture(),
+                                        languageTag = lang,
+                                    )
+                                }
+                            }.awaitAll()
                     }
                 }
             readingFeed = feed

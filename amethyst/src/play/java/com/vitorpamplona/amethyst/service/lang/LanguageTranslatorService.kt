@@ -31,6 +31,7 @@ import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import kotlinx.coroutines.tasks.await
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -85,6 +86,15 @@ object LanguageTranslatorService {
     }
 
     fun identifyLanguage(text: String): Task<String> = languageIdentification.identifyLanguage(text)
+
+    /**
+     * BCP-47 language code of [text] (e.g. "en", "pt"), or null if undetermined / detection failed.
+     * Used by the feed reader to pick a matching TTS voice per post.
+     */
+    suspend fun detectLanguage(text: String): String? {
+        val code = runCatching { identifyLanguage(text).await() }.getOrNull()
+        return code?.takeIf { it.isNotBlank() && it != "und" }
+    }
 
     fun translate(
         text: String,
