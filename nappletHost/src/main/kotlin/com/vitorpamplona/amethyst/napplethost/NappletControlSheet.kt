@@ -222,6 +222,12 @@ class NappletControlSheet(
         return LinearLayout(context).apply {
             orientation = VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
+            // Wrap the grabber (a vertical LinearLayout defaults its children to MATCH_PARENT width, which
+            // would stretch this chip's background across the whole screen) and center it under the parent.
+            layoutParams =
+                LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
+                    gravity = Gravity.CENTER_HORIZONTAL
+                }
             setPadding(dp(16), dp(7), dp(16), dp(7))
             background =
                 GradientDrawable().apply {
