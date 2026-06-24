@@ -405,6 +405,16 @@ class CardFeedContentState(
         // TODO: Implement deletion of notes from the notification feed
     }
 
+    fun trimToSize(maxItems: Int) {
+        val current = _feedContent.value
+        if (current is CardFeedState.Loaded) {
+            val loaded = current.feed.value
+            if (loaded.list.size > maxItems) {
+                current.feed.tryEmit(LoadedFeedState(loaded.list.take(maxItems).toImmutableList(), loaded.showHidden))
+            }
+        }
+    }
+
     private fun refreshFromOldState(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
 

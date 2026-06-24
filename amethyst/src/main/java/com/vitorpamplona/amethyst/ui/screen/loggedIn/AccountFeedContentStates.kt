@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.content.ComponentCallbacks2
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -139,6 +141,16 @@ class AccountFeedContentStates(
     val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache)
 
     init {
+        // Under critical memory pressure, trim every feed down to 50 items to release
+        // the strong Note references that would otherwise keep pruned cache objects alive.
+        scope.launch(Dispatchers.IO) {
+            Amethyst.instance.trimLevelEvents.collect { level ->
+                if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
+                    trimFeedsToSize(50)
+                }
+            }
+        }
+
         // Marmot group list changes (new group, group marked known, group
         // metadata synced) don't flow through LocalCache.newEventBundles, so
         // the additive update path can't see them. Force a full feed rebuild
@@ -304,6 +316,58 @@ class AccountFeedContentStates(
         drafts.deleteFromFeed(newNotes)
 
         webBookmarks.deleteFromFeed(newNotes)
+    }
+
+    fun trimFeedsToSize(maxItems: Int) {
+        homeNewThreads.trimToSize(maxItems)
+        homeReplies.trimToSize(maxItems)
+        homeEverything.trimToSize(maxItems)
+
+        dmKnown.trimToSize(maxItems)
+        dmNew.trimToSize(maxItems)
+
+        videoFeed.trimToSize(maxItems)
+
+        discoverFollowSets.trimToSize(maxItems)
+        discoverReads.trimToSize(maxItems)
+        discoverMarketplace.trimToSize(maxItems)
+        discoverDVMs.trimToSize(maxItems)
+        discoverLive.trimToSize(maxItems)
+        discoverCommunities.trimToSize(maxItems)
+        discoverPublicChats.trimToSize(maxItems)
+
+        pollsFeed.trimToSize(maxItems)
+        openPollsFeed.trimToSize(maxItems)
+        closedPollsFeed.trimToSize(maxItems)
+
+        badgesFeed.trimToSize(maxItems)
+        browseEmojiSetsFeed.trimToSize(maxItems)
+        communitiesList.trimToSize(maxItems)
+
+        picturesFeed.trimToSize(maxItems)
+        workoutsFeed.trimToSize(maxItems)
+        calendarAppointmentsFeed.trimToSize(maxItems)
+        calendarCollectionsFeed.trimToSize(maxItems)
+        productsFeed.trimToSize(maxItems)
+        shortsFeed.trimToSize(maxItems)
+        publicChatsFeed.trimToSize(maxItems)
+        followPacksFeed.trimToSize(maxItems)
+        liveStreamsFeed.trimToSize(maxItems)
+        nestsFeed.trimToSize(maxItems)
+        longsFeed.trimToSize(maxItems)
+        articlesFeed.trimToSize(maxItems)
+        musicTracksFeed.trimToSize(maxItems)
+        musicPlaylistsFeed.trimToSize(maxItems)
+        podcastEpisodesFeed.trimToSize(maxItems)
+        podcastsFeed.trimToSize(maxItems)
+        softwareAppsFeed.trimToSize(maxItems)
+
+        notifications.trimToSize(maxItems)
+        notificationsFollowing.trimToSize(maxItems)
+        notificationsEveryone.trimToSize(maxItems)
+
+        drafts.trimToSize(maxItems)
+        webBookmarks.trimToSize(maxItems)
     }
 
     fun destroy() {

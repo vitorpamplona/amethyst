@@ -120,8 +120,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -147,6 +150,9 @@ class AppModules(
         }
 
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
+
+    private val _trimLevelEvents = MutableSharedFlow<Int>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val trimLevelEvents = _trimLevelEvents.asSharedFlow()
 
     // Pre-load both preference DataStores in parallel on IO threads.
     // Both constructors use runBlocking internally, so starting them concurrently
@@ -853,6 +859,7 @@ class AppModules(
     }
 
     fun trim(level: Int) {
+        _trimLevelEvents.tryEmit(level)
         applicationIOScope.launch {
             // Backgrounding is a natural moment to flush the DNS cache.
             dnsStore.save()
