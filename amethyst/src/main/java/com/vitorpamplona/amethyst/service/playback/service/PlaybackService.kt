@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerBuilder
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerPool
 import com.vitorpamplona.amethyst.service.playback.playerPool.MediaSessionPool
 import com.vitorpamplona.amethyst.service.playback.playerPool.SimultaneousPlaybackCalculator
+import com.vitorpamplona.amethyst.service.playback.tts.FeedTtsPlayer
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.runBlocking
@@ -51,6 +52,21 @@ import kotlinx.coroutines.runBlocking
 class PlaybackService : MediaSessionService() {
     private var poolNoProxy: MediaSessionPool? = null
     private var poolWithProxy: MediaSessionPool? = null
+
+    // Single shared session for the "read the feed aloud" TTS player. Reuses this service so the
+    // reader gets the same foreground notification, lockscreen + Android Auto transport controls
+    // as video, without a second MediaSessionService.
+    private var ttsSession: MediaSession? = null
+
+    @OptIn(UnstableApi::class)
+    private fun ttsSession(): MediaSession {
+        ttsSession?.let { return it }
+        return MediaSession
+            .Builder(this, FeedTtsPlayer(applicationContext))
+            .setId(TTS_SESSION_ID)
+            .build()
+            .also { ttsSession = it }
+    }
 
     @OptIn(UnstableApi::class)
     fun newPool(
@@ -168,6 +184,11 @@ class PlaybackService : MediaSessionService() {
 
         poolWithProxy?.destroy()
         poolNoProxy?.destroy()
+        ttsSession?.run {
+            player.release()
+            release()
+        }
+        ttsSession = null
         super.onDestroy()
     }
 
@@ -177,6 +198,15 @@ class PlaybackService : MediaSessionService() {
     ) {
         // Updates any new player ready
         super.onUpdateNotification(session, startInForegroundRequired)
+
+        // While the feed is being read aloud, it owns the notification so the lockscreen / Android
+        // Auto controls drive the reader (play/pause/skip), not a muted background video.
+        ttsSession?.let {
+            if (it.player.isPlaying) {
+                super.onUpdateNotification(it, startInForegroundRequired)
+                return
+            }
+        }
 
         // playback controllers control the last notification updated.
         // this procedure re-updates the notification to make sure it aligns
@@ -228,6 +258,8 @@ class PlaybackService : MediaSessionService() {
     // this request.
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
         val id = controllerInfo.connectionHints.getString("id") ?: return null
+        // The feed reader connects with this fixed id and shares one session across controllers.
+        if (id == TTS_SESSION_ID) return ttsSession()
         val proxyPort = controllerInfo.connectionHints.getInt("proxyPort")
         val keepPlaying = controllerInfo.connectionHints.getBoolean("keepPlaying", true)
         // Optional warm-pool affinity hint: when the pool still has a paused ExoPlayer
@@ -242,5 +274,8 @@ class PlaybackService : MediaSessionService() {
         const val HINT_PROXY_PORT = "proxyPort"
         const val HINT_KEEP_PLAYING = "keepPlaying"
         const val HINT_VIDEO_URI = "videoUri"
+
+        // Fixed connection-hint id that routes a controller to the shared TTS feed-reader session.
+        const val TTS_SESSION_ID = "feedReadAloud"
     }
 }

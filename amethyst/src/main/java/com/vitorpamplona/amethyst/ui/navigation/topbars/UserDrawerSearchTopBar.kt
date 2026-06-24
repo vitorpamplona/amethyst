@@ -28,12 +28,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -97,13 +95,11 @@ private fun ReadFeedAloudButton(accountViewModel: AccountViewModel) {
     if (!accountViewModel.readAloud.hasReadableFeed) return
 
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val scope = rememberCoroutineScope()
 
     val isPlaying = accountViewModel.readAloud.isPlaying
 
     IconButton(
-        onClick = { accountViewModel.readAloud.toggle(context, lifecycleOwner, scope) },
+        onClick = { accountViewModel.readAloud.toggle(context) },
     ) {
         Icon(
             symbol = if (isPlaying) MaterialSymbols.Stop else MaterialSymbols.PlayCircle,

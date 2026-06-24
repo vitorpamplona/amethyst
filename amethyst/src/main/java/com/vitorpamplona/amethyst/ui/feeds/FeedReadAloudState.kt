@@ -20,13 +20,20 @@
  */
 package com.vitorpamplona.amethyst.ui.feeds
 
+import android.content.ComponentName
 import android.content.Context
+import android.os.Bundle
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.LifecycleOwner
+import androidx.core.content.ContextCompat
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
@@ -41,7 +48,8 @@ import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
-import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
+import com.vitorpamplona.amethyst.service.playback.service.PlaybackService
+import com.vitorpamplona.amethyst.service.playback.tts.FeedTtsPlayer
 import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -52,33 +60,49 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 
 /**
  * Drives the "read the feed aloud" accessibility/driving mode.
  *
  * One instance is held by the [AccountViewModel][com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel]
- * so both the shared top bar (which renders the play/stop button) and the feed bodies (which
- * register themselves) talk to the same object without any CompositionLocal plumbing.
+ * so both the shared top bar (the play/pause button) and the feed bodies (which register themselves)
+ * talk to the same object without any CompositionLocal plumbing.
  *
- * Whatever feed screen is currently composed calls [register] with its [FeedContentState] and live
- * [LazyListState]; when it leaves composition it [unregister]s. Pressing the button speaks the loaded
- * posts of the registered feed top-to-bottom, scrolling so the post being read stays on screen, and
- * stops when it reaches the end (or when the user presses stop again). There is no background service:
- * [TextToSpeechHelper] auto-stops when the app is paused.
+ * Playback runs through a [MediaController] connected to [PlaybackService]'s [FeedTtsPlayer] session,
+ * so reading continues in the background with the screen off and is controllable from the lockscreen
+ * and Android Auto. The resolved per-post text is packed into each [MediaItem]'s metadata; the
+ * service-side player just speaks it. Follow-along scroll mirrors the player's current item while the
+ * read-from feed is on screen.
  */
 @Stable
-class FeedReadAloudState {
+class FeedReadAloudState(
+    private val scope: CoroutineScope,
+) {
     /** True while a feed screen is on-screen and has posts to read — gates the top-bar button. */
     var hasReadableFeed by mutableStateOf(false)
         private set
 
-    /** True while actively speaking the feed. Drives the play vs stop icon. */
+    /** True while the reader is actively speaking. Drives the play vs pause icon. */
     var isPlaying by mutableStateOf(false)
+        private set
+
+    /** idHex of the post currently being read, so the feed can highlight it. Null when idle. */
+    var nowReadingNoteId by mutableStateOf<String?>(null)
         private set
 
     private var feed: FeedContentState? = null
     private var listState: LazyListState? = null
+
+    // The feed whose posts are queued in the player. Follow-along scroll only fires while the
+    // on-screen feed matches it, so navigating to another feed mid-read doesn't scroll it wrongly.
+    private var readingFeed: FeedContentState? = null
+    private var queuedNotes: List<Note> = emptyList()
+
+    private var controller: MediaController? = null
+    private var speed = 1f
 
     fun register(
         feed: FeedContentState,
@@ -87,87 +111,55 @@ class FeedReadAloudState {
         this.feed = feed
         this.listState = listState
         hasReadableFeed = true
+        // Re-syncing on (re)entry keeps follow-along scroll aligned when returning to the reading feed.
+        syncToCurrent()
     }
 
     fun unregister(feed: FeedContentState) {
-        // Identity-checked: in a HorizontalPager an arriving page registers before the leaving page
-        // disposes, so only clear if we're still the holder for this exact feed.
+        // Only clear if we're still the holder for this exact feed (a pager registers the incoming
+        // page before the outgoing one disposes). Playback deliberately keeps going in the
+        // background via the service — the lockscreen/notification controls it when off a feed.
         if (this.feed === feed) {
             this.feed = null
             this.listState = null
             hasReadableFeed = false
-            stop()
         }
     }
 
-    fun toggle(
-        context: Context,
-        owner: LifecycleOwner,
-        scope: CoroutineScope,
-    ) {
-        if (isPlaying) {
-            stop()
-        } else {
-            start(context, owner, scope)
+    fun toggle(context: Context) {
+        val c = controller
+        when {
+            c != null && c.isPlaying -> c.pause()
+            c != null && c.mediaItemCount > 0 && c.playbackState != Player.STATE_ENDED -> c.play()
+            else -> startFresh(context)
         }
     }
 
-    private fun start(
-        context: Context,
-        owner: LifecycleOwner,
-        scope: CoroutineScope,
-    ) {
-        val feed = feed ?: return
-        if (feed.visibleNotes().isEmpty()) return
+    fun next() {
+        controller?.seekToNextMediaItem()
+    }
 
-        isPlaying = true
+    fun previous() {
+        controller?.seekToPreviousMediaItem()
+    }
 
-        val startNoteIndex = currentTopNoteIndex(feed.visibleNotes().size)
-        speakNoteAt(startNoteIndex, context, owner, scope)
+    fun setSpeed(speed: Float) {
+        this.speed = speed
+        controller?.setPlaybackSpeed(speed)
     }
 
     fun stop() {
-        if (!isPlaying) return
+        controller?.pause()
         isPlaying = false
-        try {
-            TextToSpeechHelper.getInstance(appContextOrNull ?: return).destroy()
-        } catch (_: Exception) {
-        }
+        nowReadingNoteId = null
     }
 
-    // Kept so stop() can reach the singleton even without a fresh Context; set on each speak.
-    private var appContextOrNull: Context? = null
-
-    private fun speakNoteAt(
-        index: Int,
-        context: Context,
-        owner: LifecycleOwner,
-        scope: CoroutineScope,
-    ) {
-        if (!isPlaying) return
-
-        val feed =
-            feed ?: run {
-                stop()
-                return
-            }
+    private fun startFresh(context: Context) {
+        val feed = feed ?: return
         val notes = feed.visibleNotes()
-        if (index >= notes.size) {
-            // Reached the end of the loaded feed — stop (the chosen v1 behavior, no auto-load).
-            stop()
-            return
-        }
+        if (notes.isEmpty()) return
 
-        val note = notes[index]
-        appContextOrNull = context.applicationContext
-
-        // Keep the post being read on screen.
-        listState?.let { state ->
-            scope.launch {
-                runCatching { state.animateScrollToItem(lazyIndexFor(index, notes.size, state)) }
-            }
-        }
-
+        val startIndex = currentTopNoteIndex(notes.size)
         val labels =
             SpeechLabels(
                 mediaFallback = context.getString(R.string.read_feed_aloud_media_fallback),
@@ -176,27 +168,80 @@ class FeedReadAloudState {
             )
 
         scope.launch {
-            val speech = withContext(Dispatchers.Default) { buildSpeech(note, labels, QUOTE_DEPTH) }
-            if (!isPlaying) return@launch
-
-            if (speech.isBlank()) {
-                // Nothing worth reading (e.g. a reaction/empty event) — skip to the next.
-                speakNoteAt(index + 1, context, owner, scope)
-                return@launch
-            }
-
-            TextToSpeechHelper
-                .getInstance(context)
-                .registerLifecycle(owner)
-                // When the lifecycle (background/stop) tears the engine down, reflect that in our
-                // state so the top-bar button returns to play instead of being stuck on stop.
-                .setCustomActionForDestroy { isPlaying = false }
-                .speak(speech)
-                .onDone { speakNoteAt(index + 1, context, owner, scope) }
-                .onError {
-                    // Skip the offending post rather than aborting the whole session.
-                    speakNoteAt(index + 1, context, owner, scope)
+            val c = ensureController(context) ?: return@launch
+            val items =
+                withContext(Dispatchers.Default) {
+                    notes.map { note ->
+                        FeedTtsPlayer.buildMediaItem(
+                            noteId = note.idHex,
+                            speechText = buildSpeech(note, labels, QUOTE_DEPTH),
+                            title = note.author?.let { realNameOrNull(it) },
+                            artworkUri = note.author?.profilePicture(),
+                        )
+                    }
                 }
+            readingFeed = feed
+            queuedNotes = notes
+            c.setMediaItems(items, startIndex.coerceIn(0, items.lastIndex), C.TIME_UNSET)
+            c.setPlaybackSpeed(speed)
+            c.prepare()
+            c.play()
+        }
+    }
+
+    private suspend fun ensureController(context: Context): MediaController? {
+        controller?.let { if (it.isConnected) return it }
+
+        val appContext = context.applicationContext
+        val bundle = Bundle().apply { putString(PlaybackService.HINT_ID, PlaybackService.TTS_SESSION_ID) }
+        val token = SessionToken(appContext, ComponentName(appContext, PlaybackService::class.java))
+        val future =
+            MediaController
+                .Builder(appContext, token)
+                .setConnectionHints(bundle)
+                .buildAsync()
+
+        val c =
+            suspendCancellableCoroutine<MediaController?> { cont ->
+                future.addListener({
+                    cont.resume(runCatching { future.get() }.getOrNull())
+                }, ContextCompat.getMainExecutor(appContext))
+            } ?: return null
+
+        controller = c
+        c.addListener(
+            object : Player.Listener {
+                override fun onIsPlayingChanged(playing: Boolean) {
+                    isPlaying = playing
+                }
+
+                override fun onMediaItemTransition(
+                    mediaItem: MediaItem?,
+                    reason: Int,
+                ) {
+                    syncToCurrent()
+                }
+
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_ENDED) nowReadingNoteId = null
+                }
+            },
+        )
+        return c
+    }
+
+    /** Mirrors the player's current item into [nowReadingNoteId] + follow-along scroll. */
+    private fun syncToCurrent() {
+        val c = controller ?: return
+        val note = queuedNotes.getOrNull(c.currentMediaItemIndex) ?: return
+        nowReadingNoteId = note.idHex
+
+        // Only scroll when the on-screen feed is the one being read.
+        if (feed !== readingFeed) return
+        val state = listState ?: return
+        val index = c.currentMediaItemIndex
+        scope.launch {
+            runCatching { state.animateScrollToItem(lazyIndexFor(index, queuedNotes.size, state)) }
         }
     }
 
