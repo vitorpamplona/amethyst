@@ -32,25 +32,27 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 
 /**
- * The icon for a favorite app: its own manifest icon ([FavoriteApp.iconUrl]) when present, otherwise a
- * type glyph (the napplet/nsite grid mark, or the globe for a plain web URL). The glyph also backs the
- * remote image as placeholder/error, so a missing or failed icon degrades to it rather than to a blank.
+ * The icon for a favorite app: [iconModel] (e.g. a captured favicon the host app resolves) when given,
+ * else its own manifest icon ([FavoriteApp.iconUrl]), else a type glyph (the napplet/nsite grid mark, or
+ * the globe for a plain web URL). The glyph also backs the remote image as placeholder/error, so a missing
+ * or failed icon degrades to it rather than to a blank.
  */
 @Composable
 fun FavoriteAppIcon(
     app: FavoriteApp,
     tint: Color,
     modifier: Modifier = Modifier,
+    iconModel: Any? = null,
 ) {
     val symbol = if (app is FavoriteApp.NostrApp) MaterialSymbols.Apps else MaterialSymbols.Public
-    val url = app.iconUrl
+    val model = iconModel ?: app.iconUrl?.takeIf { it.isNotBlank() }
 
-    if (url.isNullOrBlank()) {
+    if (model == null) {
         Icon(symbol, contentDescription = null, modifier = modifier, tint = tint)
     } else {
         val glyph = rememberMaterialSymbolPainter(symbol, tint)
         AsyncImage(
-            model = url,
+            model = model,
             contentDescription = null,
             modifier = modifier.clip(RoundedCornerShape(6.dp)),
             placeholder = glyph,

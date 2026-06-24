@@ -34,6 +34,7 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.util.Log
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -44,6 +45,7 @@ import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import org.json.JSONObject
 
@@ -81,6 +83,10 @@ class NappletBrowserService : Service() {
         var webView: WebView? = null
         var bridgeReplyProxy: JavaScriptReplyProxy? = null
         var fireSeq = 0
+
+        // Last main-frame error state, pushed to the client so it can show an error/retry overlay over
+        // the surface (the embedded surface has no error page of its own).
+        var loadFailed = false
 
         // Per visited origin: its broker-minted launch token, the requests queued until it arrives, and
         // the origins a mint is already in flight for — so NIP-07 consent is scoped per site, per tab.
@@ -278,7 +284,12 @@ class NappletBrowserService : Service() {
             view: WebView,
             url: String,
             favicon: android.graphics.Bitmap?,
-        ) = pushUrl(tab, view)
+        ) {
+            // A new main-frame navigation cleared any prior error.
+            tab?.loadFailed = false
+            pushUrl(tab, view)
+            pushLoadState(tab, view, isLoading = true)
+        }
 
         override fun doUpdateVisitedHistory(
             view: WebView,
@@ -289,7 +300,40 @@ class NappletBrowserService : Service() {
         override fun onPageFinished(
             view: WebView,
             url: String,
-        ) = pushUrl(tab, view)
+        ) {
+            pushUrl(tab, view)
+            pushLoadState(tab, view, isLoading = false)
+        }
+
+        override fun onReceivedError(
+            view: WebView,
+            request: WebResourceRequest,
+            error: WebResourceError,
+        ) {
+            // Only a main-frame failure blanks the page; sub-resource errors (a missing image, a blocked
+            // tracker) are irrelevant to whether the app opened.
+            if (!request.isForMainFrame) return
+            tab?.loadFailed = true
+            pushLoadState(tab, view, isLoading = false)
+        }
+    }
+
+    /** Tells the client whether a main-frame load is in flight and whether it failed, so it can overlay a spinner/retry. */
+    private fun pushLoadState(
+        tab: BrowserTab?,
+        view: WebView,
+        isLoading: Boolean,
+    ) {
+        val message =
+            Message.obtain(null, NappletBrowserContract.MSG_LOAD_STATE).apply {
+                data =
+                    Bundle().apply {
+                        putBoolean(NappletBrowserContract.KEY_IS_LOADING, isLoading)
+                        putBoolean(NappletBrowserContract.KEY_LOAD_FAILED, tab?.loadFailed ?: false)
+                        putString(NappletBrowserContract.KEY_URL, view.url.orEmpty())
+                    }
+            }
+        runCatching { tab?.clientMessenger?.send(message) }
     }
 
     private fun pushUrl(
@@ -455,14 +499,8 @@ class NappletBrowserService : Service() {
 
     private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
 
-    /** Address-bar text → URL: keep an explicit scheme, prefix a bare domain, else DuckDuckGo search. */
-    private fun normalizeUrl(input: String): String {
-        val text = input.trim()
-        if (text.isEmpty()) return "about:blank"
-        if (text.contains("://")) return text
-        if (!text.contains(' ') && text.contains('.')) return "https://$text"
-        return "https://duckduckgo.com/?q=" + Uri.encode(text)
-    }
+    /** Address-bar text → URL via the shared [OmniboxInput] rules (bare domain → https, else search). */
+    private fun normalizeUrl(input: String): String = OmniboxInput.resolve(input)?.url ?: "about:blank"
 
     private companion object {
         private const val TAG = "NappletBrowserService"

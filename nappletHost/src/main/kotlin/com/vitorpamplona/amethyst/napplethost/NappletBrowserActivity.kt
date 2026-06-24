@@ -24,6 +24,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -34,6 +35,7 @@ import android.os.Messenger
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -55,8 +57,10 @@ import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executor
 
 /**
@@ -81,6 +85,13 @@ class NappletBrowserActivity : ComponentActivity() {
     private val contentFrame by lazy { FrameLayout(this) }
     private var loadingView: View? = null
     private var resumed = false
+    private var controlSheet: NappletControlSheet? = null
+
+    // Visit-history gating: only a clean main-frame load (no error) is recorded, so a misspelled/
+    // unresolved address never enters history. Reset on each main-frame page start.
+    private var pendingMainFrameUrl: String? = null
+    private var mainFrameLoadFailed = false
+    private var lastIconHost: String? = null
 
     // ---- broker bridge (per-origin NIP-07 tokens; identical to NappletBrowserService) ----
     private var brokerMessenger: Messenger? = null
@@ -267,6 +278,22 @@ class NappletBrowserActivity : ComponentActivity() {
         }
         WebView.setWebContentsDebuggingEnabled(false)
         wv.webViewClient = BrowserClient()
+        wv.webChromeClient = BrowserChromeClient()
+    }
+
+    /** Captures the page favicon (the WebChromeClient is the only source of it) for the launcher's icons. */
+    private inner class BrowserChromeClient : android.webkit.WebChromeClient() {
+        override fun onReceivedIcon(
+            view: WebView,
+            icon: Bitmap?,
+        ) {
+            if (icon == null || mainFrameLoadFailed) return
+            val host = OmniboxInput.hostOf(view.url ?: return) ?: return
+            // De-dupe: a page can fire this several times — store once per host per visit.
+            if (host == lastIconHost) return
+            lastIconHost = host
+            recordIcon(host, icon)
+        }
     }
 
     private inner class BrowserClient : WebViewClient() {
@@ -283,6 +310,29 @@ class NappletBrowserActivity : ComponentActivity() {
             return true
         }
 
+        override fun onPageStarted(
+            view: WebView,
+            url: String,
+            favicon: Bitmap?,
+        ) {
+            // A fresh main-frame navigation: arm history gating and show the new address.
+            pendingMainFrameUrl = url
+            mainFrameLoadFailed = false
+            // Re-arm favicon capture when the host changes, so a same-host in-page nav doesn't re-send.
+            if (OmniboxInput.hostOf(url) != lastIconHost) lastIconHost = null
+            controlSheet?.updateUrl(url)
+        }
+
+        override fun onReceivedError(
+            view: WebView,
+            request: WebResourceRequest,
+            error: WebResourceError,
+        ) {
+            // A main-frame failure (DNS miss on a misspelled host, no connection, …) disqualifies this
+            // navigation from history. Sub-resource errors are irrelevant to whether the page opened.
+            if (request.isForMainFrame) mainFrameLoadFailed = true
+        }
+
         override fun onPageCommitVisible(
             view: WebView,
             url: String,
@@ -290,18 +340,84 @@ class NappletBrowserActivity : ComponentActivity() {
             // The page has painted its first frame — drop the loading screen.
             loadingView?.let { contentFrame.removeView(it) }
             loadingView = null
+            controlSheet?.updateUrl(url)
         }
 
         override fun doUpdateVisitedHistory(
             view: WebView,
             url: String,
             isReload: Boolean,
-        ) = syncBackState()
+        ) {
+            syncBackState()
+            controlSheet?.updateUrl(url)
+        }
 
         override fun onPageFinished(
             view: WebView,
             url: String,
-        ) = syncBackState()
+        ) {
+            syncBackState()
+            controlSheet?.updateUrl(url)
+            // Record only a clean http(s) main-frame load — never a typed-but-failed address.
+            if (!mainFrameLoadFailed && (url.startsWith("https://") || url.startsWith("http://"))) {
+                recordHistory(url, view.title)
+            }
+        }
+    }
+
+    /** Relays a successfully loaded page to the main-process broker for the device-local visit history. */
+    private fun recordHistory(
+        url: String,
+        title: String?,
+    ) {
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_RECORD_HISTORY).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_HISTORY_URL, url)
+                        putString(NappletIpc.KEY_HISTORY_TITLE, title.orEmpty())
+                    }
+            }
+        if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
+    }
+
+    /** Scales [icon] down and relays it to the broker as the favicon for [host] (PNG bytes over IPC). */
+    private fun recordIcon(
+        host: String,
+        icon: Bitmap,
+    ) {
+        val bytes =
+            runCatching {
+                val scaled =
+                    if (icon.width > ICON_MAX_PX || icon.height > ICON_MAX_PX) {
+                        Bitmap.createScaledBitmap(icon, ICON_MAX_PX, ICON_MAX_PX, true)
+                    } else {
+                        icon
+                    }
+                ByteArrayOutputStream().use { out ->
+                    scaled.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    out.toByteArray()
+                }
+            }.getOrNull() ?: return
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_RECORD_ICON).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_ICON_HOST, host)
+                        putByteArray(NappletIpc.KEY_ICON_BYTES, bytes)
+                    }
+            }
+        if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
+    }
+
+    /** Loads a user-typed address from the in-page address bar, forcing Tor for `.onion` when available. */
+    private fun loadAddress(text: String) {
+        val resolved = OmniboxInput.resolve(text) ?: return
+        if (resolved.forceTor && proxyPort > 0 && !useTor) {
+            useTor = true
+            applyWebViewProxy(proxyPort)
+        }
+        if (this::webView.isInitialized) webView.loadUrl(resolved.url)
     }
 
     // ---- bridge: page <-> native (mirror of NappletBrowserService.onBridgeMessage) ----
@@ -447,7 +563,9 @@ class NappletBrowserActivity : ComponentActivity() {
             torInitiallyOn = if (proxyPort > 0) useTor else null,
             onToggleTor = { setNetworkMode(it) },
             onInfo = null,
-        )
+            liveUrl = startUrl,
+            onNavigate = { loadAddress(it) },
+        ).also { controlSheet = it }
 
     private fun buildLoadingView(): View =
         LinearLayout(this).apply {
@@ -482,6 +600,9 @@ class NappletBrowserActivity : ComponentActivity() {
 
         /** How often a resumed browser renews its foreground lease (well under the broker's 90s TTL). */
         private const val FOREGROUND_HEARTBEAT_MS = 30_000L
+
+        /** Max favicon edge (px) before sending over IPC — keeps the PNG tiny, well under the Binder limit. */
+        private const val ICON_MAX_PX = 96
 
         private const val EXTRA_URL = "url"
         private const val EXTRA_PROXY_PORT = "proxyPort"

@@ -38,6 +38,7 @@ import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
 import org.json.JSONObject
@@ -81,6 +82,15 @@ class EmbeddedNappletController(
     /** A granted "allow always" sensitive op just ran (one of NappletEmbedContract.NOTICE_*). */
     var onNotice: ((String) -> Unit)? = null
 
+    private var hasLoadedReal = false
+
+    /** Last known main-frame load state, so the tab layer renders the right overlay immediately. */
+    override var loadStatus: EmbeddedLoadStatus = EmbeddedLoadStatus()
+        private set
+
+    /** Notified on the main thread whenever [loadStatus] changes. */
+    override var onLoadStatusChanged: ((EmbeddedLoadStatus) -> Unit)? = null
+
     override var onImeEvent: ((ImeEvent) -> Unit)? = null
 
     private val connection =
@@ -115,6 +125,7 @@ class EmbeddedNappletController(
         onStateChanged = null
         onNotice = null
         onImeEvent = null
+        onLoadStatusChanged = null
     }
 
     override fun attachView(view: SandboxedSdkView) {
@@ -167,6 +178,11 @@ class EmbeddedNappletController(
                 val payload = msg.data?.getString(NappletEmbedContract.KEY_IME_PAYLOAD) ?: return true
                 parseImeEvent(payload)?.let { event -> onImeEvent?.invoke(event) }
             }
+            NappletEmbedContract.MSG_LOAD_STATE -> {
+                val isLoading = msg.data?.getBoolean(NappletEmbedContract.KEY_IS_LOADING, false) ?: false
+                val failed = msg.data?.getBoolean(NappletEmbedContract.KEY_LOAD_FAILED, false) ?: false
+                onLoadState(isLoading, failed)
+            }
             else -> return false
         }
         return true
@@ -200,6 +216,26 @@ class EmbeddedNappletController(
     fun back() = send(NappletEmbedContract.MSG_BACK)
 
     fun reload() = send(NappletEmbedContract.MSG_RELOAD)
+
+    /** User-triggered recovery for a stuck or failed session: reload the verified content from scratch. */
+    override fun retry() {
+        hasLoadedReal = false
+        publishLoadStatus(EmbeddedLoadStatus(isLoading = true))
+        reload()
+    }
+
+    private fun onLoadState(
+        isLoading: Boolean,
+        failed: Boolean,
+    ) {
+        if (!isLoading && !failed) hasLoadedReal = true
+        publishLoadStatus(EmbeddedLoadStatus(isLoading = isLoading, failed = failed, hasLoadedReal = hasLoadedReal))
+    }
+
+    private fun publishLoadStatus(status: EmbeddedLoadStatus) {
+        loadStatus = status
+        onLoadStatusChanged?.invoke(status)
+    }
 
     /** Pause/resume the applet's JS when the tab leaves/returns to the foreground (background gating). */
     fun pause() {

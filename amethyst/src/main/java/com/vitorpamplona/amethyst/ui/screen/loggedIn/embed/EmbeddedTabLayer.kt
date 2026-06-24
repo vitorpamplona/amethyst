@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
+import kotlinx.coroutines.delay
 
 // How far off-screen a parked (inactive) warm tab is shifted — well past any real screen width.
 private val OFFSCREEN_SHIFT = 10_000.dp
@@ -144,6 +145,47 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                     },
                     modifier = placement,
                 )
+            }
+        }
+
+        // Loading / error overlay for the active tab, drawn AFTER the surfaces so it covers the active
+        // one's (opaque, pre-first-frame) surface — which itself sits above the nav screens, so the overlay
+        // can't live in the screen. A spinner until a real page paints, or an error+retry when the load
+        // failed or stalled, so a slow / blank / failed load isn't a bare black/white void.
+        val activeController = EmbeddedTabHost.sessions.firstOrNull { it.id == activeId }?.controller
+        if (activeController != null && bounds.width > 0f && bounds.height > 0f) {
+            var loadStatus by remember(activeId) { mutableStateOf(activeController.loadStatus) }
+            var timedOut by remember(activeId) { mutableStateOf(false) }
+            DisposableEffect(activeId, activeController) {
+                activeController.onLoadStatusChanged = { loadStatus = it }
+                onDispose { activeController.onLoadStatusChanged = null }
+            }
+            // Safety net: nothing painted and nothing actively loading after a grace period → offer a retry.
+            LaunchedEffect(activeId, loadStatus) {
+                timedOut = false
+                if (!loadStatus.hasLoadedReal && !loadStatus.failed) {
+                    delay(12_000)
+                    timedOut = true
+                }
+            }
+            if (!loadStatus.hasLoadedReal) {
+                with(density) {
+                    Box(
+                        Modifier
+                            .absoluteOffset(
+                                (bounds.left - layerOrigin.x).toDp(),
+                                (bounds.top - layerOrigin.y).toDp(),
+                            ).size(bounds.width.toDp(), bounds.height.toDp()),
+                    ) {
+                        EmbeddedLoadOverlay(
+                            failed = loadStatus.failed || timedOut,
+                            onRetry = {
+                                timedOut = false
+                                activeController.retry()
+                            },
+                        )
+                    }
+                }
             }
         }
 

@@ -66,14 +66,17 @@ object FavoriteAppLauncher {
     /**
      * Opens [url] full-screen in its own task, so back/recents treat it like a separate app. Uses the
      * direct-WebView [NappletBrowserActivity] (page scrolls/zooms and the keyboard resizes natively),
-     * resolving the proxy port + this site's remembered Tor choice here in the main process.
+     * resolving the proxy port + this site's remembered Tor choice here in the main process. [preferTor]
+     * forces Tor (when available) regardless of the remembered choice — used for `.onion`, which only
+     * resolves over Tor.
      */
     fun launchUrl(
         context: Context,
         url: String,
+        preferTor: Boolean = false,
     ) {
         val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-        val useTor = proxyPort > 0 && WebUrlNetworkRegistry.useTor(url)
+        val useTor = proxyPort > 0 && (preferTor || WebUrlNetworkRegistry.useTor(url))
         val intent =
             NappletBrowserActivity.intent(context, url, proxyPort, useTor).apply {
                 if (context !is Activity) addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)

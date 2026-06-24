@@ -24,10 +24,13 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.text.InputType
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Switch
@@ -56,6 +59,10 @@ class NappletControlSheet(
     // toggling inline — used by the nSite host, where switching routing rebuilds the whole session.
     private val onNetworkTap: (() -> Unit)? = null,
     private val onInfo: (() -> Unit)? = null,
+    // The live URL of a plain-website browser. Non-null only for the direct-WebView browser (never an
+    // nsite/napplet), where it renders an editable address row; [onNavigate] loads what the user types.
+    liveUrl: String? = null,
+    private val onNavigate: ((String) -> Unit)? = null,
 ) : LinearLayout(context) {
     private val onSurface = resolveThemeColor(android.R.attr.textColorPrimary)
     private val dimmed = resolveThemeColor(android.R.attr.textColorSecondary)
@@ -63,10 +70,13 @@ class NappletControlSheet(
 
     private var expanded = false
     private var torOn = torInitiallyOn
+    private var currentUrl = liveUrl
 
     private val panel: LinearLayout
     private var torLabel: TextView? = null
     private var torSwitch: Switch? = null
+    private var addressField: EditText? = null
+    private var securityGlyph: TextView? = null
 
     init {
         orientation = VERTICAL
@@ -89,6 +99,9 @@ class NappletControlSheet(
             setPadding(dp(8), dp(6), dp(8), dp(10))
 
             addView(titleRow())
+            // Browser only: an editable address bar showing the live URL + a security glyph. nsite/napplet
+            // hosts pass no navigate callback, so they never get one.
+            onNavigate?.let { addView(addressRow(currentUrl.orEmpty(), it)) }
             addView(divider())
             if (torOn != null) addView(torRow())
             addView(
@@ -127,6 +140,79 @@ class NappletControlSheet(
                     setPadding(dp(10), 0, 0, 0)
                 },
             )
+        }
+
+    /**
+     * The browser address bar: a security glyph (🧅 Tor / 🔒 https / 🌐 plain) + an editable URL field.
+     * Pressing Go hands the trimmed text to [onNavigate] (normalized by the caller) and collapses the sheet.
+     */
+    private fun addressRow(
+        initial: String,
+        onNavigate: (String) -> Unit,
+    ): View {
+        val glyph =
+            TextView(context).apply {
+                text = securityGlyphFor(initial)
+                textSize = 15f
+                width = dp(28)
+                gravity = Gravity.CENTER
+            }
+        securityGlyph = glyph
+        val field =
+            EditText(context).apply {
+                setText(initial)
+                setTextColor(onSurface)
+                setHintTextColor(dimmed)
+                hint = context.getString(R.string.browser_address_hint)
+                contentDescription = context.getString(R.string.browser_address_hint)
+                textSize = 15f
+                isSingleLine = true
+                setSelectAllOnFocus(true)
+                background = null
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+                imeOptions = EditorInfo.IME_ACTION_GO
+                layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
+                setOnEditorActionListener { v, actionId, _ ->
+                    if (actionId == EditorInfo.IME_ACTION_GO) {
+                        val text =
+                            v.text
+                                ?.toString()
+                                ?.trim()
+                                .orEmpty()
+                        if (text.isNotEmpty()) {
+                            clearFocus()
+                            collapse()
+                            onNavigate(text)
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                }
+            }
+        addressField = field
+        return LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            addView(glyph)
+            addView(field)
+        }
+    }
+
+    /** Refreshes the address bar + security glyph as the page navigates. No-op without an address row. */
+    fun updateUrl(url: String) {
+        currentUrl = url
+        // Don't fight the user while they're editing the field.
+        addressField?.takeIf { !it.hasFocus() }?.setText(url)
+        securityGlyph?.text = securityGlyphFor(url)
+    }
+
+    private fun securityGlyphFor(url: String): String =
+        when {
+            torOn == true -> "🧅" // 🧅 routed over Tor
+            url.startsWith("https://", ignoreCase = true) -> "🔒" // 🔒 secure
+            else -> "🌐" // 🌐 plain http
         }
 
     private fun torRow(): View {
@@ -181,6 +267,7 @@ class NappletControlSheet(
         torOn = next
         torSwitch?.isChecked = next
         torLabel?.text = context.getString(if (next) R.string.napplet_net_tor_label else R.string.napplet_net_open_label)
+        securityGlyph?.text = securityGlyphFor(currentUrl.orEmpty())
         onToggleTor(next)
     }
 

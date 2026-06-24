@@ -157,7 +157,8 @@ private fun EmbeddedFavoriteTab(
             AppBottomBar(Route.FavoriteWebApp(url), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
-        // Reserve the full content area; the warm surface + its top sheet are drawn over these bounds.
+        // Reserve the full content area; the warm surface, its top sheet, and the loading/error overlay
+        // are all drawn over these bounds by the tab layer.
         Box(
             Modifier
                 .fillMaxSize()

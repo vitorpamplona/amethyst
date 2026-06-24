@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
@@ -60,10 +61,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -141,24 +144,44 @@ fun FavoriteAppsGrid(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(apps, key = { it.id }) { app ->
-            FavoriteAppCell(
-                app = app,
-                onOpen = { onOpen(app) },
-                onRemove = { onRemove(app) },
-            )
-        }
+        favoriteAppItems(apps, onOpen, onRemove)
+    }
+}
+
+/**
+ * Emits the favorite-app cells into any [LazyVerticalGrid] (the Favorite Apps tab, the browser home),
+ * so callers can mix them with their own headers/sections in a single grid.
+ */
+fun LazyGridScope.favoriteAppItems(
+    apps: List<FavoriteApp>,
+    onOpen: (FavoriteApp) -> Unit,
+    onRemove: (FavoriteApp) -> Unit,
+) {
+    items(apps, key = { it.id }) { app ->
+        FavoriteAppCell(
+            app = app,
+            onOpen = { onOpen(app) },
+            onRemove = { onRemove(app) },
+        )
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun FavoriteAppCell(
+internal fun FavoriteAppCell(
     app: FavoriteApp,
     onOpen: () -> Unit,
     onRemove: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
+
+    // For a plain web favorite, prefer the favicon captured when its site was opened; nsites/napplets keep
+    // their manifest icon. Observing the key set recomputes the model as an icon arrives.
+    val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
+    val faviconModel =
+        remember(app, iconKeys) {
+            (app as? FavoriteApp.WebUrl)?.let { OmniboxInput.hostOf(it.url)?.let(BrowserIconRegistry::iconModelFor) }
+        }
 
     Column(
         modifier =
@@ -183,6 +206,7 @@ private fun FavoriteAppCell(
                 app = app,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(28.dp),
+                iconModel = faviconModel,
             )
         }
         Spacer(Modifier.height(6.dp))

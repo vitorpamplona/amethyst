@@ -37,6 +37,7 @@ import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
 import org.json.JSONObject
@@ -63,6 +64,16 @@ class EmbeddedBrowserController(
     private var sandboxedSdkView: SandboxedSdkView? = null
     private var pendingAdapter: SandboxedUiAdapter? = null
     private var startUrl: String = "about:blank"
+
+    private var hasLoadedReal = false
+    private var blankRecovered = false
+
+    /** Last known main-frame load state, so the tab layer renders the right overlay immediately. */
+    override var loadStatus: EmbeddedLoadStatus = EmbeddedLoadStatus()
+        private set
+
+    /** Notified on the main thread whenever [loadStatus] changes. */
+    override var onLoadStatusChanged: ((EmbeddedLoadStatus) -> Unit)? = null
 
     // A single NappletBrowserService instance serves every embedded browser tab, so each controller
     // stamps its own id on every message; the provider uses it to route controls/updates to this tab.
@@ -105,6 +116,7 @@ class EmbeddedBrowserController(
         pendingAdapter = null
         onUrlChanged = null
         onImeEvent = null
+        onLoadStatusChanged = null
     }
 
     override fun teardown() = unbind()
@@ -154,6 +166,12 @@ class EmbeddedBrowserController(
                 val payload = msg.data?.getString(NappletBrowserContract.KEY_IME_PAYLOAD) ?: return true
                 parseImeEvent(payload)?.let { event -> onImeEvent?.invoke(event) }
             }
+            NappletBrowserContract.MSG_LOAD_STATE -> {
+                val isLoading = msg.data?.getBoolean(NappletBrowserContract.KEY_IS_LOADING, false) ?: false
+                val failed = msg.data?.getBoolean(NappletBrowserContract.KEY_LOAD_FAILED, false) ?: false
+                val loadedUrl = msg.data?.getString(NappletBrowserContract.KEY_URL).orEmpty()
+                onLoadState(isLoading, failed, loadedUrl)
+            }
             else -> return false
         }
         return true
@@ -162,6 +180,44 @@ class EmbeddedBrowserController(
     fun navigate(url: String) = send(NappletBrowserContract.MSG_NAVIGATE) { putString(NappletBrowserContract.KEY_URL, url) }
 
     fun reload() = send(NappletBrowserContract.MSG_RELOAD) {}
+
+    /**
+     * User-triggered recovery for a stuck, blank, or failed session: reload the canonical [startUrl] from
+     * scratch. Unlike [reload] (which re-fetches whatever the WebView currently shows — `about:blank` for a
+     * session that never got its URL), this re-navigates to the favorite's real URL.
+     */
+    override fun retry() {
+        blankRecovered = false
+        hasLoadedReal = false
+        publishLoadStatus(EmbeddedLoadStatus(isLoading = true))
+        navigate(startUrl)
+    }
+
+    private fun onLoadState(
+        isLoading: Boolean,
+        failed: Boolean,
+        loadedUrl: String,
+    ) {
+        // A favorite whose session settled on about:blank never received its real URL (a warm session built
+        // before the URL was wired through). Re-navigate once to the canonical URL — reload() can't fix this
+        // because it would just reload about:blank. Scoped to a real startUrl, so the generic browser's
+        // intentional about:blank new-tab page is left alone.
+        if (!isLoading && !failed && loadedUrl.isBlankPage() && !startUrl.isBlankPage() && !blankRecovered) {
+            blankRecovered = true
+            publishLoadStatus(EmbeddedLoadStatus(isLoading = true))
+            navigate(startUrl)
+            return
+        }
+        if (!isLoading && !failed && !loadedUrl.isBlankPage()) hasLoadedReal = true
+        publishLoadStatus(EmbeddedLoadStatus(isLoading = isLoading, failed = failed, hasLoadedReal = hasLoadedReal))
+    }
+
+    private fun publishLoadStatus(status: EmbeddedLoadStatus) {
+        loadStatus = status
+        onLoadStatusChanged?.invoke(status)
+    }
+
+    private fun String.isBlankPage() = isEmpty() || this == "about:blank"
 
     fun back() = send(NappletBrowserContract.MSG_BACK) {}
 

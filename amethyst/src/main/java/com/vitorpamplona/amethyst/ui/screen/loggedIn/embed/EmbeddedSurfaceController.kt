@@ -46,4 +46,18 @@ interface EmbeddedSurfaceController {
 
     /** Permanently close the session (unbind the service); used on eviction. */
     fun teardown()
+
+    /**
+     * Current main-frame load state, so [EmbeddedTabLayer] can draw a loading spinner / error+retry
+     * overlay over this (z-below) surface — the surface itself sits above the nav screens, so the overlay
+     * can't live in the screen. The default is "already loaded" (no overlay) for any controller that
+     * doesn't report state.
+     */
+    val loadStatus: EmbeddedLoadStatus get() = EmbeddedLoadStatus(hasLoadedReal = true)
+
+    /** Set by [EmbeddedTabLayer] for the active tab; notified on the main thread when [loadStatus] changes. */
+    var onLoadStatusChanged: ((EmbeddedLoadStatus) -> Unit)?
+
+    /** Re-attempt the load from scratch (the overlay's Retry); default no-op. */
+    fun retry() {}
 }
