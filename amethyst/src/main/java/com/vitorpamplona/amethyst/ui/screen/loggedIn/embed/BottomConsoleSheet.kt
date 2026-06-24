@@ -30,6 +30,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,9 +54,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
@@ -95,7 +100,8 @@ fun BottomConsoleSheet(
                     shadowElevation = 6.dp,
                     shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
                 ) {
-                    Column(Modifier.fillMaxWidth().heightIn(max = 240.dp)) {
+                    val maxHeight = (LocalConfiguration.current.screenHeightDp * 0.4f).dp
+                    Column(Modifier.fillMaxWidth().heightIn(max = maxHeight)) {
                         Row(
                             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -122,22 +128,37 @@ fun BottomConsoleSheet(
                                 .verticalScroll(scrollState)
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                         ) {
+                            val dimColor = MaterialTheme.colorScheme.onSurfaceVariant
                             logs.forEach { entry ->
+                                val levelColor = consoleLevelColor(entry.level)
+                                val srcShort =
+                                    entry.source
+                                        .substringAfterLast("/")
+                                        .substringAfterLast("\\")
+                                        .let { if (it.isBlank()) entry.source.takeLast(20) else it }
                                 Row(
                                     Modifier.fillMaxWidth().padding(vertical = 1.dp),
                                     verticalAlignment = Alignment.Top,
                                 ) {
                                     Text(
                                         consoleLevelChar(entry.level),
-                                        color = consoleLevelColor(entry.level),
+                                        color = levelColor,
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 11.sp,
                                         modifier = Modifier.width(14.dp),
                                     )
                                     Spacer(Modifier.width(4.dp))
                                     Text(
-                                        entry.message,
-                                        color = consoleLevelColor(entry.level),
+                                        buildAnnotatedString {
+                                            withStyle(SpanStyle(color = levelColor)) {
+                                                append(entry.message)
+                                            }
+                                            if (srcShort.isNotBlank()) {
+                                                withStyle(SpanStyle(color = dimColor)) {
+                                                    append("  $srcShort:${entry.lineNumber}")
+                                                }
+                                            }
+                                        },
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 11.sp,
                                         modifier = Modifier.weight(1f),
@@ -183,14 +204,16 @@ fun BottomConsoleSheet(
 }
 
 @Composable
-private fun consoleLevelColor(level: String): Color =
-    when (level.uppercase()) {
+private fun consoleLevelColor(level: String): Color {
+    val warningAmber = if (isSystemInDarkTheme()) Color(0xFFFFB74D) else Color(0xFFE65100)
+    return when (level.uppercase()) {
         "ERROR" -> MaterialTheme.colorScheme.error
-        "WARNING" -> Color(0xFFFF9800)
+        "WARNING" -> warningAmber
         "TIP" -> MaterialTheme.colorScheme.tertiary
         "DEBUG" -> MaterialTheme.colorScheme.onSurfaceVariant
         else -> MaterialTheme.colorScheme.onSurface
     }
+}
 
 private fun consoleLevelChar(level: String): String =
     when (level.uppercase()) {
