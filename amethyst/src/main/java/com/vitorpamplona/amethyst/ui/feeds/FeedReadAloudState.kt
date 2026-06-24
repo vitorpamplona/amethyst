@@ -29,14 +29,25 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.LifecycleOwner
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.richtext.BechSegment
+import com.vitorpamplona.amethyst.commons.richtext.HashIndexEventSegment
+import com.vitorpamplona.amethyst.commons.richtext.HashIndexUserSegment
 import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -157,9 +168,10 @@ class FeedReadAloudState {
         }
 
         val mediaFallback = context.getString(R.string.read_feed_aloud_media_fallback)
+        val quoteIntro = context.getString(R.string.read_feed_aloud_quote_intro)
 
         scope.launch {
-            val speech = withContext(Dispatchers.Default) { buildSpeech(note, mediaFallback) }
+            val speech = withContext(Dispatchers.Default) { buildSpeech(note, mediaFallback, quoteIntro, QUOTE_DEPTH) }
             if (!isPlaying) return@launch
 
             if (speech.isBlank()) {
@@ -204,9 +216,11 @@ class FeedReadAloudState {
     private fun buildSpeech(
         note: Note,
         mediaFallback: String,
+        quoteIntro: String,
+        quotesLeft: Int,
     ): String {
         val event = note.event ?: return ""
-        val author = note.author?.toBestDisplayName()?.takeIf { it.isNotBlank() }
+        val author = note.author?.let { realNameOrNull(it) }
 
         val parsed: RichTextViewerState =
             CachedRichTextParser.parseText(
@@ -216,7 +230,7 @@ class FeedReadAloudState {
                 authorPubKey = note.author?.pubkeyHex,
             )
 
-        val body = flattenToSpeech(parsed)
+        val body = flattenToSpeech(parsed, mediaFallback, quoteIntro, quotesLeft)
         val text =
             if (body.isNotBlank()) {
                 body
@@ -232,32 +246,85 @@ class FeedReadAloudState {
     }
 
     /**
-     * Flattens parsed rich text to something worth speaking: plain text + hashtags. URLs, media,
-     * bech32/nostr references, invoices, cashu tokens, custom emoji and the like are dropped so the
-     * reader doesn't recite long unreadable tokens out loud.
+     * Flattens parsed rich text to something worth speaking: plain text + hashtags, with `nostr:`
+     * mentions replaced by the mentioned person's name and quoted notes read inline (up to
+     * [QUOTE_DEPTH] levels). URLs, media, invoices, cashu tokens, custom emoji and the like are
+     * dropped so the reader doesn't recite long unreadable tokens out loud.
      */
-    private fun flattenToSpeech(state: RichTextViewerState): String {
+    private fun flattenToSpeech(
+        state: RichTextViewerState,
+        mediaFallback: String,
+        quoteIntro: String,
+        quotesLeft: Int,
+    ): String {
         val sb = StringBuilder()
         state.paragraphs.forEach { paragraph ->
             paragraph.words.forEach { word ->
-                if (isSpeakable(word)) {
-                    sb.append(word.segmentText).append(' ')
-                }
+                speak(word, mediaFallback, quoteIntro, quotesLeft)?.let { sb.append(it).append(' ') }
             }
             sb.append('\n')
         }
         return sb.toString().replace(WHITESPACE_RUN, " ").trim()
     }
 
-    private fun isSpeakable(segment: Segment): Boolean =
+    /** The spoken form of a single segment, or null when it has nothing worth reading aloud. */
+    private fun speak(
+        segment: Segment,
+        mediaFallback: String,
+        quoteIntro: String,
+        quotesLeft: Int,
+    ): String? =
         when (segment) {
-            is RegularTextSegment -> true
-            is HashTagSegment -> true
+            is RegularTextSegment -> segment.segmentText
+            is HashTagSegment -> segment.segmentText
+            // Legacy NIP-08 `#[n]` mentions/quotes carry the hex directly.
+            is HashIndexUserSegment -> mentionName(segment.hex)
+            is HashIndexEventSegment -> quotedNote(segment.hex, mediaFallback, quoteIntro, quotesLeft)
+            // Modern `nostr:` references (npub/nprofile/note/nevent/naddr) arrive as BechSegment.
+            is BechSegment -> resolveBech(segment.segmentText, mediaFallback, quoteIntro, quotesLeft)
             // The base class is emitted for plain whitespace/punctuation runs between words.
-            else -> segment::class == Segment::class
+            else -> if (segment::class == Segment::class) segment.segmentText else null
         }
+
+    private fun resolveBech(
+        word: String,
+        mediaFallback: String,
+        quoteIntro: String,
+        quotesLeft: Int,
+    ): String? {
+        val entity = Nip19Parser.uriToRoute(word)?.entity ?: return null
+        return when (entity) {
+            is NPub -> mentionName(entity.hex)
+            is NProfile -> mentionName(entity.hex)
+            is NNote -> quotedNote(entity.hex, mediaFallback, quoteIntro, quotesLeft)
+            is NEvent -> quotedNote(entity.hex, mediaFallback, quoteIntro, quotesLeft)
+            is NAddress -> quotedNote(entity.aTag(), mediaFallback, quoteIntro, quotesLeft)
+            else -> null
+        }
+    }
+
+    /** The mentioned user's display name, or null if we don't have their profile cached. */
+    private fun mentionName(hex: String): String? = LocalCache.getUserIfExists(hex)?.let { realNameOrNull(it) }
+
+    /** A user's real (metadata) name, never the hex/npub fallback — speaking raw keys is useless. */
+    private fun realNameOrNull(user: User): String? = user.metadataOrNull()?.bestName()?.takeIf { it.isNotBlank() }
+
+    private fun quotedNote(
+        hex: String,
+        mediaFallback: String,
+        quoteIntro: String,
+        quotesLeft: Int,
+    ): String? {
+        if (quotesLeft <= 0) return null
+        val note = LocalCache.getNoteIfExists(hex) ?: return null
+        val inner = buildSpeech(note, mediaFallback, quoteIntro, quotesLeft - 1)
+        return if (inner.isBlank()) null else "$quoteIntro $inner"
+    }
 
     companion object {
         private val WHITESPACE_RUN = Regex("\\s+")
+
+        // How many levels of quoted-note nesting to read before stopping (1 = read direct quotes).
+        private const val QUOTE_DEPTH = 1
     }
 }
