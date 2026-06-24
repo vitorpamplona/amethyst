@@ -61,18 +61,18 @@ class MemoryTrimmingService(
         cache.prunePastVersionsOfReplaceables()
 
         if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
-            // Tier 2: medium pressure — drop messages and unobserved reactions
-            val accounts = otherAccounts.mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()
-            cache.pruneOldMessages()
-            cache.pruneRepliesAndReactions(accounts)
-        }
-
-        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
-            // Tier 3: critical pressure — drop muted content
+            // Tier 2: medium pressure — drop events from muted/blocked users
             account.forEach {
                 cache.pruneHiddenEvents(it)
                 cache.pruneHiddenMessages(it)
             }
+        }
+
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
+            // Tier 3: critical pressure — drop old messages and unobserved reactions
+            val accounts = otherAccounts.mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()
+            cache.pruneOldMessages()
+            cache.pruneRepliesAndReactions(accounts)
         }
     }
 
