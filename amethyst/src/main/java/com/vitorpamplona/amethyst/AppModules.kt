@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst
 
+import android.content.ComponentCallbacks2
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
@@ -865,6 +866,13 @@ class AppModules(
             dnsStore.save()
             val loggedIn = accountsCache.accounts.value.values
             trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts(), level)
+            // Trim Coil's in-memory image cache proportional to OS pressure.
+            // trimToSize(0) is equivalent to clear() but avoids a separate code path.
+            when {
+                level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> memoryCache.trimToSize(0)
+                level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> memoryCache.trimToSize(memoryCache.maxSize / 4)
+                level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> memoryCache.trimToSize(memoryCache.maxSize / 2)
+            }
         }
     }
 }
