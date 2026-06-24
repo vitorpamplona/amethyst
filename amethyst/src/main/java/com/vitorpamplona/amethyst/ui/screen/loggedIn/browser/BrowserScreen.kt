@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -183,6 +184,8 @@ private fun OmniBar(
             placeholder = { Text(stringResource(R.string.browser_address_hint)) },
             keyboardOptions =
                 KeyboardOptions(
+                    capitalization = KeyboardCapitalization.None,
+                    autoCorrectEnabled = false,
                     keyboardType = KeyboardType.Uri,
                     imeAction = ImeAction.Go,
                 ),
@@ -208,11 +211,14 @@ private fun OmniBar(
 private fun hostOf(url: String): String = runCatching { Uri.parse(url).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
 
 /**
- * Turns raw omnibox text into a loadable URL: trims, rejects blanks, and prepends `https://` when no
- * scheme is present (so `example.com` works). Returns null when there's nothing to open.
+ * Turns raw omnibox text into a loadable URL: trims, rejects blanks, prepends `https://` for bare
+ * domain names (e.g. `example.com`), and falls back to a DuckDuckGo search for anything that looks
+ * like a query rather than a URL. Returns null when there's nothing to open.
  */
 private fun normalizeUrl(input: String): String? {
     val trimmed = input.trim()
     if (trimmed.isEmpty()) return null
-    return if (trimmed.contains("://")) trimmed else "https://$trimmed"
+    if (trimmed.contains("://")) return trimmed
+    if (!trimmed.contains(' ') && trimmed.contains('.')) return "https://$trimmed"
+    return "https://duckduckgo.com/?q=" + Uri.encode(trimmed)
 }
