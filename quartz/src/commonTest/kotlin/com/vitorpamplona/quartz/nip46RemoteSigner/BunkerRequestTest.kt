@@ -90,6 +90,29 @@ class BunkerRequestTest {
     }
 
     @Test
+    fun testConnectMetadataBackfillsEmptyOptionalParams() {
+        val request =
+            BunkerRequestConnect(
+                remoteKey = "abc",
+                clientMetadata = BunkerClientMetadata(name = "Amethyst"),
+            )
+
+        // Metadata MUST sit at index 3; the omitted secret/permissions are
+        // back-filled with empty strings to hold the positions.
+        assertEquals(4, request.params.size)
+        assertEquals("abc", request.params[0])
+        assertEquals("", request.params[1])
+        assertEquals("", request.params[2])
+        assertTrue(request.params[3].contains("Amethyst"))
+
+        val roundTripped = OptimizedJsonMapper.fromJsonTo<BunkerRequest>(OptimizedJsonMapper.toJson(request))
+        assertTrue(roundTripped is BunkerRequestConnect)
+        assertNull(roundTripped.secret)
+        assertNull(roundTripped.permissions)
+        assertEquals("Amethyst", roundTripped.clientMetadata?.name)
+    }
+
+    @Test
     fun testConnectEmptyMetadataNotSerialized() {
         val request =
             BunkerRequestConnect(

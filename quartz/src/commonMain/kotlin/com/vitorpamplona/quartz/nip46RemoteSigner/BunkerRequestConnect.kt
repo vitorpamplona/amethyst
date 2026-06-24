@@ -53,13 +53,32 @@ class BunkerRequestConnect(
     val secret: HexKey? = null,
     val permissions: String? = null,
     val clientMetadata: BunkerClientMetadata? = null,
-) : BunkerRequest(
-        id,
-        METHOD_NAME,
-        listOfNotNull(remoteKey, secret, permissions, clientMetadata?.takeUnless { it.isEmpty() }?.let { JsonMapper.toJson(it) }).toTypedArray(),
-    ) {
+) : BunkerRequest(id, METHOD_NAME, buildParams(remoteKey, secret, permissions, clientMetadata)) {
     companion object {
         val METHOD_NAME = "connect"
+
+        /**
+         * The connect params are positional:
+         * `[remote-signer-pubkey, optional_secret, optional_requested_perms, optional_client_metadata]`.
+         *
+         * Client metadata MUST occupy the 4th position, so when it is present we
+         * back-fill the optional secret/permissions slots with empty strings
+         * (per NIP-46). When it is absent we keep the array as short as possible
+         * for backward compatibility.
+         */
+        private fun buildParams(
+            remoteKey: HexKey,
+            secret: HexKey?,
+            permissions: String?,
+            clientMetadata: BunkerClientMetadata?,
+        ): Array<String> {
+            val metadataJson = clientMetadata?.takeUnless { it.isEmpty() }?.let { JsonMapper.toJson(it) }
+            return if (metadataJson != null) {
+                arrayOf(remoteKey, secret ?: "", permissions ?: "", metadataJson)
+            } else {
+                listOfNotNull(remoteKey, secret, permissions).toTypedArray()
+            }
+        }
 
         fun parse(
             id: String,
@@ -68,8 +87,8 @@ class BunkerRequestConnect(
             BunkerRequestConnect(
                 id = id,
                 remoteKey = params[0],
-                secret = params.getOrNull(1),
-                permissions = params.getOrNull(2),
+                secret = params.getOrNull(1)?.takeIf { it.isNotEmpty() },
+                permissions = params.getOrNull(2)?.takeIf { it.isNotEmpty() },
                 clientMetadata = params.getOrNull(3)?.let(::parseMetadata),
             )
 
