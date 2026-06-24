@@ -852,12 +852,12 @@ class AppModules(
         accountsCache.clear()
     }
 
-    fun trim() {
+    fun trim(level: Int) {
         applicationIOScope.launch {
             // Backgrounding is a natural moment to flush the DNS cache.
             dnsStore.save()
             val loggedIn = accountsCache.accounts.value.values
-            trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts())
+            trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts(), level)
         }
     }
 }
