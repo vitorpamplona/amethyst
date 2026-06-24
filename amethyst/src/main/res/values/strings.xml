@@ -2335,6 +2335,7 @@
     <string name="read_feed_aloud_stop">Stop reading aloud</string>
     <string name="read_feed_aloud_media_fallback">Shared a photo or video.</string>
     <string name="read_feed_aloud_quote_intro">Quoting</string>
+    <string name="read_feed_aloud_repost_label">reposted</string>
     <string name="home_tab_everything">Everything</string>
     <string name="profile_ui_settings">Profile UI</string>
     <string name="profile_ui_settings_description">Pick which sections and feeds appear on user profile screens. All options are enabled by default.</string>
