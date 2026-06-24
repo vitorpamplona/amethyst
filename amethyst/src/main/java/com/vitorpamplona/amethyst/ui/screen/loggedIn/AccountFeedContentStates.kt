@@ -146,7 +146,7 @@ class AccountFeedContentStates(
         scope.launch(Dispatchers.IO) {
             Amethyst.instance.trimLevelEvents.collect { level ->
                 if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
-                    trimFeedsToSize(50)
+                    trimFeedsToSize(200)
                 }
             }
         }
