@@ -35,6 +35,8 @@ import android.os.Messenger
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.webkit.ConsoleMessage
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -86,6 +88,7 @@ class NappletBrowserActivity : ComponentActivity() {
     private var loadingView: View? = null
     private var resumed = false
     private var controlSheet: NappletControlSheet? = null
+    private var consolePanel: NappletConsolePanel? = null
 
     // Visit-history gating: only a clean main-frame load (no error) is recorded, so a misspelled/
     // unresolved address never enters history. Reset on each main-frame page start.
@@ -179,6 +182,15 @@ class NappletBrowserActivity : ComponentActivity() {
                             FrameLayout.LayoutParams.MATCH_PARENT,
                             FrameLayout.LayoutParams.WRAP_CONTENT,
                             Gravity.TOP,
+                        ),
+                )
+                addView(
+                    buildConsolePanel(),
+                    FrameLayout
+                        .LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            Gravity.BOTTOM,
                         ),
                 )
             }
@@ -281,8 +293,8 @@ class NappletBrowserActivity : ComponentActivity() {
         wv.webChromeClient = BrowserChromeClient()
     }
 
-    /** Captures the page favicon (the WebChromeClient is the only source of it) for the launcher's icons. */
-    private inner class BrowserChromeClient : android.webkit.WebChromeClient() {
+    /** Captures favicon and console output; the only source of both is the WebChromeClient. */
+    private inner class BrowserChromeClient : WebChromeClient() {
         override fun onReceivedIcon(
             view: WebView,
             icon: Bitmap?,
@@ -293,6 +305,18 @@ class NappletBrowserActivity : ComponentActivity() {
             if (host == lastIconHost) return
             lastIconHost = host
             recordIcon(host, icon)
+        }
+
+        override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+            val panel = consolePanel ?: return false
+            panel.appendLog(
+                consoleMessage.messageLevel(),
+                consoleMessage.message(),
+                consoleMessage.sourceId(),
+                consoleMessage.lineNumber(),
+            )
+            controlSheet?.updateConsoleCount(panel.entryCount)
+            return true
         }
     }
 
@@ -565,7 +589,14 @@ class NappletBrowserActivity : ComponentActivity() {
             onInfo = null,
             liveUrl = startUrl,
             onNavigate = { loadAddress(it) },
+            onConsole = { consolePanel?.toggle() },
         ).also { controlSheet = it }
+
+    private fun buildConsolePanel(): View =
+        NappletConsolePanel(this).also {
+            it.onClearCallback = { controlSheet?.updateConsoleCount(0) }
+            consolePanel = it
+        }
 
     private fun buildLoadingView(): View =
         LinearLayout(this).apply {

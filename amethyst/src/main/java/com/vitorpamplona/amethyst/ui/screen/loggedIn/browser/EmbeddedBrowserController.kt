@@ -32,10 +32,13 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.mutableStateListOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleLogEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
@@ -56,7 +59,8 @@ class EmbeddedBrowserController(
     private val initialUseTor: Boolean,
     private val backgroundColor: Int,
 ) : EmbeddedSurfaceController,
-    EmbeddedImeBridge {
+    EmbeddedImeBridge,
+    ConsoleBridge {
     private val incoming = Messenger(Handler(Looper.getMainLooper(), ::onServiceMessage))
     private var serviceMessenger: Messenger? = null
     private var bound = false
@@ -74,6 +78,11 @@ class EmbeddedBrowserController(
 
     /** Notified on the main thread whenever [loadStatus] changes. */
     override var onLoadStatusChanged: ((EmbeddedLoadStatus) -> Unit)? = null
+
+    /** JavaScript console output received from the embedded WebView, capped at [MAX_CONSOLE_LOGS] entries. */
+    override val consoleLogs = mutableStateListOf<ConsoleLogEntry>()
+
+    override fun clearConsoleLogs() = consoleLogs.clear()
 
     // A single NappletBrowserService instance serves every embedded browser tab, so each controller
     // stamps its own id on every message; the provider uses it to route controls/updates to this tab.
@@ -117,6 +126,7 @@ class EmbeddedBrowserController(
         onUrlChanged = null
         onImeEvent = null
         onLoadStatusChanged = null
+        consoleLogs.clear()
     }
 
     override fun teardown() = unbind()
@@ -171,6 +181,14 @@ class EmbeddedBrowserController(
                 val failed = msg.data?.getBoolean(NappletBrowserContract.KEY_LOAD_FAILED, false) ?: false
                 val loadedUrl = msg.data?.getString(NappletBrowserContract.KEY_URL).orEmpty()
                 onLoadState(isLoading, failed, loadedUrl)
+            }
+            NappletBrowserContract.MSG_CONSOLE_LOG -> {
+                val level = msg.data?.getString(NappletBrowserContract.KEY_CONSOLE_LEVEL) ?: "LOG"
+                val message = msg.data?.getString(NappletBrowserContract.KEY_CONSOLE_MESSAGE).orEmpty()
+                val source = msg.data?.getString(NappletBrowserContract.KEY_CONSOLE_SOURCE).orEmpty()
+                val line = msg.data?.getInt(NappletBrowserContract.KEY_CONSOLE_LINE, 0) ?: 0
+                if (consoleLogs.size >= MAX_CONSOLE_LOGS) consoleLogs.removeAt(0)
+                consoleLogs.add(ConsoleLogEntry(level, message, source, line))
             }
             else -> return false
         }
@@ -265,5 +283,6 @@ class EmbeddedBrowserController(
 
     private companion object {
         private val SESSION_SEQ = AtomicLong()
+        private const val MAX_CONSOLE_LOGS = 200
     }
 }

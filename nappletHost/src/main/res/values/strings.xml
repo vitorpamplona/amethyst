@@ -13,6 +13,10 @@
     <string name="napplet_chrome_reload">Reload</string>
     <!-- Browser address bar (direct-WebView browser only) -->
     <string name="browser_address_hint">Search or enter address</string>
+    <!-- Browser developer console -->
+    <string name="browser_console_title_short">Console</string>
+    <string name="browser_console_title">Console (%1$d)</string>
+    <string name="browser_console_clear">Clear</string>
     <string name="napplet_action_published">“%1$s” published a note as you</string>
     <string name="napplet_action_uploaded">“%1$s” uploaded a file</string>
     <string name="napplet_action_paid">“%1$s” made a payment</string>

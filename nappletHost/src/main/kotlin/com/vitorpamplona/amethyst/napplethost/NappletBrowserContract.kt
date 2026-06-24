@@ -71,8 +71,19 @@ object NappletBrowserContract {
      */
     const val MSG_LOAD_STATE = 10
 
+    /**
+     * Provider → client: a JavaScript console message (console.log / warn / error / debug). Carries
+     * [KEY_CONSOLE_LEVEL], [KEY_CONSOLE_MESSAGE], [KEY_CONSOLE_SOURCE], and [KEY_CONSOLE_LINE].
+     */
+    const val MSG_CONSOLE_LOG = 11
+
     const val KEY_IS_LOADING = "isLoading"
     const val KEY_LOAD_FAILED = "loadFailed"
+
+    const val KEY_CONSOLE_LEVEL = "consoleLevel"
+    const val KEY_CONSOLE_MESSAGE = "consoleMessage"
+    const val KEY_CONSOLE_SOURCE = "consoleSource"
+    const val KEY_CONSOLE_LINE = "consoleLine"
 
     const val KEY_IME_PAYLOAD = "imePayload"
 

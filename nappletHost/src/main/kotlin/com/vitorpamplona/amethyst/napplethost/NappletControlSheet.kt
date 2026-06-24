@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.napplethost
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.InputType
 import android.util.TypedValue
@@ -63,6 +64,9 @@ class NappletControlSheet(
     // nsite/napplet), where it renders an editable address row; [onNavigate] loads what the user types.
     liveUrl: String? = null,
     private val onNavigate: ((String) -> Unit)? = null,
+    // When non-null, a "Console" row is added to the pull-down sheet. The callback toggles the
+    // browser's console log panel; the count label is updated via [updateConsoleCount].
+    private val onConsole: (() -> Unit)? = null,
 ) : LinearLayout(context) {
     private val onSurface = resolveThemeColor(android.R.attr.textColorPrimary)
     private val dimmed = resolveThemeColor(android.R.attr.textColorSecondary)
@@ -77,6 +81,7 @@ class NappletControlSheet(
     private var torSwitch: Switch? = null
     private var addressField: EditText? = null
     private var securityGlyph: TextView? = null
+    private var consoleLabel: TextView? = null
 
     init {
         orientation = VERTICAL
@@ -115,6 +120,39 @@ class NappletControlSheet(
                     actionRow("ⓘ", context.getString(R.string.napplet_chrome_permissions_desc)) {
                         collapse()
                         info()
+                    },
+                )
+            }
+            onConsole?.let { console ->
+                val label =
+                    TextView(context).apply {
+                        text = context.getString(R.string.browser_console_title_short)
+                        setTextColor(onSurface)
+                        textSize = 15f
+                        setPadding(dp(8), 0, 0, 0)
+                    }
+                consoleLabel = label
+                addView(
+                    LinearLayout(context).apply {
+                        orientation = HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(8), dp(10), dp(8), dp(10))
+                        isClickable = true
+                        setOnClickListener {
+                            collapse()
+                            console()
+                        }
+                        addView(
+                            TextView(context).apply {
+                                text = ">"
+                                setTextColor(dimmed)
+                                textSize = 18f
+                                width = dp(28)
+                                gravity = Gravity.CENTER
+                                typeface = android.graphics.Typeface.MONOSPACE
+                            },
+                        )
+                        addView(label)
                     },
                 )
             }
@@ -198,6 +236,16 @@ class NappletControlSheet(
             addView(glyph)
             addView(field)
         }
+    }
+
+    /** Updates the count shown in the Console row label so the user sees how many messages are waiting. */
+    fun updateConsoleCount(count: Int) {
+        consoleLabel?.text =
+            if (count > 0) {
+                context.getString(R.string.browser_console_title, count)
+            } else {
+                context.getString(R.string.browser_console_title_short)
+            }
     }
 
     /** Refreshes the address bar + security glyph as the page navigates. No-op without an address row. */

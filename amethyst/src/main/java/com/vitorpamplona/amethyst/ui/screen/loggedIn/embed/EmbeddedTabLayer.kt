@@ -194,8 +194,13 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         // is owned here (reset per tab) so we can draw a full-area dismiss scrim behind the open sheet —
         // while collapsed, only the small grabber is interactive and page taps pass through.
         val chrome = EmbeddedTabHost.activeChrome
+        val consoleBridge = activeController as? ConsoleBridge
+        val consoleCount = consoleBridge?.consoleLogs?.size ?: 0
+
         if (chrome != null && bounds.width > 0f && bounds.height > 0f) {
             var sheetExpanded by remember(activeId) { mutableStateOf(false) }
+            var consoleShowing by remember(activeId) { mutableStateOf(false) }
+            var consoleExpanded by remember(activeId) { mutableStateOf(false) }
 
             if (sheetExpanded) {
                 Box(
@@ -213,6 +218,20 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                     chrome = chrome,
                     expanded = sheetExpanded,
                     onExpandedChange = { sheetExpanded = it },
+                    consoleCount = consoleCount,
+                    onConsole =
+                        if (consoleBridge != null) {
+                            {
+                                if (consoleShowing) {
+                                    consoleShowing = false
+                                } else {
+                                    consoleShowing = true
+                                    consoleExpanded = true
+                                }
+                            }
+                        } else {
+                            null
+                        },
                     modifier =
                         Modifier
                             .absoluteOffset(
@@ -220,6 +239,24 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                                 (bounds.top - layerOrigin.y).toDp(),
                             ).width(bounds.width.toDp()),
                 )
+            }
+
+            // Bottom console panel: opened via the "Console" row in the top pull-down sheet.
+            if (consoleShowing && consoleBridge != null) {
+                with(density) {
+                    BottomConsoleSheet(
+                        logs = consoleBridge.consoleLogs,
+                        expanded = consoleExpanded,
+                        onExpandedChange = { consoleExpanded = it },
+                        onClear = { consoleBridge.clearConsoleLogs() },
+                        modifier =
+                            Modifier
+                                .absoluteOffset(
+                                    (bounds.left - layerOrigin.x).toDp(),
+                                    (bounds.top - layerOrigin.y).toDp(),
+                                ).size(bounds.width.toDp(), bounds.height.toDp()),
+                    )
+                }
             }
         }
 
