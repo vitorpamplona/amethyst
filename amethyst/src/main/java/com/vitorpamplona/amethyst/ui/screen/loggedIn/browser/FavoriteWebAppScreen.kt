@@ -144,9 +144,9 @@ private fun EmbeddedFavoriteTab(
 
     val bottomBarFlow = accountViewModel.settings.uiSettingsFlow.bottomBarItems
     DisposableEffect(id) {
-        EmbeddedTabHost.setActive(id)
+        val token = EmbeddedTabHost.setActive(id)
         onDispose {
-            EmbeddedTabHost.clearActiveIfMatches(id)
+            EmbeddedTabHost.clearActiveIfOwner(token)
             EmbeddedTabHost.clearActiveChrome(id)
             // Only bottom-row apps stay warm; anything else restarts when it leaves.
             if (id !in bottomBarFlow.value.favoriteIds()) EmbeddedTabHost.evict(id)
@@ -165,7 +165,7 @@ private fun EmbeddedFavoriteTab(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .onGloballyPositioned { EmbeddedTabHost.reportBounds(id, it.boundsInWindow()) },
+                .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
         )
     }
 }

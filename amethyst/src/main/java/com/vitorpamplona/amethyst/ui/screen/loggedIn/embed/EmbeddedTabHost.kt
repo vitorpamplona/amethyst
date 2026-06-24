@@ -82,7 +82,10 @@ object EmbeddedTabHost {
     }
 
     fun clearActiveChrome(id: String) {
-        if (chromeOwner == id) {
+        // Same twin race as the active id: on a same-route re-nav the new instance has already published
+        // its chrome (same id) before the old one disposes. Only clear when this id is no longer the
+        // active tab, so the incoming tab's chrome survives.
+        if (chromeOwner == id && activeId != id) {
             chromeOwner = null
             activeChrome = null
         }
@@ -99,20 +102,27 @@ object EmbeddedTabHost {
         return controller
     }
 
-    fun setActive(id: String) {
+    // Monotonic ownership token. Double-tapping a bottom-bar tab pops and re-adds the SAME route, so the
+    // outgoing screen instance disposes *after* the incoming one has already called setActive with the
+    // same id. A plain `clearActiveIfMatches(id)` would then null the active id the new instance just set
+    // (same id → it "matches"), leaving no active tab and blacking the surface out. Tokening each
+    // setActive lets the disposer clear only if nobody claimed active in the meantime.
+    private var activeToken = 0L
+
+    /** Marks [id] the active tab and returns the ownership token to hand back to [clearActiveIfOwner]. */
+    fun setActive(id: String): Long {
         activeId = id
+        activeToken += 1
+        return activeToken
     }
 
-    fun clearActiveIfMatches(id: String) {
-        if (activeId == id) activeId = null
+    /** Clears the active tab only if [token] is still the latest claim (no newer [setActive] ran). */
+    fun clearActiveIfOwner(token: Long) {
+        if (activeToken == token) activeId = null
     }
 
-    fun reportBounds(
-        id: String,
-        bounds: Rect,
-    ) {
-        // Only the active tab positions the surface; a cross-fading outgoing screen must not move it.
-        if (activeId == id) contentBounds = bounds
+    fun reportBounds(bounds: Rect) {
+        contentBounds = bounds
     }
 
     fun evict(id: String) {
