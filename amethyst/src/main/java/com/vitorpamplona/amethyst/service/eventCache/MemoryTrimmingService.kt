@@ -53,8 +53,10 @@ class MemoryTrimmingService(
         otherAccounts: List<AccountInfo>,
         level: Int,
     ) {
-        // Tier 1: always run — cheap housekeeping
+        // Tier 1: always run — cheap housekeeping; cleanObservers only removes flows that are
+        // not currently held by the UI, so it is safe and inexpensive at any pressure level.
         cache.cleanMemory()
+        cache.cleanObservers()
         cache.pruneExpiredEvents()
         cache.prunePastVersionsOfReplaceables()
 
@@ -66,8 +68,7 @@ class MemoryTrimmingService(
         }
 
         if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
-            // Tier 3: critical pressure — sever observer links and drop muted content
-            cache.cleanObservers()
+            // Tier 3: critical pressure — drop muted content
             account.forEach {
                 cache.pruneHiddenEvents(it)
                 cache.pruneHiddenMessages(it)
