@@ -24,14 +24,23 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +53,8 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
@@ -56,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
+import kotlinx.coroutines.delay
 
 /**
  * A pinned web client rendered as an **in-app tab**. The embedded `:napplet` browser surface is drawn
@@ -111,11 +123,28 @@ private fun EmbeddedFavoriteTab(
             EmbeddedTabFactory.acquireBrowser(context, url, backgroundColor)
         }
 
-    // Keep the URL/back callback fresh (cheap, needs the latest closure).
+    // Session-scoped load state (read from the warm controller, so re-entering an already-loaded tab
+    // doesn't flash a spinner over working content).
+    var status by remember(id) { mutableStateOf(controller.loadStatus) }
+    var timedOut by remember(id) { mutableStateOf(false) }
+
+    // Keep the URL/back/load callbacks fresh (cheap, needs the latest closures).
     SideEffect {
         controller.onUrlChanged = { newUrl, back ->
             if (newUrl != "about:blank") currentUrl = newUrl
             canGoBack = back
+        }
+        controller.onLoadStatusChanged = { status = it }
+    }
+
+    // Safety net: if no real page has painted and nothing is actively loading after a grace period, treat
+    // the session as stuck and surface a retry (e.g. a surface that never opened). Restarts on every load
+    // state change, so it only fires after genuine silence.
+    LaunchedEffect(id, status) {
+        timedOut = false
+        if (!status.hasLoadedReal && !status.failed) {
+            delay(12_000)
+            timedOut = true
         }
     }
 
@@ -163,7 +192,50 @@ private fun EmbeddedFavoriteTab(
                 .fillMaxSize()
                 .padding(padding)
                 .onGloballyPositioned { EmbeddedTabHost.reportBounds(it.boundsInWindow()) },
-        )
+        ) {
+            // The embedded WebView surface is drawn (z-below) by the tab layer over these bounds. Until a
+            // real page paints, cover it with a spinner — or an error/retry when the load failed or stalled
+            // — so a slow, blank, or failed load isn't a bare black/white void.
+            if (!status.hasLoadedReal) {
+                EmbeddedLoadOverlay(
+                    failed = status.failed || timedOut,
+                    onRetry = {
+                        timedOut = false
+                        controller.retry()
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.EmbeddedLoadOverlay(
+    failed: Boolean,
+    onRetry: () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .matchParentSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        if (failed) {
+            Text(
+                text = stringResource(R.string.embedded_tab_load_failed),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = onRetry) {
+                Text(stringResource(R.string.retry))
+            }
+        } else {
+            CircularProgressIndicator()
+        }
     }
 }
 

@@ -63,6 +63,17 @@ object NappletBrowserContract {
     /** Client → provider: an IME editing op for the focused field; raw JSON in [KEY_IME_PAYLOAD]. */
     const val MSG_IME_OP = 9
 
+    /**
+     * Provider → client: the main-frame load state changed. Carries [KEY_IS_LOADING] (a navigation is in
+     * flight), [KEY_LOAD_FAILED] (the main frame errored), and [KEY_URL] (the page it settled on). Lets
+     * the main process draw a loading spinner / error overlay over the embedded surface, and recover a
+     * favorite whose session came up on a blank page (re-navigate to its real URL).
+     */
+    const val MSG_LOAD_STATE = 10
+
+    const val KEY_IS_LOADING = "isLoading"
+    const val KEY_LOAD_FAILED = "loadFailed"
+
     const val KEY_IME_PAYLOAD = "imePayload"
 
     const val KEY_URL = "url"
