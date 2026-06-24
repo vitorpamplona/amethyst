@@ -215,7 +215,7 @@ class UiSharedPreferences(
         }
 
         private fun decodeBottomBarItems(raw: String): List<BottomBarEntry>? {
-            if (raw.isBlank()) return emptyList()
+            if (raw.isBlank()) return DefaultBottomBarEntries
             // Current format: a JSON list of BottomBarEntry (built-ins + favorites).
             runCatching { return JsonMapper.fromJson<List<BottomBarEntry>>(raw) }
             // Configs written before the stable @SerialName discriminators used the fully-qualified
