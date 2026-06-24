@@ -405,6 +405,24 @@ class CardFeedContentState(
         // TODO: Implement deletion of notes from the notification feed
     }
 
+    fun trimToSize(maxItems: Int) {
+        val current = _feedContent.value
+        if (current is CardFeedState.Loaded) {
+            val loaded = current.feed.value
+            if (loaded.list.size > maxItems) {
+                current.feed.tryEmit(LoadedFeedState(loaded.list.take(maxItems).toImmutableList(), loaded.showHidden))
+                // lastNotes is intentionally kept intact. Clearing it would cause the next
+                // additive update to fall through to refreshSuspended(), reloading up to
+                // limit() notes from LocalCache and undoing the trim immediately. With
+                // lastNotes intact, the fast additive path stays active: only genuinely
+                // new notifications are appended, so the card list stays near maxItems.
+                // The Note refs in lastNotes are the same objects already held by LocalCache;
+                // they are freed when pruneRepliesAndReactions() prunes LocalCache and the
+                // next full refreshSuspended() replaces lastNotes with the pruned set.
+            }
+        }
+    }
+
     private fun refreshFromOldState(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
 

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.eventCache
 
+import android.content.ComponentCallbacks2
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -32,33 +33,58 @@ class MemoryTrimmingService(
 ) {
     var isTrimmingMemoryMutex = AtomicBoolean(false)
 
+    /**
+     * Tiered pruning scaled to the OS memory-pressure level.
+     *
+     * Tier 1 — mild pressure (UI hidden, running-moderate):
+     *   Sweep stale WeakRefs, drop expired and superseded-replaceable events.
+     *   Safe to run frequently; no UI-visible side effects.
+     *
+     * Tier 2 — low memory (running-low, background):
+     *   Tier 1 + old chat messages + unobserved thread replies / reactions.
+     *   May cause feeds to re-fetch content that was scrolled past.
+     *
+     * Tier 3 — critical / imminent kill (running-critical, moderate, complete):
+     *   Tier 2 + sever all observer links + drop every event from muted/blocked users.
+     *   Aggressive; triggers recomposition wherever StateFlows were cleared.
+     */
     private fun doTrim(
         account: Collection<Account>,
         otherAccounts: List<AccountInfo>,
+        level: Int,
     ) {
+        // Tier 1: always run — cheap housekeeping; cleanObservers only removes flows that are
+        // not currently held by the UI, so it is safe and inexpensive at any pressure level.
         cache.cleanMemory()
         cache.cleanObservers()
+        cache.pruneExpiredEvents()
+        cache.prunePastVersionsOfReplaceables()
 
-        account.forEach {
-            cache.pruneHiddenEvents(it)
-            cache.pruneHiddenMessages(it)
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            // Tier 2: medium pressure — drop events from muted/blocked users
+            account.forEach {
+                cache.pruneHiddenEvents(it)
+                cache.pruneHiddenMessages(it)
+            }
         }
 
-        val accounts = otherAccounts.mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()
-        cache.pruneOldMessages()
-        cache.pruneRepliesAndReactions(accounts)
-        cache.prunePastVersionsOfReplaceables()
-        cache.pruneExpiredEvents()
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
+            // Tier 3: critical pressure — drop old messages and unobserved reactions
+            val accounts = otherAccounts.mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()
+            cache.pruneOldMessages()
+            cache.pruneRepliesAndReactions(accounts)
+        }
     }
 
     suspend fun run(
         account: Collection<Account>,
         otherAccounts: List<AccountInfo>,
+        level: Int = ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL,
     ) {
         if (isTrimmingMemoryMutex.compareAndSet(false, true)) {
-            Log.d("ServiceManager", "Trimming Memory")
+            Log.d("ServiceManager", "Trimming Memory (level=$level)")
             try {
-                doTrim(account, otherAccounts)
+                doTrim(account, otherAccounts, level)
             } finally {
                 isTrimmingMemoryMutex.getAndSet(false)
             }

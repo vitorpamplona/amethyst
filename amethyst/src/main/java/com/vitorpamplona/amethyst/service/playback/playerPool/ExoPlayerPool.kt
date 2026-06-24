@@ -214,6 +214,26 @@ class ExoPlayerPool(
         }
     }
 
+    /**
+     * Evicts all warm (paused-with-buffer) players back to the cold pool without touching active
+     * players. Safe to call under memory pressure: warm players are idle; active players are
+     * checked out via [acquirePlayer] and are not held in either pool.
+     */
+    fun releaseWarmPool() {
+        val evicted =
+            synchronized(warmPoolLock) {
+                val copy = warmPool.toList()
+                warmPool.clear()
+                copy
+            }
+        if (evicted.isEmpty()) return
+        scope.launch {
+            mutex.withLock {
+                evicted.forEach { demoteToCold(it.player) }
+            }
+        }
+    }
+
     fun destroy() {
         scope
             .launch {

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.playback.service
 
 import android.app.ForegroundServiceStartNotAllowedException
+import android.content.ComponentCallbacks2
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -162,6 +163,14 @@ class PlaybackService : MediaSessionService() {
                 throw e
             }
         }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
+            poolNoProxy?.exoPlayerPool?.releaseWarmPool()
+            poolWithProxy?.exoPlayerPool?.releaseWarmPool()
+        }
+    }
 
     override fun onDestroy() {
         Log.d("PlaybackService", "PlaybackService.onDestroy")

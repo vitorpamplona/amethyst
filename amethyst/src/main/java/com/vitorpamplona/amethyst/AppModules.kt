@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst
 
+import android.content.ComponentCallbacks2
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
@@ -43,6 +44,7 @@ import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
+import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
@@ -120,8 +122,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -147,6 +152,9 @@ class AppModules(
         }
 
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
+
+    private val _trimLevelEvents = MutableSharedFlow<Int>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val trimLevelEvents = _trimLevelEvents.asSharedFlow()
 
     // Pre-load both preference DataStores in parallel on IO threads.
     // Both constructors use runBlocking internally, so starting them concurrently
@@ -852,12 +860,71 @@ class AppModules(
         accountsCache.clear()
     }
 
-    fun trim() {
+    fun trim(level: Int) {
+        _trimLevelEvents.tryEmit(level)
         applicationIOScope.launch {
             // Backgrounding is a natural moment to flush the DNS cache.
             dnsStore.save()
             val loggedIn = accountsCache.accounts.value.values
-            trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts())
+            trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts(), level)
+            // Trim in-process caches proportional to OS memory pressure.
+            //
+            // Background levels (app not visible, ordered highest-first so the when
+            // chain short-circuits at the right tier):
+            //   COMPLETE  (80) — at the bottom of the LRU list, kill imminent
+            //   MODERATE  (60) — system is hurting, neighbouring apps being killed
+            //   BACKGROUND(40) — backgrounded, mild system pressure
+            //   UI_HIDDEN (20) — just backgrounded, no pressure yet
+            //
+            // Foreground levels (app is active but system is low):
+            //   RUNNING_CRITICAL (15), RUNNING_LOW (10)
+            //
+            // UI_HIDDEN fires on EVERY app switch. Don't clear CPU-heavy caches
+            // (Robohash SVG assembly, rich-text parsing) there — clearing them
+            // forces a full rebuild on every resume and causes visible jank.
+            when {
+                level >= ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> {
+                    // Kill imminent: free everything.
+                    memoryCache.trimToSize(0)
+                    CachedRichTextParser.trimToSize(0)
+                    CachedRobohash.trimToSize(0)
+                    nip11Cache.trimToSize(0)
+                }
+                level >= ComponentCallbacks2.TRIM_MEMORY_MODERATE -> {
+                    // System under real pressure: clear images and most parsed state.
+                    memoryCache.trimToSize(0)
+                    CachedRichTextParser.trimToSize(50)
+                    CachedRobohash.trimToSize(10)
+                    nip11Cache.trimToSize(100)
+                }
+                level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> {
+                    // Backgrounded with mild pressure: trim significantly.
+                    memoryCache.trimToSize(memoryCache.maxSize / 4)
+                    CachedRichTextParser.trimToSize(100)
+                    CachedRobohash.trimToSize(20)
+                    nip11Cache.trimToSize(200)
+                }
+                level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> {
+                    // Just backgrounded, no pressure yet: trim images (bitmaps are the
+                    // largest allocations) but keep parsed-text and avatar caches warm
+                    // so resuming is instant.
+                    memoryCache.trimToSize(memoryCache.maxSize / 2)
+                }
+                level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> {
+                    // Foreground, critically low memory.
+                    memoryCache.trimToSize(memoryCache.maxSize / 4)
+                    CachedRichTextParser.trimToSize(100)
+                    CachedRobohash.trimToSize(20)
+                    nip11Cache.trimToSize(200)
+                }
+                level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
+                    // Foreground, low memory.
+                    memoryCache.trimToSize(memoryCache.maxSize / 2)
+                    CachedRichTextParser.trimToSize(250)
+                    CachedRobohash.trimToSize(50)
+                    nip11Cache.trimToSize(500)
+                }
+            }
         }
     }
 }

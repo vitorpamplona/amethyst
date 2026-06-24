@@ -135,6 +135,16 @@ class FeedContentState(
         }
     }
 
+    fun trimToSize(maxItems: Int) {
+        val current = _feedContent.value
+        if (current is FeedState.Loaded) {
+            val loaded = current.feed.value
+            if (loaded.list.size > maxItems) {
+                current.feed.tryEmit(LoadedFeedState(loaded.list.take(maxItems).toImmutableList(), loaded.showHidden))
+            }
+        }
+    }
+
     fun refreshFromOldState(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
         if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
