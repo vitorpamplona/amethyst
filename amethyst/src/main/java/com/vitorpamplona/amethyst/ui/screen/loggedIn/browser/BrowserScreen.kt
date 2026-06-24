@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteAppsGrid
 
@@ -108,6 +109,7 @@ private fun BrowserLauncher(
     Scaffold(
         topBar = {
             OmniBar(
+                nav = nav,
                 query = query,
                 onQueryChange = { query = it },
                 onOpen = ::open,
@@ -152,6 +154,7 @@ private fun BrowserLauncher(
 
 @Composable
 private fun OmniBar(
+    nav: INav,
     query: String,
     onQueryChange: (String) -> Unit,
     onOpen: () -> Unit,
@@ -167,6 +170,11 @@ private fun OmniBar(
                 .padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // When reached from the drawer (pushed onto the back stack) rather than as a bottom-bar tab, show
+        // a back arrow — same rule as the other launcher/feed top bars (see NappletsTopBar).
+        if (nav.canPop()) {
+            IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+        }
         TextField(
             value = query,
             onValueChange = onQueryChange,
