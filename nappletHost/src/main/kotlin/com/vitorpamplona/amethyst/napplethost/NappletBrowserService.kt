@@ -166,9 +166,10 @@ class NappletBrowserService : Service() {
      * start for every origin, reaching the broker directly (no shell). Loads the pending URL.
      */
     fun createBrowserWebView(context: Context): WebView {
-        // If a prior session's WebView is still around (surface reopened without a close), destroy it
-        // first so it doesn't leak.
-        webView?.destroy()
+        // NOTE: a single NappletBrowserService instance is shared by every embedded browser tab (they
+        // bind the same Intent), but each tab opens its own session with its own WebView; [webView] is
+        // just a "latest" pointer for message routing. Do NOT destroy it here — that would tear down a
+        // *sibling* tab's live WebView and black it out. Each session owns its WebView until it closes.
         val wv = WebView(context)
         configureWebView(wv)
         // Theme the pre-load background so a blank/loading page shows Amethyst's background, not white.
@@ -184,9 +185,11 @@ class NappletBrowserService : Service() {
         return wv
     }
 
-    fun onSessionClosed() {
-        webView?.destroy()
-        webView = null
+    /** A session closed: destroy that session's own WebView and clear the shared pointer only if it
+     *  still referenced it (a sibling tab may have become the latest). */
+    fun onSessionClosed(closed: WebView) {
+        if (webView === closed) webView = null
+        closed.destroy()
     }
 
     @Suppress("SetJavaScriptEnabled")

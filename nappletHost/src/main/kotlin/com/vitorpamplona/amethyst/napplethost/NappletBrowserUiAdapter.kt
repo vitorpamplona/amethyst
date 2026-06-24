@@ -96,6 +96,6 @@ private class BrowserSession(
     override fun notifyUiChanged(uiContainerInfo: Bundle) {}
 
     override fun close() {
-        service.onSessionClosed()
+        service.onSessionClosed(webView)
     }
 }

@@ -184,9 +184,10 @@ class NappletHostService : Service() {
      * server, installs the origin-restricted shell bridge, loads the trusted shell URL.
      */
     fun createHostWebView(context: Context): WebView {
-        // If a prior session's WebView is still around (surface reopened without a close), destroy it
-        // first so it doesn't leak.
-        webView?.destroy()
+        // NOTE: a single NappletHostService instance is shared by every embedded napplet tab (they bind
+        // the same Intent), but each tab opens its own session with its own WebView; [webView] is just a
+        // "latest" pointer. Do NOT destroy it here — that would tear down a *sibling* tab's live WebView
+        // and black it out. Each session owns its WebView until it closes.
         val shellHtml = readContractAsset(NappletWebContract.SHELL_HTML_PATH)
         val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
         val appOrigin = NappletWebContract.appOrigin(deriveAppId(author, identifier))
@@ -205,9 +206,11 @@ class NappletHostService : Service() {
         return wv
     }
 
-    fun onSessionClosed() {
-        webView?.destroy()
-        webView = null
+    /** A session closed: destroy that session's own WebView and clear the shared pointer only if it
+     *  still referenced it (a sibling tab may have become the latest). */
+    fun onSessionClosed(closed: WebView) {
+        if (webView === closed) webView = null
+        closed.destroy()
     }
 
     @Suppress("SetJavaScriptEnabled")

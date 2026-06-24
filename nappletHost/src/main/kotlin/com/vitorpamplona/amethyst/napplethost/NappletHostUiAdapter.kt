@@ -97,6 +97,6 @@ private class HostSession(
     override fun notifyUiChanged(uiContainerInfo: Bundle) {}
 
     override fun close() {
-        service.onSessionClosed()
+        service.onSessionClosed(webView)
     }
 }
