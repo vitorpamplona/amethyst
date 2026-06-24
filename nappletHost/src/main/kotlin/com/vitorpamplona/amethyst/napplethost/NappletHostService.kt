@@ -141,6 +141,10 @@ class NappletHostService : Service() {
                     it.onResume()
                     it.resumeTimers()
                 }
+            NappletEmbedContract.MSG_IME_OP -> {
+                val payload = msg.data?.getString(NappletEmbedContract.KEY_IME_PAYLOAD) ?: return true
+                bridgeReplyProxy?.postMessage(payload)
+            }
             else -> return false
         }
         return true
@@ -192,7 +196,7 @@ class NappletHostService : Service() {
         val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
         val appOrigin = NappletWebContract.appOrigin(deriveAppId(author, identifier))
         val effectiveProxy = if (useTor) proxyPort else -1
-        contentServer = NappletContentServer(paths, servers, effectiveProxy, cacheDir, shellHtml, shim, appOrigin, websiteMode)
+        contentServer = NappletContentServer(paths, servers, effectiveProxy, cacheDir, shellHtml, shim, appOrigin, websiteMode, imeProxy = true)
 
         val wv = WebView(context)
         hardenWebView(wv)
@@ -309,6 +313,16 @@ class NappletHostService : Service() {
 
         if (envelope.optString("type") == "shell.ready") {
             runCatching { replyProxy.postMessage(NappletProtocolJson.encodeShellInit(declaredDomains, declaredDomains)) }
+            return
+        }
+
+        // IME events aren't brokered — the main app hosts the keyboard. Relay the envelope to the client.
+        if (envelope.optString("type").startsWith("ime.")) {
+            val reply =
+                Message.obtain(null, NappletEmbedContract.MSG_IME_EVENT).apply {
+                    data = Bundle().apply { putString(NappletEmbedContract.KEY_IME_PAYLOAD, raw) }
+                }
+            runCatching { clientMessenger?.send(reply) }
             return
         }
 

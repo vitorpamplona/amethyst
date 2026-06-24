@@ -37,7 +37,10 @@ import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
+import org.json.JSONObject
 
 /**
  * Client-side handle to an embedded nsite/napplet. Binds [NappletHostService][com.vitorpamplona.amethyst.napplethost.NappletHostService]
@@ -53,7 +56,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceContro
 class EmbeddedNappletController(
     private val appContext: Context,
     private val params: Bundle,
-) : EmbeddedSurfaceController {
+) : EmbeddedSurfaceController,
+    EmbeddedImeBridge {
     private val incoming = Messenger(Handler(Looper.getMainLooper(), ::onServiceMessage))
     private var serviceMessenger: Messenger? = null
     private var bound = false
@@ -71,6 +75,8 @@ class EmbeddedNappletController(
 
     /** A granted "allow always" sensitive op just ran (one of NappletEmbedContract.NOTICE_*). */
     var onNotice: ((String) -> Unit)? = null
+
+    override var onImeEvent: ((ImeEvent) -> Unit)? = null
 
     private val connection =
         object : ServiceConnection {
@@ -103,6 +109,7 @@ class EmbeddedNappletController(
         pendingAdapter = null
         onStateChanged = null
         onNotice = null
+        onImeEvent = null
     }
 
     override fun attachView(view: SandboxedSdkView) {
@@ -151,9 +158,41 @@ class EmbeddedNappletController(
                 val notice = msg.data?.getString(NappletEmbedContract.KEY_NOTICE) ?: return true
                 onNotice?.invoke(notice)
             }
+            NappletEmbedContract.MSG_IME_EVENT -> {
+                val payload = msg.data?.getString(NappletEmbedContract.KEY_IME_PAYLOAD) ?: return true
+                parseImeEvent(payload)?.let { event -> onImeEvent?.invoke(event) }
+            }
             else -> return false
         }
         return true
+    }
+
+    override fun sendImeOp(json: String) {
+        val msg = Message.obtain(null, NappletEmbedContract.MSG_IME_OP).apply { data = Bundle().apply { putString(NappletEmbedContract.KEY_IME_PAYLOAD, json) } }
+        runCatching { serviceMessenger?.send(msg) }
+    }
+
+    private fun parseImeEvent(payload: String): ImeEvent? {
+        val o = runCatching { JSONObject(payload) }.getOrNull() ?: return null
+        return when (o.optString("type")) {
+            "ime.focus" ->
+                ImeEvent.Focus(
+                    inputType = o.optString("inputType", "text"),
+                    enterKeyHint = o.optString("enterKeyHint", ""),
+                    multiline = o.optBoolean("multiline", false),
+                    text = o.optString("text", ""),
+                    selStart = o.optInt("selStart", 0),
+                    selEnd = o.optInt("selEnd", 0),
+                )
+            "ime.blur" -> ImeEvent.Blur
+            "ime.state" ->
+                ImeEvent.State(
+                    text = o.optString("text", ""),
+                    selStart = o.optInt("selStart", 0),
+                    selEnd = o.optInt("selEnd", 0),
+                )
+            else -> null
+        }
     }
 
     fun back() = send(NappletEmbedContract.MSG_BACK)

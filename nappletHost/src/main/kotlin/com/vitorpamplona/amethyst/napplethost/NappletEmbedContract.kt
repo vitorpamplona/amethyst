@@ -68,9 +68,19 @@ object NappletEmbedContract {
      */
     const val MSG_NOTICE = 12
 
+    /**
+     * Provider → client: the applet reported an IME event (focused editable / blur / external change);
+     * raw JSON in [KEY_IME_PAYLOAD]. The embedded surface can't host the keyboard, so the main app does.
+     */
+    const val MSG_IME_EVENT = 13
+
+    /** Client → provider: an IME editing op for the focused field; raw JSON in [KEY_IME_PAYLOAD]. */
+    const val MSG_IME_OP = 14
+
     const val KEY_CORE_LIB_INFO = "coreLibInfo"
     const val KEY_CAN_GO_BACK = "canGoBack"
     const val KEY_NOTICE = "notice"
+    const val KEY_IME_PAYLOAD = "imePayload"
 
     const val NOTICE_PUBLISHED = "published"
     const val NOTICE_UPLOADED = "uploaded"

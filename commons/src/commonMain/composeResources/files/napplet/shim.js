@@ -184,10 +184,11 @@
   // The embedded browser surface renders cross-process via SurfaceControlViewHost, which forwards
   // touch but NOT the soft keyboard (the embedded window can't be an IME target). So the host shows
   // the keyboard in the main app window and relays editing here, where we apply it to the focused
-  // field with real input/composition events. Installed only on the EMBEDDED browser surface; the
-  // full-screen browser activity sets the direct bridge but not __nappletImeProxy (it has a native kbd).
+  // field with real input/composition events. Installed on any EMBEDDED surface (browser via the direct
+  // bridge, napplet/nSite via the shell relay); both transports go through send(). The full-screen
+  // hosts set neither flag (they have a native keyboard).
   var IME_PROXY = false; try { IME_PROXY = !!window.__nappletImeProxy; } catch (_) {}
-  if (DIRECT && IME_PROXY) (function(){
+  if (IME_PROXY) (function(){
     var el = null;            // the focused editable element, or null
     var inComposition = false;
 
