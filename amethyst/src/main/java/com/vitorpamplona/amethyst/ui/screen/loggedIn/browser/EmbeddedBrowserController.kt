@@ -37,20 +37,11 @@ import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
 import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicLong
-
-/**
- * Main-frame load state of an embedded browser session. [hasLoadedReal] flips true once a non-blank page
- * has finished, so a screen re-entering a warm, already-loaded tab doesn't flash a spinner.
- */
-data class LoadStatus(
-    val isLoading: Boolean = false,
-    val failed: Boolean = false,
-    val hasLoadedReal: Boolean = false,
-)
 
 /**
  * Client-side handle to the embedded browser. Binds [NappletBrowserService] (in the keyless `:napplet`
@@ -77,12 +68,12 @@ class EmbeddedBrowserController(
     private var hasLoadedReal = false
     private var blankRecovered = false
 
-    /** Last known main-frame load state, so a re-entering screen renders the right overlay immediately. */
-    var loadStatus: LoadStatus = LoadStatus()
+    /** Last known main-frame load state, so the tab layer renders the right overlay immediately. */
+    override var loadStatus: EmbeddedLoadStatus = EmbeddedLoadStatus()
         private set
 
     /** Notified on the main thread whenever [loadStatus] changes. */
-    var onLoadStatusChanged: ((LoadStatus) -> Unit)? = null
+    override var onLoadStatusChanged: ((EmbeddedLoadStatus) -> Unit)? = null
 
     // A single NappletBrowserService instance serves every embedded browser tab, so each controller
     // stamps its own id on every message; the provider uses it to route controls/updates to this tab.
@@ -195,10 +186,10 @@ class EmbeddedBrowserController(
      * scratch. Unlike [reload] (which re-fetches whatever the WebView currently shows — `about:blank` for a
      * session that never got its URL), this re-navigates to the favorite's real URL.
      */
-    fun retry() {
+    override fun retry() {
         blankRecovered = false
         hasLoadedReal = false
-        publishLoadStatus(LoadStatus(isLoading = true))
+        publishLoadStatus(EmbeddedLoadStatus(isLoading = true))
         navigate(startUrl)
     }
 
@@ -213,15 +204,15 @@ class EmbeddedBrowserController(
         // intentional about:blank new-tab page is left alone.
         if (!isLoading && !failed && loadedUrl.isBlankPage() && !startUrl.isBlankPage() && !blankRecovered) {
             blankRecovered = true
-            publishLoadStatus(LoadStatus(isLoading = true))
+            publishLoadStatus(EmbeddedLoadStatus(isLoading = true))
             navigate(startUrl)
             return
         }
         if (!isLoading && !failed && !loadedUrl.isBlankPage()) hasLoadedReal = true
-        publishLoadStatus(LoadStatus(isLoading = isLoading, failed = failed, hasLoadedReal = hasLoadedReal))
+        publishLoadStatus(EmbeddedLoadStatus(isLoading = isLoading, failed = failed, hasLoadedReal = hasLoadedReal))
     }
 
-    private fun publishLoadStatus(status: LoadStatus) {
+    private fun publishLoadStatus(status: EmbeddedLoadStatus) {
         loadStatus = status
         onLoadStatusChanged?.invoke(status)
     }

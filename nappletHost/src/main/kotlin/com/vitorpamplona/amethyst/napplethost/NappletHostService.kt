@@ -35,6 +35,7 @@ import android.os.Message
 import android.os.Messenger
 import android.util.Log
 import android.view.View
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -99,6 +100,10 @@ class NappletHostService : Service() {
         var webView: WebView? = null
         var bridgeReplyProxy: JavaScriptReplyProxy? = null
         var fireSeq = 0
+
+        // Last main-frame error state, pushed to the client so it can show an error/retry overlay over the
+        // surface (the embedded surface has no error page of its own).
+        var loadFailed = false
         val replyMessenger = Messenger(Handler(Looper.getMainLooper()) { onBrokerReply(this, it) })
     }
 
@@ -311,6 +316,16 @@ class NappletHostService : Service() {
             request: WebResourceRequest,
         ): WebResourceResponse? = tab.contentServer?.serve(request)
 
+        override fun onPageStarted(
+            view: WebView,
+            url: String,
+            favicon: android.graphics.Bitmap?,
+        ) {
+            // A new main-frame navigation cleared any prior error.
+            tab.loadFailed = false
+            pushLoadState(tab, isLoading = true)
+        }
+
         override fun doUpdateVisitedHistory(
             view: WebView,
             url: String,
@@ -320,7 +335,22 @@ class NappletHostService : Service() {
         override fun onPageFinished(
             view: WebView,
             url: String,
-        ) = pushState(tab, view)
+        ) {
+            pushState(tab, view)
+            pushLoadState(tab, isLoading = false)
+        }
+
+        override fun onReceivedError(
+            view: WebView,
+            request: WebResourceRequest,
+            error: WebResourceError,
+        ) {
+            // Only a main-frame failure blanks the applet; a missing sub-resource is irrelevant to whether
+            // it opened.
+            if (!request.isForMainFrame) return
+            tab.loadFailed = true
+            pushLoadState(tab, isLoading = false)
+        }
 
         override fun shouldOverrideUrlLoading(
             view: WebView,
@@ -342,6 +372,22 @@ class NappletHostService : Service() {
         val message =
             Message.obtain(null, NappletEmbedContract.MSG_STATE).apply {
                 data = Bundle().apply { putBoolean(NappletEmbedContract.KEY_CAN_GO_BACK, view.canGoBack()) }
+            }
+        runCatching { tab.clientMessenger?.send(message) }
+    }
+
+    /** Tells the client whether a main-frame load is in flight and whether it failed, so it can overlay a spinner/retry. */
+    private fun pushLoadState(
+        tab: NappletTab,
+        isLoading: Boolean,
+    ) {
+        val message =
+            Message.obtain(null, NappletEmbedContract.MSG_LOAD_STATE).apply {
+                data =
+                    Bundle().apply {
+                        putBoolean(NappletEmbedContract.KEY_IS_LOADING, isLoading)
+                        putBoolean(NappletEmbedContract.KEY_LOAD_FAILED, tab.loadFailed)
+                    }
             }
         runCatching { tab.clientMessenger?.send(message) }
     }

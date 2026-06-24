@@ -77,8 +77,17 @@ object NappletEmbedContract {
     /** Client → provider: an IME editing op for the focused field; raw JSON in [KEY_IME_PAYLOAD]. */
     const val MSG_IME_OP = 14
 
+    /**
+     * Provider → client: the main-frame load state changed. Carries [KEY_IS_LOADING] (a load is in
+     * flight) and [KEY_LOAD_FAILED] (the main frame errored). Lets the main process draw a loading
+     * spinner / error+retry overlay over the embedded surface instead of a bare black/white void.
+     */
+    const val MSG_LOAD_STATE = 15
+
     const val KEY_CORE_LIB_INFO = "coreLibInfo"
     const val KEY_CAN_GO_BACK = "canGoBack"
+    const val KEY_IS_LOADING = "isLoading"
+    const val KEY_LOAD_FAILED = "loadFailed"
     const val KEY_NOTICE = "notice"
     const val KEY_IME_PAYLOAD = "imePayload"
 
