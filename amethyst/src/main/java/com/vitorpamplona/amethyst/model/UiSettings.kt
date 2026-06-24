@@ -55,6 +55,7 @@ data class UiSettings(
     val dontShowOnchainPublicWarning: Boolean = false,
     val suggestWorkoutsFromHealthConnect: BooleanType = BooleanType.ALWAYS,
     val showReadFeedAloudButton: Boolean = true,
+    val readFeedAloudSpeed: Float = 1.0f,
 )
 
 enum class ThemeType(

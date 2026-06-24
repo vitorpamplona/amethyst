@@ -28,6 +28,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -119,6 +120,7 @@ class UiSharedPreferences(
         val UI_DONT_SHOW_ONCHAIN_PUBLIC_WARNING = booleanPreferencesKey("ui.dont_show_onchain_public_warning")
         val UI_SUGGEST_WORKOUTS_FROM_HEALTH_CONNECT = stringPreferencesKey("ui.suggest_workouts_from_health_connect")
         val UI_SHOW_READ_FEED_ALOUD_BUTTON = booleanPreferencesKey("ui.show_read_feed_aloud_button")
+        val UI_READ_FEED_ALOUD_SPEED = floatPreferencesKey("ui.read_feed_aloud_speed")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
@@ -157,6 +159,7 @@ class UiSharedPreferences(
                     suggestWorkoutsFromHealthConnect =
                         preferences[UI_SUGGEST_WORKOUTS_FROM_HEALTH_CONNECT]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
                     showReadFeedAloudButton = preferences[UI_SHOW_READ_FEED_ALOUD_BUTTON] ?: true,
+                    readFeedAloudSpeed = preferences[UI_READ_FEED_ALOUD_SPEED] ?: 1.0f,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -207,6 +210,7 @@ class UiSharedPreferences(
                     preferences[UI_DONT_SHOW_ONCHAIN_PUBLIC_WARNING] = sharedSettings.dontShowOnchainPublicWarning
                     preferences[UI_SUGGEST_WORKOUTS_FROM_HEALTH_CONNECT] = sharedSettings.suggestWorkoutsFromHealthConnect.name
                     preferences[UI_SHOW_READ_FEED_ALOUD_BUTTON] = sharedSettings.showReadFeedAloudButton
+                    preferences[UI_READ_FEED_ALOUD_SPEED] = sharedSettings.readFeedAloudSpeed
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

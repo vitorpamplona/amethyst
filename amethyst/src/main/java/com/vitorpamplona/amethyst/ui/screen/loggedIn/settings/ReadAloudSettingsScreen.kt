@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -83,6 +85,7 @@ fun ReadAloudSettingsContent(accountViewModel: AccountViewModel) {
     val ui = accountViewModel.settings.uiSettingsFlow
 
     val showButton by ui.showReadFeedAloudButton.collectAsStateWithLifecycle()
+    val speed by ui.readFeedAloudSpeed.collectAsStateWithLifecycle()
 
     Column(
         modifier =
@@ -105,9 +108,47 @@ fun ReadAloudSettingsContent(accountViewModel: AccountViewModel) {
             onCheckedChange = { ui.showReadFeedAloudButton.tryEmit(it) },
         )
 
+        HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
+
+        ReadAloudSpeedRow(
+            speed = speed,
+            onSpeedChange = { ui.readFeedAloudSpeed.tryEmit(it) },
+        )
+
         Spacer(Modifier.height(16.dp))
     }
 }
+
+@Composable
+private fun ReadAloudSpeedRow(
+    speed: Float,
+    onSpeedChange: (Float) -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = Size20dp),
+    ) {
+        Text(
+            text = stringRes(R.string.read_feed_aloud_speed),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Spacer(Modifier.height(8.dp))
+        Row {
+            READ_ALOUD_SPEEDS.forEach { option ->
+                FilterChip(
+                    selected = speed == option,
+                    onClick = { onSpeedChange(option) },
+                    label = { Text("${option}x") },
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+            }
+        }
+    }
+}
+
+private val READ_ALOUD_SPEEDS = listOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
 
 @Composable
 private fun ReadAloudSwitchRow(

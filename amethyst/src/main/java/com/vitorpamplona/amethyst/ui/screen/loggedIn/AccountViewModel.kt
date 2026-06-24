@@ -203,7 +203,7 @@ class AccountViewModel(
     val feedStates = AccountFeedContentStates(account, viewModelScope)
 
     /** Shared "read the feed aloud" controller; the on-screen feed registers itself here. */
-    val readAloud = FeedReadAloudState(viewModelScope)
+    val readAloud = FeedReadAloudState(viewModelScope) { settings.uiSettingsFlow.readFeedAloudSpeed.value }
 
     /**
      * `true` when feed/note media (images and videos in `MediaUrlContent`)

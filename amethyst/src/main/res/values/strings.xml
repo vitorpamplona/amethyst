@@ -2330,6 +2330,7 @@
     <string name="read_feed_aloud_settings">Read Feed Aloud</string>
     <string name="read_feed_aloud_settings_description">Adds a button next to the search bar that reads the posts in the current feed out loud, one after another, until you stop it. Handy when your hands or eyes are busy.</string>
     <string name="read_feed_aloud_show_button">Show the read aloud button</string>
+    <string name="read_feed_aloud_speed">Reading speed</string>
     <string name="read_feed_aloud_search_keywords" translatable="false">read, aloud, speak, text to speech, tts, voice, accessibility, driving, listen</string>
     <string name="read_feed_aloud_start">Read the feed aloud</string>
     <string name="read_feed_aloud_stop">Stop reading aloud</string>

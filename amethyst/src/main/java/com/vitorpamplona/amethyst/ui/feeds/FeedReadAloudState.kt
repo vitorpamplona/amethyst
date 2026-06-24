@@ -80,6 +80,7 @@ import kotlin.coroutines.resume
 @Stable
 class FeedReadAloudState(
     private val scope: CoroutineScope,
+    private val speedProvider: () -> Float = { 1f },
 ) {
     /** True while a feed screen is on-screen and has posts to read — gates the top-bar button. */
     var hasReadableFeed by mutableStateOf(false)
@@ -159,6 +160,7 @@ class FeedReadAloudState(
         val notes = feed.visibleNotes()
         if (notes.isEmpty()) return
 
+        speed = speedProvider()
         val startIndex = currentTopNoteIndex(notes.size)
         val labels =
             SpeechLabels(

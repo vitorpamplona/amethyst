@@ -55,6 +55,7 @@ class UiSettingsFlow(
     val dontShowOnchainPublicWarning: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val suggestWorkoutsFromHealthConnect: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val showReadFeedAloudButton: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val readFeedAloudSpeed: MutableStateFlow<Float> = MutableStateFlow(1.0f),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -84,6 +85,7 @@ class UiSettingsFlow(
             dontShowOnchainPublicWarning,
             suggestWorkoutsFromHealthConnect,
             showReadFeedAloudButton,
+            readFeedAloudSpeed,
         )
 
     // emits at every change in any of the propertyes.
@@ -117,6 +119,7 @@ class UiSettingsFlow(
                 flows[23] as Boolean,
                 flows[24] as BooleanType,
                 flows[25] as Boolean,
+                flows[26] as Float,
             )
         }
 
@@ -148,6 +151,7 @@ class UiSettingsFlow(
             dontShowOnchainPublicWarning.value,
             suggestWorkoutsFromHealthConnect.value,
             showReadFeedAloudButton.value,
+            readFeedAloudSpeed.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -257,6 +261,10 @@ class UiSettingsFlow(
             showReadFeedAloudButton.tryEmit(torSettings.showReadFeedAloudButton)
             any = true
         }
+        if (readFeedAloudSpeed.value != torSettings.readFeedAloudSpeed) {
+            readFeedAloudSpeed.tryEmit(torSettings.readFeedAloudSpeed)
+            any = true
+        }
 
         return any
     }
@@ -308,6 +316,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.dontShowOnchainPublicWarning),
                 MutableStateFlow(uiSettings.suggestWorkoutsFromHealthConnect),
                 MutableStateFlow(uiSettings.showReadFeedAloudButton),
+                MutableStateFlow(uiSettings.readFeedAloudSpeed),
             )
     }
 }
