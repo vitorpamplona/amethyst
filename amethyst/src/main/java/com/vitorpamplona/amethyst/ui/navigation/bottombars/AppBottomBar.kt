@@ -42,9 +42,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -109,6 +111,9 @@ private fun RenderBottomMenu(
     // Index favorites by id so resolving each Favorite entry is a map lookup, not a per-entry scan.
     val favoritesById = remember(favorites) { favorites.associateBy { it.id } }
 
+    // Captured favicons, so a pinned web favorite shows the site's icon instead of the generic globe.
+    val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
+
     Column(
         modifier =
             Modifier
@@ -141,7 +146,11 @@ private fun RenderBottomMenu(
                                 is FavoriteApp.WebUrl -> Route.FavoriteWebApp(fav.url)
                                 is FavoriteApp.NostrApp -> Route.FavoriteNostrApp(fav.coordinate)
                             }
-                        FavoriteNavItem(destination == selectedRoute, fav, destination, nav)
+                        val iconModel =
+                            remember(fav, iconKeys) {
+                                (fav as? FavoriteApp.WebUrl)?.let { OmniboxInput.hostOf(it.url)?.let(BrowserIconRegistry::iconModelFor) }
+                            }
+                        FavoriteNavItem(destination == selectedRoute, fav, iconModel, destination, nav)
                     }
                 }
             }
@@ -153,6 +162,7 @@ private fun RenderBottomMenu(
 private fun RowScope.FavoriteNavItem(
     selected: Boolean,
     fav: FavoriteApp,
+    iconModel: Any?,
     destination: Route,
     nav: (Route) -> Unit,
 ) {
@@ -160,11 +170,13 @@ private fun RowScope.FavoriteNavItem(
         alwaysShowLabel = false,
         icon = {
             Box(Size27Modifier, contentAlignment = Alignment.Center) {
-                // The app's own icon (nsite/napplet manifest icon) when it has one, else a type glyph.
+                // A web favorite's captured favicon (else the globe); an nsite/napplet's manifest icon (else
+                // the grid glyph).
                 FavoriteAppIcon(
                     app = fav,
                     tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface65,
                     modifier = Size25Modifier,
+                    iconModel = iconModel,
                 )
             }
         },

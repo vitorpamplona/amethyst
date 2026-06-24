@@ -21,10 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.browser
 
 import android.os.Build
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +42,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -229,17 +229,30 @@ private fun BrowserLauncher(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            else ->
+            else -> {
+                val favoriteUrls = remember(apps) { apps.filterIsInstance<FavoriteApp.WebUrl>().mapTo(HashSet()) { it.url } }
                 BrowserHome(
                     apps = apps,
                     history = history,
                     iconKeys = iconKeys,
+                    favoriteUrls = favoriteUrls,
                     onOpenApp = { FavoriteAppLauncher.launch(context, it) },
                     onRemoveApp = { FavoriteAppsRegistry.remove(it.id) },
                     onOpenUrl = { open(it) },
+                    onToggleRecentFavorite = { entry ->
+                        val id = "url:" + entry.url
+                        if (FavoriteAppsRegistry.isFavorite(id)) {
+                            FavoriteAppsRegistry.remove(id)
+                        } else {
+                            FavoriteAppsRegistry.add(
+                                FavoriteApp.WebUrl(entry.url, entry.title.ifBlank { entry.host }, System.currentTimeMillis()),
+                            )
+                        }
+                    },
                     onRemoveRecent = { BrowserHistoryRegistry.remove(it) },
                     modifier = contentModifier,
                 )
+            }
         }
     }
 }
@@ -368,15 +381,16 @@ private fun SuggestionRow(
 }
 
 /** The idle body: favorites grid on top, then recent visits — in one grid so they scroll together. */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BrowserHome(
     apps: List<FavoriteApp>,
     history: List<BrowserHistoryEntry>,
     iconKeys: Set<String>,
+    favoriteUrls: Set<String>,
     onOpenApp: (FavoriteApp) -> Unit,
     onRemoveApp: (FavoriteApp) -> Unit,
     onOpenUrl: (String) -> Unit,
+    onToggleRecentFavorite: (BrowserHistoryEntry) -> Unit,
     onRemoveRecent: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -398,7 +412,9 @@ private fun BrowserHome(
                 RecentRow(
                     entry = entry,
                     iconKeys = iconKeys,
+                    isFavorited = entry.url in favoriteUrls,
                     onClick = { onOpenUrl(entry.url) },
+                    onToggleFavorite = { onToggleRecentFavorite(entry) },
                     onRemove = { onRemoveRecent(entry.url) },
                 )
             }
@@ -406,24 +422,26 @@ private fun BrowserHome(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun RecentRow(
     entry: BrowserHistoryEntry,
     iconKeys: Set<String>,
+    isFavorited: Boolean,
     onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
     onRemove: () -> Unit,
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .combinedClickable(onClick = onClick, onLongClick = onRemove)
-                .padding(horizontal = 8.dp, vertical = 10.dp),
+                .clickable(onClick = onClick)
+                .padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SiteIcon(entry.host, isFavorite = false, iconKeys = iconKeys, modifier = Modifier.size(24.dp))
+        SiteIcon(entry.host, isFavorite = isFavorited, iconKeys = iconKeys, modifier = Modifier.size(24.dp))
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
             Text(
@@ -439,6 +457,31 @@ private fun RecentRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+        Box {
+            IconButton(onClick = { menuOpen = true }) {
+                Icon(MaterialSymbols.MoreVert, contentDescription = stringResource(R.string.browser_recent_options))
+            }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(if (isFavorited) R.string.favorite_app_remove else R.string.favorite_app_add)) },
+                    leadingIcon = {
+                        Icon(if (isFavorited) MaterialSymbols.Star else MaterialSymbols.StarBorder, contentDescription = null)
+                    },
+                    onClick = {
+                        menuOpen = false
+                        onToggleFavorite()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.browser_recent_remove)) },
+                    leadingIcon = { Icon(MaterialSymbols.Delete, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        onRemove()
+                    },
+                )
+            }
         }
     }
 }
