@@ -81,6 +81,14 @@ object NappletIpc {
      */
     const val MSG_RECORD_HISTORY = 9
 
+    /**
+     * Host → broker (browser mode): store the favicon for a visited site. Carries [KEY_ICON_HOST] and
+     * [KEY_ICON_BYTES] (a small PNG, scaled down by the host before sending). Captured from the WebView
+     * that loaded the page, so it rides the page's own (Tor-routed) network path; the main process never
+     * fetches it itself. Bytes stay well under the Binder transaction limit.
+     */
+    const val MSG_RECORD_ICON = 10
+
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
 
@@ -89,6 +97,12 @@ object NappletIpc {
 
     /** The page title of a successfully loaded browser page, for the visit-history record. */
     const val KEY_HISTORY_TITLE = "historyTitle"
+
+    /** The host a captured favicon belongs to. */
+    const val KEY_ICON_HOST = "iconHost"
+
+    /** The captured favicon as PNG bytes. */
+    const val KEY_ICON_BYTES = "iconBytes"
 
     /** The bare host (e.g. `example.com`) a browser Tor choice belongs to. */
     const val KEY_WEB_HOST = "webHost"

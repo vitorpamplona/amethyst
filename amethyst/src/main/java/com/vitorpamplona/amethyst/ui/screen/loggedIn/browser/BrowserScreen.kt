@@ -20,11 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.browser
 
-import android.net.Uri
 import android.os.Build
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,8 +37,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.IconButton
@@ -50,10 +57,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -61,13 +70,17 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.browser.OmniboxSuggestions
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
+import com.vitorpamplona.amethyst.favorites.BrowserHistoryEntry
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
+import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -75,15 +88,21 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteAppsGrid
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.favoriteAppItems
+
+/** How many of the most recent history entries the idle browser home surfaces under "Recent". */
+private const val RECENTS_LIMIT = 12
 
 /**
  * The Browser tab — a **launcher**, not a content surface. The user types a URL here and each opened
  * site lands in its own full-screen
  * [NappletBrowserActivity][com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity] (its own
  * task/recents entry), so apps are swapped the normal Android way and a running app never carries an
- * editable address bar. As the user types, the body becomes an omnibox suggestion list (favorites +
- * visit history, ranked) with inline ghost-text completion; cleared, it shows the [FavoriteAppsGrid].
+ * editable address bar.
+ *
+ * Idle, the body is the [BrowserHome]: pinned favorites on top, then recent visits. As the user types it
+ * becomes a grouped omnibox suggestion list (favorites first + highlighted, then recents) with inline
+ * ghost-text completion. Both decorate sites with the favicon captured when they were last opened.
  *
  * Requires API 30+ (the keyless `:napplet` browser host needs it); below that the Browser nav item is
  * hidden, so this screen is unreachable — the fallback message is just defense in depth.
@@ -113,6 +132,7 @@ private fun BrowserLauncher(
     val context = LocalContext.current
     val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
     val history by BrowserHistoryRegistry.history.collectAsStateWithLifecycle()
+    val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
 
     var field by remember { mutableStateOf(TextFieldValue("")) }
 
@@ -187,22 +207,21 @@ private fun BrowserLauncher(
             AppBottomBar(Route.Browser, nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
+        val contentModifier =
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
         when {
             typed.isNotBlank() && suggestions.isNotEmpty() ->
-                SuggestionList(
+                SuggestionGrid(
                     suggestions = suggestions,
+                    iconKeys = iconKeys,
                     onOpen = { open(it.url) },
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(padding),
+                    modifier = contentModifier,
                 )
-            apps.isEmpty() ->
+            apps.isEmpty() && history.isEmpty() ->
                 Box(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(32.dp),
+                    contentModifier.padding(32.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -211,14 +230,15 @@ private fun BrowserLauncher(
                     )
                 }
             else ->
-                FavoriteAppsGrid(
+                BrowserHome(
                     apps = apps,
-                    onOpen = { FavoriteAppLauncher.launch(context, it) },
-                    onRemove = { FavoriteAppsRegistry.remove(it.id) },
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(padding),
+                    history = history,
+                    iconKeys = iconKeys,
+                    onOpenApp = { FavoriteAppLauncher.launch(context, it) },
+                    onRemoveApp = { FavoriteAppsRegistry.remove(it.id) },
+                    onOpenUrl = { open(it) },
+                    onRemoveRecent = { BrowserHistoryRegistry.remove(it) },
+                    modifier = contentModifier,
                 )
         }
     }
@@ -286,15 +306,24 @@ private fun OmniBar(
     }
 }
 
+/** The typed-state body: ranked suggestions split into a highlighted Favorites group then Recent. */
 @Composable
-private fun SuggestionList(
+private fun SuggestionGrid(
     suggestions: List<OmniboxSuggestions.Suggestion>,
+    iconKeys: Set<String>,
     onOpen: (OmniboxSuggestions.Suggestion) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(modifier) {
-        items(suggestions, key = { it.url }) { suggestion ->
-            SuggestionRow(suggestion) { onOpen(suggestion) }
+    val favorites = suggestions.filter { it.isFavorite }
+    val others = suggestions.filterNot { it.isFavorite }
+    LazyVerticalGrid(columns = GridCells.Fixed(1), modifier = modifier) {
+        if (favorites.isNotEmpty()) {
+            item(key = "h-fav") { SectionHeader(stringResource(R.string.browser_favorites)) }
+            items(favorites, key = { "f:" + it.url }) { SuggestionRow(it, iconKeys, highlighted = true) { onOpen(it) } }
+        }
+        if (others.isNotEmpty()) {
+            item(key = "h-rec") { SectionHeader(stringResource(R.string.favorite_app_recent)) }
+            items(others, key = { "o:" + it.url }) { SuggestionRow(it, iconKeys, highlighted = false) { onOpen(it) } }
         }
     }
 }
@@ -302,6 +331,8 @@ private fun SuggestionList(
 @Composable
 private fun SuggestionRow(
     suggestion: OmniboxSuggestions.Suggestion,
+    iconKeys: Set<String>,
+    highlighted: Boolean,
     onClick: () -> Unit,
 ) {
     Row(
@@ -309,21 +340,17 @@ private fun SuggestionRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
+                .background(if (highlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else Color.Transparent)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // A star marks a pinned favorite; otherwise it came from visit history.
-        Icon(
-            if (suggestion.isFavorite) MaterialSymbols.Star else MaterialSymbols.History,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        SiteIcon(suggestion.host, suggestion.isFavorite, iconKeys, Modifier.size(24.dp))
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 suggestion.host,
                 style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (highlighted) FontWeight.Medium else FontWeight.Normal,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -340,5 +367,117 @@ private fun SuggestionRow(
     }
 }
 
+/** The idle body: favorites grid on top, then recent visits — in one grid so they scroll together. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BrowserHome(
+    apps: List<FavoriteApp>,
+    history: List<BrowserHistoryEntry>,
+    iconKeys: Set<String>,
+    onOpenApp: (FavoriteApp) -> Unit,
+    onRemoveApp: (FavoriteApp) -> Unit,
+    onOpenUrl: (String) -> Unit,
+    onRemoveRecent: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val recents = remember(history) { history.take(RECENTS_LIMIT) }
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(96.dp),
+        modifier = modifier,
+        contentPadding = PaddingValues(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (apps.isNotEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-fav") { SectionHeader(stringResource(R.string.browser_favorites)) }
+            favoriteAppItems(apps, onOpenApp, onRemoveApp)
+        }
+        if (recents.isNotEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-rec") { SectionHeader(stringResource(R.string.favorite_app_recent)) }
+            items(recents, span = { GridItemSpan(maxLineSpan) }, key = { "r:" + it.url }) { entry ->
+                RecentRow(
+                    entry = entry,
+                    iconKeys = iconKeys,
+                    onClick = { onOpenUrl(entry.url) },
+                    onRemove = { onRemoveRecent(entry.url) },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun RecentRow(
+    entry: BrowserHistoryEntry,
+    iconKeys: Set<String>,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .combinedClickable(onClick = onClick, onLongClick = onRemove)
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SiteIcon(entry.host, isFavorite = false, iconKeys = iconKeys, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                entry.title.ifBlank { entry.host },
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                entry.host,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        title,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
+}
+
+/** A site's captured favicon, falling back to a glyph (a star for favorites, the globe otherwise). */
+@Composable
+private fun SiteIcon(
+    host: String,
+    isFavorite: Boolean,
+    iconKeys: Set<String>,
+    modifier: Modifier = Modifier,
+) {
+    val model = remember(host, iconKeys) { BrowserIconRegistry.iconModelFor(host) }
+    val symbol = if (isFavorite) MaterialSymbols.Star else MaterialSymbols.Public
+    val tint = MaterialTheme.colorScheme.onSurfaceVariant
+    if (model == null) {
+        Icon(symbol, contentDescription = null, modifier = modifier, tint = tint)
+    } else {
+        val glyph = rememberMaterialSymbolPainter(symbol, tint)
+        AsyncImage(
+            model = model,
+            contentDescription = null,
+            modifier = modifier.clip(RoundedCornerShape(6.dp)),
+            placeholder = glyph,
+            error = glyph,
+            fallback = glyph,
+        )
+    }
+}
+
 /** The host of [url] for a favorite's default label, falling back to the raw string. */
-private fun hostOf(url: String): String = OmniboxInput.hostOf(url) ?: runCatching { Uri.parse(url).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
+private fun hostOf(url: String): String = OmniboxInput.hostOf(url) ?: url

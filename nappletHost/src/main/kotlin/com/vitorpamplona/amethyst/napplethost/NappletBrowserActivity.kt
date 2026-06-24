@@ -60,6 +60,7 @@ import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executor
 
 /**
@@ -90,6 +91,7 @@ class NappletBrowserActivity : ComponentActivity() {
     // unresolved address never enters history. Reset on each main-frame page start.
     private var pendingMainFrameUrl: String? = null
     private var mainFrameLoadFailed = false
+    private var lastIconHost: String? = null
 
     // ---- broker bridge (per-origin NIP-07 tokens; identical to NappletBrowserService) ----
     private var brokerMessenger: Messenger? = null
@@ -276,6 +278,22 @@ class NappletBrowserActivity : ComponentActivity() {
         }
         WebView.setWebContentsDebuggingEnabled(false)
         wv.webViewClient = BrowserClient()
+        wv.webChromeClient = BrowserChromeClient()
+    }
+
+    /** Captures the page favicon (the WebChromeClient is the only source of it) for the launcher's icons. */
+    private inner class BrowserChromeClient : android.webkit.WebChromeClient() {
+        override fun onReceivedIcon(
+            view: WebView,
+            icon: Bitmap?,
+        ) {
+            if (icon == null || mainFrameLoadFailed) return
+            val host = OmniboxInput.hostOf(view.url ?: return) ?: return
+            // De-dupe: a page can fire this several times — store once per host per visit.
+            if (host == lastIconHost) return
+            lastIconHost = host
+            recordIcon(host, icon)
+        }
     }
 
     private inner class BrowserClient : WebViewClient() {
@@ -300,6 +318,8 @@ class NappletBrowserActivity : ComponentActivity() {
             // A fresh main-frame navigation: arm history gating and show the new address.
             pendingMainFrameUrl = url
             mainFrameLoadFailed = false
+            // Re-arm favicon capture when the host changes, so a same-host in-page nav doesn't re-send.
+            if (OmniboxInput.hostOf(url) != lastIconHost) lastIconHost = null
             controlSheet?.updateUrl(url)
         }
 
@@ -356,6 +376,35 @@ class NappletBrowserActivity : ComponentActivity() {
                     Bundle().apply {
                         putString(NappletIpc.KEY_HISTORY_URL, url)
                         putString(NappletIpc.KEY_HISTORY_TITLE, title.orEmpty())
+                    }
+            }
+        if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
+    }
+
+    /** Scales [icon] down and relays it to the broker as the favicon for [host] (PNG bytes over IPC). */
+    private fun recordIcon(
+        host: String,
+        icon: Bitmap,
+    ) {
+        val bytes =
+            runCatching {
+                val scaled =
+                    if (icon.width > ICON_MAX_PX || icon.height > ICON_MAX_PX) {
+                        Bitmap.createScaledBitmap(icon, ICON_MAX_PX, ICON_MAX_PX, true)
+                    } else {
+                        icon
+                    }
+                ByteArrayOutputStream().use { out ->
+                    scaled.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    out.toByteArray()
+                }
+            }.getOrNull() ?: return
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_RECORD_ICON).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_ICON_HOST, host)
+                        putByteArray(NappletIpc.KEY_ICON_BYTES, bytes)
                     }
             }
         if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
@@ -551,6 +600,9 @@ class NappletBrowserActivity : ComponentActivity() {
 
         /** How often a resumed browser renews its foreground lease (well under the broker's 90s TTL). */
         private const val FOREGROUND_HEARTBEAT_MS = 30_000L
+
+        /** Max favicon edge (px) before sending over IPC — keeps the PNG tiny, well under the Binder limit. */
+        private const val ICON_MAX_PX = 96
 
         private const val EXTRA_URL = "url"
         private const val EXTRA_PROXY_PORT = "proxyPort"

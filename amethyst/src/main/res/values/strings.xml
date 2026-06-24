@@ -674,6 +674,7 @@
     <string name="browser_unsupported">The in-app browser needs Android 11 or newer.</string>
     <string name="browser_go">Open</string>
     <string name="browser_clear">Clear</string>
+    <string name="browser_favorites">Favorites</string>
     <string name="favorite_apps">Favorite apps</string>
     <string name="favorite_apps_empty">No favorite apps yet. Open a web client or nsite and tap the star to pin it here.</string>
     <string name="favorite_app_add">Add to favorites</string>
