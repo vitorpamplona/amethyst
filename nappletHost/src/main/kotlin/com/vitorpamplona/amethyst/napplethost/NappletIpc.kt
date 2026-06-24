@@ -73,8 +73,22 @@ object NappletIpc {
      */
     const val MSG_SET_WEB_TOR = 8
 
+    /**
+     * Host → broker (browser mode): record a *successfully loaded* page in the device-local visit history
+     * (main process only). Carries [KEY_HISTORY_URL] (the landed URL) and [KEY_HISTORY_TITLE]. Sent only
+     * after a clean main-frame page-finish — never for a typed-but-failed address — so misspellings never
+     * enter history. The `:napplet` process can't touch the main process's store, so it relays it here.
+     */
+    const val MSG_RECORD_HISTORY = 9
+
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
+
+    /** The landed URL of a successfully loaded browser page, for the visit-history record. */
+    const val KEY_HISTORY_URL = "historyUrl"
+
+    /** The page title of a successfully loaded browser page, for the visit-history record. */
+    const val KEY_HISTORY_TITLE = "historyTitle"
 
     /** The bare host (e.g. `example.com`) a browser Tor choice belongs to. */
     const val KEY_WEB_HOST = "webHost"

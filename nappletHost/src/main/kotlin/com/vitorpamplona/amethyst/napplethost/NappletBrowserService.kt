@@ -44,6 +44,7 @@ import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import org.json.JSONObject
 
@@ -455,14 +456,8 @@ class NappletBrowserService : Service() {
 
     private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
 
-    /** Address-bar text → URL: keep an explicit scheme, prefix a bare domain, else DuckDuckGo search. */
-    private fun normalizeUrl(input: String): String {
-        val text = input.trim()
-        if (text.isEmpty()) return "about:blank"
-        if (text.contains("://")) return text
-        if (!text.contains(' ') && text.contains('.')) return "https://$text"
-        return "https://duckduckgo.com/?q=" + Uri.encode(text)
-    }
+    /** Address-bar text → URL via the shared [OmniboxInput] rules (bare domain → https, else search). */
+    private fun normalizeUrl(input: String): String = OmniboxInput.resolve(input)?.url ?: "about:blank"
 
     private companion object {
         private const val TAG = "NappletBrowserService"

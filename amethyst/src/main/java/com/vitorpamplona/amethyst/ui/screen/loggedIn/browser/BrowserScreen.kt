@@ -22,12 +22,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.browser
 
 import android.net.Uri
 import android.os.Build
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.IconButton
@@ -46,15 +53,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.browser.OmniboxSuggestions
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -69,8 +82,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteAppsGrid
  * site lands in its own full-screen
  * [NappletBrowserActivity][com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity] (its own
  * task/recents entry), so apps are swapped the normal Android way and a running app never carries an
- * editable address bar. Below the omnibox sits the shared [FavoriteAppsGrid] for one-tap access to
- * pinned clients.
+ * editable address bar. As the user types, the body becomes an omnibox suggestion list (favorites +
+ * visit history, ranked) with inline ghost-text completion; cleared, it shows the [FavoriteAppsGrid].
  *
  * Requires API 30+ (the keyless `:napplet` browser host needs it); below that the Browser nav item is
  * hidden, so this screen is unreachable — the fallback message is just defense in depth.
@@ -99,23 +112,71 @@ private fun BrowserLauncher(
 ) {
     val context = LocalContext.current
     val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val history by BrowserHistoryRegistry.history.collectAsStateWithLifecycle()
 
-    var query by remember { mutableStateOf("") }
+    var field by remember { mutableStateOf(TextFieldValue("")) }
 
-    fun open() {
-        val url = normalizeUrl(query) ?: return
-        FavoriteAppLauncher.launchUrl(context, url)
+    // Favorites + visit history flattened into the neutral candidate shape the ranker consumes.
+    val candidates =
+        remember(apps, history) {
+            buildList {
+                apps.forEach { if (it is FavoriteApp.WebUrl) add(OmniboxSuggestions.Candidate(it.url, it.label, isFavorite = true)) }
+                history.forEach {
+                    add(
+                        OmniboxSuggestions.Candidate(
+                            url = it.url,
+                            label = it.title.ifBlank { it.host },
+                            isFavorite = false,
+                            visitCount = it.visitCount,
+                            lastVisitedAt = it.lastVisitedAt,
+                        ),
+                    )
+                }
+            }
+        }
+
+    // What the user actually typed, excluding any selected ghost-completion suffix (selection.min is the
+    // caret when collapsed, or the start of the highlighted suffix when a completion is showing).
+    val typed = field.text.take(field.selection.min.coerceIn(0, field.text.length))
+    val suggestions = remember(typed, candidates) { OmniboxSuggestions.rank(typed, candidates) }
+
+    fun open(text: String) {
+        val target = OmniboxInput.resolve(text) ?: return
+        FavoriteAppLauncher.launchUrl(context, target.url, target.forceTor)
+    }
+
+    // Inline autocomplete: when the user appends a character, offer the top host as selected ghost text so
+    // the next keystroke replaces it. On deletion or mid-string edits, leave the value untouched.
+    fun onValueChange(new: TextFieldValue) {
+        val prevTyped = field.text.take(field.selection.min.coerceIn(0, field.text.length))
+        val newText = new.text
+        val appended =
+            new.selection.collapsed &&
+                new.selection.start == newText.length &&
+                newText.length > prevTyped.length &&
+                newText.startsWith(prevTyped)
+        if (appended) {
+            val completion = OmniboxSuggestions.completion(newText, OmniboxSuggestions.rank(newText, candidates))
+            if (completion != null) {
+                // Keep the user's own casing for the typed prefix; append only the remaining suffix.
+                val full = newText + completion.substring(newText.length)
+                field = TextFieldValue(full, TextRange(newText.length, full.length))
+                return
+            }
+        }
+        field = new
     }
 
     Scaffold(
         topBar = {
             OmniBar(
                 nav = nav,
-                query = query,
-                onQueryChange = { query = it },
-                onOpen = ::open,
+                field = field,
+                onValueChange = ::onValueChange,
+                onClear = { field = TextFieldValue("") },
+                onOpen = { open(field.text) },
                 onFavorite = {
-                    val url = normalizeUrl(query) ?: return@OmniBar
+                    val url = OmniboxInput.resolve(field.text)?.url ?: return@OmniBar
                     FavoriteAppsRegistry.add(
                         FavoriteApp.WebUrl(url = url, label = hostOf(url), addedAt = System.currentTimeMillis()),
                     )
@@ -126,29 +187,39 @@ private fun BrowserLauncher(
             AppBottomBar(Route.Browser, nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
-        if (apps.isEmpty()) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    stringResource(R.string.favorite_apps_empty),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        when {
+            typed.isNotBlank() && suggestions.isNotEmpty() ->
+                SuggestionList(
+                    suggestions = suggestions,
+                    onOpen = { open(it.url) },
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding),
                 )
-            }
-        } else {
-            FavoriteAppsGrid(
-                apps = apps,
-                onOpen = { FavoriteAppLauncher.launch(context, it) },
-                onRemove = { FavoriteAppsRegistry.remove(it.id) },
-                modifier =
+            apps.isEmpty() ->
+                Box(
                     Modifier
                         .fillMaxSize()
-                        .padding(padding),
-            )
+                        .padding(padding)
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        stringResource(R.string.favorite_apps_empty),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            else ->
+                FavoriteAppsGrid(
+                    apps = apps,
+                    onOpen = { FavoriteAppLauncher.launch(context, it) },
+                    onRemove = { FavoriteAppsRegistry.remove(it.id) },
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                )
         }
     }
 }
@@ -156,8 +227,9 @@ private fun BrowserLauncher(
 @Composable
 private fun OmniBar(
     nav: INav,
-    query: String,
-    onQueryChange: (String) -> Unit,
+    field: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    onClear: () -> Unit,
     onOpen: () -> Unit,
     onFavorite: () -> Unit,
 ) {
@@ -177,8 +249,8 @@ private fun OmniBar(
             IconButton(onClick = nav::popBack) { ArrowBackIcon() }
         }
         TextField(
-            value = query,
-            onValueChange = onQueryChange,
+            value = field,
+            onValueChange = onValueChange,
             modifier = Modifier.weight(1f),
             singleLine = true,
             placeholder = { Text(stringResource(R.string.browser_address_hint)) },
@@ -190,13 +262,20 @@ private fun OmniBar(
                     imeAction = ImeAction.Go,
                 ),
             keyboardActions = KeyboardActions(onGo = { onOpen() }),
+            trailingIcon = {
+                if (field.text.isNotEmpty()) {
+                    IconButton(onClick = onClear) {
+                        Icon(MaterialSymbols.Clear, contentDescription = stringResource(R.string.browser_clear))
+                    }
+                }
+            },
             colors =
                 TextFieldDefaults.colors(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
         )
-        if (query.isNotBlank()) {
+        if (field.text.isNotBlank()) {
             IconButton(onClick = onFavorite) {
                 Icon(MaterialSymbols.StarBorder, contentDescription = stringResource(R.string.favorite_app_add))
             }
@@ -207,18 +286,59 @@ private fun OmniBar(
     }
 }
 
-/** The host of [url] for a favorite's default label, falling back to the raw string. */
-private fun hostOf(url: String): String = runCatching { Uri.parse(url).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
-
-/**
- * Turns raw omnibox text into a loadable URL: trims, rejects blanks, prepends `https://` for bare
- * domain names (e.g. `example.com`), and falls back to a DuckDuckGo search for anything that looks
- * like a query rather than a URL. Returns null when there's nothing to open.
- */
-private fun normalizeUrl(input: String): String? {
-    val trimmed = input.trim()
-    if (trimmed.isEmpty()) return null
-    if (trimmed.contains("://")) return trimmed
-    if (!trimmed.contains(' ') && trimmed.contains('.')) return "https://$trimmed"
-    return "https://duckduckgo.com/?q=" + Uri.encode(trimmed)
+@Composable
+private fun SuggestionList(
+    suggestions: List<OmniboxSuggestions.Suggestion>,
+    onOpen: (OmniboxSuggestions.Suggestion) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(modifier) {
+        items(suggestions, key = { it.url }) { suggestion ->
+            SuggestionRow(suggestion) { onOpen(suggestion) }
+        }
+    }
 }
+
+@Composable
+private fun SuggestionRow(
+    suggestion: OmniboxSuggestions.Suggestion,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // A star marks a pinned favorite; otherwise it came from visit history.
+        Icon(
+            if (suggestion.isFavorite) MaterialSymbols.Star else MaterialSymbols.History,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                suggestion.host,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (suggestion.label.isNotBlank() && !suggestion.label.equals(suggestion.host, ignoreCase = true)) {
+                Text(
+                    suggestion.label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+/** The host of [url] for a favorite's default label, falling back to the raw string. */
+private fun hostOf(url: String): String = OmniboxInput.hostOf(url) ?: runCatching { Uri.parse(url).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
