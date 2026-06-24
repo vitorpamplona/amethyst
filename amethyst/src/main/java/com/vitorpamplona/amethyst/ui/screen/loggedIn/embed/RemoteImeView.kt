@@ -68,6 +68,15 @@ class RemoteImeView(
 
     private val flush = Runnable { flushState() }
 
+    // Deferred blur: web frameworks (React controlled inputs) often fire blur+focus in rapid succession
+    // when they re-render an input after the first character. Delaying the actual hide/clearFocus lets a
+    // following ime.focus cancel the blur without the 1-2 second IME restart penalty.
+    private val pendingBlur =
+        Runnable {
+            clearFocus()
+            imm.hideSoftInputFromWindow(windowToken, 0)
+        }
+
     init {
         // Invisible but focusable: the IME needs a laid-out, visible target, but the user must never see
         // this field or its cursor/selection handles — only the embedded page.
@@ -110,10 +119,17 @@ class RemoteImeView(
 
     /** A page field focused: configure the keyboard, seed the buffer, and raise the IME. */
     fun onPageFocus(focus: ImeEvent.Focus) {
+        // Cancel any pending blur so a rapid blur→focus cycle (React re-rendering a controlled input
+        // after the first character) doesn't trigger an unnecessary restartInput.
+        removeCallbacks(pendingBlur)
+        val alreadyFocused = hasFocus()
         configureFor(focus)
         applyRemote(focus.text, focus.selStart, focus.selEnd)
         requestFocus()
-        imm.restartInput(this)
+        // Only restart when we weren't already the IME target. Restarting on every re-focus (e.g. the
+        // blur→focus cycle from a framework re-render) forces the IME to tear down and rebuild its
+        // InputConnection, causing a 1-2 second stall on the next keypress.
+        if (!alreadyFocused) imm.restartInput(this)
         // Post the show so it runs after focus/attachment has settled (showSoftInput can no-op otherwise).
         post {
             if (hasFocus()) imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
@@ -126,10 +142,12 @@ class RemoteImeView(
         applyRemote(state.text, state.selStart, state.selEnd)
     }
 
-    /** The page field blurred: drop the keyboard. */
+    /** The page field blurred: drop the keyboard after a short grace period. */
     fun onPageBlur() {
-        clearFocus()
-        imm.hideSoftInputFromWindow(windowToken, 0)
+        // Short delay: if a focus event arrives within this window (blur→focus from a re-render cycle),
+        // the pendingBlur is cancelled and we avoid the unnecessary restartInput + keyboard flicker.
+        removeCallbacks(pendingBlur)
+        postDelayed(pendingBlur, 150)
     }
 
     private fun applyRemote(
@@ -138,7 +156,11 @@ class RemoteImeView(
         selEnd: Int,
     ) {
         applyingRemote = true
-        setText(newText)
+        // Skip setText when content is unchanged — calling it unconditionally moves the cursor to the
+        // end internally and notifies the IME of a spurious selection change, which makes the keyboard
+        // cursor jump to the end of the word when the page reports a selection-only update (e.g. the
+        // word selection produced by a long-press).
+        if (text?.toString() != newText) setText(newText)
         val len = text?.length ?: 0
         setSelection(selStart.coerceIn(0, len), selEnd.coerceIn(0, len))
         applyingRemote = false
