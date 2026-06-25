@@ -68,7 +68,9 @@ class TrustedRelayListState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                emptySet(),
+                // Synchronously seed from the cached (pre-decrypted) backup so the relay-auth
+                // ledger sees a non-empty list immediately, before the IO-thread onStart emit.
+                settings.backupTrustedRelayList?.let { decryptionCache.cachedRelays(it) } ?: emptySet(),
             )
 
     suspend fun saveRelayList(trustedRelays: List<NormalizedRelayUrl>): TrustedRelayListEvent {

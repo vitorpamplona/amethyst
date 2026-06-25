@@ -93,6 +93,12 @@ class NappletBroker(
     // Only accessed under signerConsentLock.
     private val sessionAllows = mutableSetOf<String>()
 
+    // Apps whose first-connect dialog the user dismissed with Cancel this session.
+    // Cancelling means "not now" — we suppress re-prompting within the same session so a
+    // napplet that fires many requests doesn't show the dialog on every one.
+    // Only accessed under signerConsentLock.
+    private val sessionCancelled = mutableSetOf<String>()
+
     /**
      * Authorizes and runs [request] on behalf of [identity]. [declared] is the capability set the
      * manifest's `requires` resolved to; a request outside it is refused before any prompt.
@@ -351,14 +357,21 @@ class NappletBroker(
             // Re-check after acquiring lock: a sibling request may have set the policy while we waited.
             if (sl.hasPolicy(identity.coordinate)) return@withLock true
 
+            // Suppress re-prompting if the user already cancelled this session.
+            if (identity.coordinate in sessionCancelled) return@withLock false
+
             val prompt = nostrConnectPrompt ?: return@withLock true
             when (val result = prompt.request(identity)) {
                 is AppConnectResult.Connected -> {
                     sl.setPolicy(identity.coordinate, result.policy)
-                    // Bulk-grant all declared capabilities except payments so the app works immediately.
-                    for (cap in declared) {
-                        if (!cap.requiresPerUseConsent) {
-                            ledger.record(identity, cap, GrantState.ALLOW_ALWAYS)
+                    // Bulk-grant non-payment capabilities only for non-paranoid policies.
+                    // PARANOID users chose "ask me for everything" — leave the capability ledger
+                    // empty so each capability prompts on first use.
+                    if (result.policy != AppSignerPolicy.PARANOID) {
+                        for (cap in declared) {
+                            if (!cap.requiresPerUseConsent) {
+                                ledger.record(identity, cap, GrantState.ALLOW_ALWAYS)
+                            }
                         }
                     }
                     true
@@ -370,7 +383,10 @@ class NappletBroker(
                     }
                     false
                 }
-                AppConnectResult.Cancelled -> false
+                AppConnectResult.Cancelled -> {
+                    sessionCancelled.add(identity.coordinate)
+                    false
+                }
             }
         }
 

@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  *
  * 1. Per-operation overrides ([NostrSignerPermissionStore.loadOpDecision]) — these always win.
  * 2. The app's [AppSignerPolicy] trust level ([NostrSignerPermissionStore.loadPolicy]).
- * 3. The built-in "reasonable" set (kind 1/6/7 are auto-allowed) when policy is [AppSignerPolicy.REASONABLE].
+ * 3. The built-in "reasonable" set (kind 1/6/7 + encrypt are auto-allowed) when policy is [AppSignerPolicy.REASONABLE].
  *
  * When no policy has been set (`null`), [decide] returns [NostrOpDecision.ASK], which triggers the
  * first-connect dialog in the broker.
@@ -124,6 +124,6 @@ class NostrSignerPermissionLedger(
                     else -> NostrOpDecision.ASK
                 }
             NostrSignerOp.Encrypt -> NostrOpDecision.ALLOW
-            NostrSignerOp.Decrypt -> NostrOpDecision.ALLOW
+            NostrSignerOp.Decrypt -> NostrOpDecision.ASK
         }
 }
