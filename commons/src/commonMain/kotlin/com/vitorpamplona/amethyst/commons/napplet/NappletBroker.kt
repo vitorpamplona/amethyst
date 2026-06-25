@@ -25,6 +25,15 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.commons.napplet.permissions.PermissionDecision
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
+import com.vitorpamplona.amethyst.commons.napplet.signers.AppConnectResult
+import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
+import com.vitorpamplona.amethyst.commons.napplet.signers.NostrConnectPrompt
+import com.vitorpamplona.amethyst.commons.napplet.signers.NostrOpDecision
+import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerConsentPrompt
+import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
+import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.commons.napplet.signers.SignerOpGrant
+import com.vitorpamplona.amethyst.commons.napplet.signers.toSignerOp
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -71,11 +80,18 @@ class NappletBroker(
     private val identityReads: NappletIdentityGateway? = null,
     private val theme: NappletThemeGateway? = null,
     private val notify: NappletNotifyGateway? = null,
+    private val signerLedger: NostrSignerPermissionLedger? = null,
+    private val nostrConnectPrompt: NostrConnectPrompt? = null,
+    private val signerConsentPrompt: NostrSignerConsentPrompt? = null,
 ) {
     // Serializes the consent-prompt path so concurrent requests queue into one dialog at a time
     // (see [authorizeWithConsent]). Only the prompt is held here; non-prompting paths and execute()
     // run unserialized.
     private val consentLock = Mutex()
+
+    // Serializes first-connect and per-op signer consent dialogs so concurrent signing requests
+    // queue into one dialog at a time rather than launching several dialogs simultaneously.
+    private val signerConsentLock = Mutex()
 
     /**
      * Authorizes and runs [request] on behalf of [identity]. [declared] is the capability set the
@@ -105,6 +121,13 @@ class NappletBroker(
             return NappletResponse.Denied(capability, "Blocked by a standing denial.")
         }
 
+        // For internal signers, show the first-connect dialog if the app has no signer policy yet.
+        if (signer is NostrSignerInternal && signerLedger != null && !signerLedger.hasPolicy(identity.coordinate)) {
+            if (!ensureConnected(identity, declared)) {
+                return NappletResponse.Denied(capability, "Connection not authorized.")
+            }
+        }
+
         val authorized =
             when {
                 // Keyboard/command action registration is a shell-mediated UI affordance, not key
@@ -120,6 +143,14 @@ class NappletBroker(
             }
 
         if (!authorized) return NappletResponse.Denied(capability, "The user declined.")
+
+        // Additional per-operation gate for internal signer signing/encryption.
+        if (signer is NostrSignerInternal && signerLedger != null) {
+            val op = request.toSignerOp()
+            if (op != null && !authorizeSignerOp(identity, op, request)) {
+                return NappletResponse.Denied(capability, "Signing operation declined.")
+            }
+        }
 
         return try {
             execute(identity, request)
@@ -309,5 +340,77 @@ class NappletBroker(
             tags
         } else {
             tags + arrayOf(arrayOf("p", recipient))
+        }
+
+    /**
+     * Shows the first-connect "Connect to Nostr" dialog if no signer policy exists yet.
+     * On success, stores the chosen policy and bulk-grants all declared non-payment capabilities.
+     * Returns false if the user cancelled or blocked the app.
+     */
+    private suspend fun ensureConnected(
+        identity: NappletIdentity,
+        declared: Set<NappletCapability>,
+    ): Boolean =
+        signerConsentLock.withLock {
+            val sl = signerLedger ?: return@withLock true
+            // Re-check after acquiring lock: a sibling request may have set the policy while we waited.
+            if (sl.hasPolicy(identity.coordinate)) return@withLock true
+
+            val prompt = nostrConnectPrompt ?: return@withLock true
+            when (val result = prompt.request(identity)) {
+                is AppConnectResult.Connected -> {
+                    sl.setPolicy(identity.coordinate, result.policy)
+                    // Bulk-grant all declared capabilities except payments so the app works immediately.
+                    for (cap in declared) {
+                        if (!cap.requiresPerUseConsent) {
+                            ledger.record(identity, cap, GrantState.ALLOW_ALWAYS)
+                        }
+                    }
+                    true
+                }
+                AppConnectResult.Blocked -> {
+                    sl.setPolicy(identity.coordinate, AppSignerPolicy.PARANOID)
+                    for (cap in declared) {
+                        ledger.record(identity, cap, GrantState.DENY)
+                    }
+                    false
+                }
+                AppConnectResult.Cancelled -> false
+            }
+        }
+
+    /**
+     * Gates a specific signing/encryption operation through the signer permission ledger.
+     * If the ledger says ASK, prompts the user and records their choice.
+     */
+    private suspend fun authorizeSignerOp(
+        identity: NappletIdentity,
+        op: NostrSignerOp,
+        request: NappletRequest,
+    ): Boolean =
+        signerConsentLock.withLock {
+            val sl = signerLedger ?: return@withLock true
+            when (sl.decide(identity.coordinate, op)) {
+                NostrOpDecision.ALLOW -> true
+                NostrOpDecision.DENY -> false
+                NostrOpDecision.ASK -> {
+                    val prompt = signerConsentPrompt ?: return@withLock true
+                    when (val grant = prompt.request(identity, op, request)) {
+                        is SignerOpGrant.AllowAll -> {
+                            sl.setPolicy(identity.coordinate, AppSignerPolicy.FULL_TRUST)
+                            true
+                        }
+                        is SignerOpGrant.AllowForOp -> {
+                            sl.setOpDecision(identity.coordinate, op, NostrOpDecision.ALLOW)
+                            true
+                        }
+                        is SignerOpGrant.DenyForOp -> {
+                            sl.setOpDecision(identity.coordinate, op, NostrOpDecision.DENY)
+                            false
+                        }
+                        else -> grant.isAllowed
+                    }
+                }
+            }
         }
 }

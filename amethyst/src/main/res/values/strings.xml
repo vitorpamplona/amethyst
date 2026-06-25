@@ -752,6 +752,39 @@
         <item quantity="one">This nApplet wants to pay a Lightning invoice for %1$d sat.</item>
         <item quantity="other">This nApplet wants to pay a Lightning invoice for %1$d sats.</item>
     </plurals>
+    <!-- Signer permissions: first-connect dialog -->
+    <string name="napplet_connect_title">Connect to Nostr</string>
+    <string name="napplet_connect_how_handle">How should this app\'s requests be handled?</string>
+    <string name="napplet_connect_button">Connect</string>
+    <string name="napplet_connect_block">Block and ignore %1$s</string>
+
+    <!-- Signer trust levels -->
+    <string name="napplet_policy_full_trust">I fully trust it</string>
+    <string name="napplet_policy_full_trust_desc">Auto-sign all requests (except payments)</string>
+    <string name="napplet_policy_reasonable">Let\'s be reasonable</string>
+    <string name="napplet_policy_reasonable_desc">Auto-approve most common requests</string>
+    <string name="napplet_policy_paranoid">I\'m a bit paranoid</string>
+    <string name="napplet_policy_paranoid_desc">Do not sign anything without asking me!</string>
+
+    <!-- Signer per-op consent dialog -->
+    <string name="napplet_signer_allow_once">Allow once</string>
+    <string name="napplet_signer_allow_op">Don\'t ask again to %1$s</string>
+    <string name="napplet_signer_allow_all">Don\'t ask again for any Nostr requests</string>
+    <string name="napplet_signer_deny_once">Deny</string>
+    <string name="napplet_signer_deny_op">Always deny %1$s</string>
+
+    <!-- Signer op labels -->
+    <string name="napplet_op_sign_kind">sign kind %1$d event</string>
+    <string name="napplet_op_encrypt">encrypt a message</string>
+    <string name="napplet_op_decrypt">decrypt a message</string>
+
+    <!-- Permissions management screen -->
+    <string name="napplet_permissions_title">Connected Apps</string>
+    <string name="napplet_permissions_revoke_all">Revoke all permissions</string>
+    <string name="napplet_permissions_overrides">Operation overrides</string>
+    <string name="napplet_signer_permissions_empty">No apps have connected yet.</string>
+    <string name="napplet_signer_permissions_revoke_all">Revoke all permissions</string>
+
     <string name="nip82_repository_label">Source: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Download</string>

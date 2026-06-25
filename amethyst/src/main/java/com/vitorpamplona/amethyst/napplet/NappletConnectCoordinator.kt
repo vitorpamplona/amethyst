@@ -1,0 +1,85 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.napplet
+
+import android.content.Context
+import android.content.Intent
+import com.vitorpamplona.amethyst.commons.napplet.signers.AppConnectResult
+import kotlinx.coroutines.CompletableDeferred
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+
+/** Everything the "Connect to Nostr" dialog needs to render. */
+data class NappletConnectInfo(
+    val appletTitle: String,
+    val coordinate: String,
+    val domain: String,
+)
+
+/**
+ * Bridges the broker to the "Connect to Nostr" first-connect UI. Suspends in [requestConnect];
+ * the Activity resolves the deferred with the user's choice.
+ * A dismissed dialog resolves to [AppConnectResult.Cancelled] — fails closed, no silent grant.
+ */
+object NappletConnectCoordinator {
+    private class Pending(
+        val info: NappletConnectInfo,
+        val deferred: CompletableDeferred<AppConnectResult>,
+    )
+
+    private val pending = ConcurrentHashMap<String, Pending>()
+
+    suspend fun requestConnect(
+        context: Context,
+        info: NappletConnectInfo,
+    ): AppConnectResult {
+        val token = UUID.randomUUID().toString()
+        val deferred = CompletableDeferred<AppConnectResult>()
+        pending[token] = Pending(info, deferred)
+
+        context.startActivity(
+            Intent(context, NappletConnectActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .putExtra(EXTRA_TOKEN, token),
+        )
+
+        return try {
+            deferred.await()
+        } finally {
+            pending.remove(token)
+        }
+    }
+
+    fun infoFor(token: String): NappletConnectInfo? = pending[token]?.info
+
+    fun complete(
+        token: String,
+        result: AppConnectResult,
+    ) {
+        pending[token]?.deferred?.complete(result)
+    }
+
+    fun cancel(token: String) {
+        pending[token]?.deferred?.complete(AppConnectResult.Cancelled)
+    }
+
+    const val EXTRA_TOKEN = "napplet_connect_token"
+}
