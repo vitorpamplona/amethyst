@@ -159,6 +159,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.MusicPlaylistsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.MusicTracksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.NewMusicPlaylistScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.NewMusicTrackScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppDetailScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.NappletPermissionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.NappletsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
@@ -336,6 +338,8 @@ fun BuildNavigation(
         composableFromEndArgs<Route.WebApp> { WebAppScreen(it.url, accountViewModel, nav) }
         composableFromEndArgs<Route.NostrApp> { NostrAppScreen(it.coordinate, accountViewModel, nav) }
         composableFromEnd<Route.NappletPermissions> { NappletPermissionsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.ConnectedApps> { ConnectedAppsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.ConnectedAppDetail> { ConnectedAppDetailScreen(it.coordinate, accountViewModel, nav) }
         composableFromEndArgs<Route.SoftwareAppDetail> { SoftwareAppDetailScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Calendars> { CalendarsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CalendarCollections> { CalendarCollectionsScreen(accountViewModel, nav) }

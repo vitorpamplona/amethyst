@@ -791,6 +791,12 @@
     <string name="napplet_decision_allow">Allow</string>
     <string name="napplet_decision_ask">Ask</string>
     <string name="napplet_decision_deny">Deny</string>
+    <string name="napplet_connected_apps_search_keywords">apps permissions signer napplet nsite webapp trust connected</string>
+    <string name="napplet_connected_app_trust_level">Signing trust level</string>
+    <string name="napplet_connected_app_capabilities">Capabilities</string>
+    <string name="napplet_connected_app_forget">Forget this app</string>
+    <string name="napplet_connected_app_op_overrides">Signing operation overrides</string>
+    <string name="napplet_connected_app_empty">No apps have connected yet.\n\nWhen a web app connects to your Nostr key, it will appear here.</string>
 
     <string name="nip82_repository_label">Source: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>

@@ -107,6 +107,12 @@ sealed class Route {
 
     @Serializable object NappletPermissions : Route()
 
+    @Serializable object ConnectedApps : Route()
+
+    @Serializable data class ConnectedAppDetail(
+        val coordinate: String,
+    ) : Route()
+
     @Serializable data class SoftwareAppDetail(
         val kind: Int,
         val pubKeyHex: HexKey,
