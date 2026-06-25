@@ -102,6 +102,13 @@ object NappletBrowserContract {
     const val KEY_BG_COLOR = "bgColor"
 
     /**
+     * The user's theme preference name ("DARK", "LIGHT", or "SYSTEM"), passed from the main process so
+     * the keyless `:napplet` process can apply the matching night mode and let embedded WebView content
+     * respond correctly to `prefers-color-scheme`.
+     */
+    const val KEY_THEME = "theme"
+
+    /**
      * Opaque per-tab session id the client stamps on [MSG_CREATE_SESSION] and every control message
      * ([MSG_NAVIGATE]/[MSG_RELOAD]/[MSG_BACK]/[MSG_SET_TOR]). A single provider instance is shared by all
      * embedded browser tabs (they bind the same Intent), so this scopes a control to the right surface —

@@ -119,6 +119,8 @@ class NappletHostActivity : ComponentActivity() {
     // NAP domain strings the shell advertises to the applet in the shell.init handshake.
     private var declaredDomains: List<String> = emptyList()
 
+    private var themeType: String = "SYSTEM"
+
     // Pre-localized capability labels for the "what it can access" sheet (resolved by the launcher).
     private var capabilityLabels: List<String> = emptyList()
 
@@ -200,6 +202,8 @@ class NappletHostActivity : ComponentActivity() {
             finish()
             return
         }
+
+        applyNightMode()
 
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             Toast.makeText(this, getString(R.string.napplet_webview_too_old), Toast.LENGTH_LONG).show()
@@ -412,6 +416,7 @@ class NappletHostActivity : ComponentActivity() {
         proxyPort = intent.getIntExtra(NappletHostContract.EXTRA_PROXY_PORT, -1)
         launchToken = intent.getStringExtra(NappletHostContract.EXTRA_LAUNCH_TOKEN).orEmpty()
         capabilityLabels = intent.getStringArrayListExtra(NappletHostContract.EXTRA_CAP_LABELS) ?: emptyList()
+        themeType = intent.getStringExtra(NappletHostContract.EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" }
 
         val requires = intent.getStringArrayListExtra(NappletHostContract.EXTRA_REQUIRES) ?: emptyList()
         val resolved = resolveRequiredCapabilities(requires)
@@ -791,6 +796,15 @@ class NappletHostActivity : ComponentActivity() {
                 else -> return
             }
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun applyNightMode() {
+        val uiManager = getSystemService(android.content.Context.UI_MODE_SERVICE) as android.app.UiModeManager
+        when (themeType) {
+            "DARK" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_YES
+            "LIGHT" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_NO
+            else -> {} // SYSTEM: follow the device setting (process default)
+        }
     }
 
     private fun resolveThemeColor(attr: Int): Int {

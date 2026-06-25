@@ -92,6 +92,7 @@ class NappletHostService : Service() {
         val useTor: Boolean,
         val proxyPort: Int,
         val bgColor: Int,
+        val themeType: String,
         val declaredDomains: List<String>,
     ) {
         // Read on the WebView worker thread in shouldInterceptRequest; written on the main thread in
@@ -186,6 +187,15 @@ class NappletHostService : Service() {
         return true
     }
 
+    private fun applyNightMode(themeType: String) {
+        val uiManager = getSystemService(android.content.Context.UI_MODE_SERVICE) as android.app.UiModeManager
+        when (themeType) {
+            "DARK" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_YES
+            "LIGHT" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_NO
+            else -> {} // SYSTEM: follow the device setting (process default)
+        }
+    }
+
     private fun buildTab(msg: Message): NappletTab? {
         val data = msg.data ?: return null
         val sessionId = data.getString(NappletEmbedContract.KEY_SESSION_ID) ?: return null
@@ -199,20 +209,24 @@ class NappletHostService : Service() {
         val requires = data.getStringArrayList(NappletHostContract.EXTRA_REQUIRES) ?: emptyList()
         val declaredDomains = (listOf("shell") + resolveRequiredCapabilities(requires).capabilities.map { it.name.lowercase() }).distinct()
 
-        return NappletTab(
-            sessionId = sessionId,
-            clientMessenger = msg.replyTo,
-            paths = pathList.indices.map { PathTag(pathList[it], hashList[it]) },
-            servers = data.getStringArrayList(NappletHostContract.EXTRA_SERVERS) ?: emptyList(),
-            author = author,
-            identifier = data.getString(NappletHostContract.EXTRA_IDENTIFIER).orEmpty(),
-            launchToken = launchToken,
-            websiteMode = data.getBoolean(NappletHostContract.EXTRA_WEBSITE_MODE, false),
-            useTor = data.getBoolean(NappletHostContract.EXTRA_USE_TOR, true),
-            proxyPort = data.getInt(NappletHostContract.EXTRA_PROXY_PORT, -1),
-            bgColor = data.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE),
-            declaredDomains = declaredDomains,
-        )
+        val tab =
+            NappletTab(
+                sessionId = sessionId,
+                clientMessenger = msg.replyTo,
+                paths = pathList.indices.map { PathTag(pathList[it], hashList[it]) },
+                servers = data.getStringArrayList(NappletHostContract.EXTRA_SERVERS) ?: emptyList(),
+                author = author,
+                identifier = data.getString(NappletHostContract.EXTRA_IDENTIFIER).orEmpty(),
+                launchToken = launchToken,
+                websiteMode = data.getBoolean(NappletHostContract.EXTRA_WEBSITE_MODE, false),
+                useTor = data.getBoolean(NappletHostContract.EXTRA_USE_TOR, true),
+                proxyPort = data.getInt(NappletHostContract.EXTRA_PROXY_PORT, -1),
+                bgColor = data.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE),
+                themeType = data.getString(NappletHostContract.EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" },
+                declaredDomains = declaredDomains,
+            )
+        applyNightMode(tab.themeType)
+        return tab
     }
 
     /** Builds the SandboxedUiAdapter for [tab] and ships its cross-process handle (coreLibInfo) to the client. */

@@ -83,6 +83,7 @@ class NappletBrowserActivity : ComponentActivity() {
     private var startUrl: String = "about:blank"
     private var proxyPort: Int = -1
     private var useTor: Boolean = true
+    private var themeType: String = "SYSTEM"
 
     private val contentFrame by lazy { FrameLayout(this) }
     private var loadingView: View? = null
@@ -149,6 +150,8 @@ class NappletBrowserActivity : ComponentActivity() {
         proxyPort = intent.getIntExtra(EXTRA_PROXY_PORT, -1)
         useTor = intent.getBooleanExtra(EXTRA_USE_TOR, true)
         title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
+        themeType = intent.getStringExtra(EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" }
+        applyNightMode()
 
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             Toast.makeText(this, getString(R.string.napplet_webview_too_old), Toast.LENGTH_LONG).show()
@@ -616,6 +619,15 @@ class NappletBrowserActivity : ComponentActivity() {
             addView(ProgressBar(this@NappletBrowserActivity))
         }
 
+    private fun applyNightMode() {
+        val uiManager = getSystemService(android.content.Context.UI_MODE_SERVICE) as android.app.UiModeManager
+        when (themeType) {
+            "DARK" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_YES
+            "LIGHT" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_NO
+            else -> {} // SYSTEM: follow the device setting (process default)
+        }
+    }
+
     private fun resolveThemeColor(attr: Int): Int {
         val tv = android.util.TypedValue()
         theme.resolveAttribute(attr, tv, true)
@@ -639,6 +651,7 @@ class NappletBrowserActivity : ComponentActivity() {
         private const val EXTRA_PROXY_PORT = "proxyPort"
         private const val EXTRA_USE_TOR = "useTor"
         private const val EXTRA_TITLE = "title"
+        private const val EXTRA_THEME = "theme"
 
         fun intent(
             context: Context,
@@ -646,6 +659,7 @@ class NappletBrowserActivity : ComponentActivity() {
             proxyPort: Int,
             useTor: Boolean,
             title: String = "",
+            theme: String = "SYSTEM",
         ): Intent =
             Intent()
                 .setClassName(context, "com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity")
@@ -653,6 +667,7 @@ class NappletBrowserActivity : ComponentActivity() {
                 .putExtra(EXTRA_PROXY_PORT, proxyPort)
                 .putExtra(EXTRA_USE_TOR, useTor)
                 .putExtra(EXTRA_TITLE, title)
+                .putExtra(EXTRA_THEME, theme)
                 // Distinct task identity per URL for documentLaunchMode=intoExisting.
                 .setData(Uri.parse(url))
     }

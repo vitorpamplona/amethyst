@@ -57,7 +57,8 @@ object EmbeddedTabFactory {
         EmbeddedTabHost.acquire(browserId(url)) {
             val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
             val initialUseTor = proxyPort > 0 && WebUrlNetworkRegistry.useTor(url)
-            EmbeddedBrowserController(context.applicationContext, proxyPort, initialUseTor, backgroundColor).also { it.bind(url) }
+            val theme = Amethyst.instance.uiPrefs.value.theme.value.name
+            EmbeddedBrowserController(context.applicationContext, proxyPort, initialUseTor, backgroundColor, theme).also { it.bind(url) }
         } as EmbeddedBrowserController
 
     /**

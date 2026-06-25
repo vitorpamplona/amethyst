@@ -134,6 +134,8 @@ object NappletLauncher {
         // Resolve capability labels here (the app has the resources) so the sandbox module needs none.
         val capLabels = declared.map { context.getString(it.labelRes()) }
 
+        val theme = Amethyst.instance.uiPrefs.value.theme.value.name
+
         return Bundle().apply {
             putStringArrayList(NappletHostContract.EXTRA_PATHS, ArrayList(paths.map { it.path }))
             putStringArrayList(NappletHostContract.EXTRA_HASHES, ArrayList(paths.map { it.hash }))
@@ -148,6 +150,7 @@ object NappletLauncher {
             putInt(NappletHostContract.EXTRA_PROXY_PORT, proxyPort)
             putBoolean(NappletHostContract.EXTRA_WEBSITE_MODE, websiteMode)
             putBoolean(NappletHostContract.EXTRA_USE_TOR, useTor)
+            putString(NappletHostContract.EXTRA_THEME, theme)
         }
     }
 }

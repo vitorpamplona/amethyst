@@ -81,6 +81,7 @@ class NappletBrowserService : Service() {
         val proxyPort: Int,
         var useTor: Boolean,
         val bgColor: Int,
+        val themeType: String,
     ) {
         var webView: WebView? = null
         var bridgeReplyProxy: JavaScriptReplyProxy? = null
@@ -137,6 +138,15 @@ class NappletBrowserService : Service() {
         super.onDestroy()
     }
 
+    private fun applyNightMode(themeType: String) {
+        val uiManager = getSystemService(android.content.Context.UI_MODE_SERVICE) as android.app.UiModeManager
+        when (themeType) {
+            "DARK" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_YES
+            "LIGHT" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_NO
+            else -> {} // SYSTEM: follow the device setting (process default)
+        }
+    }
+
     private fun tabFor(msg: Message): BrowserTab? = msg.data?.getString(NappletBrowserContract.KEY_SESSION_ID)?.let { tabs[it] }
 
     private fun onClientMessage(msg: Message): Boolean {
@@ -152,7 +162,9 @@ class NappletBrowserService : Service() {
                         proxyPort = data.getInt(NappletBrowserContract.KEY_PROXY_PORT, -1),
                         useTor = data.getBoolean(NappletBrowserContract.KEY_USE_TOR, false),
                         bgColor = data.getInt(NappletBrowserContract.KEY_BG_COLOR, android.graphics.Color.WHITE),
+                        themeType = data.getString(NappletBrowserContract.KEY_THEME).orEmpty().ifBlank { "SYSTEM" },
                     )
+                applyNightMode(tab.themeType)
                 tabs[sessionId] = tab
                 // Bind the broker once; a re-sent MSG_CREATE_SESSION (e.g. client reconnect) must not
                 // leak a second binding.
