@@ -123,7 +123,7 @@ class NostrSignerPermissionLedger(
                     7 -> NostrOpDecision.ALLOW // Reactions / emoji
                     else -> NostrOpDecision.ASK
                 }
-            NostrSignerOp.Encrypt -> NostrOpDecision.ASK
-            NostrSignerOp.Decrypt -> NostrOpDecision.ASK
+            NostrSignerOp.Encrypt -> NostrOpDecision.ALLOW
+            NostrSignerOp.Decrypt -> NostrOpDecision.ALLOW
         }
 }

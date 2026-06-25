@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.commons.napplet.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.napplet.signers.toSignerOp
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -55,13 +54,10 @@ import kotlin.coroutines.cancellation.CancellationException
  * Two capability-specific policies refine step 2/3:
  * - **Per-use capabilities** ([NappletCapability.requiresPerUseConsent], i.e. [NappletCapability.VALUE])
  *   never auto-approve from a prior grant — every payment is confirmed afresh, with the amount shown.
- * - **Signer self-gating**: an identity read or a sign-as-user op ([NappletRequest.signsAsUser])
- *   is gated here only when the key lives in Amethyst (a [NostrSignerInternal]). Remote (NIP-46) and
- *   external (NIP-55) signers run their own per-request consent UI, so we defer to them rather than
- *   double-prompt. A standing DENY is still honored, and the applet must still have *declared* the
- *   capability. This is safe only because the napplet host runs foreground-only, so the signer's
- *   prompt appears in the clear context of the user interacting with that napplet (it can't be
- *   fired from the background).
+ * - All signer types — internal, NIP-46 remote, and NIP-55 external — are gated through Amethyst's
+ *   consent UI before the operation reaches the signer. External signers add their own per-request
+ *   prompt on top (double-prompting), ensuring the user can differentiate requests from different
+ *   apps inside the external signer.
  *
  * Security invariants enforced here (never trusted from the applet): the signing identity is
  * always the host's signer; the napplet only ever supplies an unsigned template — the shell signs
@@ -125,8 +121,8 @@ class NappletBroker(
             return NappletResponse.Denied(capability, "Blocked by a standing denial.")
         }
 
-        // For internal signers, show the first-connect dialog if the app has no signer policy yet.
-        if (signer is NostrSignerInternal && signerLedger != null && !signerLedger.hasPolicy(identity.coordinate)) {
+        // Show the first-connect dialog if the app has no signer policy yet.
+        if (signerLedger != null && !signerLedger.hasPolicy(identity.coordinate)) {
             if (!ensureConnected(identity, declared)) {
                 return NappletResponse.Denied(capability, "Connection not authorized.")
             }
@@ -139,8 +135,6 @@ class NappletBroker(
                 request is NappletRequest.RegisterAction || request is NappletRequest.UnregisterAction -> true
                 // Cosmetic/negotiation capabilities (theme) never prompt.
                 !capability.requiresConsent -> true
-                // Remote/external signers run their own per-request consent UI — defer to them.
-                signerSelfGates(request) -> true
                 // A standing allow short-circuits, except for per-use capabilities (e.g. payments).
                 ledger.decide(identity, capability) == PermissionDecision.ALLOW && !capability.requiresPerUseConsent -> true
                 else -> authorizeWithConsent(identity, capability, request)
@@ -148,8 +142,8 @@ class NappletBroker(
 
         if (!authorized) return NappletResponse.Denied(capability, "The user declined.")
 
-        // Additional per-operation gate for internal signer signing/encryption.
-        if (signer is NostrSignerInternal && signerLedger != null) {
+        // Additional per-operation gate for signing/encryption.
+        if (signerLedger != null) {
             val op = request.toSignerOp()
             if (op != null && !authorizeSignerOp(identity, op, request)) {
                 return NappletResponse.Denied(capability, "Signing operation declined.")
@@ -192,9 +186,6 @@ class NappletBroker(
             ledger.record(identity, capability, effectiveGrant(capability, grant))
             grant.allowsExecution
         }
-
-    /** Identity reads and sign-as-user ops are gated by us only when we hold the key; remote/external signers gate themselves. */
-    private fun signerSelfGates(request: NappletRequest): Boolean = (request.capability == NappletCapability.IDENTITY || request.signsAsUser) && signer !is NostrSignerInternal
 
     /** Downgrades a grant to one-shot when the capability forbids persisting that scope (e.g. payments). */
     private fun effectiveGrant(

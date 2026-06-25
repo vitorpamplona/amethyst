@@ -405,16 +405,29 @@ class NappletBrokerTest {
         }
 
     @Test
-    fun externalSignerDefersIdentityWithoutPrompting() =
+    fun externalSignerIsPromptedByAmethystForIdentity() =
         runTest {
-            val prompt = ScriptedPrompt(GrantState.DENY) // would block if we asked
+            val prompt = ScriptedPrompt(GrantState.DENY)
+            val external = FakeExternalSigner("dd".repeat(32))
+
+            val response =
+                broker(prompt, signer = external).handle(applet, NappletRequest.GetPublicKey, allDeclared)
+
+            assertIs<NappletResponse.Denied>(response) // Amethyst asked and user denied
+            assertEquals(1, prompt.calls) // Amethyst prompts all signer types
+        }
+
+    @Test
+    fun externalSignerAllowedByAmethystReturnsPublicKey() =
+        runTest {
+            val prompt = ScriptedPrompt(GrantState.ALLOW_ONCE)
             val external = FakeExternalSigner("dd".repeat(32))
 
             val response =
                 broker(prompt, signer = external).handle(applet, NappletRequest.GetPublicKey, allDeclared)
 
             assertEquals(NappletResponse.PublicKey(external.pubKey), response)
-            assertEquals(0, prompt.calls) // deferred to the external signer; we did not prompt
+            assertEquals(1, prompt.calls) // Amethyst prompted before the external signer
         }
 
     @Test

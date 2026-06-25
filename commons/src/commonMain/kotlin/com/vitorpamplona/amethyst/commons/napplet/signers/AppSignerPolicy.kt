@@ -30,8 +30,9 @@ enum class AppSignerPolicy {
     FULL_TRUST,
 
     /**
-     * Auto-approve the most common operations (kind 1 short notes, kind 6 reposts, kind 7
-     * reactions); ask before anything else. A reasonable default for most apps.
+     * Auto-approve the most common operations: kind 1 short notes, kind 6 reposts, kind 7
+     * reactions, and all encrypt/decrypt operations; ask before anything else.
+     * A reasonable default for most apps.
      */
     REASONABLE,
 
