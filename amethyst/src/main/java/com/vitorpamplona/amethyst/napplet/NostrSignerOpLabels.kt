@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
+import org.json.JSONArray
+import org.json.JSONObject
 
 /** Human-readable label for a [NostrSignerOp]. */
 fun NostrSignerOp.label(context: Context): String =
@@ -81,36 +83,22 @@ private fun buildEventJson(
     createdAt: Long? = null,
     recipient: String? = null,
     encryption: String? = null,
-): String =
-    buildString {
-        append("{\n")
-        append("  \"kind\": $kind")
-        if (createdAt != null) append(",\n  \"created_at\": $createdAt")
-        if (recipient != null) append(",\n  \"recipient\": \"$recipient\"")
-        if (encryption != null) append(",\n  \"encryption\": \"$encryption\"")
-        append(",\n  \"tags\": [")
-        if (tags.isEmpty()) {
-            append("]")
-        } else {
-            append("\n")
-            tags.forEachIndexed { i, tag ->
-                append("    [")
-                append(tag.joinToString(", ") { "\"${it.replace("\\", "\\\\").replace("\"", "\\\"")}\"" })
-                append("]")
-                if (i < tags.size - 1) append(",")
-                append("\n")
-            }
-            append("  ]")
-        }
-        val escaped =
-            content
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-        append(",\n  \"content\": \"$escaped\"")
-        append("\n}")
+): String {
+    val obj = JSONObject()
+    obj.put("kind", kind)
+    if (createdAt != null) obj.put("created_at", createdAt)
+    if (recipient != null) obj.put("recipient", recipient)
+    if (encryption != null) obj.put("encryption", encryption)
+    val tagsArray = JSONArray()
+    for (tag in tags) {
+        val tagArray = JSONArray()
+        for (item in tag) tagArray.put(item)
+        tagsArray.put(tagArray)
     }
+    obj.put("tags", tagsArray)
+    obj.put("content", content)
+    return obj.toString(2)
+}
 
 /** Creates a [NappletConnectInfo] for the first-connect dialog. */
 fun buildConnectInfo(
