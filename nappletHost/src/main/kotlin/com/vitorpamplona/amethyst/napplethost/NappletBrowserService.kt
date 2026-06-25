@@ -34,6 +34,8 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.util.Log
+import android.webkit.ConsoleMessage
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -261,6 +263,43 @@ class NappletBrowserService : Service() {
         }
         WebView.setWebContentsDebuggingEnabled(false)
         wv.webViewClient = BrowserClient(tab)
+        wv.webChromeClient = BrowserChromeClient(tab)
+    }
+
+    private inner class BrowserChromeClient(
+        private val tab: BrowserTab?,
+    ) : WebChromeClient() {
+        override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+            if (tab == null) return false
+            pushConsoleLog(
+                tab,
+                consoleMessage.messageLevel().name,
+                consoleMessage.message(),
+                consoleMessage.sourceId(),
+                consoleMessage.lineNumber(),
+            )
+            return true
+        }
+    }
+
+    private fun pushConsoleLog(
+        tab: BrowserTab,
+        level: String,
+        message: String,
+        source: String,
+        line: Int,
+    ) {
+        val msg =
+            Message.obtain(null, NappletBrowserContract.MSG_CONSOLE_LOG).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletBrowserContract.KEY_CONSOLE_LEVEL, level)
+                        putString(NappletBrowserContract.KEY_CONSOLE_MESSAGE, message)
+                        putString(NappletBrowserContract.KEY_CONSOLE_SOURCE, source)
+                        putInt(NappletBrowserContract.KEY_CONSOLE_LINE, line)
+                    }
+            }
+        runCatching { tab.clientMessenger?.send(msg) }
     }
 
     /** Loads live web pages in-WebView (http/https) and hands other schemes to the system on a user tap. */

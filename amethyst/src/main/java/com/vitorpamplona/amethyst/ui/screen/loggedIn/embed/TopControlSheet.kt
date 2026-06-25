@@ -63,6 +63,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
  * the very top edge — out of the corner where a site puts its own avatar/menu. Pull it down (or tap) to
  * reveal the page's controls: route over Tor, reload, "what it can access" (sandboxed apps), and open
  * full screen. The page can't draw over it (the surface is z-ordered below this layer).
+ *
+ * @param onConsole When non-null, a "Console (N)" row is shown so the user can toggle the log
+ *   panel from the pull-down sheet. [consoleCount] is the number of messages already captured.
  */
 @Composable
 fun TopControlSheet(
@@ -70,6 +73,8 @@ fun TopControlSheet(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    consoleCount: Int = 0,
+    onConsole: (() -> Unit)? = null,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -125,6 +130,19 @@ fun TopControlSheet(
                     SheetItem(MaterialSymbols.OpenInFull, stringResource(R.string.favorite_app_open_window)) {
                         onExpandedChange(false)
                         chrome.onOpenFull()
+                    }
+                    onConsole?.let { showConsole ->
+                        SheetItem(
+                            MaterialSymbols.Code,
+                            if (consoleCount > 0) {
+                                stringResource(R.string.browser_console_title, consoleCount)
+                            } else {
+                                stringResource(R.string.browser_console_title_short)
+                            },
+                        ) {
+                            onExpandedChange(false)
+                            showConsole()
+                        }
                     }
                 }
             }
