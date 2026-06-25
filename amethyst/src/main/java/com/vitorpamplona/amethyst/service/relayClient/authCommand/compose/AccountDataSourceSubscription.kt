@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoor
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.ScreenAuthAccount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 
 @Composable
 fun RelayAuthSubscription(accountViewModel: AccountViewModel) = RelayAuthSubscription(accountViewModel, Amethyst.instance.authCoordinator)
@@ -50,9 +51,9 @@ fun RelayAuthSubscription(
                 store = Amethyst.instance.relayAuthPermissionStore,
                 globalPolicy = { account.settings.defaultRelayAuthPolicy.value },
                 isInMyRelayList = { relayUrl ->
-                    account.settings.localRelayServers.value.any {
-                        it.trimEnd('/') == relayUrl.trimEnd('/')
-                    }
+                    val normalized = relayUrl.normalizeRelayUrlOrNull() ?: return@RelayAuthPermissionLedger false
+                    normalized !in account.blockedRelayList.flow.value &&
+                        normalized in account.trustedRelays.flow.value
                 },
             )
         }
