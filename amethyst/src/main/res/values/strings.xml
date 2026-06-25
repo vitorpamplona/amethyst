@@ -667,11 +667,7 @@
     <string name="nsites">nSites</string>
     <string name="nsite_none_found">No nSites found yet.</string>
     <string name="browser">Browser</string>
-    <string name="browser_address_hint">Search or enter address</string>
     <string name="browser_reload">Reload</string>
-    <string name="browser_console_title_short">Console</string>
-    <string name="browser_console_title">Console (%1$d)</string>
-    <string name="browser_console_clear">Clear</string>
     <string name="browser_tor_on">Loading over Tor. Tap to use the open web.</string>
     <string name="browser_tor_off">Loading over the open web. Tap to use Tor.</string>
     <string name="browser_unsupported">The in-app browser needs Android 11 or newer.</string>
@@ -704,7 +700,6 @@
     <string name="napplet_permissions_forget">Forget this nApplet</string>
     <string name="napplet_permissions_blocked">Blocked</string>
     <string name="napplet_permissions_revoke">Revoke</string>
-    <string name="napplet_untitled">Untitled nApplet</string>
     <string name="napplet_none_found">No nApplets found yet.</string>
     <string name="napplet_fallback_title">nApplet %1$s…</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
