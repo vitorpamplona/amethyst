@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.browser
 
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -104,24 +103,15 @@ private const val RECENTS_LIMIT = 12
  * becomes a grouped omnibox suggestion list (favorites first + highlighted, then recents) with inline
  * ghost-text completion. Both decorate sites with the favicon captured when they were last opened.
  *
- * Requires API 30+ (the keyless `:napplet` browser host needs it); below that the Browser nav item is
- * hidden, so this screen is unreachable — the fallback message is just defense in depth.
+ * Works on any API level: each site loads in a full-screen direct-WebView activity, never the
+ * cross-process SurfaceControlViewHost surface that the *embedded* favorite-app tabs require (API 30+).
  */
 @Composable
 fun BrowserScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        BrowserLauncher(accountViewModel, nav)
-    } else {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                stringResource(R.string.browser_unsupported),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    BrowserLauncher(accountViewModel, nav)
 }
 
 @Composable
