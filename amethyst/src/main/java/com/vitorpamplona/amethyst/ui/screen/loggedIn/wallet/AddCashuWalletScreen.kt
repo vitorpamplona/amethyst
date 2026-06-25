@@ -426,16 +426,28 @@ fun AddCashuWalletScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // A mint typed into the input but not yet committed with the "+"
+            // button. Folding it into the save makes "+" optional: the user can
+            // type a mint and hit Save directly instead of being blocked by a
+            // disabled button with no obvious reason.
+            val pendingMint = mintInput.trim().trimEnd('/')
+
             Button(
                 onClick = {
+                    val allMints =
+                        if (pendingMint.isNotEmpty() && pendingMint !in mints) {
+                            mints.toList() + pendingMint
+                        } else {
+                            mints.toList()
+                        }
                     viewModel.saveWallet(
-                        mints = mints.toList(),
+                        mints = allMints,
                         keyMode = keyMode,
                         manualPrivkey = manualPrivkey.takeIf { keyMode == CashuWalletViewModel.P2pkKeyMode.Manual },
                     )
                 },
                 enabled =
-                    mints.isNotEmpty() &&
+                    (mints.isNotEmpty() || pendingMint.isNotEmpty()) &&
                         createState !is CashuWalletCreateState.Saving &&
                         (keyMode != CashuWalletViewModel.P2pkKeyMode.Manual || manualPrivkey.isNotBlank()),
                 modifier = Modifier.fillMaxWidth(),
