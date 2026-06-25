@@ -89,7 +89,7 @@ class NappletHostService : Service() {
         val author: String,
         val identifier: String,
         val launchToken: String,
-        val websiteMode: Boolean,
+        val profile: HostProfile,
         val useTor: Boolean,
         val proxyPort: Int,
         val bgColor: Int,
@@ -218,7 +218,7 @@ class NappletHostService : Service() {
                 author = author,
                 identifier = data.getString(NappletHostContract.EXTRA_IDENTIFIER).orEmpty(),
                 launchToken = launchToken,
-                websiteMode = data.getBoolean(NappletHostContract.EXTRA_WEBSITE_MODE, false),
+                profile = HostProfile.fromName(data.getString(NappletHostContract.EXTRA_HOST_PROFILE)),
                 useTor = data.getBoolean(NappletHostContract.EXTRA_USE_TOR, true),
                 proxyPort = data.getInt(NappletHostContract.EXTRA_PROXY_PORT, -1),
                 bgColor = data.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE),
@@ -255,13 +255,13 @@ class NappletHostService : Service() {
         val wv = WebView(context)
         val appOrigin = NappletWebContract.appOrigin(deriveAppId(tab.author, tab.identifier))
         val effectiveProxy = if (tab.useTor) tab.proxyPort else -1
-        tab.contentServer = NappletContentServer(tab.paths, tab.servers, effectiveProxy, cacheDir, shellHtml, shimJs, appOrigin, tab.websiteMode, imeProxy = true)
+        tab.contentServer = NappletContentServer(tab.paths, tab.servers, effectiveProxy, cacheDir, shellHtml, shimJs, appOrigin, tab.profile, imeProxy = true)
 
         hardenWebView(wv, tab)
         // Theme the pre-load background so the shell/app loading shows Amethyst's background, not white.
         wv.setBackgroundColor(tab.bgColor)
         wv.dropSystemBarInsets()
-        if (tab.websiteMode) applyWebViewProxy(effectiveProxy)
+        if (tab.profile.exposesNetwork) applyWebViewProxy(effectiveProxy)
         WebViewCompat.addWebMessageListener(wv, NappletWebContract.BRIDGE_NAME, setOf(NappletWebContract.ORIGIN), ::onShellMessage)
         tab.webView = wv
         wv.loadUrl(NappletWebContract.SHELL_URL)

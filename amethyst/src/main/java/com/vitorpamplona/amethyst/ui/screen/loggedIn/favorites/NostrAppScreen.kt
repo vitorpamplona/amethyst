@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -122,7 +123,7 @@ private fun EmbeddedNostrAppTab(
 
     val title = params.getString(NappletHostContract.EXTRA_TITLE).orEmpty()
     val capLabels = params.getStringArrayList(NappletHostContract.EXTRA_CAP_LABELS).orEmpty()
-    val websiteMode = params.getBoolean(NappletHostContract.EXTRA_WEBSITE_MODE, false)
+    val profile = HostProfile.fromName(params.getString(NappletHostContract.EXTRA_HOST_PROFILE))
     val useTor = params.getBoolean(NappletHostContract.EXTRA_USE_TOR, true)
 
     var canGoBack by remember { mutableStateOf(false) }
@@ -199,7 +200,7 @@ private fun EmbeddedNostrAppTab(
     BackHandler(enabled = canGoBack) { controller.back() }
 
     if (showAccess) {
-        AccessDialog(title, capLabels, websiteMode, useTor) { showAccess = false }
+        AccessDialog(title, capLabels, profile.exposesNetwork, useTor) { showAccess = false }
     }
 
     Scaffold(
@@ -251,7 +252,7 @@ private fun UnavailableTab(
 private fun AccessDialog(
     title: String,
     capLabels: List<String>,
-    websiteMode: Boolean,
+    showsNetwork: Boolean,
     useTor: Boolean,
     onDismiss: () -> Unit,
 ) {
@@ -262,7 +263,7 @@ private fun AccessDialog(
             capLabels.joinToString("\n") { "•  $it" }
         }
     val networkBody =
-        if (websiteMode) {
+        if (showsNetwork) {
             "\n\n" + stringResource(if (useTor) R.string.favorite_app_network_tor else R.string.favorite_app_network_open)
         } else {
             ""

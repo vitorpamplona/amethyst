@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.StaticWebsiteCard
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
+import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletBlobPrefetcher
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -132,7 +133,7 @@ fun RenderRootSiteEvent(
                         aggregateHash = null,
                         title = event.title() ?: "nsite",
                         requires = emptyList(),
-                        websiteMode = true,
+                        profile = HostProfile.WEBSITE,
                     )
                 }
             } else {
@@ -173,7 +174,7 @@ fun RenderNamedSiteEvent(
                         aggregateHash = null,
                         title = event.title() ?: event.identifier(),
                         requires = emptyList(),
-                        websiteMode = true,
+                        profile = HostProfile.WEBSITE,
                     )
                 }
             } else {

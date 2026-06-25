@@ -110,8 +110,8 @@ class NappletHostActivity : ComponentActivity() {
     // The sandbox never carries its own coordinate, so a compromised :napplet process can't forge one.
     private var launchToken: String = ""
 
-    // nSite "website mode": a normal web app (NIP-07 window.nostr + normal network), vs a locked napplet.
-    private var websiteMode: Boolean = false
+    // The host posture: a WEBSITE nSite (NIP-07 window.nostr + normal network) vs a locked NAPPLET.
+    private var profile: HostProfile = HostProfile.NAPPLET
 
     // Per-site network choice: route this site's traffic through Tor (default) or over the open web.
     // Applied to both the WebView proxy and the blob-fetch client; toggled from the top-bar onion.
@@ -224,7 +224,7 @@ class NappletHostActivity : ComponentActivity() {
         // "Open web" for a site makes everything direct — both its blob fetches (here) and its live
         // web traffic (the WebView proxy, below). Tor (the default) routes both through the SOCKS port.
         val effectiveProxy = if (useTor) proxyPort else -1
-        contentServer = NappletContentServer(paths, servers, effectiveProxy, cacheDir, shellHtml, shim, appOrigin, websiteMode)
+        contentServer = NappletContentServer(paths, servers, effectiveProxy, cacheDir, shellHtml, shim, appOrigin, profile)
 
         // Create + warm the WebView NOW so its (slow, first-in-process) Chromium init runs on the main
         // thread concurrently with the index probe below (which runs on IO) — instead of serially after
@@ -237,7 +237,7 @@ class NappletHostActivity : ComponentActivity() {
         // Route the WebView's own (off-origin) traffic through Tor for an nSite, unless this site was
         // opted out to the open web. Set process-wide before any page navigation; the shell + blobs are
         // served from cache via shouldInterceptRequest, so only the site's external requests hit this.
-        if (websiteMode) applyWebViewProxy(effectiveProxy)
+        if (profile.exposesNetwork) applyWebViewProxy(effectiveProxy)
         // Origin-restricted bridge: only the trusted shell page (main frame) can reach native.
         WebViewCompat.addWebMessageListener(
             webView,
@@ -411,7 +411,7 @@ class NappletHostActivity : ComponentActivity() {
         servers.addAll(intent.getStringArrayListExtra(NappletHostContract.EXTRA_SERVERS) ?: emptyList())
         author = intent.getStringExtra(NappletHostContract.EXTRA_AUTHOR).orEmpty()
         identifier = intent.getStringExtra(NappletHostContract.EXTRA_IDENTIFIER).orEmpty()
-        websiteMode = intent.getBooleanExtra(NappletHostContract.EXTRA_WEBSITE_MODE, false)
+        profile = HostProfile.fromName(intent.getStringExtra(NappletHostContract.EXTRA_HOST_PROFILE))
         useTor = intent.getBooleanExtra(NappletHostContract.EXTRA_USE_TOR, true)
         title = intent.getStringExtra(NappletHostContract.EXTRA_TITLE).orEmpty()
         proxyPort = intent.getIntExtra(NappletHostContract.EXTRA_PROXY_PORT, -1)
@@ -731,8 +731,8 @@ class NappletHostActivity : ComponentActivity() {
             onReload = { if (this::webView.isInitialized) webView.reload() },
             // Website-mode nSites can re-route over Tor; switching rebuilds the session via a confirm
             // dialog, so the row taps through rather than toggling inline.
-            torInitiallyOn = if (websiteMode && proxyPort > 0) useTor else null,
-            onNetworkTap = if (websiteMode && proxyPort > 0) ({ showNetworkDialog() }) else null,
+            torInitiallyOn = if (profile.exposesNetwork && proxyPort > 0) useTor else null,
+            onNetworkTap = if (profile.exposesNetwork && proxyPort > 0) ({ showNetworkDialog() }) else null,
             onInfo = { showAccessDialog() },
         )
 

@@ -25,11 +25,10 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
-import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.ThemeType
+import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletHostActivity
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -74,12 +73,12 @@ object NappletLauncher {
         aggregateHash: HexKey?,
         title: String,
         requires: List<String>,
-        // nSites open in "website mode": a NIP-07 window.nostr provider + normal network. The broker
-        // then grants the IDENTITY + RELAY capabilities NIP-07 needs (consent-gated), regardless of the
-        // (empty) manifest `requires`. Napplets pass false and keep their declared-only, locked sandbox.
-        websiteMode: Boolean = false,
+        // nSites open as [HostProfile.WEBSITE]: a NIP-07 window.nostr provider + normal network. The
+        // broker then grants the IDENTITY + RELAY capabilities NIP-07 needs (consent-gated), regardless
+        // of the (empty) manifest `requires`. Napplets keep the default locked [HostProfile.NAPPLET].
+        profile: HostProfile = HostProfile.NAPPLET,
     ) {
-        val params = buildLaunchParams(context, paths, servers, authorPubKey, identifier, aggregateHash, title, requires, websiteMode)
+        val params = buildLaunchParams(context, paths, servers, authorPubKey, identifier, aggregateHash, title, requires, profile)
         val intent =
             Intent(context, NappletHostActivity::class.java).apply {
                 putExtras(params)
@@ -104,7 +103,7 @@ object NappletLauncher {
         aggregateHash: HexKey?,
         title: String,
         requires: List<String>,
-        websiteMode: Boolean,
+        profile: HostProfile,
     ): Bundle {
         val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
 
@@ -120,18 +119,13 @@ object NappletLauncher {
         // Mint the launch token in the (trusted) main process: the broker resolves the sandbox's
         // requests back to THIS identity + declared set, regardless of anything the sandbox sends.
         val identity = NappletIdentity(authorPubKey = authorPubKey, identifier = identifier, aggregateHash = aggregateHash)
-        val declared =
-            if (websiteMode) {
-                setOf(NappletCapability.IDENTITY, NappletCapability.RELAY)
-            } else {
-                resolveRequiredCapabilities(requires).capabilities.toSet()
-            }
+        val declared = profile.declaredCapabilities(requires)
         val launchToken = NappletLaunchRegistry.register(identity, declared)
 
         // Resolve the per-site network choice (Tor default; a site can be opted out to the open web).
         // Locked napplets always keep Tor for their blob fetches — only nSites expose the toggle.
         NappletNetworkRegistry.init(context.applicationContext)
-        val useTor = if (websiteMode) NappletNetworkRegistry.useTor(identity.coordinate) else true
+        val useTor = if (profile.exposesNetwork) NappletNetworkRegistry.useTor(identity.coordinate) else true
 
         // Resolve capability labels here (the app has the resources) so the sandbox module needs none.
         val capLabels = declared.map { context.getString(it.labelRes()) }
@@ -159,7 +153,7 @@ object NappletLauncher {
             putStringArrayList(NappletHostContract.EXTRA_CAP_LABELS, ArrayList(capLabels))
             putString(NappletHostContract.EXTRA_LAUNCH_TOKEN, launchToken)
             putInt(NappletHostContract.EXTRA_PROXY_PORT, proxyPort)
-            putBoolean(NappletHostContract.EXTRA_WEBSITE_MODE, websiteMode)
+            putString(NappletHostContract.EXTRA_HOST_PROFILE, profile.name)
             putBoolean(NappletHostContract.EXTRA_USE_TOR, useTor)
             putString(NappletHostContract.EXTRA_THEME, theme)
         }

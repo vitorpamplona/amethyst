@@ -57,9 +57,9 @@ class NappletContentServer(
     // The applet's own per-applet origin (a distinct napplet.local subdomain). The shell is on
     // NappletWebContract.ORIGIN; app blobs are served here so the applet has a real, isolated origin.
     private val appOrigin: String,
-    // nSite "website mode": the applet is a normal web app — it gets a NIP-07 window.nostr provider,
-    // normal network (no app CSP; off-origin requests defer to the WebView), unlike a locked napplet.
-    private val websiteMode: Boolean = false,
+    // The host posture: a WEBSITE nSite is a normal web app — NIP-07 window.nostr provider, normal
+    // network (no app CSP; off-origin requests defer to the WebView), unlike a locked NAPPLET.
+    private val profile: HostProfile = HostProfile.NAPPLET,
     // Embedded surfaces (a windowless Service) can't host the soft keyboard, so the shim installs the
     // IME proxy agent that relays the focused field to the host's keyboard. The full-screen Activity
     // host has a native keyboard and leaves this false.
@@ -126,7 +126,7 @@ class NappletContentServer(
         }
         // Off-origin: a locked napplet 404s (connect-src 'none' means it shouldn't ask). An nSite in
         // website mode is a normal web app — defer to the WebView so it can load external resources.
-        return if (websiteMode) null else notFound()
+        return if (profile.allowsOffOrigin) null else notFound()
     }
 
     private fun serveShell(): WebResourceResponse {
@@ -172,7 +172,7 @@ class NappletContentServer(
 
         // Locked napplets get the strict app CSP (connect-src 'none', etc.). An nSite in website mode
         // is a normal web app: no app CSP, so it can talk to relays (wss) and load external resources.
-        val headers = if (websiteMode) emptyMap() else mapOf("Content-Security-Policy" to NappletWebContract.APP_CSP)
+        val headers = profile.appCsp?.let { mapOf("Content-Security-Policy" to it) } ?: emptyMap()
         return WebResourceResponse(
             mime,
             charset,
@@ -193,7 +193,7 @@ class NappletContentServer(
         // theme-independently. Allowed by the app CSP's `style-src 'unsafe-inline'`.
         val style = "<style>html,body{overscroll-behavior:none !important}</style>"
         // In website mode, set the NIP-07 flag synchronously *before* the shim so window.nostr installs.
-        val nip07Flag = if (websiteMode) "<script>window.__nappletNip07=true;</script>" else ""
+        val nip07Flag = if (profile.injectsNip07) "<script>window.__nappletNip07=true;</script>" else ""
         // Embedded surface: turn on the IME proxy agent (set before the shim runs).
         val imeFlag = if (imeProxy) "<script>window.__nappletImeProxy=true;</script>" else ""
         val script = "$style$nip07Flag$imeFlag<script>$shimJs</script>"

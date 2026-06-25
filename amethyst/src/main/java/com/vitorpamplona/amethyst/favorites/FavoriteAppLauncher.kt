@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
+import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -117,7 +118,7 @@ object FavoriteAppLauncher {
                     aggregateHash = null,
                     title = event.title() ?: "nsite",
                     requires = emptyList(),
-                    websiteMode = true,
+                    profile = HostProfile.WEBSITE,
                 )
             is NamedSiteEvent ->
                 NappletLauncher.launch(
@@ -129,7 +130,7 @@ object FavoriteAppLauncher {
                     aggregateHash = null,
                     title = event.title() ?: event.identifier(),
                     requires = emptyList(),
-                    websiteMode = true,
+                    profile = HostProfile.WEBSITE,
                 )
             else -> {
                 Log.w("FavoriteAppLauncher", "Favorited app not resolvable yet: $coordinate")
@@ -160,7 +161,7 @@ object FavoriteAppLauncher {
                     event.declaredAggregateHash() ?: event.computeAggregateHash(),
                     event.title() ?: "Napplet",
                     event.requires(),
-                    false,
+                    HostProfile.NAPPLET,
                 )
             is NamedNappletEvent ->
                 NappletLauncher.buildLaunchParams(
@@ -172,7 +173,7 @@ object FavoriteAppLauncher {
                     event.declaredAggregateHash() ?: event.computeAggregateHash(),
                     event.title() ?: event.identifier(),
                     event.requires(),
-                    false,
+                    HostProfile.NAPPLET,
                 )
             is RootSiteEvent ->
                 NappletLauncher.buildLaunchParams(
@@ -184,7 +185,7 @@ object FavoriteAppLauncher {
                     null,
                     event.title() ?: "nsite",
                     emptyList(),
-                    true,
+                    HostProfile.WEBSITE,
                 )
             is NamedSiteEvent ->
                 NappletLauncher.buildLaunchParams(
@@ -196,7 +197,7 @@ object FavoriteAppLauncher {
                     null,
                     event.title() ?: event.identifier(),
                     emptyList(),
-                    true,
+                    HostProfile.WEBSITE,
                 )
             else -> null
         }
