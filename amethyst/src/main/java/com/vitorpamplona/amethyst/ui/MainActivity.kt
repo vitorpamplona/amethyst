@@ -54,12 +54,12 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.UriParser
-import java.net.URLDecoder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.net.URLDecoder
 
 class MainActivity : AppCompatActivity() {
     companion object {
