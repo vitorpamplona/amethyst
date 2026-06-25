@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
+import com.vitorpamplona.amethyst.service.okhttp.OnionLocationCache
 import com.vitorpamplona.amethyst.service.okhttp.SurgeDns
 import com.vitorpamplona.amethyst.service.okhttp.SurgeDnsStore
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
@@ -240,6 +241,11 @@ class AppModules(
     // path on first lookup. Stored in cacheDir — pure perf data, OK if the OS evicts it.
     val dnsStore = SurgeDnsStore(File(appContext.safeCacheDir(), SurgeDnsStore.FILE_NAME), surgeDns)
 
+    // Shared cache populated by OnionLocationInterceptor from any HTTP/WebSocket
+    // response carrying an Onion-Location header. Consulted by OnionUrlRewriteInterceptor
+    // on Tor-enabled clients to transparently redirect to .onion addresses.
+    val onionLocationCache = OnionLocationCache()
+
     // manages all the other connections separately from relays.
     val okHttpClients: DualHttpClientManager =
         DualHttpClientManager(
@@ -258,6 +264,7 @@ class AppModules(
                 val profileOnly = settings?.localBlossomCacheProfilePicturesOnly?.value ?: false
                 master && !profileOnly && localBlossomCacheProbe.available.value
             },
+            onionCache = onionLocationCache,
         )
 
     // Offers easy methods to know when connections are happening through Tor or not
@@ -432,6 +439,7 @@ class AppModules(
             isMobileDataProvider = connManager.isMobileOrNull,
             scope = applicationIOScope,
             dns = surgeDns,
+            onionCache = onionLocationCache,
         )
 
     // Connects the INostrClient class with okHttp
