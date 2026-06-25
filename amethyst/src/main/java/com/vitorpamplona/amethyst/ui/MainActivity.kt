@@ -51,8 +51,10 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.UriParser
+import java.net.URLDecoder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -147,6 +149,18 @@ fun isNotificationRoute(uri: String) = uri.startsWith("notifications", true) || 
 
 fun isHashtagRoute(uri: String) = uri.startsWith("hashtag?id=") || uri.startsWith("nostr:hashtag?id=")
 
+fun isUrlRoute(uri: String) = uri.startsWith("url?id=") || uri.startsWith("nostr:url?id=")
+
+fun urlRoute(uri: String): Route.Url? {
+    val url =
+        runCatching {
+            val rawUrl = java.net.URI(uri.removePrefix("nostr:")).findParameterValue("id") ?: return null
+            URLDecoder.decode(rawUrl, Charsets.UTF_8.name())
+        }.getOrNull() ?: return null
+
+    return UrlId.toScopeOrNull(url)?.let { Route.Url(it) }
+}
+
 fun isWalletConnectRoute(uri: String) = uri.startsWith("dlnwc?value=") || uri.startsWith("amethyst+walletconnect:dlnwc?value=") || uri.startsWith("amethyst+walletconnect://dlnwc?value=")
 
 fun isMarmotGroupRoute(uri: String) = uri.startsWith("marmot:")
@@ -163,6 +177,9 @@ fun uriToRoute(
     }
     if (isHashtagRoute(uri)) {
         return Route.Hashtag(uri.removePrefix("nostr:").removePrefix("hashtag?id=").lowercase())
+    }
+    if (isUrlRoute(uri)) {
+        return urlRoute(uri)
     }
 
     val nip19 = Nip19Parser.uriToRoute(uri)?.entity

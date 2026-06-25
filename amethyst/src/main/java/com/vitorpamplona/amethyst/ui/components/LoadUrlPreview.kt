@@ -30,6 +30,8 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 
@@ -39,11 +41,12 @@ fun LoadUrlPreview(
     urlText: String,
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
+    nav: INav? = null,
 ) {
     if (!accountViewModel.settings.showUrlPreview()) {
         ClickableUrl(urlText, url)
     } else {
-        LoadUrlPreviewDirect(url, urlText, callbackUri, accountViewModel)
+        LoadUrlPreviewDirect(url, urlText, callbackUri, accountViewModel, nav)
     }
 }
 
@@ -53,6 +56,7 @@ fun LoadUrlPreviewDirect(
     urlText: String,
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
+    nav: INav? = null,
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")
     val urlPreviewState by
@@ -72,7 +76,7 @@ fun LoadUrlPreviewDirect(
     ) { state ->
         when (state) {
             is UrlPreviewState.Loaded -> {
-                RenderLoaded(state, url, callbackUri, accountViewModel)
+                RenderLoaded(state, url, callbackUri, accountViewModel, nav)
             }
 
             is UrlPreviewState.Loading -> {
@@ -94,6 +98,7 @@ fun RenderLoaded(
     url: String,
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
+    nav: INav? = null,
 ) {
     when {
         state.previewInfo.mimeType.startsWith("image") -> {
@@ -130,7 +135,14 @@ fun RenderLoaded(
         }
 
         else -> {
-            UrlPreviewCard(url, state.previewInfo)
+            UrlPreviewCard(
+                url,
+                state.previewInfo,
+                onUrlComments =
+                    nav?.let {
+                        { it.nav(Route.Url(url)) }
+                    },
+            )
         }
     }
 }

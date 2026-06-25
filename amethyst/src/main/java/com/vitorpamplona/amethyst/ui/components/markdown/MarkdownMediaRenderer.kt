@@ -132,7 +132,7 @@ class MarkdownMediaRenderer(
                     renderAsCompleteLink(title ?: uri, uri, richTextStringBuilder)
                 } else {
                     renderInlineFullWidth(richTextStringBuilder) {
-                        LoadUrlPreview(uri, title ?: uri, callbackUri, accountViewModel)
+                        LoadUrlPreview(uri, title ?: uri, callbackUri, accountViewModel, nav)
                     }
                 }
             }
