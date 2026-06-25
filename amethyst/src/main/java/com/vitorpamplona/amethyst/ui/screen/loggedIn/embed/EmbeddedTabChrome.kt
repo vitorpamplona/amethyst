@@ -37,4 +37,8 @@ data class EmbeddedTabChrome(
     val onToggleTor: () -> Unit = {},
     /** The "what it can access" sheet, for sandboxed napplets/nsites; null for a plain web client. */
     val onInfo: (() -> Unit)? = null,
+    /** Whether the current URL/app is already saved as a favorite. */
+    val isFavorite: Boolean = false,
+    /** Toggles the current site/app in the favorites registry; null when not applicable. */
+    val onFavorite: (() -> Unit)? = null,
 )

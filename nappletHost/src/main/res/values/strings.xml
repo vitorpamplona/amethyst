@@ -34,6 +34,10 @@
     <string name="napplet_net_tor_label">Loads over Tor</string>
     <string name="napplet_net_open_label">Loads over the open web</string>
 
+    <!-- Favorite toggle in the pull-down sheet -->
+    <string name="browser_favorite_add">Add to favorites</string>
+    <string name="browser_favorite_remove">Remove from favorites</string>
+
     <!-- Loading / unavailable screens -->
     <string name="napplet_unavailable_title">Couldn\'t load “%1$s”</string>
     <string name="napplet_unavailable_subtitle">The publisher\'s servers may be offline, or you\'re not connected. You can try again.</string>

@@ -89,6 +89,14 @@ object NappletIpc {
      */
     const val MSG_RECORD_ICON = 10
 
+    /**
+     * Host → broker (browser mode): toggle a URL in the main-process favorites registry. Carries
+     * [KEY_FAVORITE_URL] and [KEY_FAVORITE_LABEL]. The broker adds the URL if it isn't already
+     * a favorite, or removes it if it is — identical to the in-app star toggle on the home screen.
+     * Fire-and-forget; no reply needed.
+     */
+    const val MSG_TOGGLE_WEB_FAVORITE = 11
+
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
 
@@ -106,6 +114,12 @@ object NappletIpc {
 
     /** The bare host (e.g. `example.com`) a browser Tor choice belongs to. */
     const val KEY_WEB_HOST = "webHost"
+
+    /** The full URL (e.g. `https://example.com`) to toggle as a web favorite. */
+    const val KEY_FAVORITE_URL = "favoriteUrl"
+
+    /** A human-readable label for the favorited URL (typically the host). */
+    const val KEY_FAVORITE_LABEL = "favoriteLabel"
 
     /** Boolean: this sandbox surface is now foreground (true) or backgrounded (false). */
     const val KEY_FOREGROUND = "foreground"

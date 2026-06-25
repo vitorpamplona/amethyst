@@ -590,7 +590,27 @@ class NappletBrowserActivity : ComponentActivity() {
             liveUrl = startUrl,
             onNavigate = { loadAddress(it) },
             onConsole = { consolePanel?.toggle() },
+            isFavoriteInitially = intent.getBooleanExtra(EXTRA_IS_FAVORITE, false),
+            onFavoriteToggle = { url, _ -> sendFavoriteToggle(url) },
         ).also { controlSheet = it }
+
+    private fun sendFavoriteToggle(url: String) {
+        val host =
+            runCatching {
+                android.net.Uri
+                    .parse(url)
+                    .host
+            }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_TOGGLE_WEB_FAVORITE).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_FAVORITE_URL, url)
+                        putString(NappletIpc.KEY_FAVORITE_LABEL, host)
+                    }
+            }
+        if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
+    }
 
     private fun buildConsolePanel(): View =
         NappletConsolePanel(this).also {
@@ -639,6 +659,7 @@ class NappletBrowserActivity : ComponentActivity() {
         private const val EXTRA_PROXY_PORT = "proxyPort"
         private const val EXTRA_USE_TOR = "useTor"
         private const val EXTRA_TITLE = "title"
+        private const val EXTRA_IS_FAVORITE = "isFavorite"
 
         fun intent(
             context: Context,
@@ -646,6 +667,7 @@ class NappletBrowserActivity : ComponentActivity() {
             proxyPort: Int,
             useTor: Boolean,
             title: String = "",
+            isFavorite: Boolean = false,
         ): Intent =
             Intent()
                 .setClassName(context, "com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity")
@@ -653,6 +675,7 @@ class NappletBrowserActivity : ComponentActivity() {
                 .putExtra(EXTRA_PROXY_PORT, proxyPort)
                 .putExtra(EXTRA_USE_TOR, useTor)
                 .putExtra(EXTRA_TITLE, title)
+                .putExtra(EXTRA_IS_FAVORITE, isFavorite)
                 // Distinct task identity per URL for documentLaunchMode=intoExisting.
                 .setData(Uri.parse(url))
     }

@@ -131,6 +131,15 @@ fun TopControlSheet(
                         onExpandedChange(false)
                         chrome.onOpenFull()
                     }
+                    chrome.onFavorite?.let { toggleFavorite ->
+                        SheetItem(
+                            if (chrome.isFavorite) MaterialSymbols.Star else MaterialSymbols.StarBorder,
+                            stringResource(if (chrome.isFavorite) R.string.favorite_app_remove else R.string.favorite_app_add),
+                        ) {
+                            onExpandedChange(false)
+                            toggleFavorite()
+                        }
+                    }
                     onConsole?.let { showConsole ->
                         SheetItem(
                             MaterialSymbols.Code,
