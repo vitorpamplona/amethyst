@@ -58,6 +58,7 @@ class EmbeddedBrowserController(
     private val proxyPort: Int,
     private val initialUseTor: Boolean,
     private val backgroundColor: Int,
+    private val themeType: String = "SYSTEM",
 ) : EmbeddedSurfaceController,
     EmbeddedImeBridge,
     ConsoleBridge {
@@ -154,6 +155,7 @@ class EmbeddedBrowserController(
                         putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort)
                         putBoolean(NappletBrowserContract.KEY_USE_TOR, initialUseTor)
                         putInt(NappletBrowserContract.KEY_BG_COLOR, backgroundColor)
+                        putString(NappletBrowserContract.KEY_THEME, themeType)
                     }
             }
         runCatching { serviceMessenger?.send(msg) }

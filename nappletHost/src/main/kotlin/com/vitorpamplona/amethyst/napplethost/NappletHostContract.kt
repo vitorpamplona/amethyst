@@ -74,6 +74,13 @@ object NappletHostContract {
     const val EXTRA_USE_TOR = "napplet_use_tor"
 
     /**
+     * The user's theme preference name ("DARK", "LIGHT", or "SYSTEM"), passed from the main process so
+     * the keyless `:napplet` process — which never runs the full app init — can apply the same night mode
+     * and let WebView content respond correctly to `prefers-color-scheme`.
+     */
+    const val EXTRA_THEME = "napplet_theme"
+
+    /**
      * FQN of the main-process broker service (in `:amethyst`). The sandbox binds it by name so it
      * needs no compile-time reference to `:amethyst`. Must match the manifest `<service>` declaration.
      */
