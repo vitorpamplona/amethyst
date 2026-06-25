@@ -803,7 +803,6 @@ class NappletHostActivity : ComponentActivity() {
         when (themeType) {
             "DARK" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_YES
             "LIGHT" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_NO
-            else -> {} // SYSTEM: follow the device setting (process default)
         }
     }
 

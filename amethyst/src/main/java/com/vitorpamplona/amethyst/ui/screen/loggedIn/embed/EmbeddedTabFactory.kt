@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import androidx.annotation.RequiresApi
@@ -28,6 +29,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
+import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.EmbeddedBrowserController
@@ -57,7 +59,16 @@ object EmbeddedTabFactory {
         EmbeddedTabHost.acquire(browserId(url)) {
             val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
             val initialUseTor = proxyPort > 0 && WebUrlNetworkRegistry.useTor(url)
-            val theme = Amethyst.instance.uiPrefs.value.theme.value.name
+            val themeType = Amethyst.instance.uiPrefs.value.theme.value
+            val theme =
+                when (themeType) {
+                    ThemeType.DARK -> "DARK"
+                    ThemeType.LIGHT -> "LIGHT"
+                    ThemeType.SYSTEM -> {
+                        val nightMask = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+                        if (nightMask == Configuration.UI_MODE_NIGHT_YES) "DARK" else "LIGHT"
+                    }
+                }
             EmbeddedBrowserController(context.applicationContext, proxyPort, initialUseTor, backgroundColor, theme).also { it.bind(url) }
         } as EmbeddedBrowserController
 

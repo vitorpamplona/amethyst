@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.favorites
 
 import android.app.Activity
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -29,6 +30,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity
@@ -77,7 +79,16 @@ object FavoriteAppLauncher {
     ) {
         val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
         val useTor = proxyPort > 0 && (preferTor || WebUrlNetworkRegistry.useTor(url))
-        val theme = Amethyst.instance.uiPrefs.value.theme.value.name
+        val themeType = Amethyst.instance.uiPrefs.value.theme.value
+        val theme =
+            when (themeType) {
+                ThemeType.DARK -> "DARK"
+                ThemeType.LIGHT -> "LIGHT"
+                ThemeType.SYSTEM -> {
+                    val nightMask = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+                    if (nightMask == Configuration.UI_MODE_NIGHT_YES) "DARK" else "LIGHT"
+                }
+            }
         val intent =
             NappletBrowserActivity.intent(context, url, proxyPort, useTor, theme = theme).apply {
                 if (context !is Activity) addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
