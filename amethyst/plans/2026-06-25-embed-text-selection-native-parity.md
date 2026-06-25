@@ -133,6 +133,28 @@ Until pinned, treat this as a **WebView/Chromium off-window-surface limitation**
 the app layer cannot currently restore the highlight without recreating the
 surface (#1).
 
+## How to test
+
+The on-device harness lives at **`tools/ime-test/`** (`index.html` + `README.md`).
+It's a single page with an `<input>`, a `<textarea>`, and an on-page log that
+timestamps focus/selection/input/composition events, **paint latency**,
+long-tasks, and main-thread blocks — the instrumentation that pinned the erase,
+caret-jump, and first-letter-freeze bugs, and exactly what we'll want when
+profiling the magnifier.
+
+Run it (full details in `tools/ime-test/README.md`):
+
+1. `cd tools/ime-test && python3 -m http.server 8765`
+2. Reach it: emulator → `http://10.0.2.2:8765`; USB device →
+   `adb reverse tcp:8765 tcp:8765` then `http://localhost:8765`.
+3. Open that URL in the **in-app browser** (`BrowserScreen` address bar) to load
+   it as an *embedded* tab (the relay path). Opening the same URL full-screen and
+   pressing `back` is how you reproduce the highlight bug below.
+
+Console log lines are tagged `[ImeDiag]` and surface in `adb logcat` (the
+`:napplet` process owns the WebView console). This is a dev tool — nothing under
+`tools/` ships, which is why those diagnostic strings are kept out of `src/`.
+
 ## Key files
 
 - `commons/src/commonMain/composeResources/files/napplet/shim.js` — DOM bridge.
