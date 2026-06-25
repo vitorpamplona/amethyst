@@ -32,13 +32,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,6 +54,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
@@ -78,6 +78,7 @@ private data class ConnectedAppEntry(
     val coordinate: String,
     val title: String,
     val domain: String,
+    val iconUrl: String?,
     val signerPolicy: AppSignerPolicy?,
     val capabilityCount: Int,
 )
@@ -166,20 +167,11 @@ private fun ConnectedAppCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
+            FavoriteAppIcon(
+                app = FavoriteApp.NostrApp(entry.coordinate, entry.title, 0L, entry.iconUrl),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(44.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        MaterialSymbols.Apps,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
+            )
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -242,21 +234,23 @@ private suspend fun loadConnectedApps(
         .map { coordinate ->
             val author = coordinate.substringBefore(':')
             val identifier = coordinate.substringAfter(':', "")
+            val (title, iconUrl) = resolveAppMeta(author, identifier, untitled)
             ConnectedAppEntry(
                 coordinate = coordinate,
-                title = resolveAppTitle(author, identifier, untitled),
+                title = title,
                 domain = identifier.ifBlank { author.take(12) + "…" },
+                iconUrl = iconUrl,
                 signerPolicy = signerPolicies[coordinate],
                 capabilityCount = capGrants[coordinate]?.size ?: 0,
             )
         }.sortedBy { it.title.lowercase() }
 }
 
-private fun resolveAppTitle(
+private fun resolveAppMeta(
     author: String,
     identifier: String,
     untitled: String,
-): String {
+): Pair<String, String?> {
     val events =
         Amethyst.instance.cache
             .filter(Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND), authors = listOf(author)))
@@ -268,7 +262,8 @@ private fun resolveAppTitle(
                 is RootNappletEvent -> identifier.isEmpty()
                 else -> false
             }
-        }
-    return (match as? NappletManifest)?.title()?.ifBlank { null }
-        ?: identifier.ifBlank { untitled }
+        } as? NappletManifest
+    val title = match?.title()?.ifBlank { null } ?: identifier.ifBlank { untitled }
+    val iconUrl = match?.icon()?.ifBlank { null }
+    return title to iconUrl
 }
