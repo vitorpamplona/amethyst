@@ -25,6 +25,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -33,6 +35,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import android.os.SystemClock
 import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
@@ -51,6 +54,7 @@ import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 
 /**
  * Provider for the **embedded** in-app browser. Runs in the keyless `:napplet` process: it hosts the
@@ -190,9 +194,54 @@ class NappletBrowserService : Service() {
                 // reload the one the user toggled.
                 applyWebViewProxy(if (tab.useTor) tab.proxyPort else -1) { tab.webView?.reload() }
             }
+            NappletBrowserContract.MSG_MAGNIFIER_REQUEST -> onMagnifierRequest(msg)
             else -> return false
         }
         return true
+    }
+
+    // One reusable output bitmap per tab would be ideal, but loupe size is fixed per drag; createBitmap each
+    // frame is cheap next to the draw. Source rect is in view px (== surface px, the SCVH is 1:1).
+    private fun onMagnifierRequest(msg: Message) {
+        val tab = tabFor(msg) ?: return
+        val wv = tab.webView ?: return
+        val data = msg.data ?: return
+        val cx = data.getFloat(NappletBrowserContract.KEY_MAG_X)
+        val cy = data.getFloat(NappletBrowserContract.KEY_MAG_Y)
+        val boxW = data.getInt(NappletBrowserContract.KEY_MAG_BOX_W, 150).coerceIn(16, 1024)
+        val boxH = data.getInt(NappletBrowserContract.KEY_MAG_BOX_H, 84).coerceIn(16, 1024)
+        val zoom = data.getFloat(NappletBrowserContract.KEY_MAG_ZOOM, 1.6f).coerceIn(1f, 4f)
+        val reqT = data.getLong(NappletBrowserContract.KEY_MAG_REQ_T)
+
+        val outW = (boxW * zoom).toInt().coerceAtLeast(1)
+        val outH = (boxH * zoom).toInt().coerceAtLeast(1)
+        val t0 = SystemClock.elapsedRealtimeNanos()
+        val bitmap = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        canvas.drawColor(tab.bgColor)
+        // Map the source rect (centered on cx,cy in view px) into the zoomed output bitmap.
+        canvas.scale(zoom, zoom)
+        canvas.translate(-(cx - boxW / 2f), -(cy - boxH / 2f))
+        wv.draw(canvas)
+
+        val baos = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
+        val bytes = baos.toByteArray()
+        bitmap.recycle()
+        val captureMs = (SystemClock.elapsedRealtimeNanos() - t0) / 1_000_000.0
+
+        val reply =
+            Message.obtain(null, NappletBrowserContract.MSG_MAGNIFIER_FRAME).apply {
+                this.data =
+                    Bundle().apply {
+                        putByteArray(NappletBrowserContract.KEY_MAG_BYTES, bytes)
+                        putInt(NappletBrowserContract.KEY_MAG_W, outW)
+                        putInt(NappletBrowserContract.KEY_MAG_H, outH)
+                        putDouble(NappletBrowserContract.KEY_MAG_CAPTURE_MS, captureMs)
+                        putLong(NappletBrowserContract.KEY_MAG_REQ_T, reqT)
+                    }
+            }
+        runCatching { tab.clientMessenger?.send(reply) }
     }
 
     /** Builds the SandboxedUiAdapter for [tab] and ships its cross-process handle (coreLibInfo) to the client. */

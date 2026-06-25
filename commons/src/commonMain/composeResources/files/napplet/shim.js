@@ -277,6 +277,12 @@
       return [n.selectionStart || 0, n.selectionEnd || 0];
     }
     function setSel(n, s, e){
+      // No-op if already there: re-applying the same selection still fires `select`/`selectionchange`, and
+      // every such redundant event ripples into a host report → geometry update → toolbar/handle recompose
+      // (visible churn). Our re-asserts/re-applies frequently target the current range, so guard them here.
+      var cur = selOf(n);
+      if (cur[0] === s && cur[1] === e) return;
+      lastSelActivityAt = perfNow(); // a real selection write → the field may auto-scroll to reveal it
       if (isCE(n)) ceSetSel(n, s, e);
       else { try { n.setSelectionRange(s, e); } catch (_) {} }
     }
@@ -329,6 +335,13 @@
         else if (x < c.x) hi = mid;
         else lo = mid + 1;
       }
+      // The search lands on the boundary just RIGHT of x; round to the NEAREST boundary instead (native
+      // getOffsetForPosition) so tapping the left half of a glyph doesn't advance the caret past it. Only
+      // compare within the same line (skip when lo sits at a wrap, where lo-1 is on the previous row).
+      if (lo > 0) {
+        var cl = caretCoords(n, lo - 1), cr = caretCoords(n, lo);
+        if (cl && cr && cl.top === cr.top && (x - cl.x) < (cr.x - x)) lo = lo - 1;
+      }
       return lo;
     }
     // The focused field's bounding box in CSS px (toolbar anchor). When the selection is a bare caret it also
@@ -337,10 +350,22 @@
       try {
         var b = n.getBoundingClientRect();
         var g = { l: b.left, t: b.top, r: b.right, b: b.bottom, sx: b.left, sb: b.bottom, ex: b.right, eb: b.bottom, vw: window.innerWidth };
-        var sel = selOf(n);
-        if (sel[0] === sel[1] && !isCE(n)) {
-          var c = caretCoords(n, sel[0]);
-          if (c) { g.cx = c.x; g.ct = c.top; g.cb = c.bottom; }
+        if (!isCE(n)) {
+          var sel = selOf(n);
+          if (sel[0] === sel[1]) {
+            // Bare caret → carry the caret rect so the host shows the insertion handle.
+            var c = caretCoords(n, sel[0]);
+            if (c) { g.cx = c.x; g.ct = c.top; g.cb = c.bottom; }
+          } else {
+            // Range → carry the start/end caret feet so the host shows draggable selection handles, and
+            // tighten the box to the selected line span so the toolbar anchors above the selection.
+            var cs = caretCoords(n, sel[0]), ce = caretCoords(n, sel[1]);
+            if (cs && ce) {
+              g.rng = true; // marks a real range so the host keeps these feet through Chrome's collapse fight
+              g.sx = cs.x; g.sb = cs.bottom; g.ex = ce.x; g.eb = ce.bottom;
+              g.t = Math.min(cs.top, ce.top); g.b = Math.max(cs.bottom, ce.bottom);
+            }
+          }
         }
         return g;
       } catch (_) { return null; }
@@ -356,17 +381,40 @@
     // Last selection we either applied (applyState) or already reported, so the asynchronous
     // selectionchange our own setSel triggers doesn't echo back to the host as a fresh edit.
     var lastSel = null;
+    // The live non-collapsed field range we protect from Chrome's off-window abandonment (see the
+    // selectionchange handler). Tracked centrally so handle-extends and select-all keep it current.
+    var lastFieldRange = null, lastFieldAt = -1;
+    // When the selection last changed (Chrome-driven OR our own setSel). Forming/re-asserting a selection makes
+    // the browser auto-scroll the field to reveal it, firing `scroll` events that are NOT a user content scroll.
+    // The hide-on-scroll path uses this to ignore those: hiding the host overlays on a selection-reveal scroll
+    // makes the handles/toolbar blink off-and-on every time a selection settles. See onAnyScroll.
+    var lastSelActivityAt = -1;
     function sameSel(a, b){ return !!(a && b && a[0] === b[0] && a[1] === b[1]); }
+    function noteSel(sel){
+      lastSel = sel;
+      if (el && !isCE(el)) {
+        if (sel[0] !== sel[1]) { lastFieldRange = [sel[0], sel[1]]; lastFieldAt = perfNow(); }
+        else { lastFieldRange = null; }
+      }
+    }
     function reportState(){
       if (!el) return;
       var sel = selOf(el);
-      lastSel = sel;
+      noteSel(sel);
       send({ type:'ime.state', text: valOf(el), selStart: sel[0], selEnd: sel[1], geom: fieldGeom(el) });
     }
 
     document.addEventListener('focusin', function(e){
       if (isEditable(e.target)) {
         el = e.target; inComposition = false; lastSel = selOf(el); send(focusInfo(el));
+        // Focusing a field clears any page-text selection in the browser. The page selectionchange handler is
+        // muted while a field is focused (el is set), so it never emits the `active:false` — emit it here, or
+        // the host's page handles + Copy bar linger ABOVE the field overlays (and, being z-above, steal the
+        // caret/selection-handle drag so the caret can't be moved).
+        if (pageSelText) { lastPageRange = null; sendPageSel(false, null); }
+        // Cancel any in-flight scroll-hide from the page phase so the new field overlays aren't suppressed by a
+        // stale `scrolling` state (its settle would otherwise keep getting re-armed by the field reveal-scrolls).
+        scrolling = false; if (scrollTimer) { clearTimeout(scrollTimer); scrollTimer = null; }
         // The host shrinks the surface for the keyboard, but also nudge the field into view in case IME
         // insets aren't delivered (some hosts) so it never sits behind the keyboard.
         try { el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (_) {}
@@ -377,13 +425,70 @@
     }, true);
     // The page (its own JS, autofill) changed the field: resync the host keyboard's view of it.
     document.addEventListener('input', function(e){ if (e.target === el && !el.__nappletIme) reportState(); }, true);
-    // Just mirror selection changes inside the focused editable to the host. The host owns the authoritative
-    // selection, so it (not the shim) detects and re-asserts the collapse-to-endpoint that Chrome does when it
-    // abandons a selection it can't present handles for in the embedded surface — see RemoteImeView.onPageState.
+    // Mirror selection changes inside the focused editable to the host. Off-window Chrome abandons a field
+    // selection by collapsing the caret to one of its endpoints; we re-assert it RIGHT HERE, synchronously,
+    // the same way the page-text path does — reverting before the collapse paints, so it doesn't blink (the
+    // old path round-tripped through the host EditText, leaving a visible collapsed frame each cycle). The
+    // host's own re-assert in RemoteImeView.onPageState stays as a fallback for collapses we don't catch.
     document.addEventListener('selectionchange', function(){
-      if (!el || el.__nappletIme) return;
-      if (sameSel(selOf(el), lastSel)) return; // our own applyState/setSel echoing back
+      if (!el || el.__nappletIme) return; // our own applyState/setSel
+      lastSelActivityAt = perfNow(); // Chrome moved the selection → an imminent reveal-scroll isn't a user scroll
+      var sel = selOf(el);
+      if (sameSel(sel, lastSel)) return; // echo of what we just applied
+      if (!isCE(el) && lastFieldRange && sel[0] === sel[1] &&
+          (sel[0] === lastFieldRange[0] || sel[0] === lastFieldRange[1]) &&
+          (perfNow() - lastFieldAt) < 1500) {
+        // Chrome's off-window abandonment collapsed our live range to an endpoint → snap it back
+        // synchronously (reverts before paint, so no blink) and keep the window open. The host already
+        // holds this range, so we don't re-report (which would feed the slow round-trip loop).
+        el.__nappletIme = true;
+        setSel(el, lastFieldRange[0], lastFieldRange[1]);
+        el.__nappletIme = false;
+        lastSel = selOf(el);
+        lastFieldAt = perfNow();
+        return;
+      }
       reportState();
+    }, true);
+    // Tap handling on the focused editable. A single tap collapses any selection to a caret at the tap point
+    // and shows the insertion handle (native; off-window Chrome won't collapse-on-tap itself). A DOUBLE tap
+    // selects the word — but `click` fires before `dblclick`, so instead of guessing with timing we DEFER the
+    // collapse and let the real `dblclick` cancel it. This is robust to Chrome's own double-click timing
+    // (a timing guess raced it and sometimes ate the word selection → "cursor jumps to end of word").
+    var collapseTimer = null;
+    function clearCollapse() { if (collapseTimer) { clearTimeout(collapseTimer); collapseTimer = null; } }
+    document.addEventListener('dblclick', function(e){
+      if (!el || isCE(el)) return;
+      clearCollapse(); // a real double-tap → don't collapse; keep Chrome's word selection
+      var s = selOf(el);
+      if (s[0] !== s[1] && !sameSel(s, lastSel)) reportState(); // report the word only if not already sent
+    }, true);
+    document.addEventListener('click', function(e){
+      if (!el || isCE(el) || e.target !== el) return;
+      var sel = selOf(el);
+      if (sel[0] !== sel[1]) {
+        // Tap landed on a selection. Defer the collapse: if a dblclick follows (within the tap window) it
+        // cancels this and the word stays selected; otherwise this fires and collapses to the tapped offset.
+        var x = e.clientX, y = e.clientY;
+        clearCollapse();
+        collapseTimer = setTimeout(function(){
+          collapseTimer = null;
+          if (!el) return;
+          var s = selOf(el);
+          if (s[0] === s[1]) return; // already collapsed
+          var off = offsetFromPoint(el, x, y);
+          el.__nappletIme = true;
+          setSel(el, off, off);
+          el.__nappletIme = false;
+          lastSel = selOf(el);
+          reportState();
+          send({ type:'ime.carettap', geom: fieldGeom(el) });
+        }, 300);
+      } else {
+        // Tap on a bare caret → (re-)show the insertion handle. If a double-tap follows, dblclick selects the
+        // word and supersedes this.
+        send({ type:'ime.carettap', geom: fieldGeom(el) });
+      }
     }, true);
 
     function enter(n){
@@ -447,7 +552,7 @@
         }
         setSel(n, msg.selStart, msg.selEnd);
         if (!composingActive && inComposition) { inComposition = false; fireComp(n, 'compositionend', d.inserted || ''); }
-      } finally { n.__nappletIme = false; lastSel = selOf(n); }
+      } finally { n.__nappletIme = false; noteSel(selOf(n)); }
     }
 
     // --- Page (non-editable) text selection re-hosting ---
@@ -474,6 +579,7 @@
     }
     document.addEventListener('selectionchange', function(){
       if (el || pageReasserting) return; // selections inside an editable are handled above
+      lastSelActivityAt = perfNow(); // page selection moved → an imminent reveal-scroll isn't a user scroll
       var s = window.getSelection();
       if (s && s.rangeCount && !s.isCollapsed) {
         var r = s.getRangeAt(0);
@@ -510,10 +616,100 @@
       } catch (_) {}
     }
 
+    // Word-granularity snapping (native: dragging a word selection's handle extends a word at a time). The
+    // end handle snaps to the end of the word at/after the offset; the start handle to the start of the word
+    // at/before it. Whitespace between words extends to the adjacent word so you never stop mid-gap.
+    function isWordChar(c){ return c != null && /\S/.test(c); }
+    function wordEndAt(text, off){
+      var i = off;
+      while (i < text.length && !isWordChar(text[i])) i++;
+      while (i < text.length && isWordChar(text[i])) i++;
+      return i;
+    }
+    function wordStartAt(text, off){
+      var i = off;
+      while (i > 0 && !isWordChar(text[i - 1])) i--;
+      while (i > 0 && isWordChar(text[i - 1])) i--;
+      return i;
+    }
+
+    // Host drag of an in-field selection handle: move the dragged edge to the offset under (x,y) CSS px,
+    // keeping the other edge anchored. Snaps to word boundaries (the selection was made by word), and is
+    // clamped so the dragged edge can't cross the anchor (no inversion).
+    function fieldExtend(edge, x, y){
+      if (!el || isCE(el)) return;
+      try {
+        var off = offsetFromPoint(el, x, y);
+        var text = valOf(el);
+        var sel = selOf(el);
+        var s, e;
+        if (edge === 'start') {
+          e = sel[1];
+          s = Math.min(wordStartAt(text, off), e);
+        } else {
+          s = sel[0];
+          e = Math.max(wordEndAt(text, off), s);
+        }
+        el.__nappletIme = true;
+        setSel(el, s, e);
+        el.__nappletIme = false;
+        lastSel = selOf(el);
+        reportState();
+      } catch (_) {}
+    }
+
+    // While the page scrolls, host-drawn selection UI (toolbar + handles) would float at stale positions, so
+    // the host hides it on scroll-start and we re-report fresh geometry on scroll-idle so it reappears in the
+    // right place — like Android. Only signal when there's a selection to hide (a field range or page text).
+    var scrolling = false, scrollTimer = null, autoScrolling = false;
+    // How long after a selection change a scroll is treated as the browser's auto-reveal of that selection
+    // (not a user content scroll). Generous enough to catch the reveal-scroll that fires a frame or two later.
+    var SCROLL_SEL_GUARD_MS = 350;
+    function hasSelectionUi(){ return !!pageSelText || !!(el && (function(s){ return s[0] !== s[1]; })(selOf(el))); }
+    function onAnyScroll(){
+      if (autoScrolling) return; // our own drag-to-edge auto-scroll: keep the overlays up, don't hide them
+      if (!hasSelectionUi()) return;
+      if ((perfNow() - lastSelActivityAt) < SCROLL_SEL_GUARD_MS) {
+        // The browser auto-scrolled to reveal a just-changed selection (forming/re-asserting a range scrolls a
+        // textarea). That's not a user content scroll: hiding here would blink the host overlays off-and-on every
+        // time a selection settles. Reposition them in place instead (geometry shifted by the reveal-scroll).
+        // Crucially we do NOT touch the hide-on-scroll timer: if a real scroll-hide is somehow active, these
+        // reveal-scrolls must not keep re-arming it (that would leave the overlays hidden indefinitely).
+        if (el) reportState();
+        else { var sr = window.getSelection(); if (sr && sr.rangeCount && !sr.isCollapsed) sendPageSel(true, sr.getRangeAt(0)); }
+        return;
+      }
+      if (!scrolling) { scrolling = true; send({ type:'ime.scroll', active: true }); }
+      if (scrollTimer) clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(function(){
+        scrolling = false; scrollTimer = null;
+        // Refresh geometry FIRST (so overlays reposition), then tell the host to show them again.
+        if (el) reportState();
+        else { var s = window.getSelection(); if (s && s.rangeCount && !s.isCollapsed) sendPageSel(true, s.getRangeAt(0)); }
+        send({ type:'ime.scroll', active: false });
+      }, 150);
+    }
+    document.addEventListener('scroll', onAnyScroll, true); // capture: any scroller, not just the document
+
     window.__nappletImeHandle = function(msg){
       if (msg.type === 'ime.set') applyState(msg);
       else if (msg.type === 'ime.action') enter(el);
       else if (msg.type === 'ime.pageextend') pageExtend(msg.edge, msg.x, msg.y);
+      else if (msg.type === 'ime.fieldextend') fieldExtend(msg.edge, msg.x, msg.y);
+      else if (msg.type === 'ime.autoscroll') {
+        // Host drag of a handle near the surface's top/bottom edge → scroll the content (the textarea if it
+        // scrolls, else the page) so the selection can keep extending, then re-report geometry so the
+        // overlays follow. Flagged so our own scroll doesn't trip the hide-on-scroll path above.
+        var dy = msg.dy || 0;
+        autoScrolling = true;
+        try {
+          if (el && (el.tagName || '').toUpperCase() === 'TEXTAREA') el.scrollTop += dy;
+          window.scrollBy(0, dy);
+        } catch (_) {}
+        if (el) reportState();
+        else { var s = window.getSelection(); if (s && s.rangeCount && !s.isCollapsed) sendPageSel(true, s.getRangeAt(0)); }
+        setTimeout(function(){ autoScrolling = false; }, 0);
+      }
       else if (msg.type === 'ime.caretmove') {
         if (el && !isCE(el)) {
           var off = offsetFromPoint(el, msg.x, msg.y);

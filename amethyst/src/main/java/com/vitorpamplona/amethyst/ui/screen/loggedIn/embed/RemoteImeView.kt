@@ -121,6 +121,21 @@ class RemoteImeView(
     var onRangeSelectionChanged: ((Boolean) -> Unit)? = null
     private var hadRange = false
 
+    // Off-window Chrome abandons a selection by momentarily collapsing the caret to an endpoint, which we (or
+    // the page shim) re-assert right back — so the mirrored selection flickers range→caret→range within a few
+    // ms during a long-press/double-tap. The host-drawn handles/toolbar are gated on [hadRange], so reporting
+    // every flip blinks them off and back on, in lock-step with each collapse cycle. Native never shows that
+    // churn. So we DEFER the "range lost" signal by [RANGE_LOSS_DEBOUNCE_MS]: a re-assert that restores the
+    // range first cancels the pending hide, and only a selection that truly STAYS collapsed hides the overlays.
+    // Gaining a range is always reported immediately.
+    private val reportRangeLost =
+        Runnable {
+            if (selectionStart == selectionEnd && hadRange) {
+                hadRange = false
+                onRangeSelectionChanged?.invoke(false)
+            }
+        }
+
     /** Fired when the user edits text via the keyboard (not on programmatic page-state applies). The host
      *  hides the insertion handle while typing, the way Android does. */
     var onEdited: (() -> Unit)? = null
@@ -187,6 +202,7 @@ class RemoteImeView(
 
     /** The page field blurred: drop the keyboard. */
     fun onPageBlur() {
+        removeCallbacks(reportRangeLost)
         if (hadRange) {
             hadRange = false
             onRangeSelectionChanged?.invoke(false)
@@ -227,9 +243,18 @@ class RemoteImeView(
     ) {
         super.onSelectionChanged(selStart, selEnd)
         val isRange = selStart != selEnd
-        if (isRange != hadRange) {
-            hadRange = isRange
-            onRangeSelectionChanged?.invoke(isRange)
+        if (isRange) {
+            // A range is back (or still here): cancel any pending hide and show immediately.
+            removeCallbacks(reportRangeLost)
+            if (!hadRange) {
+                hadRange = true
+                onRangeSelectionChanged?.invoke(true)
+            }
+        } else if (hadRange) {
+            // Collapsed — but this may be Chrome's transient abandonment we're about to re-assert. Defer the
+            // hide; if the range returns within the window, the show branch above cancels this.
+            removeCallbacks(reportRangeLost)
+            postDelayed(reportRangeLost, RANGE_LOSS_DEBOUNCE_MS)
         }
         schedule()
     }
@@ -321,5 +346,10 @@ class RemoteImeView(
         // Wider than Chrome's ~600ms re-collapse interval so consecutive abandonments stay inside the window,
         // yet short enough that a deliberate user tap-to-collapse (well after the gesture) is accepted.
         private const val REASSERT_WINDOW_MS = 800L
+
+        // How long a collapse must persist before we hide the host-drawn selection overlays. The shim/host
+        // re-assert restores an abandonment collapse within a frame or two (one IPC hop), so this only needs to
+        // outlast that round-trip — comfortably short enough that a genuine tap-to-collapse still feels instant.
+        private const val RANGE_LOSS_DEBOUNCE_MS = 250L
     }
 }

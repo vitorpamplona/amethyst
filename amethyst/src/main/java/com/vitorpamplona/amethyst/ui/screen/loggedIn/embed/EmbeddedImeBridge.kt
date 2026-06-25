@@ -38,6 +38,7 @@ fun parseSelectionGeometry(o: JSONObject?): SelectionGeometry? {
         caretX = if (o.has("cx")) o.optDouble("cx").toFloat() else null,
         caretTop = if (o.has("ct")) o.optDouble("ct").toFloat() else null,
         caretBottom = if (o.has("cb")) o.optDouble("cb").toFloat() else null,
+        isRange = o.optBoolean("rng", false),
     )
 }
 
@@ -89,6 +90,24 @@ sealed interface ImeEvent {
         val text: String,
         val geometry: SelectionGeometry?,
     ) : ImeEvent
+
+    /**
+     * The embedded page started ([active] true) or finished ([active] false) scrolling. Host-drawn selection
+     * UI hides while scrolling (its geometry is stale mid-scroll) and reappears, repositioned, on settle —
+     * the shim re-reports geometry just before the `active=false` so the overlays land in the right place.
+     */
+    data class Scroll(
+        val active: Boolean,
+    ) : ImeEvent
+
+    /**
+     * The user tapped the focused field, placing a bare caret. Re-shows the insertion handle even when the
+     * tap didn't move the caret (so no [State] fired) — native shows the handle on every tap. [geometry]
+     * carries the caret rect. Gated host-side to non-empty fields, like `Editor`.
+     */
+    data class CaretTap(
+        val geometry: SelectionGeometry?,
+    ) : ImeEvent
 }
 
 /**
@@ -111,4 +130,8 @@ data class SelectionGeometry(
     val caretX: Float? = null,
     val caretTop: Float? = null,
     val caretBottom: Float? = null,
+    // True when this is an in-field *range* selection whose [startX]/[startBottom]/[endX]/[endBottom] are the
+    // real selection-endpoint feet (not the field-box placeholders). Lets the host hold the range geometry
+    // through Chrome's transient collapse-to-caret reports during the re-assert fight.
+    val isRange: Boolean = false,
 )

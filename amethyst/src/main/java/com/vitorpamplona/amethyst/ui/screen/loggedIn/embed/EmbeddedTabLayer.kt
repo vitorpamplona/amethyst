@@ -23,15 +23,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.os.Build
+import android.os.SystemClock
 import android.view.ViewGroup
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -62,11 +66,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -78,6 +86,31 @@ import kotlin.math.roundToInt
 
 // How far off-screen a parked (inactive) warm tab is shifted — well past any real screen width.
 private val OFFSCREEN_SHIFT = 10_000.dp
+
+// Per-drag-move auto-scroll step (CSS px) when a handle is dragged into the surface's top/bottom edge zone.
+private const val AUTOSCROLL_STEP_CSS = 40.0
+
+/**
+ * Drives the selection loupe from a handle drag: [active] shows/hides the bubble, [fingerLayerPx] is the
+ * drag point in the tab layer's px (where the bubble floats), and ([surfaceX], [surfaceY]) is the same point
+ * in surface px (what the provider captures around). Called on drag start/move with `true`, on end with `false`.
+ */
+private typealias OnMagnify = (active: Boolean, fingerLayerPx: Offset, surfaceX: Float, surfaceY: Float) -> Unit
+
+/** Sends a CSS-px positional IME op (caret move / selection extend) to the page; [edge] is null for a caret move. */
+private fun EmbeddedImeBridge.sendFieldOp(
+    type: String,
+    edge: String?,
+    cssX: Float,
+    cssY: Float,
+) = sendImeOp(
+    JSONObject()
+        .put("type", type)
+        .apply { if (edge != null) put("edge", edge) }
+        .put("x", cssX.toDouble())
+        .put("y", cssY.toDouble())
+        .toString(),
+)
 
 /**
  * The persistent surface layer: a full-window overlay (mounted once in the app shell, below the
@@ -295,47 +328,45 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         val context = LocalContext.current
         val imeBridge = EmbeddedTabHost.sessions.firstOrNull { it.id == activeId }?.controller as? EmbeddedImeBridge
         val imeView = remember { RemoteImeView(context) }
-        // The embedded WebView can't show Chrome's copy/paste toolbar in its cross-process surface, so when
-        // the page has a non-empty selection we show our own here, over the page, and route its actions to
-        // the hidden EditText (which mirrors the selection) — see [RemoteImeView.onRangeSelectionChanged].
-        var showSelectionToolbar by remember { mutableStateOf(false) }
-        var fieldGeometry by remember { mutableStateOf<SelectionGeometry?>(null) }
-        // Insertion (cursor) handle visibility: shown when a tap places/moves a bare caret, hidden while
-        // typing — like Android. A caret-bearing geometry update means a tap; an edit means typing.
-        var showInsertionHandle by remember { mutableStateOf(false) }
-        var pageSelection by remember { mutableStateOf<ImeEvent.PageSelection?>(null) }
+        // The embedded WebView can't show Chrome's copy/paste toolbar or selection handles in its cross-process
+        // surface, so we draw our own over the page and route actions through the hidden EditText (which mirrors
+        // the selection). All the show/hide state lives in one [SelectionUiState] so the rules — toolbar hides
+        // while dragging or scrolling, handles hide while scrolling — are expressed in one place.
+        val sel = remember { SelectionUiState() }
         DisposableEffect(imeBridge) {
             imeView.bind(imeBridge)
-            imeView.onRangeSelectionChanged = { showSelectionToolbar = it }
-            imeView.onEdited = { showInsertionHandle = false }
+            imeView.onRangeSelectionChanged = { sel.onFieldRangeToggle(it) }
+            imeView.onEdited = { sel.onEdited() }
             imeBridge?.onImeEvent = { event ->
                 when (event) {
                     is ImeEvent.Focus -> {
                         imeView.onPageFocus(event)
-                        event.geometry?.let { fieldGeometry = it }
-                        if (event.geometry?.caretX != null) showInsertionHandle = true
+                        // A field took focus → the browser dropped any page-text selection; clear its overlay so
+                        // the stale page handles/Copy bar don't sit above (and steal drags from) the field UI.
+                        sel.onPageSelection(null)
+                        // Cancel any in-flight scroll-hide from the page phase: otherwise the field's own
+                        // selection-reveal scrolls keep it armed and the new field handles/toolbar never appear.
+                        sel.scrolling = false
+                        sel.onFieldGeometry(event.geometry, event.text.isNotEmpty())
                     }
                     ImeEvent.Blur -> {
                         imeView.onPageBlur()
-                        fieldGeometry = null
-                        showInsertionHandle = false
+                        sel.onBlur()
                     }
                     is ImeEvent.State -> {
                         imeView.onPageState(event)
-                        event.geometry?.let { fieldGeometry = it }
-                        if (event.geometry?.caretX != null) showInsertionHandle = true
+                        sel.onFieldGeometry(event.geometry, event.text.isNotEmpty())
                     }
-                    is ImeEvent.PageSelection -> pageSelection = event.takeIf { it.active }
+                    is ImeEvent.PageSelection -> sel.onPageSelection(event.takeIf { it.active })
+                    is ImeEvent.Scroll -> sel.scrolling = event.active
+                    is ImeEvent.CaretTap -> sel.onCaretTap(event.geometry)
                 }
             }
             onDispose {
                 imeBridge?.onImeEvent = null
                 imeView.onRangeSelectionChanged = null
                 imeView.onEdited = null
-                showSelectionToolbar = false
-                fieldGeometry = null
-                showInsertionHandle = false
-                pageSelection = null
+                sel.reset()
                 imeView.onPageBlur()
                 imeView.bind(null)
             }
@@ -352,118 +383,209 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
             )
         }
 
-        // Input-field selection: cut/copy/paste/select-all routed to the hidden EditText. The DOM exposes no
-        // rect for a selection *inside* an input, so we anchor the bar above the field box (reported by the
-        // shim), falling back to the top of the tab if the field geometry is missing.
-        if (showSelectionToolbar && bounds.width > 0f && bounds.height > 0f) {
-            val fg = fieldGeometry
-            val items =
-                listOf(
-                    "Cut" to {
-                        imeView.cutSelection()
-                        Unit
-                    },
-                    "Copy" to {
-                        imeView.copySelection()
-                        Unit
-                    },
-                    "Paste" to {
-                        imeView.pasteClipboard()
-                        Unit
-                    },
-                    "Select all" to {
-                        imeView.selectAllText()
-                        Unit
-                    },
-                )
-            val originX = bounds.left - layerOrigin.x
-            val originY = bounds.top - layerOrigin.y
-            val toolbarH = with(density) { 44.dp.toPx() }
-            val gap = with(density) { 8.dp.toPx() }
-            if (fg != null && fg.viewportWidth > 0f) {
-                val scale = bounds.width / fg.viewportWidth
-                val topPx = originY + fg.top * scale
-                val toolbarY = if (topPx - toolbarH - gap > originY) topPx - toolbarH - gap else originY + fg.bottom * scale + gap
-                EmbeddedSelectionToolbar(
-                    items = items,
-                    centerXpx = originX + ((fg.left + fg.right) / 2f) * scale,
-                    topYpx = toolbarY,
-                )
-            } else {
-                EmbeddedSelectionToolbar(
-                    items = items,
-                    centerXpx = originX + bounds.width / 2f,
-                    topYpx = originY + gap,
-                )
+        // Native-style auto-hide: the insertion handle disappears after a few seconds of inactivity; the next
+        // caret tap re-emits geometry and re-shows it. A drag keeps it alive (dragging gate) so it never
+        // vanishes mid-drag; the key re-arms whenever the caret moves.
+        val caretForTimeout = sel.insertionHandle
+        LaunchedEffect(caretForTimeout, sel.dragging) {
+            if (caretForTimeout != null && !sel.dragging) {
+                delay(4_000)
+                sel.hideCaret()
             }
         }
 
+        // Selection loupe (magnifier #4): while a caret/selection handle is dragged, show a magnified live
+        // slice of the page. Host-side PixelCopy can't read the sandbox surface (ERROR_SOURCE_NO_DATA), so the
+        // pixels are captured in the `:napplet` provider and shipped back here (see [EmbeddedMagnifierProbe]).
+        // The handles report the drag point via [onMagnify]; we track it for the bubble position and ask the
+        // provider for frames, throttled to one in flight (with a 100 ms timeout) so a fast drag can't flood
+        // the IPC channel. The bubble follows the finger every move; the bitmap refreshes as frames land.
+        val magProbe = imeBridge as? EmbeddedMagnifierProbe
+        val magnifier = remember { MagnifierUiState() }
+        val magBubble = DpSize(132.dp, 74.dp)
+        val magZoom = 1.5f
+        // Source rect (surface px) = bubble px / zoom, so the provider-scaled frame lands ≈ bubble-sized.
+        val magSrcW = with(density) { (magBubble.width.toPx() / magZoom).roundToInt() }
+        val magSrcH = with(density) { (magBubble.height.toPx() / magZoom).roundToInt() }
+        DisposableEffect(magProbe) {
+            magProbe?.onMagnifierFrame = { frame ->
+                if (magnifier.visible) {
+                    magnifier.awaitingFrame = false
+                    BitmapFactory.decodeByteArray(frame.bytes, 0, frame.bytes.size)?.let { magnifier.image = it.asImageBitmap() }
+                }
+            }
+            onDispose {
+                magProbe?.onMagnifierFrame = null
+                magnifier.hide()
+            }
+        }
+        // Auto-scroll (#9): while dragging a handle near the surface's top/bottom edge, nudge the embedded
+        // content so the selection can keep extending past the viewport — like Android. We scroll on each
+        // drag-move that's in the edge zone (the finger is usually still micro-moving); the shim keeps the
+        // overlays up during this programmatic scroll and re-reports geometry so they track.
+        val edgeZonePx = with(density) { 56.dp.toPx() }
+        val onMagnify: OnMagnify = { active, fingerPx, surfaceX, surfaceY ->
+            // Drives the loupe, the toolbar-hide-while-dragging rule (and the dragged handle hides itself
+            // locally), edge auto-scroll, and suspending the nav drawer's edge swipe — one drag lifecycle.
+            sel.dragging = active
+            EmbeddedSelectionDrag.dragging = active
+            if (active && bounds.height > 0f) {
+                val oy = bounds.top - layerOrigin.y
+                val dy =
+                    when {
+                        fingerPx.y < oy + edgeZonePx -> -AUTOSCROLL_STEP_CSS
+                        fingerPx.y > oy + bounds.height - edgeZonePx -> AUTOSCROLL_STEP_CSS
+                        else -> 0.0
+                    }
+                if (dy != 0.0) imeBridge?.sendImeOp(JSONObject().put("type", "ime.autoscroll").put("dy", dy).toString())
+            }
+            if (!active || magProbe == null) {
+                magnifier.hide()
+            } else {
+                magnifier.visible = true
+                magnifier.anchorPx = fingerPx
+                val nowMs = SystemClock.uptimeMillis()
+                if (!magnifier.awaitingFrame || nowMs - magnifier.lastRequestUptimeMs > 100L) {
+                    magnifier.awaitingFrame = true
+                    magnifier.lastRequestUptimeMs = nowMs
+                    magProbe.requestMagnifier(surfaceX, surfaceY, magSrcW, magSrcH, magZoom)
+                }
+            }
+        }
+
+        val originX = bounds.left - layerOrigin.x
+        val originY = bounds.top - layerOrigin.y
+        val haveBounds = bounds.width > 0f && bounds.height > 0f
+
+        // In-field (<input>/<textarea>) range selection: cut/copy/paste/select-all routed to the hidden
+        // EditText, plus draggable start/end handles (drag → `ime.fieldextend`). The toolbar hides while a
+        // handle is dragged or the page scrolls; the handles hide only while scrolling.
+        val fieldItems =
+            listOf(
+                "Cut" to {
+                    imeView.cutSelection()
+                    Unit
+                },
+                "Copy" to {
+                    imeView.copySelection()
+                    Unit
+                },
+                "Paste" to {
+                    imeView.pasteClipboard()
+                    Unit
+                },
+                "Select all" to {
+                    imeView.selectAllText()
+                    Unit
+                },
+            )
+        val fieldHandles = sel.fieldHandles
+        if (haveBounds && fieldHandles != null) {
+            RangeSelectionOverlay(
+                geometry = fieldHandles,
+                surfaceOriginX = originX,
+                surfaceOriginY = originY,
+                scale = bounds.width / fieldHandles.viewportWidth,
+                showToolbar = sel.fieldToolbar != null,
+                toolbarItems = fieldItems,
+                onMagnify = onMagnify,
+                onExtend = { edge, cssX, cssY -> imeBridge?.sendFieldOp("ime.fieldextend", edge, cssX, cssY) },
+            )
+        } else if (haveBounds && sel.fieldToolbar != null) {
+            // Authoritative range but no geometry yet → a centered fallback toolbar (no handles).
+            EmbeddedSelectionToolbar(items = fieldItems, centerXpx = originX + bounds.width / 2f, topYpx = originY + with(density) { 8.dp.toPx() })
+        }
+
         // Bare caret in a field (no range): a draggable insertion handle under the cursor, like Android's.
-        val fgCaret = fieldGeometry
-        if (showInsertionHandle && !showSelectionToolbar && fgCaret?.caretX != null && fgCaret.caretBottom != null &&
-            fgCaret.viewportWidth > 0f && bounds.width > 0f && bounds.height > 0f
-        ) {
-            val scale = bounds.width / fgCaret.viewportWidth
-            val originX = bounds.left - layerOrigin.x
-            val originY = bounds.top - layerOrigin.y
+        val caretGeom = sel.insertionHandle
+        if (haveBounds && caretGeom?.caretX != null && caretGeom.caretBottom != null) {
+            val scale = bounds.width / caretGeom.viewportWidth
+            // Half the caret's line height (layer px), so the loupe capture centers on the text line.
+            val caretLineHalf =
+                (((caretGeom.caretTop?.let { caretGeom.caretBottom - it }) ?: 0f) * scale / 2f)
+                    .coerceIn(0f, with(density) { 28.dp.toPx() })
             InsertionHandle(
-                tipPx = Offset(originX + fgCaret.caretX * scale, originY + fgCaret.caretBottom * scale),
+                tipPx = Offset(originX + caretGeom.caretX * scale, originY + caretGeom.caretBottom * scale),
                 surfaceOriginX = originX,
                 surfaceOriginY = originY,
                 scale = scale,
-                onDragTo = { cssX, cssY ->
-                    imeBridge?.sendImeOp(
-                        JSONObject()
-                            .put("type", "ime.caretmove")
-                            .put("x", cssX.toDouble())
-                            .put("y", cssY.toDouble())
-                            .toString(),
-                    )
-                },
+                lineHalfPx = caretLineHalf,
+                onMagnify = onMagnify,
+                onTap = { sel.toggleInsertionPopup() },
+                onDragTo = { cssX, cssY -> imeBridge?.sendFieldOp("ime.caretmove", null, cssX, cssY) },
             )
         }
 
-        // Plain page-text selection: a Copy bar positioned over the selection + a drag handle at each end.
-        val pageSel = pageSelection
-        val geom = pageSel?.geometry
-        if (geom != null && geom.viewportWidth > 0f && bounds.width > 0f && bounds.height > 0f) {
-            PageSelectionOverlay(
-                geometry = geom,
-                surfaceOriginX = bounds.left - layerOrigin.x,
-                surfaceOriginY = bounds.top - layerOrigin.y,
-                scale = bounds.width / geom.viewportWidth,
-                onCopy = {
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("selection", pageSel.text))
-                },
-                onExtend = { edge, cssX, cssY ->
-                    imeBridge?.sendImeOp(
-                        JSONObject()
-                            .put("type", "ime.pageextend")
-                            .put("edge", edge)
-                            .put("x", cssX.toDouble())
-                            .put("y", cssY.toDouble())
-                            .toString(),
-                    )
-                },
+        // Tapping the bare insertion handle opens a small Paste / Select-all popup above the caret (native).
+        val popupCaret = sel.insertionPopupAt
+        if (haveBounds && popupCaret?.caretX != null && popupCaret.caretTop != null) {
+            val scale = bounds.width / popupCaret.viewportWidth
+            val gap = with(density) { 8.dp.toPx() }
+            val toolbarH = with(density) { 44.dp.toPx() }
+            val caretTopPx = originY + popupCaret.caretTop * scale
+            val caretBottomPx = originY + (popupCaret.caretBottom ?: popupCaret.caretTop) * scale
+            val topY = if (caretTopPx - toolbarH - gap > originY) caretTopPx - toolbarH - gap else caretBottomPx + gap
+            EmbeddedSelectionToolbar(
+                items =
+                    listOf(
+                        "Paste" to {
+                            imeView.pasteClipboard()
+                            sel.hideInsertionPopup()
+                        },
+                        "Select all" to {
+                            imeView.selectAllText()
+                            sel.hideInsertionPopup()
+                        },
+                    ),
+                centerXpx = originX + popupCaret.caretX * scale,
+                topYpx = topY,
             )
         }
+
+        // Plain page-text selection: a Copy bar over the selection + a drag handle at each end (same rules).
+        val pageHandles = sel.pageHandles
+        val pageSel = sel.pageSelection
+        if (haveBounds && pageHandles != null && pageSel != null) {
+            RangeSelectionOverlay(
+                geometry = pageHandles,
+                surfaceOriginX = originX,
+                surfaceOriginY = originY,
+                scale = bounds.width / pageHandles.viewportWidth,
+                showToolbar = sel.pageToolbar != null,
+                toolbarItems =
+                    listOf(
+                        "Copy" to {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("selection", pageSel.text))
+                            Unit
+                        },
+                    ),
+                onMagnify = onMagnify,
+                onExtend = { edge, cssX, cssY -> imeBridge?.sendFieldOp("ime.pageextend", edge, cssX, cssY) },
+            )
+        }
+
+        // The loupe sits above everything else, following the active handle/caret drag.
+        Magnifier(magnifier, layerSize, magBubble)
     }
 }
 
 /**
- * Host-drawn selection overlay for a plain page-text selection: a Copy bar above the selection plus a
- * draggable handle at each end. [geometry] is in the page's CSS px; [scale] and the surface origin map those
- * to this layer's px. Dragging a handle reports the new CSS-px target via [onExtend], which the shim turns
- * into a selection extension; the resulting geometry update repositions everything.
+ * Host-drawn selection overlay shared by in-field (`<input>`/`<textarea>`) and plain page-text selections:
+ * a floating toolbar above the selection (only when [showToolbar] — it's hidden mid-drag) plus a draggable
+ * handle at each end. [geometry] is in the page's CSS px; [scale] and the surface origin map those to this
+ * layer's px. Dragging a handle reports the new CSS-px target via [onExtend], which the shim turns into a
+ * selection extension; the resulting geometry update repositions everything.
  */
 @Composable
-private fun PageSelectionOverlay(
+private fun RangeSelectionOverlay(
     geometry: SelectionGeometry,
     surfaceOriginX: Float,
     surfaceOriginY: Float,
     scale: Float,
-    onCopy: () -> Unit,
+    showToolbar: Boolean,
+    toolbarItems: List<Pair<String, () -> Unit>>,
+    onMagnify: OnMagnify?,
     onExtend: (edge: String, cssX: Float, cssY: Float) -> Unit,
 ) {
     val density = LocalDensity.current
@@ -472,19 +594,24 @@ private fun PageSelectionOverlay(
 
     fun mapY(css: Float) = surfaceOriginY + css * scale
 
-    val toolbarH = with(density) { 44.dp.toPx() }
-    val gap = with(density) { 8.dp.toPx() }
-    val topPx = mapY(geometry.top)
-    val toolbarY = if (topPx - toolbarH - gap > surfaceOriginY) topPx - toolbarH - gap else mapY(geometry.bottom) + gap
+    if (showToolbar) {
+        val toolbarH = with(density) { 44.dp.toPx() }
+        val gap = with(density) { 8.dp.toPx() }
+        val topPx = mapY(geometry.top)
+        val toolbarY = if (topPx - toolbarH - gap > surfaceOriginY) topPx - toolbarH - gap else mapY(geometry.bottom) + gap
+        EmbeddedSelectionToolbar(
+            items = toolbarItems,
+            centerXpx = mapX((geometry.left + geometry.right) / 2f),
+            topYpx = toolbarY,
+        )
+    }
 
-    EmbeddedSelectionToolbar(
-        items = listOf("Copy" to onCopy),
-        centerXpx = mapX((geometry.left + geometry.right) / 2f),
-        topYpx = toolbarY,
-    )
-
-    SelectionHandle(Offset(mapX(geometry.startX), mapY(geometry.startBottom)), isStart = true, surfaceOriginX, surfaceOriginY, scale) { x, y -> onExtend("start", x, y) }
-    SelectionHandle(Offset(mapX(geometry.endX), mapY(geometry.endBottom)), isStart = false, surfaceOriginX, surfaceOriginY, scale) { x, y -> onExtend("end", x, y) }
+    // Half the selection's line height (layer px), clamped — the bounding box spans every selected line, so
+    // cap it at a sane single-line height so the loupe centers on the dragged endpoint's line, not the middle
+    // of a tall multi-line box.
+    val lineHalfPx = ((geometry.bottom - geometry.top) * scale / 2f).coerceAtMost(with(density) { 24.dp.toPx() })
+    SelectionHandle(Offset(mapX(geometry.startX), mapY(geometry.startBottom)), isStart = true, surfaceOriginX, surfaceOriginY, scale, lineHalfPx, onMagnify) { x, y -> onExtend("start", x, y) }
+    SelectionHandle(Offset(mapX(geometry.endX), mapY(geometry.endBottom)), isStart = false, surfaceOriginX, surfaceOriginY, scale, lineHalfPx, onMagnify) { x, y -> onExtend("end", x, y) }
 }
 
 /**
@@ -500,14 +627,25 @@ private fun SelectionHandle(
     surfaceOriginX: Float,
     surfaceOriginY: Float,
     scale: Float,
+    lineHalfPx: Float,
+    onMagnify: OnMagnify?,
     onDragTo: (cssX: Float, cssY: Float) -> Unit,
 ) {
     val sizeDp = 22.dp
     val sizePx = with(LocalDensity.current) { sizeDp.toPx() }
     val color = MaterialTheme.colorScheme.primary
     val currentTip by rememberUpdatedState(tipPx)
+    val currentMagnify by rememberUpdatedState(onMagnify)
     var dragTip by remember { mutableStateOf<Offset?>(null) }
     val tip = dragTip ?: tipPx
+
+    // Loupe capture: X follows the finger, Y is locked to the authoritative endpoint's line ([currentTip] is
+    // the foot, so lift by half the line height) — so the bubble shows the line being edited, not wherever the
+    // finger drifts vertically.
+    fun magnify(
+        fingerPx: Offset,
+        active: Boolean = true,
+    ) = currentMagnify?.invoke(active, fingerPx, fingerPx.x - surfaceOriginX, currentTip.y - surfaceOriginY - lineHalfPx)
     // Place the box so its pointed corner lands on the tip: start = top-right corner, end = top-left corner.
     val boxLeft = if (isStart) tip.x - sizePx else tip.x
     Box(
@@ -516,35 +654,48 @@ private fun SelectionHandle(
             .size(sizeDp)
             .pointerInput(Unit) {
                 detectDragGestures(
-                    onDragStart = { dragTip = currentTip },
+                    onDragStart = {
+                        dragTip = currentTip
+                        magnify(currentTip)
+                    },
                     onDrag = { change, delta ->
                         change.consume()
                         val np = (dragTip ?: currentTip) + delta
                         dragTip = np
                         onDragTo((np.x - surfaceOriginX) / scale, (np.y - surfaceOriginY) / scale)
+                        magnify(np)
                     },
-                    onDragEnd = { dragTip = null },
-                    onDragCancel = { dragTip = null },
+                    onDragEnd = {
+                        dragTip = null
+                        magnify(Offset.Zero, active = false)
+                    },
+                    onDragCancel = {
+                        dragTip = null
+                        magnify(Offset.Zero, active = false)
+                    },
                 )
             },
     ) {
-        Canvas(Modifier.fillMaxSize()) {
-            val d = size.minDimension
-            val path =
-                Path().apply {
-                    if (isStart) {
-                        moveTo(d, 0f)
-                        lineTo(d, d / 2f)
-                        arcTo(Rect(0f, 0f, d, d), 0f, 270f, false)
-                        close()
-                    } else {
-                        moveTo(0f, 0f)
-                        lineTo(0f, d / 2f)
-                        arcTo(Rect(0f, 0f, d, d), 180f, -270f, false)
-                        close()
+        // Hide the teardrop while THIS handle is being dragged — the loupe stands in for it, like Android.
+        if (dragTip == null) {
+            Canvas(Modifier.fillMaxSize()) {
+                val d = size.minDimension
+                val path =
+                    Path().apply {
+                        if (isStart) {
+                            moveTo(d, 0f)
+                            lineTo(d, d / 2f)
+                            arcTo(Rect(0f, 0f, d, d), 0f, 270f, false)
+                            close()
+                        } else {
+                            moveTo(0f, 0f)
+                            lineTo(0f, d / 2f)
+                            arcTo(Rect(0f, 0f, d, d), 180f, -270f, false)
+                            close()
+                        }
                     }
-                }
-            drawPath(path, color)
+                drawPath(path, color)
+            }
         }
     }
 }
@@ -560,6 +711,9 @@ private fun InsertionHandle(
     surfaceOriginX: Float,
     surfaceOriginY: Float,
     scale: Float,
+    lineHalfPx: Float,
+    onMagnify: OnMagnify?,
+    onTap: () -> Unit,
     onDragTo: (cssX: Float, cssY: Float) -> Unit,
 ) {
     val density = LocalDensity.current
@@ -567,6 +721,16 @@ private fun InsertionHandle(
     val hPx = wPx * 1.4f
     val color = MaterialTheme.colorScheme.primary
     val currentTip by rememberUpdatedState(tipPx)
+    val currentMagnify by rememberUpdatedState(onMagnify)
+    val currentTap by rememberUpdatedState(onTap)
+
+    // Loupe capture: X follows the finger, Y is locked to the authoritative caret's line ([currentTip] is the
+    // caret foot, so lift by half the line height) — so the bubble shows the edited line, not wherever the
+    // finger drifts vertically (e.g. a diagonal drag in a textarea).
+    fun magnify(
+        fingerPx: Offset,
+        active: Boolean = true,
+    ) = currentMagnify?.invoke(active, fingerPx, fingerPx.x - surfaceOriginX, currentTip.y - surfaceOriginY - lineHalfPx)
     // Track the finger separately from what we draw: the handle renders at the AUTHORITATIVE caret (tipPx,
     // which snaps to a character position as the move round-trips through the shim), while the finger drives
     // the move. So the handle stays glued to the line/text and clamps to the field instead of trailing off.
@@ -575,33 +739,62 @@ private fun InsertionHandle(
         Modifier
             .absoluteOffset { IntOffset((tipPx.x - wPx / 2f).roundToInt(), tipPx.y.roundToInt()) }
             .size(with(density) { wPx.toDp() }, with(density) { hPx.toDp() })
+            // One unified gesture so a TAP (toggle the Paste/Select-All popup) and a DRAG (move the caret)
+            // don't fight each other. We consume the down so the tap never bleeds to the surface (which would
+            // place a caret there and dismiss the popup we're opening).
             .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { fingerPx = currentTip },
-                    onDrag = { change, delta ->
-                        change.consume()
-                        val np = (fingerPx ?: currentTip) + delta
-                        fingerPx = np
-                        onDragTo((np.x - surfaceOriginX) / scale, (np.y - surfaceOriginY) / scale)
-                    },
-                    onDragEnd = { fingerPx = null },
-                    onDragCancel = { fingerPx = null },
-                )
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    down.consume()
+                    var dragging = false
+                    var fp = currentTip
+                    while (true) {
+                        val change = awaitPointerEvent().changes.firstOrNull() ?: break
+                        if (!change.pressed) {
+                            if (!dragging) {
+                                currentTap()
+                            } else {
+                                fingerPx = null
+                                magnify(Offset.Zero, active = false)
+                            }
+                            break
+                        }
+                        if (!dragging && (change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                            dragging = true
+                            fp = currentTip
+                            magnify(currentTip)
+                        }
+                        if (dragging) {
+                            // Read the delta BEFORE consuming: positionChange() returns Offset.Zero once the
+                            // change isConsumed, so consuming first (or the sandbox surface consuming the move in
+                            // an earlier pass) would freeze `fp` at the caret — the handle drags but the caret
+                            // never moves. positionChangeIgnoreConsumed() is immune to both.
+                            fp += change.positionChangeIgnoreConsumed()
+                            change.consume()
+                            fingerPx = fp
+                            onDragTo((fp.x - surfaceOriginX) / scale, (fp.y - surfaceOriginY) / scale)
+                            magnify(fp)
+                        }
+                    }
+                }
             },
     ) {
-        Canvas(Modifier.fillMaxSize()) {
-            val r = size.width / 2f
-            val cx = size.width / 2f
-            val cy = size.height - r
-            val path =
-                Path().apply {
-                    moveTo(cx, 0f)
-                    lineTo(cx + r, cy)
-                    arcTo(Rect(cx - r, cy - r, cx + r, cy + r), 0f, 180f, false)
-                    lineTo(cx, 0f)
-                    close()
-                }
-            drawPath(path, color)
+        // Hide the teardrop while dragging — the loupe stands in for it, like Android.
+        if (fingerPx == null) {
+            Canvas(Modifier.fillMaxSize()) {
+                val r = size.width / 2f
+                val cx = size.width / 2f
+                val cy = size.height - r
+                val path =
+                    Path().apply {
+                        moveTo(cx, 0f)
+                        lineTo(cx + r, cy)
+                        arcTo(Rect(cx - r, cy - r, cx + r, cy + r), 0f, 180f, false)
+                        lineTo(cx, 0f)
+                        close()
+                    }
+                drawPath(path, color)
+            }
         }
     }
 }
@@ -619,32 +812,37 @@ private fun EmbeddedSelectionToolbar(
     centerXpx: Float,
     topYpx: Float,
 ) {
-    // Self-center: the toolbar's width depends on its items, so measure it and offset by half-width around
-    // the requested centre-x (a one-frame left-aligned flash before the first measurement is acceptable).
-    var widthPx by remember { mutableStateOf(0) }
-    Surface(
-        modifier =
-            Modifier
-                .absoluteOffset { IntOffset((centerXpx - widthPx / 2f).roundToInt(), topYpx.roundToInt()) }
-                .onGloballyPositioned { widthPx = it.size.width },
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        tonalElevation = 3.dp,
-        shadowElevation = 6.dp,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            items.forEachIndexed { i, (label, action) ->
-                if (i > 0) {
-                    Box(
-                        Modifier
-                            .width(1.dp)
-                            .height(20.dp)
-                            .background(MaterialTheme.colorScheme.outlineVariant),
-                    )
+    // Center in a SINGLE layout pass: measure the bar, then place it at centerX − width/2. (The old
+    // measure-then-offset approach rendered it left-edge-at-centerX for one frame, so it visibly slid in
+    // from the right each time the bar was (re)composed.)
+    Layout(
+        content = {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                tonalElevation = 3.dp,
+                shadowElevation = 6.dp,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    items.forEachIndexed { i, (label, action) ->
+                        if (i > 0) {
+                            Box(
+                                Modifier
+                                    .width(1.dp)
+                                    .height(20.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant),
+                            )
+                        }
+                        SelectionToolbarItem(label, action)
+                    }
                 }
-                SelectionToolbarItem(label, action)
             }
+        },
+    ) { measurables, constraints ->
+        val bar = measurables.first().measure(constraints.copy(minWidth = 0, minHeight = 0))
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            bar.place((centerXpx - bar.width / 2f).roundToInt(), topYpx.roundToInt())
         }
     }
 }
@@ -659,7 +857,17 @@ private fun SelectionToolbarItem(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier =
             Modifier
-                .pointerInput(label) { detectTapGestures(onTap = { onClick() }) }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                // Consume the DOWN (not just the up) so the tap never bleeds through to the embedded surface
+                // beneath — otherwise tapping the bar over non-editable page area blurs the field.
+                .pointerInput(label) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false).consume()
+                        val up = waitForUpOrCancellation()
+                        if (up != null) {
+                            up.consume()
+                            onClick()
+                        }
+                    }
+                }.padding(horizontal = 12.dp, vertical = 10.dp),
     )
 }

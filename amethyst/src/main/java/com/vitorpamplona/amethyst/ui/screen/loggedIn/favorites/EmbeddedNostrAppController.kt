@@ -31,6 +31,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import android.os.SystemClock
 import androidx.annotation.RequiresApi
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
@@ -39,8 +40,10 @@ import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedMagnifierProbe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.MagnifierFrame
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.parseSelectionGeometry
 import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicLong
@@ -60,7 +63,8 @@ class EmbeddedNostrAppController(
     private val appContext: Context,
     private val params: Bundle,
 ) : EmbeddedSurfaceController,
-    EmbeddedImeBridge {
+    EmbeddedImeBridge,
+    EmbeddedMagnifierProbe {
     private val incoming = Messenger(Handler(Looper.getMainLooper(), ::onServiceMessage))
     private var serviceMessenger: Messenger? = null
     private var bound = false
@@ -94,6 +98,8 @@ class EmbeddedNostrAppController(
 
     override var onImeEvent: ((ImeEvent) -> Unit)? = null
 
+    override var onMagnifierFrame: ((MagnifierFrame) -> Unit)? = null
+
     private val connection =
         object : ServiceConnection {
             override fun onServiceConnected(
@@ -126,6 +132,7 @@ class EmbeddedNostrAppController(
         onStateChanged = null
         onNotice = null
         onImeEvent = null
+        onMagnifierFrame = null
         onLoadStatusChanged = null
     }
 
@@ -184,12 +191,40 @@ class EmbeddedNostrAppController(
                 val failed = msg.data?.getBoolean(NappletEmbedContract.KEY_LOAD_FAILED, false) ?: false
                 onLoadState(isLoading, failed)
             }
+            NappletEmbedContract.MSG_MAGNIFIER_FRAME -> {
+                val data = msg.data ?: return true
+                val bytes = data.getByteArray(NappletEmbedContract.KEY_MAG_BYTES) ?: return true
+                onMagnifierFrame?.invoke(
+                    MagnifierFrame(
+                        bytes = bytes,
+                        width = data.getInt(NappletEmbedContract.KEY_MAG_W),
+                        height = data.getInt(NappletEmbedContract.KEY_MAG_H),
+                        captureMs = data.getDouble(NappletEmbedContract.KEY_MAG_CAPTURE_MS),
+                        requestStampNanos = data.getLong(NappletEmbedContract.KEY_MAG_REQ_T),
+                    ),
+                )
+            }
             else -> return false
         }
         return true
     }
 
     override fun sendImeOp(json: String) = send(NappletEmbedContract.MSG_IME_OP) { putString(NappletEmbedContract.KEY_IME_PAYLOAD, json) }
+
+    override fun requestMagnifier(
+        surfaceX: Float,
+        surfaceY: Float,
+        boxWidthPx: Int,
+        boxHeightPx: Int,
+        zoom: Float,
+    ) = send(NappletEmbedContract.MSG_MAGNIFIER_REQUEST) {
+        putFloat(NappletEmbedContract.KEY_MAG_X, surfaceX)
+        putFloat(NappletEmbedContract.KEY_MAG_Y, surfaceY)
+        putInt(NappletEmbedContract.KEY_MAG_BOX_W, boxWidthPx)
+        putInt(NappletEmbedContract.KEY_MAG_BOX_H, boxHeightPx)
+        putFloat(NappletEmbedContract.KEY_MAG_ZOOM, zoom)
+        putLong(NappletEmbedContract.KEY_MAG_REQ_T, SystemClock.elapsedRealtimeNanos())
+    }
 
     private fun parseImeEvent(payload: String): ImeEvent? {
         val o = runCatching { JSONObject(payload) }.getOrNull() ?: return null
@@ -218,6 +253,8 @@ class EmbeddedNostrAppController(
                     text = o.optString("text", ""),
                     geometry = parseSelectionGeometry(o.optJSONObject("geom")),
                 )
+            "ime.scroll" -> ImeEvent.Scroll(active = o.optBoolean("active", false))
+            "ime.carettap" -> ImeEvent.CaretTap(geometry = parseSelectionGeometry(o.optJSONObject("geom")))
             else -> null
         }
     }

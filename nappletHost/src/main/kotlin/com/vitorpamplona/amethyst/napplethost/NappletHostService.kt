@@ -25,6 +25,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -33,6 +35,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.webkit.WebResourceError
@@ -57,6 +60,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executor
 
 /**
@@ -183,6 +187,7 @@ class NappletHostService : Service() {
                 val payload = msg.data?.getString(NappletEmbedContract.KEY_IME_PAYLOAD) ?: return true
                 tab.bridgeReplyProxy?.postMessage(payload)
             }
+            NappletEmbedContract.MSG_MAGNIFIER_REQUEST -> onMagnifierRequest(msg)
             else -> return false
         }
         return true
@@ -227,6 +232,52 @@ class NappletHostService : Service() {
             )
         applyNightMode(tab.themeType)
         return tab
+    }
+
+    /**
+     * Draw a zoomed slice of the live WebView (the loupe content) and ship it back as a PNG. The WebView is a
+     * real in-window view here in the provider, so its software draw renders real DOM pixels — unlike host-side
+     * `PixelCopy` of the sandbox surface. Mirror of the browser path. Runs on the main looper (`WebView.draw`).
+     */
+    private fun onMagnifierRequest(msg: Message) {
+        val tab = tabFor(msg) ?: return
+        val wv = tab.webView ?: return
+        val data = msg.data ?: return
+        val cx = data.getFloat(NappletEmbedContract.KEY_MAG_X)
+        val cy = data.getFloat(NappletEmbedContract.KEY_MAG_Y)
+        val boxW = data.getInt(NappletEmbedContract.KEY_MAG_BOX_W, 150).coerceIn(16, 1024)
+        val boxH = data.getInt(NappletEmbedContract.KEY_MAG_BOX_H, 84).coerceIn(16, 1024)
+        val zoom = data.getFloat(NappletEmbedContract.KEY_MAG_ZOOM, 1.6f).coerceIn(1f, 4f)
+        val reqT = data.getLong(NappletEmbedContract.KEY_MAG_REQ_T)
+
+        val outW = (boxW * zoom).toInt().coerceAtLeast(1)
+        val outH = (boxH * zoom).toInt().coerceAtLeast(1)
+        val t0 = SystemClock.elapsedRealtimeNanos()
+        val bitmap = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        canvas.drawColor(tab.bgColor)
+        canvas.scale(zoom, zoom)
+        canvas.translate(-(cx - boxW / 2f), -(cy - boxH / 2f))
+        wv.draw(canvas)
+
+        val baos = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
+        val bytes = baos.toByteArray()
+        bitmap.recycle()
+        val captureMs = (SystemClock.elapsedRealtimeNanos() - t0) / 1_000_000.0
+
+        val reply =
+            Message.obtain(null, NappletEmbedContract.MSG_MAGNIFIER_FRAME).apply {
+                this.data =
+                    Bundle().apply {
+                        putByteArray(NappletEmbedContract.KEY_MAG_BYTES, bytes)
+                        putInt(NappletEmbedContract.KEY_MAG_W, outW)
+                        putInt(NappletEmbedContract.KEY_MAG_H, outH)
+                        putDouble(NappletEmbedContract.KEY_MAG_CAPTURE_MS, captureMs)
+                        putLong(NappletEmbedContract.KEY_MAG_REQ_T, reqT)
+                    }
+            }
+        runCatching { tab.clientMessenger?.send(reply) }
     }
 
     /** Builds the SandboxedUiAdapter for [tab] and ships its cross-process handle (coreLibInfo) to the client. */
