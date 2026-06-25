@@ -665,6 +665,9 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="browser">Brskalnik</string>
     <string name="browser_address_hint">Išči ali vpiši naslov</string>
     <string name="browser_reload">Ponovno naloži</string>
+    <string name="browser_console_title_short">Konzola</string>
+    <string name="browser_console_title">Konzola (%1$d)</string>
+    <string name="browser_console_clear">Počisti</string>
     <string name="browser_tor_on">Nalaganje prek Tor. Tapnite za uporabo odprtega spleta.</string>
     <string name="browser_tor_off">Nalaganje prek odprtega spleta. Tapnite za uporabo Tor.</string>
     <string name="browser_unsupported">Vgrajeni brskalnik zahteva Android 11 ali novejši.</string>
