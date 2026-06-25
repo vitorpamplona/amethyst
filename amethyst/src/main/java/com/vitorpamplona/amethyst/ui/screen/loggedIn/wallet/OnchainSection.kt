@@ -172,27 +172,34 @@ private fun HeaderRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                BitcoinChip(orange)
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "Bitcoin",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                PublicChip()
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Onchain · Taproot",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
+        HeaderRowTitle(modifier = Modifier.weight(1f), orange = orange)
         BalanceBlock(state = balanceState, sats = balanceSats, orange = orange)
+    }
+}
+
+@Composable
+private fun HeaderRowTitle(
+    modifier: Modifier = Modifier,
+    orange: Color,
+) {
+    Column(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            BitcoinChip(orange)
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "Bitcoin",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            PublicChip()
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Onchain · Taproot",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
