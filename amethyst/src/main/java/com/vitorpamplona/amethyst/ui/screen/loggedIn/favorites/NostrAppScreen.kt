@@ -70,7 +70,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 
 /**
- * A favorited nsite/napplet rendered as an **in-app tab**. The verified-blob sandbox surface (hosted in
+ * A **Nostr app** — an nSite or nApplet, reached by [coordinate] (favorited or not) — rendered as an
+ * **in-app tab**. The verified-blob sandbox surface (hosted in
  * the keyless `:napplet` process by `NappletHostService`) is drawn by the persistent [EmbeddedTabHost]
  * layer, which keeps the session warm across tab swaps — the surface stays attached and just moves over
  * the area this screen reserves. The **trusted chrome** (sandbox shield, app name, "what it can access")
@@ -81,13 +82,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
  * leaves. Requires API 30+ for the cross-process surface.
  */
 @Composable
-fun FavoriteNappletScreen(
+fun NostrAppScreen(
     coordinate: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        EmbeddedNappletTab(coordinate, accountViewModel, nav)
+        EmbeddedNostrAppTab(coordinate, accountViewModel, nav)
     } else {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
@@ -101,7 +102,7 @@ fun FavoriteNappletScreen(
 @RequiresApi(Build.VERSION_CODES.R)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EmbeddedNappletTab(
+private fun EmbeddedNostrAppTab(
     coordinate: String,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -132,7 +133,7 @@ private fun EmbeddedNappletTab(
 
     val controller =
         remember(id) {
-            EmbeddedTabFactory.acquireNapplet(context, coordinate, params, backgroundColor)
+            EmbeddedTabFactory.acquireNostrApp(context, coordinate, params, backgroundColor)
         }
 
     // Keep the controller callbacks fresh (cheap, need the latest closures).
@@ -203,7 +204,7 @@ private fun EmbeddedNappletTab(
 
     Scaffold(
         bottomBar = {
-            AppBottomBar(Route.FavoriteNostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
+            AppBottomBar(Route.NostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
         // Reserve the full content area; the warm surface, its top sheet, and the loading/error overlay
@@ -227,7 +228,7 @@ private fun UnavailableTab(
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.favorite_apps)) }) },
         bottomBar = {
-            AppBottomBar(Route.FavoriteNostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
+            AppBottomBar(Route.NostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
         Box(

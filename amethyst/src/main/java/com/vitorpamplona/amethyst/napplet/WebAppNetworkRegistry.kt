@@ -48,7 +48,7 @@ private val Context.webUrlNetworkDataStore by preferencesDataStore(name = "webur
  * Lives only in the **main process** (where the browser chrome runs); an in-memory map is authoritative
  * for the session with write-through persistence.
  */
-object WebUrlNetworkRegistry {
+object WebAppNetworkRegistry {
     private const val OPEN_WEB = "OPEN"
     private const val TOR = "TOR"
 

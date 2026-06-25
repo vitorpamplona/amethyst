@@ -30,10 +30,10 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.model.ThemeType
-import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
+import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.EmbeddedBrowserController
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.EmbeddedNappletController
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.EmbeddedWebAppController
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.EmbeddedNostrAppController
 
 /**
  * The single place that builds a warm embedded-tab controller, so the favorite screens and the
@@ -46,19 +46,19 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.EmbeddedNappletCo
  */
 @RequiresApi(Build.VERSION_CODES.R)
 object EmbeddedTabFactory {
-    fun browserId(url: String) = "url:$url"
+    fun webAppId(url: String) = "url:$url"
 
-    fun nappletId(coordinate: String) = "nostr:$coordinate"
+    fun nostrAppId(coordinate: String) = "nostr:$coordinate"
 
     /** Acquires (or returns) the warm browser controller for [url], routing over Tor per the site's choice. */
-    fun acquireBrowser(
+    fun acquireWebApp(
         context: Context,
         url: String,
         backgroundColor: Int,
-    ): EmbeddedBrowserController =
-        EmbeddedTabHost.acquire(browserId(url)) {
+    ): EmbeddedWebAppController =
+        EmbeddedTabHost.acquire(webAppId(url)) {
             val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-            val initialUseTor = proxyPort > 0 && WebUrlNetworkRegistry.useTor(url)
+            val initialUseTor = proxyPort > 0 && WebAppNetworkRegistry.useTor(url)
             val themeType = Amethyst.instance.uiPrefs.value.theme.value
             val theme =
                 when (themeType) {
@@ -69,24 +69,24 @@ object EmbeddedTabFactory {
                         if (nightMask == Configuration.UI_MODE_NIGHT_YES) "DARK" else "LIGHT"
                     }
                 }
-            EmbeddedBrowserController(context.applicationContext, proxyPort, initialUseTor, backgroundColor, theme).also { it.bind(url) }
-        } as EmbeddedBrowserController
+            EmbeddedWebAppController(context.applicationContext, proxyPort, initialUseTor, backgroundColor, theme).also { it.bind(url) }
+        } as EmbeddedWebAppController
 
     /**
      * Acquires (or returns) the warm nsite/napplet controller for [coordinate] using already-resolved
      * launch [params] (the caller has the metadata anyway). [backgroundColor] is stamped into the params
      * so the sandbox WebView doesn't flash white before paint.
      */
-    fun acquireNapplet(
+    fun acquireNostrApp(
         context: Context,
         coordinate: String,
         params: Bundle,
         backgroundColor: Int,
-    ): EmbeddedNappletController {
+    ): EmbeddedNostrAppController {
         params.putInt(NappletHostContract.EXTRA_BG_COLOR, backgroundColor)
-        return EmbeddedTabHost.acquire(nappletId(coordinate)) {
-            EmbeddedNappletController(context.applicationContext, params).also { it.bind() }
-        } as EmbeddedNappletController
+        return EmbeddedTabHost.acquire(nostrAppId(coordinate)) {
+            EmbeddedNostrAppController(context.applicationContext, params).also { it.bind() }
+        } as EmbeddedNostrAppController
     }
 
     /**
@@ -100,30 +100,30 @@ object EmbeddedTabFactory {
         backgroundColor: Int,
     ): Boolean =
         when (app) {
-            is FavoriteApp.WebUrl -> {
+            is FavoriteApp.WebApp -> {
                 // Privacy: never preload a Tor-routed site over clearnet just because Tor hasn't finished
                 // connecting yet. A site only "wants Tor" when Tor is enabled AND not opted out for it; in
                 // that case wait until the proxy port is actually up (the preloader retries). When Tor is
                 // off, or the user opted this site out, clearnet IS the real route — preload immediately.
                 val torEnabled = Amethyst.instance.torPrefs.torType.value != TorType.OFF
-                val wantsTor = torEnabled && WebUrlNetworkRegistry.useTor(app.url)
+                val wantsTor = torEnabled && WebAppNetworkRegistry.useTor(app.url)
                 val torReady = Amethyst.instance.torManager.activePortOrNull.value != null
                 if (wantsTor && !torReady) {
                     false
                 } else {
-                    acquireBrowser(context, app.url, backgroundColor)
+                    acquireWebApp(context, app.url, backgroundColor)
                     true
                 }
             }
             is FavoriteApp.NostrApp -> {
-                if (EmbeddedTabHost.isWarm(nappletId(app.coordinate))) {
+                if (EmbeddedTabHost.isWarm(nostrAppId(app.coordinate))) {
                     true
                 } else {
                     val params = FavoriteAppLauncher.embedParams(context, app.coordinate)
                     if (params == null) {
                         false
                     } else {
-                        acquireNapplet(context, app.coordinate, params, backgroundColor)
+                        acquireNostrApp(context, app.coordinate, params, backgroundColor)
                         true
                     }
                 }

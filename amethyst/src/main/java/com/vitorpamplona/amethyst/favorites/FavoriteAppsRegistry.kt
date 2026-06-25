@@ -128,7 +128,7 @@ object FavoriteAppsRegistry {
             list.map {
                 when (it) {
                     is FavoriteApp.NostrApp -> Entry(TYPE_NOSTR, it.coordinate, it.label, it.addedAt, it.iconUrl)
-                    is FavoriteApp.WebUrl -> Entry(TYPE_URL, it.url, it.label, it.addedAt, it.iconUrl)
+                    is FavoriteApp.WebApp -> Entry(TYPE_URL, it.url, it.label, it.addedAt, it.iconUrl)
                 }
             },
         )
@@ -138,7 +138,7 @@ object FavoriteAppsRegistry {
             JsonMapper.fromJson<List<Entry>>(json).mapNotNull { entry ->
                 when (entry.type) {
                     TYPE_NOSTR -> FavoriteApp.NostrApp(entry.ref, entry.label, entry.addedAt, entry.iconUrl)
-                    TYPE_URL -> FavoriteApp.WebUrl(entry.ref, entry.label, entry.addedAt, entry.iconUrl)
+                    TYPE_URL -> FavoriteApp.WebApp(entry.ref, entry.label, entry.addedAt, entry.iconUrl)
                     else -> null
                 }
             }

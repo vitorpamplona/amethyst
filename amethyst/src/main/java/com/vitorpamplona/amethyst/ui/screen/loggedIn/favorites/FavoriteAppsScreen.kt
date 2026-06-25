@@ -180,7 +180,7 @@ internal fun FavoriteAppCell(
     val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
     val faviconModel =
         remember(app, iconKeys) {
-            (app as? FavoriteApp.WebUrl)?.let { OmniboxInput.hostOf(it.url)?.let(BrowserIconRegistry::iconModelFor) }
+            (app as? FavoriteApp.WebApp)?.let { OmniboxInput.hostOf(it.url)?.let(BrowserIconRegistry::iconModelFor) }
         }
 
     Column(

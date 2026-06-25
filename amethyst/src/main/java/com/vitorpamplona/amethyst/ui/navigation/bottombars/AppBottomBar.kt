@@ -90,7 +90,7 @@ fun AppBottomBar(
     }
 
     // Favorite entries in the unified list resolve to a live favorite for their icon/label and to an
-    // embedded-tab route. Both kinds embed in-process (WebUrl → browser surface, NostrApp → napplet
+    // embedded-tab route. Both kinds embed in-process (WebApp → browser surface, NostrApp → napplet
     // surface), so such a tab swaps in place rather than launching an activity from the bottom row.
     val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
 
@@ -143,12 +143,12 @@ private fun RenderBottomMenu(
                         val fav = favoritesById[entry.favoriteId] ?: return@forEach
                         val destination =
                             when (fav) {
-                                is FavoriteApp.WebUrl -> Route.FavoriteWebApp(fav.url)
-                                is FavoriteApp.NostrApp -> Route.FavoriteNostrApp(fav.coordinate)
+                                is FavoriteApp.WebApp -> Route.WebApp(fav.url)
+                                is FavoriteApp.NostrApp -> Route.NostrApp(fav.coordinate)
                             }
                         val iconModel =
                             remember(fav, iconKeys) {
-                                (fav as? FavoriteApp.WebUrl)?.let { OmniboxInput.hostOf(it.url)?.let(BrowserIconRegistry::iconModelFor) }
+                                (fav as? FavoriteApp.WebApp)?.let { OmniboxInput.hostOf(it.url)?.let(BrowserIconRegistry::iconModelFor) }
                             }
                         FavoriteNavItem(destination == selectedRoute, fav, iconModel, destination, nav)
                     }

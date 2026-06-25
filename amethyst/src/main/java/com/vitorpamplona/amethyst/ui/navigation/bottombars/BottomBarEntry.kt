@@ -33,7 +33,7 @@ import kotlinx.serialization.Serializable
  * - [Favorite] points at a [FavoriteApp][com.vitorpamplona.amethyst.commons.favorites.FavoriteApp] by
  *   its stable id (which already encodes the route's parameters — the `url` or addressable
  *   `coordinate`); the bar resolves it to a live favorite for its icon/label and to
- *   `Route.FavoriteWebApp` / `Route.FavoriteNostrApp` for navigation.
+ *   `Route.WebApp` / `Route.NostrApp` for navigation.
  */
 @Serializable
 sealed interface BottomBarEntry {

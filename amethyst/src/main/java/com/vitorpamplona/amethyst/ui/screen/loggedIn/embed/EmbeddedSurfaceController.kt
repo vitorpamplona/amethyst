@@ -26,8 +26,8 @@ import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 
 /**
  * The minimal surface controls [EmbeddedTabHost] needs to keep a session warm regardless of whether
- * it's a browser ([com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.EmbeddedBrowserController])
- * or an nsite/napplet ([com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.EmbeddedNappletController]).
+ * it's a browser ([com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.EmbeddedWebAppController])
+ * or an nsite/napplet ([com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.EmbeddedNostrAppController]).
  *
  * Warm-keep works by keeping the session's [SandboxedSdkView] **attached** to the window the whole
  * time (just moved off-screen when not active) — the privacy-sandbox view only closes its session on

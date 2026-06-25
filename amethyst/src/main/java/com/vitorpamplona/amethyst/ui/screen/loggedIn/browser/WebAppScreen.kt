@@ -50,7 +50,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
-import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
+import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -61,7 +61,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 
 /**
- * A pinned web client rendered as an **in-app tab**. The embedded `:napplet` browser surface is drawn
+ * A **Web app** (a Nostr web client, reached by [url]) rendered as an **in-app tab** — for *any* URL,
+ * favorited or not; favoriting is just the star toggle in the chrome. The embedded `:napplet` browser surface is drawn
  * by the persistent [EmbeddedTabHost]/[com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer]
  * layer, which keeps the session warm across tab swaps. This screen owns only the chrome — it publishes
  * the controls as an [EmbeddedTabChrome] and the layer draws a top pull-down sheet over the (z-below)
@@ -71,13 +72,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
  * (restarted) when the screen leaves. Requires API 30+ for the cross-process surface.
  */
 @Composable
-fun FavoriteWebAppScreen(
+fun WebAppScreen(
     url: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        EmbeddedFavoriteTab(url, accountViewModel, nav)
+        EmbeddedWebAppTab(url, accountViewModel, nav)
     } else {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
@@ -90,13 +91,13 @@ fun FavoriteWebAppScreen(
 
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
-private fun EmbeddedFavoriteTab(
+private fun EmbeddedWebAppTab(
     url: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val context = LocalContext.current
-    // Matches FavoriteApp.WebUrl.id, so warm-keep membership lines up with the bottom-bar favorites.
+    // Matches FavoriteApp.WebApp.id, so warm-keep membership lines up with the bottom-bar favorites.
     val id = "url:$url"
 
     var currentUrl by remember { mutableStateOf(url) }
@@ -105,16 +106,16 @@ private fun EmbeddedFavoriteTab(
     val proxyAvailable = remember { Amethyst.instance.torManager.activePortOrNull.value != null }
     // Start from this site's remembered Tor choice (some sites' servers reject Tor exits, so the user
     // can opt one out and it must stick). Only meaningful when Tor is actually available.
-    var torOn by remember { mutableStateOf(proxyAvailable && WebUrlNetworkRegistry.useTor(url)) }
+    var torOn by remember { mutableStateOf(proxyAvailable && WebAppNetworkRegistry.useTor(url)) }
 
     val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
-    val isFavorite = remember(apps, currentUrl) { apps.any { it is FavoriteApp.WebUrl && it.url == currentUrl } }
+    val isFavorite = remember(apps, currentUrl) { apps.any { it is FavoriteApp.WebApp && it.url == currentUrl } }
 
     val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
     val controller =
         remember(id) {
-            EmbeddedTabFactory.acquireBrowser(context, url, backgroundColor)
+            EmbeddedTabFactory.acquireWebApp(context, url, backgroundColor)
         }
 
     // Keep the URL/back callback fresh (cheap, needs the latest closure).
@@ -137,7 +138,7 @@ private fun EmbeddedFavoriteTab(
                 onToggleTor = {
                     torOn = !torOn
                     controller.setTor(torOn)
-                    WebUrlNetworkRegistry.set(url, torOn)
+                    WebAppNetworkRegistry.set(url, torOn)
                 },
                 isFavorite = isFavorite,
                 onFavorite = {
@@ -145,7 +146,7 @@ private fun EmbeddedFavoriteTab(
                     if (FavoriteAppsRegistry.isFavorite(favId)) {
                         FavoriteAppsRegistry.remove(favId)
                     } else {
-                        FavoriteAppsRegistry.add(FavoriteApp.WebUrl(currentUrl, hostLabel(currentUrl), System.currentTimeMillis()))
+                        FavoriteAppsRegistry.add(FavoriteApp.WebApp(currentUrl, hostLabel(currentUrl), System.currentTimeMillis()))
                     }
                 },
             )
@@ -169,7 +170,7 @@ private fun EmbeddedFavoriteTab(
 
     Scaffold(
         bottomBar = {
-            AppBottomBar(Route.FavoriteWebApp(url), nav, accountViewModel) { route -> nav.navBottomBar(route) }
+            AppBottomBar(Route.WebApp(url), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
         // Reserve the full content area; the warm surface, its top sheet, and the loading/error overlay

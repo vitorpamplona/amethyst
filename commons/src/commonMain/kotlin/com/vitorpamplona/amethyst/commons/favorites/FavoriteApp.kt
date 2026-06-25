@@ -29,14 +29,15 @@ import androidx.compose.runtime.Immutable
  *
  * Two shapes, because the launch layer has exactly two shapes (see `FavoriteAppLauncher`):
  *
- * - [NostrApp] — a NIP-5A nsite **or** NIP-5D napplet. Both resolve to the same launch path
+ * - [NostrApp] — a NIP-5A nSite **or** NIP-5D nApplet. Both resolve to the same launch path
  *   (`NappletLauncher` → sandboxed `:napplet` host), so they share one case here. Whether the
- *   resolved event is an nsite (website mode) or a locked napplet is recomputed from the live event
+ *   resolved event is an nSite (website mode) or a locked nApplet is recomputed from the live event
  *   at launch time, never stored: the addressable [coordinate] survives code/manifest updates, but
  *   the manifest's `requires`/website-mode flags do not.
- * - [WebUrl] — an arbitrary `https://` nostr client. No identity, no coordinate; the URL is the key.
+ * - [WebApp] — a Nostr web client reached by an arbitrary `https://` URL. No identity, no
+ *   coordinate; the URL is the key.
  *
- * A [NostrApp] is only launchable while its event is resolvable in `LocalCache`; a [WebUrl] is always
+ * A [NostrApp] is only launchable while its event is resolvable in `LocalCache`; a [WebApp] is always
  * launchable. That is the one robustness difference between the two cases.
  */
 @Immutable
@@ -68,14 +69,15 @@ sealed interface FavoriteApp {
         override val id: String get() = "nostr:$coordinate"
     }
 
-    /** An arbitrary web client reached by URL. */
+    /** A Nostr web client reached by URL — an arbitrary `https://` app. */
     @Immutable
-    data class WebUrl(
+    data class WebApp(
         val url: String,
         override val label: String,
         override val addedAt: Long,
         override val iconUrl: String? = null,
     ) : FavoriteApp {
+        // The "url:" prefix is persisted (favorites de-dup + bottom-bar keys); keep it stable.
         override val id: String get() = "url:$url"
     }
 }

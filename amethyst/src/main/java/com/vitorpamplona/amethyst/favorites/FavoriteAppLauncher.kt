@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
-import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
+import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -44,7 +44,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
  * Turns a [FavoriteApp] back into a running app. The two cases map to the two launch paths in the
  * codebase, nothing more:
  *
- * - [FavoriteApp.WebUrl] → a full-screen direct-WebView
+ * - [FavoriteApp.WebApp] → a full-screen direct-WebView
  *   [NappletBrowserActivity][com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity] (its own
  *   task/recents entry), so the web client owns the whole screen and scrolls/zooms natively.
  * - [FavoriteApp.NostrApp] → re-resolve the live event from [LocalCache] by coordinate, read its
@@ -60,7 +60,7 @@ object FavoriteAppLauncher {
         app: FavoriteApp,
     ) {
         when (app) {
-            is FavoriteApp.WebUrl -> launchUrl(context, app.url)
+            is FavoriteApp.WebApp -> launchUrl(context, app.url)
             is FavoriteApp.NostrApp -> launchNostrApp(context, app.coordinate)
         }
     }
@@ -78,7 +78,7 @@ object FavoriteAppLauncher {
         preferTor: Boolean = false,
     ) {
         val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-        val useTor = proxyPort > 0 && (preferTor || WebUrlNetworkRegistry.useTor(url))
+        val useTor = proxyPort > 0 && (preferTor || WebAppNetworkRegistry.useTor(url))
         val themeType = Amethyst.instance.uiPrefs.value.theme.value
         val theme =
             when (themeType) {

@@ -25,7 +25,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 /**
  * A surface controller that exposes JavaScript console output captured from the embedded WebView.
  * The [consoleLogs] list is Compose snapshot state so [BottomConsoleSheet] recomposes as messages
- * arrive. Implemented by [com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.EmbeddedBrowserController].
+ * arrive. Implemented by [com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.EmbeddedWebAppController].
  */
 interface ConsoleBridge {
     val consoleLogs: SnapshotStateList<ConsoleLogEntry>

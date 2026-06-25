@@ -53,7 +53,7 @@ import java.util.concurrent.atomic.AtomicLong
  * that drive the trusted, main-process address bar.
  */
 @RequiresApi(Build.VERSION_CODES.R)
-class EmbeddedBrowserController(
+class EmbeddedWebAppController(
     private val appContext: Context,
     private val proxyPort: Int,
     private val initialUseTor: Boolean,

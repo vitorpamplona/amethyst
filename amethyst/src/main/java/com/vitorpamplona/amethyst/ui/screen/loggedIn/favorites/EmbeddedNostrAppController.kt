@@ -52,10 +52,10 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * [params] is the bundle minted in the main process by
  * [NappletLauncher.buildLaunchParams][com.vitorpamplona.amethyst.napplet.NappletLauncher.buildLaunchParams]
- * — the verified manifest, identity, and launch token. The mirror of `EmbeddedBrowserController`.
+ * — the verified manifest, identity, and launch token. The mirror of `EmbeddedWebAppController`.
  */
 @RequiresApi(Build.VERSION_CODES.R)
-class EmbeddedNappletController(
+class EmbeddedNostrAppController(
     private val appContext: Context,
     private val params: Bundle,
 ) : EmbeddedSurfaceController,
