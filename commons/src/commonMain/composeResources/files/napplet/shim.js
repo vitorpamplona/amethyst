@@ -633,22 +633,38 @@
       return i;
     }
 
+    // Per-drag state for the hybrid word/char handle extend below. `fieldDragWordEnd`/`fieldDragWordStart`
+    // remember how far the dragged edge has been word-snapped so far this gesture; a >250ms gap between
+    // `ime.fieldextend` ops (or a switch of edge) means a NEW drag, so we re-baseline to the live selection.
+    var fieldDragAt = -1, fieldDragEdge = null, fieldDragWordEnd = -1, fieldDragWordStart = -1;
     // Host drag of an in-field selection handle: move the dragged edge to the offset under (x,y) CSS px,
-    // keeping the other edge anchored. Snaps to word boundaries (the selection was made by word), and is
-    // clamped so the dragged edge can't cross the anchor (no inversion).
+    // keeping the other edge anchored, clamped so it can't cross the anchor. HYBRID granularity, matching
+    // native `Editor` word-selection drags (#5): the gesture starts anchored to the current selection edge,
+    // and as the finger sweeps PAST that word's far boundary it snaps the dragged edge to the next WHOLE word
+    // (so sweeping across words grabs them whole and never stops mid-gap); moving WITHIN or back from the
+    // furthest-reached word gives CHARACTER precision (so you can fine-tune to a single character).
     function fieldExtend(edge, x, y){
       if (!el || isCE(el)) return;
       try {
         var off = offsetFromPoint(el, x, y);
         var text = valOf(el);
         var sel = selOf(el);
+        var now = perfNow();
+        var fresh = (now - fieldDragAt > 250) || edge !== fieldDragEdge;
+        fieldDragAt = now; fieldDragEdge = edge;
         var s, e;
         if (edge === 'start') {
           e = sel[1];
-          s = Math.min(wordStartAt(text, off), e);
+          if (fresh) fieldDragWordStart = sel[0]; // baseline at the current selection start
+          if (off < fieldDragWordStart) { s = wordStartAt(text, off); fieldDragWordStart = s; } // swept into a new word → snap whole
+          else s = off; // within / back from the furthest word → character precision
+          s = Math.max(0, Math.min(s, e));
         } else {
           s = sel[0];
-          e = Math.max(wordEndAt(text, off), s);
+          if (fresh) fieldDragWordEnd = sel[1]; // baseline at the current selection end
+          if (off > fieldDragWordEnd) { e = wordEndAt(text, off); fieldDragWordEnd = e; } // swept into a new word → snap whole
+          else e = off; // within / back from the furthest word → character precision
+          e = Math.min(text.length, Math.max(e, s));
         }
         el.__nappletIme = true;
         setSel(el, s, e);
