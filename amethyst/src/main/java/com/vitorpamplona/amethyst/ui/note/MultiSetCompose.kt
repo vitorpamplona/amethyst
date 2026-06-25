@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.MultiSetCard
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
@@ -390,6 +391,9 @@ fun RenderNutzapGallery(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(R.string.nutzap),
                 modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
+                // Tint the monochrome cashu outline brand orange so the nutzap
+                // gallery matches the lightning ZappedIcon in RenderZapGallery.
+                tint = BitcoinOrange,
             )
         }
 
