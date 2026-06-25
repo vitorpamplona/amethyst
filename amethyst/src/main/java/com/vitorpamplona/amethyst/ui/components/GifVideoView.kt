@@ -77,9 +77,21 @@ fun GifVideoView(
     val borderModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier
     val context = LocalContext.current
 
+    // Mirror mediaSizingModifier() used by static images so animated media obeys the
+    // same sizing policy. In Crop contexts (e.g. the multi-image gallery grid) the parent
+    // cell has a fixed width AND height, so we must fill it and let the inner content crop;
+    // imposing our own aspectRatio()+fillMaxWidth() here would overflow the cell and spill
+    // over neighbouring content like the reaction row.
+    val sizeModifier =
+        when {
+            contentScale == ContentScale.Crop -> Modifier.fillMaxSize()
+            ratio != null -> Modifier.fillMaxWidth().aspectRatio(ratio)
+            else -> Modifier.fillMaxWidth()
+        }
+
     val containerModifier =
-        (if (ratio != null) borderModifier.aspectRatio(ratio) else borderModifier)
-            .fillMaxWidth()
+        borderModifier
+            .then(sizeModifier)
             .let { if (onDialog != null) it.clickable { onDialog() } else it }
 
     Box(
