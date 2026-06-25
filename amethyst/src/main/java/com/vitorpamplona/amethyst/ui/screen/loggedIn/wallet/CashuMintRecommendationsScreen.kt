@@ -93,7 +93,6 @@ fun CashuMintRecommendationsScreen(
 
     val recommendations by viewModel.ownRecommendations.collectAsState()
     var pendingDelete by remember { mutableStateOf<MintRecommendationEvent?>(null) }
-    var newRecommendationInput by remember { mutableStateOf("") }
 
     // Kick the one-shot directory backfill so the autocomplete is useful
     // on first screen open instead of waiting for new relay deliveries.
@@ -126,63 +125,11 @@ fun CashuMintRecommendationsScreen(
         ) {
             item { Spacer(modifier = Modifier.height(8.dp)) }
 
-            // Add-recommendation input + autocomplete. Suggestions come
-            // from LocalCache.mintDirectory (kind:10019 / kind:38000 /
-            // kind:38172 the cache has seen), filtered to drop URLs the
-            // user has already recommended so they can't double-publish
-            // and the same row doesn't show up twice on screen.
             item {
-                val alreadyRecommended =
-                    remember(recommendations) {
-                        recommendations
-                            .flatMap { it.mintUrls() }
-                            .map { it.lowercase().trimEnd('/') }
-                            .toSet()
-                    }
-                val suggestions by remember(newRecommendationInput, alreadyRecommended) {
-                    derivedStateOf {
-                        val typed = newRecommendationInput.trim().trimEnd('/').lowercase()
-                        // Only react to what the user types — never show
-                        // the full directory on an empty field, which
-                        // would dump every mint we've ever seen as
-                        // unsolicited suggestions.
-                        if (typed.isEmpty()) {
-                            emptyList()
-                        } else {
-                            LocalCache.mintDirectory
-                                .suggest(typed, limit = 6)
-                                .filter { it != typed && it !in alreadyRecommended }
-                        }
-                    }
-                }
-                AddRecommendationRow(
-                    input = newRecommendationInput,
-                    onInputChange = { newRecommendationInput = it },
-                    canAdd =
-                        newRecommendationInput.isNotBlank() &&
-                            newRecommendationInput.trim().trimEnd('/').lowercase() !in alreadyRecommended,
-                    onAdd = {
-                        val trimmed = newRecommendationInput.trim().trimEnd('/')
-                        if (trimmed.isNotEmpty()) {
-                            viewModel.recommendMint(trimmed)
-                            newRecommendationInput = ""
-                        }
-                    },
+                AddRecommendationSection(
+                    recommendations = recommendations,
+                    onRecommendMint = { viewModel.recommendMint(it) },
                 )
-                if (suggestions.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    RecommendationSuggestionList(
-                        suggestions = suggestions,
-                        onPick = { url ->
-                            // One-tap recommend: publish straight from
-                            // the suggestion and clear the field so the
-                            // user can chain multiple adds without
-                            // re-tapping the text input.
-                            viewModel.recommendMint(url)
-                            newRecommendationInput = ""
-                        },
-                    )
-                }
             }
 
             if (recommendations.isEmpty()) {
@@ -222,6 +169,66 @@ fun CashuMintRecommendationsScreen(
                 TextButton(onClick = { pendingDelete = null }) {
                     Text(stringRes(R.string.cancel))
                 }
+            },
+        )
+    }
+}
+
+@Composable
+private fun AddRecommendationSection(
+    recommendations: List<MintRecommendationEvent>,
+    onRecommendMint: (String) -> Unit,
+) {
+    var newRecommendationInput by remember { mutableStateOf("") }
+
+    val alreadyRecommended =
+        remember(recommendations) {
+            recommendations
+                .flatMap { it.mintUrls() }
+                .map { it.lowercase().trimEnd('/') }
+                .toSet()
+        }
+    val suggestions by remember(newRecommendationInput, alreadyRecommended) {
+        derivedStateOf {
+            val typed = newRecommendationInput.trim().trimEnd('/').lowercase()
+            // Only react to what the user types — never show
+            // the full directory on an empty field, which
+            // would dump every mint we've ever seen as
+            // unsolicited suggestions.
+            if (typed.isEmpty()) {
+                emptyList()
+            } else {
+                LocalCache.mintDirectory
+                    .suggest(typed, limit = 6)
+                    .filter { it != typed && it !in alreadyRecommended }
+            }
+        }
+    }
+    AddRecommendationRow(
+        input = newRecommendationInput,
+        onInputChange = { newRecommendationInput = it },
+        canAdd =
+            newRecommendationInput.isNotBlank() &&
+                newRecommendationInput.trim().trimEnd('/').lowercase() !in alreadyRecommended,
+        onAdd = {
+            val trimmed = newRecommendationInput.trim().trimEnd('/')
+            if (trimmed.isNotEmpty()) {
+                onRecommendMint(trimmed)
+                newRecommendationInput = ""
+            }
+        },
+    )
+    if (suggestions.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(6.dp))
+        RecommendationSuggestionList(
+            suggestions = suggestions,
+            onPick = { url ->
+                // One-tap recommend: publish straight from
+                // the suggestion and clear the field so the
+                // user can chain multiple adds without
+                // re-tapping the text input.
+                onRecommendMint(url)
+                newRecommendationInput = ""
             },
         )
     }
