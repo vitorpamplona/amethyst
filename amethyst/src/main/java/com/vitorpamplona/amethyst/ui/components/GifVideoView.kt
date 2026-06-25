@@ -24,9 +24,7 @@ import android.graphics.drawable.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -77,21 +75,13 @@ fun GifVideoView(
     val borderModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier
     val context = LocalContext.current
 
-    // Mirror mediaSizingModifier() used by static images so animated media obeys the
-    // same sizing policy. In Crop contexts (e.g. the multi-image gallery grid) the parent
-    // cell has a fixed width AND height, so we must fill it and let the inner content crop;
-    // imposing our own aspectRatio()+fillMaxWidth() here would overflow the cell and spill
-    // over neighbouring content like the reaction row.
-    val sizeModifier =
-        when {
-            contentScale == ContentScale.Crop -> Modifier.fillMaxSize()
-            ratio != null -> Modifier.fillMaxWidth().aspectRatio(ratio)
-            else -> Modifier.fillMaxWidth()
-        }
-
+    // Share the static-image sizing policy so animated media obeys it too: in Crop
+    // contexts (e.g. the multi-image gallery grid) the cell has a fixed width AND height,
+    // so the content must fill and crop rather than impose its own aspect ratio, which
+    // would overflow the cell and spill over neighbouring content like the reaction row.
     val containerModifier =
         borderModifier
-            .then(sizeModifier)
+            .then(mediaSizingModifier(ratio, contentScale))
             .let { if (onDialog != null) it.clickable { onDialog() } else it }
 
     Box(
