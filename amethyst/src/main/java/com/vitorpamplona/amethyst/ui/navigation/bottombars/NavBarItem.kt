@@ -391,13 +391,11 @@ val DefaultBottomBarEntries: List<BottomBarEntry> = DefaultBottomBarItems.map { 
 // each id in NavBarCatalog, so adding a new screen only requires editing the catalog + the
 // matching section list below — not two separate files.
 val DrawerNavigateItems: List<NavBarItem> =
-    listOfNotNull(
+    listOf(
         NavBarItem.HOME,
         NavBarItem.MESSAGES,
         NavBarItem.VIDEO,
-        // The embedded browser renders a cross-process surface (SurfaceControlViewHost), which needs
-        // API 30+. Below that the item is hidden so the feature can't be pinned or opened.
-        NavBarItem.BROWSER.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
+        NavBarItem.BROWSER,
         NavBarItem.DISCOVER,
         NavBarItem.NOTIFICATIONS,
     )
