@@ -24,9 +24,7 @@ import android.graphics.drawable.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -77,9 +75,13 @@ fun GifVideoView(
     val borderModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier
     val context = LocalContext.current
 
+    // Share the static-image sizing policy so animated media obeys it too: in Crop
+    // contexts (e.g. the multi-image gallery grid) the cell has a fixed width AND height,
+    // so the content must fill and crop rather than impose its own aspect ratio, which
+    // would overflow the cell and spill over neighbouring content like the reaction row.
     val containerModifier =
-        (if (ratio != null) borderModifier.aspectRatio(ratio) else borderModifier)
-            .fillMaxWidth()
+        borderModifier
+            .then(mediaSizingModifier(ratio, contentScale))
             .let { if (onDialog != null) it.clickable { onDialog() } else it }
 
     Box(

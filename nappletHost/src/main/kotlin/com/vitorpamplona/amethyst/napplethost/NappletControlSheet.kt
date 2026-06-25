@@ -67,6 +67,9 @@ class NappletControlSheet(
     // When non-null, a "Console" row is added to the pull-down sheet. The callback toggles the
     // browser's console log panel; the count label is updated via [updateConsoleCount].
     private val onConsole: (() -> Unit)? = null,
+    // When non-null, a favorite toggle row is shown; called with the current URL and new isFavorite state.
+    isFavoriteInitially: Boolean = false,
+    private val onFavoriteToggle: ((url: String, isFavorite: Boolean) -> Unit)? = null,
 ) : LinearLayout(context) {
     private val onSurface = resolveThemeColor(android.R.attr.textColorPrimary)
     private val dimmed = resolveThemeColor(android.R.attr.textColorSecondary)
@@ -75,6 +78,7 @@ class NappletControlSheet(
     private var expanded = false
     private var torOn = torInitiallyOn
     private var currentUrl = liveUrl
+    private var isFavorite = isFavoriteInitially
 
     private val panel: LinearLayout
     private var torLabel: TextView? = null
@@ -82,6 +86,7 @@ class NappletControlSheet(
     private var addressField: EditText? = null
     private var securityGlyph: TextView? = null
     private var consoleLabel: TextView? = null
+    private var favoriteLabel: TextView? = null
 
     init {
         orientation = VERTICAL
@@ -150,6 +155,35 @@ class NappletControlSheet(
                                 width = dp(28)
                                 gravity = Gravity.CENTER
                                 typeface = android.graphics.Typeface.MONOSPACE
+                            },
+                        )
+                        addView(label)
+                    },
+                )
+            }
+            onFavoriteToggle?.let {
+                val label =
+                    TextView(context).apply {
+                        text = context.getString(if (isFavorite) R.string.browser_favorite_remove else R.string.browser_favorite_add)
+                        setTextColor(onSurface)
+                        textSize = 15f
+                        setPadding(dp(8), 0, 0, 0)
+                    }
+                favoriteLabel = label
+                addView(
+                    LinearLayout(context).apply {
+                        orientation = HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(8), dp(10), dp(8), dp(10))
+                        isClickable = true
+                        setOnClickListener { toggleFavorite() }
+                        addView(
+                            TextView(context).apply {
+                                text = "★"
+                                setTextColor(dimmed)
+                                textSize = 18f
+                                width = dp(28)
+                                gravity = Gravity.CENTER
                             },
                         )
                         addView(label)
@@ -254,6 +288,19 @@ class NappletControlSheet(
         // Don't fight the user while they're editing the field.
         addressField?.takeIf { !it.hasFocus() }?.setText(url)
         securityGlyph?.text = securityGlyphFor(url)
+        // Reset favorite state for the new URL (we don't know if it's a favorite without a round-trip).
+        if (onFavoriteToggle != null) {
+            isFavorite = false
+            favoriteLabel?.text = context.getString(R.string.browser_favorite_add)
+        }
+    }
+
+    private fun toggleFavorite() {
+        val url = currentUrl?.takeIf { it.isNotBlank() } ?: return
+        isFavorite = !isFavorite
+        favoriteLabel?.text = context.getString(if (isFavorite) R.string.browser_favorite_remove else R.string.browser_favorite_add)
+        collapse()
+        onFavoriteToggle?.invoke(url, isFavorite)
     }
 
     private fun securityGlyphFor(url: String): String =

@@ -89,8 +89,9 @@ object FavoriteAppLauncher {
                     if (nightMask == Configuration.UI_MODE_NIGHT_YES) "DARK" else "LIGHT"
                 }
             }
+        val isFavorite = FavoriteAppsRegistry.isFavorite("url:$url")
         val intent =
-            NappletBrowserActivity.intent(context, url, proxyPort, useTor, theme = theme).apply {
+            NappletBrowserActivity.intent(context, url, proxyPort, useTor, theme = theme, isFavorite = isFavorite).apply {
                 if (context !is Activity) addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         context.startActivity(intent)

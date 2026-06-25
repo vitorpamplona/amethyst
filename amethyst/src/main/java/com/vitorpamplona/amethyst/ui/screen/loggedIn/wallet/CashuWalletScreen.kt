@@ -1234,15 +1234,23 @@ private fun MintPicker(
     }
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
         mints.forEach { m ->
-            DropdownMenuItem(
-                text = { Text(m) },
-                onClick = {
-                    onPick(m)
-                    expanded = false
-                },
-            )
+            MintPickerItem(m) {
+                onPick(m)
+                expanded = false
+            }
         }
     }
+}
+
+@Composable
+private fun MintPickerItem(
+    mint: String,
+    onClick: () -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(mint) },
+        onClick = onClick,
+    )
 }
 
 // ============================================================================

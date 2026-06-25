@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.utils.Log
+import java.net.URLEncoder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -142,6 +143,10 @@ class BouncingIntentNav(
 
             is Route.Hashtag -> {
                 NOSTR_URI_PREFIX + "hashtag?id=" + route.hashtag
+            }
+
+            is Route.Url -> {
+                NOSTR_URI_PREFIX + "url?id=" + URLEncoder.encode(route.url, Charsets.UTF_8.name())
             }
 
             is Route.LiveActivityChannel -> {

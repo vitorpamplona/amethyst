@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.napplethost
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
 
@@ -54,7 +55,9 @@ class NappletBlobCache(
             dir.mkdirs()
             val tmp = File(dir, "$sha256.tmp.${System.nanoTime()}")
             tmp.writeBytes(bytes)
-            if (!tmp.renameTo(target)) tmp.delete()
+            if (!tmp.renameTo(target) && !tmp.delete()) {
+                Log.w("NappletBlobCache") { "Failed to delete leftover temp file ${tmp.absolutePath} after a failed rename" }
+            }
         }
     }
 

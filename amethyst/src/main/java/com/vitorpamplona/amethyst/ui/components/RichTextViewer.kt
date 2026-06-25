@@ -549,7 +549,7 @@ private fun RenderWordWithPreview(
         is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is VideoSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is PdfSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
-        is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, callbackUri, accountViewModel)
+        is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, callbackUri, accountViewModel, nav)
         is NowhereLinkSegment -> NowhereLinkCard(word)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText, accountViewModel)

@@ -214,6 +214,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.ShortsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.SoftwareAppDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.SoftwareAppsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.UrlPostScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.UrlScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddCashuWalletScreen
@@ -460,6 +462,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.ContactListUsers> { ContactListUsersScreen(it.noteId, accountViewModel, nav) }
         composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
+        composableFromEndArgs<Route.Url> { UrlScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.RelayFeed> { RelayFeedScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.ChessGame> { ChessGameScreen(it.gameId, accountViewModel, nav) }
         composableFromEndArgs<Route.RelayInfo> { RelayInformationScreen(it.url, accountViewModel, nav) }
@@ -560,6 +563,19 @@ fun BuildNavigation(
         composableFromBottomArgs<Route.HashtagPost> {
             HashtagPostScreen(
                 hashtag = it.hashtag,
+                message = it.message,
+                attachment = it.attachment,
+                replyId = it.replyTo,
+                quoteId = it.quote,
+                draftId = it.draft,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.UrlPost> {
+            UrlPostScreen(
+                url = it.url,
                 message = it.message,
                 attachment = it.attachment,
                 replyId = it.replyTo,

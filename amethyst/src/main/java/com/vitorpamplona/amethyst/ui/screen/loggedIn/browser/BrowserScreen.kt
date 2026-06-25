@@ -195,12 +195,6 @@ private fun BrowserLauncher(
                 onValueChange = ::onValueChange,
                 onClear = { field = TextFieldValue("") },
                 onOpen = { open(field.text) },
-                onFavorite = {
-                    val url = OmniboxInput.resolve(field.text)?.url ?: return@OmniBar
-                    FavoriteAppsRegistry.add(
-                        FavoriteApp.WebUrl(url = url, label = hostOf(url), addedAt = System.currentTimeMillis()),
-                    )
-                },
             )
         },
         bottomBar = {
@@ -264,7 +258,6 @@ private fun OmniBar(
     onValueChange: (TextFieldValue) -> Unit,
     onClear: () -> Unit,
     onOpen: () -> Unit,
-    onFavorite: () -> Unit,
 ) {
     Row(
         modifier =
@@ -309,9 +302,6 @@ private fun OmniBar(
                 ),
         )
         if (field.text.isNotBlank()) {
-            IconButton(onClick = onFavorite) {
-                Icon(MaterialSymbols.StarBorder, contentDescription = stringResource(R.string.favorite_app_add))
-            }
             IconButton(onClick = onOpen) {
                 Icon(MaterialSymbols.AutoMirrored.ArrowForward, contentDescription = stringResource(R.string.browser_go))
             }

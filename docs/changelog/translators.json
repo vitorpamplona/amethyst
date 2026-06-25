@@ -77,6 +77,12 @@
     "since": "2026-06-19T19:01:59-04:00",
     "translators": [
       {
+        "user": "maxblake2015",
+        "languages": [
+          "Polish"
+        ]
+      },
+      {
         "user": "rajs19420616",
         "languages": [
           "Hindi"
@@ -89,15 +95,9 @@
         ]
       },
       {
-        "user": "summoner001",
+        "user": "StellarStoic",
         "languages": [
-          "Hungarian"
-        ]
-      },
-      {
-        "user": "maxblake2015",
-        "languages": [
-          "Polish"
+          "Slovenian"
         ]
       },
       {
@@ -107,15 +107,15 @@
         ]
       },
       {
-        "user": "BitByBit21",
+        "user": "summoner001",
         "languages": [
-          "Spanish"
+          "Hungarian"
         ]
       },
       {
-        "user": "StellarStoic",
+        "user": "BitByBit21",
         "languages": [
-          "Slovenian"
+          "Spanish"
         ]
       },
       {

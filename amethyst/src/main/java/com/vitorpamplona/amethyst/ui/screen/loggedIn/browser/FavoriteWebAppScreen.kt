@@ -44,9 +44,12 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
+import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
@@ -104,6 +107,9 @@ private fun EmbeddedFavoriteTab(
     // can opt one out and it must stick). Only meaningful when Tor is actually available.
     var torOn by remember { mutableStateOf(proxyAvailable && WebUrlNetworkRegistry.useTor(url)) }
 
+    val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val isFavorite = remember(apps, currentUrl) { apps.any { it is FavoriteApp.WebUrl && it.url == currentUrl } }
+
     val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
     val controller =
@@ -121,7 +127,7 @@ private fun EmbeddedFavoriteTab(
 
     // Rebuilt only when a displayed value changes, so the tab layer isn't recomposed every frame.
     val chrome =
-        remember(currentUrl, torOn, proxyAvailable) {
+        remember(currentUrl, torOn, proxyAvailable, isFavorite) {
             EmbeddedTabChrome(
                 title = hostLabel(currentUrl),
                 isSandbox = false,
@@ -132,6 +138,15 @@ private fun EmbeddedFavoriteTab(
                     torOn = !torOn
                     controller.setTor(torOn)
                     WebUrlNetworkRegistry.set(url, torOn)
+                },
+                isFavorite = isFavorite,
+                onFavorite = {
+                    val favId = "url:$currentUrl"
+                    if (FavoriteAppsRegistry.isFavorite(favId)) {
+                        FavoriteAppsRegistry.remove(favId)
+                    } else {
+                        FavoriteAppsRegistry.add(FavoriteApp.WebUrl(currentUrl, hostLabel(currentUrl), System.currentTimeMillis()))
+                    }
                 },
             )
         }
