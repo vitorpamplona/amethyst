@@ -358,7 +358,13 @@ class CardFeedContentState(
                     it.event !is ReactionEvent &&
                         it.event !is RepostEvent &&
                         it.event !is GenericRepostEvent &&
-                        it.event !is LnZapEvent
+                        it.event !is LnZapEvent &&
+                        // Nutzaps are already grouped into nutzapsPerEvent (MultiSetCard)
+                        // or nutzapsPerUser (NutzapUserSetCard) above, exactly like lightning
+                        // zaps. Without this exclusion a nutzap would ALSO fall through to a
+                        // standalone NoteCard and render a second time as a big RenderNutzap
+                        // card — a duplicate of the grouped one.
+                        it.event !is NutzapEvent
                 }.map {
                     if (it.event is PrivateDmEvent || it.event is NIP17Group || it.isInMarmotGroup()) {
                         MessageSetCard(it)
