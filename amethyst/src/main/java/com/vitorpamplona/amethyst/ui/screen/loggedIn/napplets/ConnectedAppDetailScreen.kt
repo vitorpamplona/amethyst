@@ -259,12 +259,13 @@ private fun AppIdentityHeader(state: ConnectedAppDetailState) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                val domain = state.coordinate.substringAfter(':', "").ifBlank { state.coordinate.substringBefore(':').take(12) + "…" }
                 Text(
-                    state.coordinate,
+                    domain,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontFamily = FontFamily.Monospace,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -289,21 +290,21 @@ private fun PolicyPicker(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         PolicyOption(
             selected = selected == AppSignerPolicy.FULL_TRUST,
-            icon = "❤",
+            symbol = MaterialSymbols.Favorite,
             label = stringResource(R.string.napplet_policy_full_trust),
             description = stringResource(R.string.napplet_policy_full_trust_desc),
             onClick = { onSelect(AppSignerPolicy.FULL_TRUST) },
         )
         PolicyOption(
             selected = selected == AppSignerPolicy.REASONABLE,
-            icon = "👍",
+            symbol = MaterialSymbols.Shield,
             label = stringResource(R.string.napplet_policy_reasonable),
             description = stringResource(R.string.napplet_policy_reasonable_desc),
             onClick = { onSelect(AppSignerPolicy.REASONABLE) },
         )
         PolicyOption(
             selected = selected == AppSignerPolicy.PARANOID,
-            icon = "🕶",
+            symbol = MaterialSymbols.Lock,
             label = stringResource(R.string.napplet_policy_paranoid),
             description = stringResource(R.string.napplet_policy_paranoid_desc),
             onClick = { onSelect(AppSignerPolicy.PARANOID) },
@@ -314,7 +315,7 @@ private fun PolicyPicker(
 @Composable
 private fun PolicyOption(
     selected: Boolean,
-    icon: String,
+    symbol: MaterialSymbol,
     label: String,
     description: String,
     onClick: () -> Unit,
@@ -336,7 +337,12 @@ private fun PolicyOption(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(icon, style = MaterialTheme.typography.headlineSmall)
+            Icon(
+                symbol = symbol,
+                contentDescription = null,
+                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(28.dp),
+            )
             Column(modifier = Modifier.weight(1f)) {
                 Text(label, style = MaterialTheme.typography.titleSmall)
                 Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relayauth
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,17 +31,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,11 +55,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
@@ -107,83 +110,84 @@ fun RelayAuthSettingsScreen(
             )
             Spacer(Modifier.height(4.dp))
 
-            Column(Modifier.selectableGroup()) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 RelayAuthPolicy.entries.forEach { policy ->
-                    val (titleRes, descRes) =
+                    val (titleRes, descRes, symbol) =
                         when (policy) {
-                            RelayAuthPolicy.ALWAYS -> R.string.relay_auth_policy_always to R.string.relay_auth_policy_always_desc
-                            RelayAuthPolicy.NEVER -> R.string.relay_auth_policy_never to R.string.relay_auth_policy_never_desc
-                            RelayAuthPolicy.IF_IN_MY_LIST -> R.string.relay_auth_policy_if_in_my_list to R.string.relay_auth_policy_if_in_my_list_desc
+                            RelayAuthPolicy.ALWAYS ->
+                                Triple(
+                                    R.string.relay_auth_policy_always,
+                                    R.string.relay_auth_policy_always_desc,
+                                    MaterialSymbols.LockOpen,
+                                )
+                            RelayAuthPolicy.NEVER ->
+                                Triple(
+                                    R.string.relay_auth_policy_never,
+                                    R.string.relay_auth_policy_never_desc,
+                                    MaterialSymbols.Lock,
+                                )
+                            RelayAuthPolicy.IF_IN_MY_LIST ->
+                                Triple(
+                                    R.string.relay_auth_policy_if_in_my_list,
+                                    R.string.relay_auth_policy_if_in_my_list_desc,
+                                    MaterialSymbols.PrivacyTip,
+                                )
                         }
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = globalPolicy == policy,
-                                    onClick = { account.settings.changeDefaultRelayAuthPolicy(policy) },
-                                    role = Role.RadioButton,
-                                ).padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        RadioButton(
-                            selected = globalPolicy == policy,
-                            onClick = null,
-                        )
-                        Column {
-                            Text(text = stringResource(titleRes), style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                text = stringResource(descRes),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
+                    PolicyCard(
+                        selected = globalPolicy == policy,
+                        symbol = symbol,
+                        title = stringResource(titleRes),
+                        description = stringResource(descRes),
+                        onClick = { account.settings.changeDefaultRelayAuthPolicy(policy) },
+                    )
                 }
             }
 
-            if (perRelayOverrides.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(8.dp))
 
+            if (perRelayOverrides.isNotEmpty()) {
                 Text(
                     text = stringResource(R.string.relay_auth_per_relay_overrides),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(Modifier.height(4.dp))
 
-                perRelayOverrides.entries.sortedBy { it.key }.forEach { (url, decision) ->
-                    PerRelayOverrideRow(
-                        url = url,
-                        decision = decision,
-                        onRemove = {
-                            scope.launch {
-                                ledger.clearDecision(url)
-                                reloadKey++
-                            }
-                        },
-                        onToggle = {
-                            scope.launch {
-                                val next =
-                                    if (decision == RelayAuthDecision.ALLOW) {
-                                        RelayAuthDecision.DENY
-                                    } else {
-                                        RelayAuthDecision.ALLOW
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(4.dp)) {
+                        perRelayOverrides.entries.sortedBy { it.key }.forEachIndexed { index, (url, decision) ->
+                            if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
+                            PerRelayOverrideRow(
+                                url = url,
+                                decision = decision,
+                                onRemove = {
+                                    scope.launch {
+                                        ledger.clearDecision(url)
+                                        reloadKey++
                                     }
-                                ledger.setDecision(url, next)
-                                reloadKey++
-                            }
-                        },
-                    )
+                                },
+                                onToggle = {
+                                    scope.launch {
+                                        val next =
+                                            if (decision == RelayAuthDecision.ALLOW) {
+                                                RelayAuthDecision.DENY
+                                            } else {
+                                                RelayAuthDecision.ALLOW
+                                            }
+                                        ledger.setDecision(url, next)
+                                        reloadKey++
+                                    }
+                                },
+                            )
+                        }
+                    }
                 }
-            }
-
-            if (perRelayOverrides.isEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(8.dp))
+            } else {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text(
                         text = stringResource(R.string.relay_auth_no_overrides),
@@ -191,6 +195,52 @@ fun RelayAuthSettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PolicyCard(
+    selected: Boolean,
+    symbol: MaterialSymbol,
+    title: String,
+    description: String,
+    onClick: () -> Unit,
+) {
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    val bgColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+
+    Surface(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .border(width = if (selected) 2.dp else 1.dp, color = borderColor, shape = RoundedCornerShape(12.dp))
+                .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = bgColor,
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                symbol = symbol,
+                contentDescription = null,
+                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(28.dp),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (selected) {
+                Icon(
+                    symbol = MaterialSymbols.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
         }
     }
@@ -207,7 +257,7 @@ private fun PerRelayOverrideRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -216,6 +266,7 @@ private fun PerRelayOverrideRow(
                 text = url,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         SuggestionChip(

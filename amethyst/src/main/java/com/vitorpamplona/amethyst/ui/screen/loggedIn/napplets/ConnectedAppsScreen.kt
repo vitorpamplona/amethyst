@@ -190,16 +190,11 @@ private fun ConnectedAppCard(
                 )
             }
 
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                if (entry.signerPolicy != null) {
-                    SuggestionChip(
-                        onClick = {},
-                        label = { Text(entry.signerPolicy.shortLabel(), style = MaterialTheme.typography.labelSmall) },
-                    )
-                }
+            if (entry.signerPolicy != null) {
+                SuggestionChip(
+                    onClick = {},
+                    label = { Text(entry.signerPolicy.shortLabel(), style = MaterialTheme.typography.labelSmall) },
+                )
             }
 
             Icon(

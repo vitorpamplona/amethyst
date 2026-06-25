@@ -770,6 +770,8 @@
     <string name="napplet_consent_wants_to">wants to %1$s</string>
     <string name="napplet_consent_see_more">See more</string>
     <string name="napplet_consent_see_less">See less</string>
+    <string name="napplet_consent_more_options">More options</string>
+    <string name="napplet_consent_fewer_options">Fewer options</string>
     <string name="napplet_signer_allow_once">Allow once</string>
     <string name="napplet_signer_allow_session">Allow for this session</string>
     <string name="napplet_signer_allow_24h">Allow for 24 hours</string>
