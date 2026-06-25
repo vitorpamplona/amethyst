@@ -87,6 +87,8 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.authorRouteFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
+import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
+import com.vitorpamplona.amethyst.ui.note.types.RenderNutzap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.MultiSetCard
@@ -132,6 +134,39 @@ fun MultiSetCompose(
 
     val scope = rememberCoroutineScope()
 
+    // A MultiSetCard that carries a single zap or nutzap — the common case for a
+    // freshly-arrived notification appended at the top of the feed — is rendered
+    // as a large activity card, the same big display used for onchain zaps and the
+    // thread view, instead of a one-icon gallery. Once a full rebuild groups
+    // several reactions/zaps on the same post into one card (size > 1), it falls
+    // back to the compact gallery below. This is purely a rendering decision: the
+    // card-building logic is unchanged, so the additive path naturally produces the
+    // single-item (large) cards and a rebuild naturally produces the grouped
+    // (gallery) ones.
+    val singleZap =
+        remember(multiSetCard) {
+            multiSetCard.zapEvents
+                .singleOrNull()
+                ?.takeIf {
+                    multiSetCard.nutzapEvents.isEmpty() &&
+                        multiSetCard.likeEvents.isEmpty() &&
+                        multiSetCard.boostEvents.isEmpty()
+                }
+        }
+
+    val singleNutzap =
+        remember(multiSetCard) {
+            multiSetCard.nutzapEvents
+                .singleOrNull()
+                ?.takeIf {
+                    multiSetCard.zapEvents.isEmpty() &&
+                        multiSetCard.likeEvents.isEmpty() &&
+                        multiSetCard.boostEvents.isEmpty()
+                }
+        }
+
+    val isLargeCard = singleZap != null || singleNutzap != null
+
     val backgroundColor =
         calculateBackgroundColor(
             createdAt = multiSetCard.maxCreatedAt,
@@ -140,7 +175,7 @@ fun MultiSetCompose(
         )
 
     val columnModifier =
-        remember(backgroundColor.value) {
+        remember(backgroundColor.value, isLargeCard) {
             Modifier
                 .fillMaxWidth()
                 .background(backgroundColor.value)
@@ -153,30 +188,53 @@ fun MultiSetCompose(
                     start = 12.dp,
                     end = 12.dp,
                     top = 10.dp,
+                    bottom = if (isLargeCard) 10.dp else 0.dp,
                 )
         }
 
     Column(modifier = columnModifier) {
-        Galeries(multiSetCard, backgroundColor, accountViewModel, nav)
+        when {
+            singleZap != null ->
+                RenderLnZap(
+                    note = singleZap.response,
+                    quotesLeft = 1,
+                    backgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
 
-        Row(Modifier.fillMaxWidth()) {
-            Spacer(modifier = WidthAuthorPictureModifierWithPadding)
+            singleNutzap != null ->
+                RenderNutzap(
+                    note = singleNutzap,
+                    quotesLeft = 1,
+                    backgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
 
-            NoteCompose(
-                baseNote = baseNote,
-                modifier = HalfTopPadding,
-                routeForLastRead = null,
-                isBoostedNote = true,
-                isHiddenFeed = showHidden,
-                quotesLeft = 1,
-                parentBackgroundColor = backgroundColor,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+            else -> {
+                Galeries(multiSetCard, backgroundColor, accountViewModel, nav)
 
-            if (popupExpanded.value) {
-                NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
+                Row(Modifier.fillMaxWidth()) {
+                    Spacer(modifier = WidthAuthorPictureModifierWithPadding)
+
+                    NoteCompose(
+                        baseNote = baseNote,
+                        modifier = HalfTopPadding,
+                        routeForLastRead = null,
+                        isBoostedNote = true,
+                        isHiddenFeed = showHidden,
+                        quotesLeft = 1,
+                        parentBackgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             }
+        }
+
+        if (popupExpanded.value) {
+            NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
         }
     }
 }
