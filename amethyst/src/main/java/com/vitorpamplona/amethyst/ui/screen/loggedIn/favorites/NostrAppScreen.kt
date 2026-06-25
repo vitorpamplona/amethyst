@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -70,7 +71,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 
 /**
- * A favorited nsite/napplet rendered as an **in-app tab**. The verified-blob sandbox surface (hosted in
+ * A **Nostr app** — an nSite or nApplet, reached by [coordinate] (favorited or not) — rendered as an
+ * **in-app tab**. The verified-blob sandbox surface (hosted in
  * the keyless `:napplet` process by `NappletHostService`) is drawn by the persistent [EmbeddedTabHost]
  * layer, which keeps the session warm across tab swaps — the surface stays attached and just moves over
  * the area this screen reserves. The **trusted chrome** (sandbox shield, app name, "what it can access")
@@ -81,13 +83,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
  * leaves. Requires API 30+ for the cross-process surface.
  */
 @Composable
-fun FavoriteNappletScreen(
+fun NostrAppScreen(
     coordinate: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        EmbeddedNappletTab(coordinate, accountViewModel, nav)
+        EmbeddedNostrAppTab(coordinate, accountViewModel, nav)
     } else {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
@@ -101,7 +103,7 @@ fun FavoriteNappletScreen(
 @RequiresApi(Build.VERSION_CODES.R)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EmbeddedNappletTab(
+private fun EmbeddedNostrAppTab(
     coordinate: String,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -121,7 +123,7 @@ private fun EmbeddedNappletTab(
 
     val title = params.getString(NappletHostContract.EXTRA_TITLE).orEmpty()
     val capLabels = params.getStringArrayList(NappletHostContract.EXTRA_CAP_LABELS).orEmpty()
-    val websiteMode = params.getBoolean(NappletHostContract.EXTRA_WEBSITE_MODE, false)
+    val profile = HostProfile.fromName(params.getString(NappletHostContract.EXTRA_HOST_PROFILE))
     val useTor = params.getBoolean(NappletHostContract.EXTRA_USE_TOR, true)
 
     var canGoBack by remember { mutableStateOf(false) }
@@ -132,7 +134,7 @@ private fun EmbeddedNappletTab(
 
     val controller =
         remember(id) {
-            EmbeddedTabFactory.acquireNapplet(context, coordinate, params, backgroundColor)
+            EmbeddedTabFactory.acquireNostrApp(context, coordinate, params, backgroundColor)
         }
 
     // Keep the controller callbacks fresh (cheap, need the latest closures).
@@ -198,12 +200,12 @@ private fun EmbeddedNappletTab(
     BackHandler(enabled = canGoBack) { controller.back() }
 
     if (showAccess) {
-        AccessDialog(title, capLabels, websiteMode, useTor) { showAccess = false }
+        AccessDialog(title, capLabels, profile.exposesNetwork, useTor) { showAccess = false }
     }
 
     Scaffold(
         bottomBar = {
-            AppBottomBar(Route.FavoriteNostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
+            AppBottomBar(Route.NostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
         // Reserve the full content area; the warm surface, its top sheet, and the loading/error overlay
@@ -227,7 +229,7 @@ private fun UnavailableTab(
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.favorite_apps)) }) },
         bottomBar = {
-            AppBottomBar(Route.FavoriteNostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
+            AppBottomBar(Route.NostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
     ) { padding ->
         Box(
@@ -250,7 +252,7 @@ private fun UnavailableTab(
 private fun AccessDialog(
     title: String,
     capLabels: List<String>,
-    websiteMode: Boolean,
+    showsNetwork: Boolean,
     useTor: Boolean,
     onDismiss: () -> Unit,
 ) {
@@ -261,7 +263,7 @@ private fun AccessDialog(
             capLabels.joinToString("\n") { "•  $it" }
         }
     val networkBody =
-        if (websiteMode) {
+        if (showsNetwork) {
             "\n\n" + stringResource(if (useTor) R.string.favorite_app_network_tor else R.string.favorite_app_network_open)
         } else {
             ""

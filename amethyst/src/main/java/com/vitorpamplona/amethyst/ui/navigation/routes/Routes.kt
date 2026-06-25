@@ -95,11 +95,11 @@ sealed class Route {
 
     @Serializable object FavoriteApps : Route()
 
-    @Serializable data class FavoriteWebApp(
+    @Serializable data class WebApp(
         val url: String,
     ) : Route()
 
-    @Serializable data class FavoriteNostrApp(
+    @Serializable data class NostrApp(
         val coordinate: String,
     ) : Route()
 

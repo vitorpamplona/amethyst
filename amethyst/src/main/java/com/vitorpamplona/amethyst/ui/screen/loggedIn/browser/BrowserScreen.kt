@@ -130,7 +130,7 @@ private fun BrowserLauncher(
     val candidates =
         remember(apps, history) {
             buildList {
-                apps.forEach { if (it is FavoriteApp.WebUrl) add(OmniboxSuggestions.Candidate(it.url, it.label, isFavorite = true)) }
+                apps.forEach { if (it is FavoriteApp.WebApp) add(OmniboxSuggestions.Candidate(it.url, it.label, isFavorite = true)) }
                 history.forEach {
                     add(
                         OmniboxSuggestions.Candidate(
@@ -214,7 +214,7 @@ private fun BrowserLauncher(
                     )
                 }
             else -> {
-                val favoriteUrls = remember(apps) { apps.filterIsInstance<FavoriteApp.WebUrl>().mapTo(HashSet()) { it.url } }
+                val favoriteUrls = remember(apps) { apps.filterIsInstance<FavoriteApp.WebApp>().mapTo(HashSet()) { it.url } }
                 BrowserHome(
                     apps = apps,
                     history = history,
@@ -229,7 +229,7 @@ private fun BrowserLauncher(
                             FavoriteAppsRegistry.remove(id)
                         } else {
                             FavoriteAppsRegistry.add(
-                                FavoriteApp.WebUrl(entry.url, entry.title.ifBlank { entry.host }, System.currentTimeMillis()),
+                                FavoriteApp.WebApp(entry.url, entry.title.ifBlank { entry.host }, System.currentTimeMillis()),
                             )
                         }
                     },

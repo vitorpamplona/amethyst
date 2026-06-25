@@ -61,10 +61,11 @@ object NappletHostContract {
     const val EXTRA_BG_COLOR = "napplet_bg_color"
 
     /**
-     * nSite "website mode": treat the content as a normal web app — install the NIP-07 `window.nostr`
-     * provider and allow normal network (no app CSP). Off for locked napplets.
+     * The host posture this launch renders under — a [HostProfile] name. WEBSITE treats the content as
+     * a normal web app (NIP-07 `window.nostr` provider, normal network, no app CSP); NAPPLET is the
+     * locked sandbox. Resolved in the trusted main process; the sandbox derives all coupled policy from it.
      */
-    const val EXTRA_WEBSITE_MODE = "napplet_website_mode"
+    const val EXTRA_HOST_PROFILE = "napplet_host_profile"
 
     /**
      * Whether this site's traffic routes through Tor (true, the default when Tor is active) or over the

@@ -83,7 +83,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipMa
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.PostBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.OldBookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.BrowserScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.FavoriteWebAppScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsScreen
@@ -127,7 +127,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.metadata.Em
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.membershipManagement.EmojiPackSelectionScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.membershipManagement.MyEmojiListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteAppsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteNappletScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.NostrAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.FollowPackFeedScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.FollowPacksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashPostScreen
@@ -321,8 +321,8 @@ fun BuildNavigation(
         composableFromEnd<Route.Nsites> { NsitesScreen(accountViewModel, nav) }
         composableFromEnd<Route.Browser> { BrowserScreen(accountViewModel, nav) }
         composableFromEnd<Route.FavoriteApps> { FavoriteAppsScreen(accountViewModel, nav) }
-        composableFromEndArgs<Route.FavoriteWebApp> { FavoriteWebAppScreen(it.url, accountViewModel, nav) }
-        composableFromEndArgs<Route.FavoriteNostrApp> { FavoriteNappletScreen(it.coordinate, accountViewModel, nav) }
+        composableFromEndArgs<Route.WebApp> { WebAppScreen(it.url, accountViewModel, nav) }
+        composableFromEndArgs<Route.NostrApp> { NostrAppScreen(it.coordinate, accountViewModel, nav) }
         composableFromEnd<Route.NappletPermissions> { NappletPermissionsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.SoftwareAppDetail> { SoftwareAppDetailScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Calendars> { CalendarsScreen(accountViewModel, nav) }

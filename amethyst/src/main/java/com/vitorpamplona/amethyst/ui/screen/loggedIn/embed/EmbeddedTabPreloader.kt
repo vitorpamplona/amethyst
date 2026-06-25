@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
-import com.vitorpamplona.amethyst.napplet.WebUrlNetworkRegistry
+import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.delay
@@ -81,9 +81,9 @@ fun EmbeddedTabPreloader(accountViewModel: AccountViewModel) {
         // Hydrate the per-site Tor/open-web choices BEFORE the first preload: a cold start otherwise reads
         // the bare Tor default and would route a site the user pinned to the open web through Tor (or stall
         // it waiting for Tor), which is exactly what breaks Tor-incompatible servers.
-        WebUrlNetworkRegistry.init(context)
+        WebAppNetworkRegistry.init(context)
         NappletNetworkRegistry.init(context)
-        WebUrlNetworkRegistry.awaitReady()
+        WebAppNetworkRegistry.awaitReady()
         NappletNetworkRegistry.awaitReady()
         var attempt = 0
         while (isActive) {

@@ -187,7 +187,7 @@ class NappletBrokerService : Service() {
             if (FavoriteAppsRegistry.isFavorite(id)) {
                 FavoriteAppsRegistry.remove(id)
             } else {
-                FavoriteAppsRegistry.add(FavoriteApp.WebUrl(url, label, System.currentTimeMillis()))
+                FavoriteAppsRegistry.add(FavoriteApp.WebApp(url, label, System.currentTimeMillis()))
             }
             return true
         }
@@ -196,8 +196,8 @@ class NappletBrokerService : Service() {
         if (msg.what == NappletIpc.MSG_SET_WEB_TOR) {
             val data = msg.data ?: return true
             val host = data.getString(NappletIpc.KEY_WEB_HOST)?.takeIf { it.isNotBlank() } ?: return true
-            WebUrlNetworkRegistry.init(applicationContext)
-            WebUrlNetworkRegistry.set(host, data.getBoolean(NappletIpc.KEY_NETWORK_USE_TOR, true))
+            WebAppNetworkRegistry.init(applicationContext)
+            WebAppNetworkRegistry.set(host, data.getBoolean(NappletIpc.KEY_NETWORK_USE_TOR, true))
             return true
         }
 

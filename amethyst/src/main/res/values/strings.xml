@@ -661,8 +661,8 @@
     <string name="exercise_circuit">Circuit</string>
     <string name="exercise_emom">EMOM</string>
     <string name="exercise_amrap">AMRAP</string>
-    <string name="software_apps">Apps</string>
-    <string name="route_software_apps">Apps</string>
+    <string name="software_apps">App Store</string>
+    <string name="route_software_apps">App Store</string>
     <string name="napplets">nApplets</string>
     <string name="nsites">nSites</string>
     <string name="nsite_none_found">No nSites found yet.</string>
@@ -681,8 +681,8 @@
     <string name="browser_favorites">Favorites</string>
     <string name="browser_recent_options">Options</string>
     <string name="browser_recent_remove">Remove from history</string>
-    <string name="favorite_apps">Favorite apps</string>
-    <string name="favorite_apps_empty">No favorite apps yet. Open a web client or nsite and tap the star to pin it here.</string>
+    <string name="favorite_apps">Web apps</string>
+    <string name="favorite_apps_empty">Nothing here yet. Open a web app, nApplet, or nSite and tap the star to keep it here.</string>
     <string name="favorite_app_add">Add to favorites</string>
     <string name="favorite_app_remove">Remove from favorites</string>
     <string name="favorite_app_open_window">Open in its own window</string>
