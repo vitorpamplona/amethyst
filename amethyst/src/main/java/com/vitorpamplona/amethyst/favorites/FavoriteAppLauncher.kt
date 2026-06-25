@@ -77,8 +77,9 @@ object FavoriteAppLauncher {
     ) {
         val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
         val useTor = proxyPort > 0 && (preferTor || WebUrlNetworkRegistry.useTor(url))
+        val isFavorite = FavoriteAppsRegistry.isFavorite("url:$url")
         val intent =
-            NappletBrowserActivity.intent(context, url, proxyPort, useTor).apply {
+            NappletBrowserActivity.intent(context, url, proxyPort, useTor, isFavorite = isFavorite).apply {
                 if (context !is Activity) addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         context.startActivity(intent)

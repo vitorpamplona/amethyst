@@ -53,9 +53,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
+import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -125,6 +127,9 @@ private fun EmbeddedNappletTab(
     var canGoBack by remember { mutableStateOf(false) }
     var showAccess by remember { mutableStateOf(false) }
 
+    val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val isFavorite = remember(apps, coordinate) { apps.any { it.id == "nostr:$coordinate" } }
+
     val controller =
         remember(id) {
             EmbeddedTabFactory.acquireNapplet(context, coordinate, params, backgroundColor)
@@ -138,15 +143,24 @@ private fun EmbeddedNappletTab(
         }
     }
 
-    // Stable per app (title/coordinate don't change), so the tab layer isn't recomposed every frame.
+    // Stable per app (title/coordinate/isFavorite don't change often), so the tab layer isn't recomposed every frame.
     val chrome =
-        remember(title, coordinate) {
+        remember(title, coordinate, isFavorite) {
             EmbeddedTabChrome(
                 title = title.ifBlank { coordinate },
                 isSandbox = true,
                 onReload = { controller.reload() },
                 onOpenFull = { FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis())) },
                 onInfo = { showAccess = true },
+                isFavorite = isFavorite,
+                onFavorite = {
+                    val favId = "nostr:$coordinate"
+                    if (FavoriteAppsRegistry.isFavorite(favId)) {
+                        FavoriteAppsRegistry.remove(favId)
+                    } else {
+                        FavoriteAppsRegistry.add(FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()))
+                    }
+                },
             )
         }
     // Publish the top-sheet controls to the tab layer (drawn over the z-below surface). In a SideEffect

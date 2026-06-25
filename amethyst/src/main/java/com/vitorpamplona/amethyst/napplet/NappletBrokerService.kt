@@ -32,6 +32,7 @@ import android.os.RemoteException
 import android.os.SystemClock
 import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
@@ -41,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
+import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
 import com.vitorpamplona.amethyst.napplethost.NappletIpc
@@ -172,6 +174,21 @@ class NappletBrokerService : Service() {
             val bytes = data.getByteArray(NappletIpc.KEY_ICON_BYTES) ?: return true
             BrowserIconRegistry.init(applicationContext)
             BrowserIconRegistry.record(host, bytes)
+            return true
+        }
+
+        // The direct-WebView browser requests a favorite toggle for the current URL (main process only).
+        if (msg.what == NappletIpc.MSG_TOGGLE_WEB_FAVORITE) {
+            val data = msg.data ?: return true
+            val url = data.getString(NappletIpc.KEY_FAVORITE_URL)?.takeIf { it.isNotBlank() } ?: return true
+            val label = data.getString(NappletIpc.KEY_FAVORITE_LABEL).orEmpty().ifBlank { url }
+            FavoriteAppsRegistry.init(applicationContext)
+            val id = "url:$url"
+            if (FavoriteAppsRegistry.isFavorite(id)) {
+                FavoriteAppsRegistry.remove(id)
+            } else {
+                FavoriteAppsRegistry.add(FavoriteApp.WebUrl(url, label, System.currentTimeMillis()))
+            }
             return true
         }
 
