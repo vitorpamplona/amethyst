@@ -43,6 +43,7 @@ class OkHttpClientFactory(
      * useful for tests or pre-configuration call sites.
      */
     val shouldBridgeBlossomCache: (() -> Boolean)? = null,
+    private val onionCache: OnionLocationCache? = null,
 ) {
     // val logging = LoggingInterceptor()
     val keyDecryptor = EncryptedBlobInterceptor(keyCache)
@@ -91,6 +92,7 @@ class OkHttpClientFactory(
             }
             // .addNetworkInterceptor(logging)
             .addNetworkInterceptor(keyDecryptor)
+            .apply { onionCache?.let { addNetworkInterceptor(OnionLocationInterceptor(it)) } }
             .build()
 
     private var lastProxy: Proxy? = null
@@ -107,6 +109,7 @@ class OkHttpClientFactory(
         return rootClient
             .newBuilder()
             .proxy(proxy)
+            .apply { if (proxy != null) onionCache?.let { addInterceptor(OnionUrlRewriteInterceptor(it)) } }
             .connectTimeout(Duration.ofSeconds(seconds.toLong()))
             .readTimeout(Duration.ofSeconds(seconds.toLong() * 3))
             .writeTimeout(Duration.ofSeconds(seconds.toLong() * 3))

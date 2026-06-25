@@ -30,6 +30,7 @@ import java.time.Duration
 class OkHttpClientFactoryForRelays(
     userAgent: String,
     private val dns: SurgeDns,
+    private val onionCache: OnionLocationCache,
 ) {
     companion object {
         // by picking a random proxy port, the connection will fail as it should.
@@ -61,6 +62,7 @@ class OkHttpClientFactoryForRelays(
             .followRedirects(true)
             .followSslRedirects(true)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
+            .addNetworkInterceptor(OnionLocationInterceptor(onionCache))
             .build()
 
     private var lastProxy: Proxy? = null
@@ -77,6 +79,7 @@ class OkHttpClientFactoryForRelays(
         return rootClient
             .newBuilder()
             .proxy(proxy)
+            .apply { if (proxy != null) addInterceptor(OnionUrlRewriteInterceptor(onionCache)) }
             .connectTimeout(Duration.ofSeconds(seconds.toLong()))
             .readTimeout(Duration.ofSeconds(seconds.toLong() * 3))
             .writeTimeout(Duration.ofSeconds(seconds.toLong() * 3))

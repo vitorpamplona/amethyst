@@ -40,8 +40,9 @@ class DualHttpClientManager(
     scope: CoroutineScope,
     dns: SurgeDns,
     shouldBridgeBlossomCache: (() -> Boolean)? = null,
+    onionCache: OnionLocationCache? = null,
 ) : IHttpClientManager {
-    val factory = OkHttpClientFactory(keyCache, userAgent, dns, shouldBridgeBlossomCache)
+    val factory = OkHttpClientFactory(keyCache, userAgent, dns, shouldBridgeBlossomCache, onionCache)
 
     val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->
