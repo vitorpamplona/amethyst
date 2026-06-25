@@ -653,6 +653,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="browser">Przeglądarka</string>
     <string name="browser_address_hint">Szukaj lub wprowadź adres</string>
     <string name="browser_reload">Odśwież</string>
+    <string name="browser_console_title_short">Konsola</string>
+    <string name="browser_console_title">Konsola (%1$d)</string>
+    <string name="browser_console_clear">Wyczyść</string>
     <string name="browser_tor_on">Wczytywanie przez Tor. Kliknij, aby użyć otwartej sieci.</string>
     <string name="browser_tor_off">Pobieranie przez otwartą sieć. Kliknij, aby skorzystać z sieci Tor.</string>
     <string name="browser_unsupported">Przeglądarka w aplikacji wymaga Androida 11 lub nowszego.</string>
@@ -718,6 +721,24 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="napplet_consent_allow_once">Zezwól jednorazowo</string>
     <string name="napplet_consent_deny_always">Nigdy nie zezwalaj</string>
     <string name="napplet_consent_not_now">Nie teraz</string>
+    <string name="napplet_consent_get_pubkey">Ten nApplet chce odczytać Twój klucz publiczny.</string>
+    <string name="napplet_consent_identity_read">Ten nApplet chce odczytać dane Twojego profilu i konta.</string>
+    <string name="napplet_consent_publish">Ta aplikacja nApplet chce podpisać i opublikować zdarzenie typu %1$d w Twoim imieniu.</string>
+    <string name="napplet_consent_publish_preview">Ta aplikacja nApplet chce podpisać i opublikować zdarzenie typu %1$d w Twoim imieniu:</string>
+    <string name="napplet_consent_publish_encrypted">Ten nApplet chce wysłać zaszyfrowane wydarzenie jako Ty.</string>
+    <string name="napplet_consent_query">Ten nApplet chce odczytywać wydarzenia z twoich transmiterów.</string>
+    <string name="napplet_consent_storage">Ta aplikacja nApplet chce korzystać ze swojego prywatnego schowka.</string>
+    <string name="napplet_consent_pay">Ta aplikacja nApplet chce zapłacić fakturę w systemie Lightning.</string>
+    <string name="napplet_consent_resource">Ten nApplet chce pobrać zasób internetowy.</string>
+    <string name="napplet_consent_upload">Ten nApplet chce przesłać plik na Twój serwer multimedialny.</string>
+    <string name="napplet_consent_notify">Ten nApplet chce pokazywać Ci powiadomienia.</string>
+    <string name="napplet_consent_sign">Ta witryna chce podpisać wydarzenie %1$d za pomocą Twojego klucza Nostr.</string>
+    <plurals name="napplet_consent_pay_amount">
+        <item quantity="one">Ta aplikacja nApplet chce opłacić fakturę Lightning w wysokości %1$d sat.</item>
+        <item quantity="few">Ta aplikacja nApplet chce opłacić fakturę Lightning w wysokości %1$d satoszów.</item>
+        <item quantity="many">Ta aplikacja nApplet chce opłacić fakturę Lightning w wysokości %1$d satoszy.</item>
+        <item quantity="other">Ta aplikacja nApplet chce opłacić fakturę Lightning w wysokości %1$d satoszów.</item>
+    </plurals>
     <string name="nip82_repository_label">Źródło: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Pobierz</string>
@@ -1282,6 +1303,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="split_notifications_setting_title">Podział powiadomień według obserwowanych</string>
     <string name="split_notifications_setting_description">Wyświetl dwie zakładki powiadomień — „Obserwowani” (osoby, które obserwujesz) oraz „Wszyscy”. Wskaźnik nieprzeczytanych powiadomień świeci się tylko w przypadku aktywności osób, które obserwujesz.</string>
     <string name="show_messages_in_notifications_setting_title">Pokaż wiadomości</string>
+    <string name="show_messages_in_notifications_setting_description">W zakładce „Powiadomienia” znajdują się zarówno wiadomości bezpośrednie, jak i grupowe. Wyłącz tę opcję, aby wiadomości były wyświetlane wyłącznie w zakładce „Wiadomości”.</string>
     <string name="notification_tab_following">Obserwowani</string>
     <string name="notification_tab_everyone">Wszyscy</string>
     <string name="battery_optimization_title">Optymalizacja baterii aktywna</string>
@@ -3139,6 +3161,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="marmot_edit_group_info">Edytuj informacje o grupie</string>
     <string name="marmot_leave_group">Opuść grupę</string>
     <string name="marmot_this_group">ta grupa</string>
+    <string name="marmot_leave_group_confirm">Czy na pewno chcesz opuścić grupę „%1$s”? Nie będziesz już otrzymywać wiadomości od tej grupy.</string>
+    <string name="marmot_failed_to_leave_group">Nie udało się opuścić grupy: %1$s</string>
     <string name="marmot_adding_user">Dodawanie %1$s…</string>
     <string name="marmot_failed_to_add_user">Nie udało się dodać %1$s: %2$s</string>
     <string name="marmot_unknown_error">nieznany błąd</string>
