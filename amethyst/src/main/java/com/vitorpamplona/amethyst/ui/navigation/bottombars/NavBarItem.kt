@@ -428,25 +428,19 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.POLLS,
         NavBarItem.PRODUCTS,
         NavBarItem.WORKOUTS,
-
         NavBarItem.LIVE_STREAMS,
         NavBarItem.NESTS,
-
         NavBarItem.COMMUNITIES,
         NavBarItem.PUBLIC_CHATS,
-
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
-
         NavBarItem.SOFTWARE_APPS,
         // Favorites can be pinned as inline tabs that render on a cross-process surface
         // (SurfaceControlViewHost), which needs API 30+. Gate the whole grid on R+ for that reason.
         NavBarItem.FAVORITE_APPS.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
         NavBarItem.NAPPLETS,
         NavBarItem.NSITES,
-
         NavBarItem.FOLLOW_PACKS,
-
         NavBarItem.BADGES,
         NavBarItem.EMOJI_SETS,
     )
