@@ -58,6 +58,7 @@ import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
+import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
@@ -466,6 +467,9 @@ class NappletHostActivity : ComponentActivity() {
             if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
                 safeBrowsingEnabled = true
             }
+        }
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+            WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, true)
         }
         // Disable the overscroll stretch/glow: forcing a scroll past the content edge stretched the
         // WebView's output and exposed the shell document's background behind the applet iframe at the
