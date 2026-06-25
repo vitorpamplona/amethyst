@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.components.UrlPreviewCard
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -309,7 +310,7 @@ private fun MyLoadUrlPreviewDirectFillWidth(
                     UrlPreviewCard(
                         url,
                         previewInfo = state.previewInfo,
-                        onUrlComments = { nav.nav(com.vitorpamplona.amethyst.ui.navigation.routes.Route.Url(url)) },
+                        onUrlComments = { nav.nav(Route.Url(url)) },
                     )
                 }
             }
