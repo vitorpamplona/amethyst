@@ -31,10 +31,15 @@ import okhttp3.Response
  * Only added to Tor-enabled OkHttpClient instances, so .onion substitution
  * never happens on clearnet connections (where .onion DNS would not resolve).
  *
- * Scheme is derived from the `Onion-Location` header value:
- * - `http://` onion + WebSocket original → `ws://`
- * - `https://` onion + WebSocket original → `wss://`
- * - HTTP originals take the onion scheme directly
+ * Scheme is derived from the `Onion-Location` header value to keep the request
+ * in the correct protocol family:
+ * - WebSocket originals (`ws`/`wss`) → `ws` or `wss` based on the onion scheme
+ * - HTTP originals (`http`/`https`) → `http` or `https` based on the onion scheme
+ *
+ * A `.onion` server advertising `http://` for a clearnet `https://` host is
+ * intentional and safe: the Tor circuit provides end-to-end encryption
+ * equivalent to TLS for onion services, so an `http://` onion connection is
+ * not a downgrade in practice.
  *
  * Port and path are preserved from the onion URL and original request
  * respectively. An unparseable cached URL falls through to the original.
@@ -50,6 +55,7 @@ class OnionUrlRewriteInterceptor(
         val newScheme =
             when (original.url.scheme) {
                 "ws", "wss" -> if (onionUrl.scheme == "https") "wss" else "ws"
+                "http", "https" -> if (onionUrl.scheme == "https") "https" else "http"
                 else -> onionUrl.scheme
             }
 

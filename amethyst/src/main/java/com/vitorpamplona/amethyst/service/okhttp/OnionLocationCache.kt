@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 /**
  * Maps clearnet hostnames to their advertised .onion equivalents, populated
@@ -30,16 +31,38 @@ import java.util.concurrent.ConcurrentHashMap
  * The [OnionUrlRewriteInterceptor] consults this cache on every outbound
  * request when Tor is active, transparently redirecting to the .onion address
  * so Tor-routed connections avoid exit nodes entirely.
+ *
+ * Entries expire after [TTL_MS] so that a server that rotates or decommissions
+ * its `.onion` address does not permanently break Tor connectivity. After expiry
+ * the next request goes out via Tor exit nodes (or clearnet on the no-proxy
+ * client); if the server still advertises `Onion-Location` the mapping is
+ * refreshed automatically.
  */
 class OnionLocationCache {
-    private val cache = ConcurrentHashMap<String, String>()
+    private data class Entry(
+        val onionUrl: String,
+        val expiresAtMs: Long,
+    )
+
+    private val cache = ConcurrentHashMap<String, Entry>()
 
     fun put(
         host: String,
         onionUrl: String,
     ) {
-        cache[host] = onionUrl
+        cache[host] = Entry(onionUrl, System.currentTimeMillis() + TTL_MS)
     }
 
-    fun get(host: String): String? = cache[host]
+    fun get(host: String): String? {
+        val entry = cache[host] ?: return null
+        if (System.currentTimeMillis() > entry.expiresAtMs) {
+            cache.remove(host)
+            return null
+        }
+        return entry.onionUrl
+    }
+
+    companion object {
+        val TTL_MS: Long = TimeUnit.HOURS.toMillis(24)
+    }
 }

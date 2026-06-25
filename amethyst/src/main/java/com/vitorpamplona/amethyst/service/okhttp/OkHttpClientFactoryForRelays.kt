@@ -62,7 +62,7 @@ class OkHttpClientFactoryForRelays(
             .followRedirects(true)
             .followSslRedirects(true)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
-            .addNetworkInterceptor(OnionLocationInterceptor(onionCache))
+            .addInterceptor(OnionLocationInterceptor(onionCache))
             .build()
 
     private var lastProxy: Proxy? = null

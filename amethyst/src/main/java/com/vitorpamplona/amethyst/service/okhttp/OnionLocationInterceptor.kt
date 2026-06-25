@@ -24,7 +24,7 @@ import okhttp3.Interceptor
 import okhttp3.Response
 
 /**
- * Network interceptor that passively captures `Onion-Location` headers from
+ * Application interceptor that passively captures `Onion-Location` headers from
  * every HTTP response — NIP-11 documents, WebSocket upgrade handshakes (101),
  * image/media servers, anything — and records the mapping into
  * [OnionLocationCache].
@@ -34,8 +34,12 @@ import okhttp3.Response
  * [OnionUrlRewriteInterceptor] swaps in the cached .onion address so the
  * connection avoids exit nodes entirely.
  *
- * Registered as a network interceptor (not application interceptor) so it sees
- * real server responses rather than cached copies.
+ * Registered as an application interceptor so that `chain.request().url.host`
+ * always returns the original clearnet hostname — the correct cache key. If it
+ * were a network interceptor it would run after [OnionUrlRewriteInterceptor]
+ * has already rewritten the host to `.onion`, causing cache entries from
+ * onion-routed responses to be stored under the `.onion` hostname instead of
+ * the clearnet hostname that [OnionUrlRewriteInterceptor] actually looks up.
  */
 class OnionLocationInterceptor(
     private val cache: OnionLocationCache,

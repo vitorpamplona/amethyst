@@ -92,7 +92,7 @@ class OkHttpClientFactory(
             }
             // .addNetworkInterceptor(logging)
             .addNetworkInterceptor(keyDecryptor)
-            .apply { onionCache?.let { addNetworkInterceptor(OnionLocationInterceptor(it)) } }
+            .apply { onionCache?.let { addInterceptor(OnionLocationInterceptor(it)) } }
             .build()
 
     private var lastProxy: Proxy? = null
