@@ -342,7 +342,7 @@ class NotificationRelayService : Service() {
             .Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.always_on_notif_title))
             .setContentText(contentText)
-            .setSmallIcon(R.drawable.amethyst)
+            .setSmallIcon(R.drawable.amethyst_service)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setSilent(true)
