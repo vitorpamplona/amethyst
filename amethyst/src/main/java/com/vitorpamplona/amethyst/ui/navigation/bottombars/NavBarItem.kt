@@ -379,9 +379,8 @@ val DefaultBottomBarItems: List<NavBarItem> =
     listOf(
         NavBarItem.HOME,
         NavBarItem.MESSAGES,
-        NavBarItem.VIDEO,
-        NavBarItem.DISCOVER,
-        NavBarItem.FAVORITE_ALGO_FEEDS,
+        NavBarItem.WALLET,
+        NavBarItem.BROWSER,
         NavBarItem.NOTIFICATIONS,
     )
 
@@ -422,11 +421,11 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.SOFTWARE_APPS,
         NavBarItem.NAPPLETS,
         NavBarItem.NSITES,
-        // The embedded browser renders a cross-process surface (SurfaceControlViewHost), which needs
-        // API 30+. Below that the item is hidden so the feature can't be pinned or opened.
-        NavBarItem.BROWSER.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
-        // Favorites can include arbitrary-URL web clients, which render on the same cross-process
-        // surface as the browser (API 30+). Gate the whole grid on R+ for the same reason.
+        // The Browser tab opens each site full-screen in its own direct-WebView activity, so it works
+        // on any API — no SurfaceControlViewHost surface involved.
+        NavBarItem.BROWSER,
+        // Favorites can be pinned as inline tabs that render on a cross-process surface
+        // (SurfaceControlViewHost), which needs API 30+. Gate the whole grid on R+ for that reason.
         NavBarItem.FAVORITE_APPS.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
