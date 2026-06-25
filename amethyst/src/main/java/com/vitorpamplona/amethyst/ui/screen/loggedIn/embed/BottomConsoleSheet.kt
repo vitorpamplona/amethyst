@@ -128,43 +128,8 @@ fun BottomConsoleSheet(
                                 .verticalScroll(scrollState)
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                         ) {
-                            val dimColor = MaterialTheme.colorScheme.onSurfaceVariant
                             logs.forEach { entry ->
-                                val levelColor = consoleLevelColor(entry.level)
-                                val srcShort =
-                                    entry.source
-                                        .substringAfterLast("/")
-                                        .substringAfterLast("\\")
-                                        .let { if (it.isBlank()) entry.source.takeLast(20) else it }
-                                Row(
-                                    Modifier.fillMaxWidth().padding(vertical = 1.dp),
-                                    verticalAlignment = Alignment.Top,
-                                ) {
-                                    Text(
-                                        consoleLevelChar(entry.level),
-                                        color = levelColor,
-                                        fontFamily = FontFamily.Monospace,
-                                        fontSize = 11.sp,
-                                        modifier = Modifier.width(14.dp),
-                                    )
-                                    Spacer(Modifier.width(4.dp))
-                                    Text(
-                                        buildAnnotatedString {
-                                            withStyle(SpanStyle(color = levelColor)) {
-                                                append(entry.message)
-                                            }
-                                            if (srcShort.isNotBlank()) {
-                                                withStyle(SpanStyle(color = dimColor)) {
-                                                    append("  $srcShort:${entry.lineNumber}")
-                                                }
-                                            }
-                                        },
-                                        fontFamily = FontFamily.Monospace,
-                                        fontSize = 11.sp,
-                                        modifier = Modifier.weight(1f),
-                                        overflow = TextOverflow.Visible,
-                                    )
-                                }
+                                ConsoleLogRow(entry)
                             }
                         }
                     }
@@ -200,6 +165,46 @@ fun BottomConsoleSheet(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ConsoleLogRow(entry: ConsoleLogEntry) {
+    val levelColor = consoleLevelColor(entry.level)
+    val dimColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val srcShort =
+        entry.source
+            .substringAfterLast("/")
+            .substringAfterLast("\\")
+            .let { if (it.isBlank()) entry.source.takeLast(20) else it }
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 1.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            consoleLevelChar(entry.level),
+            color = levelColor,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 11.sp,
+            modifier = Modifier.width(14.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            buildAnnotatedString {
+                withStyle(SpanStyle(color = levelColor)) {
+                    append(entry.message)
+                }
+                if (srcShort.isNotBlank()) {
+                    withStyle(SpanStyle(color = dimColor)) {
+                        append("  $srcShort:${entry.lineNumber}")
+                    }
+                }
+            },
+            fontFamily = FontFamily.Monospace,
+            fontSize = 11.sp,
+            modifier = Modifier.weight(1f),
+            overflow = TextOverflow.Visible,
+        )
     }
 }
 
