@@ -767,6 +767,9 @@
     <string name="napplet_policy_paranoid_desc">Do not sign anything without asking me!</string>
 
     <!-- Signer per-op consent dialog -->
+    <string name="napplet_consent_wants_to">wants to %1$s</string>
+    <string name="napplet_consent_see_more">See more</string>
+    <string name="napplet_consent_see_less">See less</string>
     <string name="napplet_signer_allow_once">Allow once</string>
     <string name="napplet_signer_allow_op">Don\'t ask again to %1$s</string>
     <string name="napplet_signer_allow_all">Don\'t ask again for any Nostr requests</string>
@@ -776,7 +779,8 @@
     <!-- Signer op labels -->
     <string name="napplet_op_sign_kind">sign kind %1$d event</string>
     <string name="napplet_op_encrypt">encrypt a message</string>
-    <string name="napplet_op_decrypt">decrypt a message</string>
+    <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <string name="napplet_op_decrypt">read your private messages</string>
 
     <!-- Permissions management screen -->
     <string name="napplet_permissions_title">Connected Apps</string>
@@ -784,6 +788,9 @@
     <string name="napplet_permissions_overrides">Operation overrides</string>
     <string name="napplet_signer_permissions_empty">No apps have connected yet.</string>
     <string name="napplet_signer_permissions_revoke_all">Revoke all permissions</string>
+    <string name="napplet_decision_allow">Allow</string>
+    <string name="napplet_decision_ask">Ask</string>
+    <string name="napplet_decision_deny">Deny</string>
 
     <string name="nip82_repository_label">Source: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>

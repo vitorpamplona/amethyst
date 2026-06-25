@@ -34,7 +34,13 @@ data class NappletSignerConsentInfo(
     val coordinate: String,
     val op: NostrSignerOp,
     val operationSummary: String,
+    /** Short excerpt shown in the dialog body (≤ 160 chars). */
     val contentPreview: String,
+    /**
+     * Full raw content for the "See more" toggle — event JSON for sign/encrypt operations,
+     * decrypted plaintext for decrypt (Amethyst decrypts first, then asks permission to expose).
+     */
+    val rawData: String = "",
 )
 
 /**

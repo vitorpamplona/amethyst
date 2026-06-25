@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
@@ -187,14 +186,26 @@ private fun AppSignerPermissionCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(opKey, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                         Text(
-                            decision.name,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (decision == NostrOpDecision.DENY) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                            NostrSignerOp.fromKey(opKey)?.label() ?: opKey,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f),
                         )
-                        IconButton(onClick = { onRevokeOp(opKey) }, modifier = Modifier.size(32.dp)) {
-                            Icon(symbol = MaterialSymbols.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Text(
+                            decision.label(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color =
+                                if (decision == NostrOpDecision.DENY) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
+                        )
+                        IconButton(onClick = { onRevokeOp(opKey) }) {
+                            Icon(
+                                symbol = MaterialSymbols.Delete,
+                                contentDescription = null,
+                            )
                         }
                     }
                 }
@@ -209,4 +220,20 @@ private fun AppSignerPolicy.label(): String =
         AppSignerPolicy.FULL_TRUST -> stringResource(R.string.napplet_policy_full_trust)
         AppSignerPolicy.REASONABLE -> stringResource(R.string.napplet_policy_reasonable)
         AppSignerPolicy.PARANOID -> stringResource(R.string.napplet_policy_paranoid)
+    }
+
+@Composable
+private fun NostrSignerOp.label(): String =
+    when (this) {
+        is NostrSignerOp.SignKind -> stringResource(R.string.napplet_op_sign_kind, kind)
+        NostrSignerOp.Encrypt -> stringResource(R.string.napplet_op_encrypt)
+        NostrSignerOp.Decrypt -> stringResource(R.string.napplet_op_decrypt)
+    }
+
+@Composable
+private fun NostrOpDecision.label(): String =
+    when (this) {
+        NostrOpDecision.ALLOW -> stringResource(R.string.napplet_decision_allow)
+        NostrOpDecision.ASK -> stringResource(R.string.napplet_decision_ask)
+        NostrOpDecision.DENY -> stringResource(R.string.napplet_decision_deny)
     }

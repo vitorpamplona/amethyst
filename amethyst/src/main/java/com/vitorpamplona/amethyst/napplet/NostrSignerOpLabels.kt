@@ -47,6 +47,21 @@ fun buildSignerConsentInfo(
         when (request) {
             is NappletRequest.Publish -> request.content.take(160).trim()
             is NappletRequest.SignEvent -> request.content.take(160).trim()
+            is NappletRequest.PublishEncrypted -> request.content.take(160).trim()
+            else -> ""
+        }
+    val rawData =
+        when (request) {
+            is NappletRequest.Publish -> buildEventJson(request.kind, request.tags, request.content)
+            is NappletRequest.SignEvent -> buildEventJson(request.kind, request.tags, request.content, request.createdAt)
+            is NappletRequest.PublishEncrypted ->
+                buildEventJson(
+                    request.kind,
+                    request.tags,
+                    request.content,
+                    recipient = request.recipient,
+                    encryption = request.encryption,
+                )
             else -> ""
         }
     return NappletSignerConsentInfo(
@@ -55,8 +70,47 @@ fun buildSignerConsentInfo(
         op = op,
         operationSummary = summary,
         contentPreview = preview,
+        rawData = rawData,
     )
 }
+
+private fun buildEventJson(
+    kind: Int,
+    tags: Array<Array<String>>,
+    content: String,
+    createdAt: Long? = null,
+    recipient: String? = null,
+    encryption: String? = null,
+): String =
+    buildString {
+        append("{\n")
+        append("  \"kind\": $kind")
+        if (createdAt != null) append(",\n  \"created_at\": $createdAt")
+        if (recipient != null) append(",\n  \"recipient\": \"$recipient\"")
+        if (encryption != null) append(",\n  \"encryption\": \"$encryption\"")
+        append(",\n  \"tags\": [")
+        if (tags.isEmpty()) {
+            append("]")
+        } else {
+            append("\n")
+            tags.forEachIndexed { i, tag ->
+                append("    [")
+                append(tag.joinToString(", ") { "\"${it.replace("\\", "\\\\").replace("\"", "\\\"")}\"" })
+                append("]")
+                if (i < tags.size - 1) append(",")
+                append("\n")
+            }
+            append("  ]")
+        }
+        val escaped =
+            content
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+        append(",\n  \"content\": \"$escaped\"")
+        append("\n}")
+    }
 
 /** Creates a [NappletConnectInfo] for the first-connect dialog. */
 fun buildConnectInfo(
