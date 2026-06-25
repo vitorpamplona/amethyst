@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.parseSelectionGeometry
 import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicLong
 
@@ -201,6 +202,7 @@ class EmbeddedNostrAppController(
                     text = o.optString("text", ""),
                     selStart = o.optInt("selStart", 0),
                     selEnd = o.optInt("selEnd", 0),
+                    geometry = parseSelectionGeometry(o.optJSONObject("geom")),
                 )
             "ime.blur" -> ImeEvent.Blur
             "ime.state" ->
@@ -208,6 +210,13 @@ class EmbeddedNostrAppController(
                     text = o.optString("text", ""),
                     selStart = o.optInt("selStart", 0),
                     selEnd = o.optInt("selEnd", 0),
+                    geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+                )
+            "ime.pagesel" ->
+                ImeEvent.PageSelection(
+                    active = o.optBoolean("active", false),
+                    text = o.optString("text", ""),
+                    geometry = parseSelectionGeometry(o.optJSONObject("geom")),
                 )
             else -> null
         }

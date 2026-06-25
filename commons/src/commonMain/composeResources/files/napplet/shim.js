@@ -191,6 +191,7 @@
   if (IME_PROXY) (function(){
     var el = null;            // the focused editable element, or null
     var inComposition = false;
+    function perfNow(){ try { return performance.now(); } catch (_) { return 0; } }
 
     function isEditable(n){
       if (!n) return false;
@@ -205,7 +206,22 @@
     }
     function isCE(n){ return !!(n && n.isContentEditable); }
     function valOf(n){ return isCE(n) ? n.textContent : (n.value || ''); }
-    function setVal(n, v){ if (isCE(n)) n.textContent = v; else n.value = v; }
+    // Controlled-input frameworks (React, Preact, …) install an INSTANCE-level `value` setter on the
+    // <input>/<textarea> that records the last value they wrote, and then suppress their onChange whenever
+    // the element's value already equals that recorded value. A plain `n.value = v` assignment goes through
+    // that tracker, so our programmatic edit looks like a no-op to the framework: onChange never fires, its
+    // state stays stale, and on the next render it reconciles the field straight back to the stale value —
+    // wiping what we just typed. Writing through the NATIVE prototype setter sets the real value without
+    // touching the tracker, so the framework's input handler sees value != tracked, detects the change, and
+    // commits it. Identical to `n.value = v` for plain (non-framework) pages.
+    var nativeInputValueSet = (function(){ try { return Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; } catch (_) { return null; } })();
+    var nativeAreaValueSet = (function(){ try { return Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set; } catch (_) { return null; } })();
+    function setVal(n, v){
+      if (isCE(n)) { n.textContent = v; return; }
+      var set = (typeof HTMLTextAreaElement !== 'undefined' && n instanceof HTMLTextAreaElement) ? nativeAreaValueSet : nativeInputValueSet;
+      if (set) { try { set.call(n, v); return; } catch (_) {} }
+      n.value = v;
+    }
 
     // --- contenteditable selection/replacement, mapped through char offsets into textContent ---
     // We can't use setSelectionRange/value on a contenteditable root; instead we map a char offset
@@ -264,13 +280,78 @@
       if (isCE(n)) ceSetSel(n, s, e);
       else { try { n.setSelectionRange(s, e); } catch (_) {} }
     }
+    // The DOM exposes no caret/selection rect for a position inside an <input>/<textarea>, so we mirror the
+    // field into a hidden div (same font/padding/wrapping) and measure where a marker span lands — the
+    // well-known "textarea-caret-position" technique. Used to place the insertion handle (and drag it).
+    var CARET_PROPS = ['direction','boxSizing','width','height','overflowX','overflowY','borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth','paddingTop','paddingRight','paddingBottom','paddingLeft','fontStyle','fontVariant','fontWeight','fontStretch','fontSize','fontSizeAdjust','lineHeight','fontFamily','textAlign','textTransform','textIndent','textDecoration','letterSpacing','wordSpacing','tabSize','MozTabSize'];
+    function caretCoords(n, position){
+      try {
+        var isInput = (n.nodeName || '').toUpperCase() === 'INPUT';
+        var computed = window.getComputedStyle(n);
+        var div = document.createElement('div');
+        var s = div.style;
+        s.position = 'absolute'; s.visibility = 'hidden'; s.whiteSpace = isInput ? 'nowrap' : 'pre-wrap'; s.wordWrap = 'break-word'; s.overflow = 'hidden';
+        for (var i = 0; i < CARET_PROPS.length; i++) { s[CARET_PROPS[i]] = computed[CARET_PROPS[i]]; }
+        var val = valOf(n);
+        div.textContent = val.substring(0, position);
+        if (isInput) div.textContent = div.textContent.replace(/\s/g, ' ');
+        var span = document.createElement('span');
+        span.textContent = val.substring(position) || '.';
+        div.appendChild(span);
+        document.body.appendChild(div);
+        var caretL = span.offsetLeft, caretT = span.offsetTop;
+        var lineHeight = parseInt(computed.lineHeight) || parseInt(computed.fontSize) || 16;
+        document.body.removeChild(div);
+        // offsetLeft/Top are measured from the mirror's *inner* (padding) edge, but getBoundingClientRect is the
+        // *outer* border box — so add the field's border widths to land on the real caret.
+        var bl = parseFloat(computed.borderLeftWidth) || 0, bt = parseFloat(computed.borderTopWidth) || 0;
+        var rect = n.getBoundingClientRect();
+        var x = rect.left + bl + caretL - n.scrollLeft;
+        var top = rect.top + bt + caretT - n.scrollTop;
+        return { x: x, top: top, bottom: top + lineHeight };
+      } catch (_) { return null; }
+    }
+    // Inverse: the char offset whose caret is nearest the CSS-px point (x,y). Binary search in reading order
+    // (offset increases left-to-right, top-to-bottom), so a handle drag maps back to a cursor position. Y is
+    // first clamped into the field's text rows, so dragging the handle (which sits below the line) or off the
+    // field keeps the cursor on the nearest line and lets X drive the column — like Android.
+    function offsetFromPoint(n, x, y){
+      var len = valOf(n).length;
+      var first = caretCoords(n, 0), last = caretCoords(n, len);
+      if (first && y < first.top) y = (first.top + first.bottom) / 2;
+      else if (last && y > last.bottom) y = (last.top + last.bottom) / 2;
+      var lo = 0, hi = len;
+      while (lo < hi) {
+        var mid = (lo + hi) >> 1, c = caretCoords(n, mid);
+        if (!c) break;
+        if (y < c.top) hi = mid;
+        else if (y > c.bottom) lo = mid + 1;
+        else if (x < c.x) hi = mid;
+        else lo = mid + 1;
+      }
+      return lo;
+    }
+    // The focused field's bounding box in CSS px (toolbar anchor). When the selection is a bare caret it also
+    // carries the caret rect (cx/ct/cb) so the host can show a draggable insertion handle.
+    function fieldGeom(n){
+      try {
+        var b = n.getBoundingClientRect();
+        var g = { l: b.left, t: b.top, r: b.right, b: b.bottom, sx: b.left, sb: b.bottom, ex: b.right, eb: b.bottom, vw: window.innerWidth };
+        var sel = selOf(n);
+        if (sel[0] === sel[1] && !isCE(n)) {
+          var c = caretCoords(n, sel[0]);
+          if (c) { g.cx = c.x; g.ct = c.top; g.cb = c.bottom; }
+        }
+        return g;
+      } catch (_) { return null; }
+    }
     function focusInfo(n){
       var t = (n.tagName || '').toUpperCase();
       var multiline = isCE(n) || t === 'TEXTAREA';
       var inputType = isCE(n) ? 'text' : (t === 'TEXTAREA' ? 'textarea' : (n.type || 'text').toLowerCase());
       var sel = selOf(n);
       return { type:'ime.focus', inputType: inputType, enterKeyHint: (n.enterKeyHint || ''),
-               multiline: multiline, text: valOf(n), selStart: sel[0], selEnd: sel[1] };
+               multiline: multiline, text: valOf(n), selStart: sel[0], selEnd: sel[1], geom: fieldGeom(n) };
     }
     // Last selection we either applied (applyState) or already reported, so the asynchronous
     // selectionchange our own setSel triggers doesn't echo back to the host as a fresh edit.
@@ -280,7 +361,7 @@
       if (!el) return;
       var sel = selOf(el);
       lastSel = sel;
-      send({ type:'ime.state', text: valOf(el), selStart: sel[0], selEnd: sel[1] });
+      send({ type:'ime.state', text: valOf(el), selStart: sel[0], selEnd: sel[1], geom: fieldGeom(el) });
     }
 
     document.addEventListener('focusin', function(e){
@@ -296,6 +377,9 @@
     }, true);
     // The page (its own JS, autofill) changed the field: resync the host keyboard's view of it.
     document.addEventListener('input', function(e){ if (e.target === el && !el.__nappletIme) reportState(); }, true);
+    // Just mirror selection changes inside the focused editable to the host. The host owns the authoritative
+    // selection, so it (not the shim) detects and re-asserts the collapse-to-endpoint that Chrome does when it
+    // abandons a selection it can't present handles for in the embedded surface — see RemoteImeView.onPageState.
     document.addEventListener('selectionchange', function(){
       if (!el || el.__nappletIme) return;
       if (sameSel(selOf(el), lastSel)) return; // our own applyState/setSel echoing back
@@ -366,9 +450,80 @@
       } finally { n.__nappletIme = false; lastSel = selOf(n); }
     }
 
+    // --- Page (non-editable) text selection re-hosting ---
+    // Chrome can't present its selection handles/toolbar in the cross-process embedded surface, so a
+    // long-press on ordinary page text selects a word and then ~60ms later abandons (collapses) it, the
+    // same way it does inside inputs. Mirror the document selection: re-assert it when it collapses right
+    // after forming, and report the selected text so the host can show its own Copy bar over the page.
+    var pageSelText = '', lastPageRange = null, lastPageAt = -1, pageReasserting = false;
+    // Selection geometry in CSS px (viewport coords). The host maps these to screen px (scale = surface
+    // width / vw) to draw the toolbar above the selection and a handle at each end. l/t/r/b is the bounding
+    // box; (sx,sb) the start-caret foot, (ex,eb) the end-caret foot; vw lets the host derive the scale.
+    function pageGeom(r){
+      try {
+        var b = r.getBoundingClientRect();
+        var sr = r.cloneRange(); sr.collapse(true); var s = sr.getBoundingClientRect();
+        var er = r.cloneRange(); er.collapse(false); var e = er.getBoundingClientRect();
+        return { l: b.left, t: b.top, r: b.right, b: b.bottom, sx: s.left, sb: s.bottom, ex: e.left, eb: e.bottom, vw: window.innerWidth };
+      } catch (_) { return null; }
+    }
+    function sendPageSel(active, r){
+      var text = active ? String(window.getSelection()) : '';
+      pageSelText = text;
+      send({ type: 'ime.pagesel', active: active, text: text, geom: active && r ? pageGeom(r) : null });
+    }
+    document.addEventListener('selectionchange', function(){
+      if (el || pageReasserting) return; // selections inside an editable are handled above
+      var s = window.getSelection();
+      if (s && s.rangeCount && !s.isCollapsed) {
+        var r = s.getRangeAt(0);
+        lastPageRange = r.cloneRange(); lastPageAt = perfNow();
+        sendPageSel(true, r);
+      } else if (lastPageRange && (perfNow() - lastPageAt) < 400) {
+        pageReasserting = true;
+        try { s.removeAllRanges(); s.addRange(lastPageRange); } catch (_) {}
+        pageReasserting = false;
+        lastPageAt = perfNow();
+      } else if (pageSelText) {
+        lastPageRange = null;
+        sendPageSel(false, null);
+      }
+    }, true);
+    // Host drag of a selection handle: move the dragged edge to the text position under (x,y) CSS px,
+    // keeping the opposite edge anchored. setBaseAndExtent tolerates either drag direction.
+    function pageExtend(edge, x, y){
+      try {
+        var pt = document.caretRangeFromPoint && document.caretRangeFromPoint(x, y);
+        var s = window.getSelection();
+        if (!pt || !s.rangeCount) return;
+        var cur = s.getRangeAt(0);
+        var aN, aO;
+        if (edge === 'start') { aN = cur.endContainer; aO = cur.endOffset; } else { aN = cur.startContainer; aO = cur.startOffset; }
+        pageReasserting = true;
+        s.setBaseAndExtent(aN, aO, pt.startContainer, pt.startOffset);
+        pageReasserting = false;
+        if (!s.isCollapsed) {
+          var nr = s.getRangeAt(0);
+          lastPageRange = nr.cloneRange(); lastPageAt = perfNow();
+          sendPageSel(true, nr);
+        }
+      } catch (_) {}
+    }
+
     window.__nappletImeHandle = function(msg){
       if (msg.type === 'ime.set') applyState(msg);
       else if (msg.type === 'ime.action') enter(el);
+      else if (msg.type === 'ime.pageextend') pageExtend(msg.edge, msg.x, msg.y);
+      else if (msg.type === 'ime.caretmove') {
+        if (el && !isCE(el)) {
+          var off = offsetFromPoint(el, msg.x, msg.y);
+          el.__nappletIme = true;
+          setSel(el, off, off);
+          el.__nappletIme = false;
+          lastSel = selOf(el);
+          reportState();
+        }
+      }
     };
   })();
 

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.SystemClock
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
@@ -93,7 +94,10 @@ class RemoteImeView(
                     count: Int,
                 ) {}
 
-                override fun afterTextChanged(s: Editable?) = schedule()
+                override fun afterTextChanged(s: Editable?) {
+                    if (!applyingRemote) onEdited?.invoke()
+                    schedule()
+                }
             },
         )
         // The IME's "Go/Search/Send/Done" — the page submits/handles it (single-line has no newline).
@@ -108,26 +112,85 @@ class RemoteImeView(
         this.bridge = bridge
     }
 
+    /**
+     * Notified when the mirrored selection becomes (true) or stops being (false) a non-empty range. The
+     * embedded WebView can't present Chrome's copy/paste toolbar in its cross-process surface, so the host
+     * shows its own over the page and routes the actions back through [copy]/[cut]/[paste]/[selectAll],
+     * which run on this EditText's Editable (and so relay to the page through the normal edit path).
+     */
+    var onRangeSelectionChanged: ((Boolean) -> Unit)? = null
+    private var hadRange = false
+
+    /** Fired when the user edits text via the keyboard (not on programmatic page-state applies). The host
+     *  hides the insertion handle while typing, the way Android does. */
+    var onEdited: (() -> Unit)? = null
+
+    fun copySelection(): Boolean = onTextContextMenuItem(android.R.id.copy)
+
+    fun cutSelection(): Boolean = onTextContextMenuItem(android.R.id.cut)
+
+    fun pasteClipboard(): Boolean = onTextContextMenuItem(android.R.id.paste)
+
+    fun selectAllText(): Boolean = onTextContextMenuItem(android.R.id.selectAll)
+
     /** A page field focused: configure the keyboard, seed the buffer, and raise the IME. */
     fun onPageFocus(focus: ImeEvent.Focus) {
         configureFor(focus)
-        applyRemote(focus.text, focus.selStart, focus.selEnd)
+        // Focus the EditText BEFORE seeding text/selection. An EditText jumps its caret to the end when it
+        // gains focus; if we seed first, that end-position then overrides the seed and gets shipped to the
+        // page — so a tap mid-text lands the caret at the end of the field. Seeding AFTER focus makes the
+        // tap position the final state (the focus-induced end-position only schedules a flush that then
+        // coalesces to this seed, a no-op).
         requestFocus()
         imm.restartInput(this)
+        applyRemote(focus.text, focus.selStart, focus.selEnd)
         // Post the show so it runs after focus/attachment has settled (showSoftInput can no-op otherwise).
         post {
             if (hasFocus()) imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
         }
     }
 
+    // When the current selection first became a range, and how many of its collapse-abandonments we've
+    // re-asserted. Chrome abandons a selection *immediately* (~60ms); a deliberate user tap-to-collapse comes
+    // later — so we only re-assert within a short window of the range forming, bounded for safety.
+    private var rangeBecameAt = 0L
+    private var reassertCount = 0
+
     /** The page changed the field itself (its JS, autofill): mirror it without echoing back. */
     fun onPageState(state: ImeEvent.State) {
-        if (text?.toString() == state.text && selectionStart == state.selStart && selectionEnd == state.selEnd) return
+        val curText = text?.toString() ?: ""
+        // Chrome can't present selection handles in the embedded surface, so it abandons a selection by
+        // collapsing the caret to one of the range's endpoints, right after it forms. We hold the
+        // authoritative selection here, so a collapse to an endpoint of our current range (same text) within
+        // the window is that abandonment, not a user action: re-assert our range instead of accepting it.
+        val collapsedToEndpoint =
+            selectionStart != selectionEnd &&
+                state.selStart == state.selEnd &&
+                state.text == curText &&
+                (state.selStart == selectionStart || state.selStart == selectionEnd)
+        if (collapsedToEndpoint && reassertCount < MAX_REASSERT &&
+            SystemClock.uptimeMillis() - rangeBecameAt < REASSERT_WINDOW_MS
+        ) {
+            reassertCount++
+            // Keep the window alive across the fight: Chrome re-abandons the selection every ~600ms while the
+            // gesture is held, so each re-assert restarts the clock — bounded by reassertCount so a page that
+            // truly keeps the caret collapsed still wins.
+            rangeBecameAt = SystemClock.uptimeMillis()
+            lastSent = null // force a non-no-op flush so the range re-ships
+            flushState()
+            return
+        }
+        reassertCount = 0
+        if (curText == state.text && selectionStart == state.selStart && selectionEnd == state.selEnd) return
         applyRemote(state.text, state.selStart, state.selEnd)
     }
 
     /** The page field blurred: drop the keyboard. */
     fun onPageBlur() {
+        if (hadRange) {
+            hadRange = false
+            onRangeSelectionChanged?.invoke(false)
+        }
         clearFocus()
         imm.hideSoftInputFromWindow(windowToken, 0)
     }
@@ -138,11 +201,18 @@ class RemoteImeView(
         selEnd: Int,
     ) {
         applyingRemote = true
-        setText(newText)
+        // Only replace the buffer when the text actually changed. A page that rewrites its field's
+        // selection on a timer (without changing the text) would otherwise force a full setText on every
+        // update — clearing the composing region and restarting the IME — which needlessly churns the
+        // keyboard and contends with the user's own typing. Reposition the cursor without touching the buffer.
+        if (text?.toString() != newText) setText(newText)
         val len = text?.length ?: 0
         setSelection(selStart.coerceIn(0, len), selEnd.coerceIn(0, len))
         applyingRemote = false
         lastSent = stateJson().toString()
+        // Start the abandonment window when a fresh range appears, so onPageState can tell Chrome's instant
+        // collapse from a later user tap-to-collapse.
+        if (selectionStart != selectionEnd) rangeBecameAt = SystemClock.uptimeMillis()
     }
 
     private fun schedule() {
@@ -156,6 +226,11 @@ class RemoteImeView(
         selEnd: Int,
     ) {
         super.onSelectionChanged(selStart, selEnd)
+        val isRange = selStart != selEnd
+        if (isRange != hadRange) {
+            hadRange = isRange
+            onRangeSelectionChanged?.invoke(isRange)
+        }
         schedule()
     }
 
@@ -236,5 +311,15 @@ class RemoteImeView(
             }
             return result
         }
+    }
+
+    private companion object {
+        // Chrome re-abandons a held selection repeatedly; cover a long-press hold (each re-assert restarts the
+        // window) while still giving up if the page truly keeps re-collapsing forever.
+        private const val MAX_REASSERT = 12
+
+        // Wider than Chrome's ~600ms re-collapse interval so consecutive abandonments stay inside the window,
+        // yet short enough that a deliberate user tap-to-collapse (well after the gesture) is accepted.
+        private const val REASSERT_WINDOW_MS = 800L
     }
 }
