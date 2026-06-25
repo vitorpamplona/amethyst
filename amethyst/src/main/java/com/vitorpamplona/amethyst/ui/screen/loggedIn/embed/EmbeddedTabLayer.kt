@@ -219,6 +219,7 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                     expanded = sheetExpanded,
                     onExpandedChange = { sheetExpanded = it },
                     consoleCount = consoleCount,
+                    consoleShowing = consoleShowing,
                     onConsole =
                         if (consoleBridge != null) {
                             {

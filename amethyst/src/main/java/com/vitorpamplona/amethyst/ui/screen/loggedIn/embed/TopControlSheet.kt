@@ -74,6 +74,7 @@ fun TopControlSheet(
     onExpandedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     consoleCount: Int = 0,
+    consoleShowing: Boolean = false,
     onConsole: (() -> Unit)? = null,
 ) {
     Column(
@@ -141,17 +142,20 @@ fun TopControlSheet(
                         }
                     }
                     onConsole?.let { showConsole ->
-                        SheetItem(
-                            MaterialSymbols.Code,
-                            if (consoleCount > 0) {
-                                stringResource(R.string.browser_console_title, consoleCount)
-                            } else {
-                                stringResource(R.string.browser_console_title_short)
+                        SheetSwitchItem(
+                            symbol = MaterialSymbols.Code,
+                            label =
+                                if (consoleCount > 0) {
+                                    stringResource(R.string.browser_console_title, consoleCount)
+                                } else {
+                                    stringResource(R.string.browser_console_title_short)
+                                },
+                            checked = consoleShowing,
+                            onToggle = {
+                                onExpandedChange(false)
+                                showConsole()
                             },
-                        ) {
-                            onExpandedChange(false)
-                            showConsole()
-                        }
+                        )
                     }
                 }
             }

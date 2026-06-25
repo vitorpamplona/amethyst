@@ -83,11 +83,41 @@ fun BottomConsoleSheet(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier, contentAlignment = Alignment.BottomCenter) {
-        // Column anchored at BottomCenter; panel appears above the grabber when expanded.
+        // Column anchored at BottomCenter. Grabber sits at the top of the column so it rides up
+        // with the panel as it expands — standard bottom-sheet handle behaviour.
         Column(
             modifier = Modifier.align(Alignment.BottomCenter),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // Grabber — the only touch target when collapsed; stays at the top of the panel when open
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+                        .clickable { onExpandedChange(!expanded) }
+                        .draggable(
+                            orientation = Orientation.Vertical,
+                            state =
+                                rememberDraggableState { delta ->
+                                    if (delta < -1f) {
+                                        onExpandedChange(true)
+                                    } else if (delta > 1f) {
+                                        onExpandedChange(false)
+                                    }
+                                },
+                        ).padding(horizontal = 16.dp, vertical = 7.dp),
+            ) {
+                Spacer(
+                    Modifier
+                        .width(36.dp)
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)),
+                )
+            }
+
             AnimatedVisibility(
                 visible = expanded,
                 enter = expandVertically(expandFrom = Alignment.Bottom) + fadeIn(),
@@ -98,7 +128,7 @@ fun BottomConsoleSheet(
                     contentColor = MaterialTheme.colorScheme.onSurface,
                     tonalElevation = 3.dp,
                     shadowElevation = 6.dp,
-                    shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                    shape = RoundedCornerShape(bottomStart = 0.dp, bottomEnd = 0.dp),
                 ) {
                     val maxHeight = (LocalConfiguration.current.screenHeightDp * 0.4f).dp
                     Column(Modifier.fillMaxWidth().heightIn(max = maxHeight)) {
@@ -134,35 +164,6 @@ fun BottomConsoleSheet(
                         }
                     }
                 }
-            }
-
-            // Grabber — the only touch target when collapsed
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier =
-                    Modifier
-                        .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-                        .clickable { onExpandedChange(!expanded) }
-                        .draggable(
-                            orientation = Orientation.Vertical,
-                            state =
-                                rememberDraggableState { delta ->
-                                    if (delta < -1f) {
-                                        onExpandedChange(true)
-                                    } else if (delta > 1f) {
-                                        onExpandedChange(false)
-                                    }
-                                },
-                        ).padding(horizontal = 16.dp, vertical = 7.dp),
-            ) {
-                Spacer(
-                    Modifier
-                        .width(36.dp)
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)),
-                )
             }
         }
     }
