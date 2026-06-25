@@ -376,12 +376,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
     )
 
 val DefaultBottomBarItems: List<NavBarItem> =
-    listOf(
+    listOfNotNull(
         NavBarItem.HOME,
         NavBarItem.MESSAGES,
-        NavBarItem.VIDEO,
-        NavBarItem.DISCOVER,
-        NavBarItem.FAVORITE_ALGO_FEEDS,
+        NavBarItem.WALLET,
+        // The embedded browser renders a cross-process surface (SurfaceControlViewHost), which needs
+        // API 30+. Below that the item is dropped so the feature can't be pinned or opened.
+        NavBarItem.BROWSER.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
         NavBarItem.NOTIFICATIONS,
     )
 
