@@ -391,10 +391,13 @@ val DefaultBottomBarEntries: List<BottomBarEntry> = DefaultBottomBarItems.map { 
 // each id in NavBarCatalog, so adding a new screen only requires editing the catalog + the
 // matching section list below — not two separate files.
 val DrawerNavigateItems: List<NavBarItem> =
-    listOf(
+    listOfNotNull(
         NavBarItem.HOME,
         NavBarItem.MESSAGES,
         NavBarItem.VIDEO,
+        // The embedded browser renders a cross-process surface (SurfaceControlViewHost), which needs
+        // API 30+. Below that the item is hidden so the feature can't be pinned or opened.
+        NavBarItem.BROWSER.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
         NavBarItem.DISCOVER,
         NavBarItem.NOTIFICATIONS,
     )
@@ -414,33 +417,36 @@ val DrawerYouItems: List<NavBarItem> =
 
 val DrawerFeedsItems: List<NavBarItem> =
     listOfNotNull(
-        NavBarItem.COMMUNITIES,
         NavBarItem.ARTICLES,
         NavBarItem.PICTURES,
+        NavBarItem.SHORTS,
+        NavBarItem.LONGS,
+        NavBarItem.PODCAST_EPISODES,
+        NavBarItem.PODCASTS,
+        NavBarItem.MUSIC_TRACKS,
+        NavBarItem.MUSIC_PLAYLISTS,
+        NavBarItem.POLLS,
+        NavBarItem.PRODUCTS,
         NavBarItem.WORKOUTS,
+
+        NavBarItem.LIVE_STREAMS,
+        NavBarItem.NESTS,
+
+        NavBarItem.COMMUNITIES,
+        NavBarItem.PUBLIC_CHATS,
+
+        NavBarItem.CALENDARS,
+        NavBarItem.CALENDAR_COLLECTIONS,
+
         NavBarItem.SOFTWARE_APPS,
-        NavBarItem.NAPPLETS,
-        NavBarItem.NSITES,
-        // The Browser tab opens each site full-screen in its own direct-WebView activity, so it works
-        // on any API — no SurfaceControlViewHost surface involved.
-        NavBarItem.BROWSER,
         // Favorites can be pinned as inline tabs that render on a cross-process surface
         // (SurfaceControlViewHost), which needs API 30+. Gate the whole grid on R+ for that reason.
         NavBarItem.FAVORITE_APPS.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
-        NavBarItem.CALENDARS,
-        NavBarItem.CALENDAR_COLLECTIONS,
-        NavBarItem.SHORTS,
-        NavBarItem.MUSIC_TRACKS,
-        NavBarItem.MUSIC_PLAYLISTS,
-        NavBarItem.PODCAST_EPISODES,
-        NavBarItem.PODCASTS,
-        NavBarItem.PUBLIC_CHATS,
+        NavBarItem.NAPPLETS,
+        NavBarItem.NSITES,
+
         NavBarItem.FOLLOW_PACKS,
-        NavBarItem.LIVE_STREAMS,
-        NavBarItem.NESTS,
-        NavBarItem.LONGS,
-        NavBarItem.POLLS,
+
         NavBarItem.BADGES,
-        NavBarItem.PRODUCTS,
         NavBarItem.EMOJI_SETS,
     )
