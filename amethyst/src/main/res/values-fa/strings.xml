@@ -5316,5 +5316,23 @@
     <string name="interest_set_name_placeholder">علایق من</string>
     
     <string name="interest_set_hashtag_add_placeholder">افزودن هشتگ</string>
-
+<string name="changed_chat_profile_to">پروفایل چت جدید:</string>
+<string name="enter_picture_in_picture">شروع ویدیو در پنجره‌ای</string>
+<string name="messages_cant_upload_explainer">ابتدا مقصد پیام را وارد کنید</string>
+<string name="messages_cant_upload_title">آپلود ممکن نیست</string>
+<string name="mutual">مال شما</string>
+<string name="private_message">پیام خصوصی</string>
+<string name="public_chat_explainer">چت‌های عمومی برای همه در Nostr قابل مشاهده هستند و هر کسی می‌تواند در آن‌ها شرکت کند. آن‌ها برای جوامع باز حول موضوعات خاص عالی هستند. مدیریت می‌تواند با حذف پست‌ها در relay های مربوطه کنترل شود</string>
+<string name="public_chat_relays_explainer">بین ۱ تا ۳ relay که این گروه را میزبانی می‌کنند وارد کنید. کلاینت‌های Nostr از این تنظیم برای دانلود پیام‌ها و ارسال پیام‌های شما استفاده می‌کنند.</string>
+<string name="public_chat_relays_title">Relay ها</string>
+<string name="public_chat_title">متادیتای چت عمومی</string>
+<string name="quick_actions_open_in_another_app">باز کردن در برنامه دیگر</string>
+<string name="secret_add_to_text">افزودن به پست</string>
+<string name="secret_emoji_maker">سازنده ایموجی مخفی</string>
+<string name="secret_emoji_maker_explainer">یک ایموجی با پیام مخفی به پست اضافه کنید</string>
+<string name="secret_note_to_receiver">یادداشت مخفی برای گیرنده</string>
+<string name="secret_note_to_receiver_placeholder">پیام مخفی من</string>
+<string name="secret_visible_text">پیشوند قابل مشاهده</string>
+<string name="secret_visible_text_placeholder">😎</string>
+<string name="write_a_message">یک پیام بنویسید…</string>
 </resources>
