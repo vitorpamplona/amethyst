@@ -4884,7 +4884,7 @@
     
     <string name="search_and_add_a_user">Kullanıcı ara ve ekle</string>
     
-    <string name="my_name">@etiket adım</string>
+    <string name="my_name">\@etiket adım</string>
     
     <string name="my_awesome_name">Ostrich McAwesome</string>
     

@@ -4596,7 +4596,7 @@
 
     <string name="search_and_add_a_user">Etsi ja lisää käyttäjä</string>
 
-    <string name="my_name">@-tunnukseni</string>
+    <string name="my_name">\@-tunnukseni</string>
 
     <string name="my_awesome_name">Ostrich McAwesome</string>
 

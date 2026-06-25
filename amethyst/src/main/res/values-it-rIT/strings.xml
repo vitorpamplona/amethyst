@@ -2311,7 +2311,7 @@
     
     <string name="calendar_rsvp_going_prefixed">✓ Partecipo</string>
     
-    <string name="calendar_rsvp_maybe_prefixed">? Forse</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Forse</string>
     
     <string name="calendar_rsvp_not_going_prefixed">✗ Non posso</string>
     

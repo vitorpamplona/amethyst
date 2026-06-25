@@ -1533,7 +1533,7 @@
     
     <string name="could_not_fetch_invoice_from_details">Δεν ήταν δυνατή η λήψη τιμολογίου από %1$s: %2$s</string>
     
-    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_address_with_user">Σφάλμα ανάλυσης JSON από %1$s. Ελέγξτε τις ρυθμίσεις Lightning του χρήστη</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Σφάλμα ανάλυσης JSON από %1$s. Ελέγξτε τις ρυθμίσεις Lightning του χρήστη</string>
     
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Η διεύθυνση URL επανάκλησης δεν βρέθηκε στην απόκριση του %1$s</string>
     

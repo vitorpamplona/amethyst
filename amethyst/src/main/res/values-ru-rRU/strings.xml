@@ -2243,7 +2243,7 @@
     
     <string name="calendar_rsvp_going_prefixed">✓ Пойду</string>
     
-    <string name="calendar_rsvp_maybe_prefixed">? Возможно</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Возможно</string>
     
     <string name="calendar_rsvp_not_going_prefixed">✗ Не смогу</string>
 
@@ -3430,26 +3430,11 @@
     
     <string name="tip">Подсказка</string>
     
-    <plurals name="accounts_found">
-    <item quantity="one">%1$d аккаунт найден</item>
-    <item quantity="few">%1$d аккаунта найдено</item>
-    <item quantity="many">%1$d аккаунтов найдено</item>
-    <item quantity="other">%1$d аккаунта найдено</item>
-</plurals>
+    <string name="accounts_found">%1$d аккаунтов найдено</string>
     
-    <plurals name="num_selected">
-    <item quantity="one">%1$d выбран</item>
-    <item quantity="few">%1$d выбрано</item>
-    <item quantity="many">%1$d выбрано</item>
-    <item quantity="other">%1$d выбрано</item>
-</plurals>
+    <string name="num_selected">%1$d выбрано</string>
     
-    <plurals name="follow_accounts">
-    <item quantity="one">Подписаться на %1$d аккаунт</item>
-    <item quantity="few">Подписаться на %1$d аккаунта</item>
-    <item quantity="many">Подписаться на %1$d аккаунтов</item>
-    <item quantity="other">Подписаться на %1$d аккаунта</item>
-</plurals>
+    <string name="follow_accounts">Подписаться на %1$d аккаунтов</string>
     
     <string name="skip_for_now">Пропустить пока</string>
     
