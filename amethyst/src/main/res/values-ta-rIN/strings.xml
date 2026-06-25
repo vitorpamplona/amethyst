@@ -118,7 +118,7 @@
     <string name="feed_is_empty">ஊட்டம் காலியாக உள்ளது.</string>
     <string name="refresh">புதுப்பி</string>
     <string name="leave">வெளியேறு</string>
-    <string name="unfollow">பின்தொடர்வதை நிறுத்து</string>
+    <string name="unfollow">நிறுத்து</string>
     <string name="channel_created">அலைவரிசை உருவாக்கப்பட்டது</string>
     <string name="channel_information_changed_to">"அலைவரிசை தகவல் மாற்றப்பட்டது"</string>
     <string name="public_chat">பொது அரட்டை</string>
@@ -162,7 +162,7 @@
     <string name="quick_action_copy_note_id">பதிவின் எண்</string>
     <string name="quick_action_copy_text">உரையைப் படியெடு</string>
     <string name="quick_action_delete">அழி</string>
-    <string name="quick_action_unfollow">பின்தொடர்வதை நிறுத்து</string>
+    <string name="quick_action_unfollow">நிறுத்து</string>
     <string name="quick_action_follow">பின்தொடர்</string>
     <string name="quick_action_request_deletion_alert_title">நீக்க கோரிக்கை செய்</string>
     <string name="quick_action_request_deletion_alert_body">நீங்கள் தற்போது இணைக்கப்பட்டுள்ள ரிலேக்களிலிருந்து உங்கள் குறிப்பை நீக்குமாறு அமேதிஸ்ட் கோரும். உங்கள் குறிப்பு அந்த ரிலேக்களிலிருந்து அல்லது அது சேமிக்கப்பட்டுள்ள பிற ரிலேக்களிலிருந்து நிரந்தரமாக நீக்கப்படும் என்பதற்கு எந்த உத்தரவாதமும் இல்லை.</string>

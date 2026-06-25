@@ -301,7 +301,7 @@
     <string name="follow_list_mute_list">รายการผู้ถูกปิดกั้น</string>
     <string name="connect_through_your_orbot_setup_short">Port เริ่มต้นคือ 9050</string>
     <string name="orbot_socks_port">พอร์ต Orbot Socks</string>
-    <string name="tor_use_dm_relays">รีเลย์สำหรีบข้อความส่วนตัว</string>
+    <string name="tor_use_dm_relays">DM\ Relays</string>
     <string name="tor_off">ปิด</string>
     <string name="tor_default">ค่าเริ่มต้น</string>
     <string name="tor_custom">ปรับแต่ง</string>
@@ -1066,7 +1066,7 @@
     
     <string name="app_notification_reply_label">ตอบกลับ</string>
     
-    <string name="app_notification_mark_read_label">ทำเครื่องหมายว่าอ่านแล้ว</string>
+    <string name="app_notification_mark_read_label">ทำเครื่องหมายอ่านแล้ว</string>
     
     <string name="app_notification_dms_summary">ข้อความใหม่</string>
     

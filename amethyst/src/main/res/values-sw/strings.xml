@@ -35,7 +35,7 @@
     <string name="unknown_author">Mwandishi asiyejulikana</string>
     <string name="copy_text">Nakili Maandishi</string>
     <string name="copy_user_pubkey">Nakili Kitambulisho cha Mwandishi</string>
-    <string name="copy_note_id">Nakili Kitambulisho cha Dokezo</string>
+    <string name="copy_note_id">Nakili\ ID\ ya\ Dokezo</string>
     <string name="copy_raw_json">Nakili JSON ghafi</string>
     <string name="broadcast">Tangaza</string>
     <string name="timestamp_it">Weka alama ya muda</string>
@@ -134,7 +134,7 @@
     <string name="follow">Fuata</string>
     <string name="follow_back">Fuata tena</string>
     <string name="unblock">Fungua</string>
-    <string name="copy_user_id">Nakili Kitambulisho cha Mtumiaji</string>
+    <string name="copy_user_id">Nakili\ ID\ ya\ Mtumiaji</string>
     <string name="unblock_user">Fungua Mtumiaji</string>
     <string name="npub_hex_username">"npub, jina la mtumiaji, maandishi"</string>
     <string name="clear">Ondoa</string>

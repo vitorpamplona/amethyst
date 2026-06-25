@@ -246,7 +246,7 @@ erie gespeichert</string>
     <string name="new_threads">Neue Threads</string>
     <string name="conversations">Unterhaltungen</string>
     <string name="feed">Feed</string>
-    <string name="mod_queue">Moderationswarteschlange</string>
+    <string name="mod_queue">Mod\-Warteschlange</string>
     <string name="notes">Notizen</string>
     <string name="replies">Antworten</string>
     <string name="mutual">Deine</string>
@@ -406,7 +406,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="quick_action_delete_dialog_btn">Löschen</string>
     <string name="quick_action_block">Blockieren</string>
     <string name="quick_action_mute_thread">Thread stummschalten</string>
-    <string name="quick_action_unmute_thread">Stummschaltung des Threads aufheben</string>
+    <string name="quick_action_unmute_thread">Thread\ entdämpfen</string>
     <string name="quick_action_report">Melden</string>
     <string name="quick_action_dont_show_again_button">Nicht erneut anzeigen</string>
     <string name="report_dialog_spam">Spam oder Betrug</string>
@@ -1353,7 +1353,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="automatically_load_images_gifs">Bilder/GIFs automatisch laden</string>
     <string name="automatically_play_videos">Videos automatisch abspielen</string>
     <string name="autoplay_videos">Videos automatisch abspielen</string>
-    <string name="automatically_show_url_preview">URL-Vorschau automatisch anzeigen</string>
+    <string name="automatically_show_url_preview">URL\-Vorschau\ anzeigen</string>
     <string name="automatically_hide_nav_bars">Immersives Scrollen</string>
     <string name="automatically_hide_nav_bars_description">Navigationsleisten beim Scrollen ausblenden</string>
     <string name="ui_style">UI-Modus</string>
@@ -1683,7 +1683,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="cashu_history_incoming">Empfangen</string>
     <string name="cashu_history_outgoing">Gesendet</string>
     <string name="cashu_settings_title">Cashu-Wallet-Einstellungen</string>
-    <string name="cashu_settings_edit_wallet">Wallet-Details bearbeiten</string>
+    <string name="cashu_settings_edit_wallet">Meine\ Mints</string>
     <string name="cashu_settings_edit_wallet_subtitle">Mints, Nutzap-Schlüssel</string>
     <string name="cashu_settings_my_recommendations">Meine Mint-Empfehlungen</string>
     <string name="cashu_settings_no_recommendations">Du hast noch keine Mints empfohlen. Tippe auf das Daumen-hoch-Symbol neben einem Mint, um ihn öffentlich zu empfehlen.</string>
@@ -2294,7 +2294,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_set_delete">Liste löschen</string>
     <string name="follow_pack_delete">Empfehlungspaket löschen</string>
     <string name="kinds">Typen</string>
-    <string name="retry_failed">Erneuter Versuch fehlgeschlagen</string>
+    <string name="retry_failed">Wiederholen</string>
     <string name="tap_to_view_details">Tippen, um Details anzuzeigen</string>
     <string name="event_sent">%1$s gesendet</string>
     <string name="broadcast_results">Sendeergebnisse</string>

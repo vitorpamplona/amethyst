@@ -459,7 +459,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="theme">Design</string>
     <string name="automatically_load_images_gifs">Bilder/GIFs automatisch laden</string>
     <string name="automatically_play_videos">Videos automatisch abspielen</string>
-    <string name="automatically_show_url_preview">URL-Vorschau automatisch anzeigen</string>
+    <string name="automatically_show_url_preview">URL\-Vorschau\ anzeigen</string>
     <string name="automatically_hide_nav_bars">Immersives Scrollen</string>
     <string name="automatically_hide_nav_bars_description">Navigationsleisten beim Scrollen ausblenden</string>
     <string name="ui_style">UI-Modus</string>
@@ -781,7 +781,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="feed_filter_selected">Feed-Filter, %1$s ausgewählt</string>
     <string name="feed_filter_select_an_option">Feed-Filter, %1$s</string>
     <string name="feed">Feed</string>
-    <string name="mod_queue">Moderationswarteschlange</string>
+    <string name="mod_queue">Mod\-Warteschlange</string>
     <string name="public_home_section_explainer_profile">Der Benutzer veröffentlicht seine Inhalte auf diesen Relays</string>
     <string name="public_notif_section_explainer_profile">Der Benutzer erhält Benachrichtigungen auf diesen Relays</string>
     <string name="private_inbox_section_explainer_profile">Der Benutzer empfängt Direktnachrichten auf diesen Relays</string>
@@ -1083,7 +1083,7 @@ anz der Bedingungen ist erforderlich</string>
     
 <string name="quick_action_mute_thread">Thread stummschalten</string>
     
-<string name="quick_action_unmute_thread">Stummschaltung des Threads aufheben</string>
+<string name="quick_action_unmute_thread">Thread\ entdämpfen</string>
     
 <string name="manual_zaps">Manuelle Zap-Splits</string>
     
@@ -2814,7 +2814,7 @@ anz der Bedingungen ist erforderlich</string>
     
 <string name="cashu_settings_title">Cashu-Wallet-Einstellungen</string>
     
-<string name="cashu_settings_edit_wallet">Wallet-Details bearbeiten</string>
+<string name="cashu_settings_edit_wallet">Meine\ Mints</string>
     
 <string name="cashu_settings_edit_wallet_subtitle">Mints, Nutzap-Schlüssel</string>
     
@@ -3693,7 +3693,7 @@ anz der Bedingungen ist erforderlich</string>
     
 <string name="kinds">Typen</string>
     
-<string name="retry_failed">Erneuter Versuch fehlgeschlagen</string>
+<string name="retry_failed">Wiederholen</string>
     
 <string name="tap_to_view_details">Tippen, um Details anzuzeigen</string>
     

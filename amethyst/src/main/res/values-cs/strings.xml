@@ -453,7 +453,7 @@
     <string name="theme">Motiv</string>
     <string name="automatically_load_images_gifs">Automaticky načítat obrázky/gif</string>
     <string name="automatically_play_videos">Automaticky přehrávat videa</string>
-    <string name="automatically_show_url_preview">Automaticky zobrazit náhled URL</string>
+    <string name="automatically_show_url_preview">Náhled\ URL</string>
     <string name="automatically_hide_nav_bars">Imersivní rolování</string>
     <string name="automatically_hide_nav_bars_description">Skrýt navigační panely při rolování</string>
     <string name="ui_style">Režim UI</string>
@@ -2831,7 +2831,7 @@
     
 <string name="cashu_settings_title">Nastavení peněženky Cashu</string>
     
-<string name="cashu_settings_edit_wallet">Upravit údaje peněženky</string>
+<string name="cashu_settings_edit_wallet">Moje\ minty</string>
     
 <string name="cashu_settings_edit_wallet_subtitle">Minty, klíč pro nutzap</string>
     
@@ -3341,7 +3341,7 @@
     
 <string name="bottom_bar_settings_restore_default">Obnovit výchozí</string>
     
-<string name="home_tabs_settings">Záložky domovské obrazovky</string>
+<string name="home_tabs_settings">Záložky\ domova</string>
     
 <string name="home_tabs_settings_description">Vyberte, které záložky se zobrazí na domovské obrazovce. Pokud je aktivní jen jedna záložka, lišta záložek se skryje.</string>
     

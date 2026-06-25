@@ -705,7 +705,7 @@
     
 <string name="mark_all_as_read">Marcar todas como lidas</string>
     
-<string name="backup_keys">Copia de segurança das chaves</string>
+<string name="backup_keys">Backup\ das\ chaves</string>
     
 <string xmlns:ns0="http://schemas.android.com/tools" name="account_backup_tips2_md" ns0:ignore="Typos">    ## Dicas de Backup de Chave e Segurança
     \n\nSua conta é protegida por uma chave secreta. A chave é uma sequência longa de caracteres que começa com **nsec1**. Qualquer pessoa que tenha acesso a esta chave secreta pode postar e alterar sua identidade.
@@ -2063,7 +2063,7 @@
     
 <string name="tor_use_onion_address_explainer">Use Tor para qualquer URL .onion</string>
     
-<string name="tor_use_dm_relays">Relés de Mensagem Direta</string>
+<string name="tor_use_dm_relays">Relés\ de\ DM</string>
     
 <string name="tor_use_dm_relays_explainer">Forçar Tor para enviar e receber mensagens diretas</string>
     
@@ -2658,13 +2658,13 @@
     
 <string name="theme">Tema</string>
     
-<string name="automatically_load_images_gifs">Carregar imagens/gifs automaticamente</string>
+<string name="automatically_load_images_gifs">Pré\-visualizar\ imagens</string>
     
 <string name="automatically_play_videos">Reproduzir vídeos automaticamente</string>
     
 <string name="autoplay_videos">Reprodução automática de vídeos</string>
     
-<string name="automatically_show_url_preview">Mostrar automaticamente a visualização da URL</string>
+<string name="automatically_show_url_preview">Pré\-visualizar\ URL</string>
     
 <string name="automatically_hide_nav_bars">Rolagem Imersiva</string>
     
@@ -3303,7 +3303,7 @@
     
 <string name="cashu_settings_title">Configurações da carteira Cashu</string>
     
-<string name="cashu_settings_edit_wallet">Editar detalhes da carteira</string>
+<string name="cashu_settings_edit_wallet">Meus\ mints</string>
     
 <string name="cashu_settings_edit_wallet_subtitle">Mints, chave de nutzap</string>
     
@@ -4492,7 +4492,7 @@
     
 <string name="follow_set_delete">Excluir lista</string>
     
-<string name="follow_pack_delete">Excluir pacote de recomendações</string>
+<string name="follow_pack_delete">Excluir\ pacote</string>
     
 <string name="kinds">Tipos</string>
     

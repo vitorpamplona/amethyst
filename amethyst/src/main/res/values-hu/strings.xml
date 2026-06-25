@@ -24,7 +24,7 @@
     <string name="unknown_author">Ismeretlen szerző</string>
     <string name="copy_text">Szöveg másolása</string>
     <string name="copy_user_pubkey">Szerző azonosítójának másolása</string>
-    <string name="copy_note_id">Bejegyzés azonosítójának másolása</string>
+    <string name="copy_note_id">Bejegyzés\ ID\ másolása</string>
     <string name="broadcast">Közvetítés</string>
     <string name="timestamp_it">Időbélyegzés</string>
     <string name="timestamp_pending">Időbélyeg: függőben lévő megerősítések</string>
@@ -66,7 +66,7 @@
     <string name="profile">Profil</string>
     <string name="security_filters">Biztonsági szűrők</string>
     <string name="log_out">Kijelentkezés</string>
-    <string name="show_more">Továbbiak megjelenítése</string>
+    <string name="show_more">Több</string>
     <string name="lightning_invoice">Lightning-számla</string>
     <string name="pay">Fizetés</string>
     <string name="lightning_tips">Lightning-borravaló</string>
@@ -137,8 +137,8 @@
     <string name="follow">Követés</string>
     <string name="follow_back">Viszontkövetés</string>
     <string name="unblock">Letiltás megszüntetése</string>
-    <string name="copy_user_id">Felhasználói azonosító másolása</string>
-    <string name="unblock_user">Felhasználó letiltásának megszüntetése</string>
+    <string name="copy_user_id">Felhasználói\ ID\ másolása</string>
+    <string name="unblock_user">Tiltás\ feloldása</string>
     <string name="npub_hex_username">"npub, felhasználónév, szöveg"</string>
     <string name="clear">Kiürítés</string>
     <string name="app_logo">Alkalmazáslogó</string>
@@ -168,7 +168,7 @@
     <string name="feed_is_empty">A hírfolyam üres.</string>
     <string name="refresh">Frissítés</string>
     <string name="leave">Elhagyás</string>
-    <string name="unfollow">Követés megszüntetése</string>
+    <string name="unfollow">Követés\ vége</string>
     <string name="channel_created">Csatorna létrehozva</string>
     <string name="channel_information_changed_to">"A csatornainformáció a következőre módosult:"</string>
     <string name="public_chat">Nyilvános csevegés</string>
@@ -239,7 +239,7 @@
     <string name="quick_action_copy_note_id">Bejegyzés-azonosító</string>
     <string name="quick_action_copy_text">Szöveg másolása</string>
     <string name="quick_action_delete">Törlés</string>
-    <string name="quick_action_unfollow">Követés megszüntetése</string>
+    <string name="quick_action_unfollow">Követés\ vége</string>
     <string name="quick_action_follow">Követés</string>
     <string name="quick_action_request_deletion_gallery_title">Törlés a galériából</string>
     <string name="quick_action_request_deletion_alert_title">Törlés kérése</string>
@@ -336,7 +336,7 @@
     <string name="yes">Igen</string>
     <string name="no">Nem</string>
     <string name="follow_list_kind3follows">Követettek bejegyzései</string>
-    <string name="follow_list_aroundme">Közelben lévők bejegyzései</string>
+    <string name="follow_list_aroundme">Közelemben</string>
     <string name="follow_list_global">Globális</string>
     <string name="follow_list_mute_list">Némítottak bejegyzései</string>
     <string name="connect_through_your_orbot_setup_short">Alapértelmezett port: 9050</string>
@@ -347,7 +347,7 @@
     <string name="tor_preset_explainer">Az alábbi beállítások gyors módosítása</string>
     <string name="tor_use_onion_address">Onion-webcím / Átjátszók</string>
     <string name="tor_use_onion_address_explainer">Használja a Tor-t bármely .onion webcímhez</string>
-    <string name="tor_use_dm_relays">Közvetlen üzenetátjátszók</string>
+    <string name="tor_use_dm_relays">DM\ Relays</string>
     <string name="tor_use_dm_relays_explainer">Tor kényszerítése a privát üzenetek küldéséhez és fogadásához</string>
     <string name="tor_use_new_relays">Megbízhatatlan átjátszók</string>
     <string name="tor_use_new_relays_explainer">Tor kényszerítése a kimenő és bejövő üzenetátjátszókhoz</string>
@@ -551,7 +551,7 @@
     <string name="push_server_explainer">A telepített UnifiedPush-alkalmazásokból</string>
     <string name="push_server_none">Nincs</string>
     <string name="push_server_none_explainer">Push-értesítések letiltása</string>
-    <string name="push_server_uses_app_explainer">A következő alkalmazást használja: %1$s</string>
+    <string name="push_server_uses_app_explainer">%1\$s\ alkalmazást\ használ</string>
     <string name="push_server_install_app">Push-értesítések beállítása</string>
     <string name="push_server_install_app_description">        A push-értesítések fogadásához olyan alkalmazást telepítsen, amely támogatja a [Unified Push](https://unifiedpush.org/), például az [Ntfy](https://ntfy.sh/) alkalmazást.
         A telepítés után a beállításokban válassza ki a használni kívánt alkalmazást.
@@ -760,7 +760,7 @@
     <item quantity="other">+%1$d\nválasz</item>
 </plurals>
     
-<string name="relay_notice">Átjátszóval kapcsolatos megjegyzések</string>
+<string name="relay_notice">Relay\ értesítés</string>
     
 <string name="duplicated_post">Duplikált bejegyzés</string>
     
@@ -1640,7 +1640,7 @@
     
 <string name="nest_mic_mute">Mikrofon némítása</string>
     
-<string name="nest_mic_unmute">Mikrofon némításának megszüntetése</string>
+<string name="nest_mic_unmute">Mikrofon\ némítás\ fel</string>
     
 <string name="nest_broadcast_connecting">Élő közvetítés elkezdése…</string>
     
@@ -1662,7 +1662,7 @@
     
 <string name="nest_notification_stop">Leállítás</string>
     
-<string name="nest_join">Csatlakozás a hangszobához</string>
+<string name="nest_join">Csatlakozás</string>
     
 <string name="nest_lobby_host_label">Kiszolgáló</string>
     
@@ -1757,7 +1757,7 @@
     
 <string name="nest_participant_follow">Követés</string>
     
-<string name="nest_participant_unfollow">Követés megszüntetése</string>
+<string name="nest_participant_unfollow">Követés\ vége</string>
     
 <string name="nest_participant_mute">Némítás</string>
     
@@ -2059,7 +2059,7 @@
     
 <string name="bookmark_list_explainer">A könyvjelzőlisták metaadatai a Nostr-on bárki számára láthatók. Csak a privát tagok vannak titkosítva.</string>
     
-<string name="move_bookmark_to_public_label">Áthelyezés a nyilvános könyvjelzőkbe</string>
+<string name="move_bookmark_to_public_label">Nyilvános\ könyvjelzőbe</string>
     
 <string name="move_bookmark_to_private_label">Áthelyezés a privát könyvjelzőkbe</string>
     
@@ -2121,7 +2121,7 @@
     
 <string name="wallet_connect_connect_app">Pénztárca összekapcsolása</string>
     
-<string name="see_relay_feed">Átjátszó hírfolyamának megtekintése</string>
+<string name="see_relay_feed">Relay\ hírfolyam</string>
     
 <string name="poll_single_choice">Egyetlen lehetőség</string>
     
@@ -2245,7 +2245,7 @@
     
 <string name="app_notification_reply_label">Válasz</string>
     
-<string name="app_notification_mark_read_label">Megjelölés olvasottként</string>
+<string name="app_notification_mark_read_label">Olvasott</string>
     
 <string name="app_notification_dms_summary">Új üzenetek</string>
     
@@ -2578,7 +2578,7 @@
     
 <string name="max_limit_events_returning">Korlátozás (visszatérő események)</string>
     
-<string name="max_subid_length">Feliratkozás-azonosító hossza legfeljebb</string>
+<string name="max_subid_length">Max\ feliratkozási\ ID\ hossz</string>
     
 <string name="cashu_mint_label">Mint: %1$s</string>
     
@@ -2746,7 +2746,7 @@
     
 <string name="copy_nprofile_to_clipboard">nprofile-kulcs vágólapra másolása</string>
     
-<string name="share_target_as_dm">Küldés közvetlen üzenetként</string>
+<string name="share_target_as_dm">DM\ küldése</string>
     
 <string name="share_to_dm_title">Küldés ide…</string>
     
@@ -3336,7 +3336,7 @@
     
 <string name="calendar_event_invalid">A címet és a kezdés időpontját kötelező megadni.</string>
     
-<string name="calendar_event_end_before_start">A befejezés időpontjának a kezdés időpontja után kell következnie.</string>
+<string name="calendar_event_end_before_start">A\ vég\ a\ kezdés\ után\ kell\ legyen\.</string>
     
 <string name="calendar_nav_previous_month">Előző hónap</string>
     
@@ -3540,7 +3540,7 @@
     
 <string name="home_tab_everything">Minden</string>
     
-<string name="profile_ui_settings">Profil felhasználói felülete</string>
+<string name="profile_ui_settings">Profil\ felület</string>
     
 <string name="profile_ui_settings_description">Válassza ki, hogy mely szekciók és hírfolyamok jelenjenek meg a felhasználói profil képernyőin. Alapértelmezés szerint minden beállítás engedélyezve van.</string>
     
@@ -4164,7 +4164,7 @@
     
 <string name="kind_dm_message">Közvetlen üzenet</string>
     
-<string name="kind_dm_relays">Közvetlen üzenetátjátszók</string>
+<string name="kind_dm_relays">DM\ Relays</string>
     
 <string name="kind_classifieds">Apróhirdetések</string>
     
@@ -4296,7 +4296,7 @@
     
 <string name="kind_poll_response">Szavazásválasz</string>
     
-<string name="kind_nip04_dms">NIP-04 közvetlen üzenetek</string>
+<string name="kind_nip04_dms">NIP\-04\ DM\-ek</string>
     
 <string name="kind_private_relays">Privát átjátszók</string>
     
@@ -4929,7 +4929,7 @@
     
 <string name="relay_management_ban">Letiltás</string>
     
-<string name="relay_management_ban_pubkey">Nyilvános kulcs letiltása</string>
+<string name="relay_management_ban_pubkey">Pubkey\ tiltása</string>
     
 <string name="relay_management_allow_pubkey">Nyilvános kulcs engedélyezése</string>
     

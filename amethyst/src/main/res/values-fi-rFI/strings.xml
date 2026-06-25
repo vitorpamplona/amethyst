@@ -2370,7 +2370,7 @@
     
     <string name="bottom_bar_settings_restore_default">Palauta oletusarvoihin</string>
     
-    <string name="home_tabs_settings">Aloitusnäytön välilehdet</string>
+    <string name="home_tabs_settings">Aloitusvälilehdet</string>
     
     <string name="home_tabs_settings_description">Valitse välilehdet, jotka näkyvät aloitusnäytöllä. Kun vain yksi välilehti on aktiivinen, välilehtipalkki piilotetaan.</string>
     
@@ -3058,7 +3058,7 @@
     
     <string name="kinds">Tyypit</string>
     
-    <string name="retry_failed">Yritä epäonnistuneita uudelleen</string>
+    <string name="retry_failed">Yritä\ uudelleen</string>
     
     <string name="tap_to_view_details">Napauta nähdäksesi tiedot</string>
     
@@ -3667,7 +3667,7 @@
     
     <string name="cast_stop_casting">Lopeta suoratoisto</string>
     
-    <string name="cast_to_device_dialog_title">Suoratoista kohteeseen…</string>
+    <string name="cast_to_device_dialog_title">Toista\ kohteeseen…</string>
     
     <string name="cast_searching_for_devices">Etsitään laitteita Wi-Fi-verkostasi…</string>
     
@@ -5439,7 +5439,7 @@
     
     <string name="nest_mic_mute">Mykistä mikrofoni</string>
     
-    <string name="nest_mic_unmute">Poista mikrofonin mykistys</string>
+    <string name="nest_mic_unmute">Poista\ mykistys</string>
     
     <string name="nest_broadcast_connecting">Aloitetaan lähetys…</string>
     

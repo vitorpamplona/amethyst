@@ -1367,7 +1367,7 @@
     <string name="automatically_load_images_gifs">Automaticky načítat obrázky/gif</string>
     <string name="automatically_play_videos">Automaticky přehrávat videa</string>
     <string name="autoplay_videos">Automatické přehrávání videí</string>
-    <string name="automatically_show_url_preview">Automaticky zobrazit náhled URL</string>
+    <string name="automatically_show_url_preview">Náhled\ URL</string>
     <string name="automatically_hide_nav_bars">Imersivní rolování</string>
     <string name="automatically_hide_nav_bars_description">Skrýt navigační panely při rolování</string>
     <string name="ui_style">Režim UI</string>
@@ -1705,7 +1705,7 @@
     <string name="cashu_history_incoming">Přijato</string>
     <string name="cashu_history_outgoing">Odesláno</string>
     <string name="cashu_settings_title">Nastavení peněženky Cashu</string>
-    <string name="cashu_settings_edit_wallet">Upravit údaje peněženky</string>
+    <string name="cashu_settings_edit_wallet">Moje\ minty</string>
     <string name="cashu_settings_edit_wallet_subtitle">Minty, klíč pro nutzap</string>
     <string name="cashu_settings_my_recommendations">Moje doporučení mintů</string>
     <string name="cashu_settings_no_recommendations">Zatím jste nedoporučili žádný mint. Klepnutím na palec nahoru vedle mintu jej veřejně doporučíte.</string>
@@ -1993,7 +1993,7 @@
     <string name="bottom_bar_settings_available">Dostupné</string>
     <string name="bottom_bar_settings_reorder">Změnit pořadí</string>
     <string name="bottom_bar_settings_restore_default">Obnovit výchozí</string>
-    <string name="home_tabs_settings">Záložky domovské obrazovky</string>
+    <string name="home_tabs_settings">Záložky\ domova</string>
     <string name="home_tabs_settings_description">Vyberte, které záložky se zobrazí na domovské obrazovce. Pokud je aktivní jen jedna záložka, lišta záložek se skryje.</string>
     <string name="home_tab_everything">Vše</string>
     <string name="profile_ui_settings">Vzhled profilu</string>

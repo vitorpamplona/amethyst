@@ -627,7 +627,7 @@
     <string name="nest_talk">Praten</string>
     <string name="nest_leave_stage">Podium verlaten</string>
     <string name="nest_mic_mute">Microfoon dempen</string>
-    <string name="nest_mic_unmute">Microfoon dempen opheffen</string>
+    <string name="nest_mic_unmute">Microfoon\ aan</string>
     <string name="nest_broadcast_connecting">Live gaan…</string>
     <string name="nest_broadcast_failed">Uitzending mislukt: %1$s</string>
     <string name="nest_mute_failed">Dempen mislukt: %1$s</string>
@@ -1306,10 +1306,10 @@
     <string name="wallet_connect">Wallet Connect</string>
     <string name="language">Taal</string>
     <string name="theme">Thema</string>
-    <string name="automatically_load_images_gifs">Afbeeldingen en GIFs automatisch laden</string>
+    <string name="automatically_load_images_gifs">Afbeeldingen\ laden</string>
     <string name="automatically_play_videos">Video\'s automatisch afspelen</string>
     <string name="autoplay_videos">Video\'s automatisch afspelen</string>
-    <string name="automatically_show_url_preview">URL-voorbeelden automatisch tonen</string>
+    <string name="automatically_show_url_preview">URL\-voorbeeld</string>
     <string name="automatically_hide_nav_bars">Volledig scrollen</string>
     <string name="automatically_hide_nav_bars_description">Navigatiebalken verbergen tijdens scrollen</string>
     <string name="ui_style">Weergavestijl</string>

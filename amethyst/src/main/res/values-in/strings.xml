@@ -48,7 +48,7 @@
     <string name="profile">Profil</string>
     <string name="security_filters">Filter Keamanan</string>
     <string name="log_out">Keluar</string>
-    <string name="show_more">Tampilkan lebih banyak</string>
+    <string name="show_more">Tampilkan\ lagi</string>
     <string name="lightning_invoice">Faktur Tagihan Lightning</string>
     <string name="pay">Bayar</string>
     <string name="lightning_tips">Lightning Tip</string>

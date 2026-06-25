@@ -3360,7 +3360,7 @@
     
     <string name="event_sync_status_completed">تکمیل شد</string>
     
-    <string name="mark_as_read_dialog_title">علامت‌گذاری به عنوان خوانده‌شده</string>
+    <string name="mark_as_read_dialog_title">خوانده‌شده</string>
     
     <string name="note_actions_dialog_title">اقدامات یادداشت</string>
     
@@ -5011,7 +5011,7 @@
     
     <string name="nest_leave_stage">ترک صحنه</string>
     
-    <string name="nest_mic_mute">بی‌صدا کردن میکروفون</string>
+    <string name="nest_mic_mute">قطع\ میکروفون</string>
     
     <string name="nest_mic_unmute">باصدا کردن میکروفون</string>
     

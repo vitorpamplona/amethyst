@@ -25,7 +25,7 @@
     <string name="unknown_author">Nomaʼlum muallif</string>
     <string name="copy_text">Matnni nusxalash</string>
     <string name="copy_user_pubkey">Muallif identifikatorini nusxalash</string>
-    <string name="copy_note_id">Post identifikatorini nusxalash</string>
+    <string name="copy_note_id">Post\ ID\ nusxalash</string>
     <string name="broadcast">Tarqatish</string>
     <string name="timestamp_it">Vaqtni belgilash</string>
     <string name="timestamp_pending">Vaqt: Tasdiqlash kutilmoqda</string>

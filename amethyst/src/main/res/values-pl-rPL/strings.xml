@@ -1392,7 +1392,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_count_subscriptions">Subskrypcje KONTA (%1$d)</string>
     <string name="relay_outbox_events">Wydarzenia Wysłane (%1$d)</string>
     <string name="relay_filter_authors">%1$d autorzy</string>
-    <string name="relay_filter_ids">%1$d identyfikatorów</string>
+    <string name="relay_filter_ids">%1\$d\ id</string>
     <string name="relay_filter_since">od %1$s</string>
     <string name="relay_filter_until">do %1$s</string>
     <string name="relay_filter_limit">limit %1$d</string>
@@ -1845,7 +1845,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="cashu_history_incoming">Otrzymano</string>
     <string name="cashu_history_outgoing">Wysłano</string>
     <string name="cashu_settings_title">Ustawienia portfela Cashu</string>
-    <string name="cashu_settings_edit_wallet">Edytuj szczegóły portfela</string>
+    <string name="cashu_settings_edit_wallet">Moje\ minty</string>
     <string name="cashu_settings_edit_wallet_subtitle">Minty, klucz nutzap</string>
     <string name="cashu_settings_my_recommendations">Moje rekomendacje Minta</string>
     <string name="cashu_settings_recommendations_subtitle">Publicznie rekomenduj minty, którym ufasz, i wycofuj rekomendacje.</string>
@@ -2714,7 +2714,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="namecoin_pin_cert_body">Serwer %1$s przedstawił certyfikat, który nie znajduje się jeszcze w Twoim magazynie certyfikatów zaufanych. Sprawdź, czy poniższy Fingerprint odpowiada wartości opublikowanej przez operatora serwera, a następnie zdecyduj, czy chcesz zaufać temu certyfikatowi w przypadku przyszłych połączeń.</string>
     <string name="namecoin_pin_cert_accept">Zaufaj</string>
     <string name="namecoin_pin_cert_reject">Odrzuć</string>
-    <string name="event_sync_title">Synchronizacja Transmiterów</string>
+    <string name="event_sync_title">Sync\ relays</string>
     <string name="event_sync_what_happens_title">Jak to działa</string>
     <string name="event_sync_what_happens_body">To narzędzie skanuje wszystkie transmitery, z którymi zetknęła się Twoja aplikacja, i przekierowuje zdarzenia do właściwych miejsc docelowych: </string>
     <string name="event_sync_step1">Pobierz wszystkie wydarzenia, których jesteś autorem, i wyślij je do transmiterów nadawczych.</string>
@@ -2722,7 +2722,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="event_sync_step3">Pobierz wszystkie bezpośrednie wiadomości adresowane do Ciebie i wyślij je do swoich transmiterów DM.</string>
     <string name="event_sync_wifi_warning">⚠️ Wygląda na to, że korzystasz z połączenia komórkowego lub z limitem transferu danych. Ta operacja może wymagać przesłania bardzo dużej ilości danych. Przed rozpoczęciem podłącz się do sieci Wi-Fi.</string>
     <string name="event_sync_mobile_data_dialog_title">Włączyć transmisje danych komórkowych?</string>
-    <string name="event_sync_start">Rozpocznij synchronizację</string>
+    <string name="event_sync_start">Rozpocznij\ sync</string>
     <string name="event_sync_start_anyway">Uruchom mimo to (transmisja danych komórkowych)</string>
     <string name="event_sync_cancel">Anuluj</string>
     <string name="event_sync_relays_progress">Transmitery: %1$d / %2$d</string>
@@ -2747,7 +2747,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="searchable_events">wydarzenia podlegające wyszukiwaniu</string>
     <string name="dms">DMs</string>
     <string name="profiles">profile</string>
-    <string name="relay_settings_lower2">lista transmiterów wysyłających</string>
+    <string name="relay_settings_lower2">listy\ wychodzące</string>
     <string name="last_seen">Ostatnio widziano %1$s temu</string>
     <string name="last_seen_on_date">Ostatnio widziano %1$s (%2$s temu)</string>
     <string name="last_seen_just_now">Ostatnio widziano przed chwilą</string>

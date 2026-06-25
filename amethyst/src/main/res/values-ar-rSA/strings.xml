@@ -189,9 +189,9 @@
     <string name="report_hateful_speech">أبلغ عن كلام يحض على الكراهية</string>
     <string name="report_nudity_porn">الإبلاغ عن عُري / إباحي</string>
     <string name="mark_all_known_as_read">ضع علامة على جميع الرسائل/الاشعارات المعروفة كمقروء</string>
-    <string name="mark_all_new_as_read">ضع علامة على جميع الرسائل/الاشعارات الجديدة كمقروء</string>
-    <string name="mark_all_as_read">ضع علامة على جميع الرسائل/الاشعارات كمقروء</string>
-    <string name="backup_keys">قم بعمل نسخة احتياطية للمفاتيح</string>
+    <string name="mark_all_new_as_read">تعيين\ الجديد\ كمقروء</string>
+    <string name="mark_all_as_read">تعيين\ الكل\ كمقروء</string>
+    <string name="backup_keys">نسخ\ المفاتيح</string>
     <string name="account_backup_tips2_md" tools:ignore="Typos">        ## النصائح الرئيسية للنسخ الاحتياطي والسلامة
         \n\n- يتم تأمين حسابك بمفتاح سري. المفتاح السري هو سلسلة عشوائية طويلة تبدأ بـ **nsec1**. أي شخص لديه مفتاحك السري يمكنه نشر المحتوى باستخدام هويتك.
         \n\n- لا تقم بوضع مفتاحك السري في أي موقع أو برنامج لا تثق به.
@@ -309,9 +309,9 @@
     <string name="no">لا</string>
     <string name="follow_list_kind3follows">جميع المتابعات</string>
     <string name="follow_list_global">العالمي</string>
-    <string name="follow_list_mute_list">قائمة الحسابات المكتومة</string>
+    <string name="follow_list_mute_list">قائمة\ الكتم</string>
     <string name="tor_use_onion_address">رابط/مرحل بصلي</string>
-    <string name="tor_use_dm_relays">مرحلات المحادثات الخاصة</string>
+    <string name="tor_use_dm_relays">مرحلات\ DM</string>
     <string name="tor_use_dm_relays_explainer">استخدام Tor لإرسال و أستقبال الرسائل الخاصة</string>
     <string name="tor_use_new_relays">مرحلات غير موثوقة</string>
     <string name="tor_use_new_relays_explainer">أستخدام Tor لمرحلات الأحداث الواردة و المرسلة</string>
