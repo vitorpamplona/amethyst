@@ -87,8 +87,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.authorRouteFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
-import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
-import com.vitorpamplona.amethyst.ui.note.types.RenderNutzap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.MultiSetCard
@@ -185,29 +183,39 @@ fun MultiSetCompose(
                     },
                     onLongClick = { popupExpanded.value = true },
                 ).padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp,
-                    bottom = if (isLargeCard) 10.dp else 0.dp,
+                    // The large-card branch renders through NoteCompose, which applies
+                    // its own 12dp/10dp note padding; let it own the inset there so we
+                    // don't double it up. The gallery branch keeps the card's padding.
+                    start = if (isLargeCard) 0.dp else 12.dp,
+                    end = if (isLargeCard) 0.dp else 12.dp,
+                    top = if (isLargeCard) 0.dp else 10.dp,
+                    bottom = 0.dp,
                 )
         }
 
     Column(modifier = columnModifier) {
         when {
+            // Render the lone zap/nutzap as a full note (author picture on the left,
+            // the zap card as its body) by reusing NoteCompose on the receipt note,
+            // instead of dropping the bare activity card into the feed.
             singleZap != null ->
-                RenderLnZap(
-                    note = singleZap.response,
+                NoteCompose(
+                    baseNote = singleZap.response,
+                    routeForLastRead = null,
+                    isHiddenFeed = showHidden,
                     quotesLeft = 1,
-                    backgroundColor = backgroundColor,
+                    parentBackgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
 
             singleNutzap != null ->
-                RenderNutzap(
-                    note = singleNutzap,
+                NoteCompose(
+                    baseNote = singleNutzap,
+                    routeForLastRead = null,
+                    isHiddenFeed = showHidden,
                     quotesLeft = 1,
-                    backgroundColor = backgroundColor,
+                    parentBackgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
