@@ -309,7 +309,12 @@ private fun MyLoadUrlPreviewDirectFillWidth(
                     UrlPreviewCard(
                         url,
                         previewInfo = state.previewInfo,
-                        onUrlComments = { nav.nav(com.vitorpamplona.amethyst.ui.navigation.routes.Route.Url(url)) },
+                        onUrlComments = {
+                            nav.nav(
+                                com.vitorpamplona.amethyst.ui.navigation.routes.Route
+                                    .Url(url),
+                            )
+                        },
                     )
                 }
             }
