@@ -25,6 +25,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.ScreenAuthAccount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -36,17 +37,32 @@ fun RelayAuthSubscription(
     accountViewModel: AccountViewModel,
     dataSource: AuthCoordinator,
 ) {
-    // different screens get different states
-    // even if they are tracking the same tag.
+    val account = accountViewModel.account
+
     val state =
         remember(accountViewModel) {
-            ScreenAuthAccount(accountViewModel.account)
+            ScreenAuthAccount(account)
         }
 
-    DisposableEffect(state) {
+    val ledger =
+        remember(accountViewModel) {
+            RelayAuthPermissionLedger(
+                store = Amethyst.instance.relayAuthPermissionStore,
+                globalPolicy = { account.settings.defaultRelayAuthPolicy.value },
+                isInMyRelayList = { relayUrl ->
+                    account.settings.localRelayServers.value.any {
+                        it.trimEnd('/') == relayUrl.trimEnd('/')
+                    }
+                },
+            )
+        }
+
+    DisposableEffect(state, ledger) {
         dataSource.subscribe(state)
+        dataSource.subscribeLedger(ledger)
         onDispose {
             dataSource.unsubscribe(state)
+            dataSource.unsubscribeLedger(ledger)
         }
     }
 }

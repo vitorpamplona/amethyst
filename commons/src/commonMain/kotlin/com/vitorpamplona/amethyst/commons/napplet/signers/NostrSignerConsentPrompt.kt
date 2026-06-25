@@ -74,6 +74,21 @@ sealed interface SignerOpGrant {
         override val isAllowed = true
     }
 
+    /** Allow for the current broker session only — not persisted across app restarts. */
+    data class AllowForSession(
+        val op: NostrSignerOp,
+    ) : SignerOpGrant {
+        override val isAllowed = true
+    }
+
+    /** Allow and remember until [expiresAt] (Unix epoch seconds). */
+    data class AllowUntil(
+        val op: NostrSignerOp,
+        val expiresAt: Long,
+    ) : SignerOpGrant {
+        override val isAllowed = true
+    }
+
     /** Allow and upgrade to [AppSignerPolicy.FULL_TRUST] for all future requests. */
     data object AllowAll : SignerOpGrant {
         override val isAllowed = true

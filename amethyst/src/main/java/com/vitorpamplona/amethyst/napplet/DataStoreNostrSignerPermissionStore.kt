@@ -128,11 +128,48 @@ class DataStoreNostrSignerPermissionStore(
         for ((key, value) in prefs.asMap()) {
             val name = key.name
             if (!name.startsWith(OP_PREFIX)) continue
+            // Skip expiry metadata keys — they end with the expiry suffix
+            if (name.endsWith(OP_EXPIRY_SUFFIX)) continue
             val opKey = name.removePrefix(OP_PREFIX)
             val decision = runCatching { NostrOpDecision.valueOf(value as String) }.getOrNull() ?: continue
             result[opKey] = decision
         }
         return result
+    }
+
+    override suspend fun loadOpExpiry(
+        coordinate: String,
+        op: NostrSignerOp,
+    ): Long? {
+        val raw = storeFor(coordinate).data.first()[opExpiryKey(op)] ?: return null
+        return raw.toLongOrNull()
+    }
+
+    override suspend fun storeOpExpiry(
+        coordinate: String,
+        op: NostrSignerOp,
+        expiresAt: Long,
+    ) {
+        storeFor(coordinate).edit { it[opExpiryKey(op)] = expiresAt.toString() }
+    }
+
+    override suspend fun clearOpExpiry(
+        coordinate: String,
+        op: NostrSignerOp,
+    ) {
+        storeFor(coordinate).edit { it.remove(opExpiryKey(op)) }
+    }
+
+    override suspend fun loadLastUsed(coordinate: String): Long? {
+        val raw = storeFor(coordinate).data.first()[KEY_LAST_USED] ?: return null
+        return raw.toLongOrNull()
+    }
+
+    override suspend fun storeLastUsed(
+        coordinate: String,
+        epochSeconds: Long,
+    ) {
+        storeFor(coordinate).edit { it[KEY_LAST_USED] = epochSeconds.toString() }
     }
 
     override suspend fun clearAll(coordinate: String) {
@@ -141,10 +178,14 @@ class DataStoreNostrSignerPermissionStore(
 
     private fun opKey(op: NostrSignerOp) = stringPreferencesKey("$OP_PREFIX${op.key}")
 
+    private fun opExpiryKey(op: NostrSignerOp) = stringPreferencesKey("$OP_PREFIX${op.key}$OP_EXPIRY_SUFFIX")
+
     companion object {
         private val KEY_COORDINATE = stringPreferencesKey("coordinate")
         private val KEY_POLICY = stringPreferencesKey("policy")
+        private val KEY_LAST_USED = stringPreferencesKey("lastused")
         private const val OP_PREFIX = "op:"
+        private const val OP_EXPIRY_SUFFIX = ":exp"
 
         private fun hash(coordinate: String): String {
             val digest = MessageDigest.getInstance("SHA-256").digest(coordinate.toByteArray())

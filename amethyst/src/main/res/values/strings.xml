@@ -771,10 +771,15 @@
     <string name="napplet_consent_see_more">See more</string>
     <string name="napplet_consent_see_less">See less</string>
     <string name="napplet_signer_allow_once">Allow once</string>
+    <string name="napplet_signer_allow_session">Allow for this session</string>
+    <string name="napplet_signer_allow_24h">Allow for 24 hours</string>
+    <string name="napplet_signer_allow_30d">Allow for 30 days</string>
     <string name="napplet_signer_allow_op">Don\'t ask again to %1$s</string>
     <string name="napplet_signer_allow_all">Don\'t ask again for any Nostr requests</string>
     <string name="napplet_signer_deny_once">Deny</string>
     <string name="napplet_signer_deny_op">Always deny %1$s</string>
+    <string name="napplet_signer_last_used">Last used</string>
+    <string name="napplet_signer_expires">Expires</string>
 
     <!-- Signer op labels -->
     <string name="napplet_op_sign_kind">sign kind %1$d event</string>
@@ -797,6 +802,22 @@
     <string name="napplet_connected_app_forget">Forget this app</string>
     <string name="napplet_connected_app_op_overrides">Signing operation overrides</string>
     <string name="napplet_connected_app_empty">No apps have connected yet.\n\nWhen a web app connects to your Nostr key, it will appear here.</string>
+
+    <!-- Relay Authentication (NIP-42) settings -->
+    <string name="relay_auth_settings_title">Relay Authentication</string>
+    <string name="relay_auth_search_keywords">auth authentication relay sign verify nip-42 identity</string>
+    <string name="relay_auth_global_policy">Global policy</string>
+    <string name="relay_auth_policy_always">Always authenticate</string>
+    <string name="relay_auth_policy_always_desc">Sign auth challenges for every relay that requests it</string>
+    <string name="relay_auth_policy_never">Never authenticate</string>
+    <string name="relay_auth_policy_never_desc">Ignore auth challenges from all relays</string>
+    <string name="relay_auth_policy_if_in_my_list">My relays only</string>
+    <string name="relay_auth_policy_if_in_my_list_desc">Only authenticate with relays in your relay list</string>
+    <string name="relay_auth_per_relay_overrides">Per-relay overrides</string>
+    <string name="relay_auth_no_overrides">No per-relay overrides — global policy applies everywhere</string>
+    <string name="relay_auth_decision_allow">Allow</string>
+    <string name="relay_auth_decision_deny">Deny</string>
+    <string name="relay_auth_remove_override">Remove override</string>
 
     <string name="nip82_repository_label">Source: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>

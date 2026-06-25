@@ -93,6 +93,10 @@ class NappletBroker(
     // queue into one dialog at a time rather than launching several dialogs simultaneously.
     private val signerConsentLock = Mutex()
 
+    // In-memory session grants (AllowForSession): cleared when this broker instance is destroyed.
+    // Only accessed under signerConsentLock.
+    private val sessionAllows = mutableSetOf<String>()
+
     /**
      * Authorizes and runs [request] on behalf of [identity]. [declared] is the capability set the
      * manifest's `requires` resolved to; a request outside it is refused before any prompt.
@@ -390,18 +394,38 @@ class NappletBroker(
     ): Boolean =
         signerConsentLock.withLock {
             val sl = signerLedger ?: return@withLock true
+            // Session grants win immediately without touching storage.
+            if (op.key in sessionAllows) {
+                sl.updateLastUsed(identity.coordinate)
+                return@withLock true
+            }
             when (sl.decide(identity.coordinate, op)) {
-                NostrOpDecision.ALLOW -> true
+                NostrOpDecision.ALLOW -> {
+                    sl.updateLastUsed(identity.coordinate)
+                    true
+                }
                 NostrOpDecision.DENY -> false
                 NostrOpDecision.ASK -> {
                     val prompt = signerConsentPrompt ?: return@withLock true
                     when (val grant = prompt.request(identity, op, request)) {
                         is SignerOpGrant.AllowAll -> {
                             sl.setPolicy(identity.coordinate, AppSignerPolicy.FULL_TRUST)
+                            sl.updateLastUsed(identity.coordinate)
                             true
                         }
                         is SignerOpGrant.AllowForOp -> {
                             sl.setOpDecision(identity.coordinate, op, NostrOpDecision.ALLOW)
+                            sl.updateLastUsed(identity.coordinate)
+                            true
+                        }
+                        is SignerOpGrant.AllowForSession -> {
+                            sessionAllows.add(op.key)
+                            sl.updateLastUsed(identity.coordinate)
+                            true
+                        }
+                        is SignerOpGrant.AllowUntil -> {
+                            sl.setTimedOpDecision(identity.coordinate, op, NostrOpDecision.ALLOW, grant.expiresAt)
+                            sl.updateLastUsed(identity.coordinate)
                             true
                         }
                         is SignerOpGrant.DenyForOp -> {

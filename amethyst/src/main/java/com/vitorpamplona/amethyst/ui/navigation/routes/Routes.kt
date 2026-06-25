@@ -109,6 +109,8 @@ sealed class Route {
 
     @Serializable object ConnectedApps : Route()
 
+    @Serializable object RelayAuthSettings : Route()
+
     @Serializable data class ConnectedAppDetail(
         val coordinate: String,
     ) : Route()

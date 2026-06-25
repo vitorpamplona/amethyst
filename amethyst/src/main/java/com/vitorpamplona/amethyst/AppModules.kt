@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.TorCircuitHealthTracker
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
@@ -528,6 +529,11 @@ class AppModules(
 
     // Show messages from the Relay and controls their dismissal
     val notifyCoordinator = NotifyCoordinator(client)
+
+    // Persists per-relay NIP-42 ALLOW/DENY overrides across app restarts.
+    val relayAuthPermissionStore by lazy {
+        DataStoreRelayAuthPermissionStore(appContext)
+    }
 
     // Authenticates with relays.
     val authCoordinator = AuthCoordinator(client, applicationIOScope)

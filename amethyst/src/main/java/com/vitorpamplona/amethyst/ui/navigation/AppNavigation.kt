@@ -185,6 +185,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.PublicChatsScre
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.RelayFeedScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relayauth.RelayAuthSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSyncScreen
@@ -340,6 +341,7 @@ fun BuildNavigation(
         composableFromEnd<Route.NappletPermissions> { NappletPermissionsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ConnectedApps> { ConnectedAppsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.ConnectedAppDetail> { ConnectedAppDetailScreen(it.coordinate, accountViewModel, nav) }
+        composableFromEnd<Route.RelayAuthSettings> { RelayAuthSettingsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.SoftwareAppDetail> { SoftwareAppDetailScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Calendars> { CalendarsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CalendarCollections> { CalendarCollectionsScreen(accountViewModel, nav) }

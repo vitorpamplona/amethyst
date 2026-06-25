@@ -55,6 +55,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.napplet.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 class NappletSignerConsentActivity : ComponentActivity() {
     private var token: String? = null
@@ -203,6 +204,21 @@ private fun NappletSignerConsentDialog(
                     text = stringResource(R.string.napplet_signer_allow_once),
                     color = MaterialTheme.colorScheme.primary,
                     onClick = { onGrant(SignerOpGrant.AllowOnce) },
+                )
+                ConsentActionButton(
+                    text = stringResource(R.string.napplet_signer_allow_session),
+                    color = MaterialTheme.colorScheme.primary,
+                    onClick = { onGrant(SignerOpGrant.AllowForSession(info.op)) },
+                )
+                ConsentActionButton(
+                    text = stringResource(R.string.napplet_signer_allow_24h),
+                    color = MaterialTheme.colorScheme.primary,
+                    onClick = { onGrant(SignerOpGrant.AllowUntil(info.op, TimeUtils.now() + 86_400L)) },
+                )
+                ConsentActionButton(
+                    text = stringResource(R.string.napplet_signer_allow_30d),
+                    color = MaterialTheme.colorScheme.primary,
+                    onClick = { onGrant(SignerOpGrant.AllowUntil(info.op, TimeUtils.now() + 30L * 86_400L)) },
                 )
                 ConsentActionButton(
                     text = stringResource(R.string.napplet_signer_allow_op, info.operationSummary),

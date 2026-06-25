@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet.signers
 
+import com.vitorpamplona.quartz.utils.TimeUtils
+
 /**
  * The per-app Nostr signer permission ledger. Decides whether a signing or encryption
  * operation should auto-allow, auto-deny, or ask the user, by consulting:
@@ -40,12 +42,25 @@ class NostrSignerPermissionLedger(
      */
     suspend fun hasPolicy(coordinate: String): Boolean = store.loadPolicy(coordinate) != null
 
-    /** The authorization verdict for ([coordinate], [op]) based on stored policy + per-op overrides. */
+    /**
+     * The authorization verdict for ([coordinate], [op]) based on stored policy + per-op overrides.
+     * Checks expiry: if a timed override has passed [now], it is cleared and the policy-level decision
+     * is returned instead.
+     */
     suspend fun decide(
         coordinate: String,
         op: NostrSignerOp,
+        now: Long = TimeUtils.now(),
     ): NostrOpDecision {
-        store.loadOpDecision(coordinate, op)?.let { return it }
+        store.loadOpDecision(coordinate, op)?.let { decision ->
+            val expiresAt = store.loadOpExpiry(coordinate, op)
+            if (expiresAt != null && now > expiresAt) {
+                store.clearOpDecision(coordinate, op)
+                store.clearOpExpiry(coordinate, op)
+            } else {
+                return decision
+            }
+        }
         return when (store.loadPolicy(coordinate)) {
             AppSignerPolicy.FULL_TRUST -> NostrOpDecision.ALLOW
             AppSignerPolicy.PARANOID -> NostrOpDecision.ASK
@@ -67,11 +82,34 @@ class NostrSignerPermissionLedger(
         decision: NostrOpDecision,
     ) = store.storeOpDecision(coordinate, op, decision)
 
-    /** Removes a per-operation override, reverting to the policy-level decision. */
+    /** Stores a time-bound per-operation override that expires at [expiresAt] (Unix epoch seconds). */
+    suspend fun setTimedOpDecision(
+        coordinate: String,
+        op: NostrSignerOp,
+        decision: NostrOpDecision,
+        expiresAt: Long,
+    ) {
+        store.storeOpDecision(coordinate, op, decision)
+        store.storeOpExpiry(coordinate, op, expiresAt)
+    }
+
+    /** Records the current time as the last-used timestamp for [coordinate]. */
+    suspend fun updateLastUsed(
+        coordinate: String,
+        now: Long = TimeUtils.now(),
+    ) = store.storeLastUsed(coordinate, now)
+
+    /** The last-used timestamp for [coordinate], or `null` if never used. */
+    suspend fun lastUsed(coordinate: String): Long? = store.loadLastUsed(coordinate)
+
+    /** Removes a per-operation override (and any expiry), reverting to the policy-level decision. */
     suspend fun revokeOpDecision(
         coordinate: String,
         op: NostrSignerOp,
-    ) = store.clearOpDecision(coordinate, op)
+    ) {
+        store.clearOpDecision(coordinate, op)
+        store.clearOpExpiry(coordinate, op)
+    }
 
     /** Removes all signer permissions for [coordinate] — trust level and all per-op overrides. */
     suspend fun revokeAll(coordinate: String) = store.clearAll(coordinate)

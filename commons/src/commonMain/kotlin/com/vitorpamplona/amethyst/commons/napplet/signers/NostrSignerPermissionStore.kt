@@ -75,6 +75,34 @@ interface NostrSignerPermissionStore {
 
     /** Remove all signer permissions (policy + all op overrides) for [coordinate]. */
     suspend fun clearAll(coordinate: String)
+
+    /** The stored expiry timestamp (Unix epoch seconds) for [op] of [coordinate], or `null` = no expiry. */
+    suspend fun loadOpExpiry(
+        coordinate: String,
+        op: NostrSignerOp,
+    ): Long?
+
+    /** Persist [expiresAt] (Unix epoch seconds) for ([coordinate], [op]). */
+    suspend fun storeOpExpiry(
+        coordinate: String,
+        op: NostrSignerOp,
+        expiresAt: Long,
+    )
+
+    /** Remove the expiry for ([coordinate], [op]). */
+    suspend fun clearOpExpiry(
+        coordinate: String,
+        op: NostrSignerOp,
+    )
+
+    /** The last time (Unix epoch seconds) any auto-approved operation ran for [coordinate], or `null`. */
+    suspend fun loadLastUsed(coordinate: String): Long?
+
+    /** Persist [epochSeconds] as the last-used time for [coordinate]. */
+    suspend fun storeLastUsed(
+        coordinate: String,
+        epochSeconds: Long,
+    )
 }
 
 /** A thread-safe in-memory [NostrSignerPermissionStore] for tests and ephemeral sessions. */
@@ -82,6 +110,8 @@ class InMemoryNostrSignerPermissionStore : NostrSignerPermissionStore {
     private val lock = KmpLock()
     private val policies = mutableMapOf<String, AppSignerPolicy>()
     private val opDecisions = mutableMapOf<String, MutableMap<String, NostrOpDecision>>()
+    private val opExpiries = mutableMapOf<String, MutableMap<String, Long>>()
+    private val lastUsedMap = mutableMapOf<String, Long>()
 
     override suspend fun loadPolicy(coordinate: String): AppSignerPolicy? = lock.withLock { policies[coordinate] }
 
@@ -125,6 +155,34 @@ class InMemoryNostrSignerPermissionStore : NostrSignerPermissionStore {
         lock.withLock {
             policies.remove(coordinate)
             opDecisions.remove(coordinate)
+            opExpiries.remove(coordinate)
+            lastUsedMap.remove(coordinate)
             Unit
         }
+
+    override suspend fun loadOpExpiry(
+        coordinate: String,
+        op: NostrSignerOp,
+    ): Long? = lock.withLock { opExpiries[coordinate]?.get(op.key) }
+
+    override suspend fun storeOpExpiry(
+        coordinate: String,
+        op: NostrSignerOp,
+        expiresAt: Long,
+    ) = lock.withLock { opExpiries.getOrPut(coordinate) { mutableMapOf() }[op.key] = expiresAt }
+
+    override suspend fun clearOpExpiry(
+        coordinate: String,
+        op: NostrSignerOp,
+    ) = lock.withLock {
+        opExpiries[coordinate]?.remove(op.key)
+        Unit
+    }
+
+    override suspend fun loadLastUsed(coordinate: String): Long? = lock.withLock { lastUsedMap[coordinate] }
+
+    override suspend fun storeLastUsed(
+        coordinate: String,
+        epochSeconds: Long,
+    ) = lock.withLock { lastUsedMap[coordinate] = epochSeconds }
 }
