@@ -159,4 +159,45 @@ class AccountManagerKeyLoginTest {
             val accounts = manager.accountStorage.loadAccounts()
             assertTrue(accounts.any { it.npub == keyPair.pubKey.toNpub() })
         }
+
+    /**
+     * Regression: adding the read-only npub for a pubkey we already hold a SIGNING account for must
+     * NOT downgrade it. Accounts key by npub, so persisting the ViewOnly entry would overwrite the
+     * Internal signerType and orphan the stored key, routing every later switch through read-only.
+     * The signing account must survive and become current instead.
+     */
+    @Test
+    fun addingReadOnlyNpubDoesNotDowngradeExistingSigningAccount() =
+        runTest {
+            val keyPair = KeyPair()
+            val npub = keyPair.pubKey.toNpub()
+
+            // 1. Sign in with the nsec and persist it as a full signing account.
+            manager.loginWithKey(keyPair.privKey!!.toNsec())
+            manager.saveCurrentAccount()
+            assertEquals(
+                SignerType.Internal,
+                manager.accountStorage
+                    .loadAccounts()
+                    .first { it.npub == npub }
+                    .signerType,
+            )
+            assertTrue(keyStore.containsKey(npub))
+
+            // 2. Add the read-only npub for the SAME pubkey and try to save it.
+            manager.loginWithKey(npub)
+            assertTrue((manager.accountState.value as AccountState.LoggedIn).isReadOnly)
+            val result = manager.saveCurrentAccount()
+            assertTrue(result.isSuccess)
+
+            // 3. The signing account survives: storage stays Internal, the key is kept,
+            //    and the current account was switched back to signing (not downgraded).
+            val stored = manager.accountStorage.loadAccounts().first { it.npub == npub }
+            assertEquals(SignerType.Internal, stored.signerType)
+            assertTrue(keyStore.containsKey(npub))
+            val finalState = manager.accountState.value
+            assertIs<AccountState.LoggedIn>(finalState)
+            assertFalse(finalState.isReadOnly)
+            assertEquals(SignerType.Internal, finalState.signerType)
+        }
 }
