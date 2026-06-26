@@ -54,6 +54,8 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
@@ -128,6 +130,8 @@ class NotificationFeedFilter(
                 GenericRepostEvent.KIND,
                 GitIssueEvent.KIND,
                 GitPatchEvent.KIND,
+                GitPullRequestEvent.KIND,
+                GitPullRequestUpdateEvent.KIND,
                 HighlightEvent.KIND,
                 TextNoteEvent.KIND,
                 ReactionEvent.KIND,
@@ -205,7 +209,9 @@ class NotificationFeedFilter(
                 return true
             }
 
-            if (event is GitIssueEvent || event is GitPatchEvent) {
+            if (event is GitIssueEvent || event is GitPatchEvent ||
+                event is GitPullRequestEvent || event is GitPullRequestUpdateEvent
+            ) {
                 return true
             }
 
