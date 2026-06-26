@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -146,9 +147,15 @@ private fun RenderBottomMenu(
                                 is FavoriteApp.WebApp -> Route.WebApp(fav.url)
                                 is FavoriteApp.NostrApp -> Route.NostrApp(fav.coordinate)
                             }
+                        // A web favorite uses its captured favicon; an nsite/napplet uses the verified
+                        // icon blob bundled in its own content (the iframe sandbox rules out live capture).
                         val iconModel =
-                            remember(fav, iconKeys) {
-                                (fav as? FavoriteApp.WebApp)?.let { OmniboxInput.hostOf(it.url)?.let(BrowserIconRegistry::iconModelFor) }
+                            when (fav) {
+                                is FavoriteApp.WebApp ->
+                                    remember(fav, iconKeys) {
+                                        OmniboxInput.hostOf(fav.url)?.let(BrowserIconRegistry::iconModelFor)
+                                    }
+                                is FavoriteApp.NostrApp -> rememberNappletIconModel(fav.coordinate)
                             }
                         FavoriteNavItem(destination == selectedRoute, fav, iconModel, destination, nav)
                     }
