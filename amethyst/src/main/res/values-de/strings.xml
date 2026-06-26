@@ -4782,15 +4782,11 @@ anz der Bedingungen ist erforderlich</string>
     
 <string name="browser">Browser</string>
     
-<string name="browser_address_hint">Suchen oder Adresse eingeben</string>
     
 <string name="browser_clear">Löschen</string>
     
-<string name="browser_console_clear">Löschen</string>
     
-<string name="browser_console_title">Konsole (%1$d)</string>
     
-<string name="browser_console_title_short">Konsole</string>
     
 <string name="browser_favorites">Favoriten</string>
     
@@ -5182,7 +5178,6 @@ anz der Bedingungen ist erforderlich</string>
     
 <string name="napplet_permissions_revoke">Widerrufen</string>
     
-<string name="napplet_untitled">Unbenanntes nApplet</string>
     
 <string name="napplets">nApplets</string>
     

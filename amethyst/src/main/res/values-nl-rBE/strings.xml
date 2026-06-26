@@ -5321,15 +5321,11 @@
 
 <string name="browser">Browser</string>
 
-<string name="browser_address_hint">Zoeken of adres invoeren</string>
 
 <string name="browser_reload">Herladen</string>
 
-<string name="browser_console_title_short">Console</string>
 
-<string name="browser_console_title">Console (%1$d)</string>
 
-<string name="browser_console_clear">Wissen</string>
 
 <string name="browser_tor_on">Laden via Tor. Tik om het open web te gebruiken.</string>
 
@@ -5395,7 +5391,6 @@
 
 <string name="napplet_permissions_revoke">Intrekken</string>
 
-<string name="napplet_untitled">Naamloze nApplet</string>
 
 <string name="napplet_none_found">Nog geen nApplets gevonden.</string>
 

@@ -677,11 +677,7 @@
 <string name="nsites">nSites</string>
 <string name="nsite_none_found">இன்னும் nSites எதுவும் கிடைக்கவில்லை.</string>
 <string name="browser">உலாவி</string>
-<string name="browser_address_hint">தேடவும் அல்லது முகவரியை உள்ளிடவும்</string>
 <string name="browser_reload">மீண்டும் ஏற்று</string>
-<string name="browser_console_title_short">கன்சோல்</string>
-<string name="browser_console_title">கன்சோல் (%1$d)</string>
-<string name="browser_console_clear">அழிக்கவும்</string>
 <string name="browser_tor_on">Tor மூலம் ஏற்றுகிறது. திறந்த வலையை பயன்படுத்த தட்டவும்.</string>
 <string name="browser_tor_off">திறந்த வலை மூலம் ஏற்றுகிறது. Tor ஐ பயன்படுத்த தட்டவும்.</string>
 <string name="browser_unsupported">உள்-பயன்பாட்டு உலாவிக்கு Android 11 அல்லது புதியது தேவை.</string>
@@ -714,7 +710,6 @@
 <string name="napplet_permissions_forget">இந்த nApplet ஐ மறக்கவும்</string>
 <string name="napplet_permissions_blocked">தடுக்கப்பட்டது</string>
 <string name="napplet_permissions_revoke">திரும்பப் பெறவும்</string>
-<string name="napplet_untitled">தலைப்பற்ற nApplet</string>
 <string name="napplet_none_found">இன்னும் nApplets எதுவும் கிடைக்கவில்லை.</string>
 <string name="napplet_fallback_title">nApplet %1$s…</string>
 <string name="napplet_cap_shell">Shell</string>
