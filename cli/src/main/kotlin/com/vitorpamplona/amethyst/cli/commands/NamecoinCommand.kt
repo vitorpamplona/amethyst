@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
@@ -52,14 +53,17 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutc
  *   alice@example.bit      NIP-05-style local-part in a `.bit` domain
  *
  * Flags (resolve):
- *   --server URL[,URL]     override the ElectrumX server list (host:port,
- *                          one or more; default: the same hard-coded
- *                          mainnet set the apps ship with)
+ *   --server HOST:PORT[:tcp][,…]  override the ElectrumX server list (one or
+ *                          more `host:port[:tcp]` entries, same form the apps
+ *                          accept; TLS by default, `:tcp` for plaintext;
+ *                          default: the same hard-coded mainnet set the apps ship with)
  *   --timeout SECS         overall lookup timeout (default 20)
  *
  * Exit codes follow amy convention:
  *   0   success (Output.emit was called)
  *   1   Output.error was called (bad_args, network, name not found, …)
+ *   2   usage error raised before the verb runs (e.g. a missing positional,
+ *       thrown by Args and mapped to 2 by Main)
  *
  * The JSON shape on success (resolve):
  *   {
@@ -113,7 +117,14 @@ object NamecoinCommand {
             return Output.error("bad_args", "--server: no valid host:port entries in '$serverFlag'")
         }
 
-        val timeoutSecs = args.flag("timeout")?.toLongOrNull() ?: DEFAULT_TIMEOUT_SECS
+        val timeoutFlag = args.flag("timeout")
+        val timeoutSecs =
+            if (timeoutFlag != null) {
+                timeoutFlag.toLongOrNull()
+                    ?: return Output.error("bad_args", "--timeout must be an integer (was '$timeoutFlag')")
+            } else {
+                DEFAULT_TIMEOUT_SECS
+            }
         if (timeoutSecs <= 0) {
             return Output.error("bad_args", "--timeout must be positive (was $timeoutSecs)")
         }
@@ -186,45 +197,27 @@ object NamecoinCommand {
     }
 
     /**
-     * Parse the `--server URL[,URL]` flag.
+     * Parse the `--server HOST:PORT[:tcp][,…]` flag — one or more comma-separated
+     * entries in the same `host:port[:tcp]` form the Android/Desktop Namecoin
+     * Settings accept (TLS by default; a trailing `:tcp` selects plaintext).
      *
-     * Accepted forms per entry:
-     *   host             → host:50002 TLS
-     *   host:port        → TLS
-     *   tcp://host:port  → plaintext
-     *   tls://host:port  → TLS
-     *   ssl://host:port  → TLS (alias for tls://)
+     * Each entry is parsed by the shared [NamecoinSettings.parseServerString], so
+     * the CLI inherits the apps' exact syntax **and** their trust model — notably
+     * `usePinnedTrustStore = true`, which is required for the self-signed certs the
+     * Namecoin ElectrumX servers use (a hand-rolled parser that left it `false`
+     * would fail the TLS handshake against those servers).
      *
-     * Returns null when the flag is absent (caller falls back to the
-     * default server list). Returns an empty list when the flag is
-     * present but produced zero valid entries — the caller treats that
-     * as a hard `bad_args` rather than silently using defaults, so a
-     * fat-fingered `--server foo:bar` is impossible to overlook.
+     * Returns null when the flag is absent (caller falls back to the default server
+     * list). Returns an empty list when the flag is present but produced zero valid
+     * entries — the caller treats that as a hard `bad_args` rather than silently
+     * using defaults, so a fat-fingered `--server foo:bar` is impossible to overlook.
      */
     private fun parseServerFlag(raw: String?): List<ElectrumxServer>? {
         if (raw == null) return null
         return raw
             .split(',')
-            .mapNotNull { entry ->
-                val trimmed = entry.trim()
-                if (trimmed.isEmpty()) return@mapNotNull null
-                val (scheme, rest) =
-                    when {
-                        trimmed.startsWith("tcp://") -> "tcp" to trimmed.removePrefix("tcp://")
-                        trimmed.startsWith("tls://") -> "tls" to trimmed.removePrefix("tls://")
-                        trimmed.startsWith("ssl://") -> "tls" to trimmed.removePrefix("ssl://")
-                        else -> "tls" to trimmed
-                    }
-                val (host, portStr) =
-                    if (':' in rest) {
-                        rest.substringBeforeLast(':') to rest.substringAfterLast(':')
-                    } else {
-                        rest to "50002"
-                    }
-                if (host.isEmpty()) return@mapNotNull null
-                val port = portStr.toIntOrNull() ?: return@mapNotNull null
-                if (port !in 1..65535) return@mapNotNull null
-                ElectrumxServer(host = host, port = port, useSsl = scheme == "tls")
-            }
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .mapNotNull { NamecoinSettings.parseServerString(it) }
     }
 }
