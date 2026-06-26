@@ -183,6 +183,12 @@ object LocalPreferences {
 
     private var currentAccount: String? = null
     private val savedAccounts: MutableStateFlow<List<AccountInfo>?> = MutableStateFlow(null)
+
+    // Guards the one-time lazy population of [savedAccounts]. Without it, concurrent callers
+    // of savedAccounts() (e.g. the account-load path, the always-on notification service, and
+    // the orphan-dir sweep, all launched at startup) would each see a null value, run the IO
+    // read in parallel, and the migration branch could double-write ALL_ACCOUNT_INFO.
+    private val savedAccountsMutex = Mutex()
     private val cachedAccounts: MutableMap<String, AccountSettings?> = mutableMapOf()
 
     suspend fun currentAccount(): String? {
@@ -212,41 +218,46 @@ object LocalPreferences {
     }
 
     private suspend fun savedAccounts(): List<AccountInfo> {
-        if (savedAccounts.value == null) {
-            withContext(Dispatchers.IO) {
-                with(encryptedPreferences()) {
-                    val newSystemOfAccounts =
-                        getString(PrefKeys.ALL_ACCOUNT_INFO, "[]")?.let {
-                            JsonMapper.fromJson<List<AccountInfo>>(it)
-                        }
+        // Fast path: already populated, no lock needed.
+        savedAccounts.value?.let { return it }
 
-                    if (!newSystemOfAccounts.isNullOrEmpty()) {
-                        savedAccounts.emit(newSystemOfAccounts)
-                    } else {
-                        val oldAccounts = getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(COMMA) ?: listOf()
+        return savedAccountsMutex.withLock {
+            // Re-check under the lock: another coroutine may have populated it while we waited.
+            savedAccounts.value ?: loadSavedAccountsFromStorage().also { savedAccounts.emit(it) }
+        }
+    }
 
-                        val migrated =
-                            oldAccounts.map { npub ->
-                                AccountInfo(
-                                    npub,
-                                    encryptedPreferences(npub).getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false),
-                                    (encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "").isNotBlank(),
-                                    false,
-                                )
-                            }
-
-                        savedAccounts.emit(migrated)
-
-                        edit {
-                            putString(PrefKeys.ALL_ACCOUNT_INFO, JsonMapper.toJson(migrated))
-                        }
+    private suspend fun loadSavedAccountsFromStorage(): List<AccountInfo> =
+        withContext(Dispatchers.IO) {
+            with(encryptedPreferences()) {
+                val newSystemOfAccounts =
+                    getString(PrefKeys.ALL_ACCOUNT_INFO, "[]")?.let {
+                        JsonMapper.fromJson<List<AccountInfo>>(it)
                     }
+
+                if (!newSystemOfAccounts.isNullOrEmpty()) {
+                    newSystemOfAccounts
+                } else {
+                    val oldAccounts = getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(COMMA) ?: listOf()
+
+                    val migrated =
+                        oldAccounts.map { npub ->
+                            AccountInfo(
+                                npub,
+                                encryptedPreferences(npub).getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false),
+                                (encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "").isNotBlank(),
+                                false,
+                            )
+                        }
+
+                    edit {
+                        putString(PrefKeys.ALL_ACCOUNT_INFO, JsonMapper.toJson(migrated))
+                    }
+
+                    migrated
                 }
             }
         }
-        // it's always not null when it gets here.
-        return savedAccounts.value!!
-    }
 
     fun accountsFlow() = savedAccounts
 

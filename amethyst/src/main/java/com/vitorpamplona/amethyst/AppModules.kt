@@ -113,6 +113,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
@@ -758,6 +759,18 @@ class AppModules(
             // loads main account quickly.
             LocalPreferences.loadAccountConfigFromEncryptedStorage()
             sessionManager.loginWithDefaultAccountIfLoggedOff()
+        }
+
+        // One-time hygiene: remove per-account directories (MLS/Marmot stores) left behind
+        // by accounts that are no longer saved — account deletion historically didn't clean
+        // them up, so they leaked disk across every add/remove.
+        applicationIOScope.launch {
+            val keep =
+                LocalPreferences
+                    .allSavedAccounts()
+                    .mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }
+                    .toSet()
+            accountsCache.pruneOrphanAccountDirs(keep)
         }
 
         // forces initialization of uiPrefs in the main thread to avoid blinking themes
