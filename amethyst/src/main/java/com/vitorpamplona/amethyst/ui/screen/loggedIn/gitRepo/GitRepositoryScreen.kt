@@ -285,6 +285,9 @@ private fun StatusSplitFeed(
             routeForLastRead = null,
             accountViewModel = accountViewModel,
             nav = nav,
+            onLoaded = { loaded, listState ->
+                GitItemFeedLoaded(loaded, listState, accountViewModel, nav)
+            },
         )
     }
 }
