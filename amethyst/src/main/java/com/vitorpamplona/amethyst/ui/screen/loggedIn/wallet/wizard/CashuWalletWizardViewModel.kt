@@ -185,38 +185,46 @@ class CashuWalletWizardViewModel : ViewModel() {
         _wizardState.value = WizardState.Analyzing
         discoveredNutzapInfo = done.nutzapInfoEvents.firstOrNull()
         vm.launchSigner {
-            val found = mutableListOf<FoundWallet>()
-            for (evt in done.walletEvents) {
-                val config = state.decryptDiscoveredWallet(evt)
-                if (config == null) {
-                    found += FoundWallet(evt, evt.createdAt, emptyList(), false, null, emptyMap(), 0L)
-                    continue
-                }
-                val recoverable =
-                    if (config.privkeyHex != null && config.mints.isNotEmpty()) {
-                        state.probeRecoverableFromSeed(config.privkeyHex, config.mints)
-                    } else {
-                        emptyMap()
+            // Per-mint probe failures are already swallowed inside
+            // probeRecoverableFromSeed; this outer guard catches anything else
+            // (a malformed key, an unexpected throw) so the wizard surfaces an
+            // error + retry instead of spinning on "Analyzing…" forever.
+            try {
+                val found = mutableListOf<FoundWallet>()
+                for (evt in done.walletEvents) {
+                    val config = state.decryptDiscoveredWallet(evt)
+                    if (config == null) {
+                        found += FoundWallet(evt, evt.createdAt, emptyList(), false, null, emptyMap(), 0L)
+                        continue
                     }
-                found +=
-                    FoundWallet(
-                        event = evt,
-                        createdAt = evt.createdAt,
-                        mints = config.mints,
-                        valid = true,
-                        privkeyHex = config.privkeyHex,
-                        recoverableByMint = recoverable,
-                        totalRecoverableSats = recoverable.values.sum(),
-                    )
-            }
-
-            val valid = found.filter { it.valid }.sortedByDescending { it.createdAt }
-            _wizardState.value =
-                when {
-                    valid.isEmpty() -> WizardState.NoWallet
-                    valid.size == 1 -> WizardState.Single(valid.first())
-                    else -> WizardState.Multiple(main = valid.first(), others = valid.drop(1))
+                    val recoverable =
+                        if (config.privkeyHex != null && config.mints.isNotEmpty()) {
+                            state.probeRecoverableFromSeed(config.privkeyHex, config.mints)
+                        } else {
+                            emptyMap()
+                        }
+                    found +=
+                        FoundWallet(
+                            event = evt,
+                            createdAt = evt.createdAt,
+                            mints = config.mints,
+                            valid = true,
+                            privkeyHex = config.privkeyHex,
+                            recoverableByMint = recoverable,
+                            totalRecoverableSats = recoverable.values.sum(),
+                        )
                 }
+
+                val valid = found.filter { it.valid }.sortedByDescending { it.createdAt }
+                _wizardState.value =
+                    when {
+                        valid.isEmpty() -> WizardState.NoWallet
+                        valid.size == 1 -> WizardState.Single(valid.first())
+                        else -> WizardState.Multiple(main = valid.first(), others = valid.drop(1))
+                    }
+            } catch (e: Exception) {
+                _wizardState.value = WizardState.Error(describeMintError(e))
+            }
         }
     }
 

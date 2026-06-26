@@ -1125,7 +1125,14 @@ class CashuWalletState(
                 runCatching {
                     val recoverable = ops.scanRecoverableProofs(mint, seed, existingSecrets = existingSecrets)
                     val published = ops.publishRecoveredProofs(recoverable)
-                    if (bumpCounter && !recoverable.isEmpty) {
+                    if (bumpCounter) {
+                        // Advance past EVERY slot the mint signed, even when all
+                        // recovered proofs were already spent (recoverable.proofs
+                        // empty after the NUT-07 filter). nextCounterAfterScan is
+                        // set from the pre-checkstate scan, so the delta still
+                        // covers those slots — without this a fully-spent adopt on
+                        // a fresh device would leave the counter at 0 and the next
+                        // mint would reuse an already-signed slot (unspendable).
                         val current = settings.peekCashuCounter(recoverable.keysetId)
                         val delta = (recoverable.nextCounterAfterScan - current).coerceAtLeast(0L)
                         if (delta > 0) settings.reserveCashuCounters(recoverable.keysetId, delta.toInt())

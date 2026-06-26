@@ -62,6 +62,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -139,9 +140,11 @@ fun CashuWalletScreen(
 
     // Once discovery resolves to "no wallet here", drive the user into the
     // find-or-create wizard (which crawls every relay for a portable wallet
-    // before offering to create one). Guarded so returning from the wizard
-    // via back doesn't bounce the user straight back in.
-    var autoLaunchedWizard by remember { mutableStateOf(false) }
+    // before offering to create one). rememberSaveable (not remember) so the
+    // guard survives navigating into the wizard: this screen leaves composition
+    // on forward-nav, and a plain remember would reset to false on back, then
+    // re-fire the effect and trap the user in an inescapable wizard loop.
+    var autoLaunchedWizard by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(walletEvent == null && !discovering) {
         if (walletEvent == null && !discovering && !autoLaunchedWizard) {
             autoLaunchedWizard = true
