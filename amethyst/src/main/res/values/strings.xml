@@ -2547,6 +2547,8 @@
     <string name="git_repo_tab_overview">Overview</string>
     <string name="git_repo_tab_issues">Issues</string>
     <string name="git_repo_tab_patches">Patches &amp; PRs</string>
+    <string name="git_repo_filter_open">Open</string>
+    <string name="git_repo_filter_closed">Closed &amp; Resolved</string>
     <string name="git_repo_section_about">About</string>
     <string name="git_repo_section_links">Links</string>
     <string name="git_repo_section_maintainers">Maintainers</string>
