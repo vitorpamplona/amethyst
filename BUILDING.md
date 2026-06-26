@@ -163,6 +163,50 @@ Examples:
 
 ---
 
+## Reproducible Android builds
+
+The release APKs are **bit-for-bit reproducible**: anyone can rebuild the exact
+bytes we ship (minus the signature) from the tagged source and confirm the
+artifact on F-Droid / Zapstore / GitHub was built from this code and nothing
+else. What makes that hold:
+
+- **Pinned toolchain.** AGP, Kotlin, R8, and the Compose compiler are pinned in
+  `gradle/libs.versions.toml`; the build targets **JDK 21**. R8 is deterministic
+  for a fixed version + inputs, so the minified output is stable. Build with the
+  same JDK 21 you see in `BUILDING.md` / CI.
+- **No build-time clock.** Nothing injects `System.currentTimeMillis()` /
+  build dates into `BuildConfig` (a Spotless rule bans the call in `quartz` and
+  `commons`), and AGP normalizes ZIP entry timestamps, so two builds an hour
+  apart are identical.
+- **Deterministic version name.** `generateVersionName` only appends a branch
+  suffix off feature branches; a release tag builds in detached-`HEAD` (or from a
+  source tarball with no `.git`) resolve to the bare `app` version.
+- **No dependency-metadata blob.** `dependenciesInfo { includeInApk = false;
+  includeInBundle = false }` in `amethyst/build.gradle.kts` stops AGP from
+  embedding the Google-encrypted dependency protobuf in the signing block — that
+  ciphertext is non-deterministic and was the one remaining blocker.
+
+### Verify a release APK reproduces
+
+```bash
+# 1. Check out the exact released tag and build the same variant unsigned.
+git checkout v1.12.1
+./gradlew clean :amethyst:assembleFdroidRelease
+
+# 2. Diff your unsigned build against the published APK, ignoring only the
+#    signature (META-INF/*). apksigner + a zip-aware diff is the simplest check;
+#    diffoscope gives a human-readable breakdown of any remaining delta.
+diffoscope \
+  amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-arm64-v8a-release-unsigned.apk \
+  amethyst-fdroid-arm64-v8a-1.12.1.apk
+```
+
+A clean run shows differences confined to `META-INF/` (the signing files). Any
+diff in `classes*.dex`, `resources.arsc`, or native libs means something in the
+toolchain drifted — file it before publishing.
+
+---
+
 ## Release runbook
 
 The release flow is driven by a tag push. Every cut ships Android + Desktop +

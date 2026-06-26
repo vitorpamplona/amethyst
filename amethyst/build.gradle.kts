@@ -264,6 +264,18 @@ android {
         resValues = true
     }
 
+    // Reproducible builds: keep AGP from embedding the dependency-metadata blob
+    // in the APK/AAB. That blob is a protobuf of the resolved dependency tree
+    // encrypted with a Google public key; the ciphertext is non-deterministic,
+    // so its presence makes every release artifact impossible to reproduce
+    // bit-for-bit. Dropping it lets F-Droid / Zapstore independently rebuild and
+    // verify our developer-signed APKs. (Play still derives this data server-side
+    // from the upload, so nothing is lost for the Play channel.)
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     packaging {
         resources {
             excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "**/libscrypt.dylib")
