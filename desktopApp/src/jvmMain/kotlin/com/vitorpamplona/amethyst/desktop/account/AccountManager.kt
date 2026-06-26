@@ -508,6 +508,18 @@ class AccountManager internal constructor(
     suspend fun saveCurrentAccount(): Result<Unit> {
         val current = currentAccount() ?: return Result.failure(Exception("No account logged in"))
 
+        // Downgrade guard (mirrors Android LocalPreferences.setDefaultAccount): never persist a
+        // read-only account over an existing SIGNING account for the same pubkey. Accounts key by
+        // npub, so this would overwrite signerType to ViewOnly and orphan the stored key, routing
+        // every later switch through read-only. A signing account already subsumes a read-only one,
+        // so keep it and switch to it instead of degrading it.
+        if (current.isReadOnly) {
+            val existing = accountStorage.loadAccounts().firstOrNull { it.npub == current.npub }
+            if (existing != null && existing.signerType !is SignerType.ViewOnly) {
+                return switchAccount(current.npub).map { }
+            }
+        }
+
         // Bunker accounts: private key saved during loginWithBunker
         if (current.signerType is SignerType.Remote) {
             // Still ensure multi-account storage is updated

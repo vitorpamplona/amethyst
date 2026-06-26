@@ -175,9 +175,11 @@ class AccountSessionManager(
                 }
             }
 
-        localPreferences.setDefaultAccount(accountSettings)
+        // setDefaultAccount may keep an existing signing account instead of this one when a
+        // read-only npub is added for a pubkey we already sign for — show whichever became current.
+        val current = localPreferences.setDefaultAccount(accountSettings)
 
-        startUI(accountSettings)
+        startUI(current)
     }
 
     fun startUI(
