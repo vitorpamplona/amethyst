@@ -205,8 +205,6 @@ class NappletHostActivity : ComponentActivity() {
             return
         }
 
-        applyNightMode()
-
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             Toast.makeText(this, getString(R.string.napplet_webview_too_old), Toast.LENGTH_LONG).show()
             finish()
@@ -230,7 +228,9 @@ class NappletHostActivity : ComponentActivity() {
         // Create + warm the WebView NOW so its (slow, first-in-process) Chromium init runs on the main
         // thread concurrently with the index probe below (which runs on IO) — instead of serially after
         // it. Binding the broker early overlaps too. The WebView is attached once the probe succeeds.
-        webView = WebView(this)
+        // Built from a context forced to the app theme so its content follows DARK/LIGHT regardless of the
+        // device theme (WebView reads the context's theme, not the window's — see nightThemedContext).
+        webView = WebView(nightThemedContext(this, themeType))
         hardenWebView(webView)
         // Theme the WebView's pre-paint background to the app's so it doesn't flash white when the shell
         // mounts. This activity has a themed context, so it resolves the color locally (no IPC needed).
@@ -807,14 +807,6 @@ class NappletHostActivity : ComponentActivity() {
                 else -> return
             }
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-    }
-
-    private fun applyNightMode() {
-        val uiManager = getSystemService(android.content.Context.UI_MODE_SERVICE) as android.app.UiModeManager
-        when (themeType) {
-            "DARK" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_YES
-            "LIGHT" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_NO
-        }
     }
 
     private fun resolveThemeColor(attr: Int): Int {

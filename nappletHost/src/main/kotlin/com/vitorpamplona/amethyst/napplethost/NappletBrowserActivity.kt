@@ -154,7 +154,6 @@ class NappletBrowserActivity : ComponentActivity() {
         useTor = intent.getBooleanExtra(EXTRA_USE_TOR, true)
         title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         themeType = intent.getStringExtra(EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" }
-        applyNightMode()
 
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             Toast.makeText(this, getString(R.string.napplet_webview_too_old), Toast.LENGTH_LONG).show()
@@ -162,7 +161,9 @@ class NappletBrowserActivity : ComponentActivity() {
             return
         }
 
-        webView = WebView(this)
+        // Build the WebView from a context forced to the app theme so its content follows DARK/LIGHT even when
+        // the device theme differs (WebView reads the context's theme, not the window's — see nightThemedContext).
+        webView = WebView(nightThemedContext(this, themeType))
         configureWebView(webView)
         webView.setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
         webView.dropSystemBarInsets()
@@ -656,14 +657,6 @@ class NappletBrowserActivity : ComponentActivity() {
             addView(View(this@NappletBrowserActivity).apply { layoutParams = LinearLayout.LayoutParams(1, dp(20)) })
             addView(ProgressBar(this@NappletBrowserActivity))
         }
-
-    private fun applyNightMode() {
-        val uiManager = getSystemService(android.content.Context.UI_MODE_SERVICE) as android.app.UiModeManager
-        when (themeType) {
-            "DARK" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_YES
-            "LIGHT" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_NO
-        }
-    }
 
     private fun resolveThemeColor(attr: Int): Int {
         val tv = android.util.TypedValue()

@@ -143,14 +143,6 @@ class NappletBrowserService : Service() {
         super.onDestroy()
     }
 
-    private fun applyNightMode(themeType: String) {
-        val uiManager = getSystemService(android.content.Context.UI_MODE_SERVICE) as android.app.UiModeManager
-        when (themeType) {
-            "DARK" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_YES
-            "LIGHT" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_NO
-        }
-    }
-
     private fun tabFor(msg: Message): BrowserTab? = msg.data?.getString(NappletBrowserContract.KEY_SESSION_ID)?.let { tabs[it] }
 
     private fun onClientMessage(msg: Message): Boolean {
@@ -168,7 +160,6 @@ class NappletBrowserService : Service() {
                         bgColor = data.getInt(NappletBrowserContract.KEY_BG_COLOR, android.graphics.Color.WHITE),
                         themeType = data.getString(NappletBrowserContract.KEY_THEME).orEmpty().ifBlank { "SYSTEM" },
                     )
-                applyNightMode(tab.themeType)
                 tabs[sessionId] = tab
                 // Bind the broker once; a re-sent MSG_CREATE_SESSION (e.g. client reconnect) must not
                 // leak a second binding.
@@ -267,7 +258,7 @@ class NappletBrowserService : Service() {
         // The session may have been closed between MSG_CREATE_SESSION and this posted call — fail rather
         // than build a WebView that no tab tracks (it would leak).
         val tab = tabs[sessionId] ?: error("No browser tab for session $sessionId")
-        val wv = WebView(context)
+        val wv = WebView(nightThemedContext(context, tab.themeType))
         configureWebView(wv, tab)
         // Theme the pre-load background so a blank/loading page shows Amethyst's background, not white.
         wv.setBackgroundColor(tab.bgColor)

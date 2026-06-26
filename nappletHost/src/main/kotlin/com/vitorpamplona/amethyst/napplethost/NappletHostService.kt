@@ -188,14 +188,6 @@ class NappletHostService : Service() {
         return true
     }
 
-    private fun applyNightMode(themeType: String) {
-        val uiManager = getSystemService(android.content.Context.UI_MODE_SERVICE) as android.app.UiModeManager
-        when (themeType) {
-            "DARK" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_YES
-            "LIGHT" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_NO
-        }
-    }
-
     private fun buildTab(msg: Message): NappletTab? {
         val data = msg.data ?: return null
         val sessionId = data.getString(NappletEmbedContract.KEY_SESSION_ID) ?: return null
@@ -225,7 +217,6 @@ class NappletHostService : Service() {
                 themeType = data.getString(NappletHostContract.EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" },
                 declaredDomains = declaredDomains,
             )
-        applyNightMode(tab.themeType)
         return tab
     }
 
@@ -298,7 +289,7 @@ class NappletHostService : Service() {
         // The session may have been closed between MSG_CREATE_SESSION and this posted call — fail rather
         // than build a WebView that no tab tracks (it would leak).
         val tab = tabs[sessionId] ?: error("No napplet tab for session $sessionId")
-        val wv = WebView(context)
+        val wv = WebView(nightThemedContext(context, tab.themeType))
         val appOrigin = NappletWebContract.appOrigin(deriveAppId(tab.author, tab.identifier))
         val effectiveProxy = if (tab.useTor) tab.proxyPort else -1
         tab.contentServer = NappletContentServer(tab.paths, tab.servers, effectiveProxy, cacheDir, shellHtml, shimJs, appOrigin, tab.profile, imeProxy = true)
