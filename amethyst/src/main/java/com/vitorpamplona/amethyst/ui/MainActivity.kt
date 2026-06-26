@@ -27,11 +27,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.NotificationRelayService
+import com.vitorpamplona.amethyst.service.notifications.ServiceIconPreviewNotifications
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.ui.navigation.findParameterValue
@@ -77,6 +79,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         Log.d("ActivityLifecycle") { "MainActivity.onCreate $this" }
+
+        // TEMPORARY / DEBUG-ONLY — REMOVE BEFORE MERGE.
+        // Posts side-by-side preview notifications for the candidate always-on
+        // service icons so they can be compared on a real device.
+        if (BuildConfig.DEBUG) {
+            ServiceIconPreviewNotifications.postAll(this)
+        }
 
         setContent {
             StringResSetup()

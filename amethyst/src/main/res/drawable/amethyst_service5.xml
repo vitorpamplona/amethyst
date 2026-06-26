@@ -1,0 +1,65 @@
+<!--
+  ~ Status-bar icon (option) for the always-on relay-connection service.
+  ~ Centred brand gem as a hub with spokes out to five "server" nodes,
+  ~ symbolising a background service connected to multiple relays.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="512dp"
+    android:height="512dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+  <path
+      android:fillColor="#000000"
+      android:fillType="evenOdd"
+      android:pathData="M333.688,301.115C333.505,300.56,290.909,199.133,279.193,171c-14.264,0,-44.387,0,-65.635,0c-6.235,15.422,-22.333,54.731,-35.246,86.397c7.077,16.883,13.432,32.049,18.334,43.748l26.725,0a1.827,1.827 0,0,0,1.707,-2.146c-0.23,-5.397,-14.92,-25.012,-10.538,-46.23c1.168,-4.565,2.063,-9.203,3.341,-13.752a160.497,160.497 135,0,1,12.271,-31.776c0.812,-1.544,1.188,-2.236,3.058,-1.068c3.989,2.482,8.445,2.339,12.883,2.016c3.826,-0.832,5.69,-2.665,12.7,-0.802c1.387,0,2.738,0,4.156,0.126c3.371,0.266,6.528,1.068,8.555,4.119c2.209,3.334,2.565,7.104,2.209,10.957c-0.539,5.763,-0.156,11.13,4.721,15.193a52.522,52.522 0,0,0,5.48,3.653c2.419,1.554,5.34,2.229,7.413,4.382c1.224,1.268,1.946,2.622,1.414,4.429c-0.529,1.807,-1.946,2.659,-3.806,2.858c-4.712,0.512,-9.313,-0.446,-13.942,-1.005c-0.602,-0.073,-1.195,-0.12,-1.827,-0.156a10.474,10.474 0,0,1,-3.48,0.12l-1.088,0a24.379,24.379 0,0,0,-5.387,1.288c-4.365,1.59,-8.338,3.341,-13.486,3.251a3.946,3.946 0,0,0,-1.873,0.812c-4.036,3.587,-6.465,8.119,-4.445,14.737c5.533,15.459,19.731,52.752,25.833,68.849c-0.173,-10.904,-0.22,-30.425,-0.256,-39.901c24.363,0.037,61.715,0.017,64.693,0.017ZM251.563,223.166a5.151,5.241 90,1,0,10.481,0a5.151,5.241 90,1,0,-10.481,0Z" />
+  <path
+      android:strokeColor="#000000"
+      android:strokeWidth="12"
+      android:fillColor="#00000000"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M256,138L256,46" />
+  <path
+      android:strokeColor="#000000"
+      android:strokeWidth="12"
+      android:fillColor="#00000000"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M368.22,219.54L455.72,191.11" />
+  <path
+      android:strokeColor="#000000"
+      android:strokeWidth="12"
+      android:fillColor="#00000000"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M325.36,351.46L379.43,425.89" />
+  <path
+      android:strokeColor="#000000"
+      android:strokeWidth="12"
+      android:fillColor="#00000000"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M186.64,351.46L132.57,425.89" />
+  <path
+      android:strokeColor="#000000"
+      android:strokeWidth="12"
+      android:fillColor="#00000000"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M143.78,219.54L56.28,191.11" />
+  <path
+      android:fillColor="#000000"
+      android:pathData="M256,22A24,24 0,1,1 256,70A24,24 0,1,1 256,22Z" />
+  <path
+      android:fillColor="#000000"
+      android:pathData="M455.72,167.11A24,24 0,1,1 455.72,215.11A24,24 0,1,1 455.72,167.11Z" />
+  <path
+      android:fillColor="#000000"
+      android:pathData="M379.43,401.89A24,24 0,1,1 379.43,449.89A24,24 0,1,1 379.43,401.89Z" />
+  <path
+      android:fillColor="#000000"
+      android:pathData="M132.57,401.89A24,24 0,1,1 132.57,449.89A24,24 0,1,1 132.57,401.89Z" />
+  <path
+      android:fillColor="#000000"
+      android:pathData="M56.28,167.11A24,24 0,1,1 56.28,215.11A24,24 0,1,1 56.28,167.11Z" />
+</vector>
