@@ -277,3 +277,12 @@ Do this before considering the task complete.
 
 - Commits: Conventional commits (`feat:`, `fix:`, etc.)
 - Never use `--no-verify`
+
+### Remotes & pull requests
+
+A PR can be published two ways, via two **kinds** of remote — identify them by **URL** (`git remote -v`), because the names vary per clone and **a collaborator may have only one**:
+
+- a **GitHub** remote (`github.com/vitorpamplona/amethyst`) — the **canonical** `main`; moves constantly. Standard `gh` PR flow.
+- a **git-over-nostr** remote (`nostr://…/relay.ngit.dev/amethyst`, via `ngit`) — pushing fans out to GitHub **and** the GRASP git servers; **PRs here are nostr proposals** (the `pr/feat/*` branches), reviewed on **gitworkshop.dev** — *not* GitHub PRs. (In the maintainer's checkout these happen to be named `upstream` and `origin` respectively, but don't rely on that.)
+
+Before opening, revising, or merging a PR by **either** path, use the **`ngit-pr`** skill. It covers when to use which, identifying your remotes by URL, the `gh` and `ngit` commands, and — critically for the nostr path — the three-mains alignment gate (GitHub main vs the lagging nostr `main` vs local `main`) that its create/revise/merge flows depend on. Skipping it leads to rejected pushes and PRs that don't show up as revisions.
