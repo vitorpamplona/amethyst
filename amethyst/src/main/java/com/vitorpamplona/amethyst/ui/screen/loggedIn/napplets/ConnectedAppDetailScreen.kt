@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 private data class ConnectedAppDetailState(
     val title: String,
@@ -99,7 +100,7 @@ fun ConnectedAppDetailScreen(
     val context = LocalContext.current
     val capabilityLedger = remember { NappletPermissionLedger(DataStoreNappletPermissionStore(context)) }
     val signerLedger = remember { NostrSignerPermissionLedger(DataStoreNostrSignerPermissionStore(context)) }
-    val untitled = stringResource(R.string.napplet_untitled)
+    val untitled = stringResource(CommonsR.string.napplet_untitled)
 
     var state by remember { mutableStateOf<ConnectedAppDetailState?>(null) }
     var reload by remember { mutableIntStateOf(0) }

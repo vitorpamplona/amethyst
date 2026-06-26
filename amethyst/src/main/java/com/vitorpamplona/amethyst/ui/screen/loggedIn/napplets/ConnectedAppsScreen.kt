@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 private data class ConnectedAppEntry(
     val coordinate: String,
@@ -87,7 +88,7 @@ fun ConnectedAppsScreen(
     val context = LocalContext.current
     val capabilityLedger = remember { NappletPermissionLedger(DataStoreNappletPermissionStore(context)) }
     val signerLedger = remember { NostrSignerPermissionLedger(DataStoreNostrSignerPermissionStore(context)) }
-    val untitled = stringResource(R.string.napplet_untitled)
+    val untitled = stringResource(CommonsR.string.napplet_untitled)
 
     var items by remember { mutableStateOf<List<ConnectedAppEntry>?>(null) }
     var reload by remember { mutableIntStateOf(0) }
