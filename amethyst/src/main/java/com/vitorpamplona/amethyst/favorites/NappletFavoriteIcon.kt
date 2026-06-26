@@ -79,7 +79,10 @@ fun rememberNappletIconModel(coordinate: String): String? {
         .metadata.stateFlow
         .collectAsStateWithLifecycle()
 
-    val icon = remember(noteState) { resolveIconBlob(noteState.note.event) } ?: return null
+    // Key on the event itself, not the NoteState wrapper: re-resolve only when the manifest actually
+    // changes, not on every unrelated metadata bump (a reaction/zap tracked on the note).
+    val event = noteState.note.event
+    val icon = remember(event) { resolveIconBlob(event) } ?: return null
 
     var model by remember(icon.path.hash) { mutableStateOf<String?>(null) }
     LaunchedEffect(icon.path.hash) {

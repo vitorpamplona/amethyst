@@ -67,23 +67,45 @@ object NappletIconPath {
     // Loose-fallback name stems: a raster file whose name looks like an icon, when no exact name matched.
     private val STEMS = listOf("apple-touch-icon", "favicon", "icon", "logo")
 
+    // PRIORITY as a name -> rank lookup, so a path's preference is an O(1) map hit instead of a scan of
+    // the whole list per name. Built once.
+    private val PRIORITY_RANK: Map<String, Int> = PRIORITY.withIndex().associate { (i, name) -> name to i }
+
     /**
-     * The best icon blob in [paths], or null if none looks like an icon. Among equally-named candidates,
-     * the shallowest path wins (a root `/favicon.png` over a nested `/assets/x/favicon.png`).
+     * The best icon blob in [paths], or null if none looks like an icon. A lower-ranked conventional name
+     * wins over a higher one; among equally-named candidates the shallowest path wins (a root
+     * `/favicon.png` over a nested `/assets/x/favicon.png`); a loose icon-ish raster is the last resort.
+     *
+     * Single pass: [basename] is computed once per path (vs. once per path *per* priority name), and no
+     * intermediate lists are allocated — this runs over a whole site's `path` set, which can be large.
      */
     fun choose(paths: List<PathTag>): PathTag? {
-        if (paths.isEmpty()) return null
+        var best: PathTag? = null
+        var bestRank = Int.MAX_VALUE
+        var bestDepth = Int.MAX_VALUE
+        var fallback: PathTag? = null
+        var fallbackDepth = Int.MAX_VALUE
 
-        for (name in PRIORITY) {
-            val match = paths.filter { basename(it.path) == name }.minByOrNull { depth(it.path) }
-            if (match != null) return match
+        for (p in paths) {
+            val b = basename(p.path)
+            val rank = PRIORITY_RANK[b]
+            if (rank != null) {
+                val d = depth(p.path)
+                if (rank < bestRank || (rank == bestRank && d < bestDepth)) {
+                    best = p
+                    bestRank = rank
+                    bestDepth = d
+                }
+            } else if (best == null && RASTER.any(b::endsWith) && STEMS.any(b::contains)) {
+                val d = depth(p.path)
+                if (d < fallbackDepth) {
+                    fallback = p
+                    fallbackDepth = d
+                }
+            }
         }
 
-        return paths
-            .filter { p ->
-                val b = basename(p.path)
-                RASTER.any(b::endsWith) && STEMS.any(b::contains)
-            }.minByOrNull { depth(it.path) }
+        return best ?: fallback
     }
 
     private fun basename(path: String) = path.substringAfterLast('/').lowercase()
