@@ -33,16 +33,18 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.sub
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.subassemblies.filterSoftwareAppsByMutedAuthors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.subassemblies.filterSoftwareAppsGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 fun makeSoftwareAppsFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
+    blockedRelays: Set<NormalizedRelayUrl> = emptySet(),
 ): List<RelayBasedFilter> =
     when (feedSettings) {
         is AllFollowsTopNavPerRelayFilterSet -> filterSoftwareAppsByFollows(feedSettings, since, defaultSince)
         is AuthorsTopNavPerRelayFilterSet -> filterSoftwareAppsByAuthors(feedSettings, since, defaultSince)
-        is GlobalTopNavPerRelayFilterSet -> filterSoftwareAppsGlobal(feedSettings, since, defaultSince)
+        is GlobalTopNavPerRelayFilterSet -> filterSoftwareAppsGlobal(feedSettings, since, defaultSince, blockedRelays)
         is HashtagTopNavPerRelayFilterSet -> filterSoftwareAppsByHashtag(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterSoftwareAppsByMutedAuthors(feedSettings, since, defaultSince)
         else -> emptyList()
