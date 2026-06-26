@@ -2092,7 +2092,12 @@ class Account(
     suspend fun deleteDraftInner(draftTag: String) {
         if (!isWriteable()) return
 
-        val extraRelays = cache.getAddressableNoteIfExists(DraftWrapEvent.createAddressTag(signer.pubKey, draftTag))?.relays ?: emptyList()
+        // Nothing to delete means nothing to sign. Avoids prompting the signer to delete a
+        // draft that was never created (e.g. when "Automatically create drafts" is off).
+        val existingDraft = cache.getAddressableNoteIfExists(DraftWrapEvent.createAddressTag(signer.pubKey, draftTag))
+        if (existingDraft?.event == null) return
+
+        val extraRelays = existingDraft.relays
 
         val deletedDraft = DraftWrapEvent.createDeletedEvent(draftTag, signer)
         val deletionEvent = signer.sign(DeletionEvent.build(listOf(deletedDraft)))
