@@ -23,9 +23,6 @@ package com.vitorpamplona.amethyst.napplet.gateways
 import android.util.Base64
 import com.vitorpamplona.amethyst.commons.napplet.NappletResource
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.okhttp.OnionLocationCache
-import com.vitorpamplona.amethyst.service.okhttp.OnionLocationInterceptor
-import com.vitorpamplona.amethyst.service.okhttp.OnionUrlRewriteInterceptor
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
@@ -43,8 +40,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.net.InetSocketAddress
-import java.net.Proxy
 import java.net.URLDecoder
 
 /**
@@ -53,22 +48,17 @@ import java.net.URLDecoder
  * `https:`, and `blossom:` URLs; blossom blobs are content-addressed and **sha256-verified** before
  * returning, so a wrong server can never substitute the blob.
  *
- * Owns a Tor-routed [OkHttpClient], cached and rebuilt only when the active Tor port ([torPort])
- * changes. Built per account (so it reads the right Blossom server list); consent is enforced by the
- * broker before [fetch] ever runs.
+ * Network goes through the app-wide [OkHttpClient] supplied by [httpClient] (the shared
+ * [com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager]). Reusing it — rather than
+ * standing up a private client — means napplet blob fetches inherit the same Tor routing,
+ * passive `Onion-Location` discovery + `.onion` rewriting, local Blossom cache redirect,
+ * connection pool and DNS as every other HTTP role. Built per account (so it reads the right
+ * Blossom server list); consent is enforced by the broker before [fetch] ever runs.
  */
 class NappletResourceFetcher(
     private val account: Account,
-    private val torPort: () -> Int,
-    // Shared with the rest of the app so an `Onion-Location` learned via any
-    // OkHttp client (e.g. an NIP-11 fetch on a relay socket) transparently
-    // applies to napplet blob fetches too — and vice versa. Optional so unit
-    // tests can construct this without standing up the cache.
-    private val onionCache: OnionLocationCache? = null,
+    private val httpClient: () -> OkHttpClient,
 ) {
-    // Reused blob HTTP client, keyed by the active Tor port (see client()).
-    private var cachedHttp: Pair<Int, OkHttpClient>? = null
-
     /** Fetches an https/data/blossom resource, or null if unsupported/unavailable. */
     suspend fun fetch(url: String): NappletResource? =
         withContext(Dispatchers.IO) {
@@ -150,30 +140,12 @@ class NappletResourceFetcher(
     }
 
     /**
-     * Tor-routed OkHttp client for host-side blob fetches (the applet has no direct network).
-     * Cached and reused for connection pooling; rebuilt only when the Tor proxy port changes.
+     * The app-wide OkHttp client for host-side blob fetches (the applet has no direct network).
+     * The shared manager already routes through Tor when active, captures `Onion-Location` and
+     * rewrites `.onion`s, bridges the local Blossom cache, and pools connections — so there is no
+     * private client to build or cache here.
      */
-    @Synchronized
-    private fun client(): OkHttpClient {
-        val port = torPort()
-        cachedHttp?.let { (cachedPort, client) -> if (cachedPort == port) return client }
-        // Both variants passively capture `Onion-Location` headers into the
-        // shared cache. The Tor-routed variant additionally rewrites outbound
-        // URLs to known `.onion`s so applet blob fetches over Tor avoid exit
-        // nodes when the destination has advertised an onion. Clearnet variant
-        // never rewrites (DNS would fail on `.onion`).
-        val builder = OkHttpClient.Builder()
-        if (port > 0) {
-            builder.proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port)))
-        }
-        onionCache?.let { builder.addInterceptor(OnionLocationInterceptor(it)) }
-        if (port > 0) {
-            onionCache?.let { builder.addInterceptor(OnionUrlRewriteInterceptor(it)) }
-        }
-        val client = builder.build()
-        cachedHttp = port to client
-        return client
-    }
+    private fun client(): OkHttpClient = httpClient()
 
     /**
      * Fetches a `blossom:<sha256>` (or `blossom://<sha256>`) blob from the user's Blossom servers

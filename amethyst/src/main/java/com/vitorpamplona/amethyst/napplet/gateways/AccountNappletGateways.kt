@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeout
+import okhttp3.OkHttpClient
 import java.io.ByteArrayInputStream
 import kotlin.time.Duration.Companion.seconds
 
@@ -70,14 +71,14 @@ class AccountNappletGateways(
     private val context: Context,
     private val ledger: NappletPermissionLedger,
     private val storage: NappletStorage,
-    private val torPort: () -> Int,
+    private val httpClient: () -> OkHttpClient,
 ) {
     private val consentSummary = NappletConsentSummary(context)
 
-    // Share the app-wide OnionLocationCache so any `Onion-Location` learned
-    // elsewhere (NIP-11 docs, relay handshakes, image hosts, money endpoints)
-    // also benefits napplet HTTP blob fetches over Tor — and vice versa.
-    private val resourceFetcher = NappletResourceFetcher(account, torPort, Amethyst.instance.onionLocationCache)
+    // Reuse the app-wide HTTP client so napplet blob fetches inherit the same Tor
+    // routing, Onion-Location discovery/rewriting, Blossom cache and pool as the
+    // rest of the app, instead of a private client that has to re-wire all of it.
+    private val resourceFetcher = NappletResourceFetcher(account, httpClient)
     private val identityReader = AccountIdentityReader(account)
 
     fun broker(): NappletBroker {

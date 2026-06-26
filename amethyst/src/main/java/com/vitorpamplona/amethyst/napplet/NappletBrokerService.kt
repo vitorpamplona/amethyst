@@ -320,7 +320,8 @@ class NappletBrokerService : Service() {
                 context = applicationContext,
                 ledger = ledger,
                 storage = storage,
-                torPort = { Amethyst.instance.torManager.activePortOrNull.value ?: -1 },
+                // Prefer Tor when active; the shared manager falls back to clearnet when it isn't.
+                httpClient = { Amethyst.instance.okHttpClients.getHttpClient(useProxy = true) },
             ).broker()
         cachedBroker = account to broker
         return broker
