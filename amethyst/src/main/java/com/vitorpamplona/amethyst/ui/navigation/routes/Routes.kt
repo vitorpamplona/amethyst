@@ -235,7 +235,7 @@ sealed class Route {
         val nip47: String? = null,
     ) : Route()
 
-    @Serializable object WalletAddCashu : Route()
+    @Serializable object CashuWalletMints : Route()
 
     @Serializable data class WalletAddClinkDebit(
         val ndebit: String? = null,

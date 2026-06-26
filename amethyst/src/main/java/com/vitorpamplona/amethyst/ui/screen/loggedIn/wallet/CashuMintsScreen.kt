@@ -74,9 +74,15 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
+/**
+ * Manages the mints a Cashu wallet uses (and creates the wallet on the first
+ * mint added). Reached only from Cashu Wallet Settings → "My mints" once a
+ * wallet exists; first-time setup comes in via the find-or-create wizard. Not
+ * an "add wallet" entry point — discovery/creation lives in the wizard.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddCashuWalletScreen(
+fun CashuMintsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {

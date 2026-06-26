@@ -75,7 +75,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
  * main wallet screen. It is a thin redirector: each row either navigates to a
  * dedicated screen or triggers a single action. Hosts:
  *
- *  - "Edit wallet details" → the AddCashuWallet form in edit mode (mints).
+ *  - "My mints" → the [CashuMintsScreen] mint manager (edit mode).
  *  - "Recover from seed" → NUT-09 recovery action (inline, with status).
  *  - "Mint recommendations" → the [CashuMintRecommendationsScreen].
  *  - Danger Zone → stop nutzaps, recreate/import the nutzap key, delete wallet.
@@ -127,7 +127,7 @@ fun CashuWalletSettingsScreen(
                     icon = MaterialSymbols.Edit,
                     title = stringRes(R.string.cashu_settings_edit_wallet),
                     subtitle = stringRes(R.string.cashu_settings_edit_wallet_subtitle),
-                    onClick = { nav.nav(Route.WalletAddCashu) },
+                    onClick = { nav.nav(Route.CashuWalletMints) },
                 )
             }
 
