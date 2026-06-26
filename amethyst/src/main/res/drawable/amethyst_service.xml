@@ -3,31 +3,34 @@
   ~
   ~ Notification small icons are rendered by the system as flat, alpha-only
   ~ silhouettes, so the regular `amethyst` gem becomes an identical solid gem
-  ~ for both real notifications and this persistent service. To stop the
-  ~ service from reading as a new notification, this variant draws the gem as
-  ~ a hollow outline — same brand shape, clearly different at a glance.
+  ~ for both real notifications and this persistent service. To set the
+  ~ always-on service apart, this variant centres the brand gem inside a ring
+  ~ of three "server" nodes — signalling a background service quietly connected
+  ~ to a network of relays, clearly different from a one-off notification at a
+  ~ glance. The gem is grown to the largest size that still clears the nodes.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="512dp"
     android:height="512dp"
     android:viewportWidth="512"
     android:viewportHeight="512">
-  <!--
-    The gem outline below is authored at ~half the viewport size, leaving it
-    visibly smaller than every other notification small icon (the filled
-    `amethyst` gem fills the viewport). Scale it up ~1.8x about its centre so it
-    matches the others, keeping a margin so the stroke doesn't clip at the edges.
-  -->
-  <group
-      android:pivotX="256"
-      android:pivotY="261"
-      android:scaleX="1.8"
-      android:scaleY="1.8">
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#000000"
-        android:strokeWidth="22"
-        android:strokeLineJoin="round"
-        android:pathData="M370.18,326.86C369.91,326.04 307.3,176.97 290.09,135.63c-20.96,0 -65.23,0 -96.46,0 -9.17,22.67 -32.82,80.44 -51.8,126.98 10.4,24.81 19.74,47.1 26.95,64.29l39.28,0a2.68,2.68 135,0 0,2.51 -3.15c-0.34,-7.93 -21.93,-36.76 -15.49,-67.94 1.72,-6.71 3.03,-13.53 4.91,-20.21a235.88,235.88 135,0 1,18.04 -46.7c1.19,-2.27 1.74,-3.29 4.5,-1.57 5.86,3.65 12.41,3.44 18.94,2.97 5.62,-1.22 8.36,-3.92 18.67,-1.18 2.04,0 4.03,0 6.11,0.19 4.95,0.39 9.6,1.57 12.57,6.05 3.25,4.9 3.77,10.44 3.25,16.1 -0.79,8.47 -0.23,16.36 6.94,22.33a77.19,77.19 0,0 0,8.05 5.37c3.56,2.28 7.85,3.27 10.9,6.44 1.8,1.87 2.86,3.85 2.08,6.51 -0.78,2.66 -2.86,3.91 -5.6,4.2 -6.92,0.75 -13.69,-0.66 -20.49,-1.48 -0.89,-0.11 -1.76,-0.17 -2.68,-0.23a15.39,15.39 0,0 1,-5.11 0.17l-1.6,0a35.83,35.83 0,0 0,-7.92 1.89c-6.41,2.34 -12.25,4.91 -19.82,4.78a5.8,5.8 0,0 0,-2.75 1.19c-5.93,5.27 -9.5,11.93 -6.54,21.66 8.13,22.72 29,77.53 37.96,101.18 -0.25,-16.02 -0.32,-44.71 -0.38,-58.64 35.8,0.05 90.7,0.03 95.08,0.03z" />
-  </group>
+  <path
+      android:fillColor="#000000"
+      android:fillType="evenOdd"
+      android:pathData="M384.871,330.838C384.567,329.917,313.907,161.667,294.473,115c-23.662,0,-73.63,0,-108.877,0c-10.343,25.583,-37.047,90.79,-58.468,143.318c11.74,28.006,22.282,53.163,30.412,72.57l44.332,0a3.03,3.03 0,0,0,2.831,-3.56c-0.381,-8.953,-24.749,-41.49,-17.48,-76.687c1.937,-7.573,3.422,-15.267,5.542,-22.812a266.236,266.236 135,0,1,20.356,-52.711c1.347,-2.561,1.97,-3.709,5.072,-1.772c6.618,4.118,14.008,3.88,21.371,3.345c6.347,-1.38,9.438,-4.421,21.068,-1.33c2.302,0,4.543,0,6.894,0.21c5.591,0.442,10.829,1.772,14.191,6.833c3.665,5.53,4.255,11.784,3.665,18.176c-0.894,9.56,-0.259,18.463,7.832,25.202a87.125,87.125 0,0,0,9.091,6.06c4.013,2.578,8.859,3.698,12.297,7.269c2.031,2.103,3.229,4.349,2.346,7.346c-0.878,2.997,-3.229,4.41,-6.314,4.741c-7.816,0.85,-15.449,-0.74,-23.127,-1.667c-0.999,-0.121,-1.981,-0.199,-3.03,-0.259a17.375,17.375 0,0,1,-5.773,0.199l-1.805,0a40.441,40.441 0,0,0,-8.936,2.136c-7.242,2.638,-13.832,5.542,-22.37,5.393a6.546,6.546 0,0,0,-3.107,1.347c-6.695,5.95,-10.724,13.467,-7.374,24.446c9.179,25.643,32.73,87.505,42.853,114.209c-0.287,-18.087,-0.364,-50.47,-0.425,-66.189c40.413,0.061,102.375,0.028,107.315,0.028ZM248.64,201.534a8.544,8.693 90,1,0,17.386,0a8.544,8.693 90,1,0,-17.386,0Z" />
+  <path
+      android:strokeColor="#000000"
+      android:strokeWidth="20"
+      android:fillColor="#00000000"
+      android:strokeLineJoin="round"
+      android:pathData="M256,46A210,210 0,1,1 256,466A210,210 0,1,1 256,46Z" />
+  <path
+      android:fillColor="#000000"
+      android:pathData="M256,10A36,36 0,1,1 256,82A36,36 0,1,1 256,10Z" />
+  <path
+      android:fillColor="#000000"
+      android:pathData="M74.13,325A36,36 0,1,1 74.13,397A36,36 0,1,1 74.13,325Z" />
+  <path
+      android:fillColor="#000000"
+      android:pathData="M437.87,325A36,36 0,1,1 437.87,397A36,36 0,1,1 437.87,325Z" />
 </vector>
