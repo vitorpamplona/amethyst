@@ -268,7 +268,7 @@
     <string name="follow">Követés</string>
     <string name="follow_back">Viszontkövetés</string>
     <string name="unblock">Letiltás megszüntetése</string>
-    <string name="copy_user_id">Felhasználói ID másolása</string>
+    <string name="copy_user_id">Felhasználói azonosító másolása</string>
     <string name="unblock_user">Tiltás feloldása</string>
     <string name="user_is_blocked_hidden">Ez a felhasználó le van tiltva/némítva. A bejegyzései el vannak rejtve.</string>
     <string name="npub_hex_username">"npub, felhasználónév, szöveg"</string>
@@ -637,11 +637,7 @@
     <string name="nsites">nOldalak</string>
     <string name="nsite_none_found">Még nem találhatók nOldalak.</string>
     <string name="browser">Böngésző</string>
-    <string name="browser_address_hint">Keressen vagy adjon meg egy címet</string>
     <string name="browser_reload">Újratöltés</string>
-    <string name="browser_console_title_short">Konzol</string>
-    <string name="browser_console_title">Konzol (%1$d)</string>
-    <string name="browser_console_clear">Törlés</string>
     <string name="browser_tor_on">Betöltés Tor hálózaton keresztül. Koppintson a nyílt web használatához.</string>
     <string name="browser_tor_off">Betöltés a nyílt weben keresztül. Koppintson a Tor használatához.</string>
     <string name="browser_unsupported">Az alkalmazáson belüli böngészőhöz Android 11 vagy újabb verzió szükséges.</string>
@@ -674,7 +670,6 @@
     <string name="napplet_permissions_forget">nKisalkalmazás elfelejtése</string>
     <string name="napplet_permissions_blocked">Letiltva</string>
     <string name="napplet_permissions_revoke">Visszavonás</string>
-    <string name="napplet_untitled">Névtelen nKisalkalmazás</string>
     <string name="napplet_none_found">Még nem találhatók nKisalkalmazások.</string>
     <string name="napplet_fallback_title">nKisalkalmazás: %1$s…</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
@@ -1149,7 +1144,7 @@
     <string name="tor_preset_explainer">Az alábbi beállítások gyors módosítása</string>
     <string name="tor_use_onion_address">Onion-webcím / Átjátszók</string>
     <string name="tor_use_onion_address_explainer">Használja a Tor-t bármely .onion webcímhez</string>
-    <string name="tor_use_dm_relays">DM Relays</string>
+    <string name="tor_use_dm_relays">Közvetlen üzenetátjátszók</string>
     <string name="tor_use_dm_relays_explainer">Tor kényszerítése a privát üzenetek küldéséhez és fogadásához</string>
     <string name="tor_use_new_relays">Megbízhatatlan átjátszók</string>
     <string name="tor_use_new_relays_explainer">Tor kényszerítése a kimenő és bejövő üzenetátjátszókhoz</string>
@@ -2534,7 +2529,7 @@
     <string name="kind_channel_mute_user">Felhasználó némítása a csatornában</string>
     <string name="kind_dm_file">Közvetlen üzenetfájl</string>
     <string name="kind_dm_message">Közvetlen üzenet</string>
-    <string name="kind_dm_relays">DM Relays</string>
+    <string name="kind_dm_relays">Közvetlen üzenetátjátszók</string>
     <string name="kind_classifieds">Apróhirdetések</string>
     <string name="kind_comments">Megjegyzések</string>
     <string name="kind_community_def">Közösség alapadatai</string>
@@ -3127,44 +3122,4 @@
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Hiba történt a JSON elemzésekor a(z) %1$s számlahívásából. Ellenőrizze a felhasználó lightning-beállításait</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nem lehetett lightning-számlát létrehozni. Üzenet a következőtől: %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nem sikerült Lightning-számlát létrehozni a következőből: %1$s:  A „PR” elem nem található a kapott JSON-ban.</string>
-
-    <string name="always_on_notif_channel_name">Relay kapcsolati szolgáltatás</string>
-    <string name="and_more"> +%1$s</string>
-    <string name="app_notification_private_message">Új értesítés érkezett</string>
-    <string name="audio_visualizer_search_keywords">audió, vizualizáló, spektrum, sávok, hullámok, radiális, aurora, animáció</string>
-    <string name="backup_keys_search_keywords">nsec, privát kulcs, seed, mnemonik, export</string>
-    <string name="bottom_bar_search_keywords">navigáció, fülek, navigációs sáv</string>
-    <string name="calendar_reminder_search_keywords">naptár, események, emlékeztetők, RSVP</string>
-    <string name="call_settings_search_keywords">WebRTC, videohívás, hanghívás, hívások</string>
-    <string name="child_safety_search_keywords">jogi, biztonság, visszaélés, CSAE, gyermekvédelem</string>
-    <string name="compose_search_keywords">piszkozat, közzététel, szerkesztő, automatikus mentés</string>
-    <string name="event_sync_search_keywords">Negentropy, szinkronizálás, egyeztetés, visszatöltés</string>
-    <string name="favorite_dvms_search_keywords">DVM, adatáruló gép, algoritmus, feedek</string>
-    <string name="github">Github Gist bizonyítékkal</string>
-    <string name="home_tabs_search_keywords">fülek, feedek, szálak, beszélgetések</string>
-    <string name="import_follows_search_keywords">kapcsolatok, követések, követési lista, importálás</string>
-    <string name="mastodon">Mastodon bejegyzés azonosító bizonyítékkal</string>
-    <string name="media_servers_search_keywords">Blossom, feltöltések, képek, fotók, fájlok, CDN, tárhely</string>
-    <string name="namecoin_search_keywords">namecoin, dns, azonosság, név</string>
-    <string name="nests_servers_search_keywords">audio szobák, élő, spaces, szobák</string>
-    <string name="notification_settings_search_keywords">push, értesítések, hangok, rezgés</string>
-    <string name="ots_explorer_search_keywords">OpenTimestamps, időbélyeg, OTS, bizonyíték</string>
-    <string name="payment_targets_search_keywords">zap megosztás, megosztás, kedvezményezettek, zap továbbítás</string>
-    <string name="privacy_options_search_keywords">Tor, Orbot, proxy, adatvédelem, névtelen</string>
-    <string name="privacy_policy_search_keywords">jogi, feltételek, tos, szabályzat, GDPR</string>
-    <string name="profile_badges_search_keywords">jelvények, díjak</string>
-    <string name="profile_ui_search_keywords">profil, elrendezés</string>
-    <string name="reactions_search_keywords">emoji, tetszik, reakció</string>
-    <string name="reactions_settings_search_keywords">emoji, reakciók, tetszik</string>
-    <string name="relay_setup_search_keywords">relayok, beérkező, kimenő, kapcsolatok, szerverek</string>
-    <string name="request_to_vanish_search_keywords">fiók törlése, eltüntetés, GDPR</string>
-    <string name="reset_marmot_search_keywords">MLS, csoportos chat, üzenetküldés, visszaállítás</string>
-    <string name="security_filters_search_keywords">spam, blokkolás, némítás, szűrő, figyelmeztetések</string>
-    <string name="translations_search_keywords">nyelv, fordítás, területi beállítás</string>
-    <string name="twitter">X bejegyzés azonosító bizonyítékkal</string>
-    <string name="ui_preferences_search_keywords">sötét mód, világos mód, téma, betűméret, nyelv, megjelenés</string>
-    <string name="vanish_history_search_keywords">törlés, események törlése</string>
-    <string name="video_player_search_keywords">videó, lejátszó, visszajátszás, automatikus lejátszás, némítás</string>
-    <string name="zaps_search_keywords">lightning, sats, borravalók, pénztárca, összeg</string>
-
 </resources>

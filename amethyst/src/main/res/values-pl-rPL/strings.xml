@@ -651,11 +651,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="nsites">nSites</string>
     <string name="nsite_none_found">Nie znaleziono żadnych witryn nSite.</string>
     <string name="browser">Przeglądarka</string>
-    <string name="browser_address_hint">Szukaj lub wprowadź adres</string>
     <string name="browser_reload">Odśwież</string>
-    <string name="browser_console_title_short">Konsola</string>
-    <string name="browser_console_title">Konsola (%1$d)</string>
-    <string name="browser_console_clear">Wyczyść</string>
     <string name="browser_tor_on">Wczytywanie przez Tor. Kliknij, aby użyć otwartej sieci.</string>
     <string name="browser_tor_off">Pobieranie przez otwartą sieć. Kliknij, aby skorzystać z sieci Tor.</string>
     <string name="browser_unsupported">Przeglądarka w aplikacji wymaga Androida 11 lub nowszego.</string>
@@ -688,7 +684,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="napplet_permissions_forget">Zapomnij o tym nApplet</string>
     <string name="napplet_permissions_blocked">Zablokowane</string>
     <string name="napplet_permissions_revoke">Odwołaj</string>
-    <string name="napplet_untitled">nApplet bez tytułu</string>
     <string name="napplet_none_found">Nie znaleziono jeszcze żadnych nApplets.</string>
     <string name="napplet_fallback_title">nApplet %1$s…</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
@@ -3129,6 +3124,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="marmot_user_fallback_name">%1$s…</string>
     <string name="marmot_tab_known">Znane</string>
     <string name="marmot_tab_known_count">Znane (%1$d)</string>
+    <string name="marmot_tab_new_requests">Nowe żądania</string>
+    <string name="marmot_tab_new_requests_count">Nowe żądania (%1$d)</string>
     <string name="marmot_no_groups">Brak grup</string>
     <string name="marmot_no_groups_desc">Utwórz grupę lub zaakceptuj zaproszenie.</string>
     <string name="marmot_no_invitations">Brak zaproszeń</string>
@@ -3195,6 +3192,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="marmot_not_a_member">Nie jest członkiem tej grupy</string>
     <string name="copy">Kopiuj</string>
     <string name="ots_reset_to_auto_select">Zresetuj do automatycznego wyboru</string>
+    <string name="ots_explorer_api_label">Bazowy adres URL API eksploratora</string>
     <string name="dvm_pay_invoice_from_dvm">Zapłać fakturę z DVM</string>
     <string name="dvm_pay_amount_to_dvm">Zapłać %1$s satoszy na DVM</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Usługa lightning odbiorcy w %1$s jest niedostępna. Została obliczona na podstawie adresu lightning \"%2$s\". Błąd: %3$s. Sprawdź, czy serwer jest gotowy i czy adres lightning jest poprawny</string>
@@ -3202,47 +3200,4 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Błąd przetwarzania pliku JSON z pobierania faktury %1$s. Sprawdź konfigurację lightning użytkownika</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nie można utworzyć faktury. Wiadomość od %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nie można utworzyć faktury od %1$s: Element pr nie został znaleziony w powstałym JSON.</string>
-
-    <string name="always_on_notif_channel_name">Usługa połączenia z przekaźnikiem</string>
-    <string name="and_more"> +%1$s</string>
-    <string name="app_notification_private_message">Nadeszło nowe powiadomienie</string>
-    <string name="audio_visualizer_search_keywords">audio, wizualizator, spektrum, słupki, fale, radialny, aurora, animacja</string>
-    <string name="backup_keys_search_keywords">nsec, klucz prywatny, ziarno, mnemonik, eksport</string>
-    <string name="bottom_bar_search_keywords">nawigacja, zakładki, pasek nawigacji</string>
-    <string name="calendar_reminder_search_keywords">kalendarz, wydarzenia, przypomnienia, RSVP</string>
-    <string name="call_settings_search_keywords">WebRTC, połączenie wideo, połączenie głosowe, połączenia</string>
-    <string name="child_safety_search_keywords">prawo, bezpieczeństwo, nadużycie, CSAE, ochrona dzieci</string>
-    <string name="compose_search_keywords">szkic, publikowanie, edytor, autozapis</string>
-    <string name="event_sync_search_keywords">Negentropy, synchronizacja, uzgadnianie, uzupełnianie</string>
-    <string name="favorite_dvms_search_keywords">DVM, automat do sprzedaży danych, algo, algorytm, kanały</string>
-    <string name="github">Github Gist z dowodem</string>
-    <string name="home_tabs_search_keywords">zakładki, kanały, wątki, rozmowy</string>
-    <string name="import_follows_search_keywords">kontakty, obserwowani, lista obserwowanych, import</string>
-    <string name="marmot_tab_new_requests">Nowe żądania</string>
-    <string name="marmot_tab_new_requests_count">Nowe żądania (%1$d)</string>
-    <string name="mastodon">Identyfikator wpisu Mastodon z dowodem</string>
-    <string name="media_servers_search_keywords">Blossom, przesyłanie, obrazy, zdjęcia, pliki, CDN, przechowywanie</string>
-    <string name="namecoin_search_keywords">namecoin, dns, tożsamość, nazwa</string>
-    <string name="nests_servers_search_keywords">pokoje audio, na żywo, spaces, pokoje</string>
-    <string name="notification_settings_search_keywords">push, powiadomienia, dźwięki, wibracje</string>
-    <string name="ots_explorer_api_label">Bazowy adres URL API eksploratora</string>
-    <string name="ots_explorer_search_keywords">OpenTimestamps, znacznik czasu, OTS, dowód</string>
-    <string name="payment_targets_search_keywords">podział zap, podział, odbiorcy, przekazywanie zap</string>
-    <string name="privacy_options_search_keywords">Tor, Orbot, proxy, prywatność, anonimowość</string>
-    <string name="privacy_policy_search_keywords">prawo, warunki, regulamin, polityka, GDPR</string>
-    <string name="profile_badges_search_keywords">odznaki, nagrody</string>
-    <string name="profile_ui_search_keywords">profil, układ</string>
-    <string name="reactions_search_keywords">emoji, polubienie, reakcja</string>
-    <string name="reactions_settings_search_keywords">emoji, reakcje, polubienie</string>
-    <string name="relay_setup_search_keywords">przekaźniki, skrzynka odbiorcza, skrzynka nadawcza, połączenia, serwery</string>
-    <string name="request_to_vanish_search_keywords">usunięcie konta, zniknięcie, GDPR</string>
-    <string name="reset_marmot_search_keywords">MLS, czat grupowy, wiadomości, resetowanie</string>
-    <string name="security_filters_search_keywords">spam, blokowanie, wyciszenie, filtr, ostrzeżenia</string>
-    <string name="translations_search_keywords">język, tłumaczenie, ustawienia regionalne</string>
-    <string name="twitter">Status X z dowodem</string>
-    <string name="ui_preferences_search_keywords">tryb ciemny, tryb jasny, motyw, rozmiar czcionki, język, wygląd</string>
-    <string name="vanish_history_search_keywords">usuwanie, usuń zdarzenia</string>
-    <string name="video_player_search_keywords">wideo, odtwarzacz, odtwarzanie, autoodtwarzanie, wyciszenie</string>
-    <string name="zaps_search_keywords">lightning, saty, napiwki, portfel, kwota</string>
-
 </resources>

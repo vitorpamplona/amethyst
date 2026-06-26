@@ -663,11 +663,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nsites">nSites</string>
     <string name="nsite_none_found">nSites še niso najdena.</string>
     <string name="browser">Brskalnik</string>
-    <string name="browser_address_hint">Išči ali vpiši naslov</string>
     <string name="browser_reload">Ponovno naloži</string>
-    <string name="browser_console_title_short">Konzola</string>
-    <string name="browser_console_title">Konzola (%1$d)</string>
-    <string name="browser_console_clear">Počisti</string>
     <string name="browser_tor_on">Nalaganje prek Tor. Tapnite za uporabo odprtega spleta.</string>
     <string name="browser_tor_off">Nalaganje prek odprtega spleta. Tapnite za uporabo Tor.</string>
     <string name="browser_unsupported">Vgrajeni brskalnik zahteva Android 11 ali novejši.</string>
@@ -700,7 +696,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="napplet_permissions_forget">Pozabi ta nApplet</string>
     <string name="napplet_permissions_blocked">Blokirano</string>
     <string name="napplet_permissions_revoke">Prekliči</string>
-    <string name="napplet_untitled">Neimenovan nApplet</string>
     <string name="napplet_none_found">Še ni najdenih nobenih nAppletov.</string>
     <string name="napplet_fallback_title">nApplet%1$s…</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
@@ -3222,44 +3217,4 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Napaka pri razčlenjevanju JSON med pridobivanjem fakture iz %1$s. Preverite uporabnikove nastavitve za \"Lightning\"</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Ni mogoče ustvariti lightning fakture. Sporočilo od %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Ni mogoče ustvariti lightning fakture od %1$s: Element \'pr\' ni bil najden v JSON-u.</string>
-
-    <string name="always_on_notif_channel_name">Storitev povezave z releji</string>
-    <string name="and_more"> +%1$s</string>
-    <string name="app_notification_private_message">Prejeto je novo obvestilo</string>
-    <string name="audio_visualizer_search_keywords">zvok, vizualizator, spekter, palice, valovi, radialno, aurora, animacija</string>
-    <string name="backup_keys_search_keywords">nsec, zasebni ključ, seme, mnemonik, izvoz</string>
-    <string name="bottom_bar_search_keywords">navigacija, zavihki, navigacijska vrstica</string>
-    <string name="calendar_reminder_search_keywords">koledar, dogodki, opomniki, RSVP</string>
-    <string name="call_settings_search_keywords">WebRTC, videoklic, glasovni klic, klici</string>
-    <string name="child_safety_search_keywords">pravno, varnost, zloraba, CSAE, varstvo otrok</string>
-    <string name="compose_search_keywords">osnutek, objava, urejevalnik, samodejno shranjevanje</string>
-    <string name="event_sync_search_keywords">Negentropy, sinhronizacija, usklajevanje, zapolnitev</string>
-    <string name="favorite_dvms_search_keywords">DVM, avtomat za podatke, algo, algoritem, viri</string>
-    <string name="github">Github Gist z dokazilom</string>
-    <string name="home_tabs_search_keywords">zavihki, viri, niti, pogovori</string>
-    <string name="import_follows_search_keywords">stiki, sledenja, seznam sledenih, uvoz</string>
-    <string name="mastodon">ID objave Mastodon z dokazilom</string>
-    <string name="media_servers_search_keywords">Blossom, nalaganje, slike, fotografije, datoteke, CDN, shramba</string>
-    <string name="namecoin_search_keywords">Namecoin, DNS, identiteta, ime</string>
-    <string name="nests_servers_search_keywords">zvočne sobe, v živo, prostori, sobe</string>
-    <string name="notification_settings_search_keywords">potisna obvestila, opozorila, zvoki, vibracija</string>
-    <string name="ots_explorer_search_keywords">OpenTimestamps, časovni žig, OTS, dokazilo</string>
-    <string name="payment_targets_search_keywords">razdelitev zap, razdelitev, prejemniki, posredovanje zap</string>
-    <string name="privacy_options_search_keywords">Tor, Orbot, posrednik, zasebnost, anonimnost</string>
-    <string name="privacy_policy_search_keywords">pravno, pogoji, pogoji storitve, pravilnik, GDPR</string>
-    <string name="profile_badges_search_keywords">značke, nagrade</string>
-    <string name="profile_ui_search_keywords">profil, postavitev</string>
-    <string name="reactions_search_keywords">emoji, všeček, reakcija</string>
-    <string name="reactions_settings_search_keywords">emoji, reakcije, všeček</string>
-    <string name="relay_setup_search_keywords">releji, prejemni nabiralnik, oddajni nabiralnik, povezave, strežniki</string>
-    <string name="request_to_vanish_search_keywords">izbris računa, izginotje, GDPR</string>
-    <string name="reset_marmot_search_keywords">MLS, skupinski klepet, sporočanje, ponastavitev</string>
-    <string name="security_filters_search_keywords">neželena pošta, blokiranje, utišanje, filter, opozorila</string>
-    <string name="translations_search_keywords">jezik, prevod, lokalizacija</string>
-    <string name="twitter">X Status z dokazilom</string>
-    <string name="ui_preferences_search_keywords">temni način, svetli način, tema, velikost pisave, jezik, videz</string>
-    <string name="vanish_history_search_keywords">brisanje, izbris dogodkov</string>
-    <string name="video_player_search_keywords">video, predvajalnik, predvajanje, samodejno predvajanje, utišanje</string>
-    <string name="zaps_search_keywords">strela, sati, napitnine, denarnica, znesek</string>
-
 </resources>
