@@ -2010,6 +2010,16 @@ fun RenderAuthorImages(
         } else {
             NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
         }
+    } else if (noteEvent is LnZapEvent) {
+        // Zap receipts are signed by the recipient's lightning provider; show the
+        // sender from the embedded zap request instead of the service key, matching
+        // how the thread's master note resolves the author.
+        val zapSender = observeZapSender(baseNote, accountViewModel).value
+        if (zapSender != null) {
+            UserPicture(zapSender, Size55dp, accountViewModel = accountViewModel, nav = nav)
+        } else {
+            NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
+        }
     } else {
         NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
     }
