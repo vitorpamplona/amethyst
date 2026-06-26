@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.favoriteAppItems
+import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /** How many of the most recent history entries the idle browser home surfaces under "Recent". */
 private const val RECENTS_LIMIT = 12
@@ -269,7 +270,7 @@ private fun OmniBar(
             onValueChange = onValueChange,
             modifier = Modifier.weight(1f),
             singleLine = true,
-            placeholder = { Text(stringResource(R.string.browser_address_hint)) },
+            placeholder = { Text(stringResource(CommonsR.string.browser_address_hint)) },
             keyboardOptions =
                 KeyboardOptions(
                     capitalization = KeyboardCapitalization.None,

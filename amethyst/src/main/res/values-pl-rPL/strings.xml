@@ -1392,7 +1392,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_count_subscriptions">Subskrypcje KONTA (%1$d)</string>
     <string name="relay_outbox_events">Wydarzenia Wysłane (%1$d)</string>
     <string name="relay_filter_authors">%1$d autorzy</string>
-    <string name="relay_filter_ids">%1$d identyfikatorów</string>
+    <string name="relay_filter_ids">%1$d id</string>
     <string name="relay_filter_since">od %1$s</string>
     <string name="relay_filter_until">do %1$s</string>
     <string name="relay_filter_limit">limit %1$d</string>
@@ -1845,7 +1845,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="cashu_history_incoming">Otrzymano</string>
     <string name="cashu_history_outgoing">Wysłano</string>
     <string name="cashu_settings_title">Ustawienia portfela Cashu</string>
-    <string name="cashu_settings_edit_wallet">Edytuj szczegóły portfela</string>
+    <string name="cashu_settings_edit_wallet">Moje minty</string>
     <string name="cashu_settings_edit_wallet_subtitle">Minty, klucz nutzap</string>
     <string name="cashu_settings_my_recommendations">Moje rekomendacje Minta</string>
     <string name="cashu_settings_recommendations_subtitle">Publicznie rekomenduj minty, którym ufasz, i wycofuj rekomendacje.</string>
@@ -2714,7 +2714,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="namecoin_pin_cert_body">Serwer %1$s przedstawił certyfikat, który nie znajduje się jeszcze w Twoim magazynie certyfikatów zaufanych. Sprawdź, czy poniższy Fingerprint odpowiada wartości opublikowanej przez operatora serwera, a następnie zdecyduj, czy chcesz zaufać temu certyfikatowi w przypadku przyszłych połączeń.</string>
     <string name="namecoin_pin_cert_accept">Zaufaj</string>
     <string name="namecoin_pin_cert_reject">Odrzuć</string>
-    <string name="event_sync_title">Synchronizacja Transmiterów</string>
+    <string name="event_sync_title">Sync relays</string>
     <string name="event_sync_what_happens_title">Jak to działa</string>
     <string name="event_sync_what_happens_body">To narzędzie skanuje wszystkie transmitery, z którymi zetknęła się Twoja aplikacja, i przekierowuje zdarzenia do właściwych miejsc docelowych: </string>
     <string name="event_sync_step1">Pobierz wszystkie wydarzenia, których jesteś autorem, i wyślij je do transmiterów nadawczych.</string>
@@ -2722,7 +2722,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="event_sync_step3">Pobierz wszystkie bezpośrednie wiadomości adresowane do Ciebie i wyślij je do swoich transmiterów DM.</string>
     <string name="event_sync_wifi_warning">⚠️ Wygląda na to, że korzystasz z połączenia komórkowego lub z limitem transferu danych. Ta operacja może wymagać przesłania bardzo dużej ilości danych. Przed rozpoczęciem podłącz się do sieci Wi-Fi.</string>
     <string name="event_sync_mobile_data_dialog_title">Włączyć transmisje danych komórkowych?</string>
-    <string name="event_sync_start">Rozpocznij synchronizację</string>
+    <string name="event_sync_start">Rozpocznij sync</string>
     <string name="event_sync_start_anyway">Uruchom mimo to (transmisja danych komórkowych)</string>
     <string name="event_sync_cancel">Anuluj</string>
     <string name="event_sync_relays_progress">Transmitery: %1$d / %2$d</string>
@@ -2747,7 +2747,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="searchable_events">wydarzenia podlegające wyszukiwaniu</string>
     <string name="dms">DMs</string>
     <string name="profiles">profile</string>
-    <string name="relay_settings_lower2">lista transmiterów wysyłających</string>
+    <string name="relay_settings_lower2">listy wychodzące</string>
     <string name="last_seen">Ostatnio widziano %1$s temu</string>
     <string name="last_seen_on_date">Ostatnio widziano %1$s (%2$s temu)</string>
     <string name="last_seen_just_now">Ostatnio widziano przed chwilą</string>
@@ -3202,4 +3202,47 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Błąd przetwarzania pliku JSON z pobierania faktury %1$s. Sprawdź konfigurację lightning użytkownika</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nie można utworzyć faktury. Wiadomość od %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nie można utworzyć faktury od %1$s: Element pr nie został znaleziony w powstałym JSON.</string>
+
+    <string name="always_on_notif_channel_name">Usługa połączenia z przekaźnikiem</string>
+    <string name="and_more"> +%1$s</string>
+    <string name="app_notification_private_message">Nadeszło nowe powiadomienie</string>
+    <string name="audio_visualizer_search_keywords">audio, wizualizator, spektrum, słupki, fale, radialny, aurora, animacja</string>
+    <string name="backup_keys_search_keywords">nsec, klucz prywatny, ziarno, mnemonik, eksport</string>
+    <string name="bottom_bar_search_keywords">nawigacja, zakładki, pasek nawigacji</string>
+    <string name="calendar_reminder_search_keywords">kalendarz, wydarzenia, przypomnienia, RSVP</string>
+    <string name="call_settings_search_keywords">WebRTC, połączenie wideo, połączenie głosowe, połączenia</string>
+    <string name="child_safety_search_keywords">prawo, bezpieczeństwo, nadużycie, CSAE, ochrona dzieci</string>
+    <string name="compose_search_keywords">szkic, publikowanie, edytor, autozapis</string>
+    <string name="event_sync_search_keywords">Negentropy, synchronizacja, uzgadnianie, uzupełnianie</string>
+    <string name="favorite_dvms_search_keywords">DVM, automat do sprzedaży danych, algo, algorytm, kanały</string>
+    <string name="github">Github Gist z dowodem</string>
+    <string name="home_tabs_search_keywords">zakładki, kanały, wątki, rozmowy</string>
+    <string name="import_follows_search_keywords">kontakty, obserwowani, lista obserwowanych, import</string>
+    <string name="marmot_tab_new_requests">Nowe żądania</string>
+    <string name="marmot_tab_new_requests_count">Nowe żądania (%1$d)</string>
+    <string name="mastodon">Identyfikator wpisu Mastodon z dowodem</string>
+    <string name="media_servers_search_keywords">Blossom, przesyłanie, obrazy, zdjęcia, pliki, CDN, przechowywanie</string>
+    <string name="namecoin_search_keywords">namecoin, dns, tożsamość, nazwa</string>
+    <string name="nests_servers_search_keywords">pokoje audio, na żywo, spaces, pokoje</string>
+    <string name="notification_settings_search_keywords">push, powiadomienia, dźwięki, wibracje</string>
+    <string name="ots_explorer_api_label">Bazowy adres URL API eksploratora</string>
+    <string name="ots_explorer_search_keywords">OpenTimestamps, znacznik czasu, OTS, dowód</string>
+    <string name="payment_targets_search_keywords">podział zap, podział, odbiorcy, przekazywanie zap</string>
+    <string name="privacy_options_search_keywords">Tor, Orbot, proxy, prywatność, anonimowość</string>
+    <string name="privacy_policy_search_keywords">prawo, warunki, regulamin, polityka, GDPR</string>
+    <string name="profile_badges_search_keywords">odznaki, nagrody</string>
+    <string name="profile_ui_search_keywords">profil, układ</string>
+    <string name="reactions_search_keywords">emoji, polubienie, reakcja</string>
+    <string name="reactions_settings_search_keywords">emoji, reakcje, polubienie</string>
+    <string name="relay_setup_search_keywords">przekaźniki, skrzynka odbiorcza, skrzynka nadawcza, połączenia, serwery</string>
+    <string name="request_to_vanish_search_keywords">usunięcie konta, zniknięcie, GDPR</string>
+    <string name="reset_marmot_search_keywords">MLS, czat grupowy, wiadomości, resetowanie</string>
+    <string name="security_filters_search_keywords">spam, blokowanie, wyciszenie, filtr, ostrzeżenia</string>
+    <string name="translations_search_keywords">język, tłumaczenie, ustawienia regionalne</string>
+    <string name="twitter">Status X z dowodem</string>
+    <string name="ui_preferences_search_keywords">tryb ciemny, tryb jasny, motyw, rozmiar czcionki, język, wygląd</string>
+    <string name="vanish_history_search_keywords">usuwanie, usuń zdarzenia</string>
+    <string name="video_player_search_keywords">wideo, odtwarzacz, odtwarzanie, autoodtwarzanie, wyciszenie</string>
+    <string name="zaps_search_keywords">lightning, saty, napiwki, portfel, kwota</string>
+
 </resources>

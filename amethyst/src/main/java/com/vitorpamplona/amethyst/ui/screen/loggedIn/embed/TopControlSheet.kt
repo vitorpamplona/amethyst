@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
  * A top **pull-down sheet** for a running app surface. Collapsed it's just a small grabber centered at
@@ -146,9 +147,9 @@ fun TopControlSheet(
                             symbol = MaterialSymbols.Code,
                             label =
                                 if (consoleCount > 0) {
-                                    stringResource(R.string.browser_console_title, consoleCount)
+                                    stringResource(CommonsR.string.browser_console_title, consoleCount)
                                 } else {
-                                    stringResource(R.string.browser_console_title_short)
+                                    stringResource(CommonsR.string.browser_console_title_short)
                                 },
                             checked = consoleShowing,
                             onToggle = {

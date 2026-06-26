@@ -3,7 +3,7 @@
     <!-- Sandbox host (`:napplet` process) UI. Kept here so the sandbox module needs no app resources. -->
     <string name="napplet_invalid">Invalid nApplet.</string>
     <string name="napplet_webview_too_old">This device\'s WebView is too old to run nApplets safely.</string>
-    <string name="napplet_untitled">Untitled nApplet</string>
+
 
     <!-- Trusted chrome (top bar + live action notices) -->
     <string name="napplet_chrome_access_title">What “%1$s” can access</string>
@@ -11,12 +11,7 @@
     <string name="napplet_chrome_static_site">Static site — it has no special access to your account.</string>
     <string name="napplet_chrome_permissions_desc">What this app can access</string>
     <string name="napplet_chrome_reload">Reload</string>
-    <!-- Browser address bar (direct-WebView browser only) -->
-    <string name="browser_address_hint">Search or enter address</string>
-    <!-- Browser developer console -->
-    <string name="browser_console_title_short">Console</string>
-    <string name="browser_console_title">Console (%1$d)</string>
-    <string name="browser_console_clear">Clear</string>
+    <!-- Browser address bar and developer console strings are in :commons -->
     <string name="napplet_action_published">“%1$s” published a note as you</string>
     <string name="napplet_action_uploaded">“%1$s” uploaded a file</string>
     <string name="napplet_action_paid">“%1$s” made a payment</string>

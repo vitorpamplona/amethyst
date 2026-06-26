@@ -268,7 +268,7 @@
     <string name="follow">अनुचरण करें</string>
     <string name="follow_back">प्रत्यानुचरण करें</string>
     <string name="unblock">बाधा हटाएँ</string>
-    <string name="copy_user_id">उपयोगकर्ता विभेदक की अनुकृति करें</string>
+    <string name="copy_user_id">User ID कॉपी करें</string>
     <string name="unblock_user">उपयोगकर्ता बाधा हटाएँ</string>
     <string name="user_is_blocked_hidden">प्रयोक्ता बाधित अथवा मौनकृत। उनके पत्र छिपाए गए।</string>
     <string name="npub_hex_username">"एनपुब॰, उपयोगकर्ता नाम, लेख"</string>
@@ -432,7 +432,7 @@
     <string name="block_only">बाधित करें</string>
     <string name="manual_zaps">मनुष्यकृत ज्साप विभाजन</string>
     <string name="bookmarks">स्मर्तव्य</string>
-    <string name="bookmarks_title">मूलविकल्प स्मर्त्तव्य सूची</string>
+    <string name="bookmarks_title">बुकमार्क</string>
     <string name="bookmarks_explainer">आपका मूलविकल्प स्मर्त्तव्य सूची जिसका अवलम्बन अनेक ग्राहक करते हैं</string>
     <string name="old_bookmarks_title">पुराने स्मर्त्तव्यचिह्न</string>
     <string name="old_bookmarks_explainer">आपके पुराने स्मर्त्तव्यचिह्न</string>
@@ -893,7 +893,7 @@
     <string name="add_hashtag_label_explainer">सार्वजनिक रूप से इस पत्र के साथ विषयसूचक (निप॰३२ चिप्पी) जोडें। जो लोग आपका अनुचरण करते हैं उस विषयसूचक की सूचनावली में इस पत्र को देखेंगे।</string>
     <string name="add_hashtag_label_field">विषयसूचक</string>
     <string name="add_hashtag_label_confirm">जोडें</string>
-    <string name="hashtag_label_added_by">इनके द्वारा जोडा गया</string>
+    <string name="hashtag_label_added_by">द्वारा जोड़ा</string>
     <string name="pinned_notes">टँके गए टीकाएँ</string>
     <string name="pinned_notes_explainer">आपके टँके गए टीकाएँ</string>
     <string name="pin_to_profile">परिचय के साथ जोडें</string>
@@ -1143,7 +1143,7 @@
     <string name="tor_off">निष्क्रिय</string>
     <string name="tor_when_needed">मूलभूत</string>
     <string name="tor_default">मूलविकल्प</string>
-    <string name="tor_small_payloads">चित्र चलचित्र अभिलेख के अतिरिक्त सभी</string>
+    <string name="tor_small_payloads">मीडिया छोड़कर सभी</string>
     <string name="tor_full_privacy">सम्पूर्णतः गुप्त</string>
     <string name="tor_custom">विशिष्ट</string>
     <string name="tor_when_needed_explainer">सेवासंगणक की आवश्यकता होने पर टोर का प्रयोग करें</string>
@@ -1362,7 +1362,7 @@
     <string name="cashu">काशयू अक्षरराशि</string>
     <string name="cashu_mint_label">टकसाल : %1$s</string>
     <string name="cashu_redeem">चुकाएँ</string>
-    <string name="cashu_copy_token">अक्षरराशि की अनुकृति करें</string>
+    <string name="cashu_copy_token">Token कॉपी करें</string>
     <string name="quick_actions_open_in_another_app">अन्य क्रमक में खोलें</string>
     <string name="no_lightning_address_set">कोई लैटनिंग पता स्थापित नहीं</string>
     <string name="live_stream_live_tag">तत्क्षणप्रसार</string>
@@ -1534,7 +1534,7 @@
     <string name="copy_nprofile_to_clipboard">टाँकाफलक में एन॰परिचय की अनुकृति करें</string>
     <string name="copy_npub_to_clipboard">टाँकाफलक में एनपुब॰ की अनुकृति करें</string>
     <string name="share_or_save">बाँटें अथवा अभिलेखन करें</string>
-    <string name="share_target_as_dm">सीधासन्देश के रूप में भेजें</string>
+    <string name="share_target_as_dm">DM के रूप में भेजें</string>
     <string name="share_to_dm_title">को भेजें…</string>
     <string name="share_to_dm_start_new">नया सन्देश</string>
     <string name="copy_url_to_clipboard">टाँकाफलक में जालपता की अनुकृति करें</string>
@@ -1675,7 +1675,7 @@
     <string name="media_compression_quality_medium">मध्यम</string>
     <string name="media_compression_quality_high">उच्च</string>
     <string name="media_compression_quality_uncompressed">असंकुचित</string>
-    <string name="video_codec_h265_label">उच्च कार्यक्षमता चलचित्र संकुचनविस्तारण अथवा एच॰२६५ क्रमलेख का प्रयोग करें</string>
+    <string name="video_codec_h265_label">H.265/HEVC कोडेक उपयोग करें</string>
     <string name="video_codec_h265_description">अधिक गुणवत्ता के साथ सूक्ष्मतर अभिलेख आकार परन्तु एच॰२६५ चालन सभी यन्त्रों द्वारा अवलम्बित नहीं।</string>
     <string name="convert_gif_to_mp4_label">जिफ॰ से एमपी४॰ में परिवर्तित करें</string>
     <string name="convert_gif_to_mp4_description">चलन्त जिफ॰ से एमपी४॰ में परिवर्तित करता है सूक्ष्मतर अभिलेख आकार तथा अधिक चालन अनुकूलता के लिए।</string>
@@ -1687,7 +1687,7 @@
     <string name="metadata_strip_failed_upload_cancelled">अभिलेख से निजी परितथ्य हटाने में असफल। आरोहण निरस्त।</string>
     <string name="upload_cancelled">आरोहण निरस्त</string>
     <string name="avif_metadata_strip_failed">एविफ॰ से परितथ्य नहीं मिटा सके : %1$s</string>
-    <string name="edit_draft">पाण्डुलिपि का सम्पादन करें</string>
+    <string name="edit_draft">ड्राफ्ट संपादित करें</string>
     <string name="login_with_qr_code">क्यूआर॰ क्रमचित्र के साथ प्रवेशांकन करें</string>
     <string name="route_home">घर</string>
     <string name="route_discover">आविष्करण</string>
@@ -2486,7 +2486,7 @@
     <string name="kind_day_appointment">दिवस नियुक्ति</string>
     <string name="kind_calendar">दिनदर्शिका</string>
     <string name="kind_appointment">नियुक्ति</string>
-    <string name="kind_appt_rsvp">नियुक्ति प्रत्युत्तर अपेक्षित</string>
+    <string name="kind_appt_rsvp">अपॉइंटमेंट RSVP</string>
     <string name="kind_chess_games">चतुरंग खेल</string>
     <string name="kind_chess_auth">चतुरंग प्रमाणीकरण</string>
     <string name="kind_favorite_relays">इष्ट पुनःप्रसारक</string>
@@ -2905,11 +2905,11 @@
     <string name="relay_management_remove">हटाएँ</string>
     <string name="relay_management_allow">अनुमत</string>
     <string name="relay_management_ban">प्रतिबन्ध</string>
-    <string name="relay_management_ban_pubkey">ख्याप्य कुंचिका प्रतिबन्धित करें</string>
+    <string name="relay_management_ban_pubkey">Pubkey प्रतिबंध</string>
     <string name="relay_management_allow_pubkey">ख्याप्य कुंचिका को अनुमति दें</string>
     <string name="relay_management_ban_event">घटना प्रतिबन्धित करें</string>
     <string name="relay_management_allow_kind">प्रकार को अनुमति दें</string>
-    <string name="relay_management_block_ip">अंकीय जालपता अवरोधित करें</string>
+    <string name="relay_management_block_ip">IP ब्लॉक करें</string>
     <string name="relay_management_event_id_hex">घटना विभेदक (षोडशांक)</string>
     <string name="relay_management_kind_number">प्रकार संख्या</string>
     <string name="relay_management_ip_address">अंकीय जालपता</string>
@@ -2951,7 +2951,7 @@
     <string name="ai_writing_use_this">इसका प्रयोग करें</string>
     <string name="ai_writing_dismiss">हटाएँ</string>
     <string name="ai_tone_correct">सम्यक</string>
-    <string name="ai_tone_rephrase">वाक्याम्श पुनःसम्पादन</string>
+    <string name="ai_tone_rephrase">फिर से लिखें</string>
     <string name="ai_tone_shorter">सूक्ष्मतर</string>
     <string name="ai_tone_elaborate">विस्तार</string>
     <string name="ai_tone_friendly">मित्रतापूर्ण</string>
@@ -3096,4 +3096,37 @@
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">%1$s से लाए गए चालान के जेसोन॰ परखनें में अपक्रम। उपयोगकर्ता की लैटनिंग स्थापना की जाँच करें</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">लैटनिंग चालान नहीं बना पाए। %1$s से संदेश : %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">%1$s से लैटनिंग चालान नहीं बना पाए। परिणाम जेसोन॰ में pr अम्श उपलब्ध नहीं।</string>
+
+    <string name="browser">ब्राउज़र</string>
+    <string name="browser_address_hint">खोजें या पता दर्ज करें</string>
+    <string name="browser_clear">साफ़ करें</string>
+    <string name="browser_console_clear">साफ़ करें</string>
+    <string name="browser_console_title">कंसोल (%1$d)</string>
+    <string name="browser_console_title_short">कंसोल</string>
+    <string name="browser_favorites">पसंदीदा</string>
+    <string name="browser_go">खोलें</string>
+    <string name="browser_recent_options">विकल्प</string>
+    <string name="browser_recent_remove">इतिहास से हटाएँ</string>
+    <string name="browser_reload">पुनः लोड करें</string>
+    <string name="browser_tor_off">खुले वेब पर लोड हो रहा है। Tor उपयोग करने के लिए टैप करें।</string>
+    <string name="browser_tor_on">Tor पर लोड हो रहा है। खुले वेब उपयोग करने के लिए टैप करें।</string>
+    <string name="browser_unsupported">इन-ऐप ब्राउज़र के लिए Android 11 या नया संस्करण आवश्यक है।</string>
+    <string name="embedded_tab_load_failed">यह ऐप लोड नहीं हो सका।</string>
+    <string name="favorite_app_access_show">यह क्या एक्सेस कर सकता है</string>
+    <string name="favorite_app_access_static">सैंडबॉक्स में चलता है, आपके खाते तक कोई विशेष पहुँच नहीं।</string>
+    <string name="favorite_app_access_title">यह ऐप क्या एक्सेस कर सकता है</string>
+    <string name="favorite_app_add">पसंदीदा में जोड़ें</string>
+    <string name="favorite_app_network_open">खुले वेब पर लोड होता है।</string>
+    <string name="favorite_app_network_tor">Tor पर लोड होता है।</string>
+    <string name="favorite_app_open_window">अपनी विंडो में खोलें</string>
+    <string name="favorite_app_recent">हाल के</string>
+    <string name="favorite_app_remove">पसंदीदा से हटाएँ</string>
+    <string name="favorite_app_still_loading">वह ऐप अभी लोड नहीं हुआ है। कुछ देर बाद फिर प्रयास करें।</string>
+    <string name="favorite_app_unavailable">यह ऐप अभी लोड नहीं हुआ है। इसके कार्ड से खोलें, या कुछ देर बाद फिर प्रयास करें।</string>
+    <string name="favorite_apps">पसंदीदा ऐप्स</string>
+    <string name="favorite_apps_empty">अभी तक कोई पसंदीदा ऐप नहीं। कोई वेब क्लाइंट या nsite खोलें और यहाँ पिन करने के लिए स्टार टैप करें।</string>
+    <string name="favorite_notice_paid">भुगतान किया गया</string>
+    <string name="favorite_notice_published">रिले पर प्रकाशित किया गया</string>
+    <string name="favorite_notice_uploaded">फ़ाइल अपलोड की गई</string>
+
 </resources>
