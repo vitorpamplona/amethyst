@@ -769,6 +769,7 @@ fun InnerNoteWithReactions(
                 unPackReply = unPackReply,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                isBoostedNote = isBoostedNote,
             )
 
             if (!makeItShort) {
@@ -917,6 +918,7 @@ private fun RenderNoteRow(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    isBoostedNote: Boolean = false,
 ) {
     when (val noteEvent = baseNote.event) {
         is AppDefinitionEvent -> {
@@ -1395,6 +1397,7 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
 
@@ -1407,6 +1410,7 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
 
@@ -1419,6 +1423,7 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
 
@@ -1554,6 +1559,7 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
 
@@ -1568,6 +1574,7 @@ private fun RenderNoteRow(
                 editState,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
     }
