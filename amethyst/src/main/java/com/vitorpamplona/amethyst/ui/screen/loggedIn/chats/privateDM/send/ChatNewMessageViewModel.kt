@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -125,6 +126,10 @@ class ChatNewMessageViewModel :
     IZapRaiser,
     IExpiration {
     val draftTag = DraftTagState()
+
+    // Strong reference to the saved draft so LocalCache's weak reference can't collect it
+    // before we get a chance to delete it (see Account.createAndSendDraftIgnoreErrors).
+    var draftNote: AddressableNote? = null
 
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
@@ -322,6 +327,7 @@ class ChatNewMessageViewModel :
         val noteAuthor = draft.author
 
         if (noteEvent is DraftWrapEvent && noteAuthor != null) {
+            draftNote = draft as? AddressableNote
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -418,17 +424,17 @@ class ChatNewMessageViewModel :
     }
 
     suspend fun sendPostSync() {
-        val version = draftTag.current
+        val draftToDelete = draftNote
         innerSendPost(null)
         cancel()
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel.account.deleteDraftIgnoreErrors(version)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            account.deleteDraftIgnoreErrors(draftTag.current)
+            account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             innerSendPost(draftTag.current)
         }
@@ -617,7 +623,7 @@ class ChatNewMessageViewModel :
             }
 
         if (draftTag != null) {
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag, template)
+            draftNote = accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag, template)
         } else {
             accountViewModel.account.sendNip17PrivateMessage(template)
         }
@@ -639,6 +645,7 @@ class ChatNewMessageViewModel :
 
     fun cancel() {
         draftTag.rotate()
+        draftNote = null
 
         message.setTextAndPlaceCursorAtEnd("")
         subject.setTextAndPlaceCursorAtEnd("")

@@ -2045,24 +2045,30 @@ class Account(
         extraNotesToBroadcast.forEach { client.publish(it, relays) }
     }
 
+    /**
+     * Returns the local [AddressableNote] that now holds the draft so the caller (the
+     * composer ViewModel) can keep a strong reference to it. [LocalCache.addressables] only
+     * keeps weak references, so without an owner holding the note it can be garbage collected
+     * and a later deletion would not find it locally (leaving an orphan on the relays).
+     */
     suspend fun createAndSendDraftIgnoreErrors(
         draftTag: String,
         template: EventTemplate<out Event>,
         broadcast: Set<Event> = emptySet(),
-    ) {
+    ): AddressableNote? =
         try {
             createAndSendDraftInner(draftTag, template, broadcast)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
+            null
         }
-    }
 
     suspend fun createAndSendDraftInner(
         draftTag: String,
         template: EventTemplate<out Event>,
         broadcast: Set<Event> = emptySet(),
-    ) {
-        if (!isWriteable()) return
+    ): AddressableNote? {
+        if (!isWriteable()) return null
 
         val extraRelays = cache.getAddressableNoteIfExists(DraftWrapEvent.createAddressTag(signer.pubKey, draftTag))?.relays ?: emptyList()
 
@@ -2079,25 +2085,28 @@ class Account(
                 client.publish(it, relayList.toSet())
             }
         }
+
+        return cache.getOrCreateAddressableNote(draftEvent.address())
     }
 
-    suspend fun deleteDraftIgnoreErrors(draftTag: String) {
+    suspend fun deleteDraftIgnoreErrors(draftNote: AddressableNote?) {
         try {
-            deleteDraftInner(draftTag)
+            deleteDraftInner(draftNote)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
         }
     }
 
-    suspend fun deleteDraftInner(draftTag: String) {
+    suspend fun deleteDraftInner(draftNote: AddressableNote?) {
         if (!isWriteable()) return
 
-        // Nothing to delete means nothing to sign. Avoids prompting the signer to delete a
-        // draft that was never created (e.g. when "Automatically create drafts" is off).
-        val existingDraft = cache.getAddressableNoteIfExists(DraftWrapEvent.createAddressTag(signer.pubKey, draftTag))
-        if (existingDraft?.event == null) return
+        // Nothing to delete means nothing to sign. The caller passes the note it has been
+        // holding (so it can't be garbage collected before we get here); a null note or one
+        // without an event means no draft was ever created, so we avoid prompting the signer.
+        if (draftNote?.event == null) return
 
-        val extraRelays = existingDraft.relays
+        val draftTag = draftNote.dTag()
+        val extraRelays = draftNote.relays
 
         val deletedDraft = DraftWrapEvent.createDeletedEvent(draftTag, signer)
         val deletionEvent = signer.sign(DeletionEvent.build(listOf(deletedDraft)))

@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -113,6 +114,10 @@ open class NewProductViewModel :
     IZapRaiser,
     IExpiration {
     val draftTag = DraftTagState()
+
+    // Strong reference to the saved draft so LocalCache's weak reference can't collect it
+    // before we get a chance to delete it (see Account.createAndSendDraftIgnoreErrors).
+    var draftNote: AddressableNote? = null
 
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
@@ -213,6 +218,7 @@ open class NewProductViewModel :
         val noteAuthor = draft.author
 
         if (noteEvent is DraftWrapEvent && noteAuthor != null) {
+            draftNote = draft as? AddressableNote
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -315,21 +321,21 @@ open class NewProductViewModel :
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
 
-        val version = draftTag.current
+        val draftToDelete = draftNote
         cancel()
 
         accountViewModel.account.signAndSendPrivatelyOrBroadcast(template, relayList = { relayList })
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel.account.deleteDraftIgnoreErrors(version)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
+            draftNote = accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
     }
 
@@ -468,6 +474,7 @@ open class NewProductViewModel :
 
     open fun cancel() {
         draftTag.rotate()
+        draftNote = null
 
         message.setTextAndPlaceCursorAtEnd("")
 

@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -111,6 +112,10 @@ open class ChannelNewMessageViewModel :
     ILocationGrabber,
     IExpiration {
     val draftTag = DraftTagState()
+
+    // Strong reference to the saved draft so LocalCache's weak reference can't collect it
+    // before we get a chance to delete it (see Account.createAndSendDraftIgnoreErrors).
+    var draftNote: AddressableNote? = null
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -224,6 +229,7 @@ open class ChannelNewMessageViewModel :
         val noteAuthor = draft.author
 
         if (noteEvent is DraftWrapEvent && noteAuthor != null) {
+            draftNote = draft as? AddressableNote
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -301,20 +307,20 @@ open class ChannelNewMessageViewModel :
         val template = createTemplate() ?: return
         val channelRelays = channel?.relays() ?: emptySet()
 
-        val version = draftTag.current
+        val draftToDelete = draftNote
         cancel()
 
         accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) {
             channelRelays.toList()
         }
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel.account.deleteDraftIgnoreErrors(version)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            account.deleteDraftIgnoreErrors(draftTag.current)
+            account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {
@@ -323,7 +329,7 @@ open class ChannelNewMessageViewModel :
             }
 
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+            draftNote = accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
         }
     }
 
@@ -553,6 +559,7 @@ open class ChannelNewMessageViewModel :
 
     open fun cancel() {
         draftTag.rotate()
+        draftNote = null
 
         message.setTextAndPlaceCursorAtEnd("")
 

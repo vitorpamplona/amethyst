@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -182,6 +183,10 @@ open class ShortNotePostViewModel :
     IZapRaiser,
     IExpiration {
     val draftTag = DraftTagState()
+
+    // Strong reference to the saved draft so LocalCache's weak reference can't collect it
+    // before we get a chance to delete it (see Account.createAndSendDraftIgnoreErrors).
+    var draftNote: AddressableNote? = null
 
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
@@ -478,6 +483,7 @@ open class ShortNotePostViewModel :
         val noteAuthor = draft?.author
 
         if (draft != null && noteEvent is DraftWrapEvent && noteAuthor != null) {
+            draftNote = draft as? AddressableNote
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -889,7 +895,7 @@ open class ShortNotePostViewModel :
             }
         }
 
-        val version = draftTag.current
+        val draftToDelete = draftNote
         val anonymous = wantsAnonymousPost
         val scheduledFor = scheduledForSec
         val privately = wantsPrivateNote
@@ -903,7 +909,7 @@ open class ShortNotePostViewModel :
             @Suppress("UNCHECKED_CAST")
             accountViewModel.account.sendPrivateNote(template as EventTemplate<TextNoteEvent>)
             accountViewModel.launchSigner {
-                accountViewModel.account.deleteDraftIgnoreErrors(version)
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
             return
         }
@@ -935,7 +941,7 @@ open class ShortNotePostViewModel :
                 ),
             )
             accountViewModel.launchSigner {
-                accountViewModel.account.deleteDraftIgnoreErrors(version)
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
             return
         }
@@ -961,13 +967,13 @@ open class ShortNotePostViewModel :
         }
 
         accountViewModel.launchSigner {
-            accountViewModel.account.deleteDraftIgnoreErrors(version)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {
@@ -976,7 +982,7 @@ open class ShortNotePostViewModel :
             }
 
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+            draftNote = accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
         }
     }
 
@@ -1312,6 +1318,7 @@ open class ShortNotePostViewModel :
 
     open fun cancel() {
         draftTag.rotate()
+        draftNote = null
 
         message.setTextAndPlaceCursorAtEnd("")
 
