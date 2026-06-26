@@ -27,10 +27,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.napplethost.NappletBlobCache
 import com.vitorpamplona.amethyst.napplethost.NappletBlobPrefetcher
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
@@ -58,15 +60,26 @@ private class IconBlob(
  * iframe under the trusted shell, so `WebChromeClient.onReceivedIcon` only ever reports the shell's icon,
  * never the applet's. Deriving it from the bundled blobs is the only path that sees the real icon.
  *
- * Returns null until the blob is on disk; the icon then appears on the next recomposition. All disk + network
- * work runs off the composition thread. The blob is usually already cached (the browse/feed card prefetches
- * every manifest blob, this one included); the on-demand fetch here just covers favorites whose card isn't
- * currently on screen.
+ * Observes the addressable note, so the icon resolves whenever the manifest arrives or updates in
+ * LocalCache — not only if it already happened to be cached at first composition (on a cold start the
+ * event streams in from relays a moment later). Returns null until the blob is on disk; the icon then
+ * appears on the next recomposition. All disk + network work runs off the composition thread. The blob is
+ * usually already cached (the browse/feed card prefetches every manifest blob, this one included); the
+ * on-demand fetch here just covers favorites whose card isn't currently on screen.
  */
 @Composable
 fun rememberNappletIconModel(coordinate: String): String? {
     val context = LocalContext.current
-    val icon = remember(coordinate) { resolveIconBlob(coordinate) } ?: return null
+
+    // checkGetOrCreate returns null only for a malformed coordinate, so this early return is stable for a
+    // given coordinate (it never flips across recompositions, which would break composition structure).
+    val note = remember(coordinate) { LocalCache.checkGetOrCreateAddressableNote(coordinate) } ?: return null
+    val noteState by note
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+
+    val icon = remember(noteState) { resolveIconBlob(noteState.note.event) } ?: return null
 
     var model by remember(icon.path.hash) { mutableStateOf<String?>(null) }
     LaunchedEffect(icon.path.hash) {
@@ -82,9 +95,9 @@ fun rememberNappletIconModel(coordinate: String): String? {
     return model
 }
 
-/** Reads the live manifest from [LocalCache] and asks each event type for its bundled icon blob + servers. */
-private fun resolveIconBlob(coordinate: String): IconBlob? =
-    when (val event = LocalCache.getAddressableNoteIfExists(coordinate)?.event) {
+/** Asks each nsite/napplet event type for its bundled icon blob + the servers that hold it. */
+private fun resolveIconBlob(event: Event?): IconBlob? =
+    when (event) {
         is RootNappletEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
         is NamedNappletEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
         is RootSiteEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
