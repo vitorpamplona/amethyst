@@ -79,6 +79,7 @@ fun RenderTextEvent(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    isBoostedNote: Boolean = false,
 ) {
     val noteEvent = note.event ?: return
 
@@ -183,7 +184,10 @@ fun RenderTextEvent(
                 }
             }
 
-        if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
+        // A boosted note inside a zap/nutzap/onchain activity card is always shown as a
+        // compact 2-line preview, even when the logged-in user is only a zap-split
+        // beneficiary (and thus not the author) of the post being zapped.
+        if (makeItShort && (isBoostedNote || accountViewModel.isLoggedUser(note.author))) {
             Text(
                 text = eventContent,
                 color = MaterialTheme.colorScheme.placeholderText,
