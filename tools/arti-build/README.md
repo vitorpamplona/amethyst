@@ -20,32 +20,46 @@ rebuild if you want to verify binaries, update the Arti version, or modify the J
 
 ## Reproducible builds
 
-The shipped `.so` is **built to be byte-for-byte reproducible** so anyone —
-F-Droid, Zapstore, or an independent auditor — can rebuild it from this tag and
-confirm the committed binary wasn't tampered with. Three pins make that hold:
+The shipped `.so` is **built to be reproducible** so anyone — F-Droid, Zapstore,
+or an independent auditor — can rebuild it from this tag and confirm the
+committed binary wasn't tampered with. **Four** things have to be fixed:
 
 | Source of non-determinism | Pinned by |
 |---|---|
 | `rustc` / cargo version | [`rust-toolchain.toml`](rust-toolchain.toml) (rustup auto-installs it) |
 | transitive dependency versions | committed [`Cargo.lock`](Cargo.lock); builds run `cargo --locked` |
-| absolute build paths baked into the binary | `--remap-path-prefix` in [`repro-env.sh`](repro-env.sh) |
+| absolute paths *embedded* in the binary | `--remap-path-prefix` in [`repro-env.sh`](repro-env.sh) |
+| codegen/link **ordering** keyed on the real build path | **canonical build path** (`build-arti.sh` builds in `/tmp/amethyst-arti-build`) |
 
 `repro-env.sh` (sourced by both build scripts) also sets `CARGO_INCREMENTAL=0`
 and a fixed `SOURCE_DATE_EPOCH` derived from the Arti tag. The size-optimized
 release profile in `Cargo.toml` (`lto`, `codegen-units = 1`, `strip`,
 `panic = "abort"`) is itself deterministic for a fixed toolchain.
 
+> **Why the canonical path matters.** Verified empirically: with the toolchain,
+> lockfile, and path-remapping all in place, two builds at the **same** path are
+> byte-for-byte identical, but two builds at **different** paths still differ —
+> not in any embedded string (no path leaks into the binary) but in the *order*
+> rustc lays out functions/data, which it derives from the real on-disk artifact
+> paths. `--remap-path-prefix` only rewrites embedded strings, not that internal
+> ordering. So `build-arti.sh` always compiles in a fixed location
+> (`/tmp/amethyst-arti-build`, override with `ARTI_REPRO_DIR`); F-Droid and any
+> verifier must use the **same** path to get matching bytes. This is the standard
+> way Rust libraries are reproduced (F-Droid builds Rust at a fixed path too).
+
 ### Verify the committed binary reproduces
 
 ```bash
-# Build twice into different checkout paths and confirm identical bytes.
-# (Path remapping is what lets two different directories produce the same .so.)
-cp -r tools/arti-build /tmp/arti-a && (cd /tmp/arti-a && ./build-arti.sh --release)
-cp -r tools/arti-build /tmp/arti-b && (cd /tmp/arti-b && ./build-arti.sh --release)
-sha256sum /tmp/arti-{a,b}/../../amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so
+# Build, record the hash, then do a clean rebuild and confirm it matches.
+# Both runs compile in the canonical /tmp/amethyst-arti-build, so the bytes match
+# regardless of where this repo is checked out.
+./build-arti.sh --release
+sha256sum amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so
+./build-arti.sh --clean --release
+sha256sum amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so
 ```
 
-A clean run prints the same SHA-256 for both, and matches the committed
+Both hashes match each other and the committed
 `amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so`.
 
 ## Prerequisites
@@ -131,9 +145,12 @@ tools/arti-build/
 ├── repro-env.sh         # Deterministic build env (path remapping, epoch) — sourced by both scripts
 ├── build-arti.sh        # Build script (Android targets, shipped in APK)
 ├── build-arti-host.sh   # Build script (host target, for JVM integration tests)
-├── src/
-│   └── lib.rs           # JNI bridge (Rust → Kotlin)
-└── .arti-source/        # [gitignored] Cloned Arti repository
+└── src/
+    └── lib.rs           # JNI bridge (Rust → Kotlin)
+
+# The Arti source is cloned into the canonical build path
+# (/tmp/amethyst-arti-build/.arti-source), not under this dir — see
+# "Reproducible builds" for why the build location is fixed.
 ```
 
 ## Updating Arti version

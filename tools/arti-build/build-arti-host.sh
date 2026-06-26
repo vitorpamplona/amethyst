@@ -26,7 +26,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-ARTI_SOURCE_DIR="$SCRIPT_DIR/.arti-source"
+# Same canonical build path as build-arti.sh (see its comment for why).
+ARTI_SOURCE_DIR="${ARTI_REPRO_DIR:-/tmp/amethyst-arti-build}/.arti-source"
 WRAPPER_DIR="$ARTI_SOURCE_DIR/arti-android-wrapper"
 
 if [ ! -d "$WRAPPER_DIR" ]; then

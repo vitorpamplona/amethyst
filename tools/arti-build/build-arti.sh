@@ -24,8 +24,17 @@ NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-ARTI_SOURCE_DIR="$SCRIPT_DIR/.arti-source"
 ARTI_VERSION=$(cat "$SCRIPT_DIR/ARTI_VERSION" | tr -d '[:space:]')
+
+# Reproducibility: rustc bakes the *real* (un-remapped) absolute paths of the
+# build artifacts into its codegen/link ORDERING, so --remap-path-prefix alone
+# is not enough — the .so only reproduces byte-for-byte when the compile happens
+# at a fixed path. Everyone who needs to reproduce the shipped binary (us,
+# F-Droid, an independent verifier) must therefore build at this same canonical
+# location. Overriding ARTI_REPRO_DIR changes the output bytes; only do it if
+# you don't care about matching the published .so.
+ARTI_BUILD_ROOT="${ARTI_REPRO_DIR:-/tmp/amethyst-arti-build}"
+ARTI_SOURCE_DIR="$ARTI_BUILD_ROOT/.arti-source"
 OUTPUT_DIR="$PROJECT_ROOT/amethyst/src/main/jniLibs"
 LIB_NAME="libarti_android.so"
 MIN_SDK_VERSION=26
@@ -101,6 +110,9 @@ clone_or_update_arti() {
         print_info "Cleaning existing source"
         rm -rf "$ARTI_SOURCE_DIR"
     fi
+
+    mkdir -p "$ARTI_BUILD_ROOT"
+    print_info "Canonical build path: $ARTI_BUILD_ROOT (set ARTI_REPRO_DIR to override)"
 
     if [ ! -d "$ARTI_SOURCE_DIR" ]; then
         print_info "Cloning Arti repository..."
