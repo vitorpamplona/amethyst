@@ -114,6 +114,7 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ReactionRowAction
@@ -1243,8 +1244,12 @@ fun ZapReaction(
                     }
                 },
                 onOnchainAmount =
-                    if (baseNote.isPrivateRumor()) {
+                    if (baseNote.isPrivateRumor() || LocalCache.onchainBackend == null) {
                         // Onchain zap events are public and would e-tag the rumor id.
+                        // Also requires a configured Bitcoin backend to build the tx;
+                        // without one, masking the rail off keeps Lightning (external
+                        // wallet via Intent) / cashu as the only offered rails instead
+                        // of opening an on-chain dialog the user can't complete.
                         null
                     } else {
                         { amount ->

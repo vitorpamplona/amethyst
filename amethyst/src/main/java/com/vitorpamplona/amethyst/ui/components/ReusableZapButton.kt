@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
@@ -202,6 +203,11 @@ fun ReusableZapButton(
                     onchainZapAmount = amount
                     showOnchainDialog = true
                 },
+                // Only offer the on-chain rail when a Bitcoin backend is wired;
+                // without one the dialog can't build the tx, so masking it off
+                // keeps Lightning (external wallet via Intent) / cashu as the
+                // offered rails instead of routing a tap to a dead on-chain dialog.
+                onchainSupported = LocalCache.onchainBackend != null,
                 onReloadNutzap = { amount ->
                     wantsToZap = null
                     navigateToReloadMint(accountViewModel, nav, baseNote, amount)
