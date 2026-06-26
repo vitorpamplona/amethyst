@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -89,6 +90,10 @@ fun FavoriteAppsScreen(
 ) {
     val context = LocalContext.current
     val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+
+    // Fetch favorited nsite/napplet manifests up front so a tap launches immediately instead of showing
+    // "isn't loaded yet" until the user happens to visit the nsite/napplet feed.
+    PreloadFavoriteNostrApps(apps, accountViewModel)
 
     Scaffold(
         topBar = {
