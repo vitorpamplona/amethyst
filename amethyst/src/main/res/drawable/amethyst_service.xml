@@ -3,25 +3,31 @@
   ~
   ~ Notification small icons are rendered by the system as flat, alpha-only
   ~ silhouettes, so the regular `amethyst` gem becomes an identical solid gem
-  ~ for both real notifications and this persistent service. To set the
-  ~ always-on service apart, this variant draws a full, solid disc with the
-  ~ brand gem punched out of its centre (slightly smaller, as negative space).
-  ~ The enclosing circle reads as a continuous, always-running badge — clearly
-  ~ different at a glance while keeping the recognisable gem shape.
-  ~
-  ~ The single path combines the disc (outer subpath) with the gem body and its
-  ~ facet dot (inner subpaths); `fillType="evenOdd"` turns the gem into a hole,
-  ~ and the small facet dot back into a solid island within that hole, echoing
-  ~ the highlight on the regular gem. The gem is centred on the disc and scaled
-  ~ to ~57% of its diameter so a comfortable ring surrounds it on every side.
+  ~ for both real notifications and this persistent service. To stop the
+  ~ service from reading as a new notification, this variant draws the gem as
+  ~ a hollow outline — same brand shape, clearly different at a glance.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="512dp"
     android:height="512dp"
     android:viewportWidth="512"
     android:viewportHeight="512">
-  <path
-      android:fillColor="#000000"
-      android:fillType="evenOdd"
-      android:pathData="M256,16A240,240 0,1,1 256,496A240,240 0,1,1 256,16ZM381.672,328.981C381.376,328.082,312.47,164.009,293.518,118.5c-23.075,0,-71.802,0,-106.174,0c-10.087,24.948,-36.127,88.536,-57.016,139.761c11.448,27.311,21.729,51.844,29.657,70.768l43.232,0a2.955,2.955 0,0,0,2.761,-3.472c-0.371,-8.73,-24.135,-40.46,-17.046,-74.784c1.889,-7.385,3.337,-14.888,5.404,-22.246a259.628,259.628 135,0,1,19.85,-51.402c1.313,-2.497,1.922,-3.617,4.946,-1.728c6.454,4.015,13.661,3.784,20.841,3.262c6.19,-1.346,9.204,-4.311,20.545,-1.297c2.244,0,4.43,0,6.723,0.205c5.452,0.431,10.56,1.728,13.838,6.663c3.574,5.393,4.15,11.492,3.574,17.724c-0.872,9.322,-0.253,18.004,7.638,24.576a84.962,84.962 0,0,0,8.865,5.91c3.913,2.514,8.639,3.606,11.992,7.089c1.981,2.051,3.149,4.241,2.288,7.164c-0.856,2.923,-3.149,4.301,-6.158,4.624c-7.622,0.829,-15.065,-0.721,-22.552,-1.625c-0.974,-0.118,-1.932,-0.194,-2.955,-0.253a16.944,16.944 0,0,1,-5.63,0.194l-1.76,0a39.437,39.437 0,0,0,-8.714,2.083c-7.062,2.573,-13.488,5.404,-21.815,5.259a6.384,6.384 0,0,0,-3.03,1.313c-6.529,5.802,-10.458,13.133,-7.191,23.839c8.951,25.007,31.918,85.333,41.789,111.374c-0.28,-17.638,-0.355,-49.217,-0.414,-64.546c39.41,0.059,99.834,0.027,104.651,0.027ZM248.823,202.886a8.332,8.477 90,1,0,16.955,0a8.332,8.477 90,1,0,-16.955,0Z" />
+  <!--
+    The gem outline below is authored at ~half the viewport size, leaving it
+    visibly smaller than every other notification small icon (the filled
+    `amethyst` gem fills the viewport). Scale it up ~1.8x about its centre so it
+    matches the others, keeping a margin so the stroke doesn't clip at the edges.
+  -->
+  <group
+      android:pivotX="256"
+      android:pivotY="261"
+      android:scaleX="1.8"
+      android:scaleY="1.8">
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="22"
+        android:strokeLineJoin="round"
+        android:pathData="M370.18,326.86C369.91,326.04 307.3,176.97 290.09,135.63c-20.96,0 -65.23,0 -96.46,0 -9.17,22.67 -32.82,80.44 -51.8,126.98 10.4,24.81 19.74,47.1 26.95,64.29l39.28,0a2.68,2.68 135,0 0,2.51 -3.15c-0.34,-7.93 -21.93,-36.76 -15.49,-67.94 1.72,-6.71 3.03,-13.53 4.91,-20.21a235.88,235.88 135,0 1,18.04 -46.7c1.19,-2.27 1.74,-3.29 4.5,-1.57 5.86,3.65 12.41,3.44 18.94,2.97 5.62,-1.22 8.36,-3.92 18.67,-1.18 2.04,0 4.03,0 6.11,0.19 4.95,0.39 9.6,1.57 12.57,6.05 3.25,4.9 3.77,10.44 3.25,16.1 -0.79,8.47 -0.23,16.36 6.94,22.33a77.19,77.19 0,0 0,8.05 5.37c3.56,2.28 7.85,3.27 10.9,6.44 1.8,1.87 2.86,3.85 2.08,6.51 -0.78,2.66 -2.86,3.91 -5.6,4.2 -6.92,0.75 -13.69,-0.66 -20.49,-1.48 -0.89,-0.11 -1.76,-0.17 -2.68,-0.23a15.39,15.39 0,0 1,-5.11 0.17l-1.6,0a35.83,35.83 0,0 0,-7.92 1.89c-6.41,2.34 -12.25,4.91 -19.82,4.78a5.8,5.8 0,0 0,-2.75 1.19c-5.93,5.27 -9.5,11.93 -6.54,21.66 8.13,22.72 29,77.53 37.96,101.18 -0.25,-16.02 -0.32,-44.71 -0.38,-58.64 35.8,0.05 90.7,0.03 95.08,0.03z" />
+  </group>
 </vector>
