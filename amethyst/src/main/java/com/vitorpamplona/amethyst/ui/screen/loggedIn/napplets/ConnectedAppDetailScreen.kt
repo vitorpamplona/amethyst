@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,7 +30,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -59,12 +56,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
@@ -78,13 +73,10 @@ import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
 import com.vitorpamplona.amethyst.napplet.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.napplet.descriptionRes
 import com.vitorpamplona.amethyst.napplet.labelRes
+import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -288,73 +280,27 @@ private fun PolicyPicker(
     onSelect: (AppSignerPolicy) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        PolicyOption(
+        PolicyCard(
             selected = selected == AppSignerPolicy.FULL_TRUST,
             symbol = MaterialSymbols.Favorite,
             label = stringResource(R.string.napplet_policy_full_trust),
             description = stringResource(R.string.napplet_policy_full_trust_desc),
             onClick = { onSelect(AppSignerPolicy.FULL_TRUST) },
         )
-        PolicyOption(
+        PolicyCard(
             selected = selected == AppSignerPolicy.REASONABLE,
             symbol = MaterialSymbols.Shield,
             label = stringResource(R.string.napplet_policy_reasonable),
             description = stringResource(R.string.napplet_policy_reasonable_desc),
             onClick = { onSelect(AppSignerPolicy.REASONABLE) },
         )
-        PolicyOption(
+        PolicyCard(
             selected = selected == AppSignerPolicy.PARANOID,
             symbol = MaterialSymbols.Lock,
             label = stringResource(R.string.napplet_policy_paranoid),
             description = stringResource(R.string.napplet_policy_paranoid_desc),
             onClick = { onSelect(AppSignerPolicy.PARANOID) },
         )
-    }
-}
-
-@Composable
-private fun PolicyOption(
-    selected: Boolean,
-    symbol: MaterialSymbol,
-    label: String,
-    description: String,
-    onClick: () -> Unit,
-) {
-    val borderColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-    val bgColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
-
-    Surface(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .border(width = if (selected) 2.dp else 1.dp, color = borderColor, shape = RoundedCornerShape(12.dp))
-                .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        color = bgColor,
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                symbol = symbol,
-                contentDescription = null,
-                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(28.dp),
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(label, style = MaterialTheme.typography.titleSmall)
-                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if (selected) {
-                Icon(
-                    symbol = MaterialSymbols.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
     }
 }
 
@@ -411,7 +357,7 @@ private fun CapabilityDetailRow(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Icon(
-            capability.capSymbol(),
+            capability.symbol(),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(22.dp),
@@ -467,21 +413,6 @@ private fun NostrOpDecision.decisionLabel(): String =
         NostrOpDecision.DENY -> stringResource(R.string.napplet_decision_deny)
     }
 
-private fun NappletCapability.capSymbol(): MaterialSymbol =
-    when (this) {
-        NappletCapability.SHELL -> MaterialSymbols.Tune
-        NappletCapability.IDENTITY -> MaterialSymbols.AccountCircle
-        NappletCapability.KEYS -> MaterialSymbols.Key
-        NappletCapability.RELAY -> MaterialSymbols.Public
-        NappletCapability.STORAGE -> MaterialSymbols.Storage
-        NappletCapability.VALUE -> MaterialSymbols.Bolt
-        NappletCapability.RESOURCE -> MaterialSymbols.Language
-        NappletCapability.UPLOAD -> MaterialSymbols.Upload
-        NappletCapability.THEME -> MaterialSymbols.Image
-        NappletCapability.NOTIFY -> MaterialSymbols.Notifications
-        NappletCapability.INC -> MaterialSymbols.SwapHoriz
-    }
-
 private suspend fun loadDetailState(
     coordinate: String,
     capabilityLedger: NappletPermissionLedger,
@@ -502,7 +433,7 @@ private suspend fun loadDetailState(
     val signerPolicy = signerLedger.store.loadPolicy(coordinate)
     val opOverrides = signerLedger.store.allOpDecisions(coordinate)
 
-    val (title, iconUrl) = resolveAppMeta(author, identifier, untitled)
+    val (title, iconUrl) = resolveNappletMeta(author, identifier, untitled)
     return ConnectedAppDetailState(
         title = title,
         coordinate = coordinate,
@@ -511,26 +442,4 @@ private suspend fun loadDetailState(
         opOverrides = opOverrides,
         capabilities = capGrants,
     )
-}
-
-private fun resolveAppMeta(
-    author: String,
-    identifier: String,
-    untitled: String,
-): Pair<String, String?> {
-    val events =
-        Amethyst.instance.cache
-            .filter(Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND), authors = listOf(author)))
-            .mapNotNull { it.event }
-    val match =
-        events.firstOrNull { ev ->
-            when (ev) {
-                is NamedNappletEvent -> ev.identifier() == identifier
-                is RootNappletEvent -> identifier.isEmpty()
-                else -> false
-            }
-        } as? NappletManifest
-    val title = match?.title()?.ifBlank { null } ?: identifier.ifBlank { untitled }
-    val iconUrl = match?.icon()?.ifBlank { null }
-    return title to iconUrl
 }

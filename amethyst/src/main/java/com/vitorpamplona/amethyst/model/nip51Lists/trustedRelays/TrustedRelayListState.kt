@@ -68,8 +68,7 @@ class TrustedRelayListState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                // Synchronously seed from the cached (pre-decrypted) backup so the relay-auth
-                // ledger sees a non-empty list immediately, before the IO-thread onStart emit.
+                // Synchronously seed public tags from the backup; private tags may be absent on first boot.
                 settings.backupTrustedRelayList?.let { decryptionCache.cachedRelays(it) } ?: emptySet(),
             )
 

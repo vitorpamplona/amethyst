@@ -58,10 +58,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
@@ -70,13 +68,10 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
 import com.vitorpamplona.amethyst.napplet.descriptionRes
 import com.vitorpamplona.amethyst.napplet.labelRes
+import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -304,44 +299,7 @@ private suspend fun loadGrants(
             val identifier = coordinate.substringAfter(':', "")
             NappletGrantsUi(
                 identity = NappletIdentity(authorPubKey = author, identifier = identifier),
-                title = resolveTitle(author, identifier, untitled),
+                title = resolveNappletMeta(author, identifier, untitled).first,
                 capabilities = caps.entries.sortedBy { it.key.ordinal }.map { it.key to it.value },
             )
         }.sortedBy { it.title.lowercase() }
-
-/** Best-effort human title from a cached manifest; falls back to the d-identifier or [untitled]. */
-private fun resolveTitle(
-    author: String,
-    identifier: String,
-    untitled: String,
-): String {
-    val events =
-        Amethyst.instance.cache
-            .filter(Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND), authors = listOf(author)))
-            .mapNotNull { it.event }
-    val match =
-        events.firstOrNull { ev ->
-            when (ev) {
-                is NamedNappletEvent -> ev.identifier() == identifier
-                is RootNappletEvent -> identifier.isEmpty()
-                else -> false
-            }
-        }
-    return (match as? NappletManifest)?.title()?.ifBlank { null }
-        ?: identifier.ifBlank { untitled }
-}
-
-private fun NappletCapability.symbol(): MaterialSymbol =
-    when (this) {
-        NappletCapability.SHELL -> MaterialSymbols.Tune
-        NappletCapability.IDENTITY -> MaterialSymbols.AccountCircle
-        NappletCapability.KEYS -> MaterialSymbols.Key
-        NappletCapability.RELAY -> MaterialSymbols.Public
-        NappletCapability.STORAGE -> MaterialSymbols.Storage
-        NappletCapability.VALUE -> MaterialSymbols.Bolt
-        NappletCapability.RESOURCE -> MaterialSymbols.Language
-        NappletCapability.UPLOAD -> MaterialSymbols.Upload
-        NappletCapability.THEME -> MaterialSymbols.Image
-        NappletCapability.NOTIFY -> MaterialSymbols.Notifications
-        NappletCapability.INC -> MaterialSymbols.SwapHoriz
-    }

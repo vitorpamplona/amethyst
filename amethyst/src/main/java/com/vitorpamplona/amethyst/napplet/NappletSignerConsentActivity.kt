@@ -57,7 +57,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
@@ -65,10 +64,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class NappletSignerConsentActivity : ComponentActivity() {
@@ -110,24 +105,6 @@ class NappletSignerConsentActivity : ComponentActivity() {
     }
 }
 
-private fun resolveIconUrl(coordinate: String): String? {
-    val author = coordinate.substringBefore(':')
-    val identifier = coordinate.substringAfter(':', "")
-    val events =
-        Amethyst.instance.cache
-            .filter(Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND), authors = listOf(author)))
-            .mapNotNull { it.event }
-    val match =
-        events.firstOrNull { ev ->
-            when (ev) {
-                is NamedNappletEvent -> ev.identifier() == identifier
-                is RootNappletEvent -> identifier.isEmpty()
-                else -> false
-            }
-        } as? NappletManifest
-    return match?.icon()?.ifBlank { null }
-}
-
 @Composable
 private fun NappletSignerConsentDialog(
     info: NappletSignerConsentInfo,
@@ -138,7 +115,10 @@ private fun NappletSignerConsentDialog(
     var showMoreOptions by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.85f
-    val iconUrl = remember(info.coordinate) { resolveIconUrl(info.coordinate) }
+    val iconUrl =
+        remember(info.coordinate) {
+            resolveNappletMeta(info.coordinate.substringBefore(':'), info.coordinate.substringAfter(':', ""), "").second
+        }
 
     Dialog(
         onDismissRequest = onDismiss,

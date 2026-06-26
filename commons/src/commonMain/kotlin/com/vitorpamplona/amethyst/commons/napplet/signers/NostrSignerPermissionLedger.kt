@@ -118,9 +118,9 @@ class NostrSignerPermissionLedger(
         when (op) {
             is NostrSignerOp.SignKind ->
                 when (op.kind) {
-                    1 -> NostrOpDecision.ALLOW // Short text notes: common, low-risk
-                    6 -> NostrOpDecision.ALLOW // Reposts
-                    7 -> NostrOpDecision.ALLOW // Reactions / emoji
+                    1 -> NostrOpDecision.ALLOW
+                    6 -> NostrOpDecision.ALLOW
+                    7 -> NostrOpDecision.ALLOW
                     else -> NostrOpDecision.ASK
                 }
             NostrSignerOp.Encrypt -> NostrOpDecision.ALLOW

@@ -52,7 +52,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
@@ -63,14 +62,11 @@ import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
 import com.vitorpamplona.amethyst.napplet.DataStoreNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -229,7 +225,7 @@ private suspend fun loadConnectedApps(
         .map { coordinate ->
             val author = coordinate.substringBefore(':')
             val identifier = coordinate.substringAfter(':', "")
-            val (title, iconUrl) = resolveAppMeta(author, identifier, untitled)
+            val (title, iconUrl) = resolveNappletMeta(author, identifier, untitled)
             ConnectedAppEntry(
                 coordinate = coordinate,
                 title = title,
@@ -239,26 +235,4 @@ private suspend fun loadConnectedApps(
                 capabilityCount = capGrants[coordinate]?.size ?: 0,
             )
         }.sortedBy { it.title.lowercase() }
-}
-
-private fun resolveAppMeta(
-    author: String,
-    identifier: String,
-    untitled: String,
-): Pair<String, String?> {
-    val events =
-        Amethyst.instance.cache
-            .filter(Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND), authors = listOf(author)))
-            .mapNotNull { it.event }
-    val match =
-        events.firstOrNull { ev ->
-            when (ev) {
-                is NamedNappletEvent -> ev.identifier() == identifier
-                is RootNappletEvent -> identifier.isEmpty()
-                else -> false
-            }
-        } as? NappletManifest
-    val title = match?.title()?.ifBlank { null } ?: identifier.ifBlank { untitled }
-    val iconUrl = match?.icon()?.ifBlank { null }
-    return title to iconUrl
 }
