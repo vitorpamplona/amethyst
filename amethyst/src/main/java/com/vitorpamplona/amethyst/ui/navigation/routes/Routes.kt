@@ -243,6 +243,9 @@ sealed class Route {
 
     @Serializable object CashuWallet : Route()
 
+    /** Find-or-create wizard, shown when no NIP-60 wallet is loaded. */
+    @Serializable object CashuWalletWizard : Route()
+
     @Serializable object CashuWalletSettings : Route()
 
     @Serializable object CashuMintRecommendations : Route()

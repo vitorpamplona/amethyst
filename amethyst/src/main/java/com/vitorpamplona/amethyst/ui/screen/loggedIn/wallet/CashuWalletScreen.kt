@@ -137,6 +137,18 @@ fun CashuWalletScreen(
         if (walletEvent != null) viewModel.refresh()
     }
 
+    // Once discovery resolves to "no wallet here", drive the user into the
+    // find-or-create wizard (which crawls every relay for a portable wallet
+    // before offering to create one). Guarded so returning from the wizard
+    // via back doesn't bounce the user straight back in.
+    var autoLaunchedWizard by remember { mutableStateOf(false) }
+    LaunchedEffect(walletEvent == null && !discovering) {
+        if (walletEvent == null && !discovering && !autoLaunchedWizard) {
+            autoLaunchedWizard = true
+            nav.nav(Route.CashuWalletWizard)
+        }
+    }
+
     var receiveOpen by remember { mutableStateOf(false) }
     var sendLnOpen by remember { mutableStateOf(false) }
     var sendTokenOpen by remember { mutableStateOf(false) }
@@ -213,7 +225,7 @@ fun CashuWalletScreen(
             else ->
                 EmptyCashuWallet(
                     modifier = Modifier.padding(padding),
-                    onCreate = { nav.nav(Route.WalletAddCashu) },
+                    onCreate = { nav.nav(Route.CashuWalletWizard) },
                 )
         }
     }

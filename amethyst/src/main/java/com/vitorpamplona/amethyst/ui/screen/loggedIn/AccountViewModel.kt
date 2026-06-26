@@ -105,6 +105,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
@@ -267,63 +268,75 @@ class AccountViewModel(
             .set(callManager, this)
     }
 
+    /**
+     * Every known relay worth crawling for a full-history sweep (Event Sync,
+     * Cashu wallet discovery): relays that have connected at least once or were
+     * never tried, ordered busiest-first so the most fruitful are queried first.
+     */
+    fun crawlRelayDb(): List<NormalizedRelayUrl> {
+        val stats = Amethyst.instance.relayStats.snapshot()
+
+        val relays =
+            account.cache.relayHints.relayDB
+                .keys()
+                .filter { url ->
+                    val relayStat = stats[url]
+                    // has connected at least once OR never tried.
+                    if (relayStat != null) {
+                        relayStat.connectionCompleted > 0 || relayStat.connectionTentatives == 0
+                    } else {
+                        true
+                    }
+                }
+
+        val sortMap = relays.associateWith { stats.get(it)?.receivedBytes }
+
+        return relays.sortedByDescending { sortMap[it] }
+    }
+
+    /**
+     * A fresh, relay-authenticated [INostrClient] whose received events do NOT
+     * land in the production [com.vitorpamplona.amethyst.model.LocalCache] — for
+     * crawls (Event Sync, Cashu wallet discovery). The caller must `close()` it.
+     */
+    fun buildCrawlClient(): INostrClient {
+        // Create a new scope that inherits the ViewModel's lifecycle
+        // but uses a SupervisorJob so child failures are independent.
+        val customScope = CoroutineScope(viewModelScope.coroutineContext + SupervisorJob())
+
+        // Provides a relay pool
+        val newClient = NostrClient(Amethyst.instance.websocketBuilder, customScope)
+
+        // Authenticates with relays (registers itself with the client).
+        RelayAuthenticator(
+            newClient,
+            customScope,
+            signWithAllLoggedInUsers = { authTemplate ->
+                if (account.signer.isWriteable()) {
+                    try {
+                        listOf(account.signer.sign(authTemplate))
+                    } catch (e: Exception) {
+                        Log.e("AuthCoordinator", "Failed trying to authenticate a writeable account", e)
+                        emptyList()
+                    }
+                } else {
+                    emptyList()
+                }
+            },
+        )
+
+        return newClient
+    }
+
     val eventSync =
         EventSync(
             accountPubKey = account.signer.pubKey,
-            relayDb = {
-                val stats = Amethyst.instance.relayStats.snapshot()
-
-                val relays =
-                    account.cache.relayHints.relayDB
-                        .keys()
-                        .filter { url ->
-                            val relayStat = stats[url]
-                            // has connected at least once OR never tried.
-                            if (relayStat != null) {
-                                relayStat.connectionCompleted > 0 || relayStat.connectionTentatives == 0
-                            } else {
-                                true
-                            }
-                        }
-
-                val sortMap = relays.associateWith { stats.get(it)?.receivedBytes }
-
-                relays.sortedByDescending { sortMap[it] }
-            },
+            relayDb = { crawlRelayDb() },
             outboxTargets = { account.nip65RelayList.outboxFlow.value },
             inboxTargets = { account.nip65RelayList.inboxFlow.value },
             dmTargets = { account.dmRelayList.flow.value },
-            clientBuilder = {
-                // creates a new client to make sure these events don't end up polluting the local cache.
-
-                // Create a new scope that inherits the ViewModel's lifecycle
-                // but uses a SupervisorJob so child failures are independent.
-                val customScope = CoroutineScope(viewModelScope.coroutineContext + SupervisorJob())
-
-                // Provides a relay pool
-                val newClient = NostrClient(Amethyst.instance.websocketBuilder, customScope)
-
-                // Authenticates with relays.
-                val auth =
-                    RelayAuthenticator(
-                        newClient,
-                        customScope,
-                        signWithAllLoggedInUsers = { authTemplate ->
-                            if (account.signer.isWriteable()) {
-                                try {
-                                    listOf(account.signer.sign(authTemplate))
-                                } catch (e: Exception) {
-                                    Log.e("AuthCoordinator", "Failed trying to authenticate a writeable account", e)
-                                    emptyList()
-                                }
-                            } else {
-                                emptyList()
-                            }
-                        },
-                    )
-
-                newClient
-            },
+            // creates a new client to make sure these events don't end up polluting the local cache.
+            clientBuilder = { buildCrawlClient() },
             scope = viewModelScope,
         )
 
