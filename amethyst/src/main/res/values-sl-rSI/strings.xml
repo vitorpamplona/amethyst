@@ -3229,9 +3229,6 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="audio_visualizer_search_keywords">zvok, vizualizator, spekter, palice, valovi, radialno, aurora, animacija</string>
     <string name="backup_keys_search_keywords">nsec, zasebni ključ, seme, mnemonik, izvoz</string>
     <string name="bottom_bar_search_keywords">navigacija, zavihki, navigacijska vrstica</string>
-    <string name="browser_console_clear">Počisti</string>
-    <string name="browser_console_title">Konzola (%1$d)</string>
-    <string name="browser_console_title_short">Konzola</string>
     <string name="calendar_reminder_search_keywords">koledar, dogodki, opomniki, RSVP</string>
     <string name="call_settings_search_keywords">WebRTC, videoklic, glasovni klic, klici</string>
     <string name="child_safety_search_keywords">pravno, varnost, zloraba, CSAE, varstvo otrok</string>
