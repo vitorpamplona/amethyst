@@ -5280,15 +5280,11 @@
     
     <string name="browser">ブラウザ</string>
     
-    <string name="browser_address_hint">検索またはアドレスを入力</string>
     
     <string name="browser_reload">再読み込み</string>
     
-    <string name="browser_console_title_short">コンソール</string>
     
-    <string name="browser_console_title">コンソール（%1$d）</string>
     
-    <string name="browser_console_clear">クリア</string>
     
     <string name="browser_tor_on">Tor経由で読み込み中。タップしてオープンウェブを使用します。</string>
     
@@ -5354,7 +5350,6 @@
     
     <string name="napplet_permissions_revoke">取り消す</string>
     
-    <string name="napplet_untitled">無題の nApplet</string>
     
     <string name="napplet_none_found">nApplet はまだ見つかりません。</string>
     

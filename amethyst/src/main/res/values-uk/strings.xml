@@ -5291,15 +5291,11 @@
     
     <string name="browser">Браузер</string>
     
-    <string name="browser_address_hint">Пошук або введіть адресу</string>
     
     <string name="browser_reload">Оновити</string>
     
-    <string name="browser_console_title_short">Консоль</string>
     
-    <string name="browser_console_title">Консоль (%1$d)</string>
     
-    <string name="browser_console_clear">Очистити</string>
     
     <string name="browser_tor_on">Завантаження через Tor. Торкніться, щоб використати відкриту мережу.</string>
     
@@ -5365,7 +5361,6 @@
 
     <string name="napplet_permissions_revoke">Відкликати</string>
 
-    <string name="napplet_untitled">NApplet без назви</string>
 
     <string name="napplet_none_found">nApplets ще не знайдено.</string>
 

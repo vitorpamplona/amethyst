@@ -5600,15 +5600,11 @@
 
     <string name="browser">Tarayıcı</string>
 
-    <string name="browser_address_hint">Ara veya adres gir</string>
 
     <string name="browser_reload">Yenile</string>
 
-    <string name="browser_console_title_short">Konsol</string>
 
-    <string name="browser_console_title">Konsol (%1$d)</string>
 
-    <string name="browser_console_clear">Temizle</string>
 
     <string name="browser_tor_on">Tor üzerinden yükleniyor. Açık web\'i kullanmak için dokun.</string>
 
@@ -5674,7 +5670,6 @@
 
     <string name="napplet_permissions_revoke">İptal et</string>
 
-    <string name="napplet_untitled">Başlıksız nApplet</string>
 
     <string name="napplet_none_found">Henüz hiç nApplet bulunamadı.</string>
 

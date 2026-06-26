@@ -4871,15 +4871,11 @@
     
     <string name="browser">Браузер</string>
     
-    <string name="browser_address_hint">Поиск или введите адрес</string>
     
     <string name="browser_reload">Обновить</string>
     
-    <string name="browser_console_title_short">Консоль</string>
     
-    <string name="browser_console_title">Консоль (%1$d)</string>
     
-    <string name="browser_console_clear">Очистить</string>
     
     <string name="browser_tor_on">Загрузка через Tor. Нажмите, чтобы использовать открытую сеть.</string>
     
@@ -4945,7 +4941,6 @@
     
     <string name="napplet_permissions_revoke">Отозвать</string>
     
-    <string name="napplet_untitled">nApplet без названия</string>
     
     <string name="napplet_none_found">nApplets пока не найдены.</string>
     
