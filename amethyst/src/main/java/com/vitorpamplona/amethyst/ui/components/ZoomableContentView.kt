@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
+import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 
 @Composable

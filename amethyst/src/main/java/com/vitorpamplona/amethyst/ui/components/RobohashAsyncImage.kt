@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPa
 import com.vitorpamplona.amethyst.commons.richtext.bridgeProfilePictureUrl
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
+import com.vitorpamplona.amethyst.commons.ui.components.forwardingPainter
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter

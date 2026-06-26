@@ -39,11 +39,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayEvent

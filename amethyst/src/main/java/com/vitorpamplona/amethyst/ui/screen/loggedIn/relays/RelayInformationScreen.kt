@@ -78,11 +78,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.commons.util.timeDiffAgoShortish
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
