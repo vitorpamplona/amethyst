@@ -127,7 +127,7 @@ fun RenderLnZapCard(
 ) {
     val orange = MaterialTheme.colorScheme.bitcoinColor
 
-    ActivityCardFrame(orange) {
+    ActivityCardFrame(orange) { cardBackground ->
         ActivityHeaderRow(
             tint = orange,
             pillLabel = "LIGHTNING",
@@ -150,12 +150,12 @@ fun RenderLnZapCard(
                 },
         )
 
-        RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
+        RenderZappedPost(note, quotesLeft, cardBackground, accountViewModel, nav)
 
         card.amount?.let { ActivityAmountRow(it, orange) }
 
         card.comment?.let {
-            CrossfadeToDisplayComment(it, backgroundColor, nav, accountViewModel)
+            CrossfadeToDisplayComment(it, cardBackground, nav, accountViewModel)
         }
     }
 }

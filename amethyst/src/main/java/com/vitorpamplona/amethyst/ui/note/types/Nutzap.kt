@@ -61,7 +61,7 @@ fun RenderNutzap(
     val recipientKey = nutzapEvent.linkedPubKeys().firstOrNull()
     val orange = MaterialTheme.colorScheme.bitcoinColor
 
-    ActivityCardFrame(orange) {
+    ActivityCardFrame(orange) { cardBackground ->
         ActivityHeaderRow(
             tint = orange,
             pillLabel = "CASHU",
@@ -89,12 +89,12 @@ fun RenderNutzap(
                 },
         )
 
-        RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
+        RenderZappedPost(note, quotesLeft, cardBackground, accountViewModel, nav)
 
         ActivityAmountRow(showAmount(BigDecimal(nutzapEvent.claimedSatsTotal())), orange)
 
         nutzapEvent.content.ifBlank { null }?.let {
-            CrossfadeToDisplayComment(it, backgroundColor, nav, accountViewModel)
+            CrossfadeToDisplayComment(it, cardBackground, nav, accountViewModel)
         }
     }
 }

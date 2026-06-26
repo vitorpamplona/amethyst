@@ -50,7 +50,7 @@ fun RenderReaction(
 ) {
     val reactionType = note.event?.content ?: ""
 
-    ActivityCardFrame(LikeTint) {
+    ActivityCardFrame(LikeTint) { cardBackground ->
         ActivityHeaderRow(
             tint = LikeTint,
             pillLabel = "REACTION",
@@ -77,6 +77,6 @@ fun RenderReaction(
                 },
         )
 
-        RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
+        RenderZappedPost(note, quotesLeft, cardBackground, accountViewModel, nav)
     }
 }

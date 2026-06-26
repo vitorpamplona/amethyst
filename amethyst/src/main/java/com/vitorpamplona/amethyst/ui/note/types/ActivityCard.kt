@@ -36,6 +36,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,12 +60,20 @@ val LikeTint = Color(0xFFCA395F)
  * Gradient card frame shared by the reaction / zap / nutzap / onchain-zap
  * renderings, mirroring the onchain card's look: rounded corners and a soft
  * top-to-bottom wash of the kind's tint.
+ *
+ * The content lambda receives a stable [transparentCardBackground] state to hand
+ * down to the embedded note and comment: everything inside the card sits on the
+ * orange (or like-tinted) wash, so inner content must draw transparent and let
+ * that wash show through. Passing the parent feed / MultiSetCard background here
+ * instead would paint the inner note black (the app background) or flash it with
+ * the new-note highlight, breaking the card's solid tint.
  */
 @Composable
 fun ActivityCardFrame(
     tint: Color,
-    content: @Composable ColumnScope.() -> Unit,
+    content: @Composable ColumnScope.(transparentCardBackground: MutableState<Color>) -> Unit,
 ) {
+    val transparentCardBackground = remember { mutableStateOf<Color>(Color.Transparent) }
     Box(
         modifier =
             Modifier
@@ -78,7 +89,9 @@ fun ActivityCardFrame(
                     ),
                 ).padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            content(transparentCardBackground)
+        }
     }
 }
 
