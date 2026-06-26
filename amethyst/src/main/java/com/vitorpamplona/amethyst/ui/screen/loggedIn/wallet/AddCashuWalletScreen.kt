@@ -33,10 +33,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,7 +46,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -99,33 +96,20 @@ fun AddCashuWalletScreen(
     // suggestions on first open instead of waiting for the next relay
     // round-trip. Cheap (one sweep over the existing cache); idempotent.
     LaunchedEffect(Unit) { LocalCache.ensureMintDirectoryBackfilled() }
-    // Keyed on isEditMode so that if the wallet is delivered AFTER this screen
-    // first composes (existingWallet null → non-null), keyMode flips to
-    // KeepCurrent. Otherwise a cold open with an undelivered wallet would keep
-    // AutoGenerate and silently rotate the key on save, orphaning nutzaps.
-    var keyMode by remember(isEditMode) {
-        mutableStateOf(
-            if (isEditMode) CashuWalletViewModel.P2pkKeyMode.KeepCurrent else CashuWalletViewModel.P2pkKeyMode.AutoGenerate,
-        )
-    }
-    var manualPrivkey by remember { mutableStateOf("") }
     val createState by viewModel.createState.collectAsState()
 
     // Pre-fill the mints list with the existing wallet's mints whenever we
     // enter edit mode (or the existing mints update). Without this, hitting
     // the Edit button silently wipes the user's mint list because the local
     // `mints` state holder starts empty.
+    //
+    // Mutates `mints` directly rather than going through `publishMints` so the
+    // pre-fill never re-publishes the wallet — only genuine user add/remove
+    // actions do.
     LaunchedEffect(existingMints) {
         if (existingMints.isNotEmpty()) {
             val current = mints.toSet()
             existingMints.forEach { if (it !in current) mints.add(it) }
-        }
-    }
-
-    LaunchedEffect(createState) {
-        if (createState is CashuWalletCreateState.Success) {
-            nav.popBack()
-            viewModel.resetCreateState()
         }
     }
 
@@ -196,7 +180,10 @@ fun AddCashuWalletScreen(
                                     )
                                 }
                             }
-                            IconButton(onClick = { mints.removeAt(index) }) {
+                            IconButton(onClick = {
+                                mints.removeAt(index)
+                                viewModel.publishMints(mints.toList())
+                            }) {
                                 Icon(
                                     symbol = MaterialSymbols.Delete,
                                     contentDescription = stringRes(R.string.cashu_remove_mint),
@@ -277,6 +264,7 @@ fun AddCashuWalletScreen(
                             mints.add(trimmed)
                             mintInput = ""
                             viewModel.resetMintPing()
+                            viewModel.publishMints(mints.toList())
                         }
                     },
                     enabled = mintInput.isNotBlank(),
@@ -340,6 +328,7 @@ fun AddCashuWalletScreen(
                         if (trimmed.isNotEmpty() && trimmed !in mints) {
                             mints.add(trimmed)
                             viewModel.resetMintPing()
+                            viewModel.publishMints(mints.toList())
                         }
                     },
                 )
@@ -370,46 +359,29 @@ fun AddCashuWalletScreen(
                 else -> Unit
             }
 
-            // The nutzap (P2PK) key is only chosen at creation. In edit mode
-            // keyMode stays KeepCurrent so saving never rotates the key — the
-            // (rare, destructive) rotation lives in the settings Danger Zone
-            // instead, so editing mints can't orphan inbound nutzaps.
-            if (!isEditMode) {
-                Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = stringRes(R.string.cashu_p2pk_section),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringRes(R.string.cashu_p2pk_explainer),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            // No Save button: the wallet's kind:17375 + kind:10019 are
+            // published the moment the first mint is added and re-published on
+            // every later add/remove (see CashuWalletViewModel.publishMints).
+            // This line tells the user the screen auto-saves and that the
+            // nutzap key is generated for them — the old explicit key picker is
+            // gone; advanced key rotation lives in the settings Danger Zone.
+            Text(
+                text = stringRes(R.string.cashu_wallet_autosaves),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            if (createState is CashuWalletCreateState.Saving) {
                 Spacer(modifier = Modifier.height(8.dp))
-
-                P2pkRadio(
-                    label = stringRes(R.string.cashu_p2pk_autogen),
-                    selected = keyMode == CashuWalletViewModel.P2pkKeyMode.AutoGenerate,
-                    onSelect = { keyMode = CashuWalletViewModel.P2pkKeyMode.AutoGenerate },
-                )
-                P2pkRadio(
-                    label = stringRes(R.string.cashu_p2pk_manual_label),
-                    selected = keyMode == CashuWalletViewModel.P2pkKeyMode.Manual,
-                    onSelect = { keyMode = CashuWalletViewModel.P2pkKeyMode.Manual },
-                )
-
-                if (keyMode == CashuWalletViewModel.P2pkKeyMode.Manual) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = manualPrivkey,
-                        onValueChange = { manualPrivkey = it },
-                        label = { Text(stringRes(R.string.cashu_p2pk_manual_label)) },
-                        placeholder = { Text("hex…") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringRes(R.string.cashu_wallet_saving),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -423,66 +395,7 @@ fun AddCashuWalletScreen(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // A mint typed into the input but not yet committed with the "+"
-            // button. Folding it into the save makes "+" optional: the user can
-            // type a mint and hit Save directly instead of being blocked by a
-            // disabled button with no obvious reason.
-            val pendingMint = mintInput.trim().trimEnd('/')
-
-            Button(
-                onClick = {
-                    val allMints =
-                        if (pendingMint.isNotEmpty() && pendingMint !in mints) {
-                            mints.toList() + pendingMint
-                        } else {
-                            mints.toList()
-                        }
-                    viewModel.saveWallet(
-                        mints = allMints,
-                        keyMode = keyMode,
-                        manualPrivkey = manualPrivkey.takeIf { keyMode == CashuWalletViewModel.P2pkKeyMode.Manual },
-                    )
-                },
-                enabled =
-                    (mints.isNotEmpty() || pendingMint.isNotEmpty()) &&
-                        createState !is CashuWalletCreateState.Saving &&
-                        (keyMode != CashuWalletViewModel.P2pkKeyMode.Manual || manualPrivkey.isNotBlank()),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    stringRes(
-                        if (isEditMode) R.string.wallet_save_changes else R.string.wallet_save,
-                    ),
-                )
-            }
         }
-    }
-}
-
-@Composable
-private fun P2pkRadio(
-    label: String,
-    selected: Boolean,
-    onSelect: () -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .selectable(selected = selected, onClick = onSelect)
-                .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = onSelect)
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
     }
 }
 

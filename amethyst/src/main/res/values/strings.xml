@@ -2019,6 +2019,8 @@
     <string name="cashu_remove_mint">Remove mint</string>
     <string name="cashu_add_mint">Add mint</string>
     <string name="cashu_history">History</string>
+    <string name="cashu_wallet_autosaves">Your wallet saves automatically as you add or remove mints. A nutzap key is created for you the first time you add a mint.</string>
+    <string name="cashu_wallet_saving">Saving…</string>
     <string name="cashu_p2pk_section">Nutzap key (advanced)</string>
     <string name="cashu_p2pk_explainer">A separate private key used only to receive NIP-61 nutzaps. Not your Nostr identity key.</string>
     <string name="cashu_p2pk_autogen">Generate a new key</string>
