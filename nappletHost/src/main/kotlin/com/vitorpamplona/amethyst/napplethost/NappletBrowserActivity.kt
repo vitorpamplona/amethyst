@@ -35,6 +35,7 @@ import android.os.Messenger
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -231,7 +232,6 @@ class NappletBrowserActivity : ComponentActivity() {
         super.onResume()
         if (this::webView.isInitialized) {
             webView.onResume()
-            webView.resumeTimers()
         }
         resumed = true
         heartbeatHandler.removeCallbacks(heartbeat)
@@ -240,8 +240,11 @@ class NappletBrowserActivity : ComponentActivity() {
 
     override fun onPause() {
         if (this::webView.isInitialized) {
+            // Only pause THIS activity's WebView (onPause is per-WebView). Do NOT call pauseTimers(): it is
+            // process-global — it freezes JS/layout/parsing timers for EVERY WebView in `:napplet`, including
+            // the embedded ones in NappletBrowserService, which have no resume of their own. That left the
+            // embed frozen (dead page/connection) after returning from a full-screen excursion.
             webView.onPause()
-            webView.pauseTimers()
         }
         resumed = false
         heartbeatHandler.removeCallbacks(heartbeat)
@@ -251,7 +254,17 @@ class NappletBrowserActivity : ComponentActivity() {
 
     override fun onDestroy() {
         runCatching { unbindService(brokerConnection) }
-        if (this::webView.isInitialized) webView.destroy()
+        if (this::webView.isInitialized) {
+            // Detach from the view tree BEFORE destroy(). Destroying a WebView while it is still attached to
+            // the window corrupts the SHARED multiprocess renderer/network state, which then breaks the OTHER
+            // (embedded) WebViews living in this `:napplet` process: dead DNS (ERR_NAME_NOT_RESOLVED), DOM reads
+            // returning empty (`value == ""` on a field that visibly shows text), dead selection-highlight paint,
+            // and broken IME — all after a full-screen excursion returns to an embed. (`destroy()` requires the
+            // view to be removed from the hierarchy first; see WebView.destroy() docs.)
+            webView.stopLoading()
+            (webView.parent as? ViewGroup)?.removeView(webView)
+            webView.destroy()
+        }
         super.onDestroy()
     }
 

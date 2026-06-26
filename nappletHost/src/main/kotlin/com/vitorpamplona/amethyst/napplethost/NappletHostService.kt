@@ -172,16 +172,11 @@ class NappletHostService : Service() {
             }
             NappletEmbedContract.MSG_BACK -> tabFor(msg)?.webView?.let { if (it.canGoBack()) it.goBack() }
             NappletEmbedContract.MSG_RELOAD -> tabFor(msg)?.webView?.reload()
-            NappletEmbedContract.MSG_PAUSE ->
-                tabFor(msg)?.webView?.let {
-                    it.onPause()
-                    it.pauseTimers()
-                }
-            NappletEmbedContract.MSG_RESUME ->
-                tabFor(msg)?.webView?.let {
-                    it.onResume()
-                    it.resumeTimers()
-                }
+            // onPause()/onResume() are per-WebView (pause/resume THIS surface's JS/DOM). Do NOT call
+            // pauseTimers()/resumeTimers(): they are process-global and would freeze/thaw every WebView in
+            // `:napplet` (the browser embed + other napplets), whose lifecycles are independent of this one.
+            NappletEmbedContract.MSG_PAUSE -> tabFor(msg)?.webView?.onPause()
+            NappletEmbedContract.MSG_RESUME -> tabFor(msg)?.webView?.onResume()
             NappletEmbedContract.MSG_IME_OP -> {
                 val tab = tabFor(msg) ?: return true
                 val payload = msg.data?.getString(NappletEmbedContract.KEY_IME_PAYLOAD) ?: return true

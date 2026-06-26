@@ -321,7 +321,6 @@ class NappletHostActivity : ComponentActivity() {
         super.onResume()
         if (this::webView.isInitialized) {
             webView.onResume()
-            webView.resumeTimers()
         }
         // Launching this :napplet-process surface backgrounded the main process; tell the broker to
         // hold the main process resumed (Tor/relays/AUTH) while this napplet/nSite is in front, and
@@ -335,8 +334,10 @@ class NappletHostActivity : ComponentActivity() {
         // sign/decrypt/pay request whose consent prompt would surface over (and be confused with)
         // Amethyst's own UI. Requests only happen while the user is looking at this napplet.
         if (this::webView.isInitialized) {
+            // webView.onPause() pauses THIS WebView's JS/DOM (the security goal — a backgrounded napplet can't
+            // fire a sign/decrypt/pay request). Do NOT call pauseTimers(): it's process-global and freezes
+            // EVERY WebView in `:napplet`, including the embedded browser/napplet surfaces, which never resume.
             webView.onPause()
-            webView.pauseTimers()
         }
         // No longer foreground: stop renewing and let the main process resume normal background scaling.
         resumed = false
@@ -384,6 +385,11 @@ class NappletHostActivity : ComponentActivity() {
         runCatching { unbindService(brokerConnection) }
         keyActions.clear()
         if (this::webView.isInitialized) {
+            // Detach before destroy(): destroying an attached WebView corrupts the shared multiprocess
+            // renderer/network state and breaks the other (embedded) WebViews in this `:napplet` process
+            // (dead DNS, empty DOM reads, dead selection paint, broken IME). See NappletBrowserActivity.
+            webView.stopLoading()
+            (webView.parent as? ViewGroup)?.removeView(webView)
             webView.destroy()
         }
         super.onDestroy()
