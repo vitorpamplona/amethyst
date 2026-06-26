@@ -85,7 +85,7 @@
     
 <string name="copy_text">Copier le texte</string>
     
-<string name="copy_user_pubkey">Copier\ l\'ID\ auteur</string>
+<string name="copy_user_pubkey">Copier l\'ID auteur</string>
     
 <string name="copy_note_id">Copier l\'ID de la note</string>
     
@@ -471,7 +471,7 @@
     
 <string name="feed">Flux</string>
     
-<string name="mod_queue">File\ des\ mods</string>
+<string name="mod_queue">File des mods</string>
     
 <string name="notes">Notes</string>
     
@@ -762,7 +762,7 @@
     
 <string name="quick_action_block">Bloquer</string>
     
-<string name="quick_action_mute_thread">Muet\ le\ fil</string>
+<string name="quick_action_mute_thread">Muet le fil</string>
     
 <string name="quick_action_unmute_thread">Rétablir le fil de discussion</string>
     
@@ -2120,7 +2120,7 @@
     
 <string name="automatically_show_url_preview_description">Afficher la prévisualisation d\'URL</string>
     
-<string name="copy_stack_to_clipboard">Copier\ la\ pile</string>
+<string name="copy_stack_to_clipboard">Copier la pile</string>
     
 <string name="copy_to_clipboard">Copier dans le presse-papiers</string>
     
@@ -3830,7 +3830,7 @@
     
 <string name="nest_kick_action">Expulser</string>
     
-<string name="nest_hush_local">Sourdine\ locale</string>
+<string name="nest_hush_local">Sourdine locale</string>
     
 <string name="nest_hush_local_restore">Rétablir cet intervenant</string>
     
@@ -3890,7 +3890,7 @@
     
 <string name="nest_no_server_body">Vous n\'avez pas encore choisi de serveur nest. Ajouter %1$s à votre liste de serveurs et continuer ?\n\nVous pourrez modifier cela plus tard dans les Paramètres.</string>
     
-<string name="nest_no_server_use_default">Par\ défaut</string>
+<string name="nest_no_server_use_default">Par défaut</string>
     
 <string name="nest_no_server_save_failed">Impossible d\'enregistrer votre liste de serveurs nest. Réessayez.</string>
     
@@ -4266,7 +4266,7 @@
     
 <string name="couldnt_find_nwc_wallets_description">Amethyst n\'a trouvé aucune application de portefeuille prenant en charge Nostr Wallet Connect (NWC).\n\nVoici ce que vous pouvez faire :\n\n1. Vérifier la prise en charge NWC : Vérifiez que votre application de portefeuille préférée est compatible avec Nostr Wallet Connect.\n\n2. Créer une connexion : Accédez à votre application de portefeuille et créez une nouvelle connexion NWC.\n\n3. Lier à Amethyst : Votre portefeuille vous proposera généralement trois options :\n\n3.1 Lien automatique : Un bouton pour ouvrir et connecter automatiquement Amethyst. Si c\'est le cas, cliquez sur ce bouton, ouvrez Amethyst et appuyez sur enregistrer sur le nouvel écran.\n\n3.2 Lien manuel : Un URI de connexion que vous pouvez copier et coller via l\'icône de collage sur cet écran.\n\n3.3 Code QR : Le portefeuille crée un code QR que vous pouvez lire depuis le bouton code QR de cet écran.</string>
     
-<string name="share_target_as_dm">Envoyer\ en\ DM</string>
+<string name="share_target_as_dm">Envoyer en DM</string>
     
 <string name="share_to_dm_title">Envoyer à…</string>
     
@@ -4274,7 +4274,7 @@
     
 <string name="error_video_open_in_browser">Ouvrir dans le navigateur</string>
     
-<string name="settings_muted_threads_title">Fils\ en\ sourdine</string>
+<string name="settings_muted_threads_title">Fils en sourdine</string>
     
 <string name="settings_muted_threads_empty">Aucun fil mis en sourdine</string>
     
@@ -5242,7 +5242,7 @@
 
 <string name="namecoin_pin_cert_reject">Rejeter</string>
     
-<string name="event_sync_title">Sync\ relay</string>
+<string name="event_sync_title">Sync relay</string>
     
 <string name="event_sync_what_happens_title">Ce que cela fait</string>
     
@@ -5258,7 +5258,7 @@
     
 <string name="event_sync_mobile_data_dialog_title">Utiliser les données mobiles ?</string>
     
-<string name="event_sync_start">Démarrer\ sync</string>
+<string name="event_sync_start">Démarrer sync</string>
     
 <string name="event_sync_start_anyway">Démarrer quand même (données mobiles)</string>
     
@@ -5274,7 +5274,7 @@
     
 <string name="event_sync_done_duration">Terminé en %1$d secondes.</string>
     
-<string name="event_sync_error_title">Erreur\ de\ sync</string>
+<string name="event_sync_error_title">Erreur de sync</string>
     
 <string name="event_sync_sending_to">Envoi vers</string>
     

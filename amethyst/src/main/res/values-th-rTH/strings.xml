@@ -301,7 +301,7 @@
     <string name="follow_list_mute_list">รายการผู้ถูกปิดกั้น</string>
     <string name="connect_through_your_orbot_setup_short">Port เริ่มต้นคือ 9050</string>
     <string name="orbot_socks_port">พอร์ต Orbot Socks</string>
-    <string name="tor_use_dm_relays">DM\ Relays</string>
+    <string name="tor_use_dm_relays">DM Relays</string>
     <string name="tor_off">ปิด</string>
     <string name="tor_default">ค่าเริ่มต้น</string>
     <string name="tor_custom">ปรับแต่ง</string>

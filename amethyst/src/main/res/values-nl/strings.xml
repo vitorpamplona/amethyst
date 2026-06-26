@@ -446,9 +446,9 @@
     <string name="wallet_connect">Wallet Connect</string>
     <string name="language">Taal</string>
     <string name="theme">Thema</string>
-    <string name="automatically_load_images_gifs">Afbeeldingen\ laden</string>
+    <string name="automatically_load_images_gifs">Afbeeldingen laden</string>
     <string name="automatically_play_videos">Automatisch video\'s afspelen</string>
-    <string name="automatically_show_url_preview">URL\-voorbeeld</string>
+    <string name="automatically_show_url_preview">URL-voorbeeld</string>
     <string name="automatically_hide_nav_bars">Volledig scrollen</string>
     <string name="automatically_hide_nav_bars_description">Navigatie verbergen bij scrollen</string>
     <string name="ui_style">UI modus</string>
@@ -1459,7 +1459,7 @@
     
 <string name="nest_mic_mute">Microfoon dempen</string>
     
-<string name="nest_mic_unmute">Microfoon\ aan</string>
+<string name="nest_mic_unmute">Microfoon aan</string>
     
 <string name="nest_broadcast_connecting">Live gaan…</string>
     

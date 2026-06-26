@@ -1597,7 +1597,7 @@
     
 <string name="follow_list_kind3follows">Todos los seguidos</string>
     
-<string name="follow_list_kind3follows_users_only">Todos\ los\ seguidos</string>
+<string name="follow_list_kind3follows_users_only">Todos los seguidos</string>
     
 <string name="follow_list_aroundme">A mi alrededor</string>
     
@@ -1669,7 +1669,7 @@
     
 <string name="tor_use_onion_address_explainer">Usar Tor para cualquier URL .onion</string>
     
-<string name="tor_use_dm_relays">Relés\ DM</string>
+<string name="tor_use_dm_relays">Relés DM</string>
     
 <string name="tor_use_dm_relays_explainer">Forzar Tor para enviar y recibir mensajes directos</string>
     
@@ -1719,7 +1719,7 @@
     
 <string name="tor_default">Predeterminado</string>
     
-<string name="tor_small_payloads">Todo\ menos\ media</string>
+<string name="tor_small_payloads">Todo menos media</string>
     
 <string name="tor_full_privacy">Privacidad total</string>
     
@@ -2004,7 +2004,7 @@
     
 <string name="add_sensitive_content_description">Agrega una advertencia de contenido sensible antes de mostrarlo</string>
     
-<string name="ui_preferences">Preferencias\ de\ UI</string>
+<string name="ui_preferences">Preferencias de UI</string>
     
 <string name="preferences">Preferencias de la app</string>
     
@@ -2018,7 +2018,7 @@
     
 <string name="account_settings">Configuraciones de la cuenta</string>
     
-<string name="app_settings">Ajustes\ de\ la\ app</string>
+<string name="app_settings">Ajustes de la app</string>
     
     
     
@@ -2166,7 +2166,7 @@
     
 <string name="add_media_to_gallery">Agregar contenido multimedia a la galería</string>
     
-<string name="media_added">Media\ añadida</string>
+<string name="media_added">Media añadida</string>
     
 <string name="media_added_to_profile_gallery">Contenido multimedia añadido a la galería del perfil</string>
     
@@ -2509,7 +2509,7 @@
     
 <string name="invalid_nip19_uri_description">Amethyst recibió un URI para abrir pero era inválido: %1$s</string>
     
-<string name="dm_relays_title">Relés\ de\ entrada\ DM</string>
+<string name="dm_relays_title">Relés de entrada DM</string>
     
 <string name="dm_relays_not_found">Configura tus relés de buzón de entrada privados</string>
     
@@ -2545,7 +2545,7 @@
     
 <string name="public_notif_section_explainer">Este tipo de relé recibe todas las respuestas, comentarios, me gusta y zaps de tus publicaciones. Inserta entre 1 y 3 relés y asegúrate de que acepten publicaciones de cualquier persona.</string>
     
-<string name="private_inbox_section">Relés\ de\ entrada\ DM</string>
+<string name="private_inbox_section">Relés de entrada DM</string>
     
 <string name="private_inbox_section_explainer_profile">El usuario recibe mensajes directos en estos relés</string>
     
@@ -3545,7 +3545,7 @@
     
 <string name="add_to_music_playlist_manage_all">Gestionar todas las listas de reproducción</string>
     
-<string name="music_playlist_new_title_placeholder">Nombre\ de\ playlist</string>
+<string name="music_playlist_new_title_placeholder">Nombre de playlist</string>
     
 <string name="music_playlist_create_action">Crear</string>
     
@@ -4681,9 +4681,9 @@
     
 <string name="calendar_rsvp_not_going">No puedo ir</string>
     
-<string name="calendar_rsvp_section">RSVPs\ \(%1\$d\)</string>
+<string name="calendar_rsvp_section">RSVPs (%1$d)</string>
     
-<string name="calendar_rsvp_none">Sin\ RSVPs\ aún\.</string>
+<string name="calendar_rsvp_none">Sin RSVPs aún.</string>
     
 <string name="calendar_participants_section">Participantes (%1$d)</string>
     
@@ -5333,7 +5333,7 @@
     
 <string name="kind_dm_message">Mensaje directo</string>
     
-<string name="kind_dm_relays">Relés\ DM</string>
+<string name="kind_dm_relays">Relés DM</string>
     
 <string name="kind_classifieds">Clasificados</string>
     

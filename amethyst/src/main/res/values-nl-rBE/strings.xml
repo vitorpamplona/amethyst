@@ -1227,7 +1227,7 @@
     
 <string name="nest_mic_mute">Microfoon dempen</string>
     
-<string name="nest_mic_unmute">Microfoon\ aan</string>
+<string name="nest_mic_unmute">Microfoon aan</string>
     
 <string name="nest_broadcast_connecting">Live gaan…</string>
     
@@ -2569,13 +2569,13 @@
     
 <string name="theme">Thema</string>
     
-<string name="automatically_load_images_gifs">Afbeeldingen\ laden</string>
+<string name="automatically_load_images_gifs">Afbeeldingen laden</string>
     
 <string name="automatically_play_videos">Video\'s automatisch afspelen</string>
     
 <string name="autoplay_videos">Video\'s automatisch afspelen</string>
     
-<string name="automatically_show_url_preview">URL\-voorbeeld</string>
+<string name="automatically_show_url_preview">URL-voorbeeld</string>
     
 <string name="automatically_hide_nav_bars">Volledig scrollen</string>
     

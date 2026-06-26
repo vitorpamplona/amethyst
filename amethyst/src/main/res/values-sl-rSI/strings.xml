@@ -265,7 +265,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="new_threads">Nove objave</string>
     <string name="conversations">Razprave</string>
     <string name="feed">Vir vsebin</string>
-    <string name="mod_queue">Čakalna\ vrsta\ mod</string>
+    <string name="mod_queue">Čakalna vrsta mod</string>
     <string name="notes">Zapiski</string>
     <string name="replies">Pogovori</string>
     <string name="mutual">Vaše</string>
@@ -370,7 +370,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="mark_all_known_as_read">Označi vse znane kot prebrane</string>
     <string name="mark_all_new_as_read">Označi vse nove kot prebrane</string>
     <string name="mark_all_as_read">Označi vse kot prebrane</string>
-    <string name="backup_keys">Varnostna\ kopija\ ključev</string>
+    <string name="backup_keys">Varnostna kopija ključev</string>
     <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Varnostna kopija ključev in varnostni nasveti
         \n\nTvoj račun je zaščiten z privatnim ključem. Ta ključ ima dolgo sekvenco znakov kateri se začnejo z **nsec1**. Kdorkoli ima dostop, do tega privatnega ključa, lahko pošiljajo zapiske in spremenijo tvojo digitalno identiteto.
         \n\n- Nikoli in **Nikdar** ne vpisuj svojega privatnega ključa v spletne strani in aplikacije katerim ne zaupaš.
@@ -1329,7 +1329,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="content_warning_hide_all_sensitive_content_option">Skrij</string>
     <string name="content_warning_show_all_sensitive_content_option">Prikaži</string>
     <string name="content_warning_see_warnings_option">Opozori</string>
-    <string name="filter_spam_from_strangers_title">Filtriraj\ spam</string>
+    <string name="filter_spam_from_strangers_title">Filtriraj spam</string>
     <string name="filter_spam_from_strangers_explainer">Skrije objave neznancev, ki so bile popolnoma enake več kot petkrat</string>
     <string name="add_client_tag_title">Vključi oznako Nostr odjemalca v moje dogodke</string>
     <string name="add_client_tag_explainer">Če je omogočeno, Amethyst vašim objavljenim dogodkom doda NIP-87 oznako Nostr odjemalca.</string>
@@ -1508,7 +1508,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="ui_style_description">Izberi stil objave</string>
     <string name="gallery_style">Slog galerije profila</string>
     <string name="gallery_style_description">Izberi slog galerije</string>
-    <string name="spamming_users">Spam\ pošiljatelji</string>
+    <string name="spamming_users">Spam pošiljatelji</string>
     <string name="muted_button">Utišano. Klikni za vklop zvoka</string>
     <string name="mute_button">Zvok je prižgan. Klikni da ga utišaš</string>
     <string name="action_unmute">Vklopi zvok</string>
@@ -1857,7 +1857,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="cashu_history_incoming">Prejeto</string>
     <string name="cashu_history_outgoing">Poslano</string>
     <string name="cashu_settings_title">Nastavitve Cashu denarnice</string>
-    <string name="cashu_settings_edit_wallet">Moje\ kovnice</string>
+    <string name="cashu_settings_edit_wallet">Moje kovnice</string>
     <string name="cashu_settings_edit_wallet_subtitle">Kovnice, Nutzap ključ</string>
     <string name="cashu_settings_my_recommendations">Priporočene kovnice</string>
     <string name="cashu_settings_recommendations_subtitle">Javno podpri kovnice, ki jim zaupaš, in prekliči priporočila.</string>
@@ -2746,7 +2746,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="event_sync_done_sent">Naprej posredovanih %1$d od %2$d prejetih dogodkov do ciljnih relejev.</string>
     <string name="event_sync_done_accepted">Število dogodkov, ki jih je ciljni rele sprejel kot nove: %1$d.</string>
     <string name="event_sync_done_duration">Zaključeno v %1$d sekundah.</string>
-    <string name="event_sync_error_title">Napaka\ sinhronizacije</string>
+    <string name="event_sync_error_title">Napaka sinhronizacije</string>
     <string name="event_sync_sending_to">Pošiljam k</string>
     <string name="event_sync_outbox_relays">Odhodni</string>
     <string name="event_sync_inbox_relays">Vhodni</string>

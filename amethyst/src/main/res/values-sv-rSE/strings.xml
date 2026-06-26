@@ -1347,7 +1347,7 @@
     <string name="automatically_load_images_gifs">Ladda automatiskt bilder/gif</string>
     <string name="automatically_play_videos">Spela automatiskt videor</string>
     <string name="autoplay_videos">Automatisk uppspelning av videor</string>
-    <string name="automatically_show_url_preview">URL\-förhandsvisning</string>
+    <string name="automatically_show_url_preview">URL-förhandsvisning</string>
     <string name="automatically_hide_nav_bars">Omslutande bläddring</string>
     <string name="automatically_hide_nav_bars_description">Dölj navigeringsfält vid bläddring</string>
     <string name="ui_style">UI läge</string>
@@ -1677,7 +1677,7 @@
     <string name="cashu_history_incoming">Mottaget</string>
     <string name="cashu_history_outgoing">Skickat</string>
     <string name="cashu_settings_title">Inställningar för Cashu-plånbok</string>
-    <string name="cashu_settings_edit_wallet">Mina\ mints</string>
+    <string name="cashu_settings_edit_wallet">Mina mints</string>
     <string name="cashu_settings_edit_wallet_subtitle">Mints, nutzap-nyckel</string>
     <string name="cashu_settings_my_recommendations">Mina mint-rekommendationer</string>
     <string name="cashu_settings_no_recommendations">Du har inte rekommenderat några mints än. Tryck på tummen upp bredvid en mint för att rekommendera den offentligt.</string>
@@ -2286,7 +2286,7 @@
     <string name="follow_set_broadcast">Sänd lista</string>
     <string name="follow_pack_broadcast">Sänd rekommendationspaket</string>
     <string name="follow_set_delete">Ta bort lista</string>
-    <string name="follow_pack_delete">Ta\ bort\ paket</string>
+    <string name="follow_pack_delete">Ta bort paket</string>
     <string name="kinds">Typer</string>
     <string name="retry_failed">Försök igen misslyckades</string>
     <string name="tap_to_view_details">Tryck för att visa detaljer</string>

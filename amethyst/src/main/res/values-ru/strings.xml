@@ -597,7 +597,7 @@
     
     <string name="app_notification_reply_label">Ответить</string>
     
-    <string name="app_notification_mark_read_label">Отметить\ прочитанным</string>
+    <string name="app_notification_mark_read_label">Отметить прочитанным</string>
     
     <string name="app_notification_dms_summary">Новые сообщения</string>
     
@@ -1235,7 +1235,7 @@
     
     <string name="share_or_save">Поделиться или сохранить</string>
     
-    <string name="share_target_as_dm">Отправить\ как\ DM</string>
+    <string name="share_target_as_dm">Отправить как DM</string>
     
     <string name="share_to_dm_title">Отправить…</string>
     
@@ -2242,7 +2242,7 @@
     
     <string name="bottom_bar_settings_restore_default">Восстановить по умолчанию</string>
     
-    <string name="home_tabs_settings">Вкладки\ главной</string>
+    <string name="home_tabs_settings">Вкладки главной</string>
     
     <string name="home_tabs_settings_description">Выберите вкладки для главного экрана. Если активна только одна вкладка, панель вкладок скрывается.</string>
     
@@ -2604,7 +2604,7 @@
     
     <string name="edit_article">Редактировать статью</string>
     
-    <string name="edit_post">Редактировать\ пост</string>
+    <string name="edit_post">Редактировать пост</string>
     
     <string name="proposal_to_edit">Предложение по улучшению публикации</string>
     
@@ -3835,7 +3835,7 @@
     
     <string name="relay_management_ban">Заблокировать</string>
     
-    <string name="relay_management_ban_pubkey">Забанить\ pubkey</string>
+    <string name="relay_management_ban_pubkey">Забанить pubkey</string>
     
     <string name="relay_management_allow_pubkey">Разрешить публичный ключ</string>
     

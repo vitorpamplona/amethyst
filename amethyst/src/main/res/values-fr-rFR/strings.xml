@@ -34,7 +34,7 @@
     <string name="violence">Violence</string>
     <string name="unknown_author">Auteur inconnu</string>
     <string name="copy_text">Copier le texte</string>
-    <string name="copy_user_pubkey">Copier\ l\'ID\ auteur</string>
+    <string name="copy_user_pubkey">Copier l\'ID auteur</string>
     <string name="copy_note_id">Copier l\'ID de la note</string>
     <string name="copy_raw_json">Copier le JSON brut</string>
     <string name="broadcast">Diffuser</string>
@@ -227,7 +227,7 @@
     <string name="new_threads">Nouveaux sujets</string>
     <string name="conversations">Conversations</string>
     <string name="feed">Flux</string>
-    <string name="mod_queue">File\ des\ mods</string>
+    <string name="mod_queue">File des mods</string>
     <string name="notes">Notes</string>
     <string name="replies">Réponses</string>
     <string name="mutual">Les vôtres</string>
@@ -380,7 +380,7 @@
     <string name="quick_action_block_dialog_btn">Bloquer</string>
     <string name="quick_action_delete_dialog_btn">Supprimer</string>
     <string name="quick_action_block">Bloquer</string>
-    <string name="quick_action_mute_thread">Muet\ le\ fil</string>
+    <string name="quick_action_mute_thread">Muet le fil</string>
     <string name="quick_action_unmute_thread">Rétablir le fil de discussion</string>
     <string name="quick_action_report">Signaler</string>
     <string name="quick_action_dont_show_again_button">Ne plus montrer</string>
@@ -1067,7 +1067,7 @@
     <string name="automatically_play_videos_description">Lire automatiquement les vidéos et les GIFs</string>
     <string name="autoplay_videos_description">Lire automatiquement les vidéos lorsqu\'elles sont visibles à l\'écran</string>
     <string name="automatically_show_url_preview_description">Afficher la prévisualisation d\'URL</string>
-    <string name="copy_stack_to_clipboard">Copier\ la\ pile</string>
+    <string name="copy_stack_to_clipboard">Copier la pile</string>
     <string name="copy_to_clipboard">Copier dans le presse-papiers</string>
     <string name="copied_to_clipboard">Copié dans le presse-papiers</string>
     <string name="copy_nprofile_to_clipboard">Copier le nprofile dans le presse-papiers</string>
@@ -1940,7 +1940,7 @@
     <string name="nest_demote_listener">Rétrograder en auditeur</string>
     <string name="nest_force_mute">Forcer la mise en sourdine de l\'intervenant</string>
     <string name="nest_kick_action">Expulser</string>
-    <string name="nest_hush_local">Sourdine\ locale</string>
+    <string name="nest_hush_local">Sourdine locale</string>
     <string name="nest_hush_local_restore">Rétablir cet intervenant</string>
     <string name="nest_participant_view_profile">Voir le profil</string>
     <string name="nest_participant_zap">Envoyer un zap</string>
@@ -1970,7 +1970,7 @@
     <string name="nests_ended_ago">Terminé il y a %1$s</string>
     <string name="nest_no_server_title">Configurer un serveur nest</string>
     <string name="nest_no_server_body">Vous n\'avez pas encore choisi de serveur nest. Ajouter %1$s à votre liste de serveurs et continuer ?\n\nVous pourrez modifier cela plus tard dans les Paramètres.</string>
-    <string name="nest_no_server_use_default">Par\ défaut</string>
+    <string name="nest_no_server_use_default">Par défaut</string>
     <string name="nest_no_server_save_failed">Impossible d\'enregistrer votre liste de serveurs nest. Réessayez.</string>
     <string name="nest_create_title">Démarrer un nouveau nest</string>
     <string name="nest_create_field_room">Nom de la salle</string>
@@ -2167,11 +2167,11 @@
     <string name="music_playlist_uploading_banner">Téléversement de la couverture et publication. Cela continuera même si vous quittez l\'écran.</string>
     <string name="music_playlist_no_tracks_hint">Aucune piste pour l\'instant. Ajoutez des pistes depuis le menu d\'une chanson via « Ajouter à la liste de lecture ».</string>
     <string name="couldnt_find_nwc_wallets_description">Amethyst n\'a trouvé aucune application de portefeuille prenant en charge Nostr Wallet Connect (NWC).\n\nVoici ce que vous pouvez faire :\n\n1. Vérifier la prise en charge NWC : Vérifiez que votre application de portefeuille préférée est compatible avec Nostr Wallet Connect.\n\n2. Créer une connexion : Accédez à votre application de portefeuille et créez une nouvelle connexion NWC.\n\n3. Lier à Amethyst : Votre portefeuille vous proposera généralement trois options :\n\n3.1 Lien automatique : Un bouton pour ouvrir et connecter automatiquement Amethyst. Si c\'est le cas, cliquez sur ce bouton, ouvrez Amethyst et appuyez sur enregistrer sur le nouvel écran.\n\n3.2 Lien manuel : Un URI de connexion que vous pouvez copier et coller via l\'icône de collage sur cet écran.\n\n3.3 Code QR : Le portefeuille crée un code QR que vous pouvez lire depuis le bouton code QR de cet écran.</string>
-    <string name="share_target_as_dm">Envoyer\ en\ DM</string>
+    <string name="share_target_as_dm">Envoyer en DM</string>
     <string name="share_to_dm_title">Envoyer à…</string>
     <string name="error_video_playback_failed_description">Le codec ou le format n\'est pas pris en charge sur cet appareil (%1$s). Essayez de l\'ouvrir dans votre navigateur.</string>
     <string name="error_video_open_in_browser">Ouvrir dans le navigateur</string>
-    <string name="settings_muted_threads_title">Fils\ en\ sourdine</string>
+    <string name="settings_muted_threads_title">Fils en sourdine</string>
     <string name="settings_muted_threads_empty">Aucun fil mis en sourdine</string>
     <string name="settings_muted_threads_unknown">Fil inconnu · %1$s</string>
     <string name="tor_connection_failed_title">Tor ne se connecte pas</string>
@@ -2640,7 +2640,7 @@
 <string name="namecoin_pin_cert_body">Le serveur %1$s a présenté un certificat qui n\'est pas encore dans votre magasin de confiance. Vérifiez que l\'empreinte ci-dessous correspond à ce que l\'opérateur du serveur a publié, puis choisissez si vous souhaitez lui faire confiance pour les futures connexions.</string>
 <string name="namecoin_pin_cert_accept">Faire confiance</string>
 <string name="namecoin_pin_cert_reject">Rejeter</string>
-    <string name="event_sync_title">Sync\ relay</string>
+    <string name="event_sync_title">Sync relay</string>
     <string name="event_sync_what_happens_title">Ce que cela fait</string>
     <string name="event_sync_what_happens_body">Cet outil analyse tous les relais que votre application a vus et redistribue vos événements vers les bonnes destinations : </string>
     <string name="event_sync_step1">Télécharger tous les événements que vous avez publiés et les envoyer vers vos relais de sortie.</string>
@@ -2648,7 +2648,7 @@
     <string name="event_sync_step3">Télécharger tous les messages directs qui vous sont adressés et les envoyer vers vos relais DM.</string>
     <string name="event_sync_wifi_warning">⚠ Vous semblez être sur une connexion limitée ou mobile. Cette opération peut transférer une très grande quantité de données. Connectez-vous au Wi-Fi avant de commencer.</string>
     <string name="event_sync_mobile_data_dialog_title">Utiliser les données mobiles ?</string>
-    <string name="event_sync_start">Démarrer\ sync</string>
+    <string name="event_sync_start">Démarrer sync</string>
     <string name="event_sync_start_anyway">Démarrer quand même (données mobiles)</string>
     <string name="event_sync_relays_progress">Relais : %1$d / %2$d</string>
     <string name="event_sync_events_sent">Événements redistribués : %1$d nouveaux sur %2$d envoyés et %3$d reçus</string>
@@ -2656,7 +2656,7 @@
     <string name="event_sync_done_sent">%1$d événements transmis vers les relais de destination sur %2$d reçus.</string>
     <string name="event_sync_done_accepted">%1$d événements acceptés comme nouveaux par les relais de destination.</string>
     <string name="event_sync_done_duration">Terminé en %1$d secondes.</string>
-    <string name="event_sync_error_title">Erreur\ de\ sync</string>
+    <string name="event_sync_error_title">Erreur de sync</string>
     <string name="event_sync_sending_to">Envoi vers</string>
     <string name="event_sync_outbox_relays">Boîte d\'envoi</string>
     <string name="event_sync_inbox_relays">Boîte de réception</string>

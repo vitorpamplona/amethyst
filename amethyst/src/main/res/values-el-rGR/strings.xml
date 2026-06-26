@@ -74,8 +74,8 @@
     <string name="my_display_name">Το εμφανιζόμενο ονόμά μου</string>
     <string name="username">Όνομα Χρήστη</string>
     <string name="about_me">Σχετικά με εμένα</string>
-    <string name="avatar_url">URL\ Προφίλ</string>
-    <string name="banner_url">URL\ Ταπετσαρίας</string>
+    <string name="avatar_url">URL Προφίλ</string>
+    <string name="banner_url">URL Ταπετσαρίας</string>
     <string name="website_url">Διεύθυνση Ιστοσελίδας URL</string>
     <string name="image_saved_to_the_gallery">Η εικόνα αποθηκεύτηκε στη συλλογή</string>
     <string name="failed_to_save_the_image">Αποτυχία αποθήκευσης εικόνας</string>
@@ -107,7 +107,7 @@
     <string name="npub_hex_username">"\"Δημόσιο Κλειδί\" (npub), Όνομα Χρήστη, Κείμενο"</string>
     <string name="clear">Εκκαθάριση</string>
     <string name="app_logo">Λογότυπο Εφαρμογής</string>
-    <string name="nsec_npub_hex_private_key">nsec\.\.\ ή\ npub\.\.</string>
+    <string name="nsec_npub_hex_private_key">nsec.. ή npub..</string>
     <string name="show_password">Εμφάνιση Κωδικού</string>
     <string name="hide_password">Απόκρυψη Κωδικού</string>
     <string name="invalid_key">Μη έγκυρο κλειδί</string>
@@ -145,7 +145,7 @@
     <string name="report_hateful_speech">Αναφορά Ρητορικής μίσους</string>
     <string name="report_nudity_porn">Αναφορά Γυμνό / Πορνό</string>
     <string name="mark_all_known_as_read">Σήμανση όλων των γνωστοποιήσεων ως αναγνωσμένων</string>
-    <string name="mark_all_new_as_read">Σήμανση\ όλων\ ως\ αναγνωσμένων</string>
+    <string name="mark_all_new_as_read">Σήμανση όλων ως αναγνωσμένων</string>
     <string name="mark_all_as_read">Σήμανση όλων ως αναγνωσμένα</string>
     <string name="backup_keys">Εφεδρικά κλειδιά</string>
     <string name="secret_key_copied_to_clipboard">Το \"Μυστικό Κλειδί\" (nsec) αντιγράφηκε στο πρόχειρο</string>
@@ -271,15 +271,15 @@
     <string name="version">Έκδοση</string>
     <string name="software">Λογισμικό</string>
     <string name="contact">Επικοινωνία</string>
-    <string name="supports">Υποστηριζόμενα\ NIPs</string>
+    <string name="supports">Υποστηριζόμενα NIPs</string>
     <string name="payments_url">Διεύθυνση πληρωμής url</string>
     <string name="limitations">Περιορισμοί</string>
     <string name="countries">Χώρες</string>
     <string name="languages">Γλώσσες</string>
     <string name="posting_policy">Πολιτική δημοσιεύσεων</string>
     <string name="minimum_prefix">Ελάχιστο πρόθεμα</string>
-    <string name="maximum_event_tags">Μέγιστες\ ετικέτες</string>
-    <string name="minimum_pow">Ελάχ\.\ δυσκολία\ PoW</string>
+    <string name="maximum_event_tags">Μέγιστες ετικέτες</string>
+    <string name="minimum_pow">Ελάχ. δυσκολία PoW</string>
     <string name="cashu_redeem">Εξαργύρωση Cashu</string>
     <string name="no_lightning_address_set">Δεν έχει οριστεί διεύθυνση Lightning</string>
     <string name="live_stream_live_tag">ΖΩΝΤΑΝΑ</string>
@@ -1433,7 +1433,7 @@
     
     <string name="music_playlist_no_tracks_hint">Δεν υπάρχουν κομμάτια ακόμα. Προσθέστε κομμάτια από το μενού ενός τραγουδιού χρησιμοποιώντας «Προσθήκη στη λίστα».</string>
     
-    <string name="music_playlist_move_track_up">Μετακίνηση\ πάνω</string>
+    <string name="music_playlist_move_track_up">Μετακίνηση πάνω</string>
     
     <string name="music_playlist_move_track_down">Μετακίνηση κομματιού προς τα κάτω</string>
     
@@ -3254,7 +3254,7 @@
     
     <string name="kind_chess_games">Παιχνίδια σκακιού</string>
     
-    <string name="kind_chess_auth">Chess\ Auth</string>
+    <string name="kind_chess_auth">Chess Auth</string>
     
     <string name="kind_favorite_relays">Αγαπημένα Relays</string>
     
@@ -3344,7 +3344,7 @@
     
     <string name="kind_highlights">Επισημάνσεις</string>
     
-    <string name="kind_http_auth">Http\ Auth</string>
+    <string name="kind_http_auth">Http Auth</string>
     
     <string name="kind_index_relay_list">Λίστα Index Relay</string>
     
@@ -5614,7 +5614,7 @@
     
     <string name="nest_participant_follow">Ακολουθία</string>
     
-    <string name="nest_participant_unfollow">Διακοπή\ ακολουθίας</string>
+    <string name="nest_participant_unfollow">Διακοπή ακολουθίας</string>
     
     <string name="nest_participant_mute">Σίγαση</string>
     

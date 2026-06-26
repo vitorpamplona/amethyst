@@ -772,7 +772,7 @@
     <string name="tor_preset_explainer">Modificar rápidamente todos los ajustes a continuación</string>
     <string name="tor_use_onion_address">Url/Relés tipo onion</string>
     <string name="tor_use_onion_address_explainer">Usar Tor para cualquier URL .onion</string>
-    <string name="tor_use_dm_relays">Relés\ DM</string>
+    <string name="tor_use_dm_relays">Relés DM</string>
     <string name="tor_use_dm_relays_explainer">Forzar Tor para enviar y recibir mensajes directos</string>
     <string name="tor_use_new_relays">Relés no confiables</string>
     <string name="tor_use_new_relays_explainer">Forzar Tor en la bandeja de salida/entrada</string>
@@ -797,7 +797,7 @@
     <string name="tor_off">Desactivado</string>
     <string name="tor_when_needed">Básico</string>
     <string name="tor_default">Predeterminado</string>
-    <string name="tor_small_payloads">Todo\ menos\ media</string>
+    <string name="tor_small_payloads">Todo menos media</string>
     <string name="tor_full_privacy">Privacidad total</string>
     <string name="tor_custom">Personalizado</string>
     <string name="tor_when_needed_explainer">Usar Tor cuando lo requiera el servidor</string>
@@ -940,14 +940,14 @@
     <string name="community_no_descriptor">Esta comunidad no tiene descripción. Habla con el propietario para agregar una.</string>
     <string name="add_sensitive_content_label">Contenido delicado</string>
     <string name="add_sensitive_content_description">Agrega una advertencia de contenido sensible antes de mostrarlo</string>
-    <string name="ui_preferences">Preferencias\ de\ UI</string>
+    <string name="ui_preferences">Preferencias de UI</string>
     <string name="preferences">Preferencias de la app</string>
     <string name="user_preferences">Preferencias de usuario</string>
     <string name="translations">Traducciones</string>
     <string name="reactions">Reacciones</string>
     <string name="settings">Configuración</string>
     <string name="account_settings">Configuración de cuenta</string>
-    <string name="app_settings">Ajustes\ de\ la\ app</string>
+    <string name="app_settings">Ajustes de la app</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -1024,7 +1024,7 @@
     <string name="copy_url_to_clipboard">Copiar URL al portapapeles</string>
     <string name="copy_the_note_id_to_the_clipboard">Copiar ID de la nota al portapapeles</string>
     <string name="add_media_to_gallery">Agregar contenido multimedia a la galería</string>
-    <string name="media_added">Media\ añadida</string>
+    <string name="media_added">Media añadida</string>
     <string name="media_added_to_profile_gallery">Contenido multimedia agregado a la galería del perfil</string>
     <string name="created_at">Creado</string>
     <string name="login_with_external_signer">Iniciar sesión con Amber</string>
@@ -1195,7 +1195,7 @@
     <string name="show_npub_as_a_qr_code">Mostrar npub como código QR</string>
     <string name="invalid_nip19_uri">Dirección inválida</string>
     <string name="invalid_nip19_uri_description">Amethyst recibió un URI para abrir pero era inválido: %1$s</string>
-    <string name="dm_relays_title">Relés\ de\ entrada\ DM</string>
+    <string name="dm_relays_title">Relés de entrada DM</string>
     <string name="dm_relays_not_found">Configura tus relés de buzón de entrada privados</string>
     <string name="dm_relays_not_found_description">Esta configuración permite que todo el mundo sepa qué relés usar cuando te envíen mensajes. Sin ellos, es posible que no recibas algunos mensajes.</string>
     <string name="dm_relays_not_found_examples2">Algunas buenas opciones son:\n - auth.nostr1.com (free)\n - inbox.nostr.wine (paid)\n - relay.0xchat.com (free)</string>
@@ -1211,7 +1211,7 @@
     <string name="public_home_section_explainer">Este tipo de relé almacena todo tu contenido. Amethyst enviará tus publicaciones aquí y otros usarán estos relés para encontrar tu contenido. Inserta entre 1 y 3 relés. Pueden ser personales, de pago o públicos.</string>
     <string name="public_notif_section">Relés de buzón de entrada públicos</string>
     <string name="public_notif_section_explainer">Este tipo de relé recibe todas las respuestas, comentarios, me gusta y zaps de tus publicaciones. Inserta entre 1 y 3 relés y asegúrate de que acepten publicaciones de cualquier persona.</string>
-    <string name="private_inbox_section">Relés\ de\ entrada\ DM</string>
+    <string name="private_inbox_section">Relés de entrada DM</string>
     <string name="private_inbox_section_explainer">Inserta entre 1 y 3 relés para que te sirvan de buzón de entrada privado. Otros usarán estos relés para enviarte mensajes directos. Los relés del buzón de entrada para mensajes directos deberían aceptar cualquier mensaje de cualquier persona, pero solo te permiten descargarlos. Algunas buenas opciones son:\n - inbox.nostr.wine (de pago)\n - you.nostr1.com (relés personales; de pago)</string>
     <string name="private_outbox_section">Relés privados</string>
     <string name="private_outbox_section_explainer">Inserta entre 1 y 3 relés para almacenar eventos que nadie más pueda ver, como los borradores o la configuración de la app. Lo ideal es que estos relés sean locales o requieran autenticación antes de descargar el contenido de cada usuario.</string>
@@ -1665,7 +1665,7 @@
     
 <string name="nests_servers_auth_label">Autenticación</string>
     
-<string name="follow_list_kind3follows_users_only">Todos\ los\ seguidos</string>
+<string name="follow_list_kind3follows_users_only">Todos los seguidos</string>
     
 <string name="guidelines">Directrices</string>
     
@@ -2435,7 +2435,7 @@
     
 <string name="add_to_music_playlist_manage_all">Gestionar todas las listas de reproducción</string>
     
-<string name="music_playlist_new_title_placeholder">Nombre\ de\ playlist</string>
+<string name="music_playlist_new_title_placeholder">Nombre de playlist</string>
     
 <string name="music_playlist_create_action">Crear</string>
     
@@ -3571,9 +3571,9 @@
     
 <string name="calendar_rsvp_not_going">No puedo ir</string>
     
-<string name="calendar_rsvp_section">RSVPs\ \(%1\$d\)</string>
+<string name="calendar_rsvp_section">RSVPs (%1$d)</string>
     
-<string name="calendar_rsvp_none">Sin\ RSVPs\ aún\.</string>
+<string name="calendar_rsvp_none">Sin RSVPs aún.</string>
     
 <string name="calendar_participants_section">Participantes (%1$d)</string>
     
@@ -4223,7 +4223,7 @@
     
 <string name="kind_dm_message">Mensaje directo</string>
     
-<string name="kind_dm_relays">Relés\ DM</string>
+<string name="kind_dm_relays">Relés DM</string>
     
 <string name="kind_classifieds">Clasificados</string>
     

@@ -3628,7 +3628,7 @@
     
     <string name="event_sync_done_duration">Completato in %1$d secondi.</string>
     
-    <string name="event_sync_error_title">Errore\ di\ sync</string>
+    <string name="event_sync_error_title">Errore di sync</string>
     
     <string name="event_sync_sending_to">Invio a</string>
     

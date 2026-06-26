@@ -168,7 +168,7 @@
     <string name="copied_note_text_to_clipboard">Скопіювати текст</string>
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">ID (npub) автора скопійовано</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">ID запису (note1) скопійовано</string>
-    <string name="private_conversation_notification">"&lt;Не вдалося розшифрувати повідомлення&gt;\n\n\пВас згадали в приватному/зашифрованому чаті між %1$s і %2$s."</string>
+    <string name="private_conversation_notification">"&lt;Не вдалося розшифрувати повідомлення&gt;\n\nпВас згадали в приватному/зашифрованому чаті між %1$s і %2$s."</string>
     <string name="account_switch_add_account_dialog_title">Додати акаунт</string>
     <string name="drawer_accounts">Акаунти</string>
     <string name="account_switch_select_account">Вибір акаунта</string>
@@ -1181,7 +1181,7 @@
     
     <string name="child_safety_standards">Стандарти безпеки дітей</string>
     
-    <string name="about_legal">Про\ додаток\ і\ правові\ відомості</string>
+    <string name="about_legal">Про додаток і правові відомості</string>
     
     <string name="not_available_acronym">Н/Д</string>
     
@@ -1219,7 +1219,7 @@
     
     <string name="relay_filter_authors">%1$d авторів</string>
     
-    <string name="relay_filter_ids">%1\$d\ ід\.</string>
+    <string name="relay_filter_ids">%1$d ід.</string>
     
     <string name="relay_filter_since">від %1$s</string>
     
@@ -1495,7 +1495,7 @@
     
     <string name="share_or_save">Поділитися або зберегти</string>
     
-    <string name="share_target_as_dm">Надіслати\ як\ DM</string>
+    <string name="share_target_as_dm">Надіслати як DM</string>
     
     <string name="share_to_dm_title">Надіслати кому…</string>
     
@@ -2455,7 +2455,7 @@
     
     <string name="bottom_bar_settings_restore_default">Відновити за замовчуванням</string>
     
-    <string name="home_tabs_settings">Вкладки\ головної</string>
+    <string name="home_tabs_settings">Вкладки головної</string>
     
     <string name="home_tabs_settings_description">Виберіть, які вкладки з\'являються на головному екрані. Якщо активна лише одна вкладка, панель вкладок прихована.</string>
     
@@ -2637,7 +2637,7 @@
     
     <string name="search_relays_not_found_examples">Гарні варіанти:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
     
-    <string name="outbox_relays_title">Relay\ для\ вихідних</string>
+    <string name="outbox_relays_title">Relay для вихідних</string>
     
     <string name="outbox_relays_not_found">Налаштуйте свої публічні relay-сервери для публікацій</string>
     
@@ -2647,7 +2647,7 @@
     
     <string name="outbox_relays_not_found_examples">Гарні варіанти:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     
-    <string name="inbox_relays_title">Relay\ для\ вхідних</string>
+    <string name="inbox_relays_title">Relay для вхідних</string>
     
     <string name="inbox_relays_not_found">Налаштуйте свої публічні relay-сервери для отримання сповіщень</string>
     
@@ -5720,7 +5720,7 @@
 
     <string name="nest_create_fab">Запустити простір</string>
 
-    <string name="nests_section_live_now">Зараз\ у\ ефірі</string>
+    <string name="nests_section_live_now">Зараз у ефірі</string>
 
     <string name="nests_section_scheduled">Заплановано</string>
 
