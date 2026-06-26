@@ -2534,6 +2534,10 @@
     <string name="forked_from">Forked from</string>
     <string name="git_web_address">Web:</string>
     <string name="git_clone_address">Clone:</string>
+    <string name="git_branch">Branch</string>
+    <string name="git_commit">Commit</string>
+    <string name="git_merge_base">Merge base</string>
+    <string name="git_pr_update_description">Updated the pull request to a new commit.</string>
     <string name="git_status_open">Open</string>
     <string name="git_status_merged">Merged</string>
     <string name="git_status_closed">Closed</string>
@@ -2868,6 +2872,8 @@
     <string name="kind_git_patch">Git Patch</string>
     <string name="kind_git_repo">Git Repo</string>
     <string name="kind_git_reply">Git Reply</string>
+    <string name="kind_git_pr">Pull Request</string>
+    <string name="kind_git_pr_update">PR Update</string>
     <string name="kind_zap_goals">Zap Goals</string>
     <string name="kind_hashtag_follows">Hashtag Follows</string>
     <string name="kind_highlights">Highlights</string>

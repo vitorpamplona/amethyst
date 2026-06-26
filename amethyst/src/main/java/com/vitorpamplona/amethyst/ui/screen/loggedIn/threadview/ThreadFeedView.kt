@@ -169,6 +169,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
@@ -279,6 +281,8 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
@@ -926,6 +930,10 @@ private fun FullBleedNoteCompose(
                     RenderGitPatchEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is GitIssueEvent) {
                     RenderGitIssueEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
+                } else if (noteEvent is GitPullRequestEvent) {
+                    RenderGitPullRequestEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
+                } else if (noteEvent is GitPullRequestUpdateEvent) {
+                    RenderGitPullRequestUpdateEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is AppDefinitionEvent) {
                     RenderAppDefinition(baseNote, accountViewModel, nav)
                 } else if (noteEvent is AppRecommendationEvent) {

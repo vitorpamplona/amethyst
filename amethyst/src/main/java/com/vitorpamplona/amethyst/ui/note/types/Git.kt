@@ -37,7 +37,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -79,10 +78,10 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 private val CardShape = QuoteBorder
@@ -141,19 +140,33 @@ private fun TypeChip(
     text: String,
     background: Color,
     contentColor: Color,
+    symbol: MaterialSymbol? = null,
 ) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = contentColor,
-        maxLines = 1,
+    Row(
         modifier =
             Modifier
                 .clip(ChipShape)
                 .background(background)
                 .padding(horizontal = Size8dp, vertical = 2.dp),
-    )
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Size5dp),
+    ) {
+        symbol?.let {
+            Icon(
+                symbol = it,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = contentColor,
+            )
+        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = contentColor,
+            maxLines = 1,
+        )
+    }
 }
 
 @Composable
@@ -177,6 +190,119 @@ private fun LinkRow(
             url = url,
             urlText = url.removePrefix("https://").removePrefix("http://"),
         )
+    }
+}
+
+@Composable
+private fun GitSubjectTitle(text: String) {
+    Spacer(modifier = StdVertSpacer)
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface,
+        overflow = TextOverflow.Ellipsis,
+        maxLines = 3,
+    )
+}
+
+/**
+ * A small icon + value line for a piece of git metadata such as a branch name,
+ * commit hash or merge base. [value] is shown verbatim; commit-like hashes are
+ * expected to be shortened by the caller via [shortCommit].
+ */
+@Composable
+private fun GitMetaRow(
+    symbol: MaterialSymbol,
+    contentDescription: String?,
+    value: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = LinkRowSpacing,
+    ) {
+        Icon(
+            symbol = symbol,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(Size16dp),
+            tint = MaterialTheme.colorScheme.grayText,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelMedium.copy(fontSize = Font12SP),
+            color = MaterialTheme.colorScheme.grayText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** Shortens a 40-char git object id to its 7-char prefix for display. */
+private fun String.shortCommit(): String = if (length > 7) take(7) else this
+
+/**
+ * The shared markdown body used by patches, issues and pull requests: honors
+ * the collapsed [makeItShort] preview for the logged-in user's own posts and
+ * otherwise renders the full content with sensitivity warnings and uncited
+ * hashtags. The subject, when present, is rendered separately as a title by the
+ * caller, so it is not inlined here.
+ */
+@Composable
+private fun GitMarkdownBody(
+    note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadDecryptedContent(note, accountViewModel) { body ->
+        val isAuthorTheLoggedUser =
+            remember(note.event) { accountViewModel.isLoggedUser(note.author) }
+
+        if (makeItShort && isAuthorTheLoggedUser) {
+            Text(
+                text = body,
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        } else {
+            val callbackUri = remember(note) { note.toNostrUri() }
+
+            SensitivityWarning(
+                note = note,
+                accountViewModel = accountViewModel,
+            ) {
+                val tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+
+                TranslatableRichTextViewer(
+                    content = body,
+                    canPreview = canPreview && !makeItShort,
+                    quotesLeft = quotesLeft,
+                    modifier = Modifier.fillMaxWidth(),
+                    tags = tags,
+                    backgroundColor = backgroundColor,
+                    id = note.idHex,
+                    callbackUri = callbackUri,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            val event = note.event
+            if (event?.hasHashtags() == true) {
+                DisplayUncitedHashtags(
+                    event = event,
+                    content = body,
+                    callbackUri = callbackUri,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
     }
 }
 
@@ -278,16 +404,6 @@ private fun RenderGitPatchEvent(
             )
 
             GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
-
-            val commit = remember(noteEvent) { noteEvent.commit() }
-            commit?.takeIf { it.isNotBlank() }?.let { hash ->
-                Text(
-                    text = hash.take(7),
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = Font12SP),
-                    color = MaterialTheme.colorScheme.grayText,
-                    maxLines = 1,
-                )
-            }
         }
 
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
@@ -300,66 +416,19 @@ private fun RenderGitPatchEvent(
             }
         }
 
+        val commit = remember(noteEvent) { noteEvent.commit()?.takeIf { it.isNotBlank() } }
+        if (commit != null) {
+            Spacer(modifier = StdVertSpacer)
+            GitMetaRow(
+                symbol = MaterialSymbols.Commit,
+                contentDescription = stringRes(id = R.string.git_commit),
+                value = commit.shortCommit(),
+            )
+        }
+
         Spacer(modifier = HalfDoubleVertSpacer)
 
-        LoadDecryptedContent(note, accountViewModel) { body ->
-            val eventContent by
-                remember(note.event) {
-                    derivedStateOf {
-                        val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
-
-                        if (!subject.isNullOrBlank() && !body.split("\n")[0].contains(subject)) {
-                            "### $subject\n$body"
-                        } else {
-                            body
-                        }
-                    }
-                }
-
-            val isAuthorTheLoggedUser =
-                remember(note.event) { accountViewModel.isLoggedUser(note.author) }
-
-            if (makeItShort && isAuthorTheLoggedUser) {
-                Text(
-                    text = eventContent,
-                    color = MaterialTheme.colorScheme.placeholderText,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            } else {
-                val callbackUri = remember(note) { note.toNostrUri() }
-
-                SensitivityWarning(
-                    note = note,
-                    accountViewModel = accountViewModel,
-                ) {
-                    val tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
-
-                    TranslatableRichTextViewer(
-                        content = eventContent,
-                        canPreview = canPreview && !makeItShort,
-                        quotesLeft = quotesLeft,
-                        modifier = Modifier.fillMaxWidth(),
-                        tags = tags,
-                        backgroundColor = backgroundColor,
-                        id = note.idHex,
-                        callbackUri = callbackUri,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
-
-                if (note.event?.hasHashtags() == true) {
-                    DisplayUncitedHashtags(
-                        event = noteEvent,
-                        content = eventContent,
-                        callbackUri = callbackUri,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
-            }
-        }
+        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
     }
 }
 
@@ -412,6 +481,11 @@ private fun RenderGitIssueEvent(
             GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
         }
 
+        val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
+        if (subject != null) {
+            GitSubjectTitle(subject)
+        }
+
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
         if (repository != null) {
             Spacer(modifier = StdVertSpacer)
@@ -424,56 +498,204 @@ private fun RenderGitIssueEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
-        LoadDecryptedContent(note, accountViewModel) { body ->
-            val eventContent by
-                remember(note.event) {
-                    derivedStateOf {
-                        val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
+        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+    }
+}
 
-                        if (!subject.isNullOrBlank() && !body.split("\n")[0].contains(subject)) {
-                            "### $subject\n$body"
-                        } else {
-                            body
-                        }
-                    }
+@Composable
+fun RenderGitPullRequestEvent(
+    baseNote: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = baseNote.event as? GitPullRequestEvent ?: return
+
+    RenderGitPullRequestEvent(
+        event,
+        baseNote,
+        makeItShort,
+        canPreview,
+        quotesLeft,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+private fun RenderGitPullRequestEvent(
+    noteEvent: GitPullRequestEvent,
+    note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    GitCardContainer {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = HeaderSpacing,
+        ) {
+            TypeChip(
+                text = stringRes(id = R.string.kind_git_pr),
+                background = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                contentColor = MaterialTheme.colorScheme.secondary,
+                symbol = MaterialSymbols.CallMerge,
+            )
+
+            GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
+        }
+
+        val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
+        if (subject != null) {
+            GitSubjectTitle(subject)
+        }
+
+        val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
+        if (repository != null) {
+            Spacer(modifier = StdVertSpacer)
+            LoadAddressableNote(repository, accountViewModel) {
+                if (it != null) {
+                    RenderShortRepositoryHeader(it, accountViewModel, nav)
                 }
+            }
+        }
 
-            val isAuthorTheLoggedUser =
-                remember(note.event) { accountViewModel.isLoggedUser(note.author) }
+        val branch = remember(noteEvent) { noteEvent.branchName()?.takeIf { it.isNotBlank() } }
+        val currentCommit = remember(noteEvent) { noteEvent.currentCommit()?.takeIf { it.isNotBlank() } }
+        val mergeBase = remember(noteEvent) { noteEvent.mergeBase()?.takeIf { it.isNotBlank() } }
+        val cloneUrls = remember(noteEvent) { noteEvent.cloneUrls().filter { it.isNotBlank() } }
 
-            if (makeItShort && isAuthorTheLoggedUser) {
-                Text(
-                    text = eventContent,
-                    color = MaterialTheme.colorScheme.placeholderText,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            } else {
-                val callbackUri = remember(note) { note.toNostrUri() }
+        if (branch != null || currentCommit != null || mergeBase != null) {
+            Spacer(modifier = StdVertSpacer)
+            Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
+                branch?.let {
+                    GitMetaRow(MaterialSymbols.AltRoute, stringRes(id = R.string.git_branch), it)
+                }
+                currentCommit?.let {
+                    GitMetaRow(MaterialSymbols.Commit, stringRes(id = R.string.git_commit), it.shortCommit())
+                }
+                mergeBase?.let {
+                    GitMetaRow(MaterialSymbols.CallMerge, stringRes(id = R.string.git_merge_base), it.shortCommit())
+                }
+            }
+        }
 
-                SensitivityWarning(
-                    note = note,
-                    accountViewModel = accountViewModel,
-                ) {
-                    val tags =
-                        remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
-
-                    TranslatableRichTextViewer(
-                        content = eventContent,
-                        canPreview = canPreview && !makeItShort,
-                        quotesLeft = quotesLeft,
-                        modifier = Modifier.fillMaxWidth(),
-                        tags = tags,
-                        backgroundColor = backgroundColor,
-                        id = note.idHex,
-                        callbackUri = callbackUri,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
+        if (cloneUrls.isNotEmpty()) {
+            Spacer(modifier = StdVertSpacer)
+            Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
+                cloneUrls.forEach { url ->
+                    LinkRow(
+                        symbol = MaterialSymbols.CloudDownload,
+                        contentDescription = stringRes(id = R.string.git_clone_address),
+                        url = url,
                     )
                 }
+            }
+        }
 
-                if (note.event?.hasHashtags() == true) {
-                    DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, accountViewModel, nav)
+        Spacer(modifier = HalfDoubleVertSpacer)
+
+        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+    }
+}
+
+@Composable
+fun RenderGitPullRequestUpdateEvent(
+    baseNote: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = baseNote.event as? GitPullRequestUpdateEvent ?: return
+
+    RenderGitPullRequestUpdateEvent(
+        event,
+        baseNote,
+        makeItShort,
+        canPreview,
+        quotesLeft,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+private fun RenderGitPullRequestUpdateEvent(
+    noteEvent: GitPullRequestUpdateEvent,
+    note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    GitCardContainer {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = HeaderSpacing,
+        ) {
+            TypeChip(
+                text = stringRes(id = R.string.kind_git_pr_update),
+                background = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                symbol = MaterialSymbols.Sync,
+            )
+        }
+
+        val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
+        if (repository != null) {
+            Spacer(modifier = StdVertSpacer)
+            LoadAddressableNote(repository, accountViewModel) {
+                if (it != null) {
+                    RenderShortRepositoryHeader(it, accountViewModel, nav)
+                }
+            }
+        }
+
+        Spacer(modifier = HalfDoubleVertSpacer)
+        Text(
+            text = stringRes(id = R.string.git_pr_update_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.grayText,
+        )
+
+        val currentCommit = remember(noteEvent) { noteEvent.currentCommit()?.takeIf { it.isNotBlank() } }
+        val mergeBase = remember(noteEvent) { noteEvent.mergeBase()?.takeIf { it.isNotBlank() } }
+        val cloneUrls = remember(noteEvent) { noteEvent.cloneUrls().filter { it.isNotBlank() } }
+
+        if (currentCommit != null || mergeBase != null) {
+            Spacer(modifier = StdVertSpacer)
+            Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
+                currentCommit?.let {
+                    GitMetaRow(MaterialSymbols.Commit, stringRes(id = R.string.git_commit), it.shortCommit())
+                }
+                mergeBase?.let {
+                    GitMetaRow(MaterialSymbols.CallMerge, stringRes(id = R.string.git_merge_base), it.shortCommit())
+                }
+            }
+        }
+
+        if (cloneUrls.isNotEmpty()) {
+            Spacer(modifier = StdVertSpacer)
+            Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
+                cloneUrls.forEach { url ->
+                    LinkRow(
+                        symbol = MaterialSymbols.CloudDownload,
+                        contentDescription = stringRes(id = R.string.git_clone_address),
+                        url = url,
+                    )
                 }
             }
         }
