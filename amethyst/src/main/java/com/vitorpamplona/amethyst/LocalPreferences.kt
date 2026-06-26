@@ -702,12 +702,50 @@ object LocalPreferences {
 
                     Log.d("LocalPreferences") { "Load account from file $npub - asyncs created" }
 
+                    // Resolve every parallel parse into a local before constructing AccountSettings.
+                    // Awaiting inside the 70-argument constructor expression below would place ~27
+                    // suspension points in the middle of a single huge operand stack, forcing the
+                    // coroutine state machine to spill/restore every partially-evaluated argument at
+                    // each point. That bloats the generated method past the compiler's per-method
+                    // instruction limit ("Method exceeds compiler instruction limit"). Awaiting into
+                    // vals first keeps each suspension point at a statement boundary (near-empty
+                    // operand stack) and leaves the constructor as straight-line, suspension-free code.
+                    val nwcWalletsResolved = nwcWalletsLoaded.await()
+                    val clinkDebitsResolved = clinkDebitsLoaded.await()
+                    val defaultFileServerResolved = defaultFileServer.await()
+                    val viewedPollResultNoteIdsResolved = viewedPollResultNoteIds.await()
+                    val pendingAttestationsResolved = pendingAttestations.await()
+                    val lastReadPerRouteResolved = lastReadPerRoute.await()
+                    val latestUserMetadataResolved = latestUserMetadata.await()
+                    val latestContactListResolved = latestContactList.await()
+                    val latestDmRelayListResolved = latestDmRelayList.await()
+                    val latestNip65RelayListResolved = latestNip65RelayList.await()
+                    val latestSearchRelayListResolved = latestSearchRelayList.await()
+                    val latestIndexRelayListResolved = latestIndexRelayList.await()
+                    val latestRelayFeedsListResolved = latestRelayFeedsList.await()
+                    val latestBlockedRelayListResolved = latestBlockedRelayList.await()
+                    val latestTrustedRelayListResolved = latestTrustedRelayList.await()
+                    val latestMuteListResolved = latestMuteList.await()
+                    val latestPrivateHomeRelayListResolved = latestPrivateHomeRelayList.await()
+                    val latestAppSpecificDataResolved = latestAppSpecificData.await()
+                    val latestChannelListResolved = latestChannelList.await()
+                    val latestCommunityListResolved = latestCommunityList.await()
+                    val latestHashtagListResolved = latestHashtagList.await()
+                    val latestGeohashListResolved = latestGeohashList.await()
+                    val latestEphemeralListResolved = latestEphemeralList.await()
+                    val latestTrustProviderListResolved = latestTrustProviderList.await()
+                    val latestPaymentTargetsResolved = latestPaymentTargets.await()
+                    val latestCashuWalletResolved = latestCashuWallet.await()
+                    val latestNutzapInfoResolved = latestNutzapInfo.await()
+
+                    Log.d("LocalPreferences") { "Load account from file $npub - asyncs resolved" }
+
                     return@with AccountSettings(
                         keyPair = keyPair,
                         transientAccount = false,
                         externalSignerPackageName = externalSignerPackageName,
                         localRelayServers = MutableStateFlow(localRelayServers),
-                        defaultFileServer = defaultFileServer.await(),
+                        defaultFileServer = defaultFileServerResolved,
                         stripLocationOnUpload = stripLocationOnUpload,
                         useLocalBlossomCache = MutableStateFlow(useLocalBlossomCache),
                         localBlossomCacheProfilePicturesOnly = MutableStateFlow(localBlossomCacheProfilePicturesOnly),
@@ -739,15 +777,15 @@ object LocalPreferences {
                         defaultCommunitiesFollowList = MutableStateFlow(followListPrefs.communities),
                         defaultFollowPacksFollowList = MutableStateFlow(followListPrefs.followPacks),
                         defaultAppRecommendationsFollowList = MutableStateFlow(followListPrefs.appRecommendations),
-                        nwcWallets = MutableStateFlow(nwcWalletsLoaded.await().first),
-                        clinkDebitWallets = MutableStateFlow(clinkDebitsLoaded.await()),
+                        nwcWallets = MutableStateFlow(nwcWalletsResolved.first),
+                        clinkDebitWallets = MutableStateFlow(clinkDebitsResolved),
                         // Prefer the new unified default; migrate from the legacy NWC default;
                         // else fall back to the first configured source (NWC before debits).
                         defaultPaymentSourceId =
                             MutableStateFlow(
                                 defaultPaymentSourceIdStr
-                                    ?: nwcWalletsLoaded.await().second
-                                    ?: clinkDebitsLoaded.await().firstOrNull()?.id,
+                                    ?: nwcWalletsResolved.second
+                                    ?: clinkDebitsResolved.firstOrNull()?.id,
                             ),
                         hideDeleteRequestDialog = hideDeleteRequestDialog,
                         hideBlockAlertDialog = hideBlockAlertDialog,
@@ -755,32 +793,32 @@ object LocalPreferences {
                         alwaysOnNotificationService = MutableStateFlow(alwaysOnNotificationService),
                         splitNotificationsEnabled = MutableStateFlow(splitNotificationsEnabled),
                         showMessagesInNotifications = MutableStateFlow(showMessagesInNotifications),
-                        backupUserMetadata = latestUserMetadata.await(),
-                        backupContactList = latestContactList.await(),
-                        backupNIP65RelayList = latestNip65RelayList.await(),
-                        backupDMRelayList = latestDmRelayList.await(),
-                        backupSearchRelayList = latestSearchRelayList.await(),
-                        backupIndexRelayList = latestIndexRelayList.await(),
-                        backupRelayFeedsList = latestRelayFeedsList.await(),
-                        backupBlockedRelayList = latestBlockedRelayList.await(),
-                        backupTrustedRelayList = latestTrustedRelayList.await(),
-                        backupPrivateHomeRelayList = latestPrivateHomeRelayList.await(),
-                        backupMuteList = latestMuteList.await(),
-                        backupAppSpecificData = latestAppSpecificData.await(),
-                        backupChannelList = latestChannelList.await(),
-                        backupCommunityList = latestCommunityList.await(),
-                        backupHashtagList = latestHashtagList.await(),
-                        backupGeohashList = latestGeohashList.await(),
-                        backupEphemeralChatList = latestEphemeralList.await(),
-                        backupTrustProviderList = latestTrustProviderList.await(),
-                        lastReadPerRoute = MutableStateFlow(lastReadPerRoute.await()),
+                        backupUserMetadata = latestUserMetadataResolved,
+                        backupContactList = latestContactListResolved,
+                        backupNIP65RelayList = latestNip65RelayListResolved,
+                        backupDMRelayList = latestDmRelayListResolved,
+                        backupSearchRelayList = latestSearchRelayListResolved,
+                        backupIndexRelayList = latestIndexRelayListResolved,
+                        backupRelayFeedsList = latestRelayFeedsListResolved,
+                        backupBlockedRelayList = latestBlockedRelayListResolved,
+                        backupTrustedRelayList = latestTrustedRelayListResolved,
+                        backupPrivateHomeRelayList = latestPrivateHomeRelayListResolved,
+                        backupMuteList = latestMuteListResolved,
+                        backupAppSpecificData = latestAppSpecificDataResolved,
+                        backupChannelList = latestChannelListResolved,
+                        backupCommunityList = latestCommunityListResolved,
+                        backupHashtagList = latestHashtagListResolved,
+                        backupGeohashList = latestGeohashListResolved,
+                        backupEphemeralChatList = latestEphemeralListResolved,
+                        backupTrustProviderList = latestTrustProviderListResolved,
+                        lastReadPerRoute = MutableStateFlow(lastReadPerRouteResolved),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
                         dismissedPollNoteIds = MutableStateFlow(dismissedPollNoteIds),
-                        viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIds.await()),
-                        pendingAttestations = MutableStateFlow(pendingAttestations.await()),
-                        backupNipA3PaymentTargets = latestPaymentTargets.await(),
-                        backupCashuWallet = latestCashuWallet.await(),
-                        backupNutzapInfo = latestNutzapInfo.await(),
+                        viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIdsResolved),
+                        pendingAttestations = MutableStateFlow(pendingAttestationsResolved),
+                        backupNipA3PaymentTargets = latestPaymentTargetsResolved,
+                        backupCashuWallet = latestCashuWalletResolved,
+                        backupNutzapInfo = latestNutzapInfoResolved,
                         callsEnabled = MutableStateFlow(callsEnabled),
                     )
                 }
