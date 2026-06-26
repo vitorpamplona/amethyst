@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.cli.commands.KindCommand
 import com.vitorpamplona.amethyst.cli.commands.LoginCommand
 import com.vitorpamplona.amethyst.cli.commands.MarmotResetCommand
 import com.vitorpamplona.amethyst.cli.commands.MessageCommands
+import com.vitorpamplona.amethyst.cli.commands.NamecoinCommand
 import com.vitorpamplona.amethyst.cli.commands.NappletCommands
 import com.vitorpamplona.amethyst.cli.commands.NipCommand
 import com.vitorpamplona.amethyst.cli.commands.NotesCommands
@@ -178,6 +179,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "filter" -> return FilterCommand.run(tail)
         "nip" -> return NipCommand.run(tail)
         "kind" -> return KindCommand.run(tail)
+        "namecoin" -> return NamecoinCommand.dispatch(tail)
     }
 
     // `relay info URL` is a stateless NIP-11 fetch — no account needed. The
@@ -366,6 +368,10 @@ private fun printUsage() {
         |  nip N                        show a NIP (repo first, then a Nostr wiki/long-form fallback)
         |  nip list                     fetch the NIP index (README) from the repo
         |  kind N|NAME                  look up an event kind's label + NIP (number, or search by name)
+        |  namecoin resolve IDENT       resolve a Namecoin identifier (.bit, d/, id/, alice@x.bit)
+        |    [--server URL[,URL]]         to a Nostr pubkey + relays via the Namecoin blockchain
+        |    [--timeout SECS]             (no account, talks to ElectrumX over TLS)
+        |  namecoin servers             print the default ElectrumX server list
         |
         |Identity:
         |  init [--nsec NSEC]           create or import a bare identity (no defaults published)
