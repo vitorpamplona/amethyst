@@ -31,7 +31,7 @@
     <string name="timestamp_pending_short">OTS : En attente</string>
     <string name="request_deletion">Demande de suppression</string>
     <string name="block_report">Bloquer / Signaler</string>
-    <string name="block_hide_user"><![CDATA[Bloquer et cacher l\'utilisateur]]></string>
+    <string name="block_hide_user">Bloquer et cacher l\'utilisateur</string>
     <string name="report_spam_scam">Signaler Spam / Arnaque</string>
     <string name="report_impersonation">Signaler une falsification d\'identité</string>
     <string name="report_illegal_behaviour">Signaler un comportement illégal</string>
@@ -249,7 +249,7 @@
     <string name="report_dialog_nudity">Nudité ou contenu graphique</string>
     <string name="report_dialog_illegal">Comportement illégal</string>
     <string name="report_dialog_blocking_a_user">Bloquer un utilisateur cachera son contenu dans votre application. Vos notes sont toujours visibles publiquement, y compris pour les personnes que vous bloquez. Les utilisateurs bloqués sont listés sur l\'écran Filtres de Sécurité.</string>
-    <string name="report_dialog_block_hide_user_btn"><![CDATA[Bloquer et Masquer l\'Utilisateur]]></string>
+    <string name="report_dialog_block_hide_user_btn">Bloquer et Masquer l\'Utilisateur</string>
     <string name="report_dialog_report_btn">Signaler un Abus</string>
     <string name="report_dialog_reminder_public">Tous les rapports publiés seront visibles publiquement.</string>
     <string name="report_dialog_additional_reason_placeholder">Fournir un contexte optionnel supplémentaire sur votre signalement…</string>
