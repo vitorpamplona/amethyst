@@ -4725,15 +4725,11 @@
 
     <string name="browser">مرورگر</string>
 
-    <string name="browser_address_hint">جستجو یا وارد کردن آدرس</string>
 
     <string name="browser_reload">بارگذاری مجدد</string>
 
-    <string name="browser_console_title_short">کنسول</string>
 
-    <string name="browser_console_title">کنسول (%1$d)</string>
 
-    <string name="browser_console_clear">پاک کردن</string>
 
     <string name="browser_tor_on">بارگذاری از طریق Tor. برای استفاده از وب باز ضربه بزنید.</string>
 
@@ -4799,7 +4795,6 @@
 
     <string name="napplet_permissions_revoke">لغو</string>
 
-    <string name="napplet_untitled">nApplet بی‌عنوان</string>
 
     <string name="napplet_none_found">هنوز هیچ nApplet ای یافت نشد.</string>
 
