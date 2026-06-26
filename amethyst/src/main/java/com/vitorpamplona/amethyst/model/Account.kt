@@ -2045,6 +2045,14 @@ class Account(
         extraNotesToBroadcast.forEach { client.publish(it, relays) }
     }
 
+    /**
+     * The live [AddressableNote] backing a draft tag for this account. It is the same cached
+     * note that draft events are consumed into, so its `event` tracks the draft over time. The
+     * composer holds onto it (via DraftTagState) so [LocalCache]'s weak reference can't collect
+     * it before a deletion needs it, which would otherwise orphan the draft on the relays.
+     */
+    fun getOrCreateDraftNote(draftTag: String): AddressableNote = cache.getOrCreateAddressableNote(DraftWrapEvent.createAddress(signer.pubKey, draftTag))
+
     suspend fun createAndSendDraftIgnoreErrors(
         draftTag: String,
         template: EventTemplate<out Event>,
@@ -2081,18 +2089,25 @@ class Account(
         }
     }
 
-    suspend fun deleteDraftIgnoreErrors(draftTag: String) {
+    suspend fun deleteDraftIgnoreErrors(draftNote: AddressableNote?) {
         try {
-            deleteDraftInner(draftTag)
+            deleteDraftInner(draftNote)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
         }
     }
 
-    suspend fun deleteDraftInner(draftTag: String) {
+    suspend fun deleteDraftInner(draftNote: AddressableNote?) {
         if (!isWriteable()) return
 
-        val extraRelays = cache.getAddressableNoteIfExists(DraftWrapEvent.createAddressTag(signer.pubKey, draftTag))?.relays ?: emptyList()
+        // Only a real, still-present draft needs a deletion signed. The note's event is null when
+        // no draft was ever saved (e.g. auto-drafts disabled) and already empty once it has been
+        // deleted — in both cases there is nothing to delete, so we avoid prompting the signer.
+        val draftEvent = draftNote?.event as? DraftWrapEvent
+        if (draftEvent == null || draftEvent.isDeleted()) return
+
+        val draftTag = draftNote.dTag()
+        val extraRelays = draftNote.relays
 
         val deletedDraft = DraftWrapEvent.createDeletedEvent(draftTag, signer)
         val deletionEvent = signer.sign(DeletionEvent.build(listOf(deletedDraft)))

@@ -118,11 +118,17 @@ open class NestNewMessageViewModel :
     IExpiration {
     val draftTag = DraftTagState()
 
+    // Strong reference to the live cache note for the current draft tag (derived from the
+    // versions flow below), so LocalCache cannot weakly collect it before a deletion needs it.
+    var draftNote: AddressableNote? = null
+        private set
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
+                    draftNote = account.getOrCreateDraftNote(draftTag.current)
                     accountViewModel.launchSigner {
                         sendDraftSync()
                     }
@@ -235,6 +241,7 @@ open class NestNewMessageViewModel :
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
                     if (oldTag != null) {
                         draftTag.set(oldTag)
+                        draftNote = account.getOrCreateDraftNote(oldTag)
                     }
                     loadFromDraft(innerNote)
                 }
@@ -303,7 +310,7 @@ open class NestNewMessageViewModel :
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
 
-        val version = draftTag.current
+        val draftToDelete = draftNote
         cancel()
 
         // Broadcast to the user's default relays — the nest has no
@@ -312,13 +319,13 @@ open class NestNewMessageViewModel :
         // `account.signAndComputeBroadcast(...)`.
         accountViewModel.account.signAndComputeBroadcast(template)
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel.account.deleteDraftIgnoreErrors(version)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            account.deleteDraftIgnoreErrors(draftTag.current)
+            account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {
