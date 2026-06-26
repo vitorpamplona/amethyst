@@ -108,6 +108,39 @@ class AccountCacheState(
         }
     }
 
+    /** The on-disk root that [loadAccount] creates a per-account directory under. */
+    private fun accountsRootDir() = File(rootFilesDir(), "accounts")
+
+    /**
+     * Deletes the on-disk per-account directory (the MLS/Marmot stores created in
+     * [loadAccount]). Call only on permanent account deletion — [removeAccount] just
+     * drops the in-memory copy and leaves these files behind.
+     */
+    fun deleteAccountFiles(pubkey: HexKey) {
+        val dir = File(accountsRootDir(), pubkey)
+        if (dir.exists() && !dir.deleteRecursively()) {
+            Log.w("AccountCacheState", "Failed to delete account directory ${dir.absolutePath}")
+        }
+    }
+
+    /**
+     * Removes per-account directories left behind by accounts that are no longer saved
+     * (e.g. deleted before [deleteAccountFiles] existed). Keeps only [keepPubkeys]. Safe to
+     * run alongside [loadAccount]: it only loads saved accounts, whose pubkeys are kept.
+     */
+    fun pruneOrphanAccountDirs(keepPubkeys: Set<HexKey>) {
+        val children = accountsRootDir().listFiles() ?: return
+        children.forEach { child ->
+            if (child.isDirectory && child.name !in keepPubkeys) {
+                if (child.deleteRecursively()) {
+                    Log.d("AccountCacheState") { "Pruned orphan account dir ${child.name.take(8)}…" }
+                } else {
+                    Log.w("AccountCacheState", "Failed to prune orphan account dir ${child.absolutePath}")
+                }
+            }
+        }
+    }
+
     fun loadAccount(accountSettings: AccountSettings): Account =
         loadAccount(
             signer =

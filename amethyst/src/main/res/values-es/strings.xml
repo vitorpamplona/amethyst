@@ -1085,7 +1085,6 @@
     
 <string name="napplet_permissions_revoke">Revocar</string>
     
-<string name="napplet_untitled">NApplet sin título</string>
     
 <string name="napplet_none_found">No se han encontrado nApplets todavía.</string>
     
@@ -3333,15 +3332,11 @@
 
 <string name="browser">Navegador</string>
     
-<string name="browser_address_hint">Buscar o introducir dirección</string>
     
 <string name="browser_reload">Recargar</string>
     
-<string name="browser_console_title_short">Consola</string>
     
-<string name="browser_console_title">Consola (%1$d)</string>
     
-<string name="browser_console_clear">Borrar</string>
     
 <string name="browser_tor_on">Cargando a través de Tor. Toca para usar la web abierta.</string>
     

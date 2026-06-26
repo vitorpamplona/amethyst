@@ -386,12 +386,14 @@ class AccountSessionManager(
                 // log off and relogin with the 0 account
                 localPreferences.deleteAccount(accountInfo)
                 accountsCache.removeAccount(hex)
+                accountsCache.deleteAccountFiles(hex)
                 Amethyst.instance.scheduledPostStore.removeForAccount(hex)
                 loginWithDefaultAccount()
             } else {
                 // delete without switching logins
                 localPreferences.deleteAccount(accountInfo)
                 accountsCache.removeAccount(hex)
+                accountsCache.deleteAccountFiles(hex)
                 Amethyst.instance.scheduledPostStore.removeForAccount(hex)
             }
         }

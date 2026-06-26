@@ -2788,15 +2788,11 @@
     
 <string name="browser">Navigateur</string>
     
-<string name="browser_address_hint">Rechercher ou saisir une adresse</string>
     
 <string name="browser_reload">Recharger</string>
     
-<string name="browser_console_title_short">Console</string>
     
-<string name="browser_console_title">Console (%1$d)</string>
     
-<string name="browser_console_clear">Effacer</string>
     
 <string name="browser_tor_on">Chargement via Tor. Appuyer pour utiliser le web ouvert.</string>
     
@@ -2862,7 +2858,6 @@
     
 <string name="napplet_permissions_revoke">Révoquer</string>
     
-<string name="napplet_untitled">nApplet sans titre</string>
     
 <string name="napplet_none_found">Aucun nApplet trouvé pour l\'instant.</string>
     

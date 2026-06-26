@@ -4873,15 +4873,11 @@
     
 <string name="browser">Prohlížeč</string>
     
-<string name="browser_address_hint">Hledat nebo zadat adresu</string>
     
 <string name="browser_clear">Vymazat</string>
     
-<string name="browser_console_clear">Vymazat</string>
     
-<string name="browser_console_title">Konzola (%1$d)</string>
     
-<string name="browser_console_title_short">Konzola</string>
     
 <string name="browser_favorites">Oblíbené</string>
     
@@ -5273,7 +5269,6 @@
     
 <string name="napplet_permissions_revoke">Odebrat</string>
     
-<string name="napplet_untitled">Nepojmenovaný nApplet</string>
     
 <string name="napplets">nApplets</string>
     

@@ -726,11 +726,7 @@
 <string name="nsites">nSite-oj</string>
 <string name="nsite_none_found">Ankoraŭ neniuj nSite-oj trovitaj.</string>
 <string name="browser">Retumilo</string>
-<string name="browser_address_hint">Serĉi aŭ enigi adreson</string>
 <string name="browser_reload">Reŝargi</string>
-<string name="browser_console_title_short">Konzolo</string>
-<string name="browser_console_title">Konzolo (%1$d)</string>
-<string name="browser_console_clear">Viŝi</string>
 <string name="browser_tor_on">Ŝargante per Tor. Klaku por uzi la malferma reton.</string>
 <string name="browser_tor_off">Ŝargante per la malferma reto. Klaku por uzi Tor.</string>
 <string name="browser_unsupported">La en-aplikaĵa retumilo bezonas Android 11 aŭ pli novan.</string>
@@ -763,7 +759,6 @@
 <string name="napplet_permissions_forget">Forgesi ĉi tiun nApplet-on</string>
 <string name="napplet_permissions_blocked">Blokita</string>
 <string name="napplet_permissions_revoke">Revoki</string>
-<string name="napplet_untitled">Sennoma nApplet</string>
 <string name="napplet_none_found">Ankoraŭ neniuj nApplet-oj trovitaj.</string>
 <string name="napplet_fallback_title">nApplet %1$s…</string>
 <string name="napplet_cap_shell">Ŝelo</string>
