@@ -219,6 +219,8 @@ Army-knife verbs that operate purely on their arguments. They never touch
 | `amy filter [filter flags]` | Assemble and print a NIP-01 filter JSON from the same flags `fetch`/`subscribe` use — no query is sent. |
 | `amy nip N` / `amy nip list` | Look up a NIP — the `nostr-protocol/nips` repo first, then a Nostr wiki/long-form fallback. `list` fetches the index. |
 | `amy kind N` / `amy kind NAME` | Look up an event kind's label + defining NIP (number), or search labels by name. Backed by quartz's `KindNames` registry. |
+| `amy namecoin resolve IDENT [--server HOST:PORT[:tcp][,…]] [--timeout SECS]` | Resolve a Namecoin identifier (`.bit`, `d/`, `id/`, `alice@example.bit`) to a Nostr pubkey + relays via the Namecoin blockchain. Stateless: talks directly to one or more ElectrumX servers over TLS (`:tcp` for plaintext), no account needed. Reuses the same NIP-05-Namecoin parser, server set, and pinned trust store as the Android and Desktop apps. |
+| `amy namecoin servers` | Print the default ElectrumX server list (host, port, TLS flag). |
 | `amy relay info URL` | Fetch and print a relay's NIP-11 information document. |
 
 ### Remote signing (NIP-46 bunker)
