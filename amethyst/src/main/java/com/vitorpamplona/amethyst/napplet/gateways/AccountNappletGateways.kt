@@ -71,7 +71,7 @@ class AccountNappletGateways(
     private val context: Context,
     private val ledger: NappletPermissionLedger,
     private val storage: NappletStorage,
-    private val httpClient: () -> OkHttpClient,
+    private val httpClient: (useProxy: Boolean) -> OkHttpClient,
 ) {
     private val consentSummary = NappletConsentSummary(context)
 
@@ -102,7 +102,7 @@ class AccountNappletGateways(
             }
 
         val wallet = NappletWalletGateway { invoice -> payInvoiceViaNwc(invoice) }
-        val resource = NappletResourceGateway { url -> resourceFetcher.fetch(url) }
+        val resource = NappletResourceGateway { url, coordinate -> resourceFetcher.fetch(url, coordinate) }
         val identityReads = NappletIdentityGateway { method, argument -> identityReader.read(method, argument) }
         val upload = NappletUploadGateway { bytes, contentType, filename -> uploadBlob(bytes, contentType, filename) }
         val theme = NappletThemeGateway { currentThemeColors() }

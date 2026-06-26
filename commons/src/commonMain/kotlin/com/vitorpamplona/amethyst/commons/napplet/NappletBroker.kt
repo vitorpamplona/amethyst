@@ -274,7 +274,7 @@ class NappletBroker(
 
             is NappletRequest.ResourceBytes -> {
                 val gateway = resource ?: return NappletResponse.Unsupported("resource.bytes")
-                val fetched = gateway.fetch(request.url) ?: return NappletResponse.Failed("Could not fetch the resource.")
+                val fetched = gateway.fetch(request.url, identity.coordinate) ?: return NappletResponse.Failed("Could not fetch the resource.")
                 NappletResponse.Bytes(fetched.bytes, fetched.contentType)
             }
 
