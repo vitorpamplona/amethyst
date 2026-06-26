@@ -37,6 +37,7 @@ import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
  * The full-screen sandbox surfaces' **top pull-down sheet** — the native-View twin of the embedded
@@ -131,7 +132,7 @@ class NappletControlSheet(
             onConsole?.let { console ->
                 val label =
                     TextView(context).apply {
-                        text = context.getString(R.string.browser_console_title_short)
+                        text = context.getString(CommonsR.string.browser_console_title_short)
                         setTextColor(onSurface)
                         textSize = 15f
                         setPadding(dp(8), 0, 0, 0)
@@ -235,8 +236,8 @@ class NappletControlSheet(
                 setText(initial)
                 setTextColor(onSurface)
                 setHintTextColor(dimmed)
-                hint = context.getString(R.string.browser_address_hint)
-                contentDescription = context.getString(R.string.browser_address_hint)
+                hint = context.getString(CommonsR.string.browser_address_hint)
+                contentDescription = context.getString(CommonsR.string.browser_address_hint)
                 textSize = 15f
                 isSingleLine = true
                 setSelectAllOnFocus(true)
@@ -276,9 +277,9 @@ class NappletControlSheet(
     fun updateConsoleCount(count: Int) {
         consoleLabel?.text =
             if (count > 0) {
-                context.getString(R.string.browser_console_title, count)
+                context.getString(CommonsR.string.browser_console_title, count)
             } else {
-                context.getString(R.string.browser_console_title_short)
+                context.getString(CommonsR.string.browser_console_title_short)
             }
     }
 

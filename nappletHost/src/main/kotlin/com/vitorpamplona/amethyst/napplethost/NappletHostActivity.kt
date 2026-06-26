@@ -79,6 +79,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.util.concurrent.Executor
+import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
  * Hosts a napplet/nsite WebView in the isolated `:napplet` process — a process that holds **no**
@@ -715,7 +716,7 @@ class NappletHostActivity : ComponentActivity() {
 
     // ---- trusted sandbox chrome ----
 
-    private fun barTitle(): String = title.ifBlank { getString(R.string.napplet_untitled) }
+    private fun barTitle(): String = title.ifBlank { getString(CommonsR.string.napplet_untitled) }
 
     /**
      * The trusted top pull-down sheet: a small grabber at the top edge (out of the corner where the app

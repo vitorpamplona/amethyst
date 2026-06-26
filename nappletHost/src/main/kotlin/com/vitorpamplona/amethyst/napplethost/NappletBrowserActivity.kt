@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executor
+import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
  * Full-screen **direct-WebView** browser for an arbitrary URL, running in the keyless `:napplet`
@@ -578,7 +579,7 @@ class NappletBrowserActivity : ComponentActivity() {
 
     private var title: String = ""
 
-    private fun barTitle(): String = title.ifBlank { runCatching { Uri.parse(startUrl).host }.getOrNull() ?: getString(R.string.napplet_untitled) }
+    private fun barTitle(): String = title.ifBlank { runCatching { Uri.parse(startUrl).host }.getOrNull() ?: getString(CommonsR.string.napplet_untitled) }
 
     /**
      * The top pull-down sheet: a small grabber at the top edge (out of the corner where a site shows its

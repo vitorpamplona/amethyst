@@ -80,6 +80,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /** One napplet's persisted permission grants, ready to render. */
 private data class NappletGrantsUi(
@@ -95,7 +96,7 @@ fun NappletPermissionsScreen(
 ) {
     val context = LocalContext.current
     val ledger = remember { NappletPermissionLedger(DataStoreNappletPermissionStore(context)) }
-    val untitled = stringResource(R.string.napplet_untitled)
+    val untitled = stringResource(CommonsR.string.napplet_untitled)
 
     var items by remember { mutableStateOf<List<NappletGrantsUi>?>(null) }
     var reload by remember { mutableIntStateOf(0) }

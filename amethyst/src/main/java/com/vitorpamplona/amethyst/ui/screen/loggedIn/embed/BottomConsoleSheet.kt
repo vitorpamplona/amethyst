@@ -63,7 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
  * A bottom **pull-up sheet** for JavaScript console output. Collapsed it's a small grabber at the
@@ -137,14 +137,14 @@ fun BottomConsoleSheet(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                stringResource(R.string.browser_console_title, logs.size),
+                                stringResource(CommonsR.string.browser_console_title, logs.size),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.weight(1f),
                             )
                             TextButton(onClick = onClear) {
                                 Text(
-                                    stringResource(R.string.browser_console_clear),
+                                    stringResource(CommonsR.string.browser_console_clear),
                                     style = MaterialTheme.typography.labelSmall,
                                 )
                             }

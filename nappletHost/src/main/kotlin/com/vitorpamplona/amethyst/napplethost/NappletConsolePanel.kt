@@ -34,6 +34,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
  * The full-screen browser's **bottom pull-up sheet** for JavaScript console output. Collapsed it's
@@ -83,7 +84,7 @@ class NappletConsolePanel(
                     setPadding(dp(8), 0, dp(4), dp(4))
                     addView(
                         TextView(context).apply {
-                            text = context.getString(R.string.browser_console_title_short)
+                            text = context.getString(CommonsR.string.browser_console_title_short)
                             setTextColor(dimmed)
                             textSize = 12f
                             layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
@@ -91,7 +92,7 @@ class NappletConsolePanel(
                     )
                     addView(
                         TextView(context).apply {
-                            text = context.getString(R.string.browser_console_clear)
+                            text = context.getString(CommonsR.string.browser_console_clear)
                             setTextColor(dimmed)
                             textSize = 12f
                             setPadding(dp(12), dp(6), dp(12), dp(6))
@@ -210,7 +211,7 @@ class NappletConsolePanel(
                     setColor(withAlpha(surface, 0.6f))
                 }
             isClickable = true
-            contentDescription = context.getString(R.string.browser_console_title_short)
+            contentDescription = context.getString(CommonsR.string.browser_console_title_short)
             addView(bar)
 
             var downY = 0f
