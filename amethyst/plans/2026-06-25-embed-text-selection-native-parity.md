@@ -1,9 +1,31 @@
 # Embedded text selection — native-Android parity
 
-**Status:** in progress. The working set landed in `fix(embed): IME typing +
-host-drawn text selection for embedded surfaces` (commit `e0a2a9ab81`). This
-plan tracks the remaining gap to a native-feeling experience and the one open
-platform bug.
+**Status:** core feature-complete. The working set landed in `fix(embed): IME typing +
+host-drawn text selection for embedded surfaces` (commit `e0a2a9ab81`); subsequent
+sessions added the magnifier, the `SelectionUiState` refactor, hybrid word+char
+handle-extend, and a run of polish/bug fixes (below). **The one open platform bug —
+full-screen round-trip kills selection paint — is now FIXED** (root cause was
+process-global `pauseTimers()` + an attached `WebView.destroy()`; see that section).
+
+**2026-06-26 fixes (branch `fix/embed-ime-selection`):**
+- **No-blink word-select** — the overlay handles + toolbar blinked 2–3× on long-press
+  word-select; cause was the shim's selection-*reveal* scrolls (a `<textarea>` auto-
+  scrolling to show a forming/re-asserted range) tripping the hide-on-scroll path. The
+  shim now timestamps selection activity (`lastSelActivityAt`) and treats a scroll within
+  350 ms as a reveal-scroll (reposition, don't hide, don't re-arm the timer). Plus a
+  `RemoteImeView` range-lost debounce as a safety net. (#2, #3)
+- **Page selection clears on field focus** — focusing a field left the page-text handles
+  + Copy bar up (the shim's page `selectionchange` is muted once a field is focused), and
+  being z-above they STOLE the field handle's drag. Fixed: `focusin` emits `pagesel:false`
+  (+ resets the scroll state); host `ImeEvent.Focus` also drops the page overlay. (#2)
+- **Caret handle drag** moved the loupe but not the caret — the unified `awaitEachGesture`
+  did `change.consume()` BEFORE `change.positionChange()`, and `positionChange()` returns
+  `Offset.Zero` once consumed, so `fp` never accumulated. Fixed with
+  `positionChangeIgnoreConsumed()` (also immune to the sandbox surface consuming the move). (#10)
+- **Hybrid word+char handle-extend** completed (#5, below).
+- **Full-screen round-trip corruption FIXED** (was the open bug; see section).
+- **Embed WebViews follow the APP theme** — separate from selection, but same surfaces:
+  see `embed-webview-prefers-color-scheme-limitation` memo / `EmbedWebViewTheme.kt`.
 
 ## Why we draw selection ourselves
 
@@ -33,14 +55,14 @@ rules, so we can check off coverage. Native impl lives in `android.widget.Editor
 |---|----------------|-----------|-------------|------------|
 | 1 | **Insertion handle** (the teardrop "blob" under the caret) | tap in editable text; tap again to re-show | typing, scroll start, focus loss, ~4s inactivity timeout | ✅ `InsertionHandle`. **Native availability rule now matched (2026-06-25):** only shown when the field is NON-EMPTY (`Editor` gates the handle behind `text.length() > 0`, via `SelectionUiState.fieldHasText`) — fixes it popping up on focus of an empty box; hides on typing (`onEdited`), scroll (`scrolling`), focus loss, and ~4s inactivity (`hideCaret` timeout), re-showing on the next tap — via an explicit `ime.carettap` shim signal (DOM `click`), so a tap that doesn't move the caret still re-shows it. Device-verified. |
 | 2 | **Selection handles** (asymmetric left/right teardrops) | long-press word, double-tap word, drag-extend | tap-collapse, typing, new selection | ✅ `SelectionHandle(isStart)` + drag-to-extend, for BOTH plain page text (`pageExtend`) AND in-field `<input>`/`<textarea>` selections (`fieldExtend`, 2026-06-25). The shim reports the selection's caret feet (`sx/sb`,`ex/eb`, flagged `rng`) via the same mirror-div as the caret; the host holds the range geometry separately so Chrome's transient collapse-to-caret (the re-assert fight) doesn't yank the handles to the field edges. **Tap-to-collapse (2026-06-25):** a single tap inside a selection dismisses it to a caret at the tapped offset + insertion handle — the shim's `click` handler collapses explicitly via `offsetFromPoint` (off-window Chrome doesn't do it itself). Device-verified. |
-| 3 | **Floating toolbar** (Cut/Copy/Paste/Select-All/Share/…) | selection made, or tap insertion handle (Paste/Select-All) | scroll/fling (hides, returns on settle), handle drag (hides), tap-collapse | ⚠️ `EmbeddedSelectionToolbar` (Cut/Copy/Paste/Select-All). **Hide-during-handle-drag ✅ device-verified; hide-during-scroll ✅ implemented (2026-06-25, via `SelectionUiState.dragging`/`scrolling`; shim sends `ime.scroll` + re-reports geometry on settle) — same gate as drag-hide, but not yet exercised on device (the embedded WebView didn't scroll under injected swipes / cached short harness).** Still missing: insertion-handle Paste popup, overflow, Share/Web-Search/process-text. |
+| 3 | **Floating toolbar** (Cut/Copy/Paste/Select-All/Share/…) | selection made, or tap insertion handle (Paste/Select-All) | scroll/fling (hides, returns on settle), handle drag (hides), tap-collapse | ⚠️ `EmbeddedSelectionToolbar` (Cut/Copy/Paste/Select-All). **Hide-during-handle-drag ✅ device-verified.** Hide-during-scroll via `SelectionUiState.scrolling` (shim `ime.scroll` + re-report on settle). **2026-06-26: the scroll path was hardened** — selection-*reveal* scrolls (forming/re-asserting a range auto-scrolls a `<textarea>`) are no longer treated as user scrolls (they blinked the overlays); the shim guards them via `lastSelActivityAt` and the hide self-heals instead of re-arming. (User content-scroll-hide still wants a clean on-device pass.) Still missing: overflow, Share/Web-Search/process-text. |
 | 4 | **Magnifier / loupe** (the zoom bubble above the finger while dragging a handle or the caret) | finger down + moving on a handle or the caret | finger up | ✅ **Built (2026-06-25).** `Magnifier` bubble in [EmbeddedMagnifier.kt] follows the dragged caret/selection handle, showing live magnified page pixels captured in the `:napplet` provider and shipped over IPC ([EmbeddedMagnifierProbe], option B). Both embed paths wired (browser + napplet); verified on device for the browser path. Capture Y is locked to the caret/selection line (X follows the finger). Possible further polish: RGB_565 to cut encode, themed crosshair, clamp capture X to the line so a fast drag past EOL doesn't show blank. |
 | 5 | **Word-granularity long-press** then char-extend | long-press | — | ✅ HYBRID word+char in-field handle-extend (2026-06-25, completed): `fieldExtend` keeps per-drag state (`fieldDragWordEnd`/`fieldDragWordStart`, reset on a >250ms gap or edge switch). The drag baselines at the current selection edge; sweeping PAST that word's far boundary snaps to the next whole word (`wordEndAt`/`wordStartAt`), while moving within/back from the furthest-reached word gives CHARACTER precision — so you can fine-tune to a single character (the previously-missing "then char" mode). Page-text extend stays char (no offset model). |
 | 6 | **Double-tap = word, long-press = word, (triple-tap/drag = paragraph)** | tap count | — | ✅ double-tap + long-press both select a word (2026-06-25). Chrome word-selects on the 2nd tap, then abandons it by collapsing to the end (off-window quirk); the host re-assert restores it. The shim `click` handler DEFERS its tap-to-collapse ~300ms and the real `dblclick` cancels that timer, so the word selection survives (a timing-only guard was flaky ~40%). Triple-tap/paragraph not done. |
 | 7 | **Smart selection / entity expansion** (`TextClassifier`: phone, URL, address, date → entity actions in toolbar) | selection lands on an entity | — | ❌ not built (low priority) |
 | 8 | **Drag selected text** (long-press a selection → drag-and-drop to move) | long-press on existing selection | drop | ❌ not built (low priority) |
 | 9 | **Auto-scroll while dragging to a viewport edge** | handle dragged near top/bottom edge | finger leaves edge / up | ✅ works (2026-06-25, user-confirmed). The drag driver (`onMagnify`) detects the finger in the surface's top/bottom edge zone and sends `ime.autoscroll`; the shim scrolls the textarea (else the window) and re-reports geometry, flagged so the hide-on-scroll path doesn't fire. Scrolls per drag-move in the edge zone (not on a perfectly-held finger). **Fixed alongside:** the nav drawer's left-edge swipe was hijacking the edge drag — `EmbeddedSelectionDrag.dragging` (set by `onMagnify`) now suspends the drawer's `gesturesEnabled` while a handle is dragged. |
-| 10 | **Caret snapping to character boundaries** | always during caret/handle drag | — | ✅ via `offsetFromPoint` binary search + Y-clamp |
+| 10 | **Caret snapping to character boundaries** | always during caret/handle drag | — | ✅ via `offsetFromPoint` binary search + Y-clamp. **2026-06-26 fix:** the insertion-handle drag stopped moving the caret (loupe showed, caret frozen) — the unified `awaitEachGesture` consumed the pointer change BEFORE reading `positionChange()`, which returns `Offset.Zero` once consumed, so the accumulated finger position never advanced. Now reads `positionChangeIgnoreConsumed()` first. |
 | 11 | **Themed handle/caret drawables + blink** | always | — | ✅/⚠️ The host-drawn handles use `colorScheme.primary` — which IS the native `textSelectHandle`/accent color — so the handle drawables are themed (the actionable part). The caret bar + selection-highlight are drawn by Chrome inside the off-window surface: the caret already blinks natively, and theming its color/the highlight would mean injecting CSS into arbitrary third-party pages (intrusive; `::selection` was already ruled out as non-painting), so those are intentionally left to Chrome. |
 | 12 | **Insertion-handle Paste/Select-All mini-popup** | tap the insertion handle | tap elsewhere | ✅ built (2026-06-25). Tapping the bare insertion handle toggles a Paste/Select-All bar above the caret (`SelectionUiState.insertionPopup`, toggled from the handle's unified tap/drag gesture); tap-elsewhere/typing/blur/selection/scroll dismiss it. Fixed a latent bug: toolbar items now consume the *down* (not just the up) so the tap doesn't bleed through to the surface and blur the field. Device-verified (Select-all selects all text, field stays focused). |
 
@@ -142,56 +164,54 @@ fallback. Device-verified: textarea selection is stable; input select still work
 5. **Auto-scroll (#9), themed drawables/blink (#11).**
 6. Defer: smart selection (#7), drag-to-move (#8).
 
-## Open platform bug — full-screen round-trip kills highlight paint
+## ✅ FIXED — full-screen round-trip corrupted the embedded WebViews (2026-06-26)
 
-**Symptom.** Open an embedded field's page in its own full-screen activity
-(where the WebView renders in-window with a native keyboard), then `back` to the
-embedded version. From then on, **every** embedded surface in the `:napplet`
-process can no longer paint the native selection highlight. Critically:
+**Symptom (was).** Open an embedded field's page in its own full-screen activity,
+then `back` to the embedded version. From then on **every** embedded surface in the
+`:napplet` process was broken — and it was far more than the selection highlight: DOM
+reads returned empty (a field that visibly showed text reported `value == ""`, so typing
+prepended at offset 0 and backspace did nothing), DNS died (`ERR_NAME_NOT_RESOLVED`), the
+selection highlight stopped painting, and IME broke. The page showed a stale last frame
+over a functionally-dead renderer.
 
-- DOM selection is still correct (`window.getSelection()` returns the right range).
-- Our host-drawn toolbar still appears and **Copy/Cut/Paste still work**.
-- Only the **blue highlight rectangle render is dead** — and across *all* embeds,
-  not just the page that was opened full-screen.
+**Root cause — two process-global defects in the full-screen hosts** corrupting the
+shared multiprocess WebView state the embedded surfaces rely on. (Diagnosed with temporary
+logging: page console → logcat, all `onReceivedError`/`onReceivedHttpError`, and the shim's
+focused-field type/caret. The user's own insight — "the activity is gone but the service
+doesn't come back; am I using something from the activity?" — pointed straight at it.)
 
-This points at **global/process WebView state in `:napplet`**, not per-page
-state — likely Chrome's selection/popup controller (the same machinery behind
-`PopupTouchHandleDrawable` / `SelectionPopupControllerImpl`) entering a state
-where it has decided there is no valid window to render selection UI into, after
-the surface's window/`ViewAndroidDelegate` changed under it during the
-full-screen excursion.
+1. **`pauseTimers()`/`resumeTimers()` are PROCESS-GLOBAL** (they pause JS, layout and
+   parsing timers for *every* WebView in the process). `NappletBrowserActivity` /
+   `NappletHostActivity` `onPause`/`onResume` and `NappletHostService`'s embed
+   pause/resume all called them on their own lifecycle — so returning from full-screen
+   *froze* the embedded surfaces, which had no resume of their own. **Fix:** removed ALL
+   process-global timer calls; rely only on per-WebView `onPause()`/`onResume()` (which
+   pause just that surface's JS/DOM — still meets the napplet background-security goal).
+2. **`WebView.destroy()` while still attached to the window** corrupts the shared
+   multiprocess renderer (`cr_AwContents: "WebView.destroy() called while WebView is still
+   attached to window"`). **Fix:** `stopLoading()` + `(parent as ViewGroup).removeView(...)`
+   before `destroy()` in both full-screen activities' `onDestroy`.
 
-**What we already ruled out (do not re-try blind):**
+Device-verified: the round-trip no longer corrupts the embeds. This supersedes the old
+"recreate the session on return" hypothesis and the ruled-out attempts (`::selection` CSS,
+surface resize, focus-cycle, `MSG_WAKE`) — none were the real cause.
 
-- `::selection` CSS override — produced *no* paint at all (not even pre-bug).
-- Resizing the surface on return — no effect.
-- WebView focus-cycle (blur/refocus the page) — produced **ghost carets** (a
-  pink caret stuck at field start + a working blue one); still could not select.
-- Surface "wake" nudge + lifecycle re-dispatch (`MSG_WAKE`) — nothing changed;
-  reverted.
+## ✅ Embed WebViews follow the app theme (2026-06-26, separate concern)
 
-**Hypotheses to test next:**
-
-1. **Recreate the WebView (or the whole `:napplet` session) on return from
-   full-screen** instead of trying to revive it. Heaviest hammer, most likely to
-   work, but loses page state — acceptable as a fallback if scoped to "a
-   full-screen excursion happened."
-2. **Confirm process-global vs per-WebView.** Open two embeds, send one
-   full-screen, return — does the *other, untouched* embed also lose highlight?
-   (Summary says yes; re-confirm deterministically.) If process-global, the fix
-   must reset shared Chrome state, which realistically means #1.
-3. **Inspect the surface/window handoff.** Log the `SurfaceControlViewHost` /
-   `attachedSurfaceControl` identity before vs after; if the surface is
-   re-parented but Chrome kept the stale one, re-attaching a fresh
-   `SandboxedSdkView` may force Chrome to re-evaluate.
-4. **Avoid the in-window full-screen path entirely.** If the full-screen
-   "open in own window" reused a *different* WebView/rendering mode, the act of
-   switching modes is what corrupts shared state — consider keeping full-screen
-   on the same off-window surface (no native keyboard) so the mode never changes.
-
-Until pinned, treat this as a **WebView/Chromium off-window-surface limitation**:
-the app layer cannot currently restore the highlight without recreating the
-surface (#1).
+Not text-selection, but the same off-window surfaces: embedded (and full-screen) WebViews
+rendered web content in the *device* theme, ignoring the app's DARK/LIGHT preference.
+**Root cause:** WebView's dark decision (`prefers-color-scheme` via algorithmic darkening)
+reads the context's **theme** (`?android:attr/isLightTheme`), NOT just `Configuration.uiMode`
+— and the off-window `SurfaceControlViewHost` surface context carries neither. The old
+`applyNightMode` used `UiModeManager.setNightMode` (permission-gated no-op). **Fix:** build
+every WebView from `nightThemedContext()` — `ContextThemeWrapper(createConfigurationContext(
+<night|day>), Theme.DeviceDefault.DayNight)` for the resolved theme — shared in
+`nappletHost/.../EmbedWebViewTheme.kt`, used by both embed services + both full-screen
+activities. The full debugging arc (config-only context fails; `setForceDark` gone at
+targetSdk 37; `setApplicationNightMode` does nothing; it's the unthemed context, not the
+process boundary) is in the `embed-webview-prefers-color-scheme-limitation` memo. Upstream
+WebView is still buggy here (a cross-process SCVH WebView ignores `uiMode`); the
+theme-wrapper is the app-side workaround.
 
 ## How to test
 
@@ -207,9 +227,9 @@ Run it (full details in `tools/ime-test/README.md`):
 1. `cd tools/ime-test && python3 -m http.server 8765`
 2. Reach it: emulator → `http://10.0.2.2:8765`; USB device →
    `adb reverse tcp:8765 tcp:8765` then `http://localhost:8765`.
-3. Open that URL in the **in-app browser** (`BrowserScreen` address bar) to load
-   it as an *embedded* tab (the relay path). Opening the same URL full-screen and
-   pressing `back` is how you reproduce the highlight bug below.
+3. Open that URL in the **in-app browser** to load it as an *embedded* tab. (Opening
+   the same URL full-screen and pressing `back` used to reproduce the
+   highlight/corruption bug — now fixed; it's still the regression test for it.)
 
 Console log lines are tagged `[ImeDiag]` and surface in `adb logcat` (the
 `:napplet` process owns the WebView console). This is a dev tool — nothing under
