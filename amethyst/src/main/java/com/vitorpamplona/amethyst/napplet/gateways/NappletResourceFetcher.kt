@@ -23,6 +23,9 @@ package com.vitorpamplona.amethyst.napplet.gateways
 import android.util.Base64
 import com.vitorpamplona.amethyst.commons.napplet.NappletResource
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.okhttp.OnionLocationCache
+import com.vitorpamplona.amethyst.service.okhttp.OnionLocationInterceptor
+import com.vitorpamplona.amethyst.service.okhttp.OnionUrlRewriteInterceptor
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
@@ -57,6 +60,11 @@ import java.net.URLDecoder
 class NappletResourceFetcher(
     private val account: Account,
     private val torPort: () -> Int,
+    // Shared with the rest of the app so an `Onion-Location` learned via any
+    // OkHttp client (e.g. an NIP-11 fetch on a relay socket) transparently
+    // applies to napplet blob fetches too — and vice versa. Optional so unit
+    // tests can construct this without standing up the cache.
+    private val onionCache: OnionLocationCache? = null,
 ) {
     // Reused blob HTTP client, keyed by the active Tor port (see client()).
     private var cachedHttp: Pair<Int, OkHttpClient>? = null
@@ -149,12 +157,20 @@ class NappletResourceFetcher(
     private fun client(): OkHttpClient {
         val port = torPort()
         cachedHttp?.let { (cachedPort, client) -> if (cachedPort == port) return client }
-        val client =
-            if (port > 0) {
-                OkHttpClient.Builder().proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port))).build()
-            } else {
-                OkHttpClient()
-            }
+        // Both variants passively capture `Onion-Location` headers into the
+        // shared cache. The Tor-routed variant additionally rewrites outbound
+        // URLs to known `.onion`s so applet blob fetches over Tor avoid exit
+        // nodes when the destination has advertised an onion. Clearnet variant
+        // never rewrites (DNS would fail on `.onion`).
+        val builder = OkHttpClient.Builder()
+        if (port > 0) {
+            builder.proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port)))
+        }
+        onionCache?.let { builder.addInterceptor(OnionLocationInterceptor(it)) }
+        if (port > 0) {
+            onionCache?.let { builder.addInterceptor(OnionUrlRewriteInterceptor(it)) }
+        }
+        val client = builder.build()
         cachedHttp = port to client
         return client
     }

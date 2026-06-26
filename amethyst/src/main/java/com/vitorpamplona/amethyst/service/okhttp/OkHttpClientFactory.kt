@@ -32,6 +32,22 @@ import java.net.Proxy
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
+/**
+ * Builder for the general-purpose (non-relay) OkHttp client used by image
+ * downloads, NIP-96/Blossom uploads, NIP-05 lookups, LNURL/money, link
+ * previews, push registration, etc. Each [DualHttpClientManager] holds one
+ * of these and rebuilds clients on Tor proxy / mobile-data changes.
+ *
+ * [OnionLocationCache] is **required**: every OkHttp client minted by this
+ * factory installs [OnionLocationInterceptor] on the no-proxy and Tor-proxied
+ * variants so any HTTP/WebSocket response that carries an `Onion-Location`
+ * header (NIP-11 docs, image hosts, blossom servers, NIP-96 endpoints, LNURL
+ * providers, anything) populates the cache. Tor-proxied clients additionally
+ * install [OnionUrlRewriteInterceptor] so subsequent requests are rerouted
+ * to the cached `.onion` and avoid exit nodes entirely. Treating the cache as
+ * required (not nullable) prevents a future call site from silently disabling
+ * onion-routing for an entire HTTP role.
+ */
 class OkHttpClientFactory(
     keyCache: EncryptionKeyCache,
     val userAgent: String,
@@ -43,7 +59,7 @@ class OkHttpClientFactory(
      * useful for tests or pre-configuration call sites.
      */
     val shouldBridgeBlossomCache: (() -> Boolean)? = null,
-    private val onionCache: OnionLocationCache? = null,
+    private val onionCache: OnionLocationCache,
 ) {
     // val logging = LoggingInterceptor()
     val keyDecryptor = EncryptedBlobInterceptor(keyCache)
@@ -92,7 +108,11 @@ class OkHttpClientFactory(
             }
             // .addNetworkInterceptor(logging)
             .addNetworkInterceptor(keyDecryptor)
-            .apply { onionCache?.let { addInterceptor(OnionLocationInterceptor(it)) } }
+            // Passively populates [onionCache] from any HTTP/WebSocket response
+            // that carries an `Onion-Location` header. Application-scoped so the
+            // cache key is always the original clearnet host (see kdoc on
+            // [OnionLocationInterceptor]).
+            .addInterceptor(OnionLocationInterceptor(onionCache))
             .build()
 
     private var lastProxy: Proxy? = null
@@ -109,7 +129,10 @@ class OkHttpClientFactory(
         return rootClient
             .newBuilder()
             .proxy(proxy)
-            .apply { if (proxy != null) onionCache?.let { addInterceptor(OnionUrlRewriteInterceptor(it)) } }
+            // Only the Tor-routed variant rewrites outbound URLs to known
+            // `.onion`s — clearnet clients must never try to resolve `.onion`
+            // (DNS would fail, and we don't want fingerprintable lookups).
+            .apply { if (proxy != null) addInterceptor(OnionUrlRewriteInterceptor(onionCache)) }
             .connectTimeout(Duration.ofSeconds(seconds.toLong()))
             .readTimeout(Duration.ofSeconds(seconds.toLong() * 3))
             .writeTimeout(Duration.ofSeconds(seconds.toLong() * 3))

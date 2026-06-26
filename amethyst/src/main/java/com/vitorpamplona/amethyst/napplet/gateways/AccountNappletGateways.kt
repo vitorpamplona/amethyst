@@ -73,7 +73,11 @@ class AccountNappletGateways(
     private val torPort: () -> Int,
 ) {
     private val consentSummary = NappletConsentSummary(context)
-    private val resourceFetcher = NappletResourceFetcher(account, torPort)
+
+    // Share the app-wide OnionLocationCache so any `Onion-Location` learned
+    // elsewhere (NIP-11 docs, relay handshakes, image hosts, money endpoints)
+    // also benefits napplet HTTP blob fetches over Tor — and vice versa.
+    private val resourceFetcher = NappletResourceFetcher(account, torPort, Amethyst.instance.onionLocationCache)
     private val identityReader = AccountIdentityReader(account)
 
     fun broker(): NappletBroker {
