@@ -54,6 +54,9 @@ class NamedSiteEvent(
 
     fun icon() = tags.siteIcon()
 
+    /** The bundled blob that best looks like this site's app icon, or null. See [NappletIconPath]. */
+    fun iconBlob() = NappletIconPath.choose(paths())
+
     fun identifier() = dTag()
 
     companion object {
