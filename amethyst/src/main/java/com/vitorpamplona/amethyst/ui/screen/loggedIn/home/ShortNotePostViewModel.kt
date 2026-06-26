@@ -195,9 +195,9 @@ open class ShortNotePostViewModel :
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
-                draftNote = account.getOrCreateDraftNote(draftTag.current)
                 // don't save the first
                 if (it > 0) {
+                    draftNote = account.getOrCreateDraftNote(draftTag.current)
                     accountViewModel.launchSigner {
                         sendDraftSync()
                     }
