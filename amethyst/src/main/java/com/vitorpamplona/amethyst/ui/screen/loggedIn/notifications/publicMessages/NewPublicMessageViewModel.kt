@@ -130,10 +130,6 @@ class NewPublicMessageViewModel :
     IExpiration {
     val draftTag = DraftTagState()
 
-    // Strong reference to the saved draft so LocalCache's weak reference can't collect it
-    // before we get a chance to delete it (see Account.createAndSendDraftIgnoreErrors).
-    var draftNote: AddressableNote? = null
-
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
@@ -262,7 +258,7 @@ class NewPublicMessageViewModel :
         val noteAuthor = draft.author
 
         if (noteEvent is DraftWrapEvent && noteAuthor != null) {
-            draftNote = draft as? AddressableNote
+            draftTag.held(draft as? AddressableNote)
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -346,7 +342,7 @@ class NewPublicMessageViewModel :
             }
         }
 
-        val draftToDelete = draftNote
+        val draftToDelete = draftTag.note
         cancel()
 
         accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
@@ -357,7 +353,7 @@ class NewPublicMessageViewModel :
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftTag.note)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val broadcast = mutableSetOf<Event>()
             nip95attachments.forEach {
@@ -366,7 +362,7 @@ class NewPublicMessageViewModel :
             }
 
             val template = createTemplate()
-            draftNote = accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, broadcast)
+            draftTag.held(accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, broadcast))
         }
     }
 
@@ -525,7 +521,6 @@ class NewPublicMessageViewModel :
 
     fun cancel() {
         draftTag.rotate()
-        draftNote = null
 
         toUsers.setTextAndPlaceCursorAtEnd("")
         message.setTextAndPlaceCursorAtEnd("")

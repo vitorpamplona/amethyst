@@ -129,10 +129,6 @@ class LongFormPostViewModel :
     IExpiration {
     val draftTag = DraftTagState()
 
-    // Strong reference to the saved draft so LocalCache's weak reference can't collect it
-    // before we get a chance to delete it (see Account.createAndSendDraftIgnoreErrors).
-    var draftNote: AddressableNote? = null
-
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
@@ -237,7 +233,7 @@ class LongFormPostViewModel :
         val noteAuthor = draft?.author
 
         if (draft != null && noteEvent is DraftWrapEvent && noteAuthor != null) {
-            draftNote = draft as? AddressableNote
+            draftTag.held(draft as? AddressableNote)
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -330,7 +326,7 @@ class LongFormPostViewModel :
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
 
-        val draftToDelete = draftNote
+        val draftToDelete = draftTag.note
         cancel()
 
         if (accountViewModel.settings.useTrackedBroadcasts()) {
@@ -354,10 +350,10 @@ class LongFormPostViewModel :
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank() && title.text.isBlank()) {
-            accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftTag.note)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val template = createTemplate() ?: return
-            draftNote = accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, emptySet())
+            draftTag.held(accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, emptySet()))
         }
     }
 
@@ -583,7 +579,6 @@ class LongFormPostViewModel :
 
     fun cancel() {
         draftTag.rotate()
-        draftNote = null
 
         title = TextFieldValue("")
         summary = TextFieldValue("")

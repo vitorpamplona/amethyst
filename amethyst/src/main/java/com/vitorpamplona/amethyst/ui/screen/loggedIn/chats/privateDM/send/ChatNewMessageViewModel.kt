@@ -127,10 +127,6 @@ class ChatNewMessageViewModel :
     IExpiration {
     val draftTag = DraftTagState()
 
-    // Strong reference to the saved draft so LocalCache's weak reference can't collect it
-    // before we get a chance to delete it (see Account.createAndSendDraftIgnoreErrors).
-    var draftNote: AddressableNote? = null
-
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
@@ -327,7 +323,7 @@ class ChatNewMessageViewModel :
         val noteAuthor = draft.author
 
         if (noteEvent is DraftWrapEvent && noteAuthor != null) {
-            draftNote = draft as? AddressableNote
+            draftTag.held(draft as? AddressableNote)
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -424,7 +420,7 @@ class ChatNewMessageViewModel :
     }
 
     suspend fun sendPostSync() {
-        val draftToDelete = draftNote
+        val draftToDelete = draftTag.note
         innerSendPost(null)
         cancel()
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
@@ -434,7 +430,7 @@ class ChatNewMessageViewModel :
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            account.deleteDraftIgnoreErrors(draftNote)
+            account.deleteDraftIgnoreErrors(draftTag.note)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             innerSendPost(draftTag.current)
         }
@@ -623,7 +619,7 @@ class ChatNewMessageViewModel :
             }
 
         if (draftTag != null) {
-            draftNote = accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag, template)
+            this.draftTag.held(accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag, template))
         } else {
             accountViewModel.account.sendNip17PrivateMessage(template)
         }
@@ -645,7 +641,6 @@ class ChatNewMessageViewModel :
 
     fun cancel() {
         draftTag.rotate()
-        draftNote = null
 
         message.setTextAndPlaceCursorAtEnd("")
         subject.setTextAndPlaceCursorAtEnd("")

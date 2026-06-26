@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.model.AddressableNote
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
@@ -36,6 +37,16 @@ class DraftTagState {
     var current: String by mutableStateOf(newTag())
     var usedDraftTags by mutableStateOf(setOf(current))
 
+    /**
+     * Strong reference to the AddressableNote backing the current draft tag. LocalCache only
+     * keeps weak references to addressables, so without an owner holding the note it can be
+     * garbage-collected and a later deletion would not find it locally, orphaning the draft on
+     * the relays. Its lifecycle is tied to the tag: [held] when a draft is saved or an existing
+     * draft is loaded, and dropped by [rotate] when we move on to a fresh draft.
+     */
+    var note: AddressableNote? = null
+        private set
+
     private val _versions = MutableStateFlow(0)
 
     @OptIn(FlowPreview::class)
@@ -46,12 +57,18 @@ class DraftTagState {
 
     fun rotate() {
         set(newTag())
+        note = null
         _versions.update { 0 }
     }
 
     fun set(existingTag: String) {
         current = existingTag
         usedDraftTags += existingTag
+    }
+
+    /** Keeps a strong reference to the note that backs the current draft. */
+    fun held(note: AddressableNote?) {
+        this.note = note
     }
 
     fun newVersion() {

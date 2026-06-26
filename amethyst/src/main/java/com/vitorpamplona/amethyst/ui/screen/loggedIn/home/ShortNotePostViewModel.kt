@@ -184,10 +184,6 @@ open class ShortNotePostViewModel :
     IExpiration {
     val draftTag = DraftTagState()
 
-    // Strong reference to the saved draft so LocalCache's weak reference can't collect it
-    // before we get a chance to delete it (see Account.createAndSendDraftIgnoreErrors).
-    var draftNote: AddressableNote? = null
-
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
@@ -483,7 +479,7 @@ open class ShortNotePostViewModel :
         val noteAuthor = draft?.author
 
         if (draft != null && noteEvent is DraftWrapEvent && noteAuthor != null) {
-            draftNote = draft as? AddressableNote
+            draftTag.held(draft as? AddressableNote)
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -895,7 +891,7 @@ open class ShortNotePostViewModel :
             }
         }
 
-        val draftToDelete = draftNote
+        val draftToDelete = draftTag.note
         val anonymous = wantsAnonymousPost
         val scheduledFor = scheduledForSec
         val privately = wantsPrivateNote
@@ -973,7 +969,7 @@ open class ShortNotePostViewModel :
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftTag.note)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {
@@ -982,7 +978,7 @@ open class ShortNotePostViewModel :
             }
 
             val template = createTemplate() ?: return
-            draftNote = accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+            draftTag.held(accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments))
         }
     }
 
@@ -1318,7 +1314,6 @@ open class ShortNotePostViewModel :
 
     open fun cancel() {
         draftTag.rotate()
-        draftNote = null
 
         message.setTextAndPlaceCursorAtEnd("")
 
