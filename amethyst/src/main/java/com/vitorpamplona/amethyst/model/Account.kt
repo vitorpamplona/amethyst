@@ -2089,7 +2089,7 @@ class Account(
         }
     }
 
-    suspend fun deleteDraftIgnoreErrors(draftNote: AddressableNote) {
+    suspend fun deleteDraftIgnoreErrors(draftNote: AddressableNote?) {
         try {
             deleteDraftInner(draftNote)
         } catch (e: Exception) {
@@ -2097,14 +2097,13 @@ class Account(
         }
     }
 
-    suspend fun deleteDraftInner(draftNote: AddressableNote) {
+    suspend fun deleteDraftInner(draftNote: AddressableNote?) {
         if (!isWriteable()) return
 
-        // Only a real, still-present draft needs a deletion signed. The note is always non-null
-        // (it's the live cache note for the tag), but its event is null when no draft was ever
-        // saved (e.g. auto-drafts disabled) and already empty once it has been deleted — in both
-        // cases there is nothing to delete, so we avoid prompting the signer.
-        val draftEvent = draftNote.event as? DraftWrapEvent
+        // Only a real, still-present draft needs a deletion signed. The note's event is null when
+        // no draft was ever saved (e.g. auto-drafts disabled) and already empty once it has been
+        // deleted — in both cases there is nothing to delete, so we avoid prompting the signer.
+        val draftEvent = draftNote?.event as? DraftWrapEvent
         if (draftEvent == null || draftEvent.isDeleted()) return
 
         val draftTag = draftNote.dTag()

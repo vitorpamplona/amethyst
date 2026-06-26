@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -126,12 +127,18 @@ class ChatNewMessageViewModel :
     IExpiration {
     val draftTag = DraftTagState()
 
+    // Strong reference to the live cache note for the current draft tag (derived from the
+    // versions flow below), so LocalCache cannot weakly collect it before a deletion needs it.
+    var draftNote: AddressableNote? = null
+        private set
+
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
+                draftNote = account.getOrCreateDraftNote(draftTag.current)
                 // don't save the first
                 if (it > 0) {
                     accountViewModel.launchSigner {
@@ -257,7 +264,6 @@ class ChatNewMessageViewModel :
     fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
         this.account = accountVM.account
-        draftTag.start(account::getOrCreateDraftNote)
         this.canAddInvoice = hasLnAddress()
         this.canAddZapRaiser = hasLnAddress()
 
@@ -328,6 +334,7 @@ class ChatNewMessageViewModel :
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
                     if (oldTag != null) {
                         draftTag.set(oldTag)
+                        draftNote = account.getOrCreateDraftNote(oldTag)
                     }
                     loadFromDraft(innerNote)
                 }
@@ -419,7 +426,7 @@ class ChatNewMessageViewModel :
     }
 
     suspend fun sendPostSync() {
-        val draftToDelete = draftTag.note
+        val draftToDelete = draftNote
         innerSendPost(null)
         cancel()
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
@@ -429,7 +436,7 @@ class ChatNewMessageViewModel :
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            account.deleteDraftIgnoreErrors(draftTag.note)
+            account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             innerSendPost(draftTag.current)
         }

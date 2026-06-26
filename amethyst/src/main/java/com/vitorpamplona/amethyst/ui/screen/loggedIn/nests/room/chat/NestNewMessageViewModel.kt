@@ -118,9 +118,15 @@ open class NestNewMessageViewModel :
     IExpiration {
     val draftTag = DraftTagState()
 
+    // Strong reference to the live cache note for the current draft tag (derived from the
+    // versions flow below), so LocalCache cannot weakly collect it before a deletion needs it.
+    var draftNote: AddressableNote? = null
+        private set
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
+                draftNote = account.getOrCreateDraftNote(draftTag.current)
                 // don't save the first
                 if (it > 0) {
                     accountViewModel.launchSigner {
@@ -190,7 +196,6 @@ open class NestNewMessageViewModel :
     open fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
         this.account = accountVM.account
-        draftTag.start(account::getOrCreateDraftNote)
         this.canAddInvoice = hasLnAddress()
         this.canAddZapRaiser = hasLnAddress()
 
@@ -236,6 +241,7 @@ open class NestNewMessageViewModel :
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
                     if (oldTag != null) {
                         draftTag.set(oldTag)
+                        draftNote = account.getOrCreateDraftNote(oldTag)
                     }
                     loadFromDraft(innerNote)
                 }
@@ -304,7 +310,7 @@ open class NestNewMessageViewModel :
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
 
-        val draftToDelete = draftTag.note
+        val draftToDelete = draftNote
         cancel()
 
         // Broadcast to the user's default relays — the nest has no
@@ -319,7 +325,7 @@ open class NestNewMessageViewModel :
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            account.deleteDraftIgnoreErrors(draftTag.note)
+            account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {

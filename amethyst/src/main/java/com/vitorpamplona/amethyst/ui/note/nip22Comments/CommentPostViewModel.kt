@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -136,9 +137,15 @@ open class CommentPostViewModel :
     IExpiration {
     val draftTag = DraftTagState()
 
+    // Strong reference to the live cache note for the current draft tag (derived from the
+    // versions flow below), so LocalCache cannot weakly collect it before a deletion needs it.
+    var draftNote: AddressableNote? = null
+        private set
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
+                draftNote = account.getOrCreateDraftNote(draftTag.current)
                 // don't save the first
                 if (it > 0) {
                     sendDraftSync()
@@ -237,7 +244,6 @@ open class CommentPostViewModel :
     open fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
         this.account = accountVM.account
-        draftTag.start(account::getOrCreateDraftNote)
         this.canAddInvoice = hasLnAddress()
         this.canAddZapRaiser = hasLnAddress()
 
@@ -262,6 +268,7 @@ open class CommentPostViewModel :
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
                     if (oldTag != null) {
                         draftTag.set(oldTag)
+                        draftNote = account.getOrCreateDraftNote(oldTag)
                     }
                     loadFromDraft(innerNote)
                 }
@@ -490,7 +497,7 @@ open class CommentPostViewModel :
             }
         }
 
-        val draftToDelete = draftTag.note
+        val draftToDelete = draftNote
         val anonymous = wantsAnonymousPost
         cancel()
 
@@ -507,7 +514,7 @@ open class CommentPostViewModel :
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            accountViewModel.account.deleteDraftIgnoreErrors(draftTag.note)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {

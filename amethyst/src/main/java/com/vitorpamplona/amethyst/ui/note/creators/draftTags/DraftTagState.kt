@@ -24,7 +24,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.vitorpamplona.amethyst.model.AddressableNote
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
@@ -37,19 +36,6 @@ class DraftTagState {
     var current: String by mutableStateOf(newTag())
     var usedDraftTags by mutableStateOf(setOf(current))
 
-    private var noteBuilder: ((tag: String) -> AddressableNote)? = null
-
-    /**
-     * Strong reference to the AddressableNote backing the [current] draft tag, kept alive so
-     * LocalCache's weak reference can't garbage-collect it before a deletion needs it (which
-     * would orphan the draft on the relays). It is the live cached note for the tag, so its
-     * `event` reflects the draft automatically as it is saved or removed — no need to re-assign
-     * it after each save. Rebuilt whenever the tag changes ([set]/[rotate]); valid once [start]
-     * wires the builder, which happens when the composer is initialized.
-     */
-    lateinit var note: AddressableNote
-        private set
-
     private val _versions = MutableStateFlow(0)
 
     @OptIn(FlowPreview::class)
@@ -57,12 +43,6 @@ class DraftTagState {
 
     @OptIn(ExperimentalUuidApi::class)
     fun newTag() = Uuid.random().toString()
-
-    /** Wires the tag -> note builder and builds the note for the current tag. */
-    fun start(builder: (tag: String) -> AddressableNote) {
-        noteBuilder = builder
-        note = builder(current)
-    }
 
     fun rotate() {
         set(newTag())
@@ -72,7 +52,6 @@ class DraftTagState {
     fun set(existingTag: String) {
         current = existingTag
         usedDraftTags += existingTag
-        noteBuilder?.let { note = it(existingTag) }
     }
 
     fun newVersion() {
