@@ -190,6 +190,7 @@ open class NestNewMessageViewModel :
     open fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
         this.account = accountVM.account
+        draftTag.start(account::getOrCreateDraftNote)
         this.canAddInvoice = hasLnAddress()
         this.canAddZapRaiser = hasLnAddress()
 
@@ -230,7 +231,6 @@ open class NestNewMessageViewModel :
         val noteAuthor = draft.author
 
         if (noteEvent is DraftWrapEvent && noteAuthor != null) {
-            draftTag.held(draft as? AddressableNote)
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -328,7 +328,7 @@ open class NestNewMessageViewModel :
             }
 
             val template = createTemplate() ?: return
-            draftTag.held(accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments))
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
         }
     }
 

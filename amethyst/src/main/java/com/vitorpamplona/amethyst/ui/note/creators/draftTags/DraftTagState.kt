@@ -37,14 +37,17 @@ class DraftTagState {
     var current: String by mutableStateOf(newTag())
     var usedDraftTags by mutableStateOf(setOf(current))
 
+    private var noteBuilder: ((tag: String) -> AddressableNote)? = null
+
     /**
-     * Strong reference to the AddressableNote backing the current draft tag. LocalCache only
-     * keeps weak references to addressables, so without an owner holding the note it can be
-     * garbage-collected and a later deletion would not find it locally, orphaning the draft on
-     * the relays. Its lifecycle is tied to the tag: [held] when a draft is saved or an existing
-     * draft is loaded, and dropped by [rotate] when we move on to a fresh draft.
+     * Strong reference to the AddressableNote backing the [current] draft tag, kept alive so
+     * LocalCache's weak reference can't garbage-collect it before a deletion needs it (which
+     * would orphan the draft on the relays). It is the live cached note for the tag, so its
+     * `event` reflects the draft automatically as it is saved or removed — no need to re-assign
+     * it after each save. Rebuilt whenever the tag changes ([set]/[rotate]); valid once [start]
+     * wires the builder, which happens when the composer is initialized.
      */
-    var note: AddressableNote? = null
+    lateinit var note: AddressableNote
         private set
 
     private val _versions = MutableStateFlow(0)
@@ -55,20 +58,21 @@ class DraftTagState {
     @OptIn(ExperimentalUuidApi::class)
     fun newTag() = Uuid.random().toString()
 
+    /** Wires the tag -> note builder and builds the note for the current tag. */
+    fun start(builder: (tag: String) -> AddressableNote) {
+        noteBuilder = builder
+        note = builder(current)
+    }
+
     fun rotate() {
         set(newTag())
-        note = null
         _versions.update { 0 }
     }
 
     fun set(existingTag: String) {
         current = existingTag
         usedDraftTags += existingTag
-    }
-
-    /** Keeps a strong reference to the note that backs the current draft. */
-    fun held(note: AddressableNote?) {
-        this.note = note
+        noteBuilder?.let { note = it(existingTag) }
     }
 
     fun newVersion() {

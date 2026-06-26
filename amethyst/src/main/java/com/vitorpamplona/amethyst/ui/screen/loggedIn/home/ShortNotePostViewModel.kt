@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -458,6 +457,7 @@ open class ShortNotePostViewModel :
     open fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
         this.account = accountVM.account
+        draftTag.start(account::getOrCreateDraftNote)
         this.canAddInvoice = hasLnAddress()
         this.canAddZapRaiser = hasLnAddress()
 
@@ -479,7 +479,6 @@ open class ShortNotePostViewModel :
         val noteAuthor = draft?.author
 
         if (draft != null && noteEvent is DraftWrapEvent && noteAuthor != null) {
-            draftTag.held(draft as? AddressableNote)
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -978,7 +977,7 @@ open class ShortNotePostViewModel :
             }
 
             val template = createTemplate() ?: return
-            draftTag.held(accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments))
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
         }
     }
 

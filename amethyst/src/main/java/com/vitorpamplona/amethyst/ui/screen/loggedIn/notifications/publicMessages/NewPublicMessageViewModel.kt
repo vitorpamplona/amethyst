@@ -38,7 +38,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -209,6 +208,7 @@ class NewPublicMessageViewModel :
     fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
         this.account = accountVM.account
+        draftTag.start(account::getOrCreateDraftNote)
         this.canAddInvoice = hasLnAddress()
         this.canAddZapRaiser = hasLnAddress()
 
@@ -258,7 +258,6 @@ class NewPublicMessageViewModel :
         val noteAuthor = draft.author
 
         if (noteEvent is DraftWrapEvent && noteAuthor != null) {
-            draftTag.held(draft as? AddressableNote)
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -362,7 +361,7 @@ class NewPublicMessageViewModel :
             }
 
             val template = createTemplate()
-            draftTag.held(accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, broadcast))
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, broadcast)
         }
     }
 

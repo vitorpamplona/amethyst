@@ -39,7 +39,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -238,6 +237,7 @@ open class CommentPostViewModel :
     open fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
         this.account = accountVM.account
+        draftTag.start(account::getOrCreateDraftNote)
         this.canAddInvoice = hasLnAddress()
         this.canAddZapRaiser = hasLnAddress()
 
@@ -257,7 +257,6 @@ open class CommentPostViewModel :
         val noteAuthor = draft.author
 
         if (noteEvent is DraftWrapEvent && noteAuthor != null) {
-            draftTag.held(draft as? AddressableNote)
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -517,7 +516,7 @@ open class CommentPostViewModel :
             }
 
             val template = createTemplate() ?: return
-            draftTag.held(accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments))
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
         }
     }
 
