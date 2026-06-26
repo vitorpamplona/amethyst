@@ -629,11 +629,7 @@
     <string name="nsites">nSites</string>
     <string name="nsite_none_found">尚未找到nSite。</string>
     <string name="browser">浏览器</string>
-    <string name="browser_address_hint">搜索或输入地址</string>
     <string name="browser_reload">重新加载</string>
-    <string name="browser_console_title_short">控制台</string>
-    <string name="browser_console_title">控制台(%1$d)</string>
-    <string name="browser_console_clear">清除</string>
     <string name="browser_tor_on">正通过 Tor 加载。点击使用 open web。</string>
     <string name="browser_tor_off">正通过 open web 加载 Tor。点击使用 Tor。</string>
     <string name="browser_unsupported">应用内浏览器需要 Android 11 或更高版本。</string>
@@ -666,7 +662,6 @@
     <string name="napplet_permissions_forget">忘记此 nApplet</string>
     <string name="napplet_permissions_blocked">已阻止</string>
     <string name="napplet_permissions_revoke">撤销</string>
-    <string name="napplet_untitled">未命名nApplet</string>
     <string name="napplet_none_found">尚未找到 nApplets 。</string>
     <string name="napplet_fallback_title">nApplet %1$s…</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
@@ -3087,44 +3082,4 @@
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">从 %1$s 的闪电发票获取解析JSON 发生错误。请检查用户的闪电设置</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">无法创建闪电发票。来自 %1$s 的消息：%2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">无法从 %1$s 创建闪电发票：在生成的 JSON 中找不到付款要求元素。</string>
-
-    <string name="always_on_notif_channel_name">中继连接服务</string>
-    <string name="and_more"> +%1$s</string>
-    <string name="app_notification_private_message">收到新通知</string>
-    <string name="audio_visualizer_search_keywords">音频, 可视化, 频谱, 条形, 波形, 径向, 极光, 动画</string>
-    <string name="backup_keys_search_keywords">nsec, 私钥, 种子, 助记词, 导出</string>
-    <string name="bottom_bar_search_keywords">导航, 标签, 导航栏</string>
-    <string name="calendar_reminder_search_keywords">日历, 活动, 提醒, RSVP</string>
-    <string name="call_settings_search_keywords">WebRTC, 视频通话, 语音通话, 通话</string>
-    <string name="child_safety_search_keywords">法律, 安全, 滥用, CSAE, 儿童保护</string>
-    <string name="compose_search_keywords">草稿, 发布, 编辑器, 自动保存</string>
-    <string name="event_sync_search_keywords">Negentropy, 同步, 对账, 回填</string>
-    <string name="favorite_dvms_search_keywords">DVM, 数据自动售货机, 算法, 推送</string>
-    <string name="github">Github Gist w/ Proof</string>
-    <string name="home_tabs_search_keywords">标签, 推送, 帖子, 对话</string>
-    <string name="import_follows_search_keywords">联系人, 关注, 关注列表, 导入</string>
-    <string name="mastodon">Mastodon Post ID w/ Proof</string>
-    <string name="media_servers_search_keywords">Blossom, 上传, 图片, 照片, 文件, CDN, 存储</string>
-    <string name="namecoin_search_keywords">namecoin, DNS, 身份, 名称</string>
-    <string name="nests_servers_search_keywords">音频房间, 直播, 空间, 房间</string>
-    <string name="notification_settings_search_keywords">推送, 提醒, 声音, 振动</string>
-    <string name="ots_explorer_search_keywords">OpenTimestamps, 时间戳, OTS, 证明</string>
-    <string name="payment_targets_search_keywords">zap 分配, 分配, 收款人, 转发 zap</string>
-    <string name="privacy_options_search_keywords">Tor, Orbot, 代理, 隐私, 匿名</string>
-    <string name="privacy_policy_search_keywords">法律, 条款, 服务条款, 政策, GDPR</string>
-    <string name="profile_badges_search_keywords">徽章, 奖励</string>
-    <string name="profile_ui_search_keywords">个人资料, 布局</string>
-    <string name="reactions_search_keywords">表情, 点赞, 反应</string>
-    <string name="reactions_settings_search_keywords">表情, 反应, 点赞</string>
-    <string name="relay_setup_search_keywords">中继, 收件箱, 发件箱, 连接, 服务器</string>
-    <string name="request_to_vanish_search_keywords">删除账号, 消失, GDPR</string>
-    <string name="reset_marmot_search_keywords">MLS, 群聊, 消息, 重置</string>
-    <string name="security_filters_search_keywords">垃圾信息, 屏蔽, 静音, 过滤, 警告</string>
-    <string name="translations_search_keywords">语言, 翻译, 地区</string>
-    <string name="twitter">X Status w/ Proof</string>
-    <string name="ui_preferences_search_keywords">深色模式, 浅色模式, 主题, 字体大小, 语言, 外观</string>
-    <string name="vanish_history_search_keywords">删除, 删除事件</string>
-    <string name="video_player_search_keywords">视频, 播放器, 播放, 自动播放, 静音</string>
-    <string name="zaps_search_keywords">闪电网络, 聪, 打赏, 钱包, 金额</string>
-
 </resources>
