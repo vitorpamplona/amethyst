@@ -72,6 +72,8 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -268,6 +270,8 @@ class EventNotificationConsumer(
             is PollEvent,
             is GitPatchEvent,
             is GitIssueEvent,
+            is GitPullRequestEvent,
+            is GitPullRequestUpdateEvent,
             is HighlightEvent,
             is LongTextNoteEvent,
             is WikiNoteEvent,

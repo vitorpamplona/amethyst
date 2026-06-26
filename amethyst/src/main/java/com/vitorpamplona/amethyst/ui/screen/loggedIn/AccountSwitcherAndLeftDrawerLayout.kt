@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerContent
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSelectionDrag
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,9 +91,14 @@ fun AccountSwitcherAndLeftDrawerLayout(
             dest.hasRoute<Route.Home>() || dest.hasRoute<Route.Message>()
         } ?: false
     val drawerGesturesEnabled =
-        !isTabPagerRoute ||
-            nav.drawerState.isOpen ||
-            nav.drawerState.targetValue != nav.drawerState.currentValue
+        (
+            !isTabPagerRoute ||
+                nav.drawerState.isOpen ||
+                nav.drawerState.targetValue != nav.drawerState.currentValue
+        ) &&
+            // Suspend the left-edge swipe while a selection/caret handle is dragged over an embedded surface,
+            // so a handle drag near the left edge (or the auto-scroll edge drag) doesn't open the drawer.
+            !EmbeddedSelectionDrag.dragging
 
     ModalNavigationDrawer(
         drawerState = nav.drawerState,

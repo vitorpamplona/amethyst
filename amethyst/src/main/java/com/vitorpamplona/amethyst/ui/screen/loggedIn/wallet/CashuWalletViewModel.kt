@@ -39,13 +39,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 sealed class CashuWalletCreateState {
     data object Idle : CashuWalletCreateState()
 
     data object Saving : CashuWalletCreateState()
-
-    data object Success : CashuWalletCreateState()
 
     data class Error(
         val message: String,
@@ -448,70 +448,70 @@ class CashuWalletViewModel : ViewModel() {
         _restoreState.value = RestoreFlowState.Idle
     }
 
-    /** What to do with the wallet's P2PK key during a save. */
-    enum class P2pkKeyMode {
-        /** Keep the existing key from the on-cache wallet (edit only). */
-        KeepCurrent,
+    /**
+     * Serialises [publishMints] so two near-simultaneous mint adds can't both
+     * reach [CashuWalletOps.publishWalletEvents] before the first has cached
+     * its key. Without it, the second add — firing before the freshly created
+     * kind:17375 round-trips back into `_walletEvent` — would read a null key
+     * and generate a *second* one, rotating the P2PK key and orphaning any
+     * inbound nutzaps locked to the first.
+     */
+    private val publishMutex = Mutex()
 
-        /** Generate a fresh random key — invalidates inbound nutzaps locked to the old one. */
-        AutoGenerate,
+    /**
+     * The P2PK key in use for the wallet currently being edited on screen.
+     * Set on the first successful publish (inside [publishMutex]); reused by
+     * every later add/remove so the nutzap key stays put across changes.
+     */
+    private var sessionPrivkeyHex: String? = null
 
-        /** Use a user-pasted hex key. */
-        Manual,
-    }
-
-    fun saveWallet(
-        mints: List<String>,
-        keyMode: P2pkKeyMode,
-        manualPrivkey: String? = null,
-    ) {
+    /**
+     * Publish (or re-publish) the wallet's kind:17375 + kind:10019 with the
+     * given mint list. The Add/Edit screen has no Save button — the wallet is
+     * created the instant the first mint is added and kept in sync on every
+     * subsequent add/remove, so this runs on each list change.
+     *
+     * Key handling, in priority order:
+     *   1. [sessionPrivkeyHex] — the key from a publish we already did this
+     *      session (covers rapid successive adds before the event round-trips).
+     *   2. [CashuWalletState.exportP2pkPrivkeyHex] — the existing wallet's key
+     *      when editing a wallet that was already on cache when the screen
+     *      opened.
+     *   3. null → [CashuWalletOps.publishWalletEvents] generates a fresh key
+     *      (a genuinely new wallet).
+     *
+     * An empty list is a no-op: a NIP-60 wallet must advertise at least one
+     * mint, so removing the last mint leaves the previously published config
+     * untouched rather than publishing an empty, unusable wallet.
+     */
+    fun publishMints(mints: List<String>) {
         val vm = accountViewModel ?: return
         val acc = account ?: return
-
-        if (mints.isEmpty()) {
-            _createState.value = CashuWalletCreateState.Error("Add at least one mint")
-            return
-        }
-        if (keyMode == P2pkKeyMode.Manual && manualPrivkey.isNullOrBlank()) {
-            _createState.value = CashuWalletCreateState.Error("Paste a P2PK private key")
-            return
-        }
+        if (mints.isEmpty()) return
 
         _createState.value = CashuWalletCreateState.Saving
         vm.launchSigner {
-            try {
-                val privkey: String? =
-                    when (keyMode) {
-                        P2pkKeyMode.KeepCurrent -> {
-                            val existing = state.exportP2pkPrivkeyHex()
-                            if (existing == null) {
-                                _createState.value =
-                                    CashuWalletCreateState.Error(
-                                        "Could not read the existing wallet key. " +
-                                            "Use auto-generate or paste a key instead.",
-                                    )
-                                return@launchSigner
-                            }
-                            existing
-                        }
-                        P2pkKeyMode.AutoGenerate -> null // ops generates one
-                        P2pkKeyMode.Manual -> manualPrivkey?.trim()
-                    }
-                ops.publishWalletEvents(
-                    mints = mints,
-                    p2pkPrivkeyHex = privkey,
-                    // Advertise our NIP-65 inbox relays as the nutzap relays,
-                    // so senders publish kind:9321 where we read incoming
-                    // events (NIP-65 outbox model). The kind:10019 default
-                    // copies the inbox relay list, not outbox; the wallet
-                    // still subscribes to a wider inbox + DM + tags set.
-                    nutzapRelays =
-                        acc.notificationRelays.flow.value
-                            .toList(),
-                )
-                _createState.value = CashuWalletCreateState.Success
-            } catch (e: Exception) {
-                _createState.value = CashuWalletCreateState.Error(describeMintError(e))
+            publishMutex.withLock {
+                try {
+                    val privkey = sessionPrivkeyHex ?: state.exportP2pkPrivkeyHex()
+                    val created =
+                        ops.publishWalletEvents(
+                            mints = mints,
+                            p2pkPrivkeyHex = privkey,
+                            // Advertise our NIP-65 inbox relays as the nutzap relays,
+                            // so senders publish kind:9321 where we read incoming
+                            // events (NIP-65 outbox model). The kind:10019 default
+                            // copies the inbox relay list, not outbox; the wallet
+                            // still subscribes to a wider inbox + DM + tags set.
+                            nutzapRelays =
+                                acc.notificationRelays.flow.value
+                                    .toList(),
+                        )
+                    sessionPrivkeyHex = created.p2pkPrivkeyHex
+                    _createState.value = CashuWalletCreateState.Idle
+                } catch (e: Exception) {
+                    _createState.value = CashuWalletCreateState.Error(describeMintError(e))
+                }
             }
         }
     }

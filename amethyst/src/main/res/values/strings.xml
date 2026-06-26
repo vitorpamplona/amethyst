@@ -2014,6 +2014,8 @@
     <string name="cashu_remove_mint">Remove mint</string>
     <string name="cashu_add_mint">Add mint</string>
     <string name="cashu_history">History</string>
+    <string name="cashu_wallet_autosaves">Your wallet saves automatically as you add or remove mints. A nutzap key is created for you the first time you add a mint.</string>
+    <string name="cashu_wallet_saving">Saving…</string>
     <string name="cashu_p2pk_section">Nutzap key (advanced)</string>
     <string name="cashu_p2pk_explainer">A separate private key used only to receive NIP-61 nutzaps. Not your Nostr identity key.</string>
     <string name="cashu_p2pk_autogen">Generate a new key</string>
@@ -2534,6 +2536,10 @@
     <string name="forked_from">Forked from</string>
     <string name="git_web_address">Web:</string>
     <string name="git_clone_address">Clone:</string>
+    <string name="git_branch">Branch</string>
+    <string name="git_commit">Commit</string>
+    <string name="git_merge_base">Merge base</string>
+    <string name="git_pr_update_description">Updated the pull request to a new commit.</string>
     <string name="git_status_open">Open</string>
     <string name="git_status_merged">Merged</string>
     <string name="git_status_closed">Closed</string>
@@ -2868,6 +2874,8 @@
     <string name="kind_git_patch">Git Patch</string>
     <string name="kind_git_repo">Git Repo</string>
     <string name="kind_git_reply">Git Reply</string>
+    <string name="kind_git_pr">Pull Request</string>
+    <string name="kind_git_pr_update">PR Update</string>
     <string name="kind_zap_goals">Zap Goals</string>
     <string name="kind_hashtag_follows">Hashtag Follows</string>
     <string name="kind_highlights">Highlights</string>

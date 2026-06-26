@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -183,6 +184,11 @@ open class ShortNotePostViewModel :
     IExpiration {
     val draftTag = DraftTagState()
 
+    // Strong reference to the live cache note for the current draft tag (derived from the
+    // versions flow below), so LocalCache cannot weakly collect it before a deletion needs it.
+    var draftNote: AddressableNote? = null
+        private set
+
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
@@ -191,6 +197,7 @@ open class ShortNotePostViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
+                    draftNote = account.getOrCreateDraftNote(draftTag.current)
                     accountViewModel.launchSigner {
                         sendDraftSync()
                     }
@@ -483,6 +490,7 @@ open class ShortNotePostViewModel :
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
                     if (oldTag != null) {
                         draftTag.set(oldTag)
+                        draftNote = account.getOrCreateDraftNote(oldTag)
                     }
                     loadFromDraft(innerNote)
                 }
@@ -889,7 +897,7 @@ open class ShortNotePostViewModel :
             }
         }
 
-        val version = draftTag.current
+        val draftToDelete = draftNote
         val anonymous = wantsAnonymousPost
         val scheduledFor = scheduledForSec
         val privately = wantsPrivateNote
@@ -903,7 +911,7 @@ open class ShortNotePostViewModel :
             @Suppress("UNCHECKED_CAST")
             accountViewModel.account.sendPrivateNote(template as EventTemplate<TextNoteEvent>)
             accountViewModel.launchSigner {
-                accountViewModel.account.deleteDraftIgnoreErrors(version)
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
             return
         }
@@ -935,7 +943,7 @@ open class ShortNotePostViewModel :
                 ),
             )
             accountViewModel.launchSigner {
-                accountViewModel.account.deleteDraftIgnoreErrors(version)
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
             return
         }
@@ -961,13 +969,13 @@ open class ShortNotePostViewModel :
         }
 
         accountViewModel.launchSigner {
-            accountViewModel.account.deleteDraftIgnoreErrors(version)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {

@@ -31,6 +31,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import android.os.SystemClock
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.mutableStateListOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
@@ -41,8 +42,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleLogEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedMagnifierProbe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.MagnifierFrame
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.parseSelectionGeometry
 import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicLong
 
@@ -61,6 +65,7 @@ class EmbeddedWebAppController(
     private val themeType: String = "SYSTEM",
 ) : EmbeddedSurfaceController,
     EmbeddedImeBridge,
+    EmbeddedMagnifierProbe,
     ConsoleBridge {
     private val incoming = Messenger(Handler(Looper.getMainLooper(), ::onServiceMessage))
     private var serviceMessenger: Messenger? = null
@@ -94,6 +99,9 @@ class EmbeddedWebAppController(
 
     override var onImeEvent: ((ImeEvent) -> Unit)? = null
 
+    // SPIKE (magnifier #4, option B): provider-side capture round-trip. Removed once the loupe lands.
+    override var onMagnifierFrame: ((MagnifierFrame) -> Unit)? = null
+
     private val connection =
         object : ServiceConnection {
             override fun onServiceConnected(
@@ -126,6 +134,7 @@ class EmbeddedWebAppController(
         pendingAdapter = null
         onUrlChanged = null
         onImeEvent = null
+        onMagnifierFrame = null
         onLoadStatusChanged = null
         consoleLogs.clear()
     }
@@ -192,6 +201,19 @@ class EmbeddedWebAppController(
                 if (consoleLogs.size >= MAX_CONSOLE_LOGS) consoleLogs.removeAt(0)
                 consoleLogs.add(ConsoleLogEntry(level, message, source, line))
             }
+            NappletBrowserContract.MSG_MAGNIFIER_FRAME -> {
+                val data = msg.data ?: return true
+                val bytes = data.getByteArray(NappletBrowserContract.KEY_MAG_BYTES) ?: return true
+                onMagnifierFrame?.invoke(
+                    MagnifierFrame(
+                        bytes = bytes,
+                        width = data.getInt(NappletBrowserContract.KEY_MAG_W),
+                        height = data.getInt(NappletBrowserContract.KEY_MAG_H),
+                        captureMs = data.getDouble(NappletBrowserContract.KEY_MAG_CAPTURE_MS),
+                        requestStampNanos = data.getLong(NappletBrowserContract.KEY_MAG_REQ_T),
+                    ),
+                )
+            }
             else -> return false
         }
         return true
@@ -245,6 +267,22 @@ class EmbeddedWebAppController(
 
     override fun sendImeOp(json: String) = send(NappletBrowserContract.MSG_IME_OP) { putString(NappletBrowserContract.KEY_IME_PAYLOAD, json) }
 
+    // Stamp the client send time so the reply can be matched / stale frames dropped (same-process clock).
+    override fun requestMagnifier(
+        surfaceX: Float,
+        surfaceY: Float,
+        boxWidthPx: Int,
+        boxHeightPx: Int,
+        zoom: Float,
+    ) = send(NappletBrowserContract.MSG_MAGNIFIER_REQUEST) {
+        putFloat(NappletBrowserContract.KEY_MAG_X, surfaceX)
+        putFloat(NappletBrowserContract.KEY_MAG_Y, surfaceY)
+        putInt(NappletBrowserContract.KEY_MAG_BOX_W, boxWidthPx)
+        putInt(NappletBrowserContract.KEY_MAG_BOX_H, boxHeightPx)
+        putFloat(NappletBrowserContract.KEY_MAG_ZOOM, zoom)
+        putLong(NappletBrowserContract.KEY_MAG_REQ_T, SystemClock.elapsedRealtimeNanos())
+    }
+
     private fun parseImeEvent(payload: String): ImeEvent? {
         val o = runCatching { JSONObject(payload) }.getOrNull() ?: return null
         return when (o.optString("type")) {
@@ -256,6 +294,7 @@ class EmbeddedWebAppController(
                     text = o.optString("text", ""),
                     selStart = o.optInt("selStart", 0),
                     selEnd = o.optInt("selEnd", 0),
+                    geometry = parseSelectionGeometry(o.optJSONObject("geom")),
                 )
             "ime.blur" -> ImeEvent.Blur
             "ime.state" ->
@@ -263,7 +302,16 @@ class EmbeddedWebAppController(
                     text = o.optString("text", ""),
                     selStart = o.optInt("selStart", 0),
                     selEnd = o.optInt("selEnd", 0),
+                    geometry = parseSelectionGeometry(o.optJSONObject("geom")),
                 )
+            "ime.pagesel" ->
+                ImeEvent.PageSelection(
+                    active = o.optBoolean("active", false),
+                    text = o.optString("text", ""),
+                    geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+                )
+            "ime.scroll" -> ImeEvent.Scroll(active = o.optBoolean("active", false))
+            "ime.carettap" -> ImeEvent.CaretTap(geometry = parseSelectionGeometry(o.optJSONObject("geom")))
             else -> null
         }
     }

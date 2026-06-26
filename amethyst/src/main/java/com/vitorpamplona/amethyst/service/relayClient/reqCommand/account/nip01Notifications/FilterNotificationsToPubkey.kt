@@ -40,6 +40,8 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -84,6 +86,8 @@ val NotificationsPerKeyKinds2 =
         GitReplyEvent.KIND,
         GitIssueEvent.KIND,
         GitPatchEvent.KIND,
+        GitPullRequestEvent.KIND,
+        GitPullRequestUpdateEvent.KIND,
         HighlightEvent.KIND,
         CommentEvent.KIND,
         CalendarDateSlotEvent.KIND,

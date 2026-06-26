@@ -77,6 +77,34 @@ object NappletBrowserContract {
      */
     const val MSG_CONSOLE_LOG = 11
 
+    /**
+     * Client → provider: capture a magnified slice of the live page for the native-style selection loupe.
+     * Host-side `PixelCopy` of the sandboxed surface returns `ERROR_SOURCE_NO_DATA` (the WebView pixels live
+     * in a child SurfaceControl the host never draws into), so we capture INSIDE the provider — where the
+     * WebView is a real in-window view. Carries [KEY_MAG_X]/[KEY_MAG_Y] (surface px center),
+     * [KEY_MAG_BOX_W]/[KEY_MAG_BOX_H] (source rectangle, px), [KEY_MAG_ZOOM], and [KEY_MAG_REQ_T] (the
+     * client's `nanoTime` send stamp, echoed back so the client can drop stale out-of-order frames).
+     */
+    const val MSG_MAGNIFIER_REQUEST = 12
+
+    /**
+     * Provider → client: the captured loupe frame. Carries [KEY_MAG_BYTES] (a PNG well under the Binder
+     * limit), [KEY_MAG_W]/[KEY_MAG_H], [KEY_MAG_CAPTURE_MS] (provider-side draw+encode time), and the echoed
+     * [KEY_MAG_REQ_T] so the client matches it to its request / drops stale frames.
+     */
+    const val MSG_MAGNIFIER_FRAME = 13
+
+    const val KEY_MAG_X = "magX"
+    const val KEY_MAG_Y = "magY"
+    const val KEY_MAG_BOX_W = "magBoxW"
+    const val KEY_MAG_BOX_H = "magBoxH"
+    const val KEY_MAG_ZOOM = "magZoom"
+    const val KEY_MAG_REQ_T = "magReqT"
+    const val KEY_MAG_BYTES = "magBytes"
+    const val KEY_MAG_W = "magW"
+    const val KEY_MAG_H = "magH"
+    const val KEY_MAG_CAPTURE_MS = "magCaptureMs"
+
     const val KEY_IS_LOADING = "isLoading"
     const val KEY_LOAD_FAILED = "loadFailed"
 

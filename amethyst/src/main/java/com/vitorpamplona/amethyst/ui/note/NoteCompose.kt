@@ -138,6 +138,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
@@ -264,6 +266,8 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
@@ -765,6 +769,7 @@ fun InnerNoteWithReactions(
                 unPackReply = unPackReply,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                isBoostedNote = isBoostedNote,
             )
 
             if (!makeItShort) {
@@ -913,6 +918,7 @@ private fun RenderNoteRow(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    isBoostedNote: Boolean = false,
 ) {
     when (val noteEvent = baseNote.event) {
         is AppDefinitionEvent -> {
@@ -1203,6 +1209,30 @@ private fun RenderNoteRow(
             )
         }
 
+        is GitPullRequestEvent -> {
+            RenderGitPullRequestEvent(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is GitPullRequestUpdateEvent -> {
+            RenderGitPullRequestUpdateEvent(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
         is PrivateDmEvent -> {
             RenderPrivateMessage(
                 baseNote,
@@ -1367,6 +1397,7 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
 
@@ -1379,6 +1410,7 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
 
@@ -1391,6 +1423,7 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
 
@@ -1526,6 +1559,7 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
 
@@ -1540,6 +1574,7 @@ private fun RenderNoteRow(
                 editState,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
     }
