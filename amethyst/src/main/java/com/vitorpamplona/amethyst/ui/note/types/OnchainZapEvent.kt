@@ -105,6 +105,12 @@ fun RenderOnchainZap(
 
     val orange = MaterialTheme.colorScheme.bitcoinColor
 
+    // The embedded note sits on the orange wash, so it must draw transparent and
+    // let that show through. Handing it the parent feed / MultiSetCard background
+    // instead would paint it black (the app background) or flash it with the
+    // new-note highlight, breaking the card's solid tint.
+    val cardBackground = remember { mutableStateOf<Color>(Color.Transparent) }
+
     // Async chain lookup so we can show a real "Confirmed at block N" or
     // "In mempool…" pill rather than a sender-claimed status. Null = backend
     // not configured, or fetch failed — we just show the sender-claimed sats
@@ -143,7 +149,7 @@ fun RenderOnchainZap(
                 nav = nav,
             )
 
-            RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
+            RenderZappedPost(note, quotesLeft, cardBackground, accountViewModel, nav)
 
             AmountRow(sats = sats, orange = orange)
 
