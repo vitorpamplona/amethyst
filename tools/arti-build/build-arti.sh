@@ -131,6 +131,17 @@ setup_wrapper() {
     cp "$SCRIPT_DIR/Cargo.toml" "$wrapper_dir/Cargo.toml"
     cp "$SCRIPT_DIR/src/lib.rs" "$wrapper_dir/src/lib.rs"
 
+    # Reproducibility: build against the committed lockfile so transitive
+    # dependency versions are identical for everyone. `cargo --locked` (below)
+    # fails if this lock is missing or stale rather than silently re-resolving.
+    if [ -f "$SCRIPT_DIR/Cargo.lock" ]; then
+        cp "$SCRIPT_DIR/Cargo.lock" "$wrapper_dir/Cargo.lock"
+        print_success "Pinned dependencies from committed Cargo.lock"
+    else
+        print_error "tools/arti-build/Cargo.lock missing — generate it with: cargo generate-lockfile (see README)"
+        exit 1
+    fi
+
     # Patch Cargo.toml to use local arti-client from the source tree
     # instead of pulling from crates.io
     cd "$wrapper_dir"
@@ -170,7 +181,7 @@ build_for_target() {
         -t "$target" \
         --platform "$MIN_SDK_VERSION" \
         -o "$OUTPUT_DIR" \
-        build --release \
+        build --release --locked \
         --manifest-path "$ARTI_SOURCE_DIR/arti-android-wrapper/Cargo.toml"
 
     if [ -f "$out_dir/$LIB_NAME" ]; then
@@ -228,6 +239,11 @@ main() {
     check_prerequisites
     clone_or_update_arti
     setup_wrapper
+
+    # Deterministic build env (needs ARTI_SOURCE_DIR cloned above for SOURCE_DATE_EPOCH).
+    # shellcheck source=repro-env.sh
+    source "$SCRIPT_DIR/repro-env.sh"
+    print_success "Reproducible build env loaded (RUSTFLAGS path remapping, SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-unset})"
 
     for target in "${TARGETS[@]}"; do
         build_for_target "$target"

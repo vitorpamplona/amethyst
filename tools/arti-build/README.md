@@ -18,9 +18,40 @@ JNI wrapper built directly from Arti source.
 Pre-built `.so` files should be committed to `amethyst/src/main/jniLibs/`. You only need to
 rebuild if you want to verify binaries, update the Arti version, or modify the JNI wrapper.
 
+## Reproducible builds
+
+The shipped `.so` is **built to be byte-for-byte reproducible** so anyone —
+F-Droid, Zapstore, or an independent auditor — can rebuild it from this tag and
+confirm the committed binary wasn't tampered with. Three pins make that hold:
+
+| Source of non-determinism | Pinned by |
+|---|---|
+| `rustc` / cargo version | [`rust-toolchain.toml`](rust-toolchain.toml) (rustup auto-installs it) |
+| transitive dependency versions | committed [`Cargo.lock`](Cargo.lock); builds run `cargo --locked` |
+| absolute build paths baked into the binary | `--remap-path-prefix` in [`repro-env.sh`](repro-env.sh) |
+
+`repro-env.sh` (sourced by both build scripts) also sets `CARGO_INCREMENTAL=0`
+and a fixed `SOURCE_DATE_EPOCH` derived from the Arti tag. The size-optimized
+release profile in `Cargo.toml` (`lto`, `codegen-units = 1`, `strip`,
+`panic = "abort"`) is itself deterministic for a fixed toolchain.
+
+### Verify the committed binary reproduces
+
+```bash
+# Build twice into different checkout paths and confirm identical bytes.
+# (Path remapping is what lets two different directories produce the same .so.)
+cp -r tools/arti-build /tmp/arti-a && (cd /tmp/arti-a && ./build-arti.sh --release)
+cp -r tools/arti-build /tmp/arti-b && (cd /tmp/arti-b && ./build-arti.sh --release)
+sha256sum /tmp/arti-{a,b}/../../amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so
+```
+
+A clean run prints the same SHA-256 for both, and matches the committed
+`amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so`.
+
 ## Prerequisites
 
-1. **Rust toolchain**
+1. **Rust toolchain** — the exact version is pinned in `rust-toolchain.toml`;
+   rustup installs it automatically. You only need rustup itself:
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
@@ -92,13 +123,17 @@ The first LOAD segment alignment should be `0x4000` (16384 bytes).
 
 ```
 tools/arti-build/
-├── README.md           # This file
-├── ARTI_VERSION        # Pinned Arti git tag (e.g., arti-v1.9.0)
-├── Cargo.toml          # Rust dependencies and build profile
-├── build-arti.sh       # Build script
+├── README.md            # This file
+├── ARTI_VERSION         # Pinned Arti git tag (e.g., arti-v1.9.0)
+├── rust-toolchain.toml  # Pinned rustc version + Android targets (reproducibility)
+├── Cargo.toml           # Rust dependencies and build profile
+├── Cargo.lock           # Pinned transitive dependency versions (reproducibility)
+├── repro-env.sh         # Deterministic build env (path remapping, epoch) — sourced by both scripts
+├── build-arti.sh        # Build script (Android targets, shipped in APK)
+├── build-arti-host.sh   # Build script (host target, for JVM integration tests)
 ├── src/
-│   └── lib.rs          # JNI bridge (Rust → Kotlin)
-└── .arti-source/       # [gitignored] Cloned Arti repository
+│   └── lib.rs           # JNI bridge (Rust → Kotlin)
+└── .arti-source/        # [gitignored] Cloned Arti repository
 ```
 
 ## Updating Arti version
@@ -119,7 +154,17 @@ tools/arti-build/
    https://gitlab.torproject.org/tpo/core/arti/-/raw/arti-v1.10.0/crates/arti-client/Cargo.toml
    ```
 
-4. Rebuild and test:
+4. Regenerate the committed lockfile so the new versions are pinned (builds run
+   `--locked` and will fail until this is refreshed):
+   ```bash
+   ./build-arti.sh --clean          # clones the new tag + sets up the wrapper
+   cp .arti-source/arti-android-wrapper/Cargo.lock ./Cargo.lock
+   ```
+   If you also bump the Rust toolchain, edit `channel` in `rust-toolchain.toml`.
+
+5. Rebuild, then re-verify reproducibility (see "Reproducible builds" above) and
+   commit the regenerated `.so` files **together with** `Cargo.lock` /
+   `rust-toolchain.toml`:
    ```bash
    ./build-arti.sh --clean
    ```
