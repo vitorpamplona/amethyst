@@ -3,31 +3,25 @@
   ~
   ~ Notification small icons are rendered by the system as flat, alpha-only
   ~ silhouettes, so the regular `amethyst` gem becomes an identical solid gem
-  ~ for both real notifications and this persistent service. To stop the
-  ~ service from reading as a new notification, this variant draws the gem as
-  ~ a hollow outline — same brand shape, clearly different at a glance.
+  ~ for both real notifications and this persistent service. To set the
+  ~ always-on service apart, this variant draws a full, solid disc with the
+  ~ brand gem punched out of its centre (slightly smaller, as negative space).
+  ~ The enclosing circle reads as a continuous, always-running badge — clearly
+  ~ different at a glance while keeping the recognisable gem shape.
+  ~
+  ~ The single path combines the disc (outer subpath) with the gem body and its
+  ~ facet dot (inner subpaths); `fillType="evenOdd"` turns the gem into a hole,
+  ~ and the small facet dot back into a solid island within that hole, echoing
+  ~ the highlight on the regular gem. The gem is centred on the disc and scaled
+  ~ to ~52% of its diameter so a comfortable ring surrounds it on every side.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="512dp"
     android:height="512dp"
     android:viewportWidth="512"
     android:viewportHeight="512">
-  <!--
-    The gem outline below is authored at ~half the viewport size, leaving it
-    visibly smaller than every other notification small icon (the filled
-    `amethyst` gem fills the viewport). Scale it up ~1.8x about its centre so it
-    matches the others, keeping a margin so the stroke doesn't clip at the edges.
-  -->
-  <group
-      android:pivotX="256"
-      android:pivotY="261"
-      android:scaleX="1.8"
-      android:scaleY="1.8">
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#000000"
-        android:strokeWidth="22"
-        android:strokeLineJoin="round"
-        android:pathData="M370.18,326.86C369.91,326.04 307.3,176.97 290.09,135.63c-20.96,0 -65.23,0 -96.46,0 -9.17,22.67 -32.82,80.44 -51.8,126.98 10.4,24.81 19.74,47.1 26.95,64.29l39.28,0a2.68,2.68 135,0 0,2.51 -3.15c-0.34,-7.93 -21.93,-36.76 -15.49,-67.94 1.72,-6.71 3.03,-13.53 4.91,-20.21a235.88,235.88 135,0 1,18.04 -46.7c1.19,-2.27 1.74,-3.29 4.5,-1.57 5.86,3.65 12.41,3.44 18.94,2.97 5.62,-1.22 8.36,-3.92 18.67,-1.18 2.04,0 4.03,0 6.11,0.19 4.95,0.39 9.6,1.57 12.57,6.05 3.25,4.9 3.77,10.44 3.25,16.1 -0.79,8.47 -0.23,16.36 6.94,22.33a77.19,77.19 0,0 0,8.05 5.37c3.56,2.28 7.85,3.27 10.9,6.44 1.8,1.87 2.86,3.85 2.08,6.51 -0.78,2.66 -2.86,3.91 -5.6,4.2 -6.92,0.75 -13.69,-0.66 -20.49,-1.48 -0.89,-0.11 -1.76,-0.17 -2.68,-0.23a15.39,15.39 0,0 1,-5.11 0.17l-1.6,0a35.83,35.83 0,0 0,-7.92 1.89c-6.41,2.34 -12.25,4.91 -19.82,4.78a5.8,5.8 0,0 0,-2.75 1.19c-5.93,5.27 -9.5,11.93 -6.54,21.66 8.13,22.72 29,77.53 37.96,101.18 -0.25,-16.02 -0.32,-44.71 -0.38,-58.64 35.8,0.05 90.7,0.03 95.08,0.03z" />
-  </group>
+  <path
+      android:fillColor="#000000"
+      android:fillType="evenOdd"
+      android:pathData="M256,16A240,240 0,1,1 256,496A240,240 0,1,1 256,16ZM370.247,322.346C369.978,321.529,307.336,172.371,290.108,131c-20.977,0,-65.274,0,-96.522,0c-9.17,22.68,-32.843,80.487,-51.833,127.055c10.408,24.828,19.754,47.131,26.961,64.335l39.302,0a2.686,2.686 0,0,0,2.51,-3.156c-0.338,-7.937,-21.941,-36.782,-15.497,-67.985c1.717,-6.713,3.034,-13.534,4.913,-20.223a236.025,236.025 135,0,1,18.046,-46.729c1.194,-2.27,1.747,-3.288,4.497,-1.571c5.867,3.65,12.419,3.44,18.946,2.965c5.627,-1.223,8.367,-3.919,18.677,-1.179c2.04,0,4.027,0,6.112,0.186c4.957,0.391,9.6,1.571,12.58,6.058c3.249,4.903,3.773,10.447,3.249,16.113c-0.793,8.475,-0.23,16.368,6.943,22.342a77.238,77.238 0,0,0,8.059,5.373c3.557,2.285,7.853,3.278,10.902,6.444c1.801,1.864,2.862,3.856,2.08,6.513c-0.778,2.657,-2.862,3.91,-5.598,4.203c-6.929,0.754,-13.696,-0.656,-20.502,-1.478c-0.886,-0.108,-1.757,-0.176,-2.686,-0.23a15.404,15.404 0,0,1,-5.118,0.176l-1.6,0a35.852,35.852 0,0,0,-7.922,1.894c-6.42,2.339,-12.262,4.913,-19.832,4.781a5.803,5.803 0,0,0,-2.755,1.194c-5.935,5.275,-9.507,11.939,-6.537,21.672c8.137,22.734,29.016,77.576,37.99,101.249c-0.254,-16.035,-0.323,-44.743,-0.377,-58.678c35.828,0.054,90.758,0.024,95.137,0.024ZM249.475,207.715a7.575,7.707 90,1,0,15.413,0a7.575,7.707 90,1,0,-15.413,0Z" />
 </vector>
