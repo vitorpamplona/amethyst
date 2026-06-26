@@ -25,6 +25,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -33,6 +35,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import android.os.SystemClock
 import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
@@ -51,6 +54,7 @@ import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 
 /**
  * Provider for the **embedded** in-app browser. Runs in the keyless `:napplet` process: it hosts the
@@ -139,14 +143,6 @@ class NappletBrowserService : Service() {
         super.onDestroy()
     }
 
-    private fun applyNightMode(themeType: String) {
-        val uiManager = getSystemService(android.content.Context.UI_MODE_SERVICE) as android.app.UiModeManager
-        when (themeType) {
-            "DARK" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_YES
-            "LIGHT" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_NO
-        }
-    }
-
     private fun tabFor(msg: Message): BrowserTab? = msg.data?.getString(NappletBrowserContract.KEY_SESSION_ID)?.let { tabs[it] }
 
     private fun onClientMessage(msg: Message): Boolean {
@@ -164,7 +160,6 @@ class NappletBrowserService : Service() {
                         bgColor = data.getInt(NappletBrowserContract.KEY_BG_COLOR, android.graphics.Color.WHITE),
                         themeType = data.getString(NappletBrowserContract.KEY_THEME).orEmpty().ifBlank { "SYSTEM" },
                     )
-                applyNightMode(tab.themeType)
                 tabs[sessionId] = tab
                 // Bind the broker once; a re-sent MSG_CREATE_SESSION (e.g. client reconnect) must not
                 // leak a second binding.
@@ -190,9 +185,54 @@ class NappletBrowserService : Service() {
                 // reload the one the user toggled.
                 applyWebViewProxy(if (tab.useTor) tab.proxyPort else -1) { tab.webView?.reload() }
             }
+            NappletBrowserContract.MSG_MAGNIFIER_REQUEST -> onMagnifierRequest(msg)
             else -> return false
         }
         return true
+    }
+
+    // One reusable output bitmap per tab would be ideal, but loupe size is fixed per drag; createBitmap each
+    // frame is cheap next to the draw. Source rect is in view px (== surface px, the SCVH is 1:1).
+    private fun onMagnifierRequest(msg: Message) {
+        val tab = tabFor(msg) ?: return
+        val wv = tab.webView ?: return
+        val data = msg.data ?: return
+        val cx = data.getFloat(NappletBrowserContract.KEY_MAG_X)
+        val cy = data.getFloat(NappletBrowserContract.KEY_MAG_Y)
+        val boxW = data.getInt(NappletBrowserContract.KEY_MAG_BOX_W, 150).coerceIn(16, 1024)
+        val boxH = data.getInt(NappletBrowserContract.KEY_MAG_BOX_H, 84).coerceIn(16, 1024)
+        val zoom = data.getFloat(NappletBrowserContract.KEY_MAG_ZOOM, 1.6f).coerceIn(1f, 4f)
+        val reqT = data.getLong(NappletBrowserContract.KEY_MAG_REQ_T)
+
+        val outW = (boxW * zoom).toInt().coerceAtLeast(1)
+        val outH = (boxH * zoom).toInt().coerceAtLeast(1)
+        val t0 = SystemClock.elapsedRealtimeNanos()
+        val bitmap = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        canvas.drawColor(tab.bgColor)
+        // Map the source rect (centered on cx,cy in view px) into the zoomed output bitmap.
+        canvas.scale(zoom, zoom)
+        canvas.translate(-(cx - boxW / 2f), -(cy - boxH / 2f))
+        wv.draw(canvas)
+
+        val baos = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
+        val bytes = baos.toByteArray()
+        bitmap.recycle()
+        val captureMs = (SystemClock.elapsedRealtimeNanos() - t0) / 1_000_000.0
+
+        val reply =
+            Message.obtain(null, NappletBrowserContract.MSG_MAGNIFIER_FRAME).apply {
+                this.data =
+                    Bundle().apply {
+                        putByteArray(NappletBrowserContract.KEY_MAG_BYTES, bytes)
+                        putInt(NappletBrowserContract.KEY_MAG_W, outW)
+                        putInt(NappletBrowserContract.KEY_MAG_H, outH)
+                        putDouble(NappletBrowserContract.KEY_MAG_CAPTURE_MS, captureMs)
+                        putLong(NappletBrowserContract.KEY_MAG_REQ_T, reqT)
+                    }
+            }
+        runCatching { tab.clientMessenger?.send(reply) }
     }
 
     /** Builds the SandboxedUiAdapter for [tab] and ships its cross-process handle (coreLibInfo) to the client. */
@@ -218,7 +258,7 @@ class NappletBrowserService : Service() {
         // The session may have been closed between MSG_CREATE_SESSION and this posted call — fail rather
         // than build a WebView that no tab tracks (it would leak).
         val tab = tabs[sessionId] ?: error("No browser tab for session $sessionId")
-        val wv = WebView(context)
+        val wv = WebView(nightThemedContext(context, tab.themeType))
         configureWebView(wv, tab)
         // Theme the pre-load background so a blank/loading page shows Amethyst's background, not white.
         wv.setBackgroundColor(tab.bgColor)

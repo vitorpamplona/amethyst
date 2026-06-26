@@ -84,6 +84,29 @@ object NappletEmbedContract {
      */
     const val MSG_LOAD_STATE = 15
 
+    /**
+     * Client → provider: capture a magnified slice of the live page for the selection loupe. Host-side
+     * `PixelCopy` of the sandbox surface returns `ERROR_SOURCE_NO_DATA` (the WebView pixels live in a child
+     * SurfaceControl), so capture happens here, in the provider, where the WebView is a real in-window view.
+     * Carries [KEY_MAG_X]/[KEY_MAG_Y] (surface px center), [KEY_MAG_BOX_W]/[KEY_MAG_BOX_H] (source rect, px),
+     * [KEY_MAG_ZOOM], and [KEY_MAG_REQ_T] (echoed send stamp). Mirrors the browser path.
+     */
+    const val MSG_MAGNIFIER_REQUEST = 16
+
+    /** Provider → client: the captured loupe frame — [KEY_MAG_BYTES] PNG, [KEY_MAG_W]/[KEY_MAG_H], [KEY_MAG_CAPTURE_MS], echoed [KEY_MAG_REQ_T]. */
+    const val MSG_MAGNIFIER_FRAME = 17
+
+    const val KEY_MAG_X = "magX"
+    const val KEY_MAG_Y = "magY"
+    const val KEY_MAG_BOX_W = "magBoxW"
+    const val KEY_MAG_BOX_H = "magBoxH"
+    const val KEY_MAG_ZOOM = "magZoom"
+    const val KEY_MAG_REQ_T = "magReqT"
+    const val KEY_MAG_BYTES = "magBytes"
+    const val KEY_MAG_W = "magW"
+    const val KEY_MAG_H = "magH"
+    const val KEY_MAG_CAPTURE_MS = "magCaptureMs"
+
     const val KEY_CORE_LIB_INFO = "coreLibInfo"
     const val KEY_CAN_GO_BACK = "canGoBack"
     const val KEY_IS_LOADING = "isLoading"

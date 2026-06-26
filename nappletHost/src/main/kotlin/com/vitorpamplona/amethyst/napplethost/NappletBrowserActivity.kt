@@ -35,6 +35,7 @@ import android.os.Messenger
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -153,7 +154,6 @@ class NappletBrowserActivity : ComponentActivity() {
         useTor = intent.getBooleanExtra(EXTRA_USE_TOR, true)
         title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         themeType = intent.getStringExtra(EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" }
-        applyNightMode()
 
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             Toast.makeText(this, getString(R.string.napplet_webview_too_old), Toast.LENGTH_LONG).show()
@@ -161,7 +161,9 @@ class NappletBrowserActivity : ComponentActivity() {
             return
         }
 
-        webView = WebView(this)
+        // Build the WebView from a context forced to the app theme so its content follows DARK/LIGHT even when
+        // the device theme differs (WebView reads the context's theme, not the window's — see nightThemedContext).
+        webView = WebView(nightThemedContext(this, themeType))
         configureWebView(webView)
         webView.setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
         webView.dropSystemBarInsets()
@@ -231,7 +233,6 @@ class NappletBrowserActivity : ComponentActivity() {
         super.onResume()
         if (this::webView.isInitialized) {
             webView.onResume()
-            webView.resumeTimers()
         }
         resumed = true
         heartbeatHandler.removeCallbacks(heartbeat)
@@ -240,8 +241,11 @@ class NappletBrowserActivity : ComponentActivity() {
 
     override fun onPause() {
         if (this::webView.isInitialized) {
+            // Only pause THIS activity's WebView (onPause is per-WebView). Do NOT call pauseTimers(): it is
+            // process-global — it freezes JS/layout/parsing timers for EVERY WebView in `:napplet`, including
+            // the embedded ones in NappletBrowserService, which have no resume of their own. That left the
+            // embed frozen (dead page/connection) after returning from a full-screen excursion.
             webView.onPause()
-            webView.pauseTimers()
         }
         resumed = false
         heartbeatHandler.removeCallbacks(heartbeat)
@@ -251,7 +255,17 @@ class NappletBrowserActivity : ComponentActivity() {
 
     override fun onDestroy() {
         runCatching { unbindService(brokerConnection) }
-        if (this::webView.isInitialized) webView.destroy()
+        if (this::webView.isInitialized) {
+            // Detach from the view tree BEFORE destroy(). Destroying a WebView while it is still attached to
+            // the window corrupts the SHARED multiprocess renderer/network state, which then breaks the OTHER
+            // (embedded) WebViews living in this `:napplet` process: dead DNS (ERR_NAME_NOT_RESOLVED), DOM reads
+            // returning empty (`value == ""` on a field that visibly shows text), dead selection-highlight paint,
+            // and broken IME — all after a full-screen excursion returns to an embed. (`destroy()` requires the
+            // view to be removed from the hierarchy first; see WebView.destroy() docs.)
+            webView.stopLoading()
+            (webView.parent as? ViewGroup)?.removeView(webView)
+            webView.destroy()
+        }
         super.onDestroy()
     }
 
@@ -643,14 +657,6 @@ class NappletBrowserActivity : ComponentActivity() {
             addView(View(this@NappletBrowserActivity).apply { layoutParams = LinearLayout.LayoutParams(1, dp(20)) })
             addView(ProgressBar(this@NappletBrowserActivity))
         }
-
-    private fun applyNightMode() {
-        val uiManager = getSystemService(android.content.Context.UI_MODE_SERVICE) as android.app.UiModeManager
-        when (themeType) {
-            "DARK" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_YES
-            "LIGHT" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_NO
-        }
-    }
 
     private fun resolveThemeColor(attr: Int): Int {
         val tv = android.util.TypedValue()

@@ -25,6 +25,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -33,6 +35,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.webkit.WebResourceError
@@ -57,6 +60,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executor
 
 /**
@@ -168,32 +172,20 @@ class NappletHostService : Service() {
             }
             NappletEmbedContract.MSG_BACK -> tabFor(msg)?.webView?.let { if (it.canGoBack()) it.goBack() }
             NappletEmbedContract.MSG_RELOAD -> tabFor(msg)?.webView?.reload()
-            NappletEmbedContract.MSG_PAUSE ->
-                tabFor(msg)?.webView?.let {
-                    it.onPause()
-                    it.pauseTimers()
-                }
-            NappletEmbedContract.MSG_RESUME ->
-                tabFor(msg)?.webView?.let {
-                    it.onResume()
-                    it.resumeTimers()
-                }
+            // onPause()/onResume() are per-WebView (pause/resume THIS surface's JS/DOM). Do NOT call
+            // pauseTimers()/resumeTimers(): they are process-global and would freeze/thaw every WebView in
+            // `:napplet` (the browser embed + other napplets), whose lifecycles are independent of this one.
+            NappletEmbedContract.MSG_PAUSE -> tabFor(msg)?.webView?.onPause()
+            NappletEmbedContract.MSG_RESUME -> tabFor(msg)?.webView?.onResume()
             NappletEmbedContract.MSG_IME_OP -> {
                 val tab = tabFor(msg) ?: return true
                 val payload = msg.data?.getString(NappletEmbedContract.KEY_IME_PAYLOAD) ?: return true
                 tab.bridgeReplyProxy?.postMessage(payload)
             }
+            NappletEmbedContract.MSG_MAGNIFIER_REQUEST -> onMagnifierRequest(msg)
             else -> return false
         }
         return true
-    }
-
-    private fun applyNightMode(themeType: String) {
-        val uiManager = getSystemService(android.content.Context.UI_MODE_SERVICE) as android.app.UiModeManager
-        when (themeType) {
-            "DARK" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_YES
-            "LIGHT" -> uiManager.nightMode = android.app.UiModeManager.MODE_NIGHT_NO
-        }
     }
 
     private fun buildTab(msg: Message): NappletTab? {
@@ -225,8 +217,53 @@ class NappletHostService : Service() {
                 themeType = data.getString(NappletHostContract.EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" },
                 declaredDomains = declaredDomains,
             )
-        applyNightMode(tab.themeType)
         return tab
+    }
+
+    /**
+     * Draw a zoomed slice of the live WebView (the loupe content) and ship it back as a PNG. The WebView is a
+     * real in-window view here in the provider, so its software draw renders real DOM pixels — unlike host-side
+     * `PixelCopy` of the sandbox surface. Mirror of the browser path. Runs on the main looper (`WebView.draw`).
+     */
+    private fun onMagnifierRequest(msg: Message) {
+        val tab = tabFor(msg) ?: return
+        val wv = tab.webView ?: return
+        val data = msg.data ?: return
+        val cx = data.getFloat(NappletEmbedContract.KEY_MAG_X)
+        val cy = data.getFloat(NappletEmbedContract.KEY_MAG_Y)
+        val boxW = data.getInt(NappletEmbedContract.KEY_MAG_BOX_W, 150).coerceIn(16, 1024)
+        val boxH = data.getInt(NappletEmbedContract.KEY_MAG_BOX_H, 84).coerceIn(16, 1024)
+        val zoom = data.getFloat(NappletEmbedContract.KEY_MAG_ZOOM, 1.6f).coerceIn(1f, 4f)
+        val reqT = data.getLong(NappletEmbedContract.KEY_MAG_REQ_T)
+
+        val outW = (boxW * zoom).toInt().coerceAtLeast(1)
+        val outH = (boxH * zoom).toInt().coerceAtLeast(1)
+        val t0 = SystemClock.elapsedRealtimeNanos()
+        val bitmap = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        canvas.drawColor(tab.bgColor)
+        canvas.scale(zoom, zoom)
+        canvas.translate(-(cx - boxW / 2f), -(cy - boxH / 2f))
+        wv.draw(canvas)
+
+        val baos = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
+        val bytes = baos.toByteArray()
+        bitmap.recycle()
+        val captureMs = (SystemClock.elapsedRealtimeNanos() - t0) / 1_000_000.0
+
+        val reply =
+            Message.obtain(null, NappletEmbedContract.MSG_MAGNIFIER_FRAME).apply {
+                this.data =
+                    Bundle().apply {
+                        putByteArray(NappletEmbedContract.KEY_MAG_BYTES, bytes)
+                        putInt(NappletEmbedContract.KEY_MAG_W, outW)
+                        putInt(NappletEmbedContract.KEY_MAG_H, outH)
+                        putDouble(NappletEmbedContract.KEY_MAG_CAPTURE_MS, captureMs)
+                        putLong(NappletEmbedContract.KEY_MAG_REQ_T, reqT)
+                    }
+            }
+        runCatching { tab.clientMessenger?.send(reply) }
     }
 
     /** Builds the SandboxedUiAdapter for [tab] and ships its cross-process handle (coreLibInfo) to the client. */
@@ -252,7 +289,7 @@ class NappletHostService : Service() {
         // The session may have been closed between MSG_CREATE_SESSION and this posted call — fail rather
         // than build a WebView that no tab tracks (it would leak).
         val tab = tabs[sessionId] ?: error("No napplet tab for session $sessionId")
-        val wv = WebView(context)
+        val wv = WebView(nightThemedContext(context, tab.themeType))
         val appOrigin = NappletWebContract.appOrigin(deriveAppId(tab.author, tab.identifier))
         val effectiveProxy = if (tab.useTor) tab.proxyPort else -1
         tab.contentServer = NappletContentServer(tab.paths, tab.servers, effectiveProxy, cacheDir, shellHtml, shimJs, appOrigin, tab.profile, imeProxy = true)
