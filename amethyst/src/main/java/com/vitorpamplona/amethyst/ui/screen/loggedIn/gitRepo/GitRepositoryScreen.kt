@@ -26,17 +26,24 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal.RepositoryIssuesFeedViewModel
@@ -88,22 +96,36 @@ private fun PrepareGitRepositoryScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val issuesViewModel: RepositoryIssuesFeedViewModel =
+    val openIssuesViewModel: RepositoryIssuesFeedViewModel =
         viewModel(
-            key = note.idHex + "GitRepoIssues",
-            factory = RepositoryIssuesFeedViewModel.Factory(note, accountViewModel.account),
+            key = note.idHex + "GitRepoIssuesOpen",
+            factory = RepositoryIssuesFeedViewModel.Factory(note, accountViewModel.account, showClosed = false),
         )
 
-    val patchesViewModel: RepositoryPatchesFeedViewModel =
+    val closedIssuesViewModel: RepositoryIssuesFeedViewModel =
         viewModel(
-            key = note.idHex + "GitRepoPatches",
-            factory = RepositoryPatchesFeedViewModel.Factory(note, accountViewModel.account),
+            key = note.idHex + "GitRepoIssuesClosed",
+            factory = RepositoryIssuesFeedViewModel.Factory(note, accountViewModel.account, showClosed = true),
+        )
+
+    val openPatchesViewModel: RepositoryPatchesFeedViewModel =
+        viewModel(
+            key = note.idHex + "GitRepoPatchesOpen",
+            factory = RepositoryPatchesFeedViewModel.Factory(note, accountViewModel.account, showClosed = false),
+        )
+
+    val closedPatchesViewModel: RepositoryPatchesFeedViewModel =
+        viewModel(
+            key = note.idHex + "GitRepoPatchesClosed",
+            factory = RepositoryPatchesFeedViewModel.Factory(note, accountViewModel.account, showClosed = true),
         )
 
     GitRepositoryScreen(
         note = note,
-        issuesViewModel = issuesViewModel,
-        patchesViewModel = patchesViewModel,
+        openIssuesViewModel = openIssuesViewModel,
+        closedIssuesViewModel = closedIssuesViewModel,
+        openPatchesViewModel = openPatchesViewModel,
+        closedPatchesViewModel = closedPatchesViewModel,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -113,13 +135,17 @@ private fun PrepareGitRepositoryScreen(
 @Composable
 private fun GitRepositoryScreen(
     note: AddressableNote,
-    issuesViewModel: RepositoryIssuesFeedViewModel,
-    patchesViewModel: RepositoryPatchesFeedViewModel,
+    openIssuesViewModel: RepositoryIssuesFeedViewModel,
+    closedIssuesViewModel: RepositoryIssuesFeedViewModel,
+    openPatchesViewModel: RepositoryPatchesFeedViewModel,
+    closedPatchesViewModel: RepositoryPatchesFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchLifecycleAndUpdateModel(issuesViewModel)
-    WatchLifecycleAndUpdateModel(patchesViewModel)
+    WatchLifecycleAndUpdateModel(openIssuesViewModel)
+    WatchLifecycleAndUpdateModel(closedIssuesViewModel)
+    WatchLifecycleAndUpdateModel(openPatchesViewModel)
+    WatchLifecycleAndUpdateModel(closedPatchesViewModel)
 
     val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
 
@@ -192,24 +218,77 @@ private fun GitRepositoryScreen(
                 }
 
                 1 -> {
-                    RefresheableFeedView(
-                        viewModel = issuesViewModel,
-                        routeForLastRead = null,
+                    StatusSplitFeed(
+                        persistKey = note.idHex + "GitRepoIssuesStatus",
+                        openViewModel = openIssuesViewModel,
+                        closedViewModel = closedIssuesViewModel,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
                 }
 
                 2 -> {
-                    RefresheableFeedView(
-                        viewModel = patchesViewModel,
-                        routeForLastRead = null,
+                    StatusSplitFeed(
+                        persistKey = note.idHex + "GitRepoPatchesStatus",
+                        openViewModel = openPatchesViewModel,
+                        closedViewModel = closedPatchesViewModel,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
                 }
             }
         }
+    }
+}
+
+/**
+ * Wraps a feed in an Open / Closed &amp; Resolved segmented selector, swapping between two
+ * status-scoped feed view models. Each view model already filters by NIP-34 status, so the
+ * selector only chooses which one is rendered. The selection survives configuration changes
+ * and tab swipes via [persistKey].
+ */
+@Composable
+private fun StatusSplitFeed(
+    persistKey: String,
+    openViewModel: FeedViewModel,
+    closedViewModel: FeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    var showClosed by rememberSaveable(persistKey) { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxSize()) {
+        SingleChoiceSegmentedButtonRow(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+        ) {
+            SegmentedButton(
+                selected = !showClosed,
+                onClick = { showClosed = false },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+            ) {
+                Text(stringRes(R.string.git_repo_filter_open))
+            }
+            SegmentedButton(
+                selected = showClosed,
+                onClick = { showClosed = true },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+            ) {
+                Text(stringRes(R.string.git_repo_filter_closed))
+            }
+        }
+
+        RefresheableFeedView(
+            viewModel = if (showClosed) closedViewModel else openViewModel,
+            routeForLastRead = null,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            onLoaded = { loaded, listState ->
+                GitItemFeedLoaded(loaded, listState, accountViewModel, nav)
+            },
+        )
     }
 }
 
