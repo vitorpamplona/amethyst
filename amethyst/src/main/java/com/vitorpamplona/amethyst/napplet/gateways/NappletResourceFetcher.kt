@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.napplet.gateways
 import android.util.Base64
 import com.vitorpamplona.amethyst.commons.napplet.NappletResource
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
@@ -40,8 +41,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.net.InetSocketAddress
-import java.net.Proxy
 import java.net.URLDecoder
 
 /**
@@ -50,25 +49,34 @@ import java.net.URLDecoder
  * `https:`, and `blossom:` URLs; blossom blobs are content-addressed and **sha256-verified** before
  * returning, so a wrong server can never substitute the blob.
  *
- * Owns a Tor-routed [OkHttpClient], cached and rebuilt only when the active Tor port ([torPort])
- * changes. Built per account (so it reads the right Blossom server list); consent is enforced by the
+ * Network goes through the app-wide [OkHttpClient] supplied by [httpClient] (the shared
+ * [com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager]). Reusing it — rather than
+ * standing up a private client — means napplet blob fetches inherit the same passive
+ * `Onion-Location` discovery + `.onion` rewriting, local Blossom cache redirect, connection pool
+ * and DNS as every other HTTP role. Tor-or-clearnet is chosen per request from the calling
+ * applet's [NappletNetworkRegistry] mode (locked napplets are pinned to Tor; nSites follow the
+ * user's per-site toggle), so a brokered fetch routes exactly like that applet's own page loads.
+ * Built per account (so it reads the right Blossom server list); consent is enforced by the
  * broker before [fetch] ever runs.
  */
 class NappletResourceFetcher(
     private val account: Account,
-    private val torPort: () -> Int,
+    private val httpClient: (useProxy: Boolean) -> OkHttpClient,
 ) {
-    // Reused blob HTTP client, keyed by the active Tor port (see client()).
-    private var cachedHttp: Pair<Int, OkHttpClient>? = null
-
-    /** Fetches an https/data/blossom resource, or null if unsupported/unavailable. */
-    suspend fun fetch(url: String): NappletResource? =
+    /** Fetches an https/data/blossom resource for the applet at [coordinate], or null if unsupported/unavailable. */
+    suspend fun fetch(
+        url: String,
+        coordinate: String,
+    ): NappletResource? =
         withContext(Dispatchers.IO) {
+            // Route like the applet's own page: Tor when its network mode is Tor, clearnet otherwise.
+            NappletNetworkRegistry.awaitReady()
+            val client = httpClient(NappletNetworkRegistry.useTor(coordinate))
             when {
                 url.startsWith("data:") -> decodeDataUrl(url)
                 url.startsWith("https://") -> {
                     runCatching {
-                        client()
+                        client
                             .newCall(
                                 Request
                                     .Builder()
@@ -84,7 +92,7 @@ class NappletResourceFetcher(
                             }
                     }.getOrNull()
                 }
-                url.startsWith("blossom:") -> fetchBlossom(url)
+                url.startsWith("blossom:") -> fetchBlossom(url, client)
                 url.startsWith("nostr:") -> resolveNostr(url)
                 else -> null
             }
@@ -142,29 +150,15 @@ class NappletResourceFetcher(
     }
 
     /**
-     * Tor-routed OkHttp client for host-side blob fetches (the applet has no direct network).
-     * Cached and reused for connection pooling; rebuilt only when the Tor proxy port changes.
-     */
-    @Synchronized
-    private fun client(): OkHttpClient {
-        val port = torPort()
-        cachedHttp?.let { (cachedPort, client) -> if (cachedPort == port) return client }
-        val client =
-            if (port > 0) {
-                OkHttpClient.Builder().proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port))).build()
-            } else {
-                OkHttpClient()
-            }
-        cachedHttp = port to client
-        return client
-    }
-
-    /**
      * Fetches a `blossom:<sha256>` (or `blossom://<sha256>`) blob from the user's Blossom servers
-     * (kind:10063), verifying the sha256 before returning — content-addressed, so a wrong server
-     * can never substitute the blob. Returns null for a malformed hash or if no server serves it.
+     * (kind:10063) over [client], verifying the sha256 before returning — content-addressed, so a
+     * wrong server can never substitute the blob. Returns null for a malformed hash or if no server
+     * serves it.
      */
-    private fun fetchBlossom(url: String): NappletResource? {
+    private fun fetchBlossom(
+        url: String,
+        client: OkHttpClient,
+    ): NappletResource? {
         val hash =
             url
                 .removePrefix("blossom://")
@@ -180,7 +174,6 @@ class NappletResourceFetcher(
                 .getBlossomServersList()
                 ?.servers()
                 .orEmpty()
-        val client = client()
         for (candidate in StaticSiteResolver.candidateUrls(servers, hash)) {
             val bytes =
                 runCatching {
