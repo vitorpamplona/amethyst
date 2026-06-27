@@ -193,7 +193,12 @@ private fun SearchBar(
         }
     }
 
-    Column(modifier = Modifier.statusBarsPadding()) {
+    Column(
+        modifier =
+            Modifier
+                .background(MaterialTheme.colorScheme.surface)
+                .statusBarsPadding(),
+    ) {
         SearchTextField(searchBarViewModel, Modifier)
         // Inline Namecoin lookup feedback for the global search field.
         // Mirrors the wiring in OnchainZapSendDialog: the local prefix
