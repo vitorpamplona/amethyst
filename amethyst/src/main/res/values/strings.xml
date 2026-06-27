@@ -675,6 +675,9 @@
     <string name="browser_go">Open</string>
     <string name="browser_clear">Clear</string>
     <string name="browser_favorites">Favorites</string>
+    <string name="browser_suggested">Discover web apps</string>
+    <string name="browser_discover_nsites">Sites from people you follow</string>
+    <string name="browser_discover_napplets">Apps from people you follow</string>
     <string name="browser_recent_options">Options</string>
     <string name="browser_recent_remove">Remove from history</string>
     <string name="favorite_apps">Web apps</string>
