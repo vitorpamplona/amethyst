@@ -30,7 +30,32 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.delay
+
+// Debug tag for the playback-error lifecycle. Logs every appearance, clear, synthetic-stall raise
+// and recovery so a transient decoder-init collision (which self-recovers on a later attempt) can
+// be told apart from a genuinely undecodable stream in a field logcat. See WatchPlaybackErrors.
+internal const val ERROR_LOG_TAG = "PlaybackError"
+
+/**
+ * Flattens a [PlaybackException] into a single line: error code, message, and the full nested
+ * cause chain (e.g. `DecoderInitializationException <- MediaCodec.CodecException`). The cause
+ * chain is what distinguishes "format truly unsupported" from "decoder failed to start while a
+ * second controller held the codec" — both surface as the same top-level renderer error with
+ * `format_supported=YES`.
+ *
+ * Internal (not private) so [GetVideoController] can log the same detail at controller-acquire
+ * time — a warm-pool player can arrive already in ERROR and get re-prepared (cleared) before
+ * this watcher ever attaches, so the acquire site is the only place that error is observable.
+ */
+internal fun PlaybackException.describe(): String {
+    val causeChain =
+        generateSequence(cause) { it.cause }
+            .joinToString(" <- ") { "${it::class.simpleName}: ${it.message}" }
+            .ifEmpty { "none" }
+    return "code=$errorCodeName($errorCode) msg=$message causes=[$causeChain]"
+}
 
 // How often the decode-stall watchdog samples the controller's position/buffer.
 private const val STALL_POLL_INTERVAL_MS = 1_000L
@@ -69,10 +94,18 @@ fun WatchPlaybackErrors(controllerState: MediaControllerState) {
         // Prime from the controller's current state — a warm-pool player may already be in ERROR
         // when we attach, in which case onPlayerErrorChanged will not fire again until prepare().
         errorState.value = controller.playerError
+        controller.playerError?.let {
+            Log.w(ERROR_LOG_TAG) { "Primed with existing error on ${controller.currentMediaItem?.mediaId}: ${it.describe()}" }
+        }
 
         val listener =
             object : Player.Listener {
                 override fun onPlayerErrorChanged(error: PlaybackException?) {
+                    if (error != null) {
+                        Log.w(ERROR_LOG_TAG) { "Error raised on ${controller.currentMediaItem?.mediaId}: ${error.describe()}" }
+                    } else if (errorState.value != null) {
+                        Log.d(ERROR_LOG_TAG) { "Error cleared on ${controller.currentMediaItem?.mediaId}" }
+                    }
                     errorState.value = error
                 }
 
@@ -81,7 +114,10 @@ fun WatchPlaybackErrors(controllerState: MediaControllerState) {
                     reason: Int,
                 ) {
                     // A new item on a pooled player starts fresh; drop any error from the old one.
-                    if (errorState.value != null) errorState.value = null
+                    if (errorState.value != null) {
+                        Log.d(ERROR_LOG_TAG) { "Error dropped on media transition (reason=$reason) -> ${mediaItem?.mediaId}" }
+                        errorState.value = null
+                    }
                 }
 
                 override fun onPlaybackStateChanged(state: Int) {
@@ -90,7 +126,10 @@ fun WatchPlaybackErrors(controllerState: MediaControllerState) {
                     // STATE_BUFFERING: the synthetic decode-stall error below is raised *while*
                     // buffering, and clearing on every buffering event would wipe it instantly.
                     if (state == Player.STATE_READY) {
-                        if (errorState.value != null) errorState.value = null
+                        if (errorState.value != null) {
+                            Log.d(ERROR_LOG_TAG) { "Recovered (STATE_READY) on ${controller.currentMediaItem?.mediaId} — clearing overlay" }
+                            errorState.value = null
+                        }
                     }
                 }
             }
@@ -141,6 +180,10 @@ private suspend fun watchForDecodeStall(
             if (unproductiveSinceMs < 0) {
                 unproductiveSinceMs = now
             } else if (now - unproductiveSinceMs >= STALL_TIMEOUT_MS && errorState.value == null) {
+                Log.w(ERROR_LOG_TAG) {
+                    "Synthetic decode-stall after ${STALL_TIMEOUT_MS}ms fed-but-frozen " +
+                        "(pos=$position buffered=${controller.bufferedPosition}) on ${controller.currentMediaItem?.mediaId}"
+                }
                 errorState.value =
                     PlaybackException(
                         "Video decoding stalled with a full buffer — likely an unsupported codec",
@@ -156,6 +199,7 @@ private suspend fun watchForDecodeStall(
             // drop the stall overlay. Real decoder errors leave the player IDLE with a frozen
             // playhead, so they never progress here and are left for the STATE_READY listener.
             if (progressed && errorState.value != null) {
+                Log.d(ERROR_LOG_TAG) { "Playhead progressed to $position — clearing stall overlay on ${controller.currentMediaItem?.mediaId}" }
                 errorState.value = null
             }
         }

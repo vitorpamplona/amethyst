@@ -193,7 +193,12 @@ fun VideoView(
             DisplayBlurHash(
                 blurhash,
                 null,
-                contentScale,
+                // The placeholder bitmap is decoded at the blurhash's DCT component-grid aspect
+                // (e.g. a 5x5 grid -> a square bitmap), NOT the real media shape. When `ratio` is
+                // known the Box is already sized to the true aspect, so crop the placeholder to
+                // fill it. Without this, FillWidth letterboxes the square placeholder inside the
+                // taller portrait box — the "square blurhash on a twice-as-tall space" bug.
+                if (ratio != null) ContentScale.Crop else contentScale,
                 if (ratio != null) borderModifier.aspectRatio(ratio) else borderModifier,
                 thumbhash = thumbhash,
             )

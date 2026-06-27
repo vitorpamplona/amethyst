@@ -81,6 +81,16 @@ fun GetVideoController(
                 ).onEach { state ->
                     Log.d("PlaybackService") { "Controller instance: ${state.controller}" }
 
+                    // A warm-pool ExoPlayer can be handed back still carrying a prior
+                    // PlaybackException (e.g. a decoder-init failure from an earlier acquire). The
+                    // re-prepare below clears it before WatchPlaybackErrors ever attaches, so this
+                    // is the only place the stale error — and its decoder/codec cause chain — is
+                    // observable. Logged so a "Can't play this video" blink that self-heals can be
+                    // attributed to warm-pool reuse rather than a genuinely undecodable stream.
+                    state.controller.playerError?.let { err ->
+                        Log.w(ERROR_LOG_TAG) { "Controller arrived carrying error for ${mediaItem.item.mediaId}: ${err.describe()}" }
+                    }
+
                     // The default ExoPlayer volume is 1f and the MediaSessionPool reset lambda
                     // sets it to 0f when the player is acquired, so the controller arrives at 0f.
                     // Read first and only push an IPC if the value actually needs to change —
@@ -110,6 +120,11 @@ fun GetVideoController(
                     val targetMediaId = mediaItem.item.mediaId
                     val needsLoad = state.controller.currentMediaItem?.mediaId != targetMediaId
                     if (needsLoad) {
+                        // Cold load: a fresh decoder/codec instance gets allocated here. If a
+                        // second controller for the same URI is still alive (see liveControllers
+                        // in PlaybackServiceClient), this prepare() is where MediaCodec.start()
+                        // can collide and fail.
+                        Log.d("PlaybackService") { "Cold load (setMediaItem+prepare) for $targetMediaId" }
                         state.controller.setMediaItem(mediaItem.item)
                         state.controller.prepare()
                     } else if (state.controller.playbackState == Player.STATE_IDLE) {
