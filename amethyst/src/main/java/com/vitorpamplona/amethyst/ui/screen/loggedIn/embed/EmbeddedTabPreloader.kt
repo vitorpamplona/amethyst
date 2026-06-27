@@ -76,7 +76,9 @@ fun EmbeddedTabPreloader(accountViewModel: AccountViewModel) {
         }
     }
 
-    LaunchedEffect(favoriteIds, backgroundColor) {
+    // Re-warms after a theme flip: [rebuildAllForTheme] tears down the warm sessions and bumps the epoch,
+    // so this sweep re-acquires them in the new theme (keying on the epoch also orders it after the teardown).
+    LaunchedEffect(favoriteIds, backgroundColor, EmbeddedTabHost.themeEpoch) {
         if (favoriteIds.isEmpty()) return@LaunchedEffect
         // Hydrate the per-site Tor/open-web choices BEFORE the first preload: a cold start otherwise reads
         // the bare Tor default and would route a site the user pinned to the open web through Tor (or stall

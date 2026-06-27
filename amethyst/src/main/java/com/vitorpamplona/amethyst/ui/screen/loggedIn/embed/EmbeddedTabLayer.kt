@@ -162,7 +162,9 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
             },
     ) {
         EmbeddedTabHost.sessions.forEach { session ->
-            key(session.id) {
+            // Key on the controller too: a theme rebuild replaces the controller under the same id, and
+            // the new one needs a fresh SandboxedSdkView (the factory below attaches the surface once).
+            key(session.id, session.controller) {
                 val active = session.id == activeId
 
                 LaunchedEffect(active) {

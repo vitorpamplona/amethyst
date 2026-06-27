@@ -113,8 +113,10 @@ private fun EmbeddedWebAppTab(
 
     val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
+    // Keyed on the theme epoch too: when the app theme flips, the warm session is torn down and this
+    // re-acquires a freshly-themed one (the embed WebView's theme is fixed at construction).
     val controller =
-        remember(id) {
+        remember(id, EmbeddedTabHost.themeEpoch) {
             EmbeddedTabFactory.acquireWebApp(context, url, backgroundColor)
         }
 
@@ -128,7 +130,7 @@ private fun EmbeddedWebAppTab(
 
     // Rebuilt only when a displayed value changes, so the tab layer isn't recomposed every frame.
     val chrome =
-        remember(currentUrl, torOn, proxyAvailable, isFavorite) {
+        remember(currentUrl, torOn, proxyAvailable, isFavorite, controller) {
             EmbeddedTabChrome(
                 title = hostLabel(currentUrl),
                 isSandbox = false,
