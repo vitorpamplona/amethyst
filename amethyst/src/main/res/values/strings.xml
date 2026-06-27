@@ -754,6 +754,7 @@
     </plurals>
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">Connect to Nostr</string>
+    <string name="napplet_connect_subtitle">wants to connect to your Nostr account</string>
     <string name="napplet_connect_how_handle">How should this app\'s requests be handled?</string>
     <string name="napplet_connect_button">Connect</string>
     <string name="napplet_connect_block">Block and ignore %1$s</string>
