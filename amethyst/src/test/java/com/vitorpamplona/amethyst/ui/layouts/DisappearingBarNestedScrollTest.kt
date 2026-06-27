@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.layouts
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.unit.Velocity
+import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingBarNestedScroll
+import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingBarState
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
