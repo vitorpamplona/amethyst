@@ -719,6 +719,7 @@
         <item quantity="other">Este nApplet quiere pagar una factura Lightning de %1$d sats.</item>
     </plurals>
     <string name="nip82_repository_label">Fuente: %1$s</string>
+    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Descargar</string>
     <string name="nip82_section_about">Acerca de</string>
     <string name="nip82_section_platforms">Plataformas</string>
@@ -878,6 +879,7 @@
     <string name="route_music_tracks">Música</string>
     <string name="route_music_playlists">Listas de reproducción</string>
     <string name="route_podcast_episodes">Episodios</string>
+    <string name="route_podcasts">Podcasts</string>
     <string name="podcast_view_episodes">Ver episodios</string>
     <string name="podcast_no_episodes">Aún no se han encontrado episodios</string>
     <plurals name="podcast_episode_count">
@@ -915,6 +917,7 @@
     <string name="add_hashtag_label">Añadir hashtag</string>
     <string name="add_hashtag_label_title">Añadir un hashtag</string>
     <string name="add_hashtag_label_explainer">Etiqueta públicamente esta publicación con un hashtag (etiqueta NIP-32). Las personas que te siguen lo verán en el feed de ese hashtag.</string>
+    <string name="add_hashtag_label_field">Hashtag</string>
     <string name="add_hashtag_label_confirm">Añadir</string>
     <string name="hashtag_label_added_by">añadido por</string>
     <string name="pinned_notes">Notas fijadas</string>
@@ -941,6 +944,7 @@
     <string name="interest_set_name_placeholder">Mis intereses</string>
     <string name="interest_set_hashtag_add_placeholder">Añadir hashtag</string>
     <string name="interest_set_hashtag_private_toggle">Privado</string>
+    <string name="interest_set_hashtag_count">%1$d hashtag(s)</string>
     <string name="interest_set_actions_dialog_title">Acciones del conjunto de intereses</string>
     <string name="interest_set_rename">Renombrar</string>
     <string name="interest_set_clone">Clonar</string>
@@ -980,6 +984,7 @@
     <string name="quick_zap_amounts_explainer">Aparece al presionar el botón de zap. Pulsa una cantidad para eliminarla. Si la dejas vacía, se abrirá el cuadro de diálogo para introducir una cantidad cada vez.</string>
     <string name="send_onchain_instead">Enviar en cadena en su lugar</string>
     <string name="reload_mint_title">Recargar mint</string>
+    <string name="reload_mint_sats_amount">%1$s sats</string>
     <string name="reload_mint_topup_label">Importe de recarga</string>
     <string name="reload_mint_section_to">Mint a recargar</string>
     <string name="reload_mint_section_from">Fondos de</string>
@@ -1297,6 +1302,7 @@
     <string name="hide_community_rules_violations_explainer">Elimina publicaciones de los feeds de comunidades cuando la comunidad publica un documento de normas NIP-9B y un evento no lo cumple. No tiene efecto cuando una comunidad no tiene normas estructuradas.</string>
     <string name="security_section_filtering_preferences">Preferencias de filtrado</string>
     <string name="security_section_blocked_content">Contenido bloqueado</string>
+    <string name="security_unlimited">∞</string>
     <string name="security_blocked_users_empty">Aún no has bloqueado a ningún usuario.</string>
     <string name="security_spamming_users_empty">Ninguna cuenta ha sido marcada como spam en esta sesión.</string>
     <string name="security_hidden_words_empty">No hay palabras ocultas. Añade una palabra a continuación para ocultar las publicaciones que la contengan.</string>
@@ -1355,6 +1361,7 @@
     <string name="relay_count_subscriptions">Suscripciones COUNT (%1$d)</string>
     <string name="relay_outbox_events">Eventos de salida (%1$d)</string>
     <string name="relay_filter_authors">%1$d autores</string>
+    <string name="relay_filter_ids">%1$d ids</string>
     <string name="relay_filter_since">desde %1$s</string>
     <string name="relay_filter_until">hasta %1$s</string>
     <string name="relay_filter_limit">límite %1$d</string>
@@ -1365,6 +1372,7 @@
     <string name="accepts_up_to">Acepta hasta</string>
     <string name="time_in_the_future">%1$s en el futuro</string>
     <string name="time_in_the_past">hace %1$s</string>
+    <string name="amount_in_bits">%1$s bits</string>
     <string name="event_retention">Retención de eventos</string>
     <string name="content_size">Tamaño de contenido</string>
     <string name="connectivity">Conectividad</string>
@@ -1378,6 +1386,7 @@
     <string name="max_limit_events_returning">Límite máximo (devolución de eventos)</string>
     <string name="max_subid_length">Longitud máxima de subID</string>
     <string name="cashu">Token de Cashu</string>
+    <string name="cashu_mint_label">Mint: %1$s</string>
     <string name="cashu_redeem">Canjear</string>
     <string name="cashu_copy_token">Copiar token</string>
     <string name="quick_actions_open_in_another_app">Abrir en otra app</string>
@@ -1735,6 +1744,7 @@
     <string name="wallet_outgoing">Enviado</string>
     <string name="wallet_refresh">Actualizar</string>
     <string name="wallet_filter_all">Todos</string>
+    <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">No-Zaps</string>
     <string name="wallet_add">Añadir cartera</string>
     <string name="wallet_default">Predeterminada</string>
@@ -1758,10 +1768,13 @@
     <string name="cashu_discovering">Buscando tu monedero…</string>
     <string name="cashu_discovering_description">Los monederos NIP-60 se sincronizan entre clientes. Si creaste uno en otra aplicación con esta clave Nostr, debería aparecer en unos segundos.</string>
     <string name="cashu_balance">Saldo</string>
+    <string name="cashu_mints">Mints</string>
     <string name="cashu_mint_url">URL del mint</string>
     <string name="cashu_remove_mint">Eliminar mint</string>
     <string name="cashu_add_mint">Añadir mint</string>
     <string name="cashu_history">Historial</string>
+    <string name="cashu_wallet_autosaves">Tu monedero guarda automáticamente a medida que añades o eliminas mints. Se crea una clave nutzap la primera vez que añades una mint.</string>
+    <string name="cashu_wallet_saving">Guardando…</string>
     <string name="cashu_p2pk_section">Clave nutzap (avanzado)</string>
     <string name="cashu_p2pk_explainer">Una clave privada separada usada únicamente para recibir nutzaps NIP-61. No es tu clave de identidad Nostr.</string>
     <string name="cashu_p2pk_autogen">Generar una nueva clave</string>
@@ -1834,7 +1847,9 @@
     <string name="cashu_quote_confirm">¿Pagar %1$s sat + hasta %2$s sat en comisiones?</string>
     <string name="cashu_verify">Verificar</string>
     <string name="cashu_mint_reachable">✓ El mint es accesible</string>
+    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">No se pudo alcanzar el mint: %1$s</string>
+    <string name="nutzap">Nutzap</string>
     <string name="nutzap_failed_title">Nutzap fallido</string>
     <string name="nutzap_failed_no_recipient">No hay clave pública de destinatario en la nota</string>
     <string name="nutzap_failed_private_note">Los nutzaps son públicos y revelarían esta nota privada. Usa un zap Lightning en su lugar.</string>
@@ -1876,12 +1891,18 @@
     <string name="onchain_send_recipient_placeholder">nombre, NIP-05 o npub</string>
     <string name="onchain_send_change_recipient">Cambiar destinatario</string>
     <string name="onchain_send_amount">Cantidad</string>
+    <string name="onchain_send_sats_suffix">sats</string>
     <string name="onchain_send_min_warning">El zap onchain mínimo es %1$s sats — las cantidades menores son consumidas por las comisiones de minería. Usa un zap Lightning en su lugar.</string>
     <string name="onchain_send_comment_label">Comentario (opcional)</string>
     <string name="onchain_send_priority">Prioridad</string>
     <string name="onchain_send_fee_slow">Lento</string>
+    <string name="onchain_send_fee_normal">Normal</string>
     <string name="onchain_send_fee_fast">Rápido</string>
     <string name="onchain_send_fee_eta_slow">~1 h</string>
+    <string name="onchain_send_fee_eta_normal">~30 min</string>
+    <string name="onchain_send_fee_eta_fast">~10 min</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <string name="onchain_send_loading_fees">Cargando estimaciones de comisión…</string>
     <string name="onchain_send_button_amount">Enviar %1$s sats</string>
     <plurals name="onchain_send_button_amount_split">
@@ -1906,6 +1927,7 @@
     <string name="onchain_send_result_transaction">Transacción</string>
     <string name="onchain_send_result_fee">Comisión</string>
     <string name="onchain_send_result_change">Cambio</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
     <string name="onchain_send_done">Hecho</string>
     <string name="onchain_send_failed_at">Error en: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">El pago se difundió (tx %1$s) pero el recibo no se publicó.</string>
@@ -1940,6 +1962,7 @@
     <string name="edit_calendar_collection">Editar calendario</string>
     <string name="calendar_collection_events_section">Eventos en este calendario (%1$d)</string>
     <string name="calendar_collection_no_events_yet">Aún no has creado ningún evento de calendario.</string>
+    <string name="calendar_view_feed">Tablón</string>
     <string name="calendar_view_month">Mes</string>
     <string name="calendar_view_week">Semana</string>
     <string name="calendar_view_day">Día</string>
@@ -2001,6 +2024,7 @@
     <string name="calendar_rsvp_going">Asistiré</string>
     <string name="calendar_rsvp_maybe">Tal vez</string>
     <string name="calendar_rsvp_not_going">No puedo ir</string>
+    <string name="calendar_rsvp_section">Confirmaciones (%1$d)</string>
     <string name="calendar_rsvp_none">Sin RSVPs aún.</string>
     <string name="calendar_participants_section">Participantes (%1$d)</string>
     <string name="calendar_event_in_calendars">En calendarios (%1$d)</string>
@@ -2010,6 +2034,7 @@
     <string name="calendar_relative_ongoing_with_end">%1$s · termina %2$s</string>
     <string name="calendar_export_share_title">Compartir evento de calendario</string>
     <string name="calendar_export_event">Exportar al calendario (.ics)</string>
+    <string name="calendar_reminder_channel_id">recordatorios_calendario</string>
     <string name="calendar_reminder_channel_name">Recordatorios de calendario</string>
     <string name="calendar_reminder_channel_description">Aviso cuando un evento al que asistirás está a punto de comenzar.</string>
     <string name="calendar_reminder_default_title">Evento de calendario</string>
@@ -2034,6 +2059,10 @@
     <string name="calendar_reminder_settings_enabled_subtitle">Se enviará una notificación cuando un evento al que asistirás esté a punto de comenzar.</string>
     <string name="calendar_reminder_settings_lead_title">Tiempo de antelación del recordatorio</string>
     <string name="calendar_reminder_settings_lead_subtitle">Cuántos minutos antes del evento quieres recibir la notificación.</string>
+    <plurals name="calendar_reminder_settings_lead_choice">
+        <item quantity="one">%1$d min</item>
+        <item quantity="other">%1$d min</item>
+    </plurals>
     <string name="calendar_share_nostr">Compartir como enlace Nostr</string>
     <string name="calendar_share_nostr_title">Compartir enlace de calendario</string>
     <string name="calendar_filter_all">Todos los calendarios</string>
@@ -2182,6 +2211,7 @@
     <string name="private_inbox_section">Relés de entrada DM</string>
     <string name="private_inbox_section_explainer_profile">El usuario recibe mensajes directos en estos relés</string>
     <string name="private_inbox_section_explainer">Inserta entre 1 y 3 relés para que te sirvan de buzón de entrada privado. Otros usarán estos relés para enviarte mensajes directos. Los relés del buzón de entrada para mensajes directos deberían aceptar cualquier mensaje de cualquier persona, pero solo te permiten descargarlos. Algunas buenas opciones son:\n - inbox.nostr.wine (de pago)\n - you.nostr1.com (relés personales; de pago)</string>
+    <string name="keypackages">Paquetes de claves</string>
     <string name="keypackage_section">Relays de KeyPackage</string>
     <string name="keypackage_section_explainer">Relays donde se publican tus MLS KeyPackages (MIP-00). Otros usuarios obtienen estas KeyPackages para invitarte a chats de grupo Marmot. Introduce entre 1 y 3 relays que acepten eventos KeyPackage de tu parte y permitan lecturas públicas.</string>
     <string name="private_outbox_section">Relés privados</string>
@@ -2226,17 +2256,27 @@
     <string name="forked_from">Bifurcación de</string>
     <string name="git_web_address">Web:</string>
     <string name="git_clone_address">Clon:</string>
+    <string name="git_branch">Rama</string>
+    <string name="git_commit">Confirmar</string>
+    <string name="git_merge_base">Fusionar base</string>
+    <string name="git_pr_update_description">Se actualizó la solicitud de incorporación de cambios con una nueva confirmación.</string>
     <string name="git_status_open">Abierto</string>
     <string name="git_status_merged">Fusionado</string>
     <string name="git_status_closed">Cerrado</string>
     <string name="git_status_draft">Borrador</string>
     <string name="git_repo_tab_overview">Resumen</string>
+    <string name="git_repo_tab_issues">Incidencias</string>
     <string name="git_repo_tab_patches">Parches y PRs</string>
+    <string name="git_repo_filter_open">Abierto</string>
+    <string name="git_repo_filter_closed">Cerrado y resuelto</string>
+    <string name="git_untitled">Sin título</string>
     <string name="git_repo_section_about">Acerca de</string>
     <string name="git_repo_section_links">Enlaces</string>
     <string name="git_repo_section_maintainers">Mantenedores</string>
     <string name="git_repo_section_topics">Temas</string>
     <string name="git_repo_personal_fork">Fork personal</string>
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Permisos:</string>
     <string name="profile_tab_apps">Apps y sitios</string>
     <string name="nsite_root_site">Sitio raíz</string>
@@ -2310,12 +2350,15 @@
     <string name="torrent_no_info">El evento no tiene suficiente información para crear un enlace magnético</string>
     <string name="my_lists">Mis listas</string>
     <string name="select_list_to_filter">Selecciona una lista para filtrar el tablón</string>
+    <string name="feed_group_feeds">Tablones</string>
+    <string name="feed_group_hashtags">Hashtags</string>
     <string name="feed_group_interest_sets">Conjuntos de intereses</string>
     <string name="feed_group_locations">Ubicaciones</string>
     <string name="feed_group_communities">Comunidades</string>
     <string name="feed_group_lists">Listas</string>
     <string name="feed_group_dvms">Algoritmos de feed</string>
     <string name="follow_list_all_favorite_dvms">Todos los algoritmos de feed favoritos</string>
+    <string name="feed_group_relays">Relés</string>
     <string name="add_dvm_to_favorites">Añadir algoritmo de feed a favoritos</string>
     <string name="remove_dvm_from_favorites">Eliminar de favoritos</string>
     <string name="favorite_dvms_title">Algoritmos de feed favoritos</string>
@@ -2345,10 +2388,13 @@
     <string name="search_scope_all">Todo</string>
     <string name="search_scope_people">Personas</string>
     <string name="search_scope_notes">Notas</string>
+    <string name="search_source_local">Local</string>
+    <string name="search_source_relays">Relés</string>
     <string name="search_follows_only">Solo seguidos</string>
     <string name="search_sort_newest">Más recientes</string>
     <string name="search_sort_oldest">Más antiguos</string>
     <string name="search_sort_relevance">Relevancia</string>
+    <string name="search_sort_popular">Popular</string>
     <string name="search_filters_title">Filtros</string>
     <string name="search_filters_reset">Restablecer</string>
     <string name="search_filters_section_source">Fuente</string>
@@ -2360,6 +2406,7 @@
     <string name="translate_to_description">Elige el idioma al que traducir el contenido.</string>
     <string name="language_preferences">Preferencias de visualización de idioma</string>
     <string name="language_preferences_description">Para cada par de idiomas traducidos, elige qué idioma mostrar primero.</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
     <string name="search_languages">Buscar idiomas</string>
     <string name="add_language">Añadir idioma</string>
     <string name="add_language_pair">Añadir par de idiomas</string>
@@ -2416,6 +2463,7 @@
     <string name="retrying">Reintentando…</string>
     <string name="retry">Reintentar</string>
     <string name="dismiss">Descartar</string>
+    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Difundiendo</string>
     <string name="broadcasting_name">Difundiendo %1$s</string>
     <string name="broadcasting_number_events">Difundiendo %1$d eventos…</string>
@@ -2512,10 +2560,13 @@
     <string name="kind_follow_packs">Packs de seguidos</string>
     <string name="kind_reposts_16">Republicaciones (16)</string>
     <string name="kind_geohash_follows">Seguidos por geohash</string>
+    <string name="kind_gift_wraps">GiftWraps</string>
     <string name="kind_git_issue">Incidencia de Git</string>
     <string name="kind_git_patch">Parche de Git</string>
     <string name="kind_git_repo">Repositorio de Git</string>
     <string name="kind_git_reply">Respuesta de Git</string>
+    <string name="kind_git_pr">Solicitud de incorporación</string>
+    <string name="kind_git_pr_update">Actualización de solicitud de incorporación</string>
     <string name="kind_zap_goals">Objetivos de Zap</string>
     <string name="kind_hashtag_follows">Seguidos por hashtag</string>
     <string name="kind_highlights">Destacados</string>
@@ -2527,20 +2578,27 @@
     <string name="kind_named_bookmarks">Marcadores con nombre</string>
     <string name="kind_live_chats">Chats en directo</string>
     <string name="kind_live_streams">Transmisiones en directo</string>
+    <string name="kind_zaps">Zaps</string>
     <string name="kind_nwc_request">Solicitud NWC</string>
     <string name="kind_nwc_response">Respuesta NWC</string>
     <string name="kind_private_zaps">Zaps privados</string>
     <string name="kind_zap_req">Solicitud de Zap</string>
+    <string name="kind_blogs">Blogs</string>
     <string name="kind_meeting_room">Sala de reuniones</string>
     <string name="kind_room_presence">Presencia en sala</string>
     <string name="kind_meeting_space">Espacio de reuniones</string>
     <string name="kind_profile">Perfil</string>
     <string name="kind_mute_list">Lista de silenciados</string>
+    <string name="kind_nns">NNS</string>
+    <string name="kind_nip">NIP</string>
+    <string name="kind_nostr_connect">Nostr Connect</string>
     <string name="kind_dvm_status">Estado DVM</string>
     <string name="kind_dvm_content_req">Solicitud de contenido DVM</string>
     <string name="kind_dvm_content_resp">Respuesta de contenido DVM</string>
     <string name="kind_dvm_user_req">Solicitud de usuario DVM</string>
     <string name="kind_dvm_user_resp">Respuesta de usuario DVM</string>
+    <string name="kind_ots">OTS</string>
+    <string name="kind_pay_to">Pagar a</string>
     <string name="kind_people_lists">Listas de personas</string>
     <string name="kind_pictures">Imágenes</string>
     <string name="kind_workouts">Entrenamientos</string>
@@ -2548,6 +2606,7 @@
     <string name="kind_zap_poll">Encuesta de Zap</string>
     <string name="kind_poll">Encuesta</string>
     <string name="kind_poll_response">Respuesta de encuesta</string>
+    <string name="kind_nip04_dms">Mensajes directos NIP-04</string>
     <string name="kind_private_relays">Relés privados</string>
     <string name="kind_proxy_relays">Relés proxy</string>
     <string name="kind_public_message">Mensaje público</string>
@@ -2565,6 +2624,7 @@
     <string name="kind_user_status">Estado del usuario</string>
     <string name="kind_notes">Notas</string>
     <string name="kind_edits">Ediciones</string>
+    <string name="kind_torrents">Torrents</string>
     <string name="kind_torrent_comments">Comentarios de torrent</string>
     <string name="kind_trusted_relays">Relés de confianza</string>
     <string name="kind_trusted_providers">Proveedores de confianza</string>
