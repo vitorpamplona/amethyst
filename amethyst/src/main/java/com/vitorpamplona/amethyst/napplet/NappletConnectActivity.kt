@@ -233,8 +233,6 @@ private fun NappletConnectScreen(
                     Text(
                         stringResource(R.string.napplet_connect_block, info.domain),
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Start,
                     )
                 }
             }

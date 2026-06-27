@@ -299,22 +299,14 @@ private fun NappletSignerConsentDialog(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
-                    Text(
-                        stringResource(R.string.napplet_signer_deny_once),
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Start,
-                    )
+                    Text(stringResource(R.string.napplet_signer_deny_once))
                 }
                 OutlinedButton(
                     onClick = { onGrant(SignerOpGrant.DenyForOp(info.op)) },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
-                    Text(
-                        stringResource(R.string.napplet_signer_deny_op, info.operationSummary),
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Start,
-                    )
+                    Text(stringResource(R.string.napplet_signer_deny_op, info.operationSummary))
                 }
             }
         }

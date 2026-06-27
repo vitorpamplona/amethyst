@@ -216,9 +216,7 @@ private fun NappletConsentDialog(
                 ) {
                     Text(
                         stringResource(R.string.napplet_consent_not_now),
-                        modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Start,
                     )
                 }
                 OutlinedButton(
@@ -228,9 +226,7 @@ private fun NappletConsentDialog(
                 ) {
                     Text(
                         stringResource(R.string.napplet_consent_deny_always),
-                        modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Start,
                     )
                 }
             }
