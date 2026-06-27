@@ -53,7 +53,6 @@ import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.FontFamilyType
 import com.vitorpamplona.amethyst.model.FontSizeType
-import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.parseAccentColorType
@@ -62,7 +61,6 @@ import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseFeatureSetType
 import com.vitorpamplona.amethyst.model.parseFontFamilyType
 import com.vitorpamplona.amethyst.model.parseFontSizeType
-import com.vitorpamplona.amethyst.model.parseGalleryType
 import com.vitorpamplona.amethyst.model.parseThemeType
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
@@ -129,7 +127,6 @@ fun SettingsScreen(sharedPrefs: UiSettingsFlow) {
         ShowProfilePictureChoice(sharedPrefs)
         ImmersiveScrollingChoice(sharedPrefs)
         FeatureSetChoice(sharedPrefs)
-        GalleryChoice(sharedPrefs)
     }
 }
 
@@ -437,26 +434,6 @@ fun FeatureSetChoice(sharedPrefs: UiSettingsFlow) {
         featureSetIndex.screenCode,
     ) {
         sharedPrefs.featureSet.tryEmit(parseFeatureSetType(it))
-    }
-}
-
-@Composable
-fun GalleryChoice(sharedPrefs: UiSettingsFlow) {
-    val galleryItems =
-        persistentListOf(
-            TitleExplainer(stringRes(ProfileGalleryType.CLASSIC.resourceId)),
-            TitleExplainer(stringRes(ProfileGalleryType.MODERN.resourceId)),
-        )
-
-    val galleryIndex by sharedPrefs.gallerySet.collectAsState()
-
-    SettingsRow(
-        R.string.gallery_style,
-        R.string.gallery_style_description,
-        galleryItems,
-        galleryIndex.screenCode,
-    ) {
-        sharedPrefs.gallerySet.tryEmit(parseGalleryType(it))
     }
 }
 
