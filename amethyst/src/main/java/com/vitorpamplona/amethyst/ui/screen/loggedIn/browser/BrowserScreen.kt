@@ -74,7 +74,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.DefaultWebClients
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.browser.OmniboxSuggestions
+import com.vitorpamplona.amethyst.commons.browser.SuggestedWebApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
@@ -90,7 +92,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.favoriteAppItems
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.suggestedAppItems
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /** How many of the most recent history entries the idle browser home surfaces under "Recent". */
@@ -214,7 +215,7 @@ private fun BrowserLauncher(
             else -> {
                 val favoriteUrls = remember(apps) { apps.filterIsInstance<FavoriteApp.WebApp>().mapTo(HashSet()) { it.url } }
                 // Hardcoded starter web apps, minus any the user already pinned (those show under Favorites).
-                val suggested = remember(favoriteUrls) { DefaultWebClients.list.filter { it.url !in favoriteUrls } }
+                val suggested = remember(favoriteUrls) { DefaultWebClients.list.filter { it.app.url !in favoriteUrls } }
                 BrowserHome(
                     apps = apps,
                     history = history,
@@ -369,7 +370,7 @@ private fun BrowserHome(
     history: List<BrowserHistoryEntry>,
     iconKeys: Set<String>,
     favoriteUrls: Set<String>,
-    suggested: List<FavoriteApp.WebApp>,
+    suggested: List<SuggestedWebApp>,
     onOpenApp: (FavoriteApp) -> Unit,
     onRemoveApp: (FavoriteApp) -> Unit,
     onAddApp: (FavoriteApp) -> Unit,
@@ -405,7 +406,60 @@ private fun BrowserHome(
         }
         if (suggested.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "h-sug") { SectionHeader(stringResource(R.string.browser_suggested)) }
-            suggestedAppItems(suggested, onOpenApp, onAddApp)
+            items(suggested, span = { GridItemSpan(maxLineSpan) }, key = { "s:" + it.app.url }) { entry ->
+                SuggestedRow(
+                    entry = entry,
+                    iconKeys = iconKeys,
+                    onClick = { onOpenApp(entry.app) },
+                    onAddFavorite = { onAddApp(entry.app) },
+                )
+            }
+        }
+    }
+}
+
+/** A Discover row: the app's own icon, its name, and a one-line description, with a star to pin it. */
+@Composable
+private fun SuggestedRow(
+    entry: SuggestedWebApp,
+    iconKeys: Set<String>,
+    onClick: () -> Unit,
+    onAddFavorite: () -> Unit,
+) {
+    val iconModel = remember(entry, iconKeys) { OmniboxInput.hostOf(entry.app.url)?.let(BrowserIconRegistry::iconModelFor) }
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onClick)
+                .padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FavoriteAppIcon(
+            app = entry.app,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(28.dp),
+            iconModel = iconModel,
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                entry.app.label,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                entry.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        IconButton(onClick = onAddFavorite) {
+            Icon(MaterialSymbols.StarBorder, contentDescription = stringResource(R.string.favorite_app_add))
         }
     }
 }

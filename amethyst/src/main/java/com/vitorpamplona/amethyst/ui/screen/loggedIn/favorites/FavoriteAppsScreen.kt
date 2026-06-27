@@ -167,45 +167,7 @@ fun LazyGridScope.favoriteAppItems(
         FavoriteAppCell(
             app = app,
             onOpen = { onOpen(app) },
-            menu = { dismiss ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.favorite_app_remove)) },
-                    leadingIcon = { Icon(MaterialSymbols.Delete, contentDescription = null) },
-                    onClick = {
-                        dismiss()
-                        onRemove(app)
-                    },
-                )
-            },
-        )
-    }
-}
-
-/**
- * Emits the same launch cells for a list of *suggested* web apps (the hardcoded defaults the browser
- * home offers under "Discover web apps"). Identical to [favoriteAppItems] except the long-press menu offers
- * "Add to favorites" instead of "Remove" — these aren't pinned yet, so tapping star is what the user
- * would want next.
- */
-fun LazyGridScope.suggestedAppItems(
-    apps: List<FavoriteApp>,
-    onOpen: (FavoriteApp) -> Unit,
-    onAddFavorite: (FavoriteApp) -> Unit,
-) {
-    items(apps, key = { "suggested:" + it.id }) { app ->
-        FavoriteAppCell(
-            app = app,
-            onOpen = { onOpen(app) },
-            menu = { dismiss ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.favorite_app_add)) },
-                    leadingIcon = { Icon(MaterialSymbols.StarBorder, contentDescription = null) },
-                    onClick = {
-                        dismiss()
-                        onAddFavorite(app)
-                    },
-                )
-            },
+            onRemove = { onRemove(app) },
         )
     }
 }
@@ -215,7 +177,7 @@ fun LazyGridScope.suggestedAppItems(
 internal fun FavoriteAppCell(
     app: FavoriteApp,
     onOpen: () -> Unit,
-    menu: @Composable (dismiss: () -> Unit) -> Unit,
+    onRemove: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
 
@@ -268,7 +230,14 @@ internal fun FavoriteAppCell(
         )
 
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            menu { menuOpen = false }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.favorite_app_remove)) },
+                leadingIcon = { Icon(MaterialSymbols.Delete, contentDescription = null) },
+                onClick = {
+                    menuOpen = false
+                    onRemove()
+                },
+            )
         }
     }
 }
