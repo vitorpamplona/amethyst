@@ -31,9 +31,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.model.AccentColorType
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
+import com.vitorpamplona.amethyst.model.FontFamilyType
+import com.vitorpamplona.amethyst.model.FontSizeType
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettings
@@ -120,6 +123,9 @@ class UiSharedPreferences(
         val UI_SHOW_PROFILE_FOLLOWERS_FEED = booleanPreferencesKey("ui.show_profile_followers_feed")
         val UI_DONT_SHOW_ONCHAIN_PUBLIC_WARNING = booleanPreferencesKey("ui.dont_show_onchain_public_warning")
         val UI_SUGGEST_WORKOUTS_FROM_HEALTH_CONNECT = stringPreferencesKey("ui.suggest_workouts_from_health_connect")
+        val UI_ACCENT_COLOR = stringPreferencesKey("ui.accent_color")
+        val UI_FONT_FAMILY = stringPreferencesKey("ui.font_family")
+        val UI_FONT_SIZE = stringPreferencesKey("ui.font_size")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
@@ -157,6 +163,9 @@ class UiSharedPreferences(
                     dontShowOnchainPublicWarning = preferences[UI_DONT_SHOW_ONCHAIN_PUBLIC_WARNING] ?: false,
                     suggestWorkoutsFromHealthConnect =
                         preferences[UI_SUGGEST_WORKOUTS_FROM_HEALTH_CONNECT]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
+                    accentColor = preferences[UI_ACCENT_COLOR]?.let { AccentColorType.valueOf(it) } ?: AccentColorType.PURPLE,
+                    fontFamily = preferences[UI_FONT_FAMILY]?.let { FontFamilyType.valueOf(it) } ?: FontFamilyType.SYSTEM,
+                    fontSize = preferences[UI_FONT_SIZE]?.let { FontSizeType.valueOf(it) } ?: FontSizeType.NORMAL,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -206,6 +215,9 @@ class UiSharedPreferences(
                     preferences[UI_SHOW_PROFILE_FOLLOWERS_FEED] = sharedSettings.showProfileFollowersFeed
                     preferences[UI_DONT_SHOW_ONCHAIN_PUBLIC_WARNING] = sharedSettings.dontShowOnchainPublicWarning
                     preferences[UI_SUGGEST_WORKOUTS_FROM_HEALTH_CONNECT] = sharedSettings.suggestWorkoutsFromHealthConnect.name
+                    preferences[UI_ACCENT_COLOR] = sharedSettings.accentColor.name
+                    preferences[UI_FONT_FAMILY] = sharedSettings.fontFamily.name
+                    preferences[UI_FONT_SIZE] = sharedSettings.fontSize.name
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

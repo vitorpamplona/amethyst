@@ -19,12 +19,6 @@
     <!-- nSite network routing (Tor vs open web) -->
     <string name="napplet_net_tor_desc">This site loads over Tor. Tap to change.</string>
     <string name="napplet_net_open_desc">This site loads over the open web. Tap to change.</string>
-    <string name="napplet_net_tor_title">“%1$s” loads over Tor</string>
-    <string name="napplet_net_tor_message">This site\'s traffic is routed through Tor, so it can\'t see your IP address. Some sites are slow or broken over Tor — you can switch this site to the open web. Your choice is remembered for this site.</string>
-    <string name="napplet_net_open_title">“%1$s” loads over the open web</string>
-    <string name="napplet_net_open_message">This site loads directly, so it (and the servers it contacts) can see your IP address. Switch it back to Tor to keep your IP private. Your choice is remembered for this site.</string>
-    <string name="napplet_net_switch_open">Use open web</string>
-    <string name="napplet_net_switch_tor">Use Tor</string>
     <!-- Short labels for the pull-down sheet's network row -->
     <string name="napplet_net_tor_label">Loads over Tor</string>
     <string name="napplet_net_open_label">Loads over the open web</string>
@@ -37,4 +31,8 @@
     <string name="napplet_unavailable_title">Couldn\'t load “%1$s”</string>
     <string name="napplet_unavailable_subtitle">The publisher\'s servers may be offline, or you\'re not connected. You can try again.</string>
     <string name="napplet_unavailable_retry">Try again</string>
+
+    <!-- Developer console: page-load failures surfaced as console errors -->
+    <string name="napplet_console_load_error">Failed to load (%1$d): %2$s</string>
+    <string name="napplet_console_http_error">HTTP %1$d %2$s</string>
 </resources>

@@ -120,6 +120,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.favorites.FavoriteAlgoFeedsListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabThemeWatcher
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FavoriteAppManifestPreloader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.BrowseEmojiSetsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.display.EmojiPackScreen
@@ -271,6 +272,9 @@ fun AppNavigation(
                 EmbeddedTabLayer(bottomBarItems.favoriteIds())
                 // Warm every pinned tab at startup so the first tap is instant (content already local).
                 EmbeddedTabPreloader(accountViewModel)
+                // Rebuild the warm surfaces in the new theme when the app's DARK/LIGHT preference flips
+                // (an embed WebView's theme is fixed at construction, so it can't follow a live switch).
+                EmbeddedTabThemeWatcher()
             }
         }
     }

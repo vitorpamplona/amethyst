@@ -24,6 +24,7 @@ import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -37,6 +38,9 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.ConsoleMessage
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -58,7 +62,6 @@ import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
-import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
@@ -146,6 +149,18 @@ class NappletHostActivity : ComponentActivity() {
     // Swaps between the loading screen, the applet WebView, and the "unavailable" screen.
     private val contentFrame by lazy { FrameLayout(this) }
     private val uiScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    // The loading splash (monogram + spinner). Kept on top of the mounted WebView and removed only on
+    // first paint, so there's never a blank/dark gap between the index probe and the shell's first frame.
+    private var loadingView: View? = null
+
+    // A thin determinate progress bar pinned to the top edge (browser-style), driven by the
+    // WebChromeClient's onProgressChanged; hidden at 100%.
+    private val topProgressBar by lazy { buildTopProgressBar() }
+
+    // Bottom pull-up developer console: the page's console.log/warn/error plus any resource load errors.
+    private var consolePanel: NappletConsolePanel? = null
+    private var controlSheet: NappletControlSheet? = null
 
     // Set once the WebView has begun loading the shell, so a retry doesn't reload it.
     private var started = false
@@ -268,6 +283,18 @@ class NappletHostActivity : ComponentActivity() {
                             Gravity.TOP,
                         ),
                 )
+                addView(
+                    buildConsolePanel(),
+                    FrameLayout
+                        .LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            Gravity.BOTTOM,
+                        ),
+                )
+                // Added last so the thin loading bar paints above the content (and over the grabber's top
+                // edge); it's GONE except while loading, so it never obscures the trusted chrome.
+                addView(topProgressBar)
             }
         setContentView(root)
         // Activities are edge-to-edge by default on recent Android; pad by the system bar and
@@ -295,22 +322,26 @@ class NappletHostActivity : ComponentActivity() {
      */
     private fun probeAndMount() {
         contentFrame.removeAllViews()
-        contentFrame.addView(buildLoadingView())
+        loadingView = buildLoadingView().also { contentFrame.addView(it) }
         uiScope.launch {
             val available = withContext(Dispatchers.IO) { contentServer.resolve("/") is StaticSiteResolution.Resolved }
             if (available) {
                 mountWebView()
             } else {
                 contentFrame.removeAllViews()
+                loadingView = null
                 contentFrame.addView(buildErrorView { probeAndMount() })
             }
         }
     }
 
     private fun mountWebView() {
-        contentFrame.removeAllViews()
         (webView.parent as? ViewGroup)?.removeView(webView)
-        contentFrame.addView(webView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        // Mount the WebView UNDER the loading splash (index 0) instead of replacing it: the shell + applet
+        // bundle still take time to paint (seconds over Tor), and the WebView shows only its dark
+        // colorBackground until then. The splash stays until the first frame paints (onPageCommitVisible),
+        // so the user never sees a blank/black screen with no sign that anything is loading.
+        contentFrame.addView(webView, 0, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         if (!started) {
             started = true
             webView.loadUrl(NappletWebContract.SHELL_URL)
@@ -475,15 +506,13 @@ class NappletHostActivity : ComponentActivity() {
                 safeBrowsingEnabled = true
             }
         }
-        if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
-            WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, true)
-        }
         // Disable the overscroll stretch/glow: forcing a scroll past the content edge stretched the
         // WebView's output and exposed the shell document's background behind the applet iframe at the
         // seam (a stray white band at the bottom). The applet's own content still scrolls normally.
         webView.overScrollMode = View.OVER_SCROLL_NEVER
         WebView.setWebContentsDebuggingEnabled(false)
         webView.webViewClient = NappletWebViewClient()
+        webView.webChromeClient = NappletWebChromeClient()
     }
 
     /**
@@ -529,6 +558,34 @@ class NappletHostActivity : ComponentActivity() {
             syncBackState()
         }
 
+        // The shell has painted its first frame — drop the loading splash so the running app shows
+        // through. Null-safe so a later in-app navigation/reload (splash already gone) is a no-op.
+        override fun onPageCommitVisible(
+            view: WebView,
+            url: String,
+        ) {
+            loadingView?.let { contentFrame.removeView(it) }
+            loadingView = null
+        }
+
+        // Surface failed resource fetches (a missing blob, a verify miss, an off-origin request the
+        // default-deny CSP blocked) in the console so an nsite/napplet developer can see what broke.
+        override fun onReceivedError(
+            view: WebView,
+            request: WebResourceRequest,
+            error: WebResourceError,
+        ) {
+            logConsoleError(request, getString(R.string.napplet_console_load_error, error.errorCode, error.description?.toString().orEmpty()))
+        }
+
+        override fun onReceivedHttpError(
+            view: WebView,
+            request: WebResourceRequest,
+            errorResponse: WebResourceResponse,
+        ) {
+            logConsoleError(request, getString(R.string.napplet_console_http_error, errorResponse.statusCode, errorResponse.reasonPhrase.orEmpty()))
+        }
+
         override fun shouldOverrideUrlLoading(
             view: WebView,
             request: WebResourceRequest,
@@ -548,6 +605,43 @@ class NappletHostActivity : ComponentActivity() {
             // Never navigate the sandbox WebView away from our internal origin.
             return true
         }
+    }
+
+    /** Drives the top loading bar and forwards the applet/site's `console.*` output to the console panel. */
+    private inner class NappletWebChromeClient : WebChromeClient() {
+        override fun onProgressChanged(
+            view: WebView,
+            newProgress: Int,
+        ) {
+            updateLoadProgress(newProgress)
+        }
+
+        override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+            val panel = consolePanel ?: return false
+            panel.appendLog(consoleMessage.messageLevel(), consoleMessage.message(), consoleMessage.sourceId(), consoleMessage.lineNumber())
+            controlSheet?.updateConsoleCount(panel.entryCount)
+            return true
+        }
+    }
+
+    /** Shows the thin top bar at [progress]% while loading, hiding it once the page is fully loaded. */
+    private fun updateLoadProgress(progress: Int) {
+        if (progress >= 100) {
+            topProgressBar.visibility = View.GONE
+        } else {
+            topProgressBar.progress = progress
+            topProgressBar.visibility = View.VISIBLE
+        }
+    }
+
+    /** Appends a single ERROR line to the console panel and refreshes the chrome's unread count. */
+    private fun logConsoleError(
+        request: WebResourceRequest,
+        message: String,
+    ) {
+        val panel = consolePanel ?: return
+        panel.appendLog(ConsoleMessage.MessageLevel.ERROR, message, request.url?.toString().orEmpty(), 0)
+        controlSheet?.updateConsoleCount(panel.entryCount)
     }
 
     // ---- bridge: shell <-> native ----
@@ -663,6 +757,9 @@ class NappletHostActivity : ComponentActivity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(32), dp(32), dp(32), dp(32))
+            // Opaque so the splash/error screen fully covers the WebView it now overlays (mounted beneath
+            // it until first paint) instead of letting the dark, not-yet-painted page show through.
+            setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
             layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
         }
 
@@ -736,30 +833,33 @@ class NappletHostActivity : ComponentActivity() {
             title = barTitle(),
             isSandbox = true,
             onReload = { if (this::webView.isInitialized) webView.reload() },
-            // Website-mode nSites can re-route over Tor; switching rebuilds the session via a confirm
-            // dialog, so the row taps through rather than toggling inline.
+            // Website-mode nSites can re-route over Tor; switching rebuilds the session, so the row taps
+            // through to a full relaunch rather than toggling inline.
             torInitiallyOn = if (profile.exposesNetwork && proxyPort > 0) useTor else null,
-            onNetworkTap = if (profile.exposesNetwork && proxyPort > 0) ({ showNetworkDialog() }) else null,
+            onNetworkTap = if (profile.exposesNetwork && proxyPort > 0) ({ setNetworkMode(!useTor) }) else null,
             onInfo = { showAccessDialog() },
-        )
+            onConsole = { consolePanel?.toggle() },
+        ).also { controlSheet = it }
+
+    private fun buildConsolePanel(): View =
+        NappletConsolePanel(this).also {
+            it.onClearCallback = { controlSheet?.updateConsoleCount(0) }
+            consolePanel = it
+        }
 
     /**
-     * Explains the site's current network routing and offers to switch it. Switching persists the
-     * per-site choice (via the broker, which owns the preference) and relaunches this screen so the new
-     * routing applies cleanly from [onCreate] — the proxy and content server are rebuilt for the new mode.
+     * A thin determinate progress bar pinned to the top edge, like a browser's. Driven by
+     * [NappletWebChromeClient.onProgressChanged]: visible while the shell + verified blobs load and gone
+     * at 100%, so a slow load (e.g. a large bundle over Tor) shows progress instead of a blank dark WebView.
      */
-    private fun showNetworkDialog() {
-        val titleRes = if (useTor) R.string.napplet_net_tor_title else R.string.napplet_net_open_title
-        val messageRes = if (useTor) R.string.napplet_net_tor_message else R.string.napplet_net_open_message
-        val switchRes = if (useTor) R.string.napplet_net_switch_open else R.string.napplet_net_switch_tor
-        AlertDialog
-            .Builder(this)
-            .setTitle(getString(titleRes, barTitle()))
-            .setMessage(getString(messageRes))
-            .setPositiveButton(getString(switchRes)) { _, _ -> setNetworkMode(!useTor) }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-    }
+    private fun buildTopProgressBar(): ProgressBar =
+        ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            isIndeterminate = false
+            visibility = View.GONE
+            progressTintList = ColorStateList.valueOf(resolveThemeColor(android.R.attr.colorPrimary))
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(3), Gravity.TOP)
+        }
 
     /** Persists the new routing choice in the main process, then relaunches this screen to apply it. */
     private fun setNetworkMode(newUseTor: Boolean) {
