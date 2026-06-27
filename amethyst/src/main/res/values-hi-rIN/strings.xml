@@ -1436,7 +1436,7 @@
     <string name="danger_zone">संकट क्षेत्र</string>
     <string name="reset_marmot_state">मार्मोट॰ स्थिति पुनःस्थापित करें</string>
     <string name="reset_marmot_confirm_title">क्या मार्मोट॰ स्थिति पुनःस्थापित करें।</string>
-    <string name="reset_marmot_confirm_body">यह स्थायी रूप से सभी मार्मोट॰ समूह चर्चा तथा सन्देश इतिहास तथा एमएलएस॰ कुंचिका मिटा देगा इस यन्त्र पर वर्तमान लेखा के लिए। समकक्षजन को सूचित नहीं किया जाएगा तथा सम्भाव्यतः आपको समूहों मे देखते रहेंगे उनके अगले अभिलेखन तक। इसे पूर्ववत नहीं किया जा सकता। एक नयी कुंचिकापोटली प्रकाशित की जाएगी अगली बार जब क्रमक समचरणीकरण किया जाएगा।</string>
+    <string name="reset_marmot_confirm_body">यह स्थायी रूप से सभी मार्मोट॰ समूह चर्चा तथा सन्देश इतिहास तथा एमएलएस॰ कुंचिका मिटा देगा इस यन्त्र पर वर्तमान लेखा के लिए। समकक्षजन को सूचित नहीं किया जाएगा तथा सम्भाव्यतः आपको समूहों मे देखते रहेंगे उनके अगले स्थायी अभिलेखन तक। इसे पूर्ववत नहीं किया जा सकता। एक नयी कुंचिकापोटली प्रकाशित की जाएगी अगली बार जब क्रमक समचरणीकरण किया जाएगा।</string>
     <string name="reset_marmot_confirm_action">पुनःस्थापन</string>
     <string name="reset_marmot_success">मार्मोट॰ स्थिति पुनःस्थापन।</string>
     <string name="reset_marmot_failure">मार्मोट॰ स्थिति पुनःस्थापन असफल : %1$s</string>
@@ -1773,6 +1773,8 @@
     <string name="cashu_remove_mint">टकसाल हटाएँ</string>
     <string name="cashu_add_mint">टकसाल जोडें</string>
     <string name="cashu_history">इतिहास</string>
+    <string name="cashu_wallet_autosaves">आपका धनकोष स्वचालित रूप से अभिलेखन करता है जब आप टकसालों को जोडते हैं अथवा हटाते हैं। एक नटज्साप कुंचिका आपके लिए बनाई जाएगी जब आप प्रथम बार एक टकसाल जोडेंगे।</string>
+    <string name="cashu_wallet_saving">अभिलेखन…</string>
     <string name="cashu_p2pk_section">नटज्साप कुंचिका (उन्नत)</string>
     <string name="cashu_p2pk_explainer">एक पृथक निजी कुंचिका केवल निप॰६१ नटज्साप प्राप्त करने के लिए। आपकी नोस्टर लेखा बद्ध कुंचिका नहीं।</string>
     <string name="cashu_p2pk_autogen">एक नयी कुंचिका बनाएँ</string>
@@ -2254,6 +2256,10 @@
     <string name="forked_from">इससे पथभेद किया गया</string>
     <string name="git_web_address">जाल :</string>
     <string name="git_clone_address">अनुकृति :</string>
+    <string name="git_branch">शाखा</string>
+    <string name="git_commit">स्थायी अभिलेखन</string>
+    <string name="git_merge_base">मूल विलय</string>
+    <string name="git_pr_update_description">कर्षण अनुरोध का अद्यतन किया गया एक नए स्थायी अभिलेखन तक।</string>
     <string name="git_status_open">खुला</string>
     <string name="git_status_merged">विलीन</string>
     <string name="git_status_closed">आवृत</string>
@@ -2261,6 +2267,9 @@
     <string name="git_repo_tab_overview">रूपरेखा विवरण</string>
     <string name="git_repo_tab_issues">समस्याएँ</string>
     <string name="git_repo_tab_patches">सुधारलेख तथा पीआर॰</string>
+    <string name="git_repo_filter_open">खुला</string>
+    <string name="git_repo_filter_closed">आवृत तथा सुलझाया गया</string>
+    <string name="git_untitled">शीर्षकरहित</string>
     <string name="git_repo_section_about">जानकारी</string>
     <string name="git_repo_section_links">योजक</string>
     <string name="git_repo_section_maintainers">परिपालक</string>
@@ -2556,6 +2565,8 @@
     <string name="kind_git_patch">गिट परिहार</string>
     <string name="kind_git_repo">गिट क्रमलेखकोष</string>
     <string name="kind_git_reply">गिट उत्तर</string>
+    <string name="kind_git_pr">कर्षण अनुरोध</string>
+    <string name="kind_git_pr_update">कर्षण अनुरोध अद्यतन</string>
     <string name="kind_zap_goals">ज्साप उद्देश्य</string>
     <string name="kind_hashtag_follows">विषयसूचक अनुचरित</string>
     <string name="kind_highlights">प्रमुखताएँ</string>
@@ -3068,7 +3079,7 @@
     <string name="marmot_group_name">समूह नाम</string>
     <string name="marmot_group_name_placeholder">समूह नाम प्रविष्ट करें</string>
     <string name="marmot_group_description_placeholder">समूह विवरण प्रविष्ट करें (विकल्पात्मक)</string>
-    <string name="marmot_edit_info_footer">परिवर्तनों का अभिलेखन समूह में किया जाएगा एमएलएस॰ द्वारा तथा सभी सदस्यों तक प्रसारित किया जाएगा।</string>
+    <string name="marmot_edit_info_footer">परिवर्तनों का स्थायी अभिलेखन समूह में किया जाएगा एमएलएस॰ द्वारा तथा सभी सदस्यों तक प्रसारित किया जाएगा।</string>
     <string name="marmot_group_info_updated">समूह विवरण का अद्यतन किया गया</string>
     <string name="marmot_failed_to_update">अद्यतन असफल : %1$s</string>
     <string name="marmot_failed_to_create_group">समूह बनाने में असफल : %1$s</string>
