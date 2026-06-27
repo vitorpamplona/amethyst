@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -49,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
@@ -60,12 +62,19 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
@@ -73,6 +82,7 @@ private data class ConnectedAppEntry(
     val coordinate: String,
     val title: String,
     val domain: String,
+    val authorPubKey: String,
     val iconUrl: String?,
     val signerPolicy: AppSignerPolicy?,
     val capabilityCount: Int,
@@ -90,11 +100,61 @@ fun ConnectedAppsScreen(
     var items by remember { mutableStateOf<List<ConnectedAppEntry>?>(null) }
     var reload by remember { mutableIntStateOf(0) }
 
+    // Initial load from permission stores
     LaunchedEffect(reload) {
         items =
             withContext(Dispatchers.Default) {
                 loadConnectedApps(capabilityLedger, signerLedger, untitled)
             }
+    }
+
+    // Fetch missing manifests from relays, then watch cache for arrivals
+    LaunchedEffect(Unit) {
+        // Watch for napplet manifest events arriving in LocalCache from any source
+        launch(Dispatchers.Default) {
+            val manifestKinds = setOf(RootNappletEvent.KIND, NamedNappletEvent.KIND)
+            LocalCache.live.newEventBundles.collect { bundle ->
+                if (bundle.any { it.event?.kind in manifestKinds }) {
+                    val current = items ?: return@collect
+                    items =
+                        current.map { entry ->
+                            val author = entry.coordinate.substringBefore(':')
+                            val identifier = entry.coordinate.substringAfter(':', "")
+                            val (title, iconUrl) = resolveNappletMeta(author, identifier, untitled)
+                            entry.copy(title = title, iconUrl = iconUrl)
+                        }
+                }
+            }
+        }
+
+        // Fetch manifests for apps whose metadata isn't in cache yet
+        launch(Dispatchers.IO) {
+            val current = items ?: return@launch
+            val authorsToFetch =
+                current
+                    .filter { it.iconUrl == null }
+                    .map { it.coordinate.substringBefore(':') }
+                    .toSet()
+            if (authorsToFetch.isEmpty()) return@launch
+
+            val filter =
+                Filter(
+                    kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND),
+                    authors = authorsToFetch.toList(),
+                )
+            val relays = accountViewModel.account.homeRelays.flow.value
+            if (relays.isEmpty()) return@launch
+
+            runCatching {
+                val events =
+                    accountViewModel.account.client.fetchAll(
+                        filters = relays.associateWith { listOf(filter) },
+                        timeoutMs = 15_000L,
+                    )
+                // Inject into LocalCache so the newEventBundles observer above can re-resolve
+                events.forEach { LocalCache.justConsume(it, null, false) }
+            }
+        }
     }
 
     Scaffold(
@@ -123,7 +183,7 @@ fun ConnectedAppsScreen(
                             stringResource(R.string.napplet_connected_app_empty),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
@@ -151,10 +211,8 @@ private fun ConnectedAppCard(
     onClick: () -> Unit,
 ) {
     Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -164,10 +222,13 @@ private fun ConnectedAppCard(
             FavoriteAppIcon(
                 app = FavoriteApp.NostrApp(entry.coordinate, entry.title, 0L, entry.iconUrl),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(44.dp),
+                modifier = Modifier.size(48.dp),
             )
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
                 Text(
                     entry.title,
                     style = MaterialTheme.typography.titleSmall,
@@ -182,21 +243,38 @@ private fun ConnectedAppCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-            }
-
-            if (entry.signerPolicy != null) {
-                SuggestionChip(
-                    onClick = {},
-                    label = { Text(entry.signerPolicy.shortLabel(), style = MaterialTheme.typography.labelSmall) },
+                Text(
+                    entry.authorPubKey,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = FontFamily.Monospace,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
 
-            Icon(
-                MaterialSymbols.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                if (entry.signerPolicy != null) {
+                    SuggestionChip(
+                        onClick = {},
+                        label = {
+                            Text(
+                                entry.signerPolicy.shortLabel(),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        },
+                    )
+                }
+                Icon(
+                    MaterialSymbols.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }
@@ -224,10 +302,12 @@ private suspend fun loadConnectedApps(
             val author = coordinate.substringBefore(':')
             val identifier = coordinate.substringAfter(':', "")
             val (title, iconUrl) = resolveNappletMeta(author, identifier, untitled)
+            val npub = runCatching { NPub.create(author) }.getOrDefault(author.take(12) + "…")
             ConnectedAppEntry(
                 coordinate = coordinate,
                 title = title,
                 domain = identifier.ifBlank { author.take(12) + "…" },
+                authorPubKey = npub,
                 iconUrl = iconUrl,
                 signerPolicy = signerPolicies[coordinate],
                 capabilityCount = capGrants[coordinate]?.size ?: 0,
