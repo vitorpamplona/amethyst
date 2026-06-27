@@ -105,8 +105,6 @@ sealed class Route {
         val coordinate: String,
     ) : Route()
 
-    @Serializable object NappletPermissions : Route()
-
     @Serializable object ConnectedApps : Route()
 
     @Serializable object RelayAuthSettings : Route()

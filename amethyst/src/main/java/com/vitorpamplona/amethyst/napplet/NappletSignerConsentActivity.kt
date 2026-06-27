@@ -37,9 +37,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,7 +51,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -116,10 +116,6 @@ private fun NappletSignerConsentDialog(
     var showMoreOptions by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.85f
-    val iconUrl =
-        remember(info.coordinate) {
-            resolveNappletMeta(info.coordinate.substringBefore(':'), info.coordinate.substringAfter(':', ""), "").second
-        }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -148,7 +144,7 @@ private fun NappletSignerConsentDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     FavoriteAppIcon(
-                        app = FavoriteApp.NostrApp(info.coordinate, info.appletTitle, 0L, iconUrl),
+                        app = FavoriteApp.NostrApp(info.coordinate, info.appletTitle, 0L, info.iconUrl),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(56.dp),
                     )
@@ -160,6 +156,12 @@ private fun NappletSignerConsentDialog(
                     Text(
                         stringResource(R.string.napplet_consent_wants_to, info.operationSummary),
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        info.coordinate.substringAfter(':', "").ifBlank { info.coordinate.substringBefore(':').take(12) + "…" },
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
@@ -215,36 +217,27 @@ private fun NappletSignerConsentDialog(
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    info.coordinate.substringAfter(':', "").ifBlank { info.coordinate.substringBefore(':').take(12) + "…" },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider()
-
-                // Primary action: always allow this operation
                 Spacer(Modifier.height(8.dp))
+
+                // Primary: always allow this op
                 Button(
                     onClick = { onGrant(SignerOpGrant.AllowForOp(info.op)) },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 ) {
-                    Text(stringResource(R.string.napplet_signer_allow_op, info.operationSummary))
+                    Text(stringResource(R.string.napplet_consent_allow_always))
                 }
 
-                // Secondary action: allow just this once
-                FilledTonalButton(
+                // Secondary: allow just once
+                OutlinedButton(
                     onClick = { onGrant(SignerOpGrant.AllowOnce) },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 ) {
                     Text(stringResource(R.string.napplet_signer_allow_once))
                 }
 
-                // "More options" toggle: session, time-bound, and nuclear allow-all
+                // "More options" toggle: session and time-bound grants
                 TextButton(
                     onClick = { showMoreOptions = !showMoreOptions },
                     modifier = Modifier.fillMaxWidth(),
@@ -271,63 +264,59 @@ private fun NappletSignerConsentDialog(
                 }
 
                 if (showMoreOptions) {
-                    ConsentActionButton(
-                        text = stringResource(R.string.napplet_signer_allow_session),
-                        color = MaterialTheme.colorScheme.primary,
+                    OutlinedButton(
                         onClick = { onGrant(SignerOpGrant.AllowForSession(info.op)) },
-                    )
-                    ConsentActionButton(
-                        text = stringResource(R.string.napplet_signer_allow_24h),
-                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    ) {
+                        Text(stringResource(R.string.napplet_signer_allow_session))
+                    }
+                    OutlinedButton(
                         onClick = { onGrant(SignerOpGrant.AllowUntil(info.op, TimeUtils.now() + 86_400L)) },
-                    )
-                    ConsentActionButton(
-                        text = stringResource(R.string.napplet_signer_allow_30d),
-                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    ) {
+                        Text(stringResource(R.string.napplet_signer_allow_24h))
+                    }
+                    OutlinedButton(
                         onClick = { onGrant(SignerOpGrant.AllowUntil(info.op, TimeUtils.now() + 30L * 86_400L)) },
-                    )
-                    ConsentActionButton(
-                        text = stringResource(R.string.napplet_signer_allow_all),
-                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    ) {
+                        Text(stringResource(R.string.napplet_signer_allow_30d))
+                    }
+                    OutlinedButton(
                         onClick = { onGrant(SignerOpGrant.AllowAll) },
-                    )
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    ) {
+                        Text(stringResource(R.string.napplet_signer_allow_all))
+                    }
                 }
 
                 Spacer(Modifier.height(4.dp))
                 HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
 
-                ConsentActionButton(
-                    text = stringResource(R.string.napplet_signer_deny_once),
-                    color = MaterialTheme.colorScheme.error,
+                OutlinedButton(
                     onClick = { onGrant(SignerOpGrant.DenyOnce) },
-                )
-                ConsentActionButton(
-                    text = stringResource(R.string.napplet_signer_deny_op, info.operationSummary),
-                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text(
+                        stringResource(R.string.napplet_signer_deny_once),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Start,
+                    )
+                }
+                OutlinedButton(
                     onClick = { onGrant(SignerOpGrant.DenyForOp(info.op)) },
-                )
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text(
+                        stringResource(R.string.napplet_signer_deny_op, info.operationSummary),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Start,
+                    )
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun ConsentActionButton(
-    text: String,
-    color: Color,
-    onClick: () -> Unit,
-) {
-    TextButton(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
-    ) {
-        Text(
-            text,
-            color = color,
-            modifier = Modifier.fillMaxWidth(),
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Start,
-        )
     }
 }

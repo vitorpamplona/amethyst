@@ -25,8 +25,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
-import org.json.JSONArray
-import org.json.JSONObject
+import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /** Human-readable label for a [NostrSignerOp]. */
 fun NostrSignerOp.label(context: Context): String =
@@ -43,7 +44,8 @@ fun buildSignerConsentInfo(
     op: NostrSignerOp,
     request: NappletRequest,
 ): NappletSignerConsentInfo {
-    val title = identity.identifier.ifBlank { context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8)) }
+    val untitled = context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8))
+    val (title, iconUrl) = resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
     val summary = op.label(context)
     val preview =
         when (request) {
@@ -54,16 +56,23 @@ fun buildSignerConsentInfo(
         }
     val rawData =
         when (request) {
-            is NappletRequest.Publish -> buildEventJson(request.kind, request.tags, request.content)
-            is NappletRequest.SignEvent -> buildEventJson(request.kind, request.tags, request.content, request.createdAt)
-            is NappletRequest.PublishEncrypted ->
-                buildEventJson(
-                    request.kind,
-                    request.tags,
-                    request.content,
-                    recipient = request.recipient,
-                    encryption = request.encryption,
-                )
+            is NappletRequest.Publish ->
+                JacksonMapper.toJsonPretty(EventTemplate<Nothing>(TimeUtils.now(), request.kind, request.tags, request.content))
+            is NappletRequest.SignEvent ->
+                JacksonMapper.toJsonPretty(EventTemplate<Nothing>(request.createdAt, request.kind, request.tags, request.content))
+            is NappletRequest.PublishEncrypted -> {
+                val node = JacksonMapper.mapper.createObjectNode()
+                node.put("kind", request.kind)
+                node.put("recipient", request.recipient)
+                node.put("encryption", request.encryption)
+                val tagsNode = node.putArray("tags")
+                for (tag in request.tags) {
+                    val tagNode = tagsNode.addArray()
+                    for (item in tag) tagNode.add(item)
+                }
+                node.put("content", request.content)
+                JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
+            }
             else -> ""
         }
     return NappletSignerConsentInfo(
@@ -73,31 +82,8 @@ fun buildSignerConsentInfo(
         operationSummary = summary,
         contentPreview = preview,
         rawData = rawData,
+        iconUrl = iconUrl,
     )
-}
-
-private fun buildEventJson(
-    kind: Int,
-    tags: Array<Array<String>>,
-    content: String,
-    createdAt: Long? = null,
-    recipient: String? = null,
-    encryption: String? = null,
-): String {
-    val obj = JSONObject()
-    obj.put("kind", kind)
-    if (createdAt != null) obj.put("created_at", createdAt)
-    if (recipient != null) obj.put("recipient", recipient)
-    if (encryption != null) obj.put("encryption", encryption)
-    val tagsArray = JSONArray()
-    for (tag in tags) {
-        val tagArray = JSONArray()
-        for (item in tag) tagArray.put(item)
-        tagsArray.put(tagArray)
-    }
-    obj.put("tags", tagsArray)
-    obj.put("content", content)
-    return obj.toString(2)
 }
 
 /** Creates a [NappletConnectInfo] for the first-connect dialog. */
@@ -105,7 +91,8 @@ fun buildConnectInfo(
     context: Context,
     identity: NappletIdentity,
 ): NappletConnectInfo {
-    val title = identity.identifier.ifBlank { context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8)) }
+    val untitled = context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8))
+    val (title, iconUrl) = resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
     val domain = identity.identifier.ifBlank { identity.authorPubKey.take(12) + "…" }
-    return NappletConnectInfo(appletTitle = title, coordinate = identity.coordinate, domain = domain)
+    return NappletConnectInfo(appletTitle = title, coordinate = identity.coordinate, domain = domain, iconUrl = iconUrl)
 }

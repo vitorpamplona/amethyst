@@ -41,6 +41,7 @@ data class NappletSignerConsentInfo(
      * decrypted plaintext for decrypt (Amethyst decrypts first, then asks permission to expose).
      */
     val rawData: String = "",
+    val iconUrl: String? = null,
 )
 
 /**

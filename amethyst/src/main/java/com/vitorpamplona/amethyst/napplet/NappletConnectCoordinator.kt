@@ -32,6 +32,7 @@ data class NappletConnectInfo(
     val appletTitle: String,
     val coordinate: String,
     val domain: String,
+    val iconUrl: String? = null,
 )
 
 /**

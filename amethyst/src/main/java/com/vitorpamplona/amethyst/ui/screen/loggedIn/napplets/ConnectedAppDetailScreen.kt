@@ -51,11 +51,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
@@ -69,8 +69,6 @@ import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrOpDecision
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
-import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
-import com.vitorpamplona.amethyst.napplet.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.napplet.descriptionRes
 import com.vitorpamplona.amethyst.napplet.labelRes
 import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
@@ -97,9 +95,8 @@ fun ConnectedAppDetailScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
-    val capabilityLedger = remember { NappletPermissionLedger(DataStoreNappletPermissionStore(context)) }
-    val signerLedger = remember { NostrSignerPermissionLedger(DataStoreNostrSignerPermissionStore(context)) }
+    val capabilityLedger = remember { NappletPermissionLedger(Amethyst.instance.nappletPermissionStore) }
+    val signerLedger = remember { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
     val untitled = stringResource(CommonsR.string.napplet_untitled)
 
     var state by remember { mutableStateOf<ConnectedAppDetailState?>(null) }

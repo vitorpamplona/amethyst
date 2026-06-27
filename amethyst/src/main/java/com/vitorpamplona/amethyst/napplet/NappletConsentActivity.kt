@@ -25,7 +25,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,14 +35,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -113,10 +111,6 @@ private fun NappletConsentDialog(
     onDismiss: () -> Unit,
 ) {
     val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.85f
-    val iconUrl =
-        remember(info.coordinate) {
-            resolveNappletMeta(info.coordinate.substringBefore(':'), info.coordinate.substringAfter(':', ""), "").second
-        }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -138,14 +132,14 @@ private fun NappletConsentDialog(
                         .verticalScroll(rememberScrollState())
                         .padding(vertical = 24.dp),
             ) {
-                // Centered header: icon + app name + capability category
+                // Centered header: icon + app name + capability category + coordinate
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     FavoriteAppIcon(
-                        app = FavoriteApp.NostrApp(info.coordinate, info.appletTitle, 0L, iconUrl),
+                        app = FavoriteApp.NostrApp(info.coordinate, info.appletTitle, 0L, info.iconUrl),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(56.dp),
                     )
@@ -157,6 +151,12 @@ private fun NappletConsentDialog(
                     Text(
                         info.capabilityLabel,
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        info.coordinate.substringAfter(':', "").ifBlank { info.coordinate.substringBefore(':').take(12) + "…" },
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
@@ -180,15 +180,6 @@ private fun NappletConsentDialog(
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    info.coordinate.substringAfter(':', "").ifBlank { info.coordinate.substringBefore(':').take(12) + "…" },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider()
                 Spacer(Modifier.height(8.dp))
@@ -200,7 +191,7 @@ private fun NappletConsentDialog(
                     ) {
                         Text(stringResource(R.string.napplet_consent_allow_always))
                     }
-                    FilledTonalButton(
+                    OutlinedButton(
                         onClick = { onDecision(GrantState.ALLOW_ONCE) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     ) {
@@ -217,27 +208,26 @@ private fun NappletConsentDialog(
 
                 Spacer(Modifier.height(4.dp))
                 HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
 
-                TextButton(
-                    onClick = { onDecision(GrantState.DENY) },
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+                OutlinedButton(
+                    onClick = { onDecision(GrantState.ASK) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 ) {
                     Text(
-                        stringResource(R.string.napplet_consent_deny_always),
-                        color = MaterialTheme.colorScheme.error,
+                        stringResource(R.string.napplet_consent_not_now),
                         modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Start,
                     )
                 }
-                TextButton(
-                    onClick = { onDecision(GrantState.ASK) },
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+                OutlinedButton(
+                    onClick = { onDecision(GrantState.DENY) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
                     Text(
-                        stringResource(R.string.napplet_consent_not_now),
+                        stringResource(R.string.napplet_consent_deny_always),
                         modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Start,

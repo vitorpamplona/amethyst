@@ -27,7 +27,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,12 +38,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -120,10 +119,6 @@ private fun NappletConnectScreen(
 ) {
     var selected by remember { mutableStateOf(AppSignerPolicy.REASONABLE) }
     val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.9f
-    val iconUrl =
-        remember(info.coordinate) {
-            resolveNappletMeta(info.coordinate.substringBefore(':'), info.coordinate.substringAfter(':', ""), "").second
-        }
 
     Dialog(
         onDismissRequest = onCancel,
@@ -152,7 +147,7 @@ private fun NappletConnectScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     FavoriteAppIcon(
-                        app = FavoriteApp.NostrApp(info.coordinate, info.appletTitle, 0L, iconUrl),
+                        app = FavoriteApp.NostrApp(info.coordinate, info.appletTitle, 0L, info.iconUrl),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(56.dp),
                     )
@@ -167,16 +162,13 @@ private fun NappletConnectScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
+                    Text(
+                        info.domain,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
                 }
-
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    info.domain,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
 
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider()
@@ -233,15 +225,14 @@ private fun NappletConnectScreen(
                     }
                 }
 
-                TextButton(
+                OutlinedButton(
                     onClick = onBlock,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
                     Text(
                         stringResource(R.string.napplet_connect_block, info.domain),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Start,
                     )
