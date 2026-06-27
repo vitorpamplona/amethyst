@@ -112,8 +112,9 @@ private fun EmbeddedNostrAppTab(
     // Matches FavoriteApp.NostrApp.id, so warm-keep membership lines up with the bottom-bar favorites.
     val id = "nostr:$coordinate"
 
-    // Mint the verified launch params (a fresh token per resolve); null until the event loads.
-    val params = remember(coordinate) { FavoriteAppLauncher.embedParams(context, coordinate) }
+    // Mint the verified launch params (a fresh token per resolve); null until the event loads. Re-minted
+    // on a theme flip (the params carry the resolved theme into the sandbox host's WebView).
+    val params = remember(coordinate, EmbeddedTabHost.themeEpoch) { FavoriteAppLauncher.embedParams(context, coordinate) }
     if (params == null) {
         UnavailableTab(coordinate, accountViewModel, nav)
         return
@@ -133,7 +134,7 @@ private fun EmbeddedNostrAppTab(
     val isFavorite = remember(apps, coordinate) { apps.any { it.id == "nostr:$coordinate" } }
 
     val controller =
-        remember(id) {
+        remember(id, EmbeddedTabHost.themeEpoch) {
             EmbeddedTabFactory.acquireNostrApp(context, coordinate, params, backgroundColor)
         }
 
@@ -147,7 +148,7 @@ private fun EmbeddedNostrAppTab(
 
     // Stable per app (title/coordinate/isFavorite don't change often), so the tab layer isn't recomposed every frame.
     val chrome =
-        remember(title, coordinate, isFavorite) {
+        remember(title, coordinate, isFavorite, controller) {
             EmbeddedTabChrome(
                 title = title.ifBlank { coordinate },
                 isSandbox = true,
