@@ -2334,6 +2334,9 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="git_repo_tab_overview">Predogled</string>
     <string name="git_repo_tab_issues">Težave</string>
     <string name="git_repo_tab_patches">Popravki in PR-ji</string>
+    <string name="git_repo_filter_open">Odprto</string>
+    <string name="git_repo_filter_closed">Zaprto in rešeno</string>
+    <string name="git_untitled">Neimenovano</string>
     <string name="git_repo_section_about">Vizitka repozitorija</string>
     <string name="git_repo_section_links">Povezave</string>
     <string name="git_repo_section_maintainers">Vzdrževalci</string>
