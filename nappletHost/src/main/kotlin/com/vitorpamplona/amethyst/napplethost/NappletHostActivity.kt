@@ -736,30 +736,12 @@ class NappletHostActivity : ComponentActivity() {
             title = barTitle(),
             isSandbox = true,
             onReload = { if (this::webView.isInitialized) webView.reload() },
-            // Website-mode nSites can re-route over Tor; switching rebuilds the session via a confirm
-            // dialog, so the row taps through rather than toggling inline.
+            // Website-mode nSites can re-route over Tor; switching rebuilds the session, so the row taps
+            // through to a full relaunch rather than toggling inline.
             torInitiallyOn = if (profile.exposesNetwork && proxyPort > 0) useTor else null,
-            onNetworkTap = if (profile.exposesNetwork && proxyPort > 0) ({ showNetworkDialog() }) else null,
+            onNetworkTap = if (profile.exposesNetwork && proxyPort > 0) ({ setNetworkMode(!useTor) }) else null,
             onInfo = { showAccessDialog() },
         )
-
-    /**
-     * Explains the site's current network routing and offers to switch it. Switching persists the
-     * per-site choice (via the broker, which owns the preference) and relaunches this screen so the new
-     * routing applies cleanly from [onCreate] — the proxy and content server are rebuilt for the new mode.
-     */
-    private fun showNetworkDialog() {
-        val titleRes = if (useTor) R.string.napplet_net_tor_title else R.string.napplet_net_open_title
-        val messageRes = if (useTor) R.string.napplet_net_tor_message else R.string.napplet_net_open_message
-        val switchRes = if (useTor) R.string.napplet_net_switch_open else R.string.napplet_net_switch_tor
-        AlertDialog
-            .Builder(this)
-            .setTitle(getString(titleRes, barTitle()))
-            .setMessage(getString(messageRes))
-            .setPositiveButton(getString(switchRes)) { _, _ -> setNetworkMode(!useTor) }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-    }
 
     /** Persists the new routing choice in the main process, then relaunches this screen to apply it. */
     private fun setNetworkMode(newUseTor: Boolean) {
