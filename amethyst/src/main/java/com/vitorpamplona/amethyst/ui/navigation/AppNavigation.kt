@@ -120,6 +120,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.favorites.FavoriteAlgoFeedsListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FavoriteAppManifestPreloader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.BrowseEmojiSetsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.display.EmojiPackScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.ListOfEmojiPacksScreen
@@ -255,6 +256,11 @@ fun AppNavigation(
     AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
         Box(Modifier.fillMaxSize()) {
             BuildNavigation(accountViewModel, nav)
+            // Pull each pinned nsite/napplet's manifest into LocalCache (and keep a device-local copy)
+            // so its favorite resolves as reliably as a pinned web app's URL — the data the embedded
+            // preloader below and the full-screen launcher both need. Not API-gated: every device's
+            // launcher benefits, and it's the only preload step that runs below API 30.
+            FavoriteAppManifestPreloader(accountViewModel)
             // Persistent layer that keeps pinned embedded tabs (browser / nsite / napplet) warm by
             // holding their surfaces attached. Below the drawer (drawn by the layout above) and below
             // dialogs (separate windows). API 30+ only, matching the embedded-surface feature.
