@@ -54,8 +54,16 @@ private val Context.favoriteAppsDataStore by preferencesDataStore(name = "favori
 object FavoriteAppsRegistry {
     private val KEY = stringPreferencesKey("favorites")
 
+    // Raw manifest event JSON for each favorited [FavoriteApp.NostrApp], keyed by its addressable
+    // coordinate. Cached so a pinned nsite/napplet resolves instantly on the next cold start — and
+    // offline — instead of waiting on a relay round-trip the way a [FavoriteApp.WebApp]'s URL never
+    // has to. The relay subscription that warms these favorites keeps the cache fresh.
+    private val MANIFESTS_KEY = stringPreferencesKey("manifests")
+
     private val _favorites = MutableStateFlow<List<FavoriteApp>>(emptyList())
     val favorites: StateFlow<List<FavoriteApp>> = _favorites.asStateFlow()
+
+    private val manifestCache = MutableStateFlow<Map<String, String>>(emptyMap())
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -73,11 +81,17 @@ object FavoriteAppsRegistry {
         val ctx = context.applicationContext
         appContext = ctx
         scope.launch {
-            val json = ctx.favoriteAppsDataStore.data.first()[KEY]
-            val loaded = if (json != null) decode(json) else emptyList()
+            val prefs = ctx.favoriteAppsDataStore.data.first()
+            val loaded = prefs[KEY]?.let { decode(it) } ?: emptyList()
             // Don't clobber adds made in this session before hydration finished, and don't resurrect
             // anything the user removed in that same window.
             update { current -> (loaded.filterNot { it.id in removedBeforeHydration } + current).distinctBy { it.id } }
+
+            // Same race rules for the manifest cache: a cacheManifest() in this session wins over the
+            // disk copy, and a manifest whose favorite was removed pre-hydration must not come back.
+            val loadedManifests = prefs[MANIFESTS_KEY]?.let { decodeManifests(it) } ?: emptyMap()
+            updateManifests { current -> loadedManifests.filterKeys { "nostr:$it" !in removedBeforeHydration } + current }
+
             hydrated = true
             removedBeforeHydration.clear()
         }
@@ -91,7 +105,21 @@ object FavoriteAppsRegistry {
     fun remove(id: String) {
         if (!hydrated) removedBeforeHydration.add(id)
         update { current -> current.filterNot { it.id == id } }
+        // Drop the cached manifest too — favorite ids for nsites/napplets are "nostr:<coordinate>".
+        if (id.startsWith("nostr:")) updateManifests { it - id.removePrefix("nostr:") }
     }
+
+    /** The cached manifest event JSON for a favorited nsite/napplet [coordinate], or null if none. */
+    fun cachedManifest(coordinate: String): String? = manifestCache.value[coordinate]
+
+    /**
+     * Caches the raw manifest event [eventJson] for a favorited nsite/napplet [coordinate] so the next
+     * launch can resolve it instantly / offline. Write-through; no-ops when the JSON is unchanged.
+     */
+    fun cacheManifest(
+        coordinate: String,
+        eventJson: String,
+    ) = updateManifests { if (it[coordinate] == eventJson) it else it + (coordinate to eventJson) }
 
     /** Replaces the whole list, e.g. after a drag-reorder. */
     fun setOrder(newOrder: List<FavoriteApp>) = update { newOrder }
@@ -103,10 +131,24 @@ object FavoriteAppsRegistry {
         persist(encode(next))
     }
 
+    private inline fun updateManifests(transform: (Map<String, String>) -> Map<String, String>) {
+        val next = transform(manifestCache.value)
+        if (next == manifestCache.value) return
+        manifestCache.value = next
+        persistManifests(encodeManifests(next))
+    }
+
     private fun persist(json: String) {
         val ctx = appContext ?: return
         scope.launch {
             ctx.favoriteAppsDataStore.edit { it[KEY] = json }
+        }
+    }
+
+    private fun persistManifests(json: String) {
+        val ctx = appContext ?: return
+        scope.launch {
+            ctx.favoriteAppsDataStore.edit { it[MANIFESTS_KEY] = json }
         }
     }
 
@@ -149,4 +191,24 @@ object FavoriteAppsRegistry {
 
     private const val TYPE_NOSTR = "nostr"
     private const val TYPE_URL = "url"
+
+    // --- Manifest cache persistence -------------------------------------------------------------
+    // Stored as a flat list of (coordinate, json) records under one key — same single-key, hand-curated
+    // shape as the favorites list, so we never serialize a raw polymorphic map.
+
+    @Serializable
+    private data class ManifestEntry(
+        val coordinate: String,
+        val json: String,
+    )
+
+    private fun encodeManifests(manifests: Map<String, String>): String = JsonMapper.toJson(manifests.map { ManifestEntry(it.key, it.value) })
+
+    private fun decodeManifests(json: String): Map<String, String> =
+        try {
+            JsonMapper.fromJson<List<ManifestEntry>>(json).associate { it.coordinate to it.json }
+        } catch (e: Exception) {
+            Log.w("FavoriteAppsRegistry", "Failed to decode favorite manifests", e)
+            emptyMap()
+        }
 }
