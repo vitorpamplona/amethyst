@@ -451,7 +451,10 @@ fun RenderNutzapGallery(
 
     Row(Modifier.fillMaxWidth()) {
         Box(
-            modifier = WidthAuthorPictureModifier,
+            // Reuse the reaction galleries' icon column (55dp wide with a 5dp end
+            // inset) so the cashu glyph lines up with the like/boost icons above
+            // it, instead of sitting flush-right like the lightning ZappedIcon.
+            modifier = NotificationIconModifier,
         ) {
             Icon(
                 imageVector = CustomHashTagIcons.Cashu,
