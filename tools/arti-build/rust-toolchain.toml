@@ -10,9 +10,10 @@
 channel = "1.94.1"
 profile = "minimal"
 components = ["rustc", "cargo", "rust-std"]
+# Only the two ABIs we actually ship libarti_android.so for (see jniLibs/). If
+# build-arti.sh is extended to armv7/i686, add them here too — check_prerequisites
+# also adds any missing target on the fly.
 targets = [
     "aarch64-linux-android",
     "x86_64-linux-android",
-    "armv7-linux-androideabi",
-    "i686-linux-android",
 ]

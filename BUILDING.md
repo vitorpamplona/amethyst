@@ -184,7 +184,13 @@ else. What makes that hold:
 - **No dependency-metadata blob.** `dependenciesInfo { includeInApk = false;
   includeInBundle = false }` in `amethyst/build.gradle.kts` stops AGP from
   embedding the Google-encrypted dependency protobuf in the signing block — that
-  ciphertext is non-deterministic and was the one remaining blocker.
+  ciphertext is non-deterministic.
+- **Reproducible native library.** The bundled Tor (Arti) `.so` is the one
+  binary we compile ourselves; it is built reproducibly from source (pinned Rust
+  toolchain, locked deps, canonical build path). See
+  [`tools/arti-build/README.md`](tools/arti-build/README.md) → "Reproducible
+  builds". All other native libs (`secp256k1`, `webrtc`) are version-pinned Maven
+  prebuilts and so are byte-identical by download.
 
 ### Verify a release APK reproduces
 

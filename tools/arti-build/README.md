@@ -49,18 +49,17 @@ release profile in `Cargo.toml` (`lto`, `codegen-units = 1`, `strip`,
 
 ### Verify the committed binary reproduces
 
+From `tools/arti-build/`, the helper builds twice from clean and diffs the output:
+
 ```bash
-# Build, record the hash, then do a clean rebuild and confirm it matches.
-# Both runs compile in the canonical /tmp/amethyst-arti-build, so the bytes match
-# regardless of where this repo is checked out.
-./build-arti.sh --release
-sha256sum amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so
-./build-arti.sh --clean --release
-sha256sum amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so
+./verify-reproducible.sh            # both ABIs (arm64-v8a + x86_64)
+./verify-reproducible.sh --release  # arm64-v8a only (faster)
 ```
 
-Both hashes match each other and the committed
-`amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so`.
+It prints `✅ REPRODUCIBLE` when two clean builds produce identical bytes, then
+reports whether that matches the committed `.so`. Both builds compile in the
+canonical `/tmp/amethyst-arti-build`, so the result is independent of where the
+repo is checked out.
 
 ## Prerequisites
 
@@ -145,6 +144,7 @@ tools/arti-build/
 ├── repro-env.sh         # Deterministic build env (path remapping, epoch) — sourced by both scripts
 ├── build-arti.sh        # Build script (Android targets, shipped in APK)
 ├── build-arti-host.sh   # Build script (host target, for JVM integration tests)
+├── verify-reproducible.sh # Builds twice + diffs to prove byte-for-byte reproducibility
 └── src/
     └── lib.rs           # JNI bridge (Rust → Kotlin)
 
@@ -174,8 +174,7 @@ tools/arti-build/
 4. Regenerate the committed lockfile so the new versions are pinned (builds run
    `--locked` and will fail until this is refreshed):
    ```bash
-   ./build-arti.sh --clean          # clones the new tag + sets up the wrapper
-   cp .arti-source/arti-android-wrapper/Cargo.lock ./Cargo.lock
+   ./build-arti.sh --regen-lock     # re-resolves + rewrites ./Cargo.lock, no compile
    ```
    If you also bump the Rust toolchain, edit `channel` in `rust-toolchain.toml`.
 

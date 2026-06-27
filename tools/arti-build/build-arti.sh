@@ -43,13 +43,19 @@ MIN_SDK_VERSION=26
 TARGETS=("aarch64-linux-android" "x86_64-linux-android")
 RELEASE_ONLY=false
 CLEAN=false
+REGEN_LOCK=false
 
 # Parse arguments
 for arg in "$@"; do
     case $arg in
         --release) RELEASE_ONLY=true; TARGETS=("aarch64-linux-android") ;;
         --clean) CLEAN=true ;;
-        --help) echo "Usage: $0 [--release] [--clean] [--help]"; exit 0 ;;
+        # Refresh the committed Cargo.lock from the pinned Arti tag, then exit
+        # (no compile — needs only git + cargo, not the NDK). Use after bumping
+        # ARTI_VERSION / Cargo.toml; the normal build is --locked and will fail
+        # until the lock is regenerated and committed.
+        --regen-lock) REGEN_LOCK=true; CLEAN=true ;;
+        --help) echo "Usage: $0 [--release] [--clean] [--regen-lock] [--help]"; exit 0 ;;
     esac
 done
 
@@ -144,14 +150,14 @@ setup_wrapper() {
     cp "$SCRIPT_DIR/src/lib.rs" "$wrapper_dir/src/lib.rs"
 
     # Reproducibility: build against the committed lockfile so transitive
-    # dependency versions are identical for everyone. `cargo --locked` (below)
-    # fails if this lock is missing or stale rather than silently re-resolving.
+    # dependency versions are identical for everyone. `cargo --locked` (in
+    # build_for_target) fails loudly if this lock is missing or stale rather than
+    # silently re-resolving. (Missing is only expected during --regen-lock.)
     if [ -f "$SCRIPT_DIR/Cargo.lock" ]; then
         cp "$SCRIPT_DIR/Cargo.lock" "$wrapper_dir/Cargo.lock"
         print_success "Pinned dependencies from committed Cargo.lock"
     else
-        print_error "tools/arti-build/Cargo.lock missing — generate it with: cargo generate-lockfile (see README)"
-        exit 1
+        print_info "No committed Cargo.lock yet — run with --regen-lock to create it"
     fi
 
     # Patch Cargo.toml to use local arti-client from the source tree
@@ -248,9 +254,19 @@ verify_jni_symbols() {
 main() {
     echo -e "${BLUE}Arti Android Build — version $ARTI_VERSION${NC}"
 
-    check_prerequisites
+    # --regen-lock only needs git + cargo, not the NDK/cargo-ndk toolchain.
+    [ "$REGEN_LOCK" = true ] || check_prerequisites
     clone_or_update_arti
     setup_wrapper
+
+    if [ "$REGEN_LOCK" = true ]; then
+        print_header "Regenerating Cargo.lock"
+        local manifest="$ARTI_SOURCE_DIR/arti-android-wrapper/Cargo.toml"
+        cargo generate-lockfile --manifest-path "$manifest"
+        cp "$ARTI_SOURCE_DIR/arti-android-wrapper/Cargo.lock" "$SCRIPT_DIR/Cargo.lock"
+        print_success "Updated $SCRIPT_DIR/Cargo.lock — commit it, then re-run the build."
+        exit 0
+    fi
 
     # Deterministic build env (needs ARTI_SOURCE_DIR cloned above for SOURCE_DATE_EPOCH).
     # shellcheck source=repro-env.sh
