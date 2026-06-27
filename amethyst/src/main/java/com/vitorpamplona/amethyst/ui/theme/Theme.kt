@@ -31,25 +31,31 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -62,47 +68,57 @@ import com.patrykandpatrick.vico.compose.common.VicoTheme
 import com.patrykandpatrick.vico.compose.common.VicoTheme.CandlestickCartesianLayerColors
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideMaterialSymbols
+import com.vitorpamplona.amethyst.model.AccentColorType
+import com.vitorpamplona.amethyst.model.FontFamilyType
+import com.vitorpamplona.amethyst.model.FontSizeType
 import com.vitorpamplona.amethyst.model.ThemeType
 
-private val DarkColorPalette =
+// The accent color (primary/secondary/tertiary) is user-selectable in Settings -> Accent Color.
+// Purple keeps the original Amethyst look (purple primary + teal secondary). Every other accent
+// uses its single hue across primary and secondary for a cohesive single-color theme.
+private fun accentPrimary(
+    accent: AccentColorType,
+    dark: Boolean,
+): Color =
+    when (accent) {
+        AccentColorType.PURPLE -> if (dark) Purple200 else Purple500
+        AccentColorType.BLUE -> if (dark) AccentBlueDark else AccentBlueLight
+        AccentColorType.GREEN -> if (dark) AccentGreenDark else AccentGreenLight
+        AccentColorType.ORANGE -> if (dark) AccentOrangeDark else AccentOrangeLight
+        AccentColorType.RED -> if (dark) AccentRedDark else AccentRedLight
+        AccentColorType.PINK -> if (dark) AccentPinkDark else AccentPinkLight
+    }
+
+private fun accentSecondary(
+    accent: AccentColorType,
+    dark: Boolean,
+): Color = if (accent == AccentColorType.PURPLE) Teal200 else accentPrimary(accent, dark)
+
+private fun darkColors(accent: AccentColorType) =
     darkColorScheme(
-        primary = Purple200,
-        secondary = Teal200,
-        tertiary = Teal200,
+        primary = accentPrimary(accent, dark = true),
+        secondary = accentSecondary(accent, dark = true),
+        tertiary = accentSecondary(accent, dark = true),
         background = Color.Black,
         surface = Color.Black,
         surfaceDim = Color.Black,
         surfaceVariant = Color(red = 29, green = 26, blue = 34),
     )
 
-private val LightColorPalette =
+private fun lightColors(accent: AccentColorType) =
     lightColorScheme(
-        primary = Purple500,
-        secondary = Teal200,
-        tertiary = Teal200,
+        primary = accentPrimary(accent, dark = false),
+        secondary = accentSecondary(accent, dark = false),
+        tertiary = accentSecondary(accent, dark = false),
         surfaceContainerHighest = Color(red = 236, green = 230, blue = 240),
         surfaceVariant = Color(red = 250, green = 245, blue = 252),
     )
 
-private val DarkNewItemBackground = DarkColorPalette.primary.copy(0.12f)
-private val LightNewItemBackground = LightColorPalette.primary.copy(0.12f)
+private val DarkColorPalette = darkColors(AccentColorType.PURPLE)
+private val LightColorPalette = lightColors(AccentColorType.PURPLE)
 
 private val DarkTransparentBackground = DarkColorPalette.background.copy(0.32f)
 private val LightTransparentBackground = LightColorPalette.background.copy(0.32f)
-
-private val DarkSelectedNote = DarkNewItemBackground.compositeOver(DarkColorPalette.background)
-private val LightSelectedNote = LightNewItemBackground.compositeOver(LightColorPalette.background)
-
-private val DarkButtonBackground =
-    DarkColorPalette.primary.copy(alpha = 0.32f).compositeOver(DarkColorPalette.background)
-private val LightButtonBackground =
-    LightColorPalette.primary.copy(alpha = 0.32f).compositeOver(LightColorPalette.background)
-
-private val DarkLessImportantLink = DarkColorPalette.primary.copy(alpha = 0.52f)
-private val LightLessImportantLink = LightColorPalette.primary.copy(alpha = 0.52f)
-
-private val DarkMediumImportantLink = DarkColorPalette.primary.copy(alpha = 0.32f)
-private val LightMediumImportantLink = LightColorPalette.primary.copy(alpha = 0.32f)
 
 private val DarkGrayText = DarkColorPalette.onSurface.copy(alpha = 0.52f)
 private val LightGrayText = LightColorPalette.onSurface.copy(alpha = 0.52f)
@@ -407,26 +423,30 @@ val MarkDownStyleOnLight =
             ),
     )
 
+// Derived from background luminance instead of a fixed primary so the check keeps working
+// when the user picks a non-purple accent color (only primary/secondary change, not background).
 val ColorScheme.isLight: Boolean
-    get() = primary == Purple500
+    get() = background.luminance() > 0.5f
 
+// The accent-derived tints below are computed from the live scheme's primary so they follow
+// the selected accent color. Color is an inline value class, so these copies don't allocate.
 val ColorScheme.newItemBackgroundColor: Color
-    get() = if (isLight) LightNewItemBackground else DarkNewItemBackground
+    get() = primary.copy(alpha = 0.12f)
 
 val ColorScheme.transparentBackground: Color
     get() = if (isLight) LightTransparentBackground else DarkTransparentBackground
 
 val ColorScheme.selectedNote: Color
-    get() = if (isLight) LightSelectedNote else DarkSelectedNote
+    get() = primary.copy(alpha = 0.12f).compositeOver(background)
 
 val ColorScheme.secondaryButtonBackground: Color
-    get() = if (isLight) LightButtonBackground else DarkButtonBackground
+    get() = primary.copy(alpha = 0.32f).compositeOver(background)
 
 val ColorScheme.lessImportantLink: Color
-    get() = if (isLight) LightLessImportantLink else DarkLessImportantLink
+    get() = primary.copy(alpha = 0.52f)
 
 val ColorScheme.mediumImportanceLink: Color
-    get() = if (isLight) LightMediumImportantLink else DarkMediumImportantLink
+    get() = primary.copy(alpha = 0.32f)
 
 val ColorScheme.placeholderText: Color
     get() = if (isLight) LightPlaceholderText else DarkPlaceholderText
@@ -562,15 +582,21 @@ val ColorScheme.chartStyle: VicoTheme
 
 @Composable
 fun AmethystTheme(content: @Composable () -> Unit) {
-    val theme by Amethyst.instance.uiPrefs.value.theme
-        .collectAsStateWithLifecycle()
+    val uiPrefs = Amethyst.instance.uiPrefs.value
+    val theme by uiPrefs.theme.collectAsStateWithLifecycle()
+    val accentColor by uiPrefs.accentColor.collectAsStateWithLifecycle()
+    val fontFamily by uiPrefs.fontFamily.collectAsStateWithLifecycle()
+    val fontSize by uiPrefs.fontSize.collectAsStateWithLifecycle()
 
-    AmethystTheme(theme, content)
+    AmethystTheme(theme, accentColor, fontFamily, fontSize, content)
 }
 
 @Composable
 fun AmethystTheme(
     prefTheme: ThemeType,
+    accentColor: AccentColorType = AccentColorType.PURPLE,
+    fontFamily: FontFamilyType = FontFamilyType.SYSTEM,
+    fontSize: FontSizeType = FontSizeType.NORMAL,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -592,13 +618,33 @@ fun AmethystTheme(
                 isSystemInDarkTheme()
             }
         }
-    val colors = if (darkTheme) DarkColorPalette else LightColorPalette
+    val colors =
+        remember(darkTheme, accentColor) {
+            if (darkTheme) darkColors(accentColor) else lightColors(accentColor)
+        }
+
+    val resolvedFontFamily = remember(fontFamily) { fontFamily.toFontFamily() }
+    val typography = remember(fontFamily) { Typography.withFontFamily(resolvedFontFamily) }
+
+    val density = LocalDensity.current
+    val scaledDensity =
+        remember(density, fontSize) {
+            Density(density.density, density.fontScale * fontSize.scale)
+        }
 
     MaterialTheme(
         colorScheme = colors,
-        typography = Typography,
+        typography = typography,
         shapes = Shapes,
-        content = { ProvideMaterialSymbols(content = content) },
+        content = {
+            ProvideMaterialSymbols {
+                CompositionLocalProvider(
+                    LocalDensity provides scaledDensity,
+                    LocalTextStyle provides LocalTextStyle.current.merge(TextStyle(fontFamily = resolvedFontFamily)),
+                    content = content,
+                )
+            }
+        },
     )
 
     val view = LocalView.current

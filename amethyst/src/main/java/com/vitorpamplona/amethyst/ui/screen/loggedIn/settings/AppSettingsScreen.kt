@@ -48,14 +48,20 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AccentColorType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
+import com.vitorpamplona.amethyst.model.FontFamilyType
+import com.vitorpamplona.amethyst.model.FontSizeType
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.model.parseAccentColorType
 import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseFeatureSetType
+import com.vitorpamplona.amethyst.model.parseFontFamilyType
+import com.vitorpamplona.amethyst.model.parseFontSizeType
 import com.vitorpamplona.amethyst.model.parseGalleryType
 import com.vitorpamplona.amethyst.model.parseThemeType
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
@@ -113,6 +119,9 @@ fun SettingsScreen(sharedPrefs: UiSettingsFlow) {
     ) {
         ShowLanguageChoice(sharedPrefs)
         ShowThemeChoice(sharedPrefs)
+        ShowAccentColorChoice(sharedPrefs)
+        ShowFontFamilyChoice(sharedPrefs)
+        ShowFontSizeChoice(sharedPrefs)
         ShowImagePreviewChoice(sharedPrefs)
         ShowVideoPlaybackChoice(sharedPrefs)
         AutoplayVideosChoice(sharedPrefs)
@@ -215,6 +224,74 @@ fun ShowThemeChoice(sharedPrefs: UiSettingsFlow) {
         themeIndex.screenCode,
     ) {
         sharedPrefs.theme.tryEmit(parseThemeType(it))
+    }
+}
+
+@Composable
+fun ShowAccentColorChoice(sharedPrefs: UiSettingsFlow) {
+    val accentOptions =
+        persistentListOf(
+            TitleExplainer(stringRes(AccentColorType.PURPLE.resourceId)),
+            TitleExplainer(stringRes(AccentColorType.BLUE.resourceId)),
+            TitleExplainer(stringRes(AccentColorType.GREEN.resourceId)),
+            TitleExplainer(stringRes(AccentColorType.ORANGE.resourceId)),
+            TitleExplainer(stringRes(AccentColorType.RED.resourceId)),
+            TitleExplainer(stringRes(AccentColorType.PINK.resourceId)),
+        )
+
+    val accentIndex by sharedPrefs.accentColor.collectAsState()
+
+    SettingsRow(
+        R.string.accent_color,
+        R.string.accent_color_description,
+        accentOptions,
+        accentIndex.screenCode,
+    ) {
+        sharedPrefs.accentColor.tryEmit(parseAccentColorType(it))
+    }
+}
+
+@Composable
+fun ShowFontFamilyChoice(sharedPrefs: UiSettingsFlow) {
+    val fontOptions =
+        persistentListOf(
+            TitleExplainer(stringRes(FontFamilyType.SYSTEM.resourceId)),
+            TitleExplainer(stringRes(FontFamilyType.SANS_SERIF.resourceId)),
+            TitleExplainer(stringRes(FontFamilyType.SERIF.resourceId)),
+            TitleExplainer(stringRes(FontFamilyType.MONOSPACE.resourceId)),
+        )
+
+    val fontIndex by sharedPrefs.fontFamily.collectAsState()
+
+    SettingsRow(
+        R.string.font_family,
+        R.string.font_family_description,
+        fontOptions,
+        fontIndex.screenCode,
+    ) {
+        sharedPrefs.fontFamily.tryEmit(parseFontFamilyType(it))
+    }
+}
+
+@Composable
+fun ShowFontSizeChoice(sharedPrefs: UiSettingsFlow) {
+    val fontSizeOptions =
+        persistentListOf(
+            TitleExplainer(stringRes(FontSizeType.SMALL.resourceId)),
+            TitleExplainer(stringRes(FontSizeType.NORMAL.resourceId)),
+            TitleExplainer(stringRes(FontSizeType.LARGE.resourceId)),
+            TitleExplainer(stringRes(FontSizeType.HUGE.resourceId)),
+        )
+
+    val fontSizeIndex by sharedPrefs.fontSize.collectAsState()
+
+    SettingsRow(
+        R.string.font_size,
+        R.string.font_size_description,
+        fontSizeOptions,
+        fontSizeIndex.screenCode,
+    ) {
+        sharedPrefs.fontSize.tryEmit(parseFontSizeType(it))
     }
 }
 
