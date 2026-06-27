@@ -42,7 +42,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -99,27 +98,23 @@ fun ConnectedAppsScreen(
     val untitled = stringResource(CommonsR.string.napplet_untitled)
 
     var items by remember { mutableStateOf<List<ConnectedAppEntry>?>(null) }
-    var reload by remember { mutableIntStateOf(0) }
 
-    // Initial load from permission stores
-    LaunchedEffect(reload) {
-        items =
+    LaunchedEffect(Unit) {
+        // Load initial list; items is set before child coroutines start so the
+        // observeEvents first-emission and the relay fetch both see a non-null list.
+        val initial =
             withContext(Dispatchers.Default) {
                 loadConnectedApps(capabilityLedger, signerLedger, untitled)
             }
-    }
+        items = initial
 
-    // Watch manifest events in LocalCache and fetch missing ones from relays
-    LaunchedEffect(Unit) {
-        val manifestFilter =
-            Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND))
+        val manifestFilter = Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND))
 
-        // observeEvents emits immediately with cached events, then re-emits on each insertion
+        // Re-resolve metadata whenever a napplet manifest arrives in LocalCache.
         launch(Dispatchers.Default) {
             LocalCache.observeEvents<Event>(manifestFilter).collect {
-                val current = items ?: return@collect
                 items =
-                    current.map { entry ->
+                    items?.map { entry ->
                         val author = entry.coordinate.substringBefore(':')
                         val identifier = entry.coordinate.substringAfter(':', "")
                         val (title, iconUrl) = resolveNappletMeta(author, identifier, untitled)
@@ -128,11 +123,10 @@ fun ConnectedAppsScreen(
             }
         }
 
-        // Fetch manifests for apps whose metadata isn't in cache yet
+        // Fetch manifests for apps whose metadata isn't in cache yet.
         launch(Dispatchers.IO) {
-            val current = items ?: return@launch
             val authorsToFetch =
-                current
+                initial
                     .filter { it.iconUrl == null }
                     .map { it.coordinate.substringBefore(':') }
                     .toSet()
@@ -152,7 +146,6 @@ fun ConnectedAppsScreen(
                         filters = relays.associateWith { listOf(filter) },
                         timeoutMs = 15_000L,
                     )
-                // Inject into LocalCache; the observeEvents collector above re-resolves metadata
                 events.forEach { LocalCache.justConsume(it, null, false) }
             }
         }

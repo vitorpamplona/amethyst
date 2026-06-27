@@ -786,6 +786,7 @@
 
     <!-- Signer op labels -->
     <string name="napplet_op_sign_kind">sign kind %1$d event</string>
+    <string name="napplet_op_sign_kind_named">sign for %1$s (kind: %2$d)</string>
     <string name="napplet_op_encrypt">encrypt a message</string>
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <string name="napplet_op_decrypt">read your private messages</string>
