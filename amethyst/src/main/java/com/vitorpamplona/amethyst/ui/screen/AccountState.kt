@@ -20,112 +20,37 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
-import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.RememberObserver
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
+import androidx.compose.runtime.key
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.ui.components.getActivity
+import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
 
 /**
- * Creates a new scope for the given ViewModel type.
+ * Provides a [androidx.lifecycle.ViewModelStoreOwner] scoped to the currently logged-in account so
+ * that every ViewModel created under it (the [com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel]
+ * and all of its children) lives and dies with that account.
+ *
+ * The owner is keyed by the account's public key via [key]. While the same account stays logged in,
+ * the call site is stable, so the owner — and therefore the ViewModels — survives recompositions and
+ * configuration changes (it is parented to the Activity's [LocalViewModelStoreOwner]). When the user
+ * switches accounts the public key changes, the previous owner leaves the composition, and Lifecycle
+ * 2.11's [rememberViewModelStoreOwner] clears its [androidx.lifecycle.ViewModelStore] immediately —
+ * tearing down the old account's ViewModels instead of leaking them.
+ *
+ * This replaces a hand-rolled per-account ViewModelStore registry that could not clear stores around
+ * configuration changes (see git history).
  */
 @Composable
 fun SetAccountCentricViewModelStore(
     state: AccountState.LoggedIn,
     content: @Composable () -> Unit,
 ) {
-    val activity = LocalContext.current.getActivity()
-    val vmStore: StoreOwnerRegistry = viewModel(viewModelStoreOwner = activity)
-    vmStore.checkAttached(activity)
-
-    val owner = vmStore.getOwner(state)
-
-    val observer = remember { CompositionObserver(vmStore, state) }
-
-    CompositionLocalProvider(
-        LocalViewModelStoreOwner provides owner,
-        content = content,
-    )
-}
-
-/**
- * This class is responsible for notifying the [StoreOwnerRegistry] when a composable is detached so
- * that the viewmodel can be cleared.
- */
-class CompositionObserver(
-    private val vmStore: StoreOwnerRegistry,
-    private val key: Any,
-) : RememberObserver {
-    override fun onRemembered() {
-        // No action needed when remembered — registration happens at construction time.
+    key(state.account.signer.pubKey) {
+        val owner = rememberViewModelStoreOwner()
+        CompositionLocalProvider(
+            LocalViewModelStoreOwner provides owner,
+            content = content,
+        )
     }
-
-    override fun onForgotten() = vmStore.composableDetached(key)
-
-    override fun onAbandoned() = vmStore.composableDetached(key)
-}
-
-/**
- * Registry for [ViewModelStoreOwner]s that are scoped to a particular composition.
- * This ViewModel is registered with the Activity's lifecycle and will clear the viewmodels.
- */
-class StoreOwnerRegistry : ViewModel() {
-    private var isActivityRegistered: Boolean = false
-    private var isChangingConfigurations: Boolean = false
-    private val map = mutableMapOf<Any, ViewModelStoreOwner>()
-
-    override fun onCleared() {
-        map.values.forEach { it.viewModelStore.clear() }
-        super.onCleared()
-    }
-
-    fun getOwner(key: Any): ViewModelStoreOwner = map[key] ?: ScopedViewModelStoreOwner().also { map[key] = it }
-
-    fun composableDetached(key: Any) {
-        // TODO: This prevents the viewmodel from being cleared when the Composable is detached due
-        //  to a configuration change. We need to make sure that the viewmodel is cleared when the
-        //  Composition is recreated without the Composable. E.g. by observing the Composition
-        if (isChangingConfigurations) return
-        map.remove(key)?.also { owner -> owner.viewModelStore.clear() }
-    }
-
-    fun checkAttached(activity: ComponentActivity) {
-        if (!isActivityRegistered) {
-            isActivityRegistered = true
-            activity.lifecycle.addObserver(
-                object : DefaultLifecycleObserver {
-                    override fun onStart(owner: LifecycleOwner) {
-                        isChangingConfigurations = false
-                    }
-
-                    override fun onStop(owner: LifecycleOwner) {
-                        if (activity.isChangingConfigurations) {
-                            isChangingConfigurations = true
-                        }
-                    }
-
-                    override fun onDestroy(owner: LifecycleOwner) {
-                        isActivityRegistered = false
-                        owner.lifecycle.removeObserver(this)
-                    }
-                },
-            )
-        }
-    }
-}
-
-/**
- * Simple ViewModelStoreOwner that can be used to create a new scope.
- */
-class ScopedViewModelStoreOwner : ViewModelStoreOwner {
-    override val viewModelStore: ViewModelStore = ViewModelStore()
 }
