@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.browser.DefaultWebClients
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.browser.OmniboxSuggestions
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
@@ -89,6 +90,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.favoriteAppItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.suggestedAppItems
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /** How many of the most recent history entries the idle browser home surfaces under "Recent". */
@@ -209,25 +211,19 @@ private fun BrowserLauncher(
                     onOpen = { open(it.url) },
                     modifier = contentModifier,
                 )
-            apps.isEmpty() && history.isEmpty() ->
-                Box(
-                    contentModifier.padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        stringResource(R.string.favorite_apps_empty),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             else -> {
                 val favoriteUrls = remember(apps) { apps.filterIsInstance<FavoriteApp.WebApp>().mapTo(HashSet()) { it.url } }
+                // Hardcoded starter web apps, minus any the user already pinned (those show under Favorites).
+                val suggested = remember(favoriteUrls) { DefaultWebClients.list.filter { it.url !in favoriteUrls } }
                 BrowserHome(
                     apps = apps,
                     history = history,
                     iconKeys = iconKeys,
                     favoriteUrls = favoriteUrls,
+                    suggested = suggested,
                     onOpenApp = { FavoriteAppLauncher.launch(context, it) },
                     onRemoveApp = { FavoriteAppsRegistry.remove(it.id) },
+                    onAddApp = { FavoriteAppsRegistry.add(it) },
                     onOpenUrl = { open(it) },
                     onToggleRecentFavorite = { entry ->
                         val id = "url:" + entry.url
@@ -373,8 +369,10 @@ private fun BrowserHome(
     history: List<BrowserHistoryEntry>,
     iconKeys: Set<String>,
     favoriteUrls: Set<String>,
+    suggested: List<FavoriteApp.WebApp>,
     onOpenApp: (FavoriteApp) -> Unit,
     onRemoveApp: (FavoriteApp) -> Unit,
+    onAddApp: (FavoriteApp) -> Unit,
     onOpenUrl: (String) -> Unit,
     onToggleRecentFavorite: (BrowserHistoryEntry) -> Unit,
     onRemoveRecent: (String) -> Unit,
@@ -404,6 +402,10 @@ private fun BrowserHome(
                     onRemove = { onRemoveRecent(entry.url) },
                 )
             }
+        }
+        if (suggested.isNotEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-sug") { SectionHeader(stringResource(R.string.browser_suggested)) }
+            suggestedAppItems(suggested, onOpenApp, onAddApp)
         }
     }
 }
