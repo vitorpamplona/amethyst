@@ -289,6 +289,8 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -3760,6 +3762,14 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is FavoritePodcastsListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is Podcasting20EpisodeEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is Podcasting20TrailerEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 

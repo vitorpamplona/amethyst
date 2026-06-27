@@ -35,7 +35,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.syntheticWaveformFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.AudioTag
+import com.vitorpamplona.quartz.podcasts.PodcastAudio
 
 // The voice player's internal controls are laid out for 100.dp; 80.dp is the tightest height
 // that still fits the play button without clipping it. Shared so the feed card and the
@@ -43,13 +43,14 @@ import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.AudioTag
 private val PLAYER_HEIGHT_MODIFIER = Modifier.fillMaxWidth().height(80.dp)
 
 /**
- * The inline audio strip for a NIP-F4 episode (kind 54): one [AudioTag] played through the
- * shared media-controller stack. [borderModifier] shapes the strip — bottom-rounded when it
- * butts up under a cover image, fully rounded when it stands alone in a list.
+ * The inline audio strip for a podcast episode: one [PodcastAudio] played through the shared
+ * media-controller stack. Works for both NIP-F4 (kind 54) and Podcasting-2.0 (kind 30054)
+ * episodes via the spec-neutral audio holder. [borderModifier] shapes the strip — bottom-rounded
+ * when it butts up under a cover image, fully rounded when it stands alone in a list.
  */
 @Composable
 fun PodcastEpisodeAudioPlayer(
-    audio: AudioTag,
+    audio: PodcastAudio,
     note: Note,
     title: String?,
     image: String?,

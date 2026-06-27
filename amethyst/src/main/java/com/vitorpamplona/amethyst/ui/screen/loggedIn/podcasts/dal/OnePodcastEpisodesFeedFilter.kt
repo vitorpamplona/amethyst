@@ -23,15 +23,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 
 /**
- * Every episode of a single podcast. Per NIP-F4 each podcast is its own keypair, so all
- * episodes (kind 54) of a show are authored by [podcastPubkey]. Episodes are regular events,
- * so they live in `LocalCache.notes`. Most-recent-first via [sortedByDefaultFeedOrder].
+ * Every episode of a single podcast, authored by [podcastPubkey]. NIP-F4 episodes (kind 54,
+ * regular events in `LocalCache.notes`) and Podcasting-2.0 episodes (kind 30054, addressable
+ * events in `LocalCache.addressables`) both implement [PodcastEpisode] and are merged here —
+ * in both models the show's pubkey is the episode author. Most-recent-first via
+ * [sortedByDefaultFeedOrder].
  */
 class OnePodcastEpisodesFeedFilter(
     val podcastPubkey: HexKey,
@@ -41,18 +45,22 @@ class OnePodcastEpisodesFeedFilter(
     override fun feedKey(): String = "podcast-" + podcastPubkey
 
     override fun feed(): List<Note> {
-        val notes =
+        val regular =
             cache.notes.filterIntoSet { _, it ->
                 acceptableEvent(it)
             }
-        return sort(notes)
+        val addressable =
+            cache.addressables.filterIntoSet(Podcasting20EpisodeEvent.KIND) { _, it ->
+                acceptableEvent(it)
+            }
+        return sort(regular + addressable)
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { acceptableEvent(it) }
 
     private fun acceptableEvent(note: Note): Boolean {
-        val noteEvent = note.event
-        return noteEvent is PodcastEpisodeEvent &&
+        val noteEvent = note.event ?: return false
+        return noteEvent is PodcastEpisode &&
             noteEvent.pubKey == podcastPubkey &&
             !note.isHiddenFor(account.hiddenUsers.flow.value) &&
             account.isAcceptable(note)

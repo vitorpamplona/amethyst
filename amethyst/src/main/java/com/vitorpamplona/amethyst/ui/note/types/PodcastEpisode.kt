@@ -44,7 +44,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 
 // Bottom-rounded border on the audio player so it visually butts up against the cover's
 // top-rounded corners as one card. Constant — keep out of recomposition.
@@ -60,14 +60,18 @@ fun RenderPodcastEpisode(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? PodcastEpisodeEvent ?: return
+    val noteEvent = note.event ?: return
+    // Both NIP-F4 (kind 54) and Podcasting-2.0 (kind 30054) episodes implement PodcastEpisode,
+    // so this one renderer serves both. Title/image/description/audio come through the shared
+    // abstraction; content and tags come from the underlying event.
+    val episode = noteEvent as? PodcastEpisode ?: return
 
-    val title = remember(noteEvent) { noteEvent.title() }
-    val image = remember(noteEvent) { noteEvent.image() }
-    val description = remember(noteEvent) { noteEvent.description() }
+    val title = remember(noteEvent) { episode.episodeTitle() }
+    val image = remember(noteEvent) { episode.episodeImage() }
+    val description = remember(noteEvent) { episode.episodeDescription() }
     // Pick the first audio URL. Publishers may emit multiple containers in their preferred
     // order; clients with codec preferences can extend this later.
-    val firstAudio = remember(noteEvent) { noteEvent.audios().firstOrNull() }
+    val firstAudio = remember(noteEvent) { episode.episodeAudio().firstOrNull() }
     // Suppress the markdown block if blank — title + description already describe a short
     // episode. Otherwise hand off to RichText below.
     val markdown = remember(noteEvent) { noteEvent.content.ifBlank { null } }

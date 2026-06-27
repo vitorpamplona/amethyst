@@ -44,7 +44,7 @@ import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 
 private val PLAYER_SHAPE = Modifier.clip(RoundedCornerShape(12.dp))
 
@@ -59,12 +59,14 @@ fun PodcastEpisodeListItem(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? PodcastEpisodeEvent ?: return
+    val noteEvent = note.event ?: return
+    // Both kind 54 (NIP-F4) and kind 30054 (Podcasting 2.0) episodes implement PodcastEpisode.
+    val episode = noteEvent as? PodcastEpisode ?: return
 
-    val title = remember(noteEvent) { noteEvent.title() }
-    val description = remember(noteEvent) { noteEvent.description() }
-    val firstAudio = remember(noteEvent) { noteEvent.audios().firstOrNull() }
-    val image = remember(noteEvent) { noteEvent.image() }
+    val title = remember(noteEvent) { episode.episodeTitle() }
+    val description = remember(noteEvent) { episode.episodeDescription() }
+    val firstAudio = remember(noteEvent) { episode.episodeAudio().firstOrNull() }
+    val image = remember(noteEvent) { episode.episodeImage() }
 
     val context = LocalContext.current
     val dateStr = remember(noteEvent) { timeAgo(noteEvent.createdAt, context, prefix = "") }
