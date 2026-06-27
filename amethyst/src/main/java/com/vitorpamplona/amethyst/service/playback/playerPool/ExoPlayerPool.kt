@@ -117,8 +117,20 @@ class ExoPlayerPool(
         if (preferredMediaId != null) {
             val warm = takeWarm(preferredMediaId)
             if (warm != null) {
-                Log.d("PlaybackService") { "ExoPlayerPool warm hit: $preferredMediaId" }
-                return warm
+                // A warm player can error *after* it was pooled clean — its decoder dies
+                // asynchronously while paused (emulator surface reclaim, codec loss). releasePlayer
+                // can't catch that (the error appears post-release), so it's caught here at acquire:
+                // never hand a stale PlaybackException to a controller. Release the dead player and
+                // fall through to a clean cold/fresh one — a guaranteed setMediaItem+prepare ahead.
+                val error = warm.playerError
+                if (error != null) {
+                    Log.d("PlaybackService") { "ExoPlayerPool discarding errored warm player: $preferredMediaId (${error.errorCodeName})" }
+                    PcmTapRegistry.unregisterPlayer(warm)
+                    warm.release()
+                } else {
+                    Log.d("PlaybackService") { "ExoPlayerPool warm hit: $preferredMediaId" }
+                    return warm
+                }
             }
         }
         return coldPool.poll() ?: builder.build(context)
@@ -147,6 +159,19 @@ class ExoPlayerPool(
     suspend fun releasePlayer(player: ExoPlayer) {
         mutex.withLock {
             if (player.isReleased) return@withLock
+
+            // A player that errored out (decoder-init failure, decode error) must never be
+            // returned to either pool. Kept warm, it hands the stale PlaybackException straight
+            // back to the next acquire of the same URI — the "Can't play this video" flash traced
+            // to warm-pool reuse. Its failed MediaCodec instance is also suspect. Drop it so the
+            // pool builds a clean replacement on the next miss.
+            val error = player.playerError
+            if (error != null) {
+                Log.d("PlaybackService") { "ExoPlayerPool dropping errored player: ${player.currentMediaItem?.mediaId} (${error.errorCodeName})" }
+                PcmTapRegistry.unregisterPlayer(player)
+                player.release()
+                return@withLock
+            }
 
             val mediaId = player.currentMediaItem?.mediaId
             if (mediaId != null && warmSlotsCap > 0) {

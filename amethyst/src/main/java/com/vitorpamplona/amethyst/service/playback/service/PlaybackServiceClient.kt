@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -45,6 +46,13 @@ object PlaybackServiceClient {
     // original newCachedThreadPool was unbounded and could spin up a thread per concurrent
     // video, each lingering for the 60s keep-alive afterwards.
     val executorService: ExecutorService = Executors.newFixedThreadPool(4)
+
+    // Number of MediaControllers currently held alive (prepared and not yet released). Two
+    // controllers alive for the same videoUri at once is the signature of the decoder-init
+    // collision that surfaces as a transient "Can't play this video": the second one's
+    // MediaCodec.start() fails because the first still holds a codec instance. Logged on every
+    // prepare/release so the overlap is visible in a field logcat.
+    private val liveControllers = AtomicInteger(0)
 
     fun shutdown() {
         executorService.shutdown()
@@ -83,7 +91,7 @@ object PlaybackServiceClient {
                 .setConnectionHints(bundle)
                 .buildAsync()
 
-        Log.d("PlaybackService") { "Preparing Controller $id $videoUri" }
+        Log.d("PlaybackService") { "Preparing Controller $id (live=${liveControllers.incrementAndGet()}) $videoUri" }
 
         controllerFuture.addListener(
             {
@@ -108,7 +116,7 @@ object PlaybackServiceClient {
         )
 
         awaitClose {
-            Log.d("PlaybackService") { "Releasing Controller $id $videoUri" }
+            Log.d("PlaybackService") { "Releasing Controller $id (live=${liveControllers.decrementAndGet()}) $videoUri" }
             try {
                 MediaController.releaseFuture(controllerFuture)
             } catch (e: Exception) {
