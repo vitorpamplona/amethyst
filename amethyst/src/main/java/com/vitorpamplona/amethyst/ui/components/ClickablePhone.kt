@@ -25,6 +25,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 
 @Composable
 fun ClickablePhone(phone: String) {

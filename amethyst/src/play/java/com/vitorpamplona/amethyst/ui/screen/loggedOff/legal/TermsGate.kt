@@ -29,7 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.buildAnnotatedString
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.components.appendLink
+import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
