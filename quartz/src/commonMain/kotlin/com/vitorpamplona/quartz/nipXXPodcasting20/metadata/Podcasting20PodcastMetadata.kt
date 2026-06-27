@@ -22,8 +22,10 @@ package com.vitorpamplona.quartz.nipXXPodcasting20.metadata
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.podcasts.PodcastShow
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.serialization.Serializable
 
 /**
@@ -112,5 +114,14 @@ class Podcasting20PodcastMetadata(
             val content = runCatching { JsonMapper.fromJson<Content>(event.content) }.getOrNull() ?: return null
             return Podcasting20PodcastMetadata(event, content)
         }
+
+        /**
+         * Builds the kind:30078 show-metadata event template (`d="podcast-metadata"`) by serializing
+         * [content] to its JSON body. Unset/default fields are omitted, keeping the payload minimal.
+         */
+        fun build(
+            content: Content,
+            createdAt: Long = TimeUtils.now(),
+        ): EventTemplate<AppSpecificDataEvent> = AppSpecificDataEvent.build(PODCAST_METADATA_D_TAG, JsonMapper.toJson(content), createdAt)
     }
 }

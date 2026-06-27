@@ -92,6 +92,32 @@ class Podcasting20PodcastMetadataTest {
     }
 
     @Test
+    fun `build round-trips a Content through sign and parse`() {
+        val content =
+            Podcasting20PodcastMetadata.Content(
+                title = "Built Show",
+                description = "made in quartz",
+                author = "Jane",
+                image = "https://example.com/c.jpg",
+                categories = listOf("Tech"),
+                explicit = true,
+                funding = listOf("https://example.com/donate"),
+                complete = false,
+            )
+        val event = signer.sign<AppSpecificDataEvent>(Podcasting20PodcastMetadata.build(content))
+
+        assertEquals("podcast-metadata", event.dTag())
+        val parsed = Podcasting20PodcastMetadata.parse(event)
+        assertTrue(parsed != null)
+        assertEquals("Built Show", parsed.showTitle())
+        assertEquals("Jane", parsed.showAuthor())
+        assertEquals(listOf("Tech"), parsed.showCategories())
+        assertEquals(listOf("https://example.com/donate"), parsed.showFundingUrls())
+        assertTrue(parsed.showIsExplicit())
+        assertFalse(parsed.showIsComplete())
+    }
+
+    @Test
     fun `optional rich fields default to empty or null when absent`() {
         val event = appDataEvent("podcast-metadata", """{"title":"Bare","description":"d","image":"i"}""")
         val show = Podcasting20PodcastMetadata.parse(event)
