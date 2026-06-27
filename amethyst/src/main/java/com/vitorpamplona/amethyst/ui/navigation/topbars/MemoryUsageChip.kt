@@ -41,7 +41,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.MemorySnapshot
 import com.vitorpamplona.amethyst.collectMemorySnapshot
 import com.vitorpamplona.amethyst.isDebug
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @Composable
 fun MemoryUsageChip() {
@@ -52,7 +54,12 @@ fun MemoryUsageChip() {
 
     val snapshot by produceState<MemorySnapshot?>(null) {
         while (true) {
-            value = collectMemorySnapshot(context)
+            // collectMemorySnapshot reads coil3.disk.DiskLruCache.size(), which is @Synchronized and
+            // contends with the disk cache's own journal I/O. On cold start that lock is held by a
+            // background worker for seconds (initial journal read + the burst of image writes), so
+            // running this on the produceState default (main) dispatcher froze the UI thread —
+            // the "Loading account" frame couldn't repaint until size() returned. Collect off-main.
+            value = withContext(Dispatchers.IO) { collectMemorySnapshot(context) }
             delay(2_000)
         }
     }
