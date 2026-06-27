@@ -29,6 +29,7 @@ fun filterPodcastEventsByFollows(
     kinds: List<Int>,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
+    additionalTags: Map<String, List<String>>? = null,
 ): List<RelayBasedFilter> {
     if (followsSet.set.isEmpty()) return emptyList()
 
@@ -38,7 +39,7 @@ fun filterPodcastEventsByFollows(
 
         listOfNotNull(
             it.value.authors?.let { authors ->
-                filterPodcastEventsByAuthors(relay, kinds, authors, sinceForRelay)
+                filterPodcastEventsByAuthors(relay, kinds, authors, sinceForRelay, additionalTags)
             },
         ).flatten()
     }

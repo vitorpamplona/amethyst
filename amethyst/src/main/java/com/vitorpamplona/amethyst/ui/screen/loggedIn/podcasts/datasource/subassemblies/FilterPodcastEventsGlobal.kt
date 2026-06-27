@@ -30,6 +30,7 @@ fun filterPodcastEventsGlobal(
     kinds: List<Int>,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
+    additionalTags: Map<String, List<String>>? = null,
 ): List<RelayBasedFilter> {
     if (relays.set.isEmpty()) return emptyList()
 
@@ -42,6 +43,7 @@ fun filterPodcastEventsGlobal(
             filter =
                 Filter(
                     kinds = kinds,
+                    tags = additionalTags,
                     limit = 200,
                     since = sinceForRelay,
                 ),

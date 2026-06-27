@@ -33,6 +33,7 @@ fun filterPodcastEventsFromAllCommunities(
     kinds: List<Int>,
     communities: Set<String>,
     since: Long? = null,
+    additionalTags: Map<String, List<String>>? = null,
 ): List<RelayBasedFilter> {
     val communityList = communities.sorted()
     val kindsAsStrings = kinds.map { it.toString() }
@@ -57,7 +58,7 @@ fun filterPodcastEventsFromAllCommunities(
             filter =
                 Filter(
                     kinds = kinds,
-                    tags = mapOf("a" to communityList),
+                    tags = mergeFilterTags(mapOf("a" to communityList), additionalTags),
                     limit = communityList.size * 20,
                     since = since,
                 ),
@@ -70,6 +71,7 @@ fun filterPodcastEventsByAllCommunities(
     kinds: List<Int>,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
+    additionalTags: Map<String, List<String>>? = null,
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
 
@@ -79,6 +81,7 @@ fun filterPodcastEventsByAllCommunities(
             kinds = kinds,
             communities = it.value.communities,
             since = since?.get(it.key)?.time ?: defaultSince,
+            additionalTags = additionalTags,
         )
     }
 }
@@ -89,6 +92,7 @@ fun filterPodcastEventsFromCommunity(
     community: String,
     authors: Set<String>?,
     since: Long? = null,
+    additionalTags: Map<String, List<String>>? = null,
 ): List<RelayBasedFilter> {
     val authorList = authors?.sorted()
     val kindsAsStrings = kinds.map { it.toString() }
@@ -114,7 +118,7 @@ fun filterPodcastEventsFromCommunity(
                 Filter(
                     authors = authorList,
                     kinds = kinds,
-                    tags = mapOf("a" to listOf(community)),
+                    tags = mergeFilterTags(mapOf("a" to listOf(community)), additionalTags),
                     limit = 100,
                     since = since,
                 ),
@@ -127,6 +131,7 @@ fun filterPodcastEventsByCommunity(
     kinds: List<Int>,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
+    additionalTags: Map<String, List<String>>? = null,
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
 
@@ -137,6 +142,7 @@ fun filterPodcastEventsByCommunity(
             community = it.value.community,
             authors = it.value.authors,
             since = since?.get(it.key)?.time ?: defaultSince,
+            additionalTags = additionalTags,
         )
     }
 }
