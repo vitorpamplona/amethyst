@@ -52,6 +52,7 @@ enum class NavBarItem {
     ARTICLES,
     PICTURES,
     WORKOUTS,
+    GIT_REPOSITORIES,
     SOFTWARE_APPS,
     NAPPLETS,
     NSITES,
@@ -218,6 +219,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 labelRes = R.string.workouts,
                 icon = MaterialSymbols.DirectionsRun,
                 resolveRoute = { Route.Workouts },
+            ),
+        NavBarItem.GIT_REPOSITORIES to
+            NavBarItemDef(
+                id = NavBarItem.GIT_REPOSITORIES,
+                labelRes = R.string.git_repositories,
+                icon = MaterialSymbols.Code,
+                resolveRoute = { Route.GitRepositories },
             ),
         NavBarItem.SOFTWARE_APPS to
             NavBarItemDef(
@@ -426,6 +434,7 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.POLLS,
         NavBarItem.PRODUCTS,
         NavBarItem.WORKOUTS,
+        NavBarItem.GIT_REPOSITORIES,
         NavBarItem.LIVE_STREAMS,
         NavBarItem.NESTS,
         NavBarItem.COMMUNITIES,

@@ -108,6 +108,7 @@ private object PrefKeys {
     const val DEFAULT_NAPPLETS_FOLLOW_LIST = "defaultNappletsFollowList"
     const val DEFAULT_NSITES_FOLLOW_LIST = "defaultNsitesFollowList"
     const val DEFAULT_WORKOUTS_FOLLOW_LIST = "defaultWorkoutsFollowList"
+    const val DEFAULT_GIT_REPOSITORIES_FOLLOW_LIST = "defaultGitRepositoriesFollowList"
     const val DEFAULT_CALENDARS_FOLLOW_LIST = "defaultCalendarsFollowList"
     const val DEFAULT_PRODUCTS_FOLLOW_LIST = "defaultProductsFollowList"
     const val DEFAULT_SHORTS_FOLLOW_LIST = "defaultShortsFollowList"
@@ -426,6 +427,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_NAPPLETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNappletsFollowList.value))
                     putString(PrefKeys.DEFAULT_NSITES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNsitesFollowList.value))
                     putString(PrefKeys.DEFAULT_WORKOUTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultWorkoutsFollowList.value))
+                    putString(PrefKeys.DEFAULT_GIT_REPOSITORIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultGitRepositoriesFollowList.value))
                     putString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCalendarsFollowList.value))
                     putString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultProductsFollowList.value))
                     putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
@@ -790,6 +792,7 @@ object LocalPreferences {
                         defaultNappletsFollowList = MutableStateFlow(followListPrefs.napplets),
                         defaultNsitesFollowList = MutableStateFlow(followListPrefs.nsites),
                         defaultWorkoutsFollowList = MutableStateFlow(followListPrefs.workouts),
+                        defaultGitRepositoriesFollowList = MutableStateFlow(followListPrefs.gitRepositories),
                         defaultCalendarsFollowList = MutableStateFlow(followListPrefs.calendars),
                         defaultProductsFollowList = MutableStateFlow(followListPrefs.products),
                         defaultShortsFollowList = MutableStateFlow(followListPrefs.shorts),
@@ -882,6 +885,7 @@ object LocalPreferences {
         val napplets: TopFilter,
         val nsites: TopFilter,
         val workouts: TopFilter,
+        val gitRepositories: TopFilter,
         val calendars: TopFilter,
         val products: TopFilter,
         val shorts: TopFilter,
@@ -937,6 +941,7 @@ object LocalPreferences {
             napplets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NAPPLETS_FOLLOW_LIST, null), TopFilter.Global),
             nsites = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NSITES_FOLLOW_LIST, null), TopFilter.Global),
             workouts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_WORKOUTS_FOLLOW_LIST, null), TopFilter.Global),
+            gitRepositories = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_GIT_REPOSITORIES_FOLLOW_LIST, null), TopFilter.Global),
             calendars = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, null), TopFilter.Global),
             products = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, null), TopFilter.AroundMe),
             shorts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null), TopFilter.Global),
