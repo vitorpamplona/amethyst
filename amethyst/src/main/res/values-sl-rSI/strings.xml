@@ -2342,6 +2342,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="git_repo_section_maintainers">Vzdrževalci</string>
     <string name="git_repo_section_topics">Teme</string>
     <string name="git_repo_personal_fork">Osebni fork</string>
+    <string name="git_repositories">Git repozitoriji</string>
     <string name="nsite_title">Statična spletna stran: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Dovoljenja:</string>
