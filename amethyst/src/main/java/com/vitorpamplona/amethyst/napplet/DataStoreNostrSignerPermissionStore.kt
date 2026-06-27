@@ -50,12 +50,12 @@ class DataStoreNostrSignerPermissionStore(
 
     private val cache = LargeCache<String, DataStore<Preferences>>()
 
-    private fun storeFor(coordinate: String): DataStore<Preferences> =
-        cache.getOrCreate(coordinate) {
-            PreferenceDataStoreFactory.create(
-                produceFile = { File(filesDir, "datastore/nsp_${hash(coordinate)}.preferences_pb") },
-            )
+    private fun storeFor(coordinate: String): DataStore<Preferences> {
+        val file = File(filesDir, "datastore/nsp_${hash(coordinate)}.preferences_pb")
+        return cache.getOrCreate(file.absolutePath) {
+            PreferenceDataStoreFactory.create(produceFile = { file })
         }
+    }
 
     override suspend fun loadPolicy(coordinate: String): AppSignerPolicy? {
         val raw = storeFor(coordinate).data.first()[KEY_POLICY] ?: return null
@@ -107,15 +107,11 @@ class DataStoreNostrSignerPermissionStore(
         if (!dir.exists()) return emptyMap()
         val result = mutableMapOf<String, AppSignerPolicy>()
         for (file in dir.listFiles { f -> f.name.startsWith("nsp_") } ?: emptyArray()) {
-            val coordinate =
-                file.nameWithoutExtension.let { name ->
-                    // Derive the DataStore by re-opening the file; we stored the coordinate inside.
-                    val ds =
-                        cache.getOrCreate(name) {
-                            PreferenceDataStoreFactory.create(produceFile = { file })
-                        }
-                    ds.data.first()[KEY_COORDINATE]
-                } ?: continue
+            val ds =
+                cache.getOrCreate(file.absolutePath) {
+                    PreferenceDataStoreFactory.create(produceFile = { file })
+                }
+            val coordinate = ds.data.first()[KEY_COORDINATE] ?: continue
             val policy = loadPolicy(coordinate) ?: continue
             result[coordinate] = policy
         }
