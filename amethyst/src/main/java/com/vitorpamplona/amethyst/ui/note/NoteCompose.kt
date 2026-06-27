@@ -198,6 +198,7 @@ import com.vitorpamplona.amethyst.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastTrailerListItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.ExerciseTemplateDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutDisplay
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -347,6 +348,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
+import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -987,6 +989,10 @@ private fun RenderNoteRow(
 
         is Podcasting20EpisodeEvent -> {
             RenderPodcastEpisode(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+        }
+
+        is Podcasting20TrailerEvent -> {
+            PodcastTrailerListItem(baseNote, accountViewModel, nav)
         }
 
         is PodcastMetadataEvent -> {

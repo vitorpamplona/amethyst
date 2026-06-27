@@ -913,6 +913,8 @@
     <string name="route_podcasts">Podcasts</string>
     <string name="podcast_view_episodes">View episodes</string>
     <string name="podcast_no_episodes">No episodes found yet</string>
+    <string name="podcast_trailer">Trailer</string>
+    <string name="podcast_trailer_season">Season %1$d</string>
     <plurals name="podcast_episode_count">
         <item quantity="one">%1$d episode</item>
         <item quantity="other">%1$d episodes</item>

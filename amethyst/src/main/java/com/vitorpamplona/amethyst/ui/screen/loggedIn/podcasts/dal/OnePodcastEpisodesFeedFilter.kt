@@ -28,14 +28,16 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 
 /**
- * Every episode of a single podcast, authored by [podcastPubkey]. NIP-F4 episodes (kind 54,
- * regular events in `LocalCache.notes`) and Podcasting-2.0 episodes (kind 30054, addressable
- * events in `LocalCache.addressables`) both implement [PodcastEpisode] and are merged here —
- * in both models the show's pubkey is the episode author. Most-recent-first via
- * [sortedByDefaultFeedOrder].
+ * Everything a single podcast (authored by [podcastPubkey]) publishes for its show page: NIP-F4
+ * episodes (kind 54, regular events in `LocalCache.notes`), Podcasting-2.0 episodes (kind 30054)
+ * and Podcasting-2.0 trailers (kind 30055, both addressable events in `LocalCache.addressables`).
+ * Episodes go through the shared [PodcastEpisode] interface; trailers are matched by their concrete
+ * type and rendered distinctly. In every model the show's pubkey authors its own content.
+ * Most-recent-first via [sortedByDefaultFeedOrder].
  */
 class OnePodcastEpisodesFeedFilter(
     val podcastPubkey: HexKey,
@@ -49,18 +51,23 @@ class OnePodcastEpisodesFeedFilter(
             cache.notes.filterIntoSet { _, it ->
                 acceptableEvent(it)
             }
-        val addressable =
+        val episodes =
             cache.addressables.filterIntoSet(Podcasting20EpisodeEvent.KIND) { _, it ->
                 acceptableEvent(it)
             }
-        return sort(regular + addressable)
+        val trailers =
+            cache.addressables.filterIntoSet(Podcasting20TrailerEvent.KIND) { _, it ->
+                acceptableEvent(it)
+            }
+        return sort(regular + episodes + trailers)
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { acceptableEvent(it) }
 
     private fun acceptableEvent(note: Note): Boolean {
         val noteEvent = note.event ?: return false
-        return noteEvent is PodcastEpisode &&
+        val isShowContent = noteEvent is PodcastEpisode || noteEvent is Podcasting20TrailerEvent
+        return isShowContent &&
             noteEvent.pubKey == podcastPubkey &&
             !note.isHiddenFor(account.hiddenUsers.flow.value) &&
             account.isAcceptable(note)

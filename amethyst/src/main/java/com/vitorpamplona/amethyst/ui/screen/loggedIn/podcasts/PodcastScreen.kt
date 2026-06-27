@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 
 @Composable
 fun PodcastScreen(
@@ -181,15 +182,21 @@ private fun PodcastEpisodesList(
         contentPadding = rememberFeedContentPadding(FeedPadding),
     ) {
         item("header") {
-            PodcastHeader(metadataNote, metadataEvent, items.list.size, accountViewModel, nav)
+            // The list mixes in trailers; the header count should reflect episodes only.
+            val episodeCount = items.list.count { it.event !is Podcasting20TrailerEvent }
+            PodcastHeader(metadataNote, metadataEvent, episodeCount, accountViewModel, nav)
         }
 
         itemsIndexed(
             items.list,
             key = { _, item -> item.idHex },
-            contentType = { _, _ -> "episode" },
-        ) { index, episode ->
-            PodcastEpisodeListItem(episode, accountViewModel, nav)
+            contentType = { _, item -> if (item.event is Podcasting20TrailerEvent) "trailer" else "episode" },
+        ) { index, item ->
+            if (item.event is Podcasting20TrailerEvent) {
+                PodcastTrailerListItem(item, accountViewModel, nav)
+            } else {
+                PodcastEpisodeListItem(item, accountViewModel, nav)
+            }
 
             if (index < items.list.lastIndex) {
                 HorizontalDivider(thickness = DividerThickness)

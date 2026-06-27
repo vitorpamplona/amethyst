@@ -27,14 +27,18 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 
-// Per NIP-F4 a podcast is its own keypair: the show-level metadata (kind 10154) and every
-// episode (kind 54) are authored by the same pubkey. So a single-podcast screen fetches
-// both kinds from that one author.
+// A single-podcast screen fetches everything authored by the show's pubkey, across both drafts:
+// NIP-F4 metadata (kind 10154) + episodes (kind 54), and Podcasting-2.0 episodes (kind 30054) +
+// trailers (kind 30055). In both models the show key authors its own episodes and trailers.
 private val OnePodcastKinds =
     listOf(
         PodcastMetadataEvent.KIND,
         PodcastEpisodeEvent.KIND,
+        Podcasting20EpisodeEvent.KIND,
+        Podcasting20TrailerEvent.KIND,
     )
 
 fun filterOnePodcast(
