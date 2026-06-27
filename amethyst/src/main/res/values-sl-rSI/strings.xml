@@ -1815,6 +1815,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="cashu_remove_mint">Odstrani kovnico</string>
     <string name="cashu_add_mint">Dodaj kovnico</string>
     <string name="cashu_history">Zgodovina</string>
+    <string name="cashu_wallet_autosaves">Vaša denarnica se samodejno shrani ob dodajanju ali odstranjevanju kovnic (mints). Ob prvem dodajanju kovnice se za vas ustvari ključ nutzap.</string>
+    <string name="cashu_wallet_saving">Shranjujem…</string>
     <string name="cashu_p2pk_section">Ključ Nutzap (napredno)</string>
     <string name="cashu_p2pk_explainer">Ločen zasebni ključ, uporabljen le za prejemanje NIP-61 nutzapov. To ni tvoj ključ identitete Nostr.</string>
     <string name="cashu_p2pk_autogen">Generiraj nov ključ</string>
@@ -2321,6 +2323,10 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="forked_from">Razcepljeno od</string>
     <string name="git_web_address">Splet:</string>
     <string name="git_clone_address">Klon:</string>
+    <string name="git_branch">Veja</string>
+    <string name="git_commit">Objavi</string>
+    <string name="git_merge_base">Združi osnovo</string>
+    <string name="git_pr_update_description">Zahtevek za združitev (PR) je bil posodobljen na novo objavo.</string>
     <string name="git_status_open">Odprto</string>
     <string name="git_status_merged">Združeno</string>
     <string name="git_status_closed">Zaključeno</string>
@@ -2623,6 +2629,8 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="kind_git_patch">Git popravek</string>
     <string name="kind_git_repo">Git repozitorij</string>
     <string name="kind_git_reply">Git odgovor</string>
+    <string name="kind_git_pr">Zahtevek za združitev</string>
+    <string name="kind_git_pr_update">Posodobitev zahtevka (PR)</string>
     <string name="kind_zap_goals">Ciljni znesek zapov</string>
     <string name="kind_hashtag_follows">Sledeni ključniki</string>
     <string name="kind_highlights">Osvetlitve</string>
