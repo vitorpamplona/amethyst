@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
@@ -108,22 +109,22 @@ fun ConnectedAppsScreen(
             }
     }
 
-    // Fetch missing manifests from relays, then watch cache for arrivals
+    // Watch manifest events in LocalCache and fetch missing ones from relays
     LaunchedEffect(Unit) {
-        // Watch for napplet manifest events arriving in LocalCache from any source
+        val manifestFilter =
+            Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND))
+
+        // observeEvents emits immediately with cached events, then re-emits on each insertion
         launch(Dispatchers.Default) {
-            val manifestKinds = setOf(RootNappletEvent.KIND, NamedNappletEvent.KIND)
-            LocalCache.live.newEventBundles.collect { bundle ->
-                if (bundle.any { it.event?.kind in manifestKinds }) {
-                    val current = items ?: return@collect
-                    items =
-                        current.map { entry ->
-                            val author = entry.coordinate.substringBefore(':')
-                            val identifier = entry.coordinate.substringAfter(':', "")
-                            val (title, iconUrl) = resolveNappletMeta(author, identifier, untitled)
-                            entry.copy(title = title, iconUrl = iconUrl)
-                        }
-                }
+            LocalCache.observeEvents<Event>(manifestFilter).collect {
+                val current = items ?: return@collect
+                items =
+                    current.map { entry ->
+                        val author = entry.coordinate.substringBefore(':')
+                        val identifier = entry.coordinate.substringAfter(':', "")
+                        val (title, iconUrl) = resolveNappletMeta(author, identifier, untitled)
+                        entry.copy(title = title, iconUrl = iconUrl)
+                    }
             }
         }
 
@@ -151,7 +152,7 @@ fun ConnectedAppsScreen(
                         filters = relays.associateWith { listOf(filter) },
                         timeoutMs = 15_000L,
                     )
-                // Inject into LocalCache so the newEventBundles observer above can re-resolve
+                // Inject into LocalCache; the observeEvents collector above re-resolves metadata
                 events.forEach { LocalCache.justConsume(it, null, false) }
             }
         }
