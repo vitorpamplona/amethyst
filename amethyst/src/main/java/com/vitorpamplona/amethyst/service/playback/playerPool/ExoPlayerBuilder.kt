@@ -60,6 +60,14 @@ class ExoPlayerBuilder(
                         .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
                         .setAudioProcessors(arrayOf(TeeAudioProcessor(sink)))
                         .build()
+            }.apply {
+                // When the primary (usually hardware) decoder fails to initialize, fall back to
+                // the next available decoder instead of surfacing the format as unplayable. This
+                // mostly rescues HEVC/H.265 and other formats whose hardware MediaCodec is flaky
+                // or absent on a given device — a frequent cause of "controls show, scrub works,
+                // but the picture never decodes." It only kicks in on init failure, so it has no
+                // effect on the happy path.
+                setEnableDecoderFallback(true)
             }
 
         return ExoPlayer
