@@ -134,6 +134,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.FollowPack
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.GitRepositoriesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
@@ -323,6 +324,7 @@ fun BuildNavigation(
         composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
         composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.GitRepositories> { GitRepositoriesScreen(accountViewModel, nav) }
         composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nsites> { NsitesScreen(accountViewModel, nav) }

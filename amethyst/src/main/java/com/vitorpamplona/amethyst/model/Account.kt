@@ -543,6 +543,9 @@ class Account(
     val liveWorkoutsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultWorkoutsFollowList)
     val liveWorkoutsFollowListsPerRelay = OutboxLoaderState(liveWorkoutsFollowLists, cache, scope).flow
 
+    val liveGitRepositoriesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultGitRepositoriesFollowList)
+    val liveGitRepositoriesFollowListsPerRelay = OutboxLoaderState(liveGitRepositoriesFollowLists, cache, scope).flow
+
     val liveCalendarsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultCalendarsFollowList)
     val liveCalendarsFollowListsPerRelay = OutboxLoaderState(liveCalendarsFollowLists, cache, scope).flow
 

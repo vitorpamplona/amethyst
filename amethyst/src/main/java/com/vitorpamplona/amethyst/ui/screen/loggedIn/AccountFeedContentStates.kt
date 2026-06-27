@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.D
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal.DraftEventsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.dal.BrowseEmojiSetsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.dal.FollowPacksFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.dal.GitRepositoriesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeEverythingFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter
@@ -111,6 +112,7 @@ class AccountFeedContentStates(
 
     val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
     val workoutsFeed = FeedContentState(WorkoutFeedFilter(account), scope, LocalCache)
+    val gitRepositoriesFeed = FeedContentState(GitRepositoriesFeedFilter(account), scope, LocalCache)
     val calendarAppointmentsFeed = FeedContentState(CalendarAppointmentsFeedFilter(account), scope, LocalCache)
     val calendarCollectionsFeed = FeedContentState(CalendarCollectionsFeedFilter(account), scope, LocalCache)
     val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache)
@@ -228,6 +230,7 @@ class AccountFeedContentStates(
 
         picturesFeed.updateFeedWith(newNotes)
         workoutsFeed.updateFeedWith(newNotes)
+        gitRepositoriesFeed.updateFeedWith(newNotes)
         productsFeed.updateFeedWith(newNotes)
         shortsFeed.updateFeedWith(newNotes)
         publicChatsFeed.updateFeedWith(newNotes)
@@ -289,6 +292,7 @@ class AccountFeedContentStates(
 
         picturesFeed.deleteFromFeed(newNotes)
         workoutsFeed.deleteFromFeed(newNotes)
+        gitRepositoriesFeed.deleteFromFeed(newNotes)
         productsFeed.deleteFromFeed(newNotes)
         shortsFeed.deleteFromFeed(newNotes)
         publicChatsFeed.deleteFromFeed(newNotes)
@@ -346,6 +350,7 @@ class AccountFeedContentStates(
 
         picturesFeed.trimToSize(maxItems)
         workoutsFeed.trimToSize(maxItems)
+        gitRepositoriesFeed.trimToSize(maxItems)
         calendarAppointmentsFeed.trimToSize(maxItems)
         calendarCollectionsFeed.trimToSize(maxItems)
         productsFeed.trimToSize(maxItems)

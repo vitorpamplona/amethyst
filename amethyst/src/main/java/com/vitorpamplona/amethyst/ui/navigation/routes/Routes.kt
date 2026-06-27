@@ -85,6 +85,8 @@ sealed class Route {
 
     @Serializable object Workouts : Route()
 
+    @Serializable object GitRepositories : Route()
+
     @Serializable object SoftwareApps : Route()
 
     @Serializable object Napplets : Route()

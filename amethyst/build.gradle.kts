@@ -348,6 +348,16 @@ composeCompiler {
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
 
+    // Compose composition tracing — DEBUG ONLY, profiling aid (not shipped). Makes each
+    // recomposition show up as a NAMED slice in Perfetto system traces so we can see which
+    // composable recomposes (e.g. during the cold-start feed first-paint). All Apache-2.0.
+    // Usage: runtime-enable, then capture a Perfetto trace with the `track_event` data source:
+    //   adb shell am broadcast -a androidx.tracing.perfetto.action.ENABLE_TRACING \
+    //     -n com.vitorpamplona.amethyst.debug/androidx.tracing.perfetto.TracingReceiver
+    debugImplementation("androidx.compose.runtime:runtime-tracing")
+    debugImplementation("androidx.tracing:tracing-perfetto:1.0.0")
+    debugImplementation("androidx.tracing:tracing-perfetto-binary:1.0.0")
+
     implementation(project(":quartz"))
     implementation(project(":commons"))
     implementation(project(":nestsClient"))
