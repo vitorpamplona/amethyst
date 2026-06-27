@@ -106,6 +106,6 @@ fun buildConnectInfo(
     identity: NappletIdentity,
 ): NappletConnectInfo {
     val title = identity.identifier.ifBlank { context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8)) }
-    val domain = identity.coordinate.substringBefore(":")
+    val domain = identity.identifier.ifBlank { identity.authorPubKey.take(12) + "…" }
     return NappletConnectInfo(appletTitle = title, coordinate = identity.coordinate, domain = domain)
 }

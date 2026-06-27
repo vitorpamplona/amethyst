@@ -26,6 +26,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -119,94 +120,97 @@ private fun NappletConnectScreen(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Box(
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+            contentAlignment = Alignment.Center,
         ) {
-            Spacer(Modifier.height(32.dp))
-            Text(
-                stringResource(R.string.napplet_connect_title),
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            Spacer(Modifier.height(16.dp))
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    stringResource(R.string.napplet_connect_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                Spacer(Modifier.height(16.dp))
 
-            // App card
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Surface(
-                        modifier = Modifier.size(40.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                    ) {}
-                    Column {
-                        Text(info.appletTitle, style = MaterialTheme.typography.titleMedium)
-                        Text(info.domain, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // App card
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(40.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                        ) {}
+                        Column {
+                            Text(info.appletTitle, style = MaterialTheme.typography.titleMedium)
+                            Text(info.domain, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
-            }
 
-            Spacer(Modifier.height(24.dp))
-            Text(
-                stringResource(R.string.napplet_connect_how_handle),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-
-            // Trust level options
-            PolicyOption(
-                selected = selected == AppSignerPolicy.FULL_TRUST,
-                icon = "❤",
-                label = stringResource(R.string.napplet_policy_full_trust),
-                description = stringResource(R.string.napplet_policy_full_trust_desc),
-                onClick = { selected = AppSignerPolicy.FULL_TRUST },
-            )
-            Spacer(Modifier.height(8.dp))
-            PolicyOption(
-                selected = selected == AppSignerPolicy.REASONABLE,
-                icon = "👍",
-                label = stringResource(R.string.napplet_policy_reasonable),
-                description = stringResource(R.string.napplet_policy_reasonable_desc),
-                onClick = { selected = AppSignerPolicy.REASONABLE },
-            )
-            Spacer(Modifier.height(8.dp))
-            PolicyOption(
-                selected = selected == AppSignerPolicy.PARANOID,
-                icon = "🕶",
-                label = stringResource(R.string.napplet_policy_paranoid),
-                description = stringResource(R.string.napplet_policy_paranoid_desc),
-                onClick = { selected = AppSignerPolicy.PARANOID },
-            )
-
-            Spacer(Modifier.height(24.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.cancel))
-                }
-                Button(onClick = { onConnect(selected) }, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.napplet_connect_button))
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-            TextButton(onClick = onBlock) {
+                Spacer(Modifier.height(24.dp))
                 Text(
-                    stringResource(R.string.napplet_connect_block, info.domain),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
+                    stringResource(R.string.napplet_connect_how_handle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(Modifier.height(8.dp))
+
+                // Trust level options
+                PolicyOption(
+                    selected = selected == AppSignerPolicy.FULL_TRUST,
+                    icon = "❤",
+                    label = stringResource(R.string.napplet_policy_full_trust),
+                    description = stringResource(R.string.napplet_policy_full_trust_desc),
+                    onClick = { selected = AppSignerPolicy.FULL_TRUST },
+                )
+                Spacer(Modifier.height(8.dp))
+                PolicyOption(
+                    selected = selected == AppSignerPolicy.REASONABLE,
+                    icon = "👍",
+                    label = stringResource(R.string.napplet_policy_reasonable),
+                    description = stringResource(R.string.napplet_policy_reasonable_desc),
+                    onClick = { selected = AppSignerPolicy.REASONABLE },
+                )
+                Spacer(Modifier.height(8.dp))
+                PolicyOption(
+                    selected = selected == AppSignerPolicy.PARANOID,
+                    icon = "🕶",
+                    label = stringResource(R.string.napplet_policy_paranoid),
+                    description = stringResource(R.string.napplet_policy_paranoid_desc),
+                    onClick = { selected = AppSignerPolicy.PARANOID },
+                )
+
+                Spacer(Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                    Button(onClick = { onConnect(selected) }, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.napplet_connect_button))
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                TextButton(onClick = onBlock) {
+                    Text(
+                        stringResource(R.string.napplet_connect_block, info.domain),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
     }
@@ -239,7 +243,7 @@ private fun PolicyOption(
         ) {
             Text(icon, style = MaterialTheme.typography.headlineSmall)
             Column(modifier = Modifier.weight(1f)) {
-                Text(label, style = MaterialTheme.typography.titleSmall)
+                Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                 Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (selected) {
