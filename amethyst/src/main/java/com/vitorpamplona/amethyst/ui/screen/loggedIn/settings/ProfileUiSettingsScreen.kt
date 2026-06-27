@@ -43,6 +43,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ProfileGalleryType
+import com.vitorpamplona.amethyst.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.model.parseGalleryType
+import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -51,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import kotlinx.collections.immutable.persistentListOf
 
 @Preview
 @Composable
@@ -129,8 +134,33 @@ fun ProfileUiSettingsContent(accountViewModel: AccountViewModel) {
             checked = showFollowers,
             onCheckedChange = { ui.showProfileFollowersFeed.tryEmit(it) },
         )
+        HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
+
+        Column(modifier = Modifier.padding(vertical = 12.dp, horizontal = Size20dp)) {
+            GalleryChoice(ui)
+        }
 
         Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun GalleryChoice(sharedPrefs: UiSettingsFlow) {
+    val galleryItems =
+        persistentListOf(
+            TitleExplainer(stringRes(ProfileGalleryType.CLASSIC.resourceId)),
+            TitleExplainer(stringRes(ProfileGalleryType.MODERN.resourceId)),
+        )
+
+    val galleryIndex by sharedPrefs.gallerySet.collectAsStateWithLifecycle()
+
+    SettingsRow(
+        R.string.gallery_style,
+        R.string.gallery_style_description,
+        galleryItems,
+        galleryIndex.screenCode,
+    ) {
+        sharedPrefs.gallerySet.tryEmit(parseGalleryType(it))
     }
 }
 
