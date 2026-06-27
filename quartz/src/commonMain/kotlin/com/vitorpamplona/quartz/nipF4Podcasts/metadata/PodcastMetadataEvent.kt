@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags.DescriptionTag
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags.ImageTag
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags.TitleTag
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags.WebsiteTag
+import com.vitorpamplona.quartz.podcasts.PodcastShow
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -54,6 +55,7 @@ class PodcastMetadataEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PodcastShow,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
 
@@ -64,6 +66,14 @@ class PodcastMetadataEvent(
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
 
     fun websites() = tags.mapNotNull(WebsiteTag::parse)
+
+    override fun showTitle() = title()
+
+    override fun showImage() = image()
+
+    override fun showDescription() = description()
+
+    override fun showWebsites() = websites()
 
     /**
      * Returns claimed authors and their roles. The spec warns these claims are

@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.resolvePodcastShow
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -65,14 +65,16 @@ fun RenderPodcastMetadata(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? PodcastMetadataEvent ?: return
+    val noteEvent = note.event ?: return
+    // Resolves NIP-F4 kind:10154 and Podcasting-2.0 kind:30078 shows to one PodcastShow view.
+    val show = remember(noteEvent) { resolvePodcastShow(noteEvent) } ?: return
 
-    val title = remember(noteEvent) { noteEvent.title() }
-    val image = remember(noteEvent) { noteEvent.image() }
-    val description = remember(noteEvent) { noteEvent.description() }
-    val websites = remember(noteEvent) { noteEvent.websites() }
-    // Each podcast is its own keypair, so the author pubkey IS the podcast id used to open
-    // its dedicated screen with the full episode list.
+    val title = remember(noteEvent) { show.showTitle() }
+    val image = remember(noteEvent) { show.showImage() }
+    val description = remember(noteEvent) { show.showDescription() }
+    val websites = remember(noteEvent) { show.showWebsites() }
+    // In both drafts the show's author pubkey IS the podcast id used to open its dedicated
+    // screen with the full episode list (episodes are authored by the same key).
     val podcastPubkey = remember(noteEvent) { noteEvent.pubKey }
 
     Column(
