@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.AudioTag
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.DescriptionTag
@@ -51,6 +52,7 @@ class PodcastEpisodeEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     PodcastEpisode,
+    RootScope,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), description(), content).joinToString("\n")
 
