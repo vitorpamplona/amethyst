@@ -25,6 +25,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -730,6 +731,8 @@ private fun RenderGitRepositoryEvent(
     val summary = noteEvent.description()
     val web = noteEvent.web()
     val clone = noteEvent.clone()
+    val topics = remember(noteEvent) { noteEvent.hashtags().filter { it.isNotBlank() } }
+    val isPersonalFork = remember(noteEvent) { noteEvent.isPersonalFork() }
 
     GitCardContainer {
         Row(
@@ -757,6 +760,15 @@ private fun RenderGitRepositoryEvent(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            if (isPersonalFork) {
+                TypeChip(
+                    text = stringRes(id = R.string.git_repo_personal_fork),
+                    background = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    symbol = MaterialSymbols.AltRoute,
                 )
             }
         }
@@ -787,6 +799,22 @@ private fun RenderGitRepositoryEvent(
                         symbol = MaterialSymbols.AutoMirrored.OpenInNew,
                         contentDescription = stringRes(id = R.string.git_clone_address),
                         url = it,
+                    )
+                }
+            }
+        }
+
+        if (topics.isNotEmpty()) {
+            Spacer(modifier = HalfDoubleVertSpacer)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(Size5dp),
+                verticalArrangement = Arrangement.spacedBy(Size5dp),
+            ) {
+                topics.forEach { topic ->
+                    TypeChip(
+                        text = "#$topic",
+                        background = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                        contentColor = MaterialTheme.colorScheme.grayText,
                     )
                 }
             }

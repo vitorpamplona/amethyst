@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasource
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.datasource.FollowPacksFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource.GeoHashFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.datasource.RepositoryFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.datasource.GitRepositoriesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.datasource.LiveStreamsFilterAssembler
@@ -127,6 +128,7 @@ class RelaySubscriptionsCoordinator(
     val polls = PollsFilterAssembler(client)
     val pictures = PicturesFilterAssembler(client)
     val workouts = WorkoutsFilterAssembler(client)
+    val gitRepositories = GitRepositoriesFilterAssembler(client)
     val calendars = CalendarsFilterAssembler(client)
     val products = ProductsFilterAssembler(client)
     val shorts = ShortsFilterAssembler(client)
@@ -177,6 +179,7 @@ class RelaySubscriptionsCoordinator(
             polls,
             pictures,
             workouts,
+            gitRepositories,
             calendars,
             products,
             shorts,
