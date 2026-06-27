@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -226,8 +227,16 @@ private fun NappletSignerConsentDialog(
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider()
 
-                // Primary action
+                // Primary action: always allow this operation
                 Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = { onGrant(SignerOpGrant.AllowForOp(info.op)) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                ) {
+                    Text(stringResource(R.string.napplet_signer_allow_op, info.operationSummary))
+                }
+
+                // Secondary action: allow just this once
                 FilledTonalButton(
                     onClick = { onGrant(SignerOpGrant.AllowOnce) },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
@@ -235,7 +244,7 @@ private fun NappletSignerConsentDialog(
                     Text(stringResource(R.string.napplet_signer_allow_once))
                 }
 
-                // "More options" toggle
+                // "More options" toggle: session, time-bound, and nuclear allow-all
                 TextButton(
                     onClick = { showMoreOptions = !showMoreOptions },
                     modifier = Modifier.fillMaxWidth(),
@@ -276,11 +285,6 @@ private fun NappletSignerConsentDialog(
                         text = stringResource(R.string.napplet_signer_allow_30d),
                         color = MaterialTheme.colorScheme.primary,
                         onClick = { onGrant(SignerOpGrant.AllowUntil(info.op, TimeUtils.now() + 30L * 86_400L)) },
-                    )
-                    ConsentActionButton(
-                        text = stringResource(R.string.napplet_signer_allow_op, info.operationSummary),
-                        color = MaterialTheme.colorScheme.primary,
-                        onClick = { onGrant(SignerOpGrant.AllowForOp(info.op)) },
                     )
                     ConsentActionButton(
                         text = stringResource(R.string.napplet_signer_allow_all),
