@@ -205,6 +205,24 @@ private fun paymentTargetStyleFor(rawType: String): PaymentTargetStyle {
             PaymentTargetStyle(walletIcon, MONERO_ORANGE, "MONERO") { "monero:$it" }
         "dash" ->
             PaymentTargetStyle(walletIcon, DASH_BLUE, "DASH") { "dash:$it" }
+        "zcash", "zec" ->
+            PaymentTargetStyle(walletIcon, ZCASH_YELLOW, "ZCASH") { "zcash:$it" }
+        "bitcoincash", "bch" ->
+            PaymentTargetStyle(walletIcon, BITCOINCASH_GREEN, "BITCOINCASH") { "bitcoincash:$it" }
+        "litecoin", "ltc" ->
+            PaymentTargetStyle(walletIcon, LITECOIN_STEEL_BLUE, "LITECOIN") { "litecoin:$it" }
+        "dogecoin", "doge" ->
+            PaymentTargetStyle(walletIcon, DOGECOIN_SAND, "DOGECOIN") { "dogecoin:$it" }
+        "solana", "sol" ->
+            PaymentTargetStyle(walletIcon, SOLANA_PURPLE, "SOLANA") { "solana:$it" }
+        "tron", "trx" ->
+            PaymentTargetStyle(walletIcon, TRON_RED, "TRON") { "tron:$it" }
+        "cashapp" ->
+            PaymentTargetStyle(walletIcon, CASHAPP_LIME, "CASHAPP") { "https://cash.app/$it" }
+        "venmo" ->
+            PaymentTargetStyle(walletIcon, VENMO_BLUE, "VENMO") { "https://venmo.com/$it" }
+        "paypal" ->
+            PaymentTargetStyle(walletIcon, PAYPAL_DEEP_BLUE, "PAYPAL") { "https://paypal.me/$it" }
         else -> {
             val label = rawType.trim().ifEmpty { "PAY" }.uppercase()
             PaymentTargetStyle(walletIcon, GENERIC_TARGET_COLOR, label) { "payto://$type/$it" }
@@ -220,4 +238,13 @@ private fun shortAddress(authority: String): String {
 private val ETHEREUM_PURPLE = Color(0xFF627EEA)
 private val MONERO_ORANGE = Color(0xFFFF6600)
 private val DASH_BLUE = Color(0xFF008CE7)
+private val ZCASH_YELLOW = Color(0xFFF4B728)
+private val BITCOINCASH_GREEN = Color(0xFF4BB449)
+private val LITECOIN_STEEL_BLUE = Color(0xFF6A8BA8)
+private val DOGECOIN_SAND = Color(0xFFC9B037)
+private val SOLANA_PURPLE = Color(0xFFB884F8)
+private val TRON_RED = Color(0xFFEF0027)
+private val CASHAPP_LIME = Color(0xFF00E64D)
+private val VENMO_BLUE = Color(0xFF008CFF)
+private val PAYPAL_DEEP_BLUE = Color(0xFF003087)
 private val GENERIC_TARGET_COLOR = Color(0xFF7C8DA0)
