@@ -18,9 +18,53 @@ JNI wrapper built directly from Arti source.
 Pre-built `.so` files should be committed to `amethyst/src/main/jniLibs/`. You only need to
 rebuild if you want to verify binaries, update the Arti version, or modify the JNI wrapper.
 
+## Reproducible builds
+
+The shipped `.so` is **built to be reproducible** so anyone — F-Droid, Zapstore,
+or an independent auditor — can rebuild it from this tag and confirm the
+committed binary wasn't tampered with. **Four** things have to be fixed:
+
+| Source of non-determinism | Pinned by |
+|---|---|
+| `rustc` / cargo version | [`rust-toolchain.toml`](rust-toolchain.toml) (rustup auto-installs it) |
+| transitive dependency versions | committed [`Cargo.lock`](Cargo.lock); builds run `cargo --locked` |
+| absolute paths *embedded* in the binary | `--remap-path-prefix` in [`repro-env.sh`](repro-env.sh) |
+| codegen/link **ordering** keyed on the real build path | **canonical build path** (`build-arti.sh` builds in `/tmp/amethyst-arti-build`) |
+
+`repro-env.sh` (sourced by both build scripts) also sets `CARGO_INCREMENTAL=0`
+and a fixed `SOURCE_DATE_EPOCH` derived from the Arti tag. The size-optimized
+release profile in `Cargo.toml` (`lto`, `codegen-units = 1`, `strip`,
+`panic = "abort"`) is itself deterministic for a fixed toolchain.
+
+> **Why the canonical path matters.** Verified empirically: with the toolchain,
+> lockfile, and path-remapping all in place, two builds at the **same** path are
+> byte-for-byte identical, but two builds at **different** paths still differ —
+> not in any embedded string (no path leaks into the binary) but in the *order*
+> rustc lays out functions/data, which it derives from the real on-disk artifact
+> paths. `--remap-path-prefix` only rewrites embedded strings, not that internal
+> ordering. So `build-arti.sh` always compiles in a fixed location
+> (`/tmp/amethyst-arti-build`, override with `ARTI_REPRO_DIR`); F-Droid and any
+> verifier must use the **same** path to get matching bytes. This is the standard
+> way Rust libraries are reproduced (F-Droid builds Rust at a fixed path too).
+
+### Verify the committed binary reproduces
+
+From `tools/arti-build/`, the helper builds twice from clean and diffs the output:
+
+```bash
+./verify-reproducible.sh            # both ABIs (arm64-v8a + x86_64)
+./verify-reproducible.sh --release  # arm64-v8a only (faster)
+```
+
+It prints `✅ REPRODUCIBLE` when two clean builds produce identical bytes, then
+reports whether that matches the committed `.so`. Both builds compile in the
+canonical `/tmp/amethyst-arti-build`, so the result is independent of where the
+repo is checked out.
+
 ## Prerequisites
 
-1. **Rust toolchain**
+1. **Rust toolchain** — the exact version is pinned in `rust-toolchain.toml`;
+   rustup installs it automatically. You only need rustup itself:
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
@@ -92,13 +136,21 @@ The first LOAD segment alignment should be `0x4000` (16384 bytes).
 
 ```
 tools/arti-build/
-├── README.md           # This file
-├── ARTI_VERSION        # Pinned Arti git tag (e.g., arti-v1.9.0)
-├── Cargo.toml          # Rust dependencies and build profile
-├── build-arti.sh       # Build script
-├── src/
-│   └── lib.rs          # JNI bridge (Rust → Kotlin)
-└── .arti-source/       # [gitignored] Cloned Arti repository
+├── README.md            # This file
+├── ARTI_VERSION         # Pinned Arti git tag (e.g., arti-v1.9.0)
+├── rust-toolchain.toml  # Pinned rustc version + Android targets (reproducibility)
+├── Cargo.toml           # Rust dependencies and build profile
+├── Cargo.lock           # Pinned transitive dependency versions (reproducibility)
+├── repro-env.sh         # Deterministic build env (path remapping, epoch) — sourced by both scripts
+├── build-arti.sh        # Build script (Android targets, shipped in APK)
+├── build-arti-host.sh   # Build script (host target, for JVM integration tests)
+├── verify-reproducible.sh # Builds twice + diffs to prove byte-for-byte reproducibility
+└── src/
+    └── lib.rs           # JNI bridge (Rust → Kotlin)
+
+# The Arti source is cloned into the canonical build path
+# (/tmp/amethyst-arti-build/.arti-source), not under this dir — see
+# "Reproducible builds" for why the build location is fixed.
 ```
 
 ## Updating Arti version
@@ -119,7 +171,16 @@ tools/arti-build/
    https://gitlab.torproject.org/tpo/core/arti/-/raw/arti-v1.10.0/crates/arti-client/Cargo.toml
    ```
 
-4. Rebuild and test:
+4. Regenerate the committed lockfile so the new versions are pinned (builds run
+   `--locked` and will fail until this is refreshed):
+   ```bash
+   ./build-arti.sh --regen-lock     # re-resolves + rewrites ./Cargo.lock, no compile
+   ```
+   If you also bump the Rust toolchain, edit `channel` in `rust-toolchain.toml`.
+
+5. Rebuild, then re-verify reproducibility (see "Reproducible builds" above) and
+   commit the regenerated `.so` files **together with** `Cargo.lock` /
+   `rust-toolchain.toml`:
    ```bash
    ./build-arti.sh --clean
    ```

@@ -26,7 +26,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-WRAPPER_DIR="$SCRIPT_DIR/.arti-source/arti-android-wrapper"
+# Same canonical build path as build-arti.sh (see its comment for why).
+ARTI_SOURCE_DIR="${ARTI_REPRO_DIR:-/tmp/amethyst-arti-build}/.arti-source"
+WRAPPER_DIR="$ARTI_SOURCE_DIR/arti-android-wrapper"
 
 if [ ! -d "$WRAPPER_DIR" ]; then
     echo "Arti source / wrapper not found at $WRAPPER_DIR."
@@ -37,6 +39,12 @@ fi
 # Sync the latest wrapper sources into the .arti-source clone — build-arti.sh
 # normally does this, but if you've only edited lib.rs the host build needs it too.
 cp "$SCRIPT_DIR/src/lib.rs" "$WRAPPER_DIR/src/lib.rs"
+# Keep the dependency lock in sync with the committed one (build is --locked).
+cp "$SCRIPT_DIR/Cargo.lock" "$WRAPPER_DIR/Cargo.lock"
+
+# Same deterministic build env as the Android path (path remapping, pinned epoch).
+# shellcheck source=repro-env.sh
+source "$SCRIPT_DIR/repro-env.sh"
 
 HOST_TARGET="$(rustc -vV | sed -n 's/^host: //p')"
 case "$HOST_TARGET" in
@@ -54,7 +62,7 @@ OUT_DIR="$PROJECT_ROOT/amethyst/src/test/native-libs/$DEST_TAG"
 mkdir -p "$OUT_DIR"
 
 echo "Building Arti shim for $HOST_TARGET → $OUT_DIR/libarti_android.so"
-cargo build --release \
+cargo build --release --locked \
     --manifest-path "$WRAPPER_DIR/Cargo.toml" \
     --target "$HOST_TARGET"
 
