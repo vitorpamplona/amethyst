@@ -89,6 +89,7 @@ object DefaultWebClients {
             webApp("Chachi", "https://chachi.chat", "Group chat & communities")
             webApp("NostrChat", "https://www.nostrchat.io", "Decentralized chat", "https://www.nostrchat.io/logo192.png")
             webApp("NymChat", "https://www.nymchat.com", "Anonymous, ephemeral chat")
+            webApp("HiveTalk", "https://hivetalk.org", "Lightning-powered video conferencing", "https://hivetalk.org/_astro/apple-touch-icon.BAevOzwc.png")
 
             // Media — video, photo, audio, podcasts, files
             webApp("zap.stream", "https://zap.stream", "Live streaming with Lightning", "https://zap.stream/logo.png")
