@@ -46,7 +46,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -423,10 +422,12 @@ val MarkDownStyleOnLight =
             ),
     )
 
-// Derived from background luminance instead of a fixed primary so the check keeps working
-// when the user picks a non-purple accent color (only primary/secondary change, not background).
+// Compared against the dark palette's background instead of a fixed primary so the check keeps
+// working when the user picks a non-purple accent (accent only changes primary/secondary, never
+// background). Kept as a single reference comparison because this getter fans out to hundreds of
+// themed-color call sites on hot rendering paths — luminance()/etc. would add real per-frame cost.
 val ColorScheme.isLight: Boolean
-    get() = background.luminance() > 0.5f
+    get() = background != Color.Black
 
 // The accent-derived tints below are computed from the live scheme's primary so they follow
 // the selected accent color. Color is an inline value class, so these copies don't allocate.
