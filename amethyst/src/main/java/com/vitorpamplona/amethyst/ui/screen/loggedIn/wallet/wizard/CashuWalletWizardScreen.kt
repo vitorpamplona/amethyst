@@ -20,6 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.wizard
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,6 +46,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -47,8 +56,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -68,6 +83,11 @@ import java.text.NumberFormat
  * an existing NIP-60 wallet and routes the user into one of three outcomes:
  * create new, adopt the single found wallet, or pick the newest among several
  * and recover funds from the older ones.
+ *
+ * Phases [AnimatedContent]-transition into each other; the long relay crawl
+ * shows a determinate progress bar with a count that ticks up; and the
+ * "recovered N sats" moments count up + fire a haptic, so the find-my-funds
+ * flow has a payoff rather than a static jump.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +102,7 @@ fun CashuWalletWizardScreen(
     val adoptState by viewModel.adoptState.collectAsState()
     val recoveryStates by viewModel.recoveryStates.collectAsState()
     val mainWalletEvent by viewModel.mainWalletEvent.collectAsState()
+    val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(Unit) {
         if (viewModel.wizardState.value is WizardState.Idle) viewModel.startDiscovery()
@@ -110,61 +131,95 @@ fun CashuWalletWizardScreen(
             )
         },
     ) { padding ->
-        Column(
+        AnimatedContent(
+            targetState = wizardState,
             modifier =
                 Modifier
                     .padding(padding)
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            when (val s = wizardState) {
-                is WizardState.Idle ->
-                    BusyState(stringRes(R.string.cashu_wizard_searching), null)
+                    .fillMaxSize(),
+            // Key the transition on the phase TYPE so frequent in-phase updates
+            // (the crawl's relays-completed counter) don't re-trigger the
+            // enter/exit animation — only genuine phase changes cross-fade.
+            contentKey = { it::class },
+            transitionSpec = {
+                (fadeIn(tween(220)) + slideInVertically(tween(220)) { it / 12 })
+                    .togetherWith(fadeOut(tween(160)))
+            },
+            label = "cashuWizardPhase",
+        ) { state ->
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                when (state) {
+                    is WizardState.Idle ->
+                        BusyState(stringRes(R.string.cashu_wizard_searching), null)
 
-                is WizardState.Crawling ->
-                    BusyState(
-                        title = stringRes(R.string.cashu_wizard_searching),
-                        subtitle = stringRes(R.string.cashu_wizard_searching_progress, s.relaysCompleted, s.totalRelays),
-                    )
+                    is WizardState.Crawling ->
+                        CrawlingState(state)
 
-                is WizardState.Analyzing ->
-                    BusyState(stringRes(R.string.cashu_wizard_analyzing), null)
+                    is WizardState.Analyzing ->
+                        BusyState(stringRes(R.string.cashu_wizard_analyzing), null)
 
-                is WizardState.NoWallet ->
-                    NoWalletContent(onCreate = { nav.nav(Route.CashuWalletMints) })
+                    is WizardState.NoWallet ->
+                        NoWalletContent(onCreate = { nav.nav(Route.CashuWalletMints) })
 
-                is WizardState.Single ->
-                    SingleContent(
-                        wallet = s.wallet,
-                        adoptState = adoptState,
-                        onUse = { viewModel.adoptAsMain(s.wallet, recoverFunds = true) },
-                        onDone = { nav.popBack() },
-                    )
+                    is WizardState.Single ->
+                        SingleContent(
+                            wallet = state.wallet,
+                            adoptState = adoptState,
+                            haptic = haptic,
+                            onUse = { viewModel.adoptAsMain(state.wallet, recoverFunds = true) },
+                            onDone = { nav.popBack() },
+                        )
 
-                is WizardState.Multiple ->
-                    MultipleContent(
-                        main = s.main,
-                        others = s.others,
-                        adoptState = adoptState,
-                        recoveryStates = recoveryStates,
-                        onSetMain = { viewModel.adoptAsMain(s.main, recoverFunds = true) },
-                        onRecoverOld = { viewModel.recoverOldWallet(it) },
-                        onDone = { nav.popBack() },
-                    )
+                    is WizardState.Multiple ->
+                        MultipleContent(
+                            main = state.main,
+                            others = state.others,
+                            adoptState = adoptState,
+                            recoveryStates = recoveryStates,
+                            haptic = haptic,
+                            onSetMain = { viewModel.adoptAsMain(state.main, recoverFunds = true) },
+                            onRecoverOld = { viewModel.recoverOldWallet(it) },
+                            onDone = { nav.popBack() },
+                        )
 
-                is WizardState.Error ->
-                    ErrorContent(
-                        message = s.message,
-                        onRetry = { viewModel.startDiscovery() },
-                    )
+                    is WizardState.Error ->
+                        ErrorContent(
+                            message = state.message,
+                            onRetry = { viewModel.startDiscovery() },
+                        )
+                }
             }
         }
     }
 }
 
 private fun formatSats(sats: Long): String = NumberFormat.getInstance().format(sats)
+
+/**
+ * Animate a sats figure counting up from zero the first time it's shown, then
+ * format it. The reveal is the payoff of the find/recover flow, so the headline
+ * numbers tick up instead of snapping in. Safe to call with 0 (returns "0").
+ */
+@Composable
+private fun countUpSats(targetSats: Long): String {
+    var armed by remember { mutableStateOf(false) }
+    LaunchedEffect(targetSats) { armed = true }
+    val shown by animateIntAsState(
+        // Single-wallet balances comfortably fit in Int (< 21 BTC in sats);
+        // coerce defensively so an absurd value can't overflow the animation.
+        targetValue = if (armed) targetSats.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt() else 0,
+        animationSpec = tween(durationMillis = 700),
+        label = "satsCountUp",
+    )
+    return formatSats(shown.toLong())
+}
 
 @Composable
 private fun BusyState(
@@ -189,6 +244,59 @@ private fun BusyState(
             textAlign = TextAlign.Center,
         )
     }
+}
+
+/**
+ * The relay crawl can sweep hundreds of relays, so it gets a determinate bar
+ * that fills as relays complete and a count that ticks up — otherwise a 30s
+ * sweep behind a bare spinner reads as "hung".
+ */
+@Composable
+private fun CrawlingState(state: WizardState.Crawling) {
+    val fraction = if (state.totalRelays > 0) state.relaysCompleted.toFloat() / state.totalRelays else 0f
+    val animatedFraction by animateFloatAsState(
+        targetValue = fraction,
+        animationSpec = tween(durationMillis = 400),
+        label = "scanProgress",
+    )
+    val animatedCount by animateIntAsState(
+        targetValue = state.relaysCompleted,
+        animationSpec = tween(durationMillis = 400),
+        label = "scanCount",
+    )
+
+    Spacer(Modifier.height(48.dp))
+    Icon(
+        symbol = MaterialSymbols.Search,
+        contentDescription = null,
+        modifier = Modifier.size(40.dp),
+        tint = MaterialTheme.colorScheme.primary,
+    )
+    Spacer(Modifier.height(20.dp))
+    Text(
+        text = stringRes(R.string.cashu_wizard_searching),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        textAlign = TextAlign.Center,
+    )
+    Spacer(Modifier.height(6.dp))
+    Text(
+        text = stringRes(R.string.cashu_wizard_searching_description),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+    )
+    Spacer(Modifier.height(20.dp))
+    LinearProgressIndicator(
+        progress = { animatedFraction },
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+        text = stringRes(R.string.cashu_wizard_searching_progress, animatedCount, state.totalRelays),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable
@@ -224,9 +332,14 @@ private fun NoWalletContent(onCreate: () -> Unit) {
 private fun SingleContent(
     wallet: FoundWallet,
     adoptState: AdoptState,
+    haptic: HapticFeedback,
     onUse: () -> Unit,
     onDone: () -> Unit,
 ) {
+    LaunchedEffect(adoptState is AdoptState.Done) {
+        if (adoptState is AdoptState.Done) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+
     Text(
         text = stringRes(R.string.cashu_wizard_single_title),
         style = MaterialTheme.typography.headlineSmall,
@@ -246,9 +359,10 @@ private fun SingleContent(
 
     when (adoptState) {
         is AdoptState.Done -> {
+            val recoveredCount = countUpSats(adoptState.recoveredSats)
             SuccessLine(
                 if (adoptState.recoveredSats > 0) {
-                    stringRes(R.string.cashu_wizard_recovered, formatSats(adoptState.recoveredSats))
+                    stringRes(R.string.cashu_wizard_recovered, recoveredCount)
                 } else {
                     stringRes(R.string.cashu_wizard_single_title)
                 },
@@ -287,11 +401,16 @@ private fun MultipleContent(
     others: List<FoundWallet>,
     adoptState: AdoptState,
     recoveryStates: Map<String, RecoveryState>,
+    haptic: HapticFeedback,
     onSetMain: () -> Unit,
     onRecoverOld: (FoundWallet) -> Unit,
     onDone: () -> Unit,
 ) {
     val mainAdopted = adoptState is AdoptState.Done
+
+    LaunchedEffect(mainAdopted) {
+        if (mainAdopted) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
 
     Text(
         text = stringRes(R.string.cashu_wizard_multiple_title),
@@ -326,14 +445,16 @@ private fun MultipleContent(
                 Text(stringRes(R.string.cashu_wizard_adopting))
             }
 
-        is AdoptState.Done ->
+        is AdoptState.Done -> {
+            val recoveredCount = countUpSats(adoptState.recoveredSats)
             SuccessLine(
                 if (adoptState.recoveredSats > 0) {
-                    stringRes(R.string.cashu_wizard_recovered, formatSats(adoptState.recoveredSats))
+                    stringRes(R.string.cashu_wizard_recovered, recoveredCount)
                 } else {
                     stringRes(R.string.cashu_wizard_main_label)
                 },
             )
+        }
 
         is AdoptState.Error -> {
             ErrorLine(adoptState.message)
@@ -372,6 +493,7 @@ private fun MultipleContent(
                 wallet = old,
                 recoveryState = recoveryStates[old.event.id],
                 enabled = mainAdopted,
+                haptic = haptic,
                 onRecover = { onRecoverOld(old) },
             )
         }
@@ -404,16 +526,22 @@ private fun WalletCard(wallet: FoundWallet) {
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(6.dp))
+            // Always call countUpSats (unconditional call site keeps the
+            // composable structurally stable); the "0" is unused when there
+            // are no funds.
+            val countedSats = countUpSats(wallet.totalRecoverableSats)
+            val hasFunds = wallet.totalRecoverableSats > 0
             Text(
                 text =
-                    if (wallet.totalRecoverableSats > 0) {
-                        stringRes(R.string.cashu_wizard_recoverable, formatSats(wallet.totalRecoverableSats))
+                    if (hasFunds) {
+                        stringRes(R.string.cashu_wizard_recoverable, countedSats)
                     } else {
                         stringRes(R.string.cashu_wizard_no_funds)
                     },
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = if (hasFunds) FontWeight.Bold else FontWeight.Normal,
                 color =
-                    if (wallet.totalRecoverableSats > 0) {
+                    if (hasFunds) {
                         MaterialTheme.colorScheme.primary
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
@@ -428,8 +556,12 @@ private fun OldWalletCard(
     wallet: FoundWallet,
     recoveryState: RecoveryState?,
     enabled: Boolean,
+    haptic: HapticFeedback,
     onRecover: () -> Unit,
 ) {
+    LaunchedEffect(recoveryState is RecoveryState.Done) {
+        if (recoveryState is RecoveryState.Done) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -453,7 +585,7 @@ private fun OldWalletCard(
                     }
 
                 is RecoveryState.Done ->
-                    SuccessLine(stringRes(R.string.cashu_wizard_recovered, formatSats(recoveryState.recoveredSats)))
+                    SuccessLine(stringRes(R.string.cashu_wizard_recovered, countUpSats(recoveryState.recoveredSats)))
 
                 is RecoveryState.Error ->
                     ErrorLine(recoveryState.message)
