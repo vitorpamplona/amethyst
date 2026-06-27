@@ -31,4 +31,8 @@
     <string name="napplet_unavailable_title">Couldn\'t load “%1$s”</string>
     <string name="napplet_unavailable_subtitle">The publisher\'s servers may be offline, or you\'re not connected. You can try again.</string>
     <string name="napplet_unavailable_retry">Try again</string>
+
+    <!-- Developer console: page-load failures surfaced as console errors -->
+    <string name="napplet_console_load_error">Failed to load (%1$d): %2$s</string>
+    <string name="napplet_console_http_error">HTTP %1$d %2$s</string>
 </resources>
