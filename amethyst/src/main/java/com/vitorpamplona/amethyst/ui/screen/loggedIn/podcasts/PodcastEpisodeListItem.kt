@@ -36,12 +36,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
@@ -65,11 +67,22 @@ fun PodcastEpisodeListItem(
 
     val title = remember(noteEvent) { episode.episodeTitle() }
     val description = remember(noteEvent) { episode.episodeDescription() }
-    val firstAudio = remember(noteEvent) { episode.episodeAudio().firstOrNull() }
+    // Prefer audio; fall back to a video source so video-only episodes still play inline.
+    val media = remember(noteEvent) { episode.episodeAudio().firstOrNull() ?: episode.episodeVideo() }
     val image = remember(noteEvent) { episode.episodeImage() }
+    val season = remember(noteEvent) { episode.episodeSeason() }
+    val episodeNumber = remember(noteEvent) { episode.episodeNumber() }
 
     val context = LocalContext.current
     val dateStr = remember(noteEvent) { timeAgo(noteEvent.createdAt, context, prefix = "") }
+    val seasonEpisodeLabel =
+        when {
+            season != null && episodeNumber != null -> stringRes(R.string.podcast_season_episode, season, episodeNumber)
+            episodeNumber != null -> stringRes(R.string.podcast_episode_number, episodeNumber)
+            season != null -> stringRes(R.string.podcast_season, season)
+            else -> null
+        }
+    val subtitle = listOfNotNull(seasonEpisodeLabel, dateStr.takeIf { it.isNotBlank() }).joinToString(" · ")
 
     Column(
         modifier =
@@ -79,7 +92,7 @@ fun PodcastEpisodeListItem(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(Size5dp),
     ) {
-        dateStr.takeIf { it.isNotBlank() }?.let {
+        subtitle.takeIf { it.isNotBlank() }?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.labelMedium,
@@ -109,7 +122,7 @@ fun PodcastEpisodeListItem(
             )
         }
 
-        firstAudio?.let { audio ->
+        media?.let { audio ->
             PodcastEpisodeAudioPlayer(
                 audio = audio,
                 note = note,

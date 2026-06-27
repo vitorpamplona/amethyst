@@ -23,12 +23,17 @@ package com.vitorpamplona.quartz.nipXXPodcasting20.episode
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.AudioTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.ChaptersTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.DescriptionTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.DurationTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.EditTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.EpisodeNumberTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.ImageTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.PubDateTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.SeasonTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.TitleTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.TranscriptTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.VideoTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 
 fun TagArrayBuilder<Podcasting20EpisodeEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
@@ -38,6 +43,16 @@ fun TagArrayBuilder<Podcasting20EpisodeEvent>.description(description: String) =
 fun TagArrayBuilder<Podcasting20EpisodeEvent>.image(url: String) = addUnique(ImageTag.assemble(url))
 
 fun TagArrayBuilder<Podcasting20EpisodeEvent>.audio(audio: PodcastAudio) = add(AudioTag.assemble(audio))
+
+fun TagArrayBuilder<Podcasting20EpisodeEvent>.video(video: PodcastAudio) = addUnique(VideoTag.assemble(video))
+
+fun TagArrayBuilder<Podcasting20EpisodeEvent>.episodeNumber(number: Int) = addUnique(EpisodeNumberTag.assemble(number))
+
+fun TagArrayBuilder<Podcasting20EpisodeEvent>.season(season: Int) = addUnique(SeasonTag.assemble(season))
+
+fun TagArrayBuilder<Podcasting20EpisodeEvent>.transcript(url: String) = addUnique(TranscriptTag.assemble(url))
+
+fun TagArrayBuilder<Podcasting20EpisodeEvent>.chapters(url: String) = addUnique(ChaptersTag.assemble(url))
 
 fun TagArrayBuilder<Podcasting20EpisodeEvent>.pubdate(rfc2822Date: String) = addUnique(PubDateTag.assemble(rfc2822Date))
 

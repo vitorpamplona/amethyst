@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,7 +29,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,7 +37,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
@@ -47,7 +44,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
@@ -199,7 +195,7 @@ fun RenderPodcastMetadata(
                     verticalArrangement = Arrangement.spacedBy(Size5dp),
                 ) {
                     websites.forEach { website ->
-                        WebsiteChip(website) { runCatching { uriHandler.openUri(website) } }
+                        PodcastLinkChip(website, MaterialSymbols.Public) { runCatching { uriHandler.openUri(website) } }
                     }
                 }
             }
@@ -239,71 +235,5 @@ fun RenderPodcastMetadata(
                 )
             }
         }
-    }
-}
-
-/** A small rounded, tinted pill for a show attribute (explicit, completed, a genre, …). */
-@Composable
-private fun PodcastBadge(
-    label: String,
-    symbol: MaterialSymbol?,
-    container: Color,
-    content: Color,
-) {
-    Row(
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(50))
-                .background(container)
-                .padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        symbol?.let {
-            Icon(
-                symbol = it,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = content,
-            )
-        }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-            color = content,
-        )
-    }
-}
-
-/** A clickable website pill with a globe icon. */
-@Composable
-private fun WebsiteChip(
-    url: String,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(50))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Icon(
-            symbol = MaterialSymbols.Public,
-            contentDescription = null,
-            modifier = Modifier.size(14.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            text = url,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }

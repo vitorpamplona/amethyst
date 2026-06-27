@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -34,14 +36,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
@@ -51,6 +57,7 @@ import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 private val PLAYER_BORDER_MODIFIER =
     Modifier.clip(RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp))
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RenderPodcastEpisode(
     note: Note,
@@ -69,16 +76,21 @@ fun RenderPodcastEpisode(
     val title = remember(noteEvent) { episode.episodeTitle() }
     val image = remember(noteEvent) { episode.episodeImage() }
     val description = remember(noteEvent) { episode.episodeDescription() }
-    // Pick the first audio URL. Publishers may emit multiple containers in their preferred
-    // order; clients with codec preferences can extend this later.
-    val firstAudio = remember(noteEvent) { episode.episodeAudio().firstOrNull() }
+    // Prefer audio (podcasts are audio-first); fall back to the video source if that's all the
+    // episode ships. The media-controller player handles both.
+    val media = remember(noteEvent) { episode.episodeAudio().firstOrNull() ?: episode.episodeVideo() }
+    val hasVideo = remember(noteEvent) { episode.episodeVideo() != null }
+    val season = remember(noteEvent) { episode.episodeSeason() }
+    val episodeNumber = remember(noteEvent) { episode.episodeNumber() }
+    val transcriptUrl = remember(noteEvent) { episode.episodeTranscriptUrl() }
+    val chaptersUrl = remember(noteEvent) { episode.episodeChaptersUrl() }
     // Suppress the markdown block if blank — title + description already describe a short
     // episode. Otherwise hand off to RichText below.
     val markdown = remember(noteEvent) { noteEvent.content.ifBlank { null } }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
         PodcastCoverCard(image, note, accountViewModel)
-        firstAudio?.let { audio ->
+        media?.let { audio ->
             PodcastEpisodeAudioPlayer(
                 audio = audio,
                 note = note,
@@ -105,6 +117,48 @@ fun RenderPodcastEpisode(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth(),
                 )
+            }
+
+            if (season != null || episodeNumber != null || hasVideo || transcriptUrl != null || chaptersUrl != null) {
+                val uriHandler = LocalUriHandler.current
+                val seasonEpisodeLabel =
+                    when {
+                        season != null && episodeNumber != null -> stringRes(R.string.podcast_season_episode, season, episodeNumber)
+                        episodeNumber != null -> stringRes(R.string.podcast_episode_number, episodeNumber)
+                        season != null -> stringRes(R.string.podcast_season, season)
+                        else -> null
+                    }
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    seasonEpisodeLabel?.let {
+                        PodcastBadge(
+                            label = it,
+                            symbol = null,
+                            container = MaterialTheme.colorScheme.secondaryContainer,
+                            content = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                    }
+                    if (hasVideo) {
+                        PodcastBadge(
+                            label = stringRes(R.string.podcast_video),
+                            symbol = MaterialSymbols.Videocam,
+                            container = MaterialTheme.colorScheme.tertiaryContainer,
+                            content = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                    }
+                    transcriptUrl?.let { url ->
+                        PodcastLinkChip(stringRes(R.string.podcast_transcript), MaterialSymbols.Description) {
+                            runCatching { uriHandler.openUri(url) }
+                        }
+                    }
+                    chaptersUrl?.let { url ->
+                        PodcastLinkChip(stringRes(R.string.podcast_chapters), MaterialSymbols.Checklist) {
+                            runCatching { uriHandler.openUri(url) }
+                        }
+                    }
+                }
             }
 
             description?.let {

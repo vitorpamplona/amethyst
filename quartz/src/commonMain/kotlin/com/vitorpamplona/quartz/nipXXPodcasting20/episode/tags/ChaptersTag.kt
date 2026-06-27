@@ -18,21 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.podcasts
+package com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags
 
-import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * Spec-neutral media reference (a URL plus optional MIME type) for a podcast episode, used by the
- * shared [PodcastEpisode] abstraction so a UI can play episodes regardless of which podcast NIP
- * produced them. Despite the name it covers both audio and video sources.
- *
- * Both NIP-F4 (`kind:54`) and the Podcasting-2.0 draft (`kind:30054`) carry audio in identical
- * `["audio", "<url>", "<optional_media_type>"]` tags; the Podcasting-2.0 draft uses the same shape
- * for its `video` tag. Each event maps its own tag class into this holder.
+ * Podcasting-2.0 episode chapters file URL: `["chapters", "<url>"]`. Points at a Podcasting-2.0
+ * JSON chapters document (timestamped chapter list) hosted off-event.
  */
-@Immutable
-class PodcastAudio(
-    val url: String,
-    val mediaType: String? = null,
-)
+class ChaptersTag {
+    companion object {
+        const val TAG_NAME = "chapters"
+
+        fun parse(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
+
+        fun assemble(url: String) = arrayOf(TAG_NAME, url)
+    }
+}

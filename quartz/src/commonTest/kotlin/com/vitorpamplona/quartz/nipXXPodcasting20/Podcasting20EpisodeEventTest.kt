@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.edit
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
+import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 import com.vitorpamplona.quartz.utils.DeterministicSigner
 import com.vitorpamplona.quartz.utils.nsecToKeyPair
 import kotlin.test.Test
@@ -90,6 +91,37 @@ class Podcasting20EpisodeEventTest {
         assertNull(event.description())
         assertNull(event.durationInSeconds())
         assertNull(event.editsEventId())
+        assertNull(event.video())
+        assertNull(event.number())
+        assertNull(event.season())
+        assertNull(event.transcriptUrl())
+        assertNull(event.chaptersUrl())
+    }
+
+    @Test
+    fun `rich Podcasting 2 point 0 tags round-trip and surface through the interface`() {
+        val template =
+            Podcasting20EpisodeEvent.build(
+                dTag = "ep-rich",
+                title = "Rich Episode",
+                audios = listOf(PodcastAudio("https://example.com/ep.mp3", "audio/mpeg")),
+                pubdate = "Thu, 04 Nov 2023 12:00:00 GMT",
+                video = PodcastAudio("https://example.com/ep.mp4", "video/mp4"),
+                episodeNumber = 5,
+                season = 2,
+                transcriptUrl = "https://example.com/ep.srt",
+                chaptersUrl = "https://example.com/ep.chapters.json",
+            )
+        val episode: PodcastEpisode = signer.sign<Podcasting20EpisodeEvent>(template)
+
+        assertEquals("https://example.com/ep.mp4", episode.episodeVideo()?.url)
+        assertEquals("video/mp4", episode.episodeVideo()?.mediaType)
+        assertEquals(5, episode.episodeNumber())
+        assertEquals(2, episode.episodeSeason())
+        assertEquals("https://example.com/ep.srt", episode.episodeTranscriptUrl())
+        assertEquals("https://example.com/ep.chapters.json", episode.episodeChaptersUrl())
+        // Audio still comes through independently of the video source.
+        assertEquals("https://example.com/ep.mp3", episode.episodeAudio().single().url)
     }
 
     @Test

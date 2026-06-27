@@ -31,12 +31,17 @@ import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.AudioTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.ChaptersTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.DescriptionTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.DurationTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.EditTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.EpisodeNumberTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.ImageTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.PubDateTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.SeasonTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.TitleTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.TranscriptTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.VideoTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -71,6 +76,16 @@ class Podcasting20EpisodeEvent(
 
     fun audios() = tags.mapNotNull(AudioTag::parse)
 
+    fun video() = tags.firstNotNullOfOrNull(VideoTag::parse)
+
+    fun number() = tags.firstNotNullOfOrNull(EpisodeNumberTag::parse)
+
+    fun season() = tags.firstNotNullOfOrNull(SeasonTag::parse)
+
+    fun transcriptUrl() = tags.firstNotNullOfOrNull(TranscriptTag::parse)
+
+    fun chaptersUrl() = tags.firstNotNullOfOrNull(ChaptersTag::parse)
+
     fun durationInSeconds() = tags.firstNotNullOfOrNull(DurationTag::parse)
 
     /** RFC2822 publication date string, kept verbatim for RSS generation. */
@@ -95,6 +110,16 @@ class Podcasting20EpisodeEvent(
 
     override fun episodePublishedAt() = createdAt
 
+    override fun episodeVideo() = video()
+
+    override fun episodeNumber() = number()
+
+    override fun episodeSeason() = season()
+
+    override fun episodeTranscriptUrl() = transcriptUrl()
+
+    override fun episodeChaptersUrl() = chaptersUrl()
+
     companion object {
         const val KIND = 30054
 
@@ -107,6 +132,11 @@ class Podcasting20EpisodeEvent(
             description: String? = null,
             image: String? = null,
             durationInSeconds: Long? = null,
+            video: PodcastAudio? = null,
+            episodeNumber: Int? = null,
+            season: Int? = null,
+            transcriptUrl: String? = null,
+            chaptersUrl: String? = null,
             topics: List<String> = emptyList(),
             markdownContent: String = "",
             createdAt: Long = TimeUtils.now(),
@@ -121,6 +151,11 @@ class Podcasting20EpisodeEvent(
             description?.let { description(it) }
             image?.let { image(it) }
             durationInSeconds?.let { duration(it) }
+            video?.let { video(it) }
+            episodeNumber?.let { episodeNumber(it) }
+            season?.let { season(it) }
+            transcriptUrl?.let { transcript(it) }
+            chaptersUrl?.let { chapters(it) }
             if (topics.isNotEmpty()) hashtags(topics)
 
             initializer()

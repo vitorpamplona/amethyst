@@ -920,6 +920,12 @@
     <string name="podcast_premium">Premium</string>
     <string name="podcast_support_show">Support the show</string>
     <string name="podcast_by_author">by %1$s</string>
+    <string name="podcast_season_episode">S%1$d · E%2$d</string>
+    <string name="podcast_episode_number">Ep %1$d</string>
+    <string name="podcast_season">Season %1$d</string>
+    <string name="podcast_video">Video</string>
+    <string name="podcast_transcript">Transcript</string>
+    <string name="podcast_chapters">Chapters</string>
     <plurals name="podcast_episode_count">
         <item quantity="one">%1$d episode</item>
         <item quantity="other">%1$d episodes</item>

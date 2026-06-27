@@ -60,4 +60,22 @@ interface PodcastEpisode {
      * carries an RFC2822 `pubdate` tag exposed by its own event class.
      */
     fun episodePublishedAt(): Long
+
+    /**
+     * A video source for the episode, if it ships one. NIP-F4 has no video tag and returns null;
+     * the Podcasting-2.0 draft carries a `video` tag.
+     */
+    fun episodeVideo(): PodcastAudio? = null
+
+    /** Episode number within the show/season, if provided. */
+    fun episodeNumber(): Int? = null
+
+    /** Season number the episode belongs to, if provided. */
+    fun episodeSeason(): Int? = null
+
+    /** URL of an off-event transcript document, if provided. */
+    fun episodeTranscriptUrl(): String? = null
+
+    /** URL of an off-event Podcasting-2.0 chapters document, if provided. */
+    fun episodeChaptersUrl(): String? = null
 }
