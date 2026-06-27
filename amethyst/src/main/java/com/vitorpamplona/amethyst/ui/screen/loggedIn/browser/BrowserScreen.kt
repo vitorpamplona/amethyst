@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -135,7 +136,10 @@ private fun BrowserLauncher(
 
     var field by remember { mutableStateOf(TextFieldValue("")) }
 
-    // Favorites + visit history flattened into the neutral candidate shape the ranker consumes.
+    // Favorites + visit history + the hardcoded Discover apps, flattened into the neutral candidate shape
+    // the ranker consumes — so typing the omnibox finds a suggested app even before its first visit. The
+    // ranker dedupes by host, and favorites/history outscore a plain default, so a default that the user
+    // already pinned or visited collapses into that higher-ranked row instead of showing twice.
     val candidates =
         remember(apps, history) {
             buildList {
@@ -151,17 +155,35 @@ private fun BrowserLauncher(
                         ),
                     )
                 }
+                DefaultWebClients.list.forEach { add(OmniboxSuggestions.Candidate(it.app.url, it.app.label, isFavorite = false)) }
             }
         }
+
+    // Visited URLs, so the suggestion list can tell a Recent result from a Discover one (and only the
+    // former offers "Remove from history").
+    val historyUrls = remember(history) { history.mapTo(HashSet()) { it.url } }
 
     // What the user actually typed, excluding any selected ghost-completion suffix (selection.min is the
     // caret when collapsed, or the start of the highlighted suffix when a completion is showing).
     val typed = field.text.take(field.selection.min.coerceIn(0, field.text.length))
-    val suggestions = remember(typed, candidates) { OmniboxSuggestions.rank(typed, candidates) }
+    val suggestions = remember(typed, candidates) { OmniboxSuggestions.rank(typed, candidates, limit = 12) }
 
     fun open(text: String) {
         val target = OmniboxInput.resolve(text) ?: return
         FavoriteAppLauncher.launchUrl(context, target.url, target.forceTor)
+    }
+
+    // Pin/unpin a plain web URL by its favorite id. Shared by the suggestion list and the Recent rows.
+    fun toggleFavorite(
+        url: String,
+        label: String,
+    ) {
+        val id = "url:$url"
+        if (FavoriteAppsRegistry.isFavorite(id)) {
+            FavoriteAppsRegistry.remove(id)
+        } else {
+            FavoriteAppsRegistry.add(FavoriteApp.WebApp(url, label.ifBlank { OmniboxInput.hostOf(url) ?: url }, System.currentTimeMillis()))
+        }
     }
 
     // Inline autocomplete: when the user appends a character, offer the top host as selected ghost text so
@@ -209,7 +231,10 @@ private fun BrowserLauncher(
                 SuggestionGrid(
                     suggestions = suggestions,
                     iconKeys = iconKeys,
+                    historyUrls = historyUrls,
                     onOpen = { open(it.url) },
+                    onToggleFavorite = { toggleFavorite(it.url, it.label) },
+                    onRemoveFromHistory = { BrowserHistoryRegistry.remove(it) },
                     modifier = contentModifier,
                 )
             else -> {
@@ -226,16 +251,7 @@ private fun BrowserLauncher(
                     onRemoveApp = { FavoriteAppsRegistry.remove(it.id) },
                     onAddApp = { FavoriteAppsRegistry.add(it) },
                     onOpenUrl = { open(it) },
-                    onToggleRecentFavorite = { entry ->
-                        val id = "url:" + entry.url
-                        if (FavoriteAppsRegistry.isFavorite(id)) {
-                            FavoriteAppsRegistry.remove(id)
-                        } else {
-                            FavoriteAppsRegistry.add(
-                                FavoriteApp.WebApp(entry.url, entry.title.ifBlank { entry.host }, System.currentTimeMillis()),
-                            )
-                        }
-                    },
+                    onToggleRecentFavorite = { entry -> toggleFavorite(entry.url, entry.title.ifBlank { entry.host }) },
                     onRemoveRecent = { BrowserHistoryRegistry.remove(it) },
                     modifier = contentModifier,
                 )
@@ -302,25 +318,50 @@ private fun OmniBar(
     }
 }
 
-/** The typed-state body: ranked suggestions split into a highlighted Favorites group then Recent. */
+/**
+ * The typed-state body: ranked suggestions split into a highlighted Favorites group, then Recent (visited
+ * sites), then Discover (the hardcoded web apps the user hasn't pinned or visited yet). Every row carries
+ * the same 3-dot menu as the idle Recent cards (pin/unpin; plus remove-from-history for visited sites).
+ */
 @Composable
 private fun SuggestionGrid(
     suggestions: List<OmniboxSuggestions.Suggestion>,
     iconKeys: Set<String>,
+    historyUrls: Set<String>,
     onOpen: (OmniboxSuggestions.Suggestion) -> Unit,
+    onToggleFavorite: (OmniboxSuggestions.Suggestion) -> Unit,
+    onRemoveFromHistory: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val favorites = suggestions.filter { it.isFavorite }
-    val others = suggestions.filterNot { it.isFavorite }
+    val recent = suggestions.filter { !it.isFavorite && it.url in historyUrls }
+    val discover = suggestions.filter { !it.isFavorite && it.url !in historyUrls }
+
+    fun LazyGridScope.section(
+        keyPrefix: String,
+        title: Int,
+        rows: List<OmniboxSuggestions.Suggestion>,
+        highlighted: Boolean,
+    ) {
+        if (rows.isEmpty()) return
+        item(key = "h-$keyPrefix") { SectionHeader(stringResource(title)) }
+        items(rows, key = { "$keyPrefix:" + it.url }) { suggestion ->
+            SuggestionRow(
+                suggestion = suggestion,
+                iconKeys = iconKeys,
+                highlighted = highlighted,
+                removableFromHistory = suggestion.url in historyUrls,
+                onClick = { onOpen(suggestion) },
+                onToggleFavorite = { onToggleFavorite(suggestion) },
+                onRemoveFromHistory = { onRemoveFromHistory(suggestion.url) },
+            )
+        }
+    }
+
     LazyVerticalGrid(columns = GridCells.Fixed(1), modifier = modifier) {
-        if (favorites.isNotEmpty()) {
-            item(key = "h-fav") { SectionHeader(stringResource(R.string.browser_favorites)) }
-            items(favorites, key = { "f:" + it.url }) { SuggestionRow(it, iconKeys, highlighted = true) { onOpen(it) } }
-        }
-        if (others.isNotEmpty()) {
-            item(key = "h-rec") { SectionHeader(stringResource(R.string.favorite_app_recent)) }
-            items(others, key = { "o:" + it.url }) { SuggestionRow(it, iconKeys, highlighted = false) { onOpen(it) } }
-        }
+        section("f", R.string.browser_favorites, favorites, highlighted = true)
+        section("o", R.string.favorite_app_recent, recent, highlighted = false)
+        section("s", R.string.browser_suggested, discover, highlighted = false)
     }
 }
 
@@ -329,15 +370,19 @@ private fun SuggestionRow(
     suggestion: OmniboxSuggestions.Suggestion,
     iconKeys: Set<String>,
     highlighted: Boolean,
+    removableFromHistory: Boolean,
     onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onRemoveFromHistory: () -> Unit,
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
                 .background(if (highlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else Color.Transparent)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SiteIcon(suggestion.host, suggestion.isFavorite, iconKeys, Modifier.size(24.dp))
@@ -358,6 +403,33 @@ private fun SuggestionRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+            }
+        }
+        Box {
+            IconButton(onClick = { menuOpen = true }) {
+                Icon(MaterialSymbols.MoreVert, contentDescription = stringResource(R.string.browser_recent_options))
+            }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(if (suggestion.isFavorite) R.string.favorite_app_remove else R.string.favorite_app_add)) },
+                    leadingIcon = {
+                        Icon(if (suggestion.isFavorite) MaterialSymbols.Star else MaterialSymbols.StarBorder, contentDescription = null)
+                    },
+                    onClick = {
+                        menuOpen = false
+                        onToggleFavorite()
+                    },
+                )
+                if (removableFromHistory) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.browser_recent_remove)) },
+                        leadingIcon = { Icon(MaterialSymbols.Delete, contentDescription = null) },
+                        onClick = {
+                            menuOpen = false
+                            onRemoveFromHistory()
+                        },
+                    )
+                }
             }
         }
     }
