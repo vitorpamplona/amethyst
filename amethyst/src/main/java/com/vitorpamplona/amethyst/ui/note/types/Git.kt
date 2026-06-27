@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -174,6 +176,7 @@ private fun LinkRow(
     symbol: MaterialSymbol,
     contentDescription: String?,
     url: String,
+    style: TextStyle = LocalTextStyle.current,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -189,6 +192,7 @@ private fun LinkRow(
         ClickableUrl(
             url = url,
             urlText = url.removePrefix("https://").removePrefix("http://"),
+            style = style,
         )
     }
 }
@@ -538,6 +542,16 @@ private fun RenderGitPullRequestEvent(
     nav: INav,
 ) {
     GitCardContainer {
+        val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
+        if (repository != null) {
+            LoadAddressableNote(repository, accountViewModel) {
+                if (it != null) {
+                    RenderShortRepositoryHeader(it, accountViewModel, nav)
+                }
+            }
+            Spacer(modifier = StdVertSpacer)
+        }
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = HeaderSpacing,
@@ -555,16 +569,6 @@ private fun RenderGitPullRequestEvent(
         val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
         if (subject != null) {
             GitSubjectTitle(subject)
-        }
-
-        val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
-        if (repository != null) {
-            Spacer(modifier = StdVertSpacer)
-            LoadAddressableNote(repository, accountViewModel) {
-                if (it != null) {
-                    RenderShortRepositoryHeader(it, accountViewModel, nav)
-                }
-            }
         }
 
         val branch = remember(noteEvent) { noteEvent.branchName()?.takeIf { it.isNotBlank() } }
@@ -595,6 +599,7 @@ private fun RenderGitPullRequestEvent(
                         symbol = MaterialSymbols.CloudDownload,
                         contentDescription = stringRes(id = R.string.git_clone_address),
                         url = url,
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = Font12SP),
                     )
                 }
             }
@@ -695,6 +700,7 @@ private fun RenderGitPullRequestUpdateEvent(
                         symbol = MaterialSymbols.CloudDownload,
                         contentDescription = stringRes(id = R.string.git_clone_address),
                         url = url,
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = Font12SP),
                     )
                 }
             }

@@ -1,0 +1,19 @@
+# Pin the exact Rust toolchain used to build libarti_android.so.
+#
+# Reproducibility: rustc output is only stable for a fixed compiler version, so
+# everyone who rebuilds the shipped .so (us, F-Droid, an independent verifier)
+# must use this exact toolchain. rustup reads this file automatically and
+# installs the pinned version + the Android targets on first invocation of the
+# build scripts. Bump this in lockstep with ARTI_VERSION / Cargo.lock and
+# re-verify (see README.md → "Reproducible builds").
+[toolchain]
+channel = "1.94.1"
+profile = "minimal"
+components = ["rustc", "cargo", "rust-std"]
+# Only the two ABIs we actually ship libarti_android.so for (see jniLibs/). If
+# build-arti.sh is extended to armv7/i686, add them here too — check_prerequisites
+# also adds any missing target on the fly.
+targets = [
+    "aarch64-linux-android",
+    "x86_64-linux-android",
+]

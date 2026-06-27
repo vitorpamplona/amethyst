@@ -22,19 +22,35 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.GitStatusIndex
 import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class RepositoryIssuesFeedViewModel(
     val note: AddressableNote,
     val account: Account,
-) : AndroidFeedViewModel(RepositoryIssuesFeedFilter(note, account)) {
+    val showClosed: Boolean,
+) : AndroidFeedViewModel(RepositoryIssuesFeedFilter(note, account, showClosed)) {
+    init {
+        // Status events (kinds 1630-1633) don't mutate the issue note, so the additive
+        // feed update can't move an item between the Open/Closed buckets on its own.
+        // Watch the status index and force a full re-partition whenever it changes.
+        GitStatusIndex.startIfNeeded()
+        viewModelScope.launch(Dispatchers.IO) {
+            GitStatusIndex.latestByTarget.collect { invalidateData() }
+        }
+    }
+
     class Factory(
         val note: AddressableNote,
         val account: Account,
+        val showClosed: Boolean,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = RepositoryIssuesFeedViewModel(note, account) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = RepositoryIssuesFeedViewModel(note, account, showClosed) as T
     }
 }

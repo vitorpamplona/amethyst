@@ -53,6 +53,9 @@ class RootSiteEvent(
 
     fun icon() = tags.siteIcon()
 
+    /** The bundled blob that best looks like this site's app icon, or null. See [NappletIconPath]. */
+    fun iconBlob() = NappletIconPath.choose(paths())
+
     companion object {
         const val KIND = 15128
 

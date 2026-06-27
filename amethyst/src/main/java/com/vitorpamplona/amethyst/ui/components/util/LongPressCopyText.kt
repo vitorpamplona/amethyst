@@ -41,7 +41,7 @@ import kotlinx.coroutines.launch
  * Text composable that opens [onClick] on a tap and copies [copyValue] to the
  * system clipboard on a long-press (with a Toast confirmation).
  *
- * This is the long-press-to-copy counterpart of [com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary].
+ * This is the long-press-to-copy counterpart of [com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary].
  * It deliberately uses a plain [Text] + [combinedClickable] outer modifier
  * rather than an inline `LinkAnnotation.Clickable` inside an `AnnotatedString`,
  * because annotation-level clicks can't see a parent [combinedClickable]'s

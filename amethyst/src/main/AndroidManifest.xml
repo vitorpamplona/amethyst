@@ -105,7 +105,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Amethyst"
         android:largeHeap="true"
-        android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:hardwareAccelerated="true"
         android:localeConfig="@xml/locales_config"

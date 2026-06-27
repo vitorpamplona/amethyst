@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -65,6 +67,22 @@ object GitStatusIndex {
                     mutableLatestByTarget.value = initial
                 }.collect { bundle -> processBundle(bundle) }
         }
+    }
+
+    /**
+     * Whether the latest status for [targetId] marks it as closed (kind 1632)
+     * or applied/resolved/merged (kind 1631). Items with no status event, or
+     * whose latest status is open (1630) or draft (1633), are considered open.
+     *
+     * Reads from the synchronous snapshot in [latestByTarget]; pass an explicit
+     * [map] to avoid re-reading the value across a batch.
+     */
+    fun isClosedOrResolved(
+        targetId: HexKey,
+        map: Map<HexKey, GitStatusEvent>? = latestByTarget.value,
+    ): Boolean {
+        val event = map?.get(targetId) ?: return false
+        return event is GitStatusClosedEvent || event is GitStatusAppliedEvent
     }
 
     private fun processBundle(bundle: Set<Note>) {

@@ -22,18 +22,31 @@ package com.vitorpamplona.amethyst.service.okhttp
 
 import android.os.Build
 
-internal fun isEmulator(): Boolean =
-    Build.FINGERPRINT.startsWith("generic") ||
-        Build.FINGERPRINT.lowercase().contains("emulator") ||
-        Build.MODEL.contains("google_sdk") ||
-        Build.MODEL.lowercase().contains("droid4x") ||
-        Build.MODEL.contains("Emulator") ||
-        Build.MODEL.contains("Android SDK built for x86") ||
-        Build.MANUFACTURER.contains("Genymotion") ||
-        (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
-        "google_sdk" == Build.PRODUCT ||
-        Build.HARDWARE.contains("goldfish") ||
-        Build.HARDWARE.contains("ranchu") ||
-        Build.HARDWARE.contains("vbox86") ||
-        Build.HARDWARE.contains("nox") ||
-        Build.HARDWARE.contains("cuttlefish")
+// Kotlin types android.os.Build's static fields as non-null String, but the JVM stub
+// used in unit tests (testOptions.unitTests.isReturnDefaultValues = true) leaves them
+// null. A naive `.startsWith` would NPE there. Coalesce to empty so unit tests can
+// instantiate the OkHttp factories — production behavior is unchanged (real Android
+// always populates these).
+internal fun isEmulator(): Boolean {
+    val fingerprint = Build.FINGERPRINT ?: ""
+    val model = Build.MODEL ?: ""
+    val manufacturer = Build.MANUFACTURER ?: ""
+    val brand = Build.BRAND ?: ""
+    val device = Build.DEVICE ?: ""
+    val product = Build.PRODUCT ?: ""
+    val hardware = Build.HARDWARE ?: ""
+    return fingerprint.startsWith("generic") ||
+        fingerprint.lowercase().contains("emulator") ||
+        model.contains("google_sdk") ||
+        model.lowercase().contains("droid4x") ||
+        model.contains("Emulator") ||
+        model.contains("Android SDK built for x86") ||
+        manufacturer.contains("Genymotion") ||
+        (brand.startsWith("generic") && device.startsWith("generic")) ||
+        "google_sdk" == product ||
+        hardware.contains("goldfish") ||
+        hardware.contains("ranchu") ||
+        hardware.contains("vbox86") ||
+        hardware.contains("nox") ||
+        hardware.contains("cuttlefish")
+}

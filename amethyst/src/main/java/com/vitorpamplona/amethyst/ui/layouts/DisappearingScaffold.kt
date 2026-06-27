@@ -52,6 +52,10 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingBarNestedScroll
+import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingBarState
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
+import com.vitorpamplona.amethyst.commons.ui.layouts.rememberDisappearingBarState
 import com.vitorpamplona.amethyst.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness

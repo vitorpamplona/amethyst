@@ -355,7 +355,27 @@ object LocalPreferences {
         }
     }
 
-    suspend fun setDefaultAccount(accountSettings: AccountSettings) {
+    /**
+     * Make [accountSettings] the current account, persisting + caching it. Returns the settings that
+     * actually became current — normally [accountSettings] itself, but see the downgrade guard below.
+     */
+    suspend fun setDefaultAccount(accountSettings: AccountSettings): AccountSettings {
+        val npub = accountSettings.keyPair.pubKey.toNpub()
+
+        // Downgrade guard: adding a read-only npub for a pubkey we already hold a SIGNING account for
+        // must not clobber that account. Accounts dedup by npub, so saving fresh read-only settings
+        // here would overwrite the signing account's per-npub file — wiping its cached follow/relay/
+        // mute lists and flipping hasPrivKey off, which silently disables its push notifications. A
+        // signing account already does everything the read-only one would, so keep it and just make
+        // it current instead of degrading it.
+        if (!accountSettings.isWriteable()) {
+            val existing = loadAccountConfigFromEncryptedStorage(npub)
+            if (existing != null && existing.isWriteable()) {
+                setCurrentAccount(existing)
+                return existing
+            }
+        }
+
         // Save the per-npub file before emitting onto the savedAccounts flow.
         // Otherwise a collector (e.g. AlwaysOnNotificationServiceManager) can race in
         // and call loadAccountConfigFromEncryptedStorage(npub) before NOSTR_PUBKEY is
@@ -363,9 +383,9 @@ object LocalPreferences {
         // rest of the session — making every later switch to this account land on
         // LoggedOff instead of LoggedIn.
         saveToEncryptedStorage(accountSettings)
-        val npub = accountSettings.keyPair.pubKey.toNpub()
         mutex.withLock { cachedAccounts.put(npub, accountSettings) }
         setCurrentAccount(accountSettings)
+        return accountSettings
     }
 
     suspend fun allSavedAccounts(): List<AccountInfo> = savedAccounts()

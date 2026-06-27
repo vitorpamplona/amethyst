@@ -70,6 +70,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | Thread view (`amy thread show EVENT_ID`) | ⚠️ | Same. |
 | Notifications feed | 🆕 | |
 | Search (NIP-50) | 🆕 | |
+| Namecoin NIP-05 resolve (`amy namecoin resolve .bit\|d/\|id/`) | ✅ | `NamecoinCommand` — reuses Quartz `NamecoinNameResolver` + `ElectrumXClient` + the default ElectrumX server set the Android/Desktop apps ship with. Stateless. On-chain `name_history` + Core RPC backend pending separate PRs. |
 
 ### `nak` parity — army-knife primitives
 

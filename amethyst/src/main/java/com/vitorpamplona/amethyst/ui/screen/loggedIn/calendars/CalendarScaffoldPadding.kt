@@ -24,7 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import com.vitorpamplona.amethyst.ui.layouts.LocalDisappearingScaffoldPadding
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 
 /**
  * Applies the surrounding [com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold]'s reserved

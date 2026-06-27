@@ -20,16 +20,20 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 
 @Composable
 fun ClickableUrl(
     urlText: String,
     url: String,
+    style: TextStyle = LocalTextStyle.current,
     onError: (Int, Int) -> Unit = { _, _ -> },
 ) {
     val uri = LocalUriHandler.current
@@ -37,6 +41,7 @@ fun ClickableUrl(
 
     ClickableTextPrimary(
         text = urlText,
+        style = style,
         maxLines = 1,
         overflow = TextOverflow.MiddleEllipsis,
         onClick = {

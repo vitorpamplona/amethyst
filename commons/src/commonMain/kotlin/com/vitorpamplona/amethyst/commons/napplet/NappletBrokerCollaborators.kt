@@ -161,9 +161,16 @@ class NappletResource(
  * (`resource.bytes`). The host fetches https/blossom/nostr/data URLs on the applet's behalf —
  * the applet itself has no direct network (CSP `connect-src 'none'`). Returns `null` for an
  * unsupported scheme or a failed fetch.
+ *
+ * [coordinate] is the calling applet's identity coordinate (`author:identifier`), so the host can
+ * route the fetch the same way the applet's own page loads — through Tor or the open web — per that
+ * applet's/site's network mode.
  */
 fun interface NappletResourceGateway {
-    suspend fun fetch(url: String): NappletResource?
+    suspend fun fetch(
+        url: String,
+        coordinate: String,
+    ): NappletResource?
 }
 
 /** A completed upload: where the blob lives plus NIP-94-ish metadata. */

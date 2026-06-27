@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.layouts
 
 import androidx.compose.runtime.BroadcastFrameClock
+import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingBarState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope

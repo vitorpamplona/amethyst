@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip5dNapplets
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NappletIconPath
 import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteAggregateHash
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteAggregateHash
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteDescription
@@ -62,6 +63,13 @@ interface NappletManifest {
 
     /** `icon` tag: URL to the napplet's square app icon, when the publisher supplied one. */
     fun icon(): String? = tags.siteIcon()
+
+    /**
+     * The bundled blob that best looks like this napplet's own app icon (a conventional `favicon`/`icon`
+     * path among [paths]), or null when none is present. Lets a launcher show the real icon from verified,
+     * Tor-routed content even without an explicit `icon` URL tag. See [NappletIconPath].
+     */
+    fun iconBlob(): PathTag? = NappletIconPath.choose(paths())
 
     /** The NIP-5A aggregate hash recomputed from this manifest's [paths]. */
     fun computeAggregateHash(): HexKey = SiteAggregateHash.compute(paths())

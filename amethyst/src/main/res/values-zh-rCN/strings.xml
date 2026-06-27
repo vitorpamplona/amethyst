@@ -1757,6 +1757,8 @@
     <string name="cashu_remove_mint">移除铸币厂</string>
     <string name="cashu_add_mint">添加铸币厂</string>
     <string name="cashu_history">历史记录</string>
+    <string name="cashu_wallet_autosaves">你的钱包在添加或移除铸币厂后自动保存。你第一次添加铸币厂时会为你创建一个nutzap 密钥。</string>
+    <string name="cashu_wallet_saving">保存中…</string>
     <string name="cashu_p2pk_section">Nutzap 密钥(高级)</string>
     <string name="cashu_p2pk_explainer">一枚单独的私钥仅用于接收NIP-61 nutzaps。不是您的 Nostr 身份密钥。</string>
     <string name="cashu_p2pk_autogen">生成新密钥</string>
@@ -2227,6 +2229,10 @@
     <string name="forked_from">Fork 來源</string>
     <string name="git_web_address">网址</string>
     <string name="git_clone_address">克隆：</string>
+    <string name="git_branch">分支</string>
+    <string name="git_commit">提交</string>
+    <string name="git_merge_base">合并基</string>
+    <string name="git_pr_update_description">将拉取请求更新为新提交。</string>
     <string name="git_status_open">打开</string>
     <string name="git_status_merged">已合并</string>
     <string name="git_status_closed">已关闭</string>
@@ -2529,6 +2535,8 @@
     <string name="kind_git_patch">Git 补丁</string>
     <string name="kind_git_repo">Git 仓库</string>
     <string name="kind_git_reply">Git 回复</string>
+    <string name="kind_git_pr">拉取请求</string>
+    <string name="kind_git_pr_update">PR 更新</string>
     <string name="kind_zap_goals">打闪目标</string>
     <string name="kind_hashtag_follows">话题关注</string>
     <string name="kind_highlights">精彩场面</string>
