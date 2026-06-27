@@ -30,85 +30,107 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
  * The list is drawn from the [nostrapps.com](https://nostrapps.com) directory — every entry that ships
  * a browser-openable web version — grouped here by what it does. Entries that are browser *extensions*
  * or signer-only tools (nos2x, Nostrame, …) are intentionally left out: they aren't something you open
- * in an in-app browser. URLs are the apps' own canonical domains; an entry is only included when its
- * URL could be confirmed, so a stale/guessed link never ships.
+ * in an in-app browser. URLs are the apps' own canonical domains.
  *
- * These are plain [FavoriteApp.WebApp] entries (URL + label), so tapping one opens it like any other
- * web favorite and the user can star it to pin it for real. They are **not** persisted as favorites:
- * the list is hardcoded, device-local, and never becomes account state.
+ * Each [icon] is the app's **own** logo (the PNG/SVG declared in its `<link rel="apple-touch-icon">` /
+ * `<link rel="icon">`), so the grid matches the favicon look of the Favorites/Recent rows without
+ * routing through any third-party favicon service. Only PNG/SVG are used — Coil has no ICO decoder, so
+ * an apps whose only icon is a `.ico` (and a few that couldn't be resolved) are left [icon]-less and
+ * fall back to the globe glyph until their real favicon is captured the normal way on first visit.
  *
- * No remote icon is set ([FavoriteApp.iconUrl] is null on purpose): the idle launcher must not phone
- * home to dozens of third-party servers before the user has chosen anything. Each site's real favicon
- * is captured the normal way once the user actually opens it; until then the entry shows the globe glyph.
+ * These are plain [FavoriteApp.WebApp] entries, so tapping one opens it like any other web favorite and
+ * the user can star it to pin it for real. They are **not** persisted as favorites: the list is
+ * hardcoded, device-local, and never becomes account state.
  */
 object DefaultWebClients {
     val list: List<FavoriteApp.WebApp> =
         buildList {
             // Social / microblogging clients
-            webApp("Primal", "https://primal.net")
-            webApp("Coracle", "https://coracle.social")
-            webApp("Snort", "https://snort.social")
-            webApp("noStrudel", "https://nostrudel.ninja")
-            webApp("Iris", "https://iris.to")
-            webApp("Nostter", "https://nostter.app")
-            webApp("Jumble", "https://jumble.social")
-            webApp("Nostria", "https://nostria.app")
-            webApp("Nosotros", "https://nosotros.app")
-            webApp("lumilumi", "https://lumilumi.app")
-            webApp("Phoenix", "https://phoenix.social")
-            webApp("Shosho", "https://shosho.live")
-            webApp("ants", "https://ants.sh")
+            webApp("Primal", "https://primal.net", "https://primal.net/assets/apple-touch-icon-a536f430.png")
+            webApp("Coracle", "https://coracle.social", "https://coracle.social/icons/apple-touch-icon-76x76.png")
+            webApp("Snort", "https://snort.social", "https://snort.social/img/apple-touch-icon.png")
+            webApp("noStrudel", "https://nostrudel.ninja", "https://nostrudel.ninja/apple-touch-icon.png")
+            webApp("Iris", "https://iris.to", "https://iris.to/img/apple-touch-icon.png")
+            webApp("Nostter", "https://nostter.app", "https://nostter.app/apple-touch-icon.png")
+            webApp("Jumble", "https://jumble.social", "https://jumble.social/favicon.svg")
+            webApp("Nostria", "https://nostria.app", "https://nostria.app/icons/icon-192x192-maskable.png")
+            webApp("Nosotros", "https://nosotros.app", "https://nosotros.app/apple-touch-icon-144x144.png")
+            webApp("lumilumi", "https://lumilumi.app", "https://lumilumi.app/apple-touch-icon-180x180.png")
+            webApp("Phoenix", "https://phoenix.social", "https://phoenix.social/img/apple-touch-icon.png")
+            webApp("Shosho", "https://shosho.live", "https://shosho.live/apple-touch-icon.png")
+            webApp("ants", "https://ants.sh", "https://ants.sh/apple-touch-icon.png")
             webApp("YakiHonne", "https://yakihonne.com")
-            webApp("Ditto", "https://ditto.pub")
+            webApp("Ditto", "https://ditto.pub", "https://ditto.pub/apple-touch-icon.png")
+            webApp("x21", "https://x21.social", "https://x21.social/apple-touch-icon.png?v=4")
+            webApp("Ghostr", "https://ghostr.org", "https://ghostr.org/favicon/apple-touch-icon.png")
+            webApp("Mutable", "https://mutable.top", "https://mutable.top/mutable_logo.svg")
 
             // Reading / long-form / feeds
             webApp("Habla", "https://habla.news")
-            webApp("Highlighter", "https://highlighter.com")
-            webApp("Boris", "https://readwithboris.com")
+            webApp("Highlighter", "https://highlighter.com", "https://highlighter.com/apple-touch-icon-180x180.png")
+            webApp("Boris", "https://readwithboris.com", "https://readwithboris.com/apple-touch-icon.png")
             webApp("Noflux", "https://noflux.nostr.technology")
 
             // Communities / chat
-            webApp("Flotilla", "https://flotilla.social")
+            webApp("Flotilla", "https://flotilla.social", "https://framerusercontent.com/images/8UjnVxSvRkmvY2lEYU5z8OMOw0M.png")
             webApp("Chachi", "https://chachi.chat")
-            webApp("NostrChat", "https://www.nostrchat.io")
+            webApp("NostrChat", "https://www.nostrchat.io", "https://www.nostrchat.io/logo192.png")
+            webApp("NymChat", "https://www.nymchat.com")
 
-            // Media — video, photo, audio, files
-            webApp("zap.stream", "https://zap.stream")
-            webApp("Olas", "https://olas.app")
-            webApp("Slidestr", "https://slidestr.net")
-            webApp("Bouquet", "https://bouquet.slidestr.net")
-            webApp("YakBak", "https://yakbak.app")
-            webApp("Nests", "https://nostrnests.com")
+            // Media — video, photo, audio, podcasts, files
+            webApp("zap.stream", "https://zap.stream", "https://zap.stream/logo.png")
+            webApp("Divine Video", "https://divine.video", "https://divine.video/app_icon.png")
+            webApp("Olas", "https://olas.app", "https://olas.app/favicon.png")
+            webApp("Zappix", "https://zappix.app", "https://zappix.app/icon-192.png")
+            webApp("Slidestr", "https://slidestr.net", "https://slidestr.net/slidestr.svg")
+            webApp("Bouquet", "https://bouquet.slidestr.net", "https://bouquet.slidestr.net/bouquet.png")
+            webApp("YakBak", "https://yakbak.app", "https://yakbak.app/yakbak-logo.png")
+            webApp("ZapTrax", "https://zaptrax.app", "https://zaptrax.app/icon-192.png")
+            webApp("Podstr", "https://podstr.org", "https://podstr.org/favicon.svg")
+            webApp("Nests", "https://nostrnests.com", "https://nostrnests.com/apple-touch-icon.png")
 
             // Knowledge / wiki
-            webApp("Wikifreedia", "https://wikifreedia.xyz")
-            webApp("Wikistr", "https://wikistr.com")
+            webApp("Wikifreedia", "https://wikifreedia.xyz", "https://wikifreedia.xyz/favicon.svg")
+            webApp("Wikistr", "https://wikistr.com", "https://wikistr.com/favicon.png")
 
-            // Marketplace
+            // Marketplace / food
             webApp("Shopstr", "https://shopstr.store")
-            webApp("Plebeian Market", "https://plebeian.market")
+            webApp("Plebeian Market", "https://plebeian.market", "https://plebeian.market/logo-st5zpap9.svg")
+            webApp("Zap Cooking", "https://zap.cooking", "https://zap.cooking/favicon.svg")
 
             // Tools / utilities
             webApp("Emojito", "https://emojito.meme")
-            webApp("Formstr", "https://formstr.app")
+            webApp("Formstr", "https://formstr.app", "https://formstr.app/logo192.png")
             webApp("Nostree", "https://nostree.me")
             webApp("Badges", "https://badges.page")
-            webApp("Nstart", "https://nstart.me")
+            webApp("Nstart", "https://nstart.me", "https://nstart.me/favicon.png")
             webApp("alphaama", "https://alphaama.com")
-            webApp("Treasures", "https://treasures.to")
-            webApp("Yondar", "https://yondar.me")
+            webApp("Treasures", "https://treasures.to", "https://treasures.to/apple-touch-icon.png")
+            webApp("Yondar", "https://yondar.me", "https://yondar.me/apple-touch-icon.png")
             webApp("DTAN", "https://dtan.xyz")
             webApp("Nostrocket", "https://nostrocket.org")
-            webApp("MAKIMONO", "https://makimono.lumilumi.app")
+            webApp("Plektos", "https://plektos.app", "https://plektos.app/icon-180.png")
+            webApp("Zaplytics", "https://zaplytics.app")
+            webApp("Brainstorm", "https://brainstorm.world", "https://brainstorm.world/brainstorm.svg")
+            webApp("MAKIMONO", "https://makimono.lumilumi.app", "https://makimono.lumilumi.app/favicon3.png")
             webApp("Primal Studio", "https://studio.primal.net")
+            webApp("nostr.build", "https://nostr.build", "https://nostr.build/apple-touch-icon.png")
+            webApp("nostrcheck", "https://nostrcheck.me", "https://nostrcheck.me/apple-touch-icon.png")
+            webApp("Metadata", "https://metadata.nostr.com")
+
+            // Games
+            webApp("Plebs vs Zombies", "https://www.plebsvszombies.cc", "https://www.plebsvszombies.cc/favicon.svg")
+            webApp("Blobbi", "https://www.blobbi.pet", "https://www.blobbi.pet/icons/apple-touch-icon.png")
         }
 
     // addedAt is 0L: these are hardcoded suggestions, not user-added favorites, so they never need a
-    // real "added" timestamp for ordering — the curated order in `list` is what matters.
+    // real "added" timestamp for ordering — the curated order in `list` is what matters. `icon` is the
+    // app's own logo URL, or null to fall back to the globe glyph until a favicon is captured on visit.
     private fun MutableList<FavoriteApp.WebApp>.webApp(
         label: String,
         url: String,
+        icon: String? = null,
     ) {
-        add(FavoriteApp.WebApp(url = url, label = label, addedAt = 0L))
+        add(FavoriteApp.WebApp(url = url, label = label, addedAt = 0L, iconUrl = icon))
     }
 }
