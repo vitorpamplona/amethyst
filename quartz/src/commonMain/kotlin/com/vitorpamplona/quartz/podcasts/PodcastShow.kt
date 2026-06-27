@@ -47,4 +47,25 @@ interface PodcastShow {
 
     /** Associated website URLs (possibly empty). */
     fun showWebsites(): List<String>
+
+    /**
+     * Free-text author/host byline (not a Nostr pubkey), if the draft carries one. NIP-F4 models
+     * authors as pubkeys with roles instead, so it leaves this null.
+     */
+    fun showAuthor(): String? = null
+
+    /** Genre/category labels (e.g. "Technology"), possibly empty. */
+    fun showCategories(): List<String> = emptyList()
+
+    /** Donation/funding page URLs (Podcasting 2.0 `funding`), possibly empty. */
+    fun showFundingUrls(): List<String> = emptyList()
+
+    /** Whether the show is flagged as explicit. */
+    fun showIsExplicit(): Boolean = false
+
+    /** Whether the show is marked complete/finished (no further episodes expected). */
+    fun showIsComplete(): Boolean = false
+
+    /** Copyright line, if provided. */
+    fun showCopyright(): String? = null
 }

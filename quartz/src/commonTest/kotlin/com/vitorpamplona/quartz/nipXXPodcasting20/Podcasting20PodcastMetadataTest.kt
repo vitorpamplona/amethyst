@@ -40,7 +40,7 @@ class Podcasting20PodcastMetadataTest {
             "nsec10g0wheggqn9dawlc0yuv6adnat6n09anr7eyykevw2dm8xa5fffs0wsdsr".nsecToKeyPair(),
         )
 
-    // Verbatim content shape from derekross/podstr NIP.md (kind 30078, d="podcast-metadata").
+    // Verbatim content shape from derekross/podstr (kind 30078, d="podcast-metadata").
     private val metadataJson =
         """
         {
@@ -53,9 +53,13 @@ class Podcasting20PodcastMetadataTest {
           "categories": ["Technology", "Science"],
           "explicit": false,
           "website": "https://example.com",
+          "copyright": "© 2025 John Doe",
+          "funding": ["https://example.com/donate", "https://example.com/tip"],
+          "locked": false,
           "value": { "amount": 100000, "currency": "sat" },
           "type": "episodic",
-          "complete": false
+          "complete": true,
+          "guid": "abc-123"
         }
         """.trimIndent()
 
@@ -74,9 +78,31 @@ class Podcasting20PodcastMetadataTest {
         assertEquals("A podcast about interesting topics", show.showDescription())
         assertEquals("https://example.com/artwork.jpg", show.showImage())
         assertEquals(listOf("https://example.com"), show.showWebsites())
-        assertEquals("John Doe", show.author())
+        assertEquals("John Doe", show.showAuthor())
+        assertEquals(listOf("Technology", "Science"), show.showCategories())
+        assertEquals(listOf("https://example.com/donate", "https://example.com/tip"), show.showFundingUrls())
+        assertEquals("© 2025 John Doe", show.showCopyright())
+        assertFalse(show.showIsExplicit())
+        assertTrue(show.showIsComplete())
         assertEquals("en", show.language())
-        assertFalse(show.isExplicit())
+        assertEquals("john@example.com", show.email())
+        assertEquals("episodic", show.type())
+        assertEquals("abc-123", show.guid())
+        assertFalse(show.isLocked())
+    }
+
+    @Test
+    fun `optional rich fields default to empty or null when absent`() {
+        val event = appDataEvent("podcast-metadata", """{"title":"Bare","description":"d","image":"i"}""")
+        val show = Podcasting20PodcastMetadata.parse(event)
+
+        assertTrue(show != null)
+        assertNull(show.showAuthor())
+        assertTrue(show.showCategories().isEmpty())
+        assertTrue(show.showFundingUrls().isEmpty())
+        assertNull(show.showCopyright())
+        assertFalse(show.showIsExplicit())
+        assertFalse(show.showIsComplete())
     }
 
     @Test

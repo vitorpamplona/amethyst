@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,12 +39,15 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
@@ -70,9 +76,15 @@ fun RenderPodcastMetadata(
     val show = remember(noteEvent) { resolvePodcastShow(noteEvent) } ?: return
 
     val title = remember(noteEvent) { show.showTitle() }
+    val author = remember(noteEvent) { show.showAuthor() }
     val image = remember(noteEvent) { show.showImage() }
     val description = remember(noteEvent) { show.showDescription() }
     val websites = remember(noteEvent) { show.showWebsites() }
+    val categories = remember(noteEvent) { show.showCategories() }
+    val fundingUrls = remember(noteEvent) { show.showFundingUrls() }
+    val isExplicit = remember(noteEvent) { show.showIsExplicit() }
+    val isComplete = remember(noteEvent) { show.showIsComplete() }
+    val copyright = remember(noteEvent) { show.showCopyright() }
     // In both drafts the show's author pubkey IS the podcast id used to open its dedicated
     // screen with the full episode list (episodes are authored by the same key).
     val podcastPubkey = remember(noteEvent) { noteEvent.pubKey }
@@ -102,6 +114,48 @@ fun RenderPodcastMetadata(
                 )
             }
 
+            author?.let {
+                Text(
+                    text = stringRes(R.string.podcast_by_author, it),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.grayText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            if (isExplicit || isComplete || categories.isNotEmpty()) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (isComplete) {
+                        PodcastBadge(
+                            label = stringRes(R.string.podcast_completed),
+                            symbol = MaterialSymbols.CheckCircle,
+                            container = MaterialTheme.colorScheme.tertiaryContainer,
+                            content = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                    }
+                    if (isExplicit) {
+                        PodcastBadge(
+                            label = stringRes(R.string.podcast_explicit),
+                            symbol = null,
+                            container = MaterialTheme.colorScheme.errorContainer,
+                            content = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
+                    categories.forEach { category ->
+                        PodcastBadge(
+                            label = category,
+                            symbol = MaterialSymbols.Tag,
+                            container = MaterialTheme.colorScheme.secondaryContainer,
+                            content = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                    }
+                }
+            }
+
             description?.takeIf { !makeItShort }?.let {
                 val tags = remember(noteEvent) { noteEvent.tags.toImmutableListOfLists() }
 
@@ -118,21 +172,45 @@ fun RenderPodcastMetadata(
                 )
             }
 
+            if (fundingUrls.isNotEmpty() && !makeItShort) {
+                val uriHandler = LocalUriHandler.current
+                Button(
+                    onClick = { runCatching { uriHandler.openUri(fundingUrls.first()) } },
+                    modifier = Modifier.fillMaxWidth().padding(top = Size5dp),
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.Favorite,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Text(
+                        text = stringRes(R.string.podcast_support_show),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+            }
+
             if (websites.isNotEmpty() && !makeItShort) {
+                val uriHandler = LocalUriHandler.current
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(Size5dp),
                     verticalArrangement = Arrangement.spacedBy(Size5dp),
                 ) {
                     websites.forEach { website ->
-                        Text(
-                            text = website,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.grayText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        WebsiteChip(website) { runCatching { uriHandler.openUri(website) } }
                     }
                 }
+            }
+
+            copyright?.takeIf { !makeItShort }?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.grayText,
+                    modifier = Modifier.padding(top = Size5dp),
+                )
             }
 
             // Affordance that this card opens a full show page with every episode.
@@ -161,5 +239,71 @@ fun RenderPodcastMetadata(
                 )
             }
         }
+    }
+}
+
+/** A small rounded, tinted pill for a show attribute (explicit, completed, a genre, …). */
+@Composable
+private fun PodcastBadge(
+    label: String,
+    symbol: MaterialSymbol?,
+    container: Color,
+    content: Color,
+) {
+    Row(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(container)
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        symbol?.let {
+            Icon(
+                symbol = it,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = content,
+            )
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color = content,
+        )
+    }
+}
+
+/** A clickable website pill with a globe icon. */
+@Composable
+private fun WebsiteChip(
+    url: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Public,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = url,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

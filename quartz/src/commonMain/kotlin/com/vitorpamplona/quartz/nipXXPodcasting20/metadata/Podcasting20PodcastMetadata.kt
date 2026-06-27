@@ -49,27 +49,54 @@ class Podcasting20PodcastMetadata(
 
     override fun showWebsites() = listOfNotNull(content.website?.takeIf { it.isNotEmpty() })
 
-    /** Free-text author/host name (not a Nostr pubkey). */
-    fun author() = content.author
+    override fun showAuthor() = content.author?.takeIf { it.isNotEmpty() }
+
+    override fun showCategories() = content.categories.filter { it.isNotEmpty() }
+
+    override fun showFundingUrls() = content.funding.filter { it.isNotEmpty() }
+
+    override fun showIsExplicit() = content.explicit ?: false
+
+    override fun showIsComplete() = content.complete ?: false
+
+    override fun showCopyright() = content.copyright?.takeIf { it.isNotEmpty() }
 
     fun language() = content.language
 
-    fun isExplicit() = content.explicit ?: false
+    /** Contact email for the show, if provided. */
+    fun email() = content.email?.takeIf { it.isNotEmpty() }
+
+    /** "episodic" or "serial" per Podcasting 2.0, if provided. */
+    fun type() = content.type?.takeIf { it.isNotEmpty() }
+
+    /** Whether the show is locked (premium / subscription-gated). */
+    fun isLocked() = content.locked ?: false
+
+    /** The stable podcast GUID (Podcasting 2.0 `podcast:guid`), if provided. */
+    fun guid() = content.guid?.takeIf { it.isNotEmpty() }
 
     /**
      * The subset of the Podcasting-2.0 `kind:30078` metadata JSON this client reads. Unknown keys
-     * (e.g. `value`, `funding`, `categories`, `copyright`) are ignored by the lenient mapper and
-     * can be surfaced later without changing the wire format.
+     * (notably `value` for value-for-value splits) are ignored by the lenient mapper and can be
+     * surfaced later without changing the wire format.
      */
     @Serializable
     class Content(
         val title: String? = null,
         val description: String? = null,
         val author: String? = null,
+        val email: String? = null,
         val image: String? = null,
         val language: String? = null,
-        val website: String? = null,
+        val categories: List<String> = emptyList(),
         val explicit: Boolean? = null,
+        val website: String? = null,
+        val copyright: String? = null,
+        val funding: List<String> = emptyList(),
+        val locked: Boolean? = null,
+        val type: String? = null,
+        val complete: Boolean? = null,
+        val guid: String? = null,
     )
 
     companion object {
