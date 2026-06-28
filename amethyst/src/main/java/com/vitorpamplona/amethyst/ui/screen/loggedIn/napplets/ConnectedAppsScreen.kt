@@ -78,6 +78,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
+/** Author placeholder used by the browser permission path — not a real pubkey. */
+private const val BROWSER_AUTHOR = "browser"
+
 private data class ConnectedAppEntry(
     val coordinate: String,
     val signerPolicy: AppSignerPolicy?,
@@ -92,7 +95,7 @@ fun ConnectedAppsScreen(
     val signerLedger = remember { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
 
     var items by remember { mutableStateOf<List<ConnectedAppEntry>?>(null) }
-    var authors by remember { mutableStateOf<Set<HexKey>>(emptySet()) }
+    var nappletAuthors by remember { mutableStateOf<Set<HexKey>>(emptySet()) }
 
     LaunchedEffect(Unit) {
         val initial =
@@ -100,10 +103,15 @@ fun ConnectedAppsScreen(
                 loadConnectedApps(capabilityLedger, signerLedger)
             }
         items = initial
-        authors = initial.map { it.coordinate.substringBefore(':') }.toSet()
+        // Only include real pubkeys (not the "browser" sentinel) in the relay subscription.
+        nappletAuthors =
+            initial
+                .map { it.coordinate.substringBefore(':') }
+                .filter { it != BROWSER_AUTHOR }
+                .toSet()
     }
 
-    ConnectedAppsFilterAssemblerSubscription(accountViewModel, authors)
+    ConnectedAppsFilterAssemblerSubscription(accountViewModel, nappletAuthors)
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringResource(R.string.napplet_permissions_title), nav) },
@@ -175,16 +183,54 @@ private fun ConnectedAppCard(
     onClick: () -> Unit,
 ) {
     val author = remember(entry.coordinate) { entry.coordinate.substringBefore(':') }
-    val identifier = remember(entry.coordinate) { entry.coordinate.substringAfter(':', "") }
+    if (author == BROWSER_AUTHOR) {
+        val url = remember(entry.coordinate) { entry.coordinate.substringAfter(':', "") }
+        BrowserAppCard(url = url, entry = entry, onClick = onClick)
+    } else {
+        NappletAppCard(author = author, entry = entry, untitled = untitled, onClick = onClick)
+    }
+}
 
-    // Build the full kind:pubkey:dtag coordinate that LocalCache and rememberNappletIconModel expect.
+/** Card for a web app permission entry — the user visited this origin in the sandboxed browser. */
+@Composable
+private fun BrowserAppCard(
+    url: String,
+    entry: ConnectedAppEntry,
+    onClick: () -> Unit,
+) {
+    val domain =
+        remember(url) {
+            url
+                .removePrefix("https://")
+                .removePrefix("http://")
+                .substringBefore('/')
+                .ifBlank { url }
+        }
+
+    ConnectedAppCardLayout(
+        app = FavoriteApp.WebApp(url, domain, 0L),
+        iconModel = null,
+        title = domain,
+        subtitle = url,
+        npub = null,
+        signerPolicy = entry.signerPolicy,
+        onClick = onClick,
+    )
+}
+
+/** Card for a napplet / nsite permission entry — resolves title and icon from the live manifest. */
+@Composable
+private fun NappletAppCard(
+    author: String,
+    entry: ConnectedAppEntry,
+    untitled: String,
+    onClick: () -> Unit,
+) {
+    val identifier = remember(entry.coordinate) { entry.coordinate.substringAfter(':', "") }
     val kind = if (identifier.isEmpty()) RootNappletEvent.KIND else NamedNappletEvent.KIND
     val fullCoordinate = remember(entry.coordinate) { "$kind:$author:$identifier" }
 
-    // Reactive icon blob (downloads from blossom as needed).
     val iconModel = rememberNappletIconModel(fullCoordinate)
-
-    // Reactively resolve title and iconUrl from the live addressable note.
     val manifest = rememberNappletManifest(fullCoordinate)
     val title = manifest?.title()?.ifBlank { null } ?: identifier.ifBlank { untitled }
     val iconUrl = manifest?.icon()?.ifBlank { null }
@@ -192,6 +238,27 @@ private fun ConnectedAppCard(
     val npub = remember(author) { runCatching { NPub.create(author) }.getOrDefault(author.take(12) + "…") }
     val domain = identifier.ifBlank { author.take(12) + "…" }
 
+    ConnectedAppCardLayout(
+        app = FavoriteApp.NostrApp(fullCoordinate, title, 0L, iconUrl),
+        iconModel = iconModel,
+        title = title,
+        subtitle = domain,
+        npub = npub,
+        signerPolicy = entry.signerPolicy,
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun ConnectedAppCardLayout(
+    app: FavoriteApp,
+    iconModel: Any?,
+    title: String,
+    subtitle: String,
+    npub: String?,
+    signerPolicy: AppSignerPolicy?,
+    onClick: () -> Unit,
+) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -202,7 +269,7 @@ private fun ConnectedAppCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             FavoriteAppIcon(
-                app = FavoriteApp.NostrApp(fullCoordinate, title, 0L, iconUrl),
+                app = app,
                 iconModel = iconModel,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(48.dp),
@@ -219,33 +286,35 @@ private fun ConnectedAppCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    domain,
+                    subtitle,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontFamily = FontFamily.Monospace,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    npub,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontFamily = FontFamily.Monospace,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (npub != null) {
+                    Text(
+                        npub,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontFamily = FontFamily.Monospace,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
 
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                if (entry.signerPolicy != null) {
+                if (signerPolicy != null) {
                     SuggestionChip(
                         onClick = {},
                         label = {
                             Text(
-                                entry.signerPolicy.shortLabel(),
+                                signerPolicy.shortLabel(),
                                 style = MaterialTheme.typography.labelSmall,
                             )
                         },

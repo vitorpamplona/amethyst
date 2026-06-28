@@ -237,8 +237,15 @@ private fun AppIdentityHeader(state: ConnectedAppDetailState) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            val isBrowserEntry = state.coordinate.startsWith("browser:")
+            val appForIcon =
+                if (isBrowserEntry) {
+                    FavoriteApp.WebApp(state.coordinate.substringAfter(':'), state.title, 0L)
+                } else {
+                    FavoriteApp.NostrApp(state.coordinate, state.title, 0L, state.iconUrl)
+                }
             FavoriteAppIcon(
-                app = FavoriteApp.NostrApp(state.coordinate, state.title, 0L, state.iconUrl),
+                app = appForIcon,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(48.dp),
             )
@@ -249,7 +256,18 @@ private fun AppIdentityHeader(state: ConnectedAppDetailState) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val domain = state.coordinate.substringAfter(':', "").ifBlank { state.coordinate.substringBefore(':').take(12) + "…" }
+                val author = state.coordinate.substringBefore(':')
+                val identifier = state.coordinate.substringAfter(':', "")
+                val domain =
+                    if (author == "browser") {
+                        identifier
+                            .removePrefix("https://")
+                            .removePrefix("http://")
+                            .substringBefore('/')
+                            .ifBlank { identifier }
+                    } else {
+                        identifier.ifBlank { author.take(12) + "…" }
+                    }
                 Text(
                     domain,
                     style = MaterialTheme.typography.labelSmall,
