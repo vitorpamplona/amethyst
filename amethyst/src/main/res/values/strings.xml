@@ -2615,6 +2615,13 @@
     <string name="git_new_issue_labels_hint">bug, enhancement…</string>
     <string name="git_issue_close">Close issue</string>
     <string name="git_issue_reopen">Reopen</string>
+    <string name="git_status_close">Close</string>
+    <string name="git_status_reopen">Reopen</string>
+    <string name="git_status_mark_merged">Mark merged</string>
+    <string name="git_pr_view_changes">View changes</string>
+    <string name="git_pr_loading_changes">Loading changes…</string>
+    <string name="git_pr_no_changes">No file changes found.</string>
+    <string name="git_pr_changes_retry">Retry loading changes</string>
     <string name="git_pr_revised">Revised</string>
     <string name="git_repo_settings_title">Edit repository</string>
     <string name="git_repo_settings_name">Name</string>

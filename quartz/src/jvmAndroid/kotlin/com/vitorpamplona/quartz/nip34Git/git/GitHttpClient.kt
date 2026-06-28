@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip34Git.git
 
+import com.vitorpamplona.quartz.nip34Git.patch.GitDiffFile
+import com.vitorpamplona.quartz.nip34Git.patch.GitFileChange
+import com.vitorpamplona.quartz.nip34Git.patch.LineDiff
+import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
@@ -100,6 +104,155 @@ class GitHttpClient(
             transport = transport,
             caps = caps,
         )
+    }
+
+    /**
+     * Computes the diff a pull request introduces: the changes between
+     * [baseCommit] (or, when null, the server's HEAD) and [headCommit]. Fetches
+     * both commit trees, finds the changed files by oid, batch-fetches the
+     * differing blobs and runs a line diff on each. Returns a [ParsedPatch] ready
+     * for the same renderer the embedded-patch path uses.
+     */
+    suspend fun computeDiff(
+        cloneUrl: String,
+        headCommit: String,
+        baseCommit: String?,
+    ): ParsedPatch {
+        require(cloneUrl.startsWith("http://") || cloneUrl.startsWith("https://")) {
+            "unsupported git transport (only http/https): $cloneUrl"
+        }
+        val caps = transport.fetchCapabilities(cloneUrl)
+        if (!caps.supportsFetch) throw GitHttpException("server does not speak git protocol v2 (fetch)")
+
+        val base =
+            baseCommit?.takeIf { it.isNotBlank() }
+                ?: run {
+                    if (!caps.supportsLsRefs) throw GitHttpException("no merge base and server can't list refs")
+                    val refs = transport.lsRefs(cloneUrl, caps)
+                    selectHead(refs, null)?.oid ?: throw GitHttpException("could not resolve a base commit")
+                }
+
+        // 1. Both commit trees (and, when the server can't filter, every blob too).
+        val treePack =
+            transport.fetchPack(
+                cloneUrl = cloneUrl,
+                caps = caps,
+                wants = listOf(headCommit, base).distinct(),
+                deepen = 1,
+                filterBlobNone = caps.supportsFilter,
+            )
+        val objects = Packfile.parse(treePack)
+
+        val headTreeOid = commitTreeOf(objects, headCommit)
+        val baseTreeOid = commitTreeOf(objects, base)
+        val trees = HashMap<String, List<GitTreeEntry>>()
+        val blobs = HashMap<String, ByteArray>()
+        for ((oid, obj) in objects) {
+            when (obj.type) {
+                GitObjectType.TREE -> trees[oid] = GitObjectParser.parseTree(obj.data)
+                GitObjectType.BLOB -> blobs[oid] = obj.data
+                else -> {}
+            }
+        }
+
+        val headFiles = collectFiles(trees, headTreeOid)
+        val baseFiles = collectFiles(trees, baseTreeOid)
+
+        // 2. Classify changes and gather the blob oids we still need.
+        data class Change(
+            val path: String,
+            val oldOid: String?,
+            val newOid: String?,
+            val change: GitFileChange,
+        )
+        val changes = ArrayList<Change>()
+        for (path in (headFiles.keys + baseFiles.keys).toSortedSet()) {
+            val oldOid = baseFiles[path]
+            val newOid = headFiles[path]
+            when {
+                oldOid == null && newOid != null -> changes.add(Change(path, null, newOid, GitFileChange.ADD))
+                newOid == null && oldOid != null -> changes.add(Change(path, oldOid, null, GitFileChange.DELETE))
+                oldOid != null && newOid != null && oldOid != newOid ->
+                    changes.add(Change(path, oldOid, newOid, GitFileChange.MODIFY))
+            }
+        }
+
+        val needed = changes.flatMap { listOfNotNull(it.oldOid, it.newOid) }.filter { it !in blobs }.distinct()
+        if (needed.isNotEmpty() && caps.supportsFilter) {
+            val blobPack = transport.fetchPack(cloneUrl, caps, needed, deepen = null, filterBlobNone = true)
+            for ((oid, obj) in Packfile.parse(blobPack)) {
+                if (obj.type == GitObjectType.BLOB) blobs[oid] = obj.data
+            }
+        }
+
+        // 3. Line-diff every changed file.
+        val files =
+            changes.map { change ->
+                val oldBytes = change.oldOid?.let { blobs[it] }
+                val newBytes = change.newOid?.let { blobs[it] }
+                val binary = (oldBytes?.let(::isBinary) == true) || (newBytes?.let(::isBinary) == true)
+                val hunks =
+                    if (binary) {
+                        emptyList()
+                    } else {
+                        LineDiff.hunks(toLines(oldBytes), toLines(newBytes))
+                    }
+                GitDiffFile(
+                    oldPath = if (change.change == GitFileChange.ADD) null else change.path,
+                    newPath = if (change.change == GitFileChange.DELETE) null else change.path,
+                    change = change.change,
+                    isBinary = binary,
+                    hunks = hunks,
+                )
+            }
+
+        return ParsedPatch(message = "", files = files)
+    }
+
+    private fun commitTreeOf(
+        objects: Map<String, GitObject>,
+        commitOid: String,
+    ): String {
+        val commit = objects[commitOid] ?: throw GitHttpException("commit $commitOid missing from pack")
+        if (commit.type != GitObjectType.COMMIT) throw GitHttpException("$commitOid is not a commit")
+        return GitObjectParser.parseCommitTree(commit.data) ?: throw GitHttpException("commit $commitOid has no tree")
+    }
+
+    private fun collectFiles(
+        trees: Map<String, List<GitTreeEntry>>,
+        rootTreeOid: String,
+    ): Map<String, String> {
+        val out = HashMap<String, String>()
+
+        fun walk(
+            treeOid: String,
+            prefix: String,
+        ) {
+            val entries = trees[treeOid] ?: return
+            for (entry in entries) {
+                val path = if (prefix.isEmpty()) entry.name else "$prefix/${entry.name}"
+                when {
+                    entry.isFolder -> walk(entry.oid, path)
+                    entry.isSubmodule -> {} // submodule pointers aren't file content
+                    else -> out[path] = entry.oid
+                }
+            }
+        }
+        walk(rootTreeOid, "")
+        return out
+    }
+
+    private fun toLines(bytes: ByteArray?): List<String> {
+        if (bytes == null || bytes.isEmpty()) return emptyList()
+        val text = bytes.decodeToString()
+        val parts = text.split("\n")
+        return if (text.endsWith("\n")) parts.dropLast(1) else parts
+    }
+
+    private fun isBinary(bytes: ByteArray): Boolean {
+        val limit = minOf(bytes.size, 8000)
+        for (i in 0 until limit) if (bytes[i].toInt() == 0) return true
+        return false
     }
 
     /** Picks the ref to browse: an explicit [ref] if given, otherwise HEAD. */

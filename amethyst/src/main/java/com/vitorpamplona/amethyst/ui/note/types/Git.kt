@@ -453,6 +453,10 @@ private fun RenderGitPatchEvent(
         } else {
             GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
         }
+
+        if (!makeItShort) {
+            GitStatusActions(note, accountViewModel)
+        }
     }
 }
 
@@ -525,7 +529,7 @@ private fun RenderGitIssueEvent(
         GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
 
         if (!makeItShort) {
-            GitIssueStatusActions(note, accountViewModel)
+            GitStatusActions(note, accountViewModel)
         }
     }
 }
@@ -656,6 +660,11 @@ private fun RenderGitPullRequestEvent(
         Spacer(modifier = HalfDoubleVertSpacer)
 
         GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+
+        if (!makeItShort) {
+            GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel)
+            GitStatusActions(note, accountViewModel)
+        }
     }
 }
 

@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ButtonDefaults
@@ -44,80 +44,103 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 
+private enum class StatusTarget { OPEN, CLOSED, APPLIED }
+
 /**
- * Open / Close controls for a git issue. Visible only to the people NIP-34 lets
- * moderate the thread: the issue author and the repository owner / maintainers.
- * Publishing toggles the issue between [GitStatusOpenEvent] and
- * [GitStatusClosedEvent]; [GitStatusIndex] then reflects the change everywhere.
+ * NIP-34 status controls for an issue, patch or pull request. Visible only to the
+ * people allowed to moderate the thread — the item's author and the repository
+ * owner / maintainers. Patches and PRs additionally offer "Mark merged"
+ * ([GitStatusAppliedEvent]); everything can be closed/reopened. [GitStatusIndex]
+ * reflects the published status everywhere.
  */
 @Composable
-fun GitIssueStatusActions(
-    issueNote: Note,
+fun GitStatusActions(
+    note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    val event = issueNote.event as? GitIssueEvent ?: return
+    val event = note.event ?: return
+    val repoAddress = repositoryAddressOf(event) ?: return
+    val isPatchOrPr = event is GitPatchEvent || event is GitPullRequestEvent
 
-    val canModerate = remember(event, issueNote) { canModerate(event, issueNote, accountViewModel) }
+    val canModerate = remember(event, note) { canModerate(repoAddress, note, accountViewModel) }
     if (!canModerate) return
 
     LaunchedEffect(Unit) { GitStatusIndex.startIfNeeded() }
     val index by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
-    if (index == null) return // wait for the initial scan
-    val isClosed = GitStatusIndex.isClosedOrResolved(issueNote.idHex)
+    if (index == null) return
+    val current = index?.get(note.idHex)
+    val closedOrApplied = current is GitStatusClosedEvent || current is GitStatusAppliedEvent
 
-    Row(
+    FlowRow(
         modifier = Modifier.padding(top = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (isClosed) {
-            FilledTonalButton(onClick = { sendIssueStatus(accountViewModel, issueNote, close = false) }) {
+        if (closedOrApplied) {
+            FilledTonalButton(onClick = { sendStatus(accountViewModel, note, StatusTarget.OPEN) }) {
                 Icon(MaterialSymbols.RadioButtonChecked, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text(stringRes(R.string.git_issue_reopen), modifier = Modifier.padding(start = 6.dp))
+                Text(stringRes(R.string.git_status_reopen), modifier = Modifier.padding(start = 6.dp))
             }
         } else {
+            if (isPatchOrPr) {
+                FilledTonalButton(onClick = { sendStatus(accountViewModel, note, StatusTarget.APPLIED) }) {
+                    Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringRes(R.string.git_status_mark_merged), modifier = Modifier.padding(start = 6.dp))
+                }
+            }
             OutlinedButton(
-                onClick = { sendIssueStatus(accountViewModel, issueNote, close = true) },
+                onClick = { sendStatus(accountViewModel, note, StatusTarget.CLOSED) },
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
             ) {
                 Icon(MaterialSymbols.Cancel, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text(stringRes(R.string.git_issue_close), modifier = Modifier.padding(start = 6.dp))
+                Text(stringRes(R.string.git_status_close), modifier = Modifier.padding(start = 6.dp))
             }
         }
     }
 }
 
+private fun repositoryAddressOf(event: Event): Address? =
+    when (event) {
+        is GitIssueEvent -> event.repositoryAddress()
+        is GitPatchEvent -> event.repositoryAddress()
+        is GitPullRequestEvent -> event.repositoryAddress()
+        else -> null
+    }
+
 private fun canModerate(
-    event: GitIssueEvent,
-    issueNote: Note,
+    repoAddress: Address,
+    note: Note,
     accountViewModel: AccountViewModel,
 ): Boolean {
     val myHex = accountViewModel.account.signer.pubKey
-    if (accountViewModel.isLoggedUser(issueNote.author)) return true
-    val ownerHex = event.repositoryAddress()?.pubKeyHex
-    if (myHex == ownerHex) return true
-    // Include extra maintainers when the repository event is already in cache.
-    val repoEvent =
-        event.repositoryAddress()?.let { LocalCache.getAddressableNoteIfExists(it)?.event as? GitRepositoryEvent }
+    if (accountViewModel.isLoggedUser(note.author)) return true
+    if (myHex == repoAddress.pubKeyHex) return true
+    val repoEvent = LocalCache.getAddressableNoteIfExists(repoAddress)?.event as? GitRepositoryEvent
     return repoEvent?.maintainers()?.contains(myHex) == true
 }
 
-private fun sendIssueStatus(
+private fun sendStatus(
     accountViewModel: AccountViewModel,
-    issueNote: Note,
-    close: Boolean,
+    note: Note,
+    target: StatusTarget,
 ) {
-    val target = issueNote.toEventHint<GitIssueEvent>() ?: return
+    val hint = note.toEventHint<Event>() ?: return
     accountViewModel.launchSigner {
         val template =
-            if (close) {
-                GitStatusClosedEvent.build("", target)
-            } else {
-                GitStatusOpenEvent.build("", target)
+            when (target) {
+                StatusTarget.OPEN -> GitStatusOpenEvent.build("", hint)
+                StatusTarget.CLOSED -> GitStatusClosedEvent.build("", hint)
+                StatusTarget.APPLIED -> GitStatusAppliedEvent.build("", hint)
             }
         val signed = accountViewModel.account.signer.sign(template)
         accountViewModel.account.sendAutomatic(signed)
