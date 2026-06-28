@@ -102,7 +102,7 @@ class RelayAuthenticatorTimeoutTest {
             RelayAuthenticator(
                 client = client,
                 scope = scope,
-                signWithAllLoggedInUsers = {
+                signWithAllLoggedInUsers = { _, _ ->
                     throw SignerExceptions.TimedOutException("User didn't accept or reject in time.")
                 },
             )
@@ -130,7 +130,7 @@ class RelayAuthenticatorTimeoutTest {
             RelayAuthenticator(
                 client = client,
                 scope = scope,
-                signWithAllLoggedInUsers = { template ->
+                signWithAllLoggedInUsers = { _, _ ->
                     listOf(RelayAuthEvent.create(relay.url, "challenge-123", signer))
                 },
             )

@@ -78,7 +78,7 @@ fun NappletsTopBar(
             }
         },
         actions = {
-            IconButton(onClick = { nav.nav(Route.NappletPermissions) }) {
+            IconButton(onClick = { nav.nav(Route.ConnectedApps) }) {
                 Icon(MaterialSymbols.Tune, contentDescription = stringResource(R.string.napplet_manage_permissions))
             }
             IconButton(onClick = { nav.nav(Route.Search) }) {

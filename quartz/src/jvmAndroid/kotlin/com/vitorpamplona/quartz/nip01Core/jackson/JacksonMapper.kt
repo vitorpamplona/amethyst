@@ -168,6 +168,8 @@ class JacksonMapper {
                     ),
                 )
 
+        fun toJsonPretty(template: EventTemplate<*>): String = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(template)
+
         fun toJson(event: ArrayNode): String = mapper.writeValueAsString(event)
 
         fun toJson(event: ObjectNode?): String = mapper.writeValueAsString(event)

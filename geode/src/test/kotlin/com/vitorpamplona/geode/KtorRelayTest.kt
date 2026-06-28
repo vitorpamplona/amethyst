@@ -246,7 +246,7 @@ class KtorRelayTest {
                     com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator(
                         client = client,
                         scope = scope,
-                    ) { template ->
+                    ) { _, template ->
                         listOf(signer.sign(template))
                     }
                 try {

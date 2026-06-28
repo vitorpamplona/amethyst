@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListR
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -267,6 +268,7 @@ class AccountSettings(
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
     var callMaxBitrateBps: Int = 1_500_000,
     val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.IF_IN_MY_LIST),
 ) : EphemeralChatRepository,
     PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
@@ -1473,6 +1475,13 @@ class AccountSettings(
     fun changeCallsEnabled(enabled: Boolean) {
         if (callsEnabled.value != enabled) {
             callsEnabled.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultRelayAuthPolicy(policy: RelayAuthPolicy) {
+        if (defaultRelayAuthPolicy.value != policy) {
+            defaultRelayAuthPolicy.tryEmit(policy)
             saveAccountSettings()
         }
     }

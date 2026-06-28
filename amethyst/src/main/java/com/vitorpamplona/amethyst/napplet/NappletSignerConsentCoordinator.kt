@@ -22,51 +22,53 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
+import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
+import com.vitorpamplona.amethyst.commons.napplet.signers.SignerOpGrant
 import kotlinx.coroutines.CompletableDeferred
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/** Everything the consent dialog needs to describe what an applet is asking permission to do. */
-data class NappletConsentInfo(
+/** Everything the per-operation consent dialog needs to render. */
+data class NappletSignerConsentInfo(
     val appletTitle: String,
     val coordinate: String,
-    val capabilityLabel: String,
+    val op: NostrSignerOp,
     val operationSummary: String,
-    /** Whether a persistent "Always allow" choice may be offered (false for per-use caps like payments). */
-    val allowAlways: Boolean,
+    /** Short excerpt shown in the dialog body (≤ 160 chars). */
+    val contentPreview: String,
+    /**
+     * Full raw content for the "See more" toggle — event JSON for sign/encrypt operations,
+     * decrypted plaintext for decrypt (Amethyst decrypts first, then asks permission to expose).
+     */
+    val rawData: String = "",
     val iconUrl: String? = null,
 )
 
 /**
- * Bridges the main-process broker to the consent UI. The broker suspends in
- * [requestConsent]; this launches [NappletConsentActivity], holds the pending decision keyed
- * by a one-time token, and resolves it when the activity reports the user's choice.
- *
- * A dismissed dialog resolves to [GrantState.ASK] — i.e. "not authorized, ask again next
- * time" — so closing the prompt never silently grants nor permanently blocks.
+ * Bridges the broker to the per-operation signer consent UI.
+ * A dismissed dialog resolves to [SignerOpGrant.DenyOnce] — fails closed.
  */
-object NappletConsentCoordinator {
+object NappletSignerConsentCoordinator {
     private class Pending(
-        val info: NappletConsentInfo,
-        val deferred: CompletableDeferred<GrantState>,
+        val info: NappletSignerConsentInfo,
+        val deferred: CompletableDeferred<SignerOpGrant>,
     )
 
     private val pending = ConcurrentHashMap<String, Pending>()
 
     suspend fun requestConsent(
         context: Context,
-        info: NappletConsentInfo,
-    ): GrantState {
+        info: NappletSignerConsentInfo,
+    ): SignerOpGrant {
         val token = UUID.randomUUID().toString()
-        val deferred = CompletableDeferred<GrantState>()
+        val deferred = CompletableDeferred<SignerOpGrant>()
         pending[token] = Pending(info, deferred)
 
-        val intent =
-            Intent(context, NappletConsentActivity::class.java)
+        context.startActivity(
+            Intent(context, NappletSignerConsentActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .putExtra(EXTRA_TOKEN, token)
-        context.startActivity(intent)
+                .putExtra(EXTRA_TOKEN, token),
+        )
 
         return try {
             deferred.await()
@@ -75,21 +77,18 @@ object NappletConsentCoordinator {
         }
     }
 
-    /** Called by [NappletConsentActivity] to render the prompt. */
-    fun infoFor(token: String): NappletConsentInfo? = pending[token]?.info
+    fun infoFor(token: String): NappletSignerConsentInfo? = pending[token]?.info
 
-    /** Called by [NappletConsentActivity] with the user's decision. */
     fun complete(
         token: String,
-        grant: GrantState,
+        grant: SignerOpGrant,
     ) {
         pending[token]?.deferred?.complete(grant)
     }
 
-    /** Called when the dialog is dismissed without a choice — fails closed (no grant). */
     fun cancel(token: String) {
-        pending[token]?.deferred?.complete(GrantState.ASK)
+        pending[token]?.deferred?.complete(SignerOpGrant.DenyOnce)
     }
 
-    const val EXTRA_TOKEN = "napplet_consent_token"
+    const val EXTRA_TOKEN = "napplet_signer_consent_token"
 }

@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
+import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 
@@ -41,13 +43,21 @@ class NappletConsentSummary(
         capability: NappletCapability,
         request: NappletRequest,
     ): NappletConsentInfo {
-        val title = identity.identifier.ifBlank { context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8)) }
+        val untitled = context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8))
+        val (title, iconUrl) =
+            if (identity.authorPubKey == "browser") {
+                val host = OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
+                host to BrowserIconRegistry.iconModelFor(host)
+            } else {
+                resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
+            }
         return NappletConsentInfo(
             appletTitle = title,
             coordinate = identity.coordinate,
             capabilityLabel = context.getString(capability.labelRes()),
             operationSummary = summaryFor(request),
             allowAlways = capability.canGrantAlways,
+            iconUrl = iconUrl,
         )
     }
 
