@@ -184,6 +184,12 @@ private fun GitRepositoryScreen(
     }
 
     val pagerState = rememberForeverPagerState(note.idHex + "GitRepoScreenPagerState") { 5 }
+    var showSettings by rememberSaveable(note.idHex) { mutableStateOf(false) }
+
+    val currentEventForSettings = event
+    if (showSettings && currentEventForSettings != null) {
+        GitRepoSettingsDialog(currentEventForSettings, accountViewModel) { showSettings = false }
+    }
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -196,6 +202,13 @@ private fun GitRepositoryScreen(
                     navigationIcon = {
                         Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                        }
+                    },
+                    actions = {
+                        if (event != null && accountViewModel.isLoggedUser(event?.pubKey)) {
+                            IconButton(onClick = { showSettings = true }) {
+                                Icon(MaterialSymbols.Edit, contentDescription = stringRes(R.string.git_repo_settings_title))
+                            }
                         }
                     },
                 )

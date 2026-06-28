@@ -2616,6 +2616,13 @@
     <string name="git_issue_close">Close issue</string>
     <string name="git_issue_reopen">Reopen</string>
     <string name="git_pr_revised">Revised</string>
+    <string name="git_repo_settings_title">Edit repository</string>
+    <string name="git_repo_settings_name">Name</string>
+    <string name="git_repo_settings_description">Description</string>
+    <string name="git_repo_settings_clone_urls">Clone URLs (one per line)</string>
+    <string name="git_repo_settings_web_urls">Web URLs (one per line)</string>
+    <string name="git_repo_settings_topics">Topics (comma separated)</string>
+    <string name="git_repo_settings_save">Save</string>
     <string name="git_repositories">Git Repositories</string>
     <string name="nsite_title">nSite: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
