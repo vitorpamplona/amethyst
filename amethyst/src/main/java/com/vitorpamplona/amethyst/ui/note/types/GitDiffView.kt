@@ -47,6 +47,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -60,10 +62,12 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code.CodeHighlighter
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip34Git.patch.CharSpan
 import com.vitorpamplona.quartz.nip34Git.patch.GitDiffFile
 import com.vitorpamplona.quartz.nip34Git.patch.GitDiffLine
 import com.vitorpamplona.quartz.nip34Git.patch.GitDiffLineType
 import com.vitorpamplona.quartz.nip34Git.patch.GitFileChange
+import com.vitorpamplona.quartz.nip34Git.patch.IntralineDiff
 import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
 import dev.snipme.highlights.model.SyntaxLanguage
 
@@ -177,8 +181,9 @@ private fun DiffFileCard(
                 Column(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
                     file.hunks.forEach { hunk ->
                         HunkHeaderRow(hunk.header)
-                        hunk.lines.forEach { line ->
-                            DiffLineRow(line, gutterWidth, language.takeIf { highlightEnabled }, darkMode)
+                        val emphasis = remember(hunk) { IntralineDiff.emphasis(hunk.lines) }
+                        hunk.lines.forEachIndexed { index, line ->
+                            DiffLineRow(line, gutterWidth, language.takeIf { highlightEnabled }, darkMode, emphasis[index])
                         }
                     }
                 }
@@ -211,11 +216,18 @@ private fun DiffLineRow(
     gutterWidth: Dp,
     language: SyntaxLanguage?,
     darkMode: Boolean,
+    emphasis: CharSpan?,
 ) {
     val background =
         when (line.type) {
             GitDiffLineType.ADD -> AddColor.copy(alpha = 0.12f)
             GitDiffLineType.DELETE -> DeleteColor.copy(alpha = 0.12f)
+            GitDiffLineType.CONTEXT -> Color.Transparent
+        }
+    val emphasisColor =
+        when (line.type) {
+            GitDiffLineType.ADD -> AddColor.copy(alpha = 0.30f)
+            GitDiffLineType.DELETE -> DeleteColor.copy(alpha = 0.30f)
             GitDiffLineType.CONTEXT -> Color.Transparent
         }
     val marker =
@@ -233,11 +245,24 @@ private fun DiffLineRow(
     val numberColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
 
     val content =
-        remember(line.content, language, darkMode) {
-            if (language != null && line.content.isNotEmpty()) {
-                CodeHighlighter.highlight(line.content, language, darkMode)
+        remember(line.content, language, darkMode, emphasis) {
+            val base =
+                if (language != null && line.content.isNotEmpty()) {
+                    CodeHighlighter.highlight(line.content, language, darkMode)
+                } else {
+                    AnnotatedString(line.content)
+                }
+            if (emphasis != null && !emphasis.isEmpty) {
+                buildAnnotatedString {
+                    append(base)
+                    addStyle(
+                        SpanStyle(background = emphasisColor),
+                        emphasis.start.coerceIn(0, line.content.length),
+                        emphasis.end.coerceIn(0, line.content.length),
+                    )
+                }
             } else {
-                AnnotatedString(line.content)
+                base
             }
         }
 
