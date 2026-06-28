@@ -2589,6 +2589,11 @@
     <string name="git_repo_empty_folder">This folder is empty.</string>
     <string name="git_repo_root">root</string>
     <string name="git_repo_retry">Retry</string>
+    <string name="git_repo_default_branch">default</string>
+    <string name="git_repo_branches">Branches</string>
+    <string name="git_repo_tags">Tags</string>
+    <string name="git_repo_search_files">Search files…</string>
+    <string name="git_repo_no_search_results">No matching files.</string>
     <string name="git_repo_copy_file">Copy file contents</string>
     <string name="git_repo_plain_text">Text</string>
     <plurals name="git_repo_item_count">
@@ -2606,6 +2611,8 @@
     <string name="git_new_issue_body">Description</string>
     <string name="git_new_issue_create">Create</string>
     <string name="git_new_issue_cancel">Cancel</string>
+    <string name="git_new_issue_labels">Labels</string>
+    <string name="git_new_issue_labels_hint">bug, enhancement…</string>
     <string name="git_issue_close">Close issue</string>
     <string name="git_issue_reopen">Reopen</string>
     <string name="git_pr_revised">Revised</string>

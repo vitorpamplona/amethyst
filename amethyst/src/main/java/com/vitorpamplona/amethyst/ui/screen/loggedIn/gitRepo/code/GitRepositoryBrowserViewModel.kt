@@ -61,6 +61,10 @@ class GitRepositoryBrowserViewModel(
     private var cloneUrls: List<String> = emptyList()
     private var started = false
 
+    /** The branch/tag currently displayed (null = the server's default branch). */
+    var currentRef: String? = null
+        private set
+
     /**
      * Loads the repository once, using the announcement's clone URLs. Safe to call
      * on every recomposition; only the first call (after the event has arrived) runs.
@@ -69,6 +73,13 @@ class GitRepositoryBrowserViewModel(
         if (started) return
         started = true
         this.cloneUrls = cloneUrls
+        reload()
+    }
+
+    /** Reloads the tree at [ref] (a branch or tag name; null = default branch). */
+    fun switchRef(ref: String?) {
+        if (ref == currentRef) return
+        currentRef = ref
         reload()
     }
 
@@ -83,7 +94,7 @@ class GitRepositoryBrowserViewModel(
             val errors = StringBuilder()
             for (url in candidates) {
                 try {
-                    val snapshot = client.open(url)
+                    val snapshot = client.open(url, currentRef)
                     _state.value = GitBrowseState.Loaded(snapshot)
                     return@launch
                 } catch (e: CancellationException) {

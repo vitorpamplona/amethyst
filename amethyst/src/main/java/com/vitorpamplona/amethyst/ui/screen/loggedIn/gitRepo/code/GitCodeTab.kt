@@ -41,6 +41,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -128,12 +131,46 @@ private fun CodeBrowser(
         return
     }
 
-    BackHandler(enabled = path.isNotEmpty()) { pathString = path.dropLast(1).joinToString("/") }
+    var query by rememberSaveable(snapshot.headCommit) { mutableStateOf("") }
+    val searching = query.isNotBlank()
+
+    BackHandler(enabled = searching || path.isNotEmpty()) {
+        if (searching) query = "" else pathString = path.dropLast(1).joinToString("/")
+    }
 
     val entries = remember(snapshot, pathString) { snapshot.entriesAt(path).orEmpty() }
 
     Column(Modifier.fillMaxSize().padding(scaffoldPaddingTop)) {
-        RepoInfoBar(branch = snapshot.branch, headCommit = snapshot.headCommit, entryCount = entries.size)
+        RepoInfoBar(
+            branch = snapshot.branch,
+            headCommit = snapshot.headCommit,
+            entryCount = entries.size,
+            branches = snapshot.branches,
+            tags = snapshot.tags,
+            onSelectRef = { viewModel.switchRef(it) },
+        )
+        FileSearchField(query = query, onQueryChange = { query = it })
+        HorizontalDivider(thickness = 0.5.dp)
+
+        if (searching) {
+            val results = remember(snapshot, query) { snapshot.searchFiles(query.trim()) }
+            if (results.isEmpty()) {
+                GitMessageBox(MaterialSymbols.Search, stringRes(R.string.git_repo_no_search_results))
+            } else {
+                LazyColumn(Modifier.fillMaxSize()) {
+                    items(results, key = { it.joinToString("/") }) { result ->
+                        SearchResultRow(result) { openFilePath = result.joinToString("/") }
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 40.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                        )
+                    }
+                }
+            }
+            return@Column
+        }
+
         Breadcrumb(
             path = path,
             onNavigate = { depth -> pathString = path.take(depth).joinToString("/") },
@@ -157,6 +194,80 @@ private fun CodeBrowser(
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FileSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+) {
+    TextField(
+        value = query,
+        onValueChange = onQueryChange,
+        singleLine = true,
+        placeholder = { Text(stringRes(R.string.git_repo_search_files)) },
+        leadingIcon = { Icon(MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(MaterialSymbols.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+            }
+        },
+        colors =
+            TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+            ),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+                .clip(RoundedCornerShape(10.dp)),
+    )
+}
+
+@Composable
+private fun SearchResultRow(
+    path: List<String>,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Description,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = path.last(),
+                style = MaterialTheme.typography.bodyMedium,
+                fontFamily = FontFamily.Monospace,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (path.size > 1) {
+                Text(
+                    text = path.dropLast(1).joinToString("/"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

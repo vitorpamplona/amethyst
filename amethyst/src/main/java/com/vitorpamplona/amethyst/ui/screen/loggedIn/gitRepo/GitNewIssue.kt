@@ -58,6 +58,7 @@ fun GitNewIssueDialog(
 ) {
     var subject by rememberSaveable { mutableStateOf("") }
     var body by rememberSaveable { mutableStateOf("") }
+    var labels by rememberSaveable { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -79,13 +80,21 @@ fun GitNewIssueDialog(
                     minLines = 4,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                OutlinedTextField(
+                    value = labels,
+                    onValueChange = { labels = it },
+                    label = { Text(stringRes(R.string.git_new_issue_labels)) },
+                    placeholder = { Text(stringRes(R.string.git_new_issue_labels_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         },
         confirmButton = {
             TextButton(
                 enabled = subject.isNotBlank(),
                 onClick = {
-                    sendGitIssue(accountViewModel, repoNote, subject.trim(), body.trim())
+                    sendGitIssue(accountViewModel, repoNote, subject.trim(), body.trim(), parseLabels(labels))
                     onDismiss()
                 },
             ) {
@@ -98,15 +107,24 @@ fun GitNewIssueDialog(
     )
 }
 
+/** Splits a free-text label field on commas/whitespace, stripping any leading `#`. */
+private fun parseLabels(raw: String): List<String> =
+    raw
+        .split(',', ' ', '\n', '\t')
+        .map { it.trim().removePrefix("#") }
+        .filter { it.isNotEmpty() }
+        .distinct()
+
 private fun sendGitIssue(
     accountViewModel: AccountViewModel,
     repoNote: AddressableNote,
     subject: String,
     body: String,
+    labels: List<String>,
 ) {
     val repositoryHint = repoNote.toEventHint<GitRepositoryEvent>() ?: return
     accountViewModel.launchSigner {
-        val template = GitIssueEvent.build(subject, body, repositoryHint, emptyList(), emptyList())
+        val template = GitIssueEvent.build(subject, body, repositoryHint, emptyList(), labels)
         val signed = accountViewModel.account.signer.sign(template)
         accountViewModel.account.sendAutomatic(signed)
     }

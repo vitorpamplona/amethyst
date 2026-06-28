@@ -24,6 +24,7 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,6 +54,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -105,14 +108,16 @@ fun GitFileViewer(
         else -> {
             val data = bytes.getOrThrow()
             when {
+                isMarkdownFile(entry.name) ->
+                    MarkdownFile(data.decodeToString(), accountViewModel, nav, modifier)
+                isImageFile(entry.name) ->
+                    ImageFile(data, entry.name, modifier)
                 isProbablyBinary(data) ->
                     GitMessageBox(
                         symbol = MaterialSymbols.Description,
                         text = stringRes(R.string.git_repo_binary_file, humanSize(data.size)),
                         modifier = modifier,
                     )
-                isMarkdownFile(entry.name) ->
-                    MarkdownFile(data.decodeToString(), accountViewModel, nav, modifier)
                 else ->
                     HighlightedCode(data.decodeToString(), entry.name, modifier)
             }
@@ -300,9 +305,34 @@ private fun prettyLanguage(enumName: String): String =
         else -> enumName.lowercase().replaceFirstChar { it.uppercase() }
     }
 
+@Composable
+private fun ImageFile(
+    bytes: ByteArray,
+    name: String,
+    modifier: Modifier,
+) {
+    val context = LocalContext.current
+    val request = remember(bytes) { ImageRequest.Builder(context).data(bytes).build() }
+    Box(
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        AsyncImage(
+            model = request,
+            contentDescription = name,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
 private fun isMarkdownFile(name: String): Boolean {
     val ext = name.substringAfterLast('.', "").lowercase()
     return ext == "md" || ext == "markdown" || ext == "mdown" || ext == "mkd"
+}
+
+private fun isImageFile(name: String): Boolean {
+    val ext = name.substringAfterLast('.', "").lowercase()
+    return ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "gif" || ext == "webp" || ext == "bmp"
 }
 
 /** Heuristic: a NUL byte in the first chunk means the content isn't text. */

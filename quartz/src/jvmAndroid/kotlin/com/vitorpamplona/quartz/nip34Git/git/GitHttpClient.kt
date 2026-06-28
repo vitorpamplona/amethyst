@@ -55,7 +55,10 @@ class GitHttpClient(
 
         val refs = transport.lsRefs(cloneUrl, caps)
         val head = selectHead(refs, ref) ?: throw GitHttpException("could not resolve a branch to browse")
-        val branch = head.symrefTarget?.removePrefix("refs/heads/") ?: ref?.removePrefix("refs/heads/")
+        val branch = head.symrefTarget?.removePrefix("refs/heads/") ?: ref?.removePrefix("refs/heads/") ?: ref
+
+        val branches = refs.mapNotNull { it.name.removePrefix("refs/heads/").takeIf { _ -> it.name.startsWith("refs/heads/") } }.distinct().sorted()
+        val tags = refs.mapNotNull { it.name.removePrefix("refs/tags/").takeIf { _ -> it.name.startsWith("refs/tags/") } }.distinct().sorted()
 
         val pack =
             transport.fetchPack(
@@ -89,6 +92,8 @@ class GitHttpClient(
             cloneUrl = cloneUrl,
             headCommit = head.oid,
             branch = branch,
+            branches = branches,
+            tags = tags,
             rootTreeOid = rootTreeOid,
             trees = trees,
             blobs = blobs,
@@ -121,6 +126,8 @@ class GitRepoSnapshot(
     val cloneUrl: String,
     val headCommit: String,
     val branch: String?,
+    val branches: List<String> = emptyList(),
+    val tags: List<String> = emptyList(),
     private val rootTreeOid: String,
     private val trees: Map<String, List<GitTreeEntry>>,
     blobs: Map<String, ByteArray>,
@@ -151,6 +158,39 @@ class GitRepoSnapshot(
         if (path.isEmpty()) return null
         val parent = entriesAt(path.dropLast(1)) ?: return null
         return parent.firstOrNull { it.name == path.last() }
+    }
+
+    /**
+     * Returns up to [limit] full file paths whose file name contains [query]
+     * (case-insensitive), searching the whole tree. Folders are walked but not
+     * matched. The tree is fully present (blob-less), so this is offline.
+     */
+    fun searchFiles(
+        query: String,
+        limit: Int = 100,
+    ): List<List<String>> {
+        if (query.isBlank()) return emptyList()
+        val needle = query.lowercase()
+        val result = ArrayList<List<String>>()
+
+        fun walk(
+            treeOid: String,
+            prefix: List<String>,
+        ) {
+            if (result.size >= limit) return
+            val entries = trees[treeOid] ?: return
+            for (entry in entries) {
+                if (result.size >= limit) return
+                val path = prefix + entry.name
+                if (entry.isFolder) {
+                    walk(entry.oid, path)
+                } else if (entry.name.lowercase().contains(needle)) {
+                    result.add(path)
+                }
+            }
+        }
+        walk(rootTreeOid, emptyList())
+        return result
     }
 
     fun hasBlob(oid: String): Boolean = blobs.containsKey(oid)

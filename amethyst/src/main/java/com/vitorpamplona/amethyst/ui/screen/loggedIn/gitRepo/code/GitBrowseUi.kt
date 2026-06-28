@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,10 +35,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -123,14 +130,17 @@ fun GitMessageBox(
 }
 
 /**
- * Compact bar identifying the snapshot: the branch and short commit the file
- * tree was loaded from, plus the entry count of the current directory.
+ * Compact bar identifying the snapshot: a branch/tag picker, the short commit the
+ * file tree was loaded from, and the entry count of the current directory.
  */
 @Composable
 fun RepoInfoBar(
     branch: String?,
     headCommit: String,
     entryCount: Int,
+    branches: List<String> = emptyList(),
+    tags: List<String> = emptyList(),
+    onSelectRef: ((String?) -> Unit)? = null,
 ) {
     Row(
         modifier =
@@ -141,7 +151,9 @@ fun RepoInfoBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (branch != null) {
+        if (onSelectRef != null && (branches.size + tags.size) > 1) {
+            BranchSelector(branch, branches, tags, onSelectRef)
+        } else if (branch != null) {
             InfoChip(symbol = MaterialSymbols.AltRoute, label = branch)
         }
         InfoChip(symbol = MaterialSymbols.Commit, label = headCommit.take(7), monospace = true)
@@ -151,6 +163,90 @@ fun RepoInfoBar(
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
         )
     }
+}
+
+@Composable
+private fun BranchSelector(
+    current: String?,
+    branches: List<String>,
+    tags: List<String>,
+    onSelectRef: (String?) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .clickable { expanded = true }
+                    .padding(start = 8.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Icon(MaterialSymbols.AltRoute, contentDescription = null, modifier = Modifier.size(15.dp), tint = MaterialTheme.colorScheme.primary)
+            Text(
+                text = current ?: stringRes(R.string.git_repo_default_branch),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
+            Icon(MaterialSymbols.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            if (branches.isNotEmpty()) {
+                SectionHeader(stringRes(R.string.git_repo_branches))
+                branches.forEach { name ->
+                    RefMenuItem(name, MaterialSymbols.AltRoute, selected = name == current) {
+                        expanded = false
+                        if (name != current) onSelectRef(name)
+                    }
+                }
+            }
+            if (tags.isNotEmpty()) {
+                SectionHeader(stringRes(R.string.git_repo_tags))
+                tags.forEach { name ->
+                    RefMenuItem(name, MaterialSymbols.Tag, selected = name == current) {
+                        expanded = false
+                        if (name != current) onSelectRef(name)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+    )
+}
+
+@Composable
+private fun RefMenuItem(
+    name: String,
+    symbol: MaterialSymbol,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    DropdownMenuItem(
+        text = {
+            Text(
+                name,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
+        },
+        leadingIcon = { Icon(symbol, contentDescription = null, modifier = Modifier.size(16.dp)) },
+        onClick = onClick,
+    )
 }
 
 @Composable
