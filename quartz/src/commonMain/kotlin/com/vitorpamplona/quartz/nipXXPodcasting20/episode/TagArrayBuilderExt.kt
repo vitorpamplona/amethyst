@@ -33,8 +33,10 @@ import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.PubDateTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.SeasonTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.TitleTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.TranscriptTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.ValueTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.VideoTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
+import com.vitorpamplona.quartz.podcasts.PodcastValue
 
 fun TagArrayBuilder<Podcasting20EpisodeEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
 
@@ -53,6 +55,8 @@ fun TagArrayBuilder<Podcasting20EpisodeEvent>.season(season: Int) = addUnique(Se
 fun TagArrayBuilder<Podcasting20EpisodeEvent>.transcript(url: String) = addUnique(TranscriptTag.assemble(url))
 
 fun TagArrayBuilder<Podcasting20EpisodeEvent>.chapters(url: String) = addUnique(ChaptersTag.assemble(url))
+
+fun TagArrayBuilder<Podcasting20EpisodeEvent>.value(value: PodcastValue) = addUnique(ValueTag.assemble(value))
 
 fun TagArrayBuilder<Podcasting20EpisodeEvent>.pubdate(rfc2822Date: String) = addUnique(PubDateTag.assemble(rfc2822Date))
 

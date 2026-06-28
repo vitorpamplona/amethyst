@@ -42,9 +42,11 @@ import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.PubDateTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.SeasonTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.TitleTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.TranscriptTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.ValueTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.VideoTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
+import com.vitorpamplona.quartz.podcasts.PodcastValue
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -88,6 +90,8 @@ class Podcasting20EpisodeEvent(
 
     fun chaptersUrl() = tags.firstNotNullOfOrNull(ChaptersTag::parse)
 
+    fun value() = tags.firstNotNullOfOrNull(ValueTag::parse)
+
     fun durationInSeconds() = tags.firstNotNullOfOrNull(DurationTag::parse)
 
     /** RFC2822 publication date string, kept verbatim for RSS generation. */
@@ -122,6 +126,8 @@ class Podcasting20EpisodeEvent(
 
     override fun episodeChaptersUrl() = chaptersUrl()
 
+    override fun episodeValue() = value()
+
     companion object {
         const val KIND = 30054
 
@@ -139,6 +145,7 @@ class Podcasting20EpisodeEvent(
             season: Int? = null,
             transcriptUrl: String? = null,
             chaptersUrl: String? = null,
+            value: PodcastValue? = null,
             topics: List<String> = emptyList(),
             markdownContent: String = "",
             createdAt: Long = TimeUtils.now(),
@@ -158,6 +165,7 @@ class Podcasting20EpisodeEvent(
             season?.let { season(it) }
             transcriptUrl?.let { transcript(it) }
             chaptersUrl?.let { chapters(it) }
+            value?.let { value(it) }
             if (topics.isNotEmpty()) hashtags(topics)
 
             initializer()

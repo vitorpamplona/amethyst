@@ -56,7 +56,13 @@ class Podcasting20PodcastMetadataTest {
           "copyright": "© 2025 John Doe",
           "funding": ["https://example.com/donate", "https://example.com/tip"],
           "locked": false,
-          "value": { "amount": 100000, "currency": "sat" },
+          "value": {
+            "amount": 100000,
+            "currency": "sat",
+            "recipients": [
+              { "name": "Host", "type": "lnaddress", "address": "host@example.com", "split": 100 }
+            ]
+          },
           "type": "episodic",
           "complete": true,
           "guid": "abc-123"
@@ -89,6 +95,14 @@ class Podcasting20PodcastMetadataTest {
         assertEquals("episodic", show.type())
         assertEquals("abc-123", show.guid())
         assertFalse(show.isLocked())
+
+        val value = show.showValue()
+        assertTrue(value != null)
+        assertEquals("sat", value.currency)
+        assertEquals(1, value.recipients.size)
+        assertEquals("Host", value.recipients[0].name)
+        assertEquals("host@example.com", value.recipients[0].address)
+        assertEquals(100, value.recipients[0].split)
     }
 
     @Test

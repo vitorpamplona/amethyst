@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEve
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.edit
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
+import com.vitorpamplona.quartz.podcasts.PodcastValue
+import com.vitorpamplona.quartz.podcasts.PodcastValueRecipient
 import com.vitorpamplona.quartz.utils.DeterministicSigner
 import com.vitorpamplona.quartz.utils.nsecToKeyPair
 import kotlin.test.Test
@@ -96,6 +98,44 @@ class Podcasting20EpisodeEventTest {
         assertNull(event.season())
         assertNull(event.transcriptUrl())
         assertNull(event.chaptersUrl())
+        assertNull(event.value())
+    }
+
+    @Test
+    fun `value-for-value split round-trips through the value tag and the interface`() {
+        val value =
+            PodcastValue(
+                enabled = true,
+                amount = 1000,
+                currency = "sat",
+                recipients =
+                    listOf(
+                        PodcastValueRecipient(name = "Host", type = "lnaddress", address = "host@ln.tips", split = 90),
+                        PodcastValueRecipient(name = "Producer", type = "node", address = "02abcd", split = 10, fee = true),
+                    ),
+            )
+        val episode: PodcastEpisode =
+            signer.sign<Podcasting20EpisodeEvent>(
+                Podcasting20EpisodeEvent.build(
+                    dTag = "ep-v4v",
+                    title = "V4V",
+                    audios = listOf(PodcastAudio("https://x/a.mp3")),
+                    pubdate = "Thu, 04 Nov 2023 12:00:00 GMT",
+                    value = value,
+                ),
+            )
+
+        val parsed = episode.episodeValue()
+        assertTrue(parsed != null)
+        assertEquals(true, parsed.enabled)
+        assertEquals("sat", parsed.currency)
+        assertEquals(100, parsed.totalSplit())
+        assertEquals(2, parsed.recipients.size)
+        assertEquals("Host", parsed.recipients[0].name)
+        assertEquals("lnaddress", parsed.recipients[0].type)
+        assertEquals("host@ln.tips", parsed.recipients[0].address)
+        assertEquals(90, parsed.recipients[0].split)
+        assertEquals(true, parsed.recipients[1].fee)
     }
 
     @Test

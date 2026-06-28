@@ -81,6 +81,7 @@ fun RenderPodcastMetadata(
     val isExplicit = remember(noteEvent) { show.showIsExplicit() }
     val isComplete = remember(noteEvent) { show.showIsComplete() }
     val copyright = remember(noteEvent) { show.showCopyright() }
+    val value = remember(noteEvent) { show.showValue() }
     // In both drafts the show's author pubkey IS the podcast id used to open its dedicated
     // screen with the full episode list (episodes are authored by the same key).
     val podcastPubkey = remember(noteEvent) { noteEvent.pubKey }
@@ -167,6 +168,8 @@ fun RenderPodcastMetadata(
                     nav = nav,
                 )
             }
+
+            value?.takeIf { !makeItShort }?.let { PodcastValueSplits(it) }
 
             if (fundingUrls.isNotEmpty() && !makeItShort) {
                 val uriHandler = LocalUriHandler.current

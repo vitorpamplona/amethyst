@@ -485,11 +485,12 @@ private fun printUsage() {
         |      [--description D] [--author A] [--image URL] [--language L]
         |      [--categories A,B] [--funding URL,URL] [--website URL]
         |      [--copyright C] [--type episodic|serial] [--explicit] [--complete]
+        |      [--value-json JSON]                       value-for-value split block
         |  podcast20 episode --title T --audio URL[,URL]  publish a kind:30054 episode
         |      [--d ID] [--audio-type MIME] [--description D] [--image URL]
         |      [--duration SECS] [--video URL] [--video-type MIME]
         |      [--episode N] [--season N] [--transcript URL] [--chapters URL]
-        |      [--topic A,B] [--content MARKDOWN] [--pubdate RFC2822]
+        |      [--value-json JSON] [--topic A,B] [--content MARKDOWN] [--pubdate RFC2822]
         |  podcast20 trailer --title T --url URL          publish a kind:30055 trailer
         |      [--d ID] [--type MIME] [--length BYTES] [--season N] [--pubdate RFC2822]
         |  podcast20 list [USER] [--limit N]            list a creator's metadata + episodes + trailers

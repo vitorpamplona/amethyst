@@ -84,6 +84,7 @@ fun RenderPodcastEpisode(
     val episodeNumber = remember(noteEvent) { episode.episodeNumber() }
     val transcriptUrl = remember(noteEvent) { episode.episodeTranscriptUrl() }
     val chaptersUrl = remember(noteEvent) { episode.episodeChaptersUrl() }
+    val value = remember(noteEvent) { episode.episodeValue() }
     // Suppress the markdown block if blank — title + description already describe a short
     // episode. Otherwise hand off to RichText below.
     val markdown = remember(noteEvent) { noteEvent.content.ifBlank { null } }
@@ -176,6 +177,8 @@ fun RenderPodcastEpisode(
                     nav = nav,
                 )
             }
+
+            value?.takeIf { !makeItShort }?.let { PodcastValueSplits(it) }
 
             markdown?.takeIf { !makeItShort }?.let {
                 Spacer(Modifier.padding(top = 4.dp))

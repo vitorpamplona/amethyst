@@ -24,12 +24,14 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
+import com.vitorpamplona.quartz.podcasts.PodcastValue
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -72,6 +74,10 @@ object Podcast20Commands {
     ): Int {
         val args = Args(rest)
         val title = args.flag("title") ?: return Output.error("bad_args", "podcast20 metadata requires --title")
+        val value =
+            valueFlag(args).getOrElse {
+                return Output.error("bad_args", "podcast20 metadata --value-json is not valid JSON")
+            }
 
         val content =
             Podcasting20PodcastMetadata.Content(
@@ -90,6 +96,7 @@ object Podcast20Commands {
                 type = args.flag("type"),
                 complete = trueIfPresent(args, "complete"),
                 guid = args.flag("guid"),
+                value = value,
             )
 
         Context.open(dataDir).use { ctx ->
@@ -125,6 +132,10 @@ object Podcast20Commands {
                 ?.map { PodcastAudio(it, audioType) }
                 .orEmpty()
         if (audios.isEmpty()) return Output.error("bad_args", "podcast20 episode requires --audio URL[,URL…]")
+        val value =
+            valueFlag(args).getOrElse {
+                return Output.error("bad_args", "podcast20 episode --value-json is not valid JSON")
+            }
 
         val dTag = args.flag("d") ?: generateDTag("episode")
         val video = args.flag("video")?.let { PodcastAudio(it, args.flag("video-type")) }
@@ -145,6 +156,7 @@ object Podcast20Commands {
                     season = args.flag("season")?.toIntOrNull(),
                     transcriptUrl = args.flag("transcript"),
                     chaptersUrl = args.flag("chapters"),
+                    value = value,
                     topics = listFlag(args, "topic"),
                     markdownContent = args.flag("content", "") ?: "",
                 )
@@ -298,6 +310,15 @@ object Podcast20Commands {
         args: Args,
         name: String,
     ): Boolean? = if (args.bool(name)) true else null
+
+    /**
+     * Parses the `--value-json` value-for-value block. Success with null means the flag was absent;
+     * a failure means it was present but malformed (the caller turns that into a bad_args error).
+     */
+    private fun valueFlag(args: Args): Result<PodcastValue?> {
+        val json = args.flag("value-json") ?: return Result.success(null)
+        return runCatching { JsonMapper.fromJson<PodcastValue>(json) }
+    }
 
     private fun generateDTag(prefix: String): String = "$prefix-${System.currentTimeMillis() / 1000}-${UUID.randomUUID().toString().take(8)}"
 

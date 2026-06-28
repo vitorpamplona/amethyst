@@ -78,4 +78,10 @@ interface PodcastEpisode {
 
     /** URL of an off-event Podcasting-2.0 chapters document, if provided. */
     fun episodeChaptersUrl(): String? = null
+
+    /**
+     * The episode's value-for-value split block, if it overrides the show default. NIP-F4 has no
+     * V4V and returns null.
+     */
+    fun episodeValue(): PodcastValue? = null
 }

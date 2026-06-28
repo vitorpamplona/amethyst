@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.podcasts.PodcastShow
+import com.vitorpamplona.quartz.podcasts.PodcastValue
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.serialization.Serializable
 
@@ -63,6 +64,8 @@ class Podcasting20PodcastMetadata(
 
     override fun showCopyright() = content.copyright?.takeIf { it.isNotEmpty() }
 
+    override fun showValue() = content.value
+
     fun language() = content.language
 
     /** Contact email for the show, if provided. */
@@ -99,6 +102,7 @@ class Podcasting20PodcastMetadata(
         val type: String? = null,
         val complete: Boolean? = null,
         val guid: String? = null,
+        val value: PodcastValue? = null,
     )
 
     companion object {

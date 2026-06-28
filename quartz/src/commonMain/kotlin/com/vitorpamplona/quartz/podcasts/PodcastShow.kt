@@ -68,4 +68,7 @@ interface PodcastShow {
 
     /** Copyright line, if provided. */
     fun showCopyright(): String? = null
+
+    /** The show's default value-for-value split block, if any. NIP-F4 has no V4V and returns null. */
+    fun showValue(): PodcastValue? = null
 }
