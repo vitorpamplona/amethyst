@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import android.content.Context
+import android.media.AudioManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -75,9 +77,11 @@ private const val DEFAULT_STREAM_RATE = 10L
  * The whole point is that it must never pay while the user isn't listening, so accrual is bound
  * tightly to real playback:
  * - It lives inside the player composable, so navigating away disposes it and stops streaming.
- * - Every second it re-reads the live [MediaControllerState.controller] `isPlaying`; it only accrues
- *   when audio is actually playing and there's no playback error. The player already pauses itself
- *   on background / off-screen / focus-loss / error, so all of those stop accrual for free.
+ * - Every second it re-reads the live [MediaControllerState.controller] and only accrues when audio
+ *   is genuinely **audible**: playing, no playback error, in-app volume > 0, and system media volume
+ *   > 0. `isPlaying` alone is not enough — a muted player (the player's mute button sets volume to 0)
+ *   or a system volume of 0 keeps `isPlaying` true while the user hears nothing, and we must not
+ *   spend then. The player also pauses itself on background / off-screen / error, stopping accrual.
  * - Only whole, actually-played minutes are billed ([PodcastStreamingAccrual]); a partial minute is
  *   dropped when the session ends.
  * - The toggle is gated to an in-app wallet (NWC/CLINK debit). Streaming to an external wallet app
@@ -96,6 +100,7 @@ fun PodcastStreamingControl(
     if (payableRecipients == 0) return
 
     val context = LocalContext.current
+    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }
     val hasInAppWallet = remember { accountViewModel.account.settings.defaultPaymentSource() != null }
 
     // Deliberately plain remember (not rememberSaveable): streaming must never silently resume after
@@ -112,9 +117,18 @@ fun PodcastStreamingControl(
             val accrual = PodcastStreamingAccrual()
             while (isActive) {
                 delay(STREAM_TICK_MS)
-                val playing = runCatching { controllerState.controller.isPlaying }.getOrDefault(false)
-                val healthy = controllerState.playbackError.value == null
-                if (playing && healthy) {
+                // Accrue only when audio is genuinely AUDIBLE, not merely "playing". isPlaying stays
+                // true when the player is muted (the player's mute button sets volume to 0) or when
+                // the system media volume is at 0 — in both cases the user hears nothing, so we must
+                // not spend. Require: playing, no error, in-app volume > 0, and system media volume > 0.
+                val audible =
+                    runCatching {
+                        controllerState.controller.isPlaying &&
+                            controllerState.playbackError.value == null &&
+                            controllerState.controller.volume > 0.001f &&
+                            (audioManager?.let { it.getStreamVolume(AudioManager.STREAM_MUSIC) > 0 } ?: true)
+                    }.getOrDefault(false)
+                if (audible) {
                     val minutes = accrual.accrue(STREAM_TICK_MS)
                     if (minutes > 0) {
                         val amount = minutes * rate
