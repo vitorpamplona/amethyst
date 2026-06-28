@@ -96,15 +96,20 @@ fun GitItemFeedLoaded(
     listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: INav,
+    labelFilter: String? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val list =
+        remember(items, labelFilter) {
+            if (labelFilter == null) items.list else items.list.filter { labelFilter in gitLabelsOf(it.event) }
+        }
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(
-            items.list,
+            list,
             key = { _, item -> item.idHex },
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
@@ -275,7 +280,7 @@ private fun gitSubjectOf(event: Event?): String? =
         else -> null
     }
 
-private fun gitLabelsOf(event: Event?): List<String> =
+internal fun gitLabelsOf(event: Event?): List<String> =
     when (event) {
         is GitIssueEvent -> event.topics()
         is GitPullRequestEvent -> event.labels()

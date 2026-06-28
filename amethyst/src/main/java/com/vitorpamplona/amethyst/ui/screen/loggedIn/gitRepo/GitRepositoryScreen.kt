@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
@@ -44,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -57,7 +60,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
@@ -80,6 +85,10 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 @Composable
@@ -205,6 +214,16 @@ private fun GitRepositoryScreen(
                         }
                     },
                     actions = {
+                        val bookmarkedSet by accountViewModel.account.gitRepositoryListState.publicRepositoryAddressSet
+                            .collectAsStateWithLifecycle()
+                        val isBookmarked = remember(bookmarkedSet, note) { bookmarkedSet.contains(note.address) }
+                        IconButton(onClick = { accountViewModel.toggleRepositoryBookmark(note, isBookmarked) }) {
+                            Icon(
+                                symbol = if (isBookmarked) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkBorder,
+                                contentDescription = stringRes(R.string.git_repo_bookmark),
+                                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         if (event != null && accountViewModel.isLoggedUser(event?.pubKey)) {
                             IconButton(onClick = { showSettings = true }) {
                                 Icon(MaterialSymbols.Edit, contentDescription = stringRes(R.string.git_repo_settings_title))
@@ -359,6 +378,21 @@ private fun StatusSplitFeed(
     headerAction: (@Composable () -> Unit)? = null,
 ) {
     var showClosed by rememberSaveable(persistKey) { mutableStateOf(false) }
+    var selectedLabel by rememberSaveable(persistKey) { mutableStateOf<String?>(null) }
+
+    val openItems = rememberGitFeedItems(openViewModel)
+    val closedItems = rememberGitFeedItems(closedViewModel)
+
+    val activeItems = if (showClosed) closedItems else openItems
+    val labels =
+        remember(activeItems) {
+            activeItems.flatMap { gitLabelsOf(it.event) }.distinct().sorted()
+        }
+
+    // A label selected under one status may not exist under the other; drop it when it's gone.
+    LaunchedEffect(labels) {
+        if (selectedLabel != null && selectedLabel !in labels) selectedLabel = null
+    }
 
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -372,7 +406,7 @@ private fun StatusSplitFeed(
             FilterChip(
                 selected = !showClosed,
                 onClick = { showClosed = false },
-                label = { Text(stringRes(R.string.git_repo_filter_open)) },
+                label = { Text(countedLabel(stringRes(R.string.git_repo_filter_open), openItems.size)) },
                 leadingIcon =
                     if (!showClosed) {
                         { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
@@ -383,7 +417,7 @@ private fun StatusSplitFeed(
             FilterChip(
                 selected = showClosed,
                 onClick = { showClosed = true },
-                label = { Text(stringRes(R.string.git_repo_filter_closed)) },
+                label = { Text(countedLabel(stringRes(R.string.git_repo_filter_closed), closedItems.size)) },
                 leadingIcon =
                     if (showClosed) {
                         { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
@@ -397,16 +431,64 @@ private fun StatusSplitFeed(
             }
         }
 
+        if (labels.isNotEmpty()) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 10.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = selectedLabel == null,
+                    onClick = { selectedLabel = null },
+                    label = { Text(stringRes(R.string.git_repo_label_all)) },
+                )
+                labels.forEach { label ->
+                    FilterChip(
+                        selected = selectedLabel == label,
+                        onClick = { selectedLabel = if (selectedLabel == label) null else label },
+                        label = { Text("#$label") },
+                    )
+                }
+            }
+        }
+
         RefresheableFeedView(
             viewModel = if (showClosed) closedViewModel else openViewModel,
             routeForLastRead = null,
             accountViewModel = accountViewModel,
             nav = nav,
             onLoaded = { loaded, listState ->
-                GitItemFeedLoaded(loaded, listState, accountViewModel, nav)
+                GitItemFeedLoaded(loaded, listState, accountViewModel, nav, labelFilter = selectedLabel)
             },
         )
     }
+}
+
+/** Appends a count to a chip label, e.g. "Open · 3". Hidden while the feed is still empty/loading. */
+private fun countedLabel(
+    base: String,
+    count: Int,
+): String = if (count > 0) "$base · $count" else base
+
+/**
+ * Mirrors the active feed list out of a [FeedViewModel] so the status row can show item counts
+ * and derive the available label set. Emits an empty list while the feed is loading or empty.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+@Composable
+private fun rememberGitFeedItems(viewModel: FeedViewModel): List<Note> {
+    val flow =
+        remember(viewModel) {
+            viewModel.feedState.feedContent.flatMapLatest { state ->
+                if (state is FeedState.Loaded) state.feed.map { it.list } else flowOf(emptyList())
+            }
+        }
+    val items by flow.collectAsStateWithLifecycle(emptyList())
+    return items
 }
 
 @Composable
