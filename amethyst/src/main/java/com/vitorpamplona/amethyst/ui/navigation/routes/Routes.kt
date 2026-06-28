@@ -190,6 +190,17 @@ sealed class Route {
         val pubkey: String,
     ) : Route()
 
+    @Serializable object PodcastAuthoring : Route()
+
+    @Serializable object EditPodcastShow : Route()
+
+    @Serializable
+    data class NewPodcastEpisode(
+        val dTag: String? = null,
+    ) : Route()
+
+    @Serializable object NewPodcastTrailer : Route()
+
     @Serializable
     data class NewMusicTrack(
         val dTag: String? = null,

@@ -172,6 +172,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.pinnednotes.PinnedNotesScre
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastEpisodesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring.EditPodcastShowScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring.NewPodcastEpisodeScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring.NewPodcastTrailerScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring.PodcastAuthoringScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
@@ -358,6 +362,10 @@ fun BuildNavigation(
         composableFromEnd<Route.PodcastEpisodes> { PodcastEpisodesScreen(accountViewModel, nav) }
         composableFromEnd<Route.Podcasts> { PodcastsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.Podcast> { PodcastScreen(it.pubkey, accountViewModel, nav) }
+        composableFromEnd<Route.PodcastAuthoring> { PodcastAuthoringScreen(accountViewModel, nav) }
+        composableFromEnd<Route.EditPodcastShow> { EditPodcastShowScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.NewPodcastEpisode> { NewPodcastEpisodeScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
+        composableFromEnd<Route.NewPodcastTrailer> { NewPodcastTrailerScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.NewMusicTrack> { NewMusicTrackScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
         composableFromEndArgs<Route.NewMusicPlaylist> { NewMusicPlaylistScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
         composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
