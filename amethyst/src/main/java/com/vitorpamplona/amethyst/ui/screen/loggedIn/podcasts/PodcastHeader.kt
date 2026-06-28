@@ -69,6 +69,8 @@ fun PodcastHeader(
     val image = remember(metadataEvent) { metadataEvent?.image() }
     val description = remember(metadataEvent) { metadataEvent?.description() }
     val websites = remember(metadataEvent) { metadataEvent?.websites() ?: emptyList() }
+    val claimedAuthors = remember(metadataEvent) { metadataEvent?.claimedAuthors() ?: emptyList() }
+    val podcastPubkey = remember(metadataEvent) { metadataEvent?.pubKey }
     val tags = remember(metadataEvent) { metadataEvent?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
     Column(Modifier.fillMaxWidth()) {
@@ -121,6 +123,10 @@ fun PodcastHeader(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+            }
+
+            if (claimedAuthors.isNotEmpty() && podcastPubkey != null) {
+                PodcastAuthors(podcastPubkey, claimedAuthors, accountViewModel, nav)
             }
         }
 
