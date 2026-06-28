@@ -38,6 +38,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -57,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.GitPullRequestUpdateIndex
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
@@ -562,6 +565,12 @@ private fun RenderGitPullRequestEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // A later pull-request update (kind 1619) revises this PR with a newer commit /
+    // merge base. Fold the most recent one in so the card reflects the current state.
+    LaunchedEffect(Unit) { GitPullRequestUpdateIndex.startIfNeeded() }
+    val updateIndex by GitPullRequestUpdateIndex.latestByPullRequest.collectAsStateWithLifecycle()
+    val update = updateIndex?.get(note.idHex)
+
     GitCardContainer {
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
         if (repository != null) {
@@ -585,6 +594,15 @@ private fun RenderGitPullRequestEvent(
             )
 
             GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
+
+            if (update != null) {
+                TypeChip(
+                    text = stringRes(id = R.string.git_pr_revised),
+                    background = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    symbol = MaterialSymbols.Sync,
+                )
+            }
         }
 
         val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
@@ -593,9 +611,18 @@ private fun RenderGitPullRequestEvent(
         }
 
         val branch = remember(noteEvent) { noteEvent.branchName()?.takeIf { it.isNotBlank() } }
-        val currentCommit = remember(noteEvent) { noteEvent.currentCommit()?.takeIf { it.isNotBlank() } }
-        val mergeBase = remember(noteEvent) { noteEvent.mergeBase()?.takeIf { it.isNotBlank() } }
-        val cloneUrls = remember(noteEvent) { noteEvent.cloneUrls().filter { it.isNotBlank() } }
+        val currentCommit =
+            remember(noteEvent, update) {
+                (update?.currentCommit() ?: noteEvent.currentCommit())?.takeIf { it.isNotBlank() }
+            }
+        val mergeBase =
+            remember(noteEvent, update) {
+                (update?.mergeBase() ?: noteEvent.mergeBase())?.takeIf { it.isNotBlank() }
+            }
+        val cloneUrls =
+            remember(noteEvent, update) {
+                (update?.cloneUrls()?.filter { it.isNotBlank() }?.ifEmpty { null } ?: noteEvent.cloneUrls().filter { it.isNotBlank() })
+            }
 
         if (branch != null || currentCommit != null || mergeBase != null) {
             Spacer(modifier = StdVertSpacer)
