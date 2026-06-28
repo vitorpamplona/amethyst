@@ -701,8 +701,9 @@
     <string name="napplet_permissions_empty">No nApplet permissions yet</string>
     <string name="napplet_permissions_empty_subtitle">Permissions you grant to nApplets will appear here.</string>
     <string name="napplet_permissions_forget">Forget this nApplet</string>
-    <string name="napplet_permissions_blocked">Blocked</string>
+    <string name="napplet_permissions_blocked">Requires per-use approval</string>
     <string name="napplet_permissions_revoke">Revoke</string>
+    <string name="napplet_permissions_ask_each_time">Ask me each time</string>
     <string name="napplet_none_found">No nApplets found yet.</string>
     <string name="napplet_fallback_title">nApplet %1$s…</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
@@ -752,6 +753,77 @@
         <item quantity="one">This nApplet wants to pay a Lightning invoice for %1$d sat.</item>
         <item quantity="other">This nApplet wants to pay a Lightning invoice for %1$d sats.</item>
     </plurals>
+    <!-- Signer permissions: first-connect dialog -->
+    <string name="napplet_connect_title">Connect to Nostr</string>
+    <string name="napplet_connect_subtitle">wants to connect to your Nostr account</string>
+    <string name="napplet_connect_how_handle">How should this app\'s requests be handled?</string>
+    <string name="napplet_connect_button">Connect</string>
+    <string name="napplet_connect_block">Block and ignore %1$s</string>
+
+    <!-- Signer trust levels -->
+    <string name="napplet_policy_full_trust">I fully trust it</string>
+    <string name="napplet_policy_full_trust_desc">Auto-sign all requests (except payments)</string>
+    <string name="napplet_policy_reasonable">Let\'s be reasonable</string>
+    <string name="napplet_policy_reasonable_desc">Auto-approve most common requests</string>
+    <string name="napplet_policy_paranoid">I\'m a bit paranoid</string>
+    <string name="napplet_policy_paranoid_desc">Do not sign anything without asking me!</string>
+
+    <!-- Signer per-op consent dialog -->
+    <string name="napplet_consent_wants_to">wants to %1$s</string>
+    <string name="napplet_consent_show_event">Show Event</string>
+    <string name="napplet_consent_hide_event">Hide Event</string>
+    <string name="napplet_consent_more_options">More options</string>
+    <string name="napplet_consent_fewer_options">Fewer options</string>
+    <string name="napplet_signer_allow_once">Allow once</string>
+    <string name="napplet_signer_allow_session">Allow for this session</string>
+    <string name="napplet_signer_allow_24h">Allow for 24 hours</string>
+    <string name="napplet_signer_allow_30d">Allow for 30 days</string>
+    <string name="napplet_signer_allow_op">Don\'t ask again to %1$s</string>
+    <string name="napplet_signer_allow_all">Don\'t ask again for any Nostr requests</string>
+    <string name="napplet_signer_deny_once">Deny</string>
+    <string name="napplet_signer_deny_op">Always deny %1$s</string>
+    <string name="napplet_signer_last_used">Last used</string>
+    <string name="napplet_signer_expires">Expires</string>
+
+    <!-- Signer op labels -->
+    <string name="napplet_op_sign_kind">sign kind %1$d event</string>
+    <string name="napplet_op_sign_kind_named">sign for %1$s (kind: %2$d)</string>
+    <string name="napplet_op_encrypt">encrypt a message</string>
+    <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <string name="napplet_op_decrypt">read your private messages</string>
+
+    <!-- Permissions management screen -->
+    <string name="napplet_permissions_title">Connected Apps</string>
+    <string name="napplet_permissions_revoke_all">Revoke all permissions</string>
+    <string name="napplet_permissions_overrides">Operation overrides</string>
+    <string name="napplet_signer_permissions_empty">No apps have connected yet.</string>
+    <string name="napplet_signer_permissions_revoke_all">Revoke all permissions</string>
+    <string name="napplet_decision_allow">Allow</string>
+    <string name="napplet_decision_ask">Ask</string>
+    <string name="napplet_decision_deny">Deny</string>
+    <string name="napplet_connected_apps_search_keywords">apps permissions signer napplet nsite webapp trust connected</string>
+    <string name="napplet_connected_app_trust_level">Signing trust level</string>
+    <string name="napplet_connected_app_capabilities">Capabilities</string>
+    <string name="napplet_connected_app_forget">Forget this app</string>
+    <string name="napplet_connected_app_op_overrides">Signing operation overrides</string>
+    <string name="napplet_connected_app_empty">No apps have connected yet.\n\nWhen a web app connects to your Nostr key, it will appear here.</string>
+
+    <!-- Relay Authentication (NIP-42) settings -->
+    <string name="relay_auth_settings_title">Relay Authentication</string>
+    <string name="relay_auth_search_keywords">auth authentication relay sign verify nip-42 identity</string>
+    <string name="relay_auth_global_policy">Global policy</string>
+    <string name="relay_auth_policy_always">Always authenticate</string>
+    <string name="relay_auth_policy_always_desc">Sign auth challenges for every relay that requests it</string>
+    <string name="relay_auth_policy_never">Never authenticate</string>
+    <string name="relay_auth_policy_never_desc">Ignore auth challenges from all relays</string>
+    <string name="relay_auth_policy_if_in_my_list">My relays only</string>
+    <string name="relay_auth_policy_if_in_my_list_desc">Only authenticate with relays in your relay list</string>
+    <string name="relay_auth_per_relay_overrides">Per-relay overrides</string>
+    <string name="relay_auth_no_overrides">No per-relay overrides — global policy applies everywhere</string>
+    <string name="relay_auth_decision_allow">Allow</string>
+    <string name="relay_auth_decision_deny">Deny</string>
+    <string name="relay_auth_remove_override">Remove override</string>
+
     <string name="nip82_repository_label">Source: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Download</string>

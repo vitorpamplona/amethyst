@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -43,30 +44,56 @@ class AuthCoordinator(
         NostrSignerSync()
     }
 
+    @Volatile private var relayLedgers: List<RelayAuthPermissionLedger> = emptyList()
+
+    fun subscribeLedger(ledger: RelayAuthPermissionLedger) {
+        synchronized(this) { relayLedgers = relayLedgers + ledger }
+    }
+
+    fun unsubscribeLedger(ledger: RelayAuthPermissionLedger) {
+        synchronized(this) { relayLedgers = relayLedgers - ledger }
+    }
+
     val receiver =
         RelayAuthenticator(
             client,
             scope,
-            signWithAllLoggedInUsers = { authTemplate ->
-                val results =
-                    authWithAccounts.distinct().mapNotNull {
-                        if (it.signer.isWriteable()) {
-                            try {
-                                it.signer.sign(authTemplate)
-                            } catch (e: Exception) {
-                                Log.e("AuthCoordinator", "Failed trying to authenticate a writeable account", e)
-                                null
+            signWithAllLoggedInUsers = { relayUrl, authTemplate ->
+                val currentLedgers = relayLedgers
+                val shouldAuth =
+                    if (currentLedgers.isEmpty()) {
+                        true
+                    } else {
+                        var allow = false
+                        for (ledger in currentLedgers) {
+                            if (ledger.decide(relayUrl.url) == RelayAuthDecision.ALLOW) {
+                                allow = true
+                                break
                             }
-                        } else {
-                            null
                         }
+                        allow
                     }
 
-                // Always auth, even with random keys
-                if (!results.isEmpty()) {
-                    results
+                if (shouldAuth) {
+                    // distinct() returns Set<Account> (the key type U of ListWithUniqueSetCache)
+                    val results =
+                        authWithAccounts.distinct().mapNotNull {
+                            if (it.signer.isWriteable()) {
+                                try {
+                                    it.signer.sign(authTemplate)
+                                } catch (e: Exception) {
+                                    Log.e("AuthCoordinator", "Failed trying to authenticate a writeable account", e)
+                                    null
+                                }
+                            } else {
+                                null
+                            }
+                        }
+
+                    // Always auth, even with random keys
+                    if (results.isNotEmpty()) results else listOf(tempAccount.sign(authTemplate))
                 } else {
-                    listOf(tempAccount.sign(authTemplate))
+                    emptyList()
                 }
             },
         )
