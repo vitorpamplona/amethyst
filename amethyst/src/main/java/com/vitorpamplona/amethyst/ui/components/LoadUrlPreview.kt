@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.datasource.observeUrlCommentCount
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 
 @Composable
@@ -136,14 +137,17 @@ fun RenderLoaded(
         }
 
         else -> {
-            UrlPreviewCard(
-                url,
-                state.previewInfo,
-                onUrlComments =
-                    nav?.let {
-                        { it.nav(Route.Url(url)) }
-                    },
-            )
+            if (nav != null) {
+                val commentCount by observeUrlCommentCount(url, accountViewModel)
+                UrlPreviewCard(
+                    url,
+                    state.previewInfo,
+                    onUrlComments = { nav.nav(Route.Url(url)) },
+                    commentCount = commentCount,
+                )
+            } else {
+                UrlPreviewCard(url, state.previewInfo)
+            }
         }
     }
 }

@@ -21,22 +21,30 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -53,6 +61,7 @@ fun UrlPreviewCard(
     url: String,
     previewInfo: UrlInfoItem,
     onUrlComments: (() -> Unit)? = null,
+    commentCount: Int = 0,
 ) {
     val uri = LocalUriHandler.current
     val popupExpanded =
@@ -135,6 +144,42 @@ fun UrlPreviewCard(
             overflow = TextOverflow.Ellipsis,
         )
 
+        if (commentCount > 0 && onUrlComments != null) {
+            UrlCommentCountBadge(commentCount, onUrlComments)
+        }
+
         Spacer(modifier = DoubleVertSpacer)
+    }
+}
+
+/**
+ * A small "N comments" affordance shown on a URL preview when the page has NIP-22
+ * comments scoped to it. This is the discovery surface: it lets the user notice a
+ * conversation exists and tap straight into the URL thread, without long-pressing.
+ */
+@Composable
+private fun UrlCommentCountBadge(
+    commentCount: Int,
+    onUrlComments: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            MaxWidthWithHorzPadding
+                .clickable(onClick = onUrlComments)
+                .padding(vertical = 4.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Forum,
+            contentDescription = stringRes(R.string.kind_comments),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(modifier = Modifier.size(6.dp))
+        Text(
+            text = "$commentCount",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
 }
