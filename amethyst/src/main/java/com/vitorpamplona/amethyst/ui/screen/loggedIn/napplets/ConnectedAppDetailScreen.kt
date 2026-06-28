@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,16 +32,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -71,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.napplet.signers.NostrOpDecision
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
+import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
 import com.vitorpamplona.amethyst.napplet.descriptionRes
 import com.vitorpamplona.amethyst.napplet.labelRes
@@ -78,6 +82,8 @@ import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -197,10 +203,15 @@ fun ConnectedAppDetailScreen(
                             CapabilityDetailRow(
                                 capability = cap,
                                 grant = grant,
-                                onSetAllowed = { allowed ->
-                                    mutate { capabilityLedger.record(identity, cap, if (allowed) GrantState.ALLOW_ALWAYS else GrantState.DENY) }
+                                onSetGrant = { newGrant ->
+                                    mutate {
+                                        if (newGrant == null) {
+                                            capabilityLedger.revoke(identity, cap)
+                                        } else {
+                                            capabilityLedger.record(identity, cap, newGrant)
+                                        }
+                                    }
                                 },
-                                onRevoke = { mutate { capabilityLedger.revoke(identity, cap) } },
                             )
                         }
                     }
@@ -241,14 +252,18 @@ private fun AppIdentityHeader(state: ConnectedAppDetailState) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             val isBrowserEntry = state.coordinate.startsWith("browser:")
-            val browserUrl = if (isBrowserEntry) state.coordinate.substringAfter(':') else null
-            val iconModel = if (browserUrl != null) rememberWebAppIconModel(browserUrl) else null
-            val appForIcon =
-                if (isBrowserEntry) {
-                    FavoriteApp.WebApp(browserUrl ?: "", state.title, 0L)
-                } else {
-                    FavoriteApp.NostrApp(state.coordinate, state.title, 0L, state.iconUrl)
-                }
+            val author = state.coordinate.substringBefore(':')
+            val identifier = state.coordinate.substringAfter(':', "")
+            val iconModel: String?
+            val appForIcon: FavoriteApp
+            if (isBrowserEntry) {
+                iconModel = rememberWebAppIconModel(identifier)
+                appForIcon = FavoriteApp.WebApp(identifier, state.title, 0L)
+            } else {
+                val kind = if (identifier.isEmpty()) RootNappletEvent.KIND else NamedNappletEvent.KIND
+                iconModel = rememberNappletIconModel("$kind:$author:$identifier")
+                appForIcon = FavoriteApp.NostrApp(state.coordinate, state.title, 0L, state.iconUrl)
+            }
             FavoriteAppIcon(
                 app = appForIcon,
                 iconModel = iconModel,
@@ -262,8 +277,6 @@ private fun AppIdentityHeader(state: ConnectedAppDetailState) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val author = state.coordinate.substringBefore(':')
-                val identifier = state.coordinate.substringAfter(':', "")
                 val domain =
                     if (author == "browser") {
                         identifier
@@ -371,12 +384,29 @@ private fun OpOverrideRow(
 private fun CapabilityDetailRow(
     capability: NappletCapability,
     grant: GrantState,
-    onSetAllowed: (Boolean) -> Unit,
-    onRevoke: () -> Unit,
+    onSetGrant: (GrantState?) -> Unit,
 ) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    if (showDialog) {
+        CapabilityPermissionDialog(
+            capability = capability,
+            current = grant,
+            onSetGrant = { newGrant ->
+                showDialog = false
+                onSetGrant(newGrant)
+            },
+            onDismiss = { showDialog = false },
+        )
+    }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { showDialog = true }
+                .padding(horizontal = 12.dp, vertical = 12.dp),
     ) {
         Icon(
             capability.symbol(),
@@ -393,50 +423,96 @@ private fun CapabilityDetailRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Spacer(Modifier.size(8.dp))
+        Text(
+            when (grant) {
+                GrantState.ALLOW_ALWAYS -> stringResource(R.string.napplet_consent_allow_always)
+                GrantState.DENY -> stringResource(R.string.napplet_consent_deny_always)
+                else -> stringResource(R.string.napplet_permissions_ask_each_time)
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color =
+                when (grant) {
+                    GrantState.ALLOW_ALWAYS -> MaterialTheme.colorScheme.primary
+                    GrantState.DENY -> MaterialTheme.colorScheme.error
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                },
+        )
+        Icon(
+            MaterialSymbols.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
 
-        if (capability.requiresPerUseConsent) {
-            Text(
-                stringResource(R.string.napplet_permissions_blocked),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    stringResource(
-                        if (grant == GrantState.ALLOW_ALWAYS) {
-                            R.string.napplet_consent_allow_always
-                        } else {
-                            R.string.napplet_consent_deny_always
-                        },
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color =
-                        if (grant == GrantState.ALLOW_ALWAYS) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.error
-                        },
+@Composable
+private fun CapabilityPermissionDialog(
+    capability: NappletCapability,
+    current: GrantState,
+    onSetGrant: (GrantState?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val initial =
+        when (current) {
+            GrantState.ALLOW_ALWAYS -> GrantState.ALLOW_ALWAYS
+            GrantState.DENY -> GrantState.DENY
+            else -> GrantState.ASK
+        }
+    var selected by remember { mutableStateOf(initial) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(capability.labelRes())) },
+        text = {
+            Column {
+                GrantOption(
+                    label = stringResource(R.string.napplet_permissions_ask_each_time),
+                    selected = selected == GrantState.ASK,
+                    onClick = { selected = GrantState.ASK },
                 )
-                Switch(
-                    checked = grant == GrantState.ALLOW_ALWAYS,
-                    onCheckedChange = onSetAllowed,
+                if (!capability.requiresPerUseConsent) {
+                    GrantOption(
+                        label = stringResource(R.string.napplet_consent_allow_always),
+                        selected = selected == GrantState.ALLOW_ALWAYS,
+                        onClick = { selected = GrantState.ALLOW_ALWAYS },
+                    )
+                }
+                GrantOption(
+                    label = stringResource(R.string.napplet_consent_deny_always),
+                    selected = selected == GrantState.DENY,
+                    onClick = { selected = GrantState.DENY },
                 )
             }
-        }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSetGrant(if (selected == GrantState.ASK) null else selected) },
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
 
-        Spacer(Modifier.size(4.dp))
-        IconButton(onClick = onRevoke) {
-            Icon(
-                MaterialSymbols.Refresh,
-                contentDescription = stringResource(R.string.napplet_permissions_ask_each_time),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-        }
+@Composable
+private fun GrantOption(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Text(label, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
