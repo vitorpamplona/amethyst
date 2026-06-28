@@ -769,8 +769,8 @@
 
     <!-- Signer per-op consent dialog -->
     <string name="napplet_consent_wants_to">wants to %1$s</string>
-    <string name="napplet_consent_see_more">See more</string>
-    <string name="napplet_consent_see_less">See less</string>
+    <string name="napplet_consent_show_event">Show Event</string>
+    <string name="napplet_consent_hide_event">Hide Event</string>
     <string name="napplet_consent_more_options">More options</string>
     <string name="napplet_consent_fewer_options">Fewer options</string>
     <string name="napplet_signer_allow_once">Allow once</string>

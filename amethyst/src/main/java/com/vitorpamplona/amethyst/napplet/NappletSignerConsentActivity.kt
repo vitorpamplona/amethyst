@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.napplet
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -194,15 +196,18 @@ private fun NappletSignerConsentDialog(
                             if (info.rawData.isNotBlank()) {
                                 if (showRawData) {
                                     Spacer(Modifier.height(8.dp))
-                                    SelectionContainer {
-                                        Text(
-                                            info.rawData,
-                                            style =
-                                                MaterialTheme.typography.labelSmall.copy(
-                                                    fontFamily = FontFamily.Monospace,
-                                                ),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
+                                    Box(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                                        SelectionContainer {
+                                            Text(
+                                                info.rawData,
+                                                style =
+                                                    MaterialTheme.typography.labelSmall.copy(
+                                                        fontFamily = FontFamily.Monospace,
+                                                    ),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                softWrap = false,
+                                            )
+                                        }
                                     }
                                 }
                                 TextButton(
@@ -211,9 +216,9 @@ private fun NappletSignerConsentDialog(
                                 ) {
                                     Text(
                                         if (showRawData) {
-                                            stringResource(R.string.napplet_consent_see_less)
+                                            stringResource(R.string.napplet_consent_hide_event)
                                         } else {
-                                            stringResource(R.string.napplet_consent_see_more)
+                                            stringResource(R.string.napplet_consent_show_event)
                                         },
                                         style = MaterialTheme.typography.labelSmall,
                                     )
