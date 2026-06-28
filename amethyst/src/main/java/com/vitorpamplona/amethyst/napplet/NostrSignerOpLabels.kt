@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
+import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindNameFor
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -46,7 +48,13 @@ fun buildSignerConsentInfo(
     request: NappletRequest,
 ): NappletSignerConsentInfo {
     val untitled = context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8))
-    val (title, iconUrl) = resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
+    val (title, iconUrl) =
+        if (identity.authorPubKey == "browser") {
+            val host = OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
+            host to BrowserIconRegistry.iconModelFor(host)
+        } else {
+            resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
+        }
     val summary = op.label(context)
     val preview =
         when (request) {
@@ -93,7 +101,18 @@ fun buildConnectInfo(
     identity: NappletIdentity,
 ): NappletConnectInfo {
     val untitled = context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8))
-    val (title, iconUrl) = resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
-    val domain = identity.identifier.ifBlank { identity.authorPubKey.take(12) + "…" }
+    val (title, iconUrl) =
+        if (identity.authorPubKey == "browser") {
+            val host = OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
+            host to BrowserIconRegistry.iconModelFor(host)
+        } else {
+            resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
+        }
+    val domain =
+        if (identity.authorPubKey == "browser") {
+            OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
+        } else {
+            identity.identifier.ifBlank { identity.authorPubKey.take(12) + "…" }
+        }
     return NappletConnectInfo(appletTitle = title, coordinate = identity.coordinate, domain = domain, iconUrl = iconUrl)
 }

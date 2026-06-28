@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -69,6 +70,8 @@ import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrOpDecision
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
+import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
 import com.vitorpamplona.amethyst.napplet.descriptionRes
 import com.vitorpamplona.amethyst.napplet.labelRes
 import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
@@ -238,14 +241,17 @@ private fun AppIdentityHeader(state: ConnectedAppDetailState) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             val isBrowserEntry = state.coordinate.startsWith("browser:")
+            val browserUrl = if (isBrowserEntry) state.coordinate.substringAfter(':') else null
+            val iconModel = if (browserUrl != null) rememberWebAppIconModel(browserUrl) else null
             val appForIcon =
                 if (isBrowserEntry) {
-                    FavoriteApp.WebApp(state.coordinate.substringAfter(':'), state.title, 0L)
+                    FavoriteApp.WebApp(browserUrl ?: "", state.title, 0L)
                 } else {
                     FavoriteApp.NostrApp(state.coordinate, state.title, 0L, state.iconUrl)
                 }
             FavoriteAppIcon(
                 app = appForIcon,
+                iconModel = iconModel,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(48.dp),
             )
@@ -449,7 +455,13 @@ private suspend fun loadDetailState(
     val signerPolicy = signerLedger.store.loadPolicy(coordinate)
     val opOverrides = signerLedger.store.allOpDecisions(coordinate)
 
-    val (title, iconUrl) = resolveNappletMeta(author, identifier, untitled)
+    val (title, iconUrl) =
+        if (author == "browser") {
+            val host = OmniboxInput.hostOf(identifier) ?: identifier
+            host to BrowserIconRegistry.iconModelFor(host)
+        } else {
+            resolveNappletMeta(author, identifier, untitled)
+        }
     return ConnectedAppDetailState(
         title = title,
         coordinate = coordinate,

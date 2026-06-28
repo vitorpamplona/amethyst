@@ -146,8 +146,14 @@ private fun NappletConnectScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    val isBrowser = info.coordinate.startsWith("browser:")
                     FavoriteAppIcon(
-                        app = FavoriteApp.NostrApp(info.coordinate, info.appletTitle, 0L, info.iconUrl),
+                        app =
+                            if (isBrowser) {
+                                FavoriteApp.WebApp(info.coordinate.substringAfter(':'), info.appletTitle, 0L, info.iconUrl)
+                            } else {
+                                FavoriteApp.NostrApp(info.coordinate, info.appletTitle, 0L, info.iconUrl)
+                            },
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(56.dp),
                     )

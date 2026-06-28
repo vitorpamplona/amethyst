@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
+import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -207,9 +208,11 @@ private fun BrowserAppCard(
                 .ifBlank { url }
         }
 
+    val iconModel = rememberWebAppIconModel(url)
+
     ConnectedAppCardLayout(
         app = FavoriteApp.WebApp(url, domain, 0L),
-        iconModel = null,
+        iconModel = iconModel,
         title = domain,
         subtitle = url,
         npub = null,

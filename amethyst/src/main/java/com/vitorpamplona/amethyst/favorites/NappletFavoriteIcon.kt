@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.napplethost.NappletBlobCache
 import com.vitorpamplona.amethyst.napplethost.NappletBlobPrefetcher
@@ -107,3 +108,19 @@ private fun resolveIconBlob(event: Event?): IconBlob? =
         is NamedSiteEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
         else -> null
     }
+
+/**
+ * A Coil model (`file://…`) for the cached favicon of [url]'s host, or null when no favicon
+ * has been captured yet. The favicon is stored by [BrowserIconRegistry] at browse time (the
+ * WebView captures it in the sandboxed `:napplet` process); this composable just reads the cache.
+ *
+ * Early-returns null when [url] is blank or has no parseable host — this early return is stable
+ * for a given [url] (the host either always parses or never does), so composition structure is
+ * preserved across recompositions.
+ */
+@Composable
+fun rememberWebAppIconModel(url: String): String? {
+    val host = remember(url) { OmniboxInput.hostOf(url) } ?: return null
+    val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
+    return remember(host, iconKeys) { BrowserIconRegistry.iconModelFor(host) }
+}
