@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.service.playback.playerPool
 
 import android.content.Context
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -67,6 +69,18 @@ class ExoPlayerBuilder(
             .apply {
                 setMediaSourceFactory(CustomMediaSourceFactory(videoCache, dataSourceFactory))
                 setLoadControl(feedTunedLoadControl())
+                // Let ExoPlayer own audio focus: pause when a call or another media app takes over
+                // (which flips isPlaying false, so V4V streaming payments stop with it) and duck for
+                // transient interruptions. USAGE_MEDIA so the system treats it as ordinary playback.
+                setAudioAttributes(
+                    AudioAttributes
+                        .Builder()
+                        .setUsage(C.USAGE_MEDIA)
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .build(),
+                    // handleAudioFocus =
+                    true,
+                )
             }.build()
             .apply {
                 PcmTapRegistry.registerPlayer(this, sink)
