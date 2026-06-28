@@ -39,6 +39,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -49,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -64,6 +66,9 @@ import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code.GitCodeTab
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code.GitReadmeTab
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal.RepositoryIssuesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal.RepositoryPatchesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.datasource.RepositoryFilterAssemblerSubscription
@@ -120,12 +125,19 @@ private fun PrepareGitRepositoryScreen(
             factory = RepositoryPatchesFeedViewModel.Factory(note, accountViewModel.account, showClosed = true),
         )
 
+    val browserViewModel: GitRepositoryBrowserViewModel =
+        viewModel(
+            key = note.idHex + "GitRepoBrowser",
+            factory = GitRepositoryBrowserViewModel.Factory(accountViewModel.httpClientBuilder::okHttpClientForPreview),
+        )
+
     GitRepositoryScreen(
         note = note,
         openIssuesViewModel = openIssuesViewModel,
         closedIssuesViewModel = closedIssuesViewModel,
         openPatchesViewModel = openPatchesViewModel,
         closedPatchesViewModel = closedPatchesViewModel,
+        browserViewModel = browserViewModel,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -139,6 +151,7 @@ private fun GitRepositoryScreen(
     closedIssuesViewModel: RepositoryIssuesFeedViewModel,
     openPatchesViewModel: RepositoryPatchesFeedViewModel,
     closedPatchesViewModel: RepositoryPatchesFeedViewModel,
+    browserViewModel: GitRepositoryBrowserViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -148,6 +161,13 @@ private fun GitRepositoryScreen(
     WatchLifecycleAndUpdateModel(closedPatchesViewModel)
 
     val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
+
+    // Start the smart-HTTP browser as soon as the repository announcement arrives,
+    // so the README and Code tabs can fetch from its clone URL.
+    LaunchedEffect(event) {
+        event?.let { browserViewModel.loadOnce(it.clones()) }
+    }
+    val browserState by browserViewModel.state.collectAsStateWithLifecycle()
 
     // RepositoryContentSubAssembler.updateFilter reads note.event and bails out if it isn't
     // a GitRepositoryEvent yet. The compose subscription manager doesn't re-run updateFilter
@@ -159,7 +179,7 @@ private fun GitRepositoryScreen(
         RepositoryFilterAssemblerSubscription(note, accountViewModel.dataSources().gitRepository)
     }
 
-    val pagerState = rememberForeverPagerState(note.idHex + "GitRepoScreenPagerState") { 3 }
+    val pagerState = rememberForeverPagerState(note.idHex + "GitRepoScreenPagerState") { 5 }
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -185,18 +205,28 @@ private fun GitRepositoryScreen(
                     val coroutineScope = rememberCoroutineScope()
                     Tab(
                         selected = pagerState.currentPage == 0,
-                        text = { Text(stringRes(R.string.git_repo_tab_overview)) },
+                        text = { Text(stringRes(R.string.git_repo_tab_readme)) },
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                     )
                     Tab(
                         selected = pagerState.currentPage == 1,
-                        text = { Text(stringRes(R.string.git_repo_tab_issues)) },
+                        text = { Text(stringRes(R.string.git_repo_tab_code)) },
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                     )
                     Tab(
                         selected = pagerState.currentPage == 2,
-                        text = { Text(stringRes(R.string.git_repo_tab_patches)) },
+                        text = { Text(stringRes(R.string.git_repo_tab_overview)) },
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
+                    )
+                    Tab(
+                        selected = pagerState.currentPage == 3,
+                        text = { Text(stringRes(R.string.git_repo_tab_issues)) },
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
+                    )
+                    Tab(
+                        selected = pagerState.currentPage == 4,
+                        text = { Text(stringRes(R.string.git_repo_tab_patches)) },
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(4) } },
                     )
                 }
             }
@@ -211,13 +241,26 @@ private fun GitRepositoryScreen(
                 0 -> {
                     val currentEvent = event
                     if (currentEvent != null) {
-                        GitRepositoryOverview(currentEvent, accountViewModel, nav)
+                        GitReadmeTab(browserState, browserViewModel, currentEvent, accountViewModel, nav)
                     } else {
                         EmptyMessage(stringRes(R.string.loading_feed))
                     }
                 }
 
                 1 -> {
+                    GitCodeTab(browserState, browserViewModel, accountViewModel, nav)
+                }
+
+                2 -> {
+                    val currentEvent = event
+                    if (currentEvent != null) {
+                        GitRepositoryOverview(currentEvent, accountViewModel, nav)
+                    } else {
+                        EmptyMessage(stringRes(R.string.loading_feed))
+                    }
+                }
+
+                3 -> {
                     StatusSplitFeed(
                         persistKey = note.idHex + "GitRepoIssuesStatus",
                         openViewModel = openIssuesViewModel,
@@ -227,7 +270,7 @@ private fun GitRepositoryScreen(
                     )
                 }
 
-                2 -> {
+                4 -> {
                     StatusSplitFeed(
                         persistKey = note.idHex + "GitRepoPatchesStatus",
                         openViewModel = openPatchesViewModel,

@@ -457,6 +457,9 @@ dependencies {
     implementation(libs.markdown.ui.material3)
     implementation(libs.markdown.commonmark)
 
+    // Syntax highlighting for the git repository code browser (Apache-2.0)
+    implementation(libs.highlights)
+
     // LaTeX math rendering ($...$ and $$...$$ inline equations)
     implementation(libs.jlatexmath.android)
     implementation(libs.jlatexmath.font.greek)

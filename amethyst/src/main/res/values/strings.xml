@@ -2578,6 +2578,17 @@
     <string name="git_repo_section_maintainers">Maintainers</string>
     <string name="git_repo_section_topics">Topics</string>
     <string name="git_repo_personal_fork">Personal fork</string>
+    <string name="git_repo_tab_readme">Readme</string>
+    <string name="git_repo_tab_code">Code</string>
+    <string name="git_repo_code_loading">Loading repository…</string>
+    <string name="git_repo_code_error">Could not load the repository from its clone URL.</string>
+    <string name="git_repo_no_clone_url">This repository announcement has no http(s) clone URL to browse.</string>
+    <string name="git_repo_readme_missing">This repository has no README file.</string>
+    <string name="git_repo_file_load_error">Could not load this file.</string>
+    <string name="git_repo_binary_file">Binary file (%1$s) — preview not available.</string>
+    <string name="git_repo_empty_folder">This folder is empty.</string>
+    <string name="git_repo_root">root</string>
+    <string name="git_repo_retry">Retry</string>
     <string name="git_repositories">Git Repositories</string>
     <string name="nsite_title">nSite: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
