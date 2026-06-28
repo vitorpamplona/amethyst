@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.patch.UnifiedDiffParser
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
@@ -433,7 +434,22 @@ private fun RenderGitPatchEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
-        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+        // In a collapsed feed preview keep the lightweight markdown body; in the
+        // full (thread) view parse the patch into a proper file-by-file diff.
+        val parsed = if (makeItShort) null else remember(noteEvent) { UnifiedDiffParser.parse(noteEvent.content) }
+        if (parsed != null && parsed.hasDiff) {
+            if (parsed.message.isNotBlank()) {
+                Text(
+                    text = parsed.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(modifier = HalfDoubleVertSpacer)
+            }
+            GitDiffView(parsed, Modifier.fillMaxWidth())
+        } else {
+            GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
     }
 }
 
@@ -504,6 +520,10 @@ private fun RenderGitIssueEvent(
         Spacer(modifier = HalfDoubleVertSpacer)
 
         GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+
+        if (!makeItShort) {
+            GitIssueStatusActions(note, accountViewModel)
+        }
     }
 }
 

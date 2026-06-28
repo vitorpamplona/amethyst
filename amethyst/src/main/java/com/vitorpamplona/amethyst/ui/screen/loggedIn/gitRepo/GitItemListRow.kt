@@ -21,14 +21,17 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -196,9 +200,31 @@ private fun GitItemRowContent(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
+            val labels = remember(note.event) { gitLabelsOf(note.event) }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
+                labels.take(6).forEach { LabelChip(it) }
+            }
         }
     }
+}
+
+@Composable
+private fun LabelChip(label: String) {
+    Text(
+        text = "#$label",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+    )
 }
 
 private fun gitSubjectOf(event: Event?): String? =
@@ -208,3 +234,10 @@ private fun gitSubjectOf(event: Event?): String? =
         is GitPatchEvent -> event.subject()?.takeIf { it.isNotBlank() }
         else -> null
     }
+
+private fun gitLabelsOf(event: Event?): List<String> =
+    when (event) {
+        is GitIssueEvent -> event.topics()
+        is GitPullRequestEvent -> event.labels()
+        else -> emptyList()
+    }.filter { it.isNotBlank() }.distinct()

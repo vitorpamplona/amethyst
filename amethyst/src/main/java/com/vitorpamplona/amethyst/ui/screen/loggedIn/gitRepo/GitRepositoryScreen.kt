@@ -24,18 +24,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,6 +55,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -261,8 +265,9 @@ private fun GitRepositoryScreen(
                 }
 
                 3 -> {
-                    StatusSplitFeed(
-                        persistKey = note.idHex + "GitRepoIssuesStatus",
+                    GitIssuesTab(
+                        note = note,
+                        event = event,
                         openViewModel = openIssuesViewModel,
                         closedViewModel = closedIssuesViewModel,
                         accountViewModel = accountViewModel,
@@ -285,10 +290,51 @@ private fun GitRepositoryScreen(
 }
 
 /**
- * Wraps a feed in an Open / Closed &amp; Resolved segmented selector, swapping between two
+ * The Issues tab: the open/closed status feed plus a "New issue" composer reachable
+ * from the filter row once the repository announcement has loaded.
+ */
+@Composable
+private fun GitIssuesTab(
+    note: AddressableNote,
+    event: GitRepositoryEvent?,
+    openViewModel: RepositoryIssuesFeedViewModel,
+    closedViewModel: RepositoryIssuesFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    var showNewIssue by rememberSaveable(note.idHex) { mutableStateOf(false) }
+
+    StatusSplitFeed(
+        persistKey = note.idHex + "GitRepoIssuesStatus",
+        openViewModel = openViewModel,
+        closedViewModel = closedViewModel,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        headerAction = if (event != null) ({ NewIssueButton { showNewIssue = true } }) else null,
+    )
+
+    if (showNewIssue && event != null) {
+        GitNewIssueDialog(repoNote = note, accountViewModel = accountViewModel, onDismiss = { showNewIssue = false })
+    }
+}
+
+@Composable
+private fun NewIssueButton(onClick: () -> Unit) {
+    FilledTonalButton(
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+    ) {
+        Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+        Text(stringRes(R.string.git_new_issue_button), modifier = Modifier.padding(start = 6.dp))
+    }
+}
+
+/**
+ * Wraps a feed in an Open / Closed &amp; Resolved status filter, swapping between two
  * status-scoped feed view models. Each view model already filters by NIP-34 status, so the
  * selector only chooses which one is rendered. The selection survives configuration changes
- * and tab swipes via [persistKey].
+ * and tab swipes via [persistKey]. An optional [headerAction] (e.g. a "New issue" button)
+ * is shown at the trailing edge of the filter row.
  */
 @Composable
 private fun StatusSplitFeed(
@@ -297,29 +343,44 @@ private fun StatusSplitFeed(
     closedViewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
+    headerAction: (@Composable () -> Unit)? = null,
 ) {
     var showClosed by rememberSaveable(persistKey) { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize()) {
-        SingleChoiceSegmentedButtonRow(
+        Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SegmentedButton(
+            FilterChip(
                 selected = !showClosed,
                 onClick = { showClosed = false },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-            ) {
-                Text(stringRes(R.string.git_repo_filter_open))
-            }
-            SegmentedButton(
+                label = { Text(stringRes(R.string.git_repo_filter_open)) },
+                leadingIcon =
+                    if (!showClosed) {
+                        { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    } else {
+                        null
+                    },
+            )
+            FilterChip(
                 selected = showClosed,
                 onClick = { showClosed = true },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-            ) {
-                Text(stringRes(R.string.git_repo_filter_closed))
+                label = { Text(stringRes(R.string.git_repo_filter_closed)) },
+                leadingIcon =
+                    if (showClosed) {
+                        { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    } else {
+                        null
+                    },
+            )
+            if (headerAction != null) {
+                Spacer(Modifier.weight(1f))
+                headerAction()
             }
         }
 
