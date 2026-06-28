@@ -62,7 +62,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
-import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
+import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -70,8 +70,11 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.ConnectedAppsFilterAssemblerSubscription
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
@@ -166,15 +169,29 @@ fun ConnectedAppsScreen(
 }
 
 @Composable
-private fun rememberNappletManifest(fullCoordinate: String): NappletManifest? {
-    val note =
-        remember(fullCoordinate) { LocalCache.checkGetOrCreateAddressableNote(fullCoordinate) }
-            ?: return null
-    val noteState by note
+private fun rememberManifestEvent(
+    author: String,
+    identifier: String,
+): Event? {
+    val nappletCoord =
+        remember(author, identifier) {
+            if (identifier.isEmpty()) "${RootNappletEvent.KIND}:$author:" else "${NamedNappletEvent.KIND}:$author:$identifier"
+        }
+    val nsiteCoord =
+        remember(author, identifier) {
+            if (identifier.isEmpty()) "${RootSiteEvent.KIND}:$author:" else "${NamedSiteEvent.KIND}:$author:$identifier"
+        }
+    val nappletNote = remember(nappletCoord) { LocalCache.checkGetOrCreateAddressableNote(nappletCoord) } ?: return null
+    val nsiteNote = remember(nsiteCoord) { LocalCache.checkGetOrCreateAddressableNote(nsiteCoord) } ?: return null
+    val nappletState by nappletNote
         .flow()
         .metadata.stateFlow
         .collectAsStateWithLifecycle()
-    return noteState.note.event as? NappletManifest
+    val nsiteState by nsiteNote
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+    return nappletState.note.event ?: nsiteState.note.event
 }
 
 @Composable
@@ -233,10 +250,22 @@ private fun NappletAppCard(
     val kind = if (identifier.isEmpty()) RootNappletEvent.KIND else NamedNappletEvent.KIND
     val fullCoordinate = remember(entry.coordinate) { "$kind:$author:$identifier" }
 
-    val iconModel = rememberNappletIconModel(fullCoordinate)
-    val manifest = rememberNappletManifest(fullCoordinate)
-    val title = manifest?.title()?.ifBlank { null } ?: identifier.ifBlank { untitled }
-    val iconUrl = manifest?.icon()?.ifBlank { null }
+    val iconModel = rememberManifestIconModel(author, identifier)
+    val event = rememberManifestEvent(author, identifier)
+    val title =
+        when (event) {
+            is NappletManifest -> event.title()
+            is RootSiteEvent -> event.title()
+            is NamedSiteEvent -> event.title()
+            else -> null
+        }?.ifBlank { null } ?: identifier.ifBlank { untitled }
+    val iconUrl =
+        when (event) {
+            is NappletManifest -> event.icon()
+            is RootSiteEvent -> event.icon()
+            is NamedSiteEvent -> event.icon()
+            else -> null
+        }?.ifBlank { null }
 
     val npub = remember(author) { runCatching { NPub.create(author) }.getOrDefault(author.take(12) + "…") }
     val domain = identifier.ifBlank { author.take(12) + "…" }

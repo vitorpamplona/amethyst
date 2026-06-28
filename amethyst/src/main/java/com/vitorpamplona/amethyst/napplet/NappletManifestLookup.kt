@@ -22,12 +22,14 @@ package com.vitorpamplona.amethyst.napplet
 
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 
 /**
- * Looks up the best-effort human title and icon URL for a napplet from the local cache.
+ * Looks up the best-effort human title and icon URL for a napplet or nsite from the local cache.
  * Falls back to the d-identifier or [untitled] when no manifest is cached.
  */
 fun resolveNappletMeta(
@@ -37,17 +39,35 @@ fun resolveNappletMeta(
 ): Pair<String, String?> {
     val events =
         Amethyst.instance.cache
-            .filter(Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND), authors = listOf(author)))
-            .mapNotNull { it.event }
+            .filter(
+                Filter(
+                    kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND, RootSiteEvent.KIND, NamedSiteEvent.KIND),
+                    authors = listOf(author),
+                ),
+            ).mapNotNull { it.event }
     val match =
         events.firstOrNull { ev ->
             when (ev) {
                 is NamedNappletEvent -> ev.identifier() == identifier
                 is RootNappletEvent -> identifier.isEmpty()
+                is NamedSiteEvent -> ev.identifier() == identifier
+                is RootSiteEvent -> identifier.isEmpty()
                 else -> false
             }
-        } as? NappletManifest
-    val title = match?.title()?.ifBlank { null } ?: identifier.ifBlank { untitled }
-    val iconUrl = match?.icon()?.ifBlank { null }
+        }
+    val title =
+        when (match) {
+            is NappletManifest -> match.title()
+            is RootSiteEvent -> match.title()
+            is NamedSiteEvent -> match.title()
+            else -> null
+        }?.ifBlank { null } ?: identifier.ifBlank { untitled }
+    val iconUrl =
+        when (match) {
+            is NappletManifest -> match.icon()
+            is RootSiteEvent -> match.icon()
+            is NamedSiteEvent -> match.icon()
+            else -> null
+        }?.ifBlank { null }
     return title to iconUrl
 }

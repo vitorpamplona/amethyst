@@ -124,3 +124,24 @@ fun rememberWebAppIconModel(url: String): String? {
     val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
     return remember(host, iconKeys) { BrowserIconRegistry.iconModelFor(host) }
 }
+
+/**
+ * A Coil model for the bundled icon of an napplet or nsite identified by [author] and
+ * [identifier]. Tries the napplet manifest (kinds 15129 / 35129) first, then falls back to the
+ * nsite manifest (kinds 15128 / 35128). Returns null until the blob lands on disk.
+ */
+@Composable
+fun rememberManifestIconModel(
+    author: String,
+    identifier: String,
+): String? {
+    val nappletCoord =
+        remember(author, identifier) {
+            if (identifier.isEmpty()) "${RootNappletEvent.KIND}:$author:" else "${NamedNappletEvent.KIND}:$author:$identifier"
+        }
+    val nsiteCoord =
+        remember(author, identifier) {
+            if (identifier.isEmpty()) "${RootSiteEvent.KIND}:$author:" else "${NamedSiteEvent.KIND}:$author:$identifier"
+        }
+    return rememberNappletIconModel(nappletCoord) ?: rememberNappletIconModel(nsiteCoord)
+}

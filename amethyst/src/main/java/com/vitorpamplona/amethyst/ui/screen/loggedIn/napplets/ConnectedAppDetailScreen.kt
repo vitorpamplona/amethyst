@@ -74,7 +74,7 @@ import com.vitorpamplona.amethyst.commons.napplet.signers.NostrOpDecision
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
-import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
+import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
 import com.vitorpamplona.amethyst.napplet.descriptionRes
 import com.vitorpamplona.amethyst.napplet.labelRes
@@ -82,8 +82,6 @@ import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -260,8 +258,7 @@ private fun AppIdentityHeader(state: ConnectedAppDetailState) {
                 iconModel = rememberWebAppIconModel(identifier)
                 appForIcon = FavoriteApp.WebApp(identifier, state.title, 0L)
             } else {
-                val kind = if (identifier.isEmpty()) RootNappletEvent.KIND else NamedNappletEvent.KIND
-                iconModel = rememberNappletIconModel("$kind:$author:$identifier")
+                iconModel = rememberManifestIconModel(author, identifier)
                 appForIcon = FavoriteApp.NostrApp(state.coordinate, state.title, 0L, state.iconUrl)
             }
             FavoriteAppIcon(
