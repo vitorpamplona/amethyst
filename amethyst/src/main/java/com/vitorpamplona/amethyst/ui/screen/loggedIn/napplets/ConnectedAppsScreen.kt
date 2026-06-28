@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
@@ -63,16 +64,15 @@ import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -81,12 +81,7 @@ import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 private data class ConnectedAppEntry(
     val coordinate: String,
-    val title: String,
-    val domain: String,
-    val authorPubKey: String,
-    val iconUrl: String?,
     val signerPolicy: AppSignerPolicy?,
-    val capabilityCount: Int,
 )
 
 @Composable
@@ -96,51 +91,27 @@ fun ConnectedAppsScreen(
 ) {
     val capabilityLedger = remember { NappletPermissionLedger(Amethyst.instance.nappletPermissionStore) }
     val signerLedger = remember { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
-    val untitled = stringResource(CommonsR.string.napplet_untitled)
 
     var items by remember { mutableStateOf<List<ConnectedAppEntry>?>(null) }
 
     LaunchedEffect(Unit) {
-        // Load initial list; items is set before child coroutines start so the
-        // observeEvents first-emission and the relay fetch both see a non-null list.
         val initial =
             withContext(Dispatchers.Default) {
-                loadConnectedApps(capabilityLedger, signerLedger, untitled)
+                loadConnectedApps(capabilityLedger, signerLedger)
             }
         items = initial
 
-        val manifestFilter = Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND))
-
-        // Re-resolve metadata whenever a napplet manifest arrives in LocalCache.
-        launch(Dispatchers.Default) {
-            LocalCache.observeEvents<Event>(manifestFilter).collect {
-                items =
-                    items?.map { entry ->
-                        val author = entry.coordinate.substringBefore(':')
-                        val identifier = entry.coordinate.substringAfter(':', "")
-                        val (title, iconUrl) = resolveNappletMeta(author, identifier, untitled)
-                        entry.copy(title = title, iconUrl = iconUrl)
-                    }
-            }
-        }
-
-        // Fetch manifests for apps whose metadata isn't in cache yet.
+        // Fetch manifests for all entries so the reactive cards can display title + icon.
         launch(Dispatchers.IO) {
-            val authorsToFetch =
-                initial
-                    .filter { it.iconUrl == null }
-                    .map { it.coordinate.substringBefore(':') }
-                    .toSet()
-            if (authorsToFetch.isEmpty()) return@launch
-
+            if (initial.isEmpty()) return@launch
+            val authors = initial.map { it.coordinate.substringBefore(':') }.toSet()
             val filter =
                 Filter(
                     kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND),
-                    authors = authorsToFetch.toList(),
+                    authors = authors.toList(),
                 )
             val relays = accountViewModel.account.homeRelays.flow.value
             if (relays.isEmpty()) return@launch
-
             runCatching {
                 val events =
                     accountViewModel.account.client.fetchAll(
@@ -183,7 +154,8 @@ fun ConnectedAppsScreen(
                     }
                 }
 
-            else ->
+            else -> {
+                val untitled = stringResource(CommonsR.string.napplet_untitled)
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(padding),
                     contentPadding = PaddingValues(16.dp),
@@ -192,20 +164,52 @@ fun ConnectedAppsScreen(
                     items(current, key = { it.coordinate }) { entry ->
                         ConnectedAppCard(
                             entry = entry,
+                            untitled = untitled,
                             onClick = { nav.nav(Route.ConnectedAppDetail(entry.coordinate)) },
                         )
                     }
                 }
+            }
         }
     }
 }
 
 @Composable
+private fun rememberNappletManifest(fullCoordinate: String): NappletManifest? {
+    val note =
+        remember(fullCoordinate) { LocalCache.checkGetOrCreateAddressableNote(fullCoordinate) }
+            ?: return null
+    val noteState by note
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+    return noteState.note.event as? NappletManifest
+}
+
+@Composable
 private fun ConnectedAppCard(
     entry: ConnectedAppEntry,
+    untitled: String,
     onClick: () -> Unit,
 ) {
-    val iconModel = rememberNappletIconModel(entry.coordinate)
+    val author = remember(entry.coordinate) { entry.coordinate.substringBefore(':') }
+    val identifier = remember(entry.coordinate) { entry.coordinate.substringAfter(':', "") }
+
+    // Build the full kind:pubkey:dtag coordinate that LocalCache and rememberNappletIconModel expect.
+    val kind = if (identifier.isEmpty()) RootNappletEvent.KIND else NamedNappletEvent.KIND
+    val fullCoordinate = remember(entry.coordinate) { "$kind:$author:$identifier" }
+
+    // Reactive icon blob (downloads from blossom as needed).
+    val iconModel = rememberNappletIconModel(fullCoordinate)
+
+    // Reactively resolve title and iconUrl from the live addressable note.
+    val manifest = rememberNappletManifest(fullCoordinate)
+    val title = manifest?.title()?.ifBlank { null } ?: identifier.ifBlank { untitled }
+    val iconUrl = manifest?.icon()?.ifBlank { null }
+
+    val npub = remember(author) { runCatching { NPub.create(author) }.getOrDefault(author.take(12) + "…") }
+    val domain = identifier.ifBlank { author.take(12) + "…" }
+
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -216,7 +220,7 @@ private fun ConnectedAppCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             FavoriteAppIcon(
-                app = FavoriteApp.NostrApp(entry.coordinate, entry.title, 0L, entry.iconUrl),
+                app = FavoriteApp.NostrApp(fullCoordinate, title, 0L, iconUrl),
                 iconModel = iconModel,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(48.dp),
@@ -227,13 +231,13 @@ private fun ConnectedAppCard(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
-                    entry.title,
+                    title,
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    entry.domain,
+                    domain,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontFamily = FontFamily.Monospace,
@@ -241,7 +245,7 @@ private fun ConnectedAppCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    entry.authorPubKey,
+                    npub,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontFamily = FontFamily.Monospace,
@@ -287,27 +291,15 @@ private fun AppSignerPolicy.shortLabel(): String =
 private suspend fun loadConnectedApps(
     capabilityLedger: NappletPermissionLedger,
     signerLedger: NostrSignerPermissionLedger,
-    untitled: String,
 ): List<ConnectedAppEntry> {
     val capGrants = capabilityLedger.allPersistedGrants()
     val signerPolicies = signerLedger.store.allPolicies()
-
     val allCoordinates = (capGrants.keys + signerPolicies.keys).toSet()
-
     return allCoordinates
         .map { coordinate ->
-            val author = coordinate.substringBefore(':')
-            val identifier = coordinate.substringAfter(':', "")
-            val (title, iconUrl) = resolveNappletMeta(author, identifier, untitled)
-            val npub = runCatching { NPub.create(author) }.getOrDefault(author.take(12) + "…")
             ConnectedAppEntry(
                 coordinate = coordinate,
-                title = title,
-                domain = identifier.ifBlank { author.take(12) + "…" },
-                authorPubKey = npub,
-                iconUrl = iconUrl,
                 signerPolicy = signerPolicies[coordinate],
-                capabilityCount = capGrants[coordinate]?.size ?: 0,
             )
-        }.sortedBy { it.title.lowercase() }
+        }.sortedBy { it.coordinate }
 }
