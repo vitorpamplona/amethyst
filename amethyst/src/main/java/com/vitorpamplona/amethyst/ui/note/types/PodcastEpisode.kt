@@ -33,7 +33,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,6 +90,7 @@ fun RenderPodcastEpisode(
     val transcriptUrl = remember(noteEvent) { episode.episodeTranscriptUrl() }
     val chaptersUrl = remember(noteEvent) { episode.episodeChaptersUrl() }
     val value = remember(noteEvent) { episode.episodeValue() }
+    var chaptersExpanded by remember(noteEvent) { mutableStateOf(false) }
     // Suppress the markdown block if blank — title + description already describe a short
     // episode. Otherwise hand off to RichText below.
     val markdown = remember(noteEvent) { noteEvent.content.ifBlank { null } }
@@ -162,12 +166,16 @@ fun RenderPodcastEpisode(
                             runCatching { uriHandler.openUri(url) }
                         }
                     }
-                    chaptersUrl?.let { url ->
+                    chaptersUrl?.let {
                         PodcastLinkChip(stringRes(R.string.podcast_chapters), MaterialSymbols.Checklist) {
-                            runCatching { uriHandler.openUri(url) }
+                            chaptersExpanded = !chaptersExpanded
                         }
                     }
                 }
+            }
+
+            if (chaptersExpanded) {
+                chaptersUrl?.let { PodcastChaptersSection(it, accountViewModel) }
             }
 
             description?.let {
