@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
@@ -101,8 +102,8 @@ private fun ReadmeContent(
         }
 
     when (val text = content) {
-        null -> StatusText(stringRes(R.string.git_repo_code_loading), scaffoldPaddingTop)
-        "" -> StatusText(stringRes(R.string.git_repo_file_load_error), scaffoldPaddingTop)
+        null -> GitLoadingBox(stringRes(R.string.git_repo_code_loading), Modifier.padding(scaffoldPaddingTop))
+        "" -> GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(R.string.git_repo_file_load_error), Modifier.padding(scaffoldPaddingTop))
         else -> {
             val background = MaterialTheme.colorScheme.background
             val backgroundColor = remember { mutableStateOf(background) }
@@ -139,10 +140,11 @@ private fun ReadmeFallback(
 ) {
     val description = event.description()?.takeIf { it.isNotBlank() }
     if (description == null) {
-        StatusText(
-            text = if (loading) stringRes(R.string.git_repo_code_loading) else stringRes(R.string.git_repo_readme_missing),
-            scaffoldPaddingTop = scaffoldPaddingTop,
-        )
+        if (loading) {
+            GitLoadingBox(stringRes(R.string.git_repo_code_loading), Modifier.padding(scaffoldPaddingTop))
+        } else {
+            GitMessageBox(MaterialSymbols.Description, stringRes(R.string.git_repo_readme_missing), Modifier.padding(scaffoldPaddingTop))
+        }
         return
     }
 
@@ -178,22 +180,6 @@ private fun ReadmeFallback(
                 modifier = Modifier.padding(top = 16.dp),
             )
         }
-    }
-}
-
-@Composable
-private fun StatusText(
-    text: String,
-    scaffoldPaddingTop: PaddingValues,
-) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(scaffoldPaddingTop).padding(24.dp),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-        )
     }
 }
 

@@ -2589,6 +2589,12 @@
     <string name="git_repo_empty_folder">This folder is empty.</string>
     <string name="git_repo_root">root</string>
     <string name="git_repo_retry">Retry</string>
+    <string name="git_repo_copy_file">Copy file contents</string>
+    <string name="git_repo_plain_text">Text</string>
+    <plurals name="git_repo_item_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
     <string name="git_repositories">Git Repositories</string>
     <string name="nsite_title">nSite: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>

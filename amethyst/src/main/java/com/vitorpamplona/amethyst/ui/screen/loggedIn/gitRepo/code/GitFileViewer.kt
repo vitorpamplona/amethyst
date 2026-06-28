@@ -20,14 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code
 
+import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,26 +42,40 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
 import com.vitorpamplona.quartz.nip34Git.git.GitTreeEntry
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 
+private val CodeFontSize = 13.sp
+private val CodeLineHeight = 20.sp
+
 /**
  * Renders a single file from the repository. Markdown files render as rich text,
- * text files render with syntax highlighting, and binary files show a notice.
+ * text files render with a line-number gutter and syntax highlighting, and binary
+ * files show a notice.
  */
 @Composable
 fun GitFileViewer(
@@ -79,13 +100,17 @@ fun GitFileViewer(
 
     val bytes = result
     when {
-        bytes == null -> CenteredMessage(stringRes(R.string.git_repo_code_loading), modifier)
-        bytes.isFailure -> CenteredMessage(stringRes(R.string.git_repo_file_load_error), modifier)
+        bytes == null -> GitLoadingBox(stringRes(R.string.git_repo_code_loading), modifier)
+        bytes.isFailure -> GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(R.string.git_repo_file_load_error), modifier)
         else -> {
             val data = bytes.getOrThrow()
             when {
                 isProbablyBinary(data) ->
-                    CenteredMessage(stringRes(R.string.git_repo_binary_file, humanSize(data.size)), modifier)
+                    GitMessageBox(
+                        symbol = MaterialSymbols.Description,
+                        text = stringRes(R.string.git_repo_binary_file, humanSize(data.size)),
+                        modifier = modifier,
+                    )
                 isMarkdownFile(entry.name) ->
                     MarkdownFile(data.decodeToString(), accountViewModel, nav, modifier)
                 else ->
@@ -131,46 +156,149 @@ private fun HighlightedCode(
     modifier: Modifier,
 ) {
     val darkMode = isSystemInDarkTheme()
+    val language = remember(fileName) { CodeHighlighter.languageForFile(fileName) }
+
     val annotated by
         produceState(AnnotatedString(code), code, fileName, darkMode) {
             value =
                 withContext(Dispatchers.Default) {
-                    val language = CodeHighlighter.languageForFile(fileName)
                     if (language == null) AnnotatedString(code) else CodeHighlighter.highlight(code, language, darkMode)
                 }
         }
 
-    Text(
-        text = annotated,
-        fontFamily = FontFamily.Monospace,
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
-        softWrap = false,
-        color = MaterialTheme.colorScheme.onBackground,
-        modifier =
-            modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-    )
+    Column(modifier.fillMaxSize()) {
+        CodeBar(languageLabel = language?.name?.let(::prettyLanguage) ?: stringRes(R.string.git_repo_plain_text), code = code)
+        HorizontalDivider(thickness = 0.5.dp)
+        CodeWithLineNumbers(annotated, Modifier.fillMaxSize())
+    }
 }
 
 @Composable
-private fun CenteredMessage(
-    text: String,
-    modifier: Modifier,
+private fun CodeBar(
+    languageLabel: String,
+    code: String,
 ) {
-    Column(
-        modifier = modifier.fillMaxSize().padding(24.dp),
+    val clipboard = LocalClipboard.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                .padding(start = 14.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            text = languageLabel,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
         )
+        IconButton(
+            onClick = {
+                scope.launch {
+                    clipboard.setText(code)
+                    Toast.makeText(context, stringRes(context, R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
+                }
+            },
+        ) {
+            Icon(
+                symbol = MaterialSymbols.ContentCopy,
+                contentDescription = stringRes(R.string.git_repo_copy_file),
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
+
+@Composable
+private fun CodeWithLineNumbers(
+    annotated: AnnotatedString,
+    modifier: Modifier,
+) {
+    val lineRanges = remember(annotated) { computeLineRanges(annotated.text) }
+    val gutterDigits = lineRanges.size.toString().length
+    val gutterWidth = (gutterDigits * 9 + 20).dp
+
+    val verticalScroll = rememberScrollState()
+    val horizontalScroll = rememberScrollState()
+    val gutterColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+
+    Row(modifier.verticalScroll(verticalScroll)) {
+        // Sticky line-number gutter (only the code area scrolls horizontally).
+        Column(
+            modifier =
+                Modifier
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                    .width(gutterWidth)
+                    .padding(vertical = 8.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
+            for (i in lineRanges.indices) {
+                Text(
+                    text = (i + 1).toString(),
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = CodeFontSize,
+                    lineHeight = CodeLineHeight,
+                    color = gutterColor,
+                    textAlign = TextAlign.End,
+                )
+            }
+        }
+        Column(
+            modifier =
+                Modifier
+                    .horizontalScroll(horizontalScroll)
+                    .padding(start = 12.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+        ) {
+            for ((start, end) in lineRanges) {
+                Text(
+                    text = annotated.subSequence(start, end),
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = CodeFontSize,
+                    lineHeight = CodeLineHeight,
+                    softWrap = false,
+                    maxLines = 1,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+        }
+    }
+}
+
+/** Splits text into per-line character ranges, dropping a single trailing newline's empty line. */
+private fun computeLineRanges(text: String): List<Pair<Int, Int>> {
+    val ranges = ArrayList<Pair<Int, Int>>()
+    var lineStart = 0
+    var i = 0
+    while (i < text.length) {
+        if (text[i] == '\n') {
+            ranges.add(lineStart to i)
+            lineStart = i + 1
+        }
+        i++
+    }
+    ranges.add(lineStart to text.length)
+    if (ranges.size > 1 && ranges.last().let { it.first == it.second }) {
+        ranges.removeAt(ranges.size - 1)
+    }
+    return ranges
+}
+
+private fun prettyLanguage(enumName: String): String =
+    when (enumName) {
+        "CPP" -> "C++"
+        "CSHARP" -> "C#"
+        "JAVASCRIPT" -> "JavaScript"
+        "TYPESCRIPT" -> "TypeScript"
+        "COFFEESCRIPT" -> "CoffeeScript"
+        "PHP" -> "PHP"
+        else -> enumName.lowercase().replaceFirstChar { it.uppercase() }
+    }
 
 private fun isMarkdownFile(name: String): Boolean {
     val ext = name.substringAfterLast('.', "").lowercase()

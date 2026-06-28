@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -35,7 +36,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.Button
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +49,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,19 +75,17 @@ fun GitCodeTab(
     val scaffoldPadding = LocalDisappearingScaffoldPadding.current
     when (state) {
         is GitBrowseState.Loading ->
-            CenteredStatus(stringRes(R.string.git_repo_code_loading), Modifier.padding(scaffoldPadding))
+            GitLoadingBox(stringRes(R.string.git_repo_code_loading), Modifier.padding(scaffoldPadding))
 
-        is GitBrowseState.Error ->
-            CenteredStatus(
-                text =
-                    if (state.message == GitRepositoryBrowserViewModel.NO_CLONE_URL) {
-                        stringRes(R.string.git_repo_no_clone_url)
-                    } else {
-                        stringRes(R.string.git_repo_code_error)
-                    },
+        is GitBrowseState.Error -> {
+            val noClone = state.message == GitRepositoryBrowserViewModel.NO_CLONE_URL
+            GitMessageBox(
+                symbol = if (noClone) MaterialSymbols.Code else MaterialSymbols.ErrorOutline,
+                text = if (noClone) stringRes(R.string.git_repo_no_clone_url) else stringRes(R.string.git_repo_code_error),
                 modifier = Modifier.padding(scaffoldPadding),
-                onRetry = if (state.message == GitRepositoryBrowserViewModel.NO_CLONE_URL) null else viewModel::reload,
+                onRetry = if (noClone) null else viewModel::reload,
             )
+        }
 
         is GitBrowseState.Loaded ->
             CodeBrowser(state.snapshot, viewModel, accountViewModel, nav, scaffoldPaddingTop = scaffoldPadding)
@@ -112,7 +113,7 @@ private fun CodeBrowser(
             FileHeader(name = openPath.lastOrNull() ?: "", onBack = { openFilePath = null })
             HorizontalDivider(thickness = 0.5.dp)
             if (entry == null) {
-                CenteredStatus(stringRes(R.string.git_repo_file_load_error), Modifier)
+                GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(R.string.git_repo_file_load_error))
             } else {
                 GitFileViewer(
                     snapshot = snapshot,
@@ -132,13 +133,14 @@ private fun CodeBrowser(
     val entries = remember(snapshot, pathString) { snapshot.entriesAt(path).orEmpty() }
 
     Column(Modifier.fillMaxSize().padding(scaffoldPaddingTop)) {
+        RepoInfoBar(branch = snapshot.branch, headCommit = snapshot.headCommit, entryCount = entries.size)
         Breadcrumb(
             path = path,
             onNavigate = { depth -> pathString = path.take(depth).joinToString("/") },
         )
         HorizontalDivider(thickness = 0.5.dp)
         if (entries.isEmpty()) {
-            CenteredStatus(stringRes(R.string.git_repo_empty_folder), Modifier)
+            GitMessageBox(MaterialSymbols.Folder, stringRes(R.string.git_repo_empty_folder))
         } else {
             LazyColumn(Modifier.fillMaxSize()) {
                 items(entries, key = { it.name }) { entry ->
@@ -148,6 +150,11 @@ private fun CodeBrowser(
                             val child = (path + entry.name).joinToString("/")
                             if (entry.isFolder) pathString = child else openFilePath = child
                         },
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 56.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
                     )
                 }
             }
@@ -165,18 +172,19 @@ private fun Breadcrumb(
             Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Crumb(label = stringRes(R.string.git_repo_root), enabled = path.isNotEmpty()) { onNavigate(0) }
+        Crumb(label = stringRes(R.string.git_repo_root), current = path.isEmpty()) { onNavigate(0) }
         path.forEachIndexed { index, segment ->
             Icon(
                 symbol = MaterialSymbols.ChevronRight,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp).padding(horizontal = 2.dp),
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f),
             )
-            Crumb(label = segment, enabled = index < path.lastIndex) { onNavigate(index + 1) }
+            Crumb(label = segment, current = index == path.lastIndex) { onNavigate(index + 1) }
         }
     }
 }
@@ -184,21 +192,29 @@ private fun Breadcrumb(
 @Composable
 private fun Crumb(
     label: String,
-    enabled: Boolean,
+    current: Boolean,
     onClick: () -> Unit,
 ) {
+    val background =
+        if (current) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        }
+    val textColor = if (current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+
     Text(
         text = label,
         style = MaterialTheme.typography.labelLarge,
-        fontWeight = if (enabled) FontWeight.Normal else FontWeight.SemiBold,
-        color =
-            if (enabled) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onBackground
-            },
+        fontWeight = if (current) FontWeight.SemiBold else FontWeight.Normal,
+        color = textColor,
         maxLines = 1,
-        modifier = if (enabled) Modifier.clickable(onClick = onClick) else Modifier,
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .let { if (!current) it.clickable(onClick = onClick) else it }
+                .background(background)
+                .padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }
 
@@ -212,7 +228,7 @@ private fun EntryRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -222,23 +238,39 @@ private fun EntryRow(
                 entry.isSubmodule -> MaterialSymbols.Code
                 else -> MaterialSymbols.Description
             }
-        Icon(
-            symbol = symbol,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint =
-                if (entry.isFolder) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                },
-        )
+        val tint = if (entry.isFolder) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        Box(
+            modifier =
+                Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(tint.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                symbol = symbol,
+                contentDescription = null,
+                modifier = Modifier.size(19.dp),
+                tint = tint,
+            )
+        }
         Text(
             text = entry.name,
             style = MaterialTheme.typography.bodyMedium,
+            fontFamily = if (entry.isFolder) null else FontFamily.Monospace,
+            fontWeight = if (entry.isFolder) FontWeight.Medium else FontWeight.Normal,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
         )
+        if (entry.isFolder) {
+            Icon(
+                symbol = MaterialSymbols.ChevronRight,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+            )
+        }
     }
 }
 
@@ -256,33 +288,10 @@ private fun FileHeader(
         Text(
             text = name,
             style = MaterialTheme.typography.titleSmall,
+            fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-    }
-}
-
-@Composable
-private fun CenteredStatus(
-    text: String,
-    modifier: Modifier,
-    onRetry: (() -> Unit)? = null,
-) {
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.padding(24.dp),
-        ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-            )
-            if (onRetry != null) {
-                Button(onClick = onRetry) { Text(stringRes(R.string.git_repo_retry)) }
-            }
-        }
     }
 }
