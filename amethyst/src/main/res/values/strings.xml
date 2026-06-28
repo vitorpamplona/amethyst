@@ -2594,6 +2594,8 @@
     <string name="git_repo_tags">Tags</string>
     <string name="git_repo_search_files">Search files…</string>
     <string name="git_repo_no_search_results">No matching files.</string>
+    <string name="git_repo_commits">Commits</string>
+    <string name="git_repo_no_commits">No commit history available.</string>
     <string name="git_repo_copy_file">Copy file contents</string>
     <string name="git_repo_plain_text">Text</string>
     <plurals name="git_repo_item_count">

@@ -105,6 +105,14 @@ private fun CodeBrowser(
 ) {
     var pathString by rememberSaveable(snapshot.headCommit) { mutableStateOf("") }
     var openFilePath by rememberSaveable(snapshot.headCommit) { mutableStateOf<String?>(null) }
+    var showHistory by rememberSaveable(snapshot.headCommit) { mutableStateOf(false) }
+
+    if (showHistory) {
+        Column(Modifier.fillMaxSize().padding(scaffoldPaddingTop)) {
+            GitCommitLog(snapshot, viewModel, onBack = { showHistory = false })
+        }
+        return
+    }
 
     val path = remember(pathString) { if (pathString.isEmpty()) emptyList() else pathString.split("/") }
     val openPath = openFilePath?.let { if (it.isEmpty()) emptyList() else it.split("/") }
@@ -148,6 +156,7 @@ private fun CodeBrowser(
             branches = snapshot.branches,
             tags = snapshot.tags,
             onSelectRef = { viewModel.switchRef(it) },
+            onHistory = { showHistory = true },
         )
         FileSearchField(query = query, onQueryChange = { query = it })
         HorizontalDivider(thickness = 0.5.dp)

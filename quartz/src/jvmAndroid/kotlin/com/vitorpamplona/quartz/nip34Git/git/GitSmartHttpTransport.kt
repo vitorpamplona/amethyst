@@ -89,14 +89,16 @@ class GitSmartHttpTransport(
      *
      * @param wants object ids to request.
      * @param deepen shallow depth (1 = tip only). Null for a full fetch.
-     * @param filterBlobNone request `filter blob:none` (omit file contents).
+     * @param filter a partial-clone filter spec such as `blob:none` (omit file
+     *   contents) or `tree:0` (omit trees and blobs). Applied only when the server
+     *   advertises `filter`.
      */
     suspend fun fetchPack(
         cloneUrl: String,
         caps: GitCapabilities,
         wants: List<String>,
         deepen: Int?,
-        filterBlobNone: Boolean,
+        filter: String?,
     ): ByteArray =
         withContext(Dispatchers.IO) {
             require(wants.isNotEmpty()) { "fetch requires at least one want" }
@@ -105,7 +107,7 @@ class GitSmartHttpTransport(
                     objectFormat = caps.objectFormat,
                     wants = wants,
                     deepen = if (caps.supportsShallow) deepen else null,
-                    filterBlobNone = filterBlobNone && caps.supportsFilter,
+                    filter = filter?.takeIf { caps.supportsFilter },
                 )
             GitUploadPackV2.extractPack(PktLineCodec.parse(postUploadPack(cloneUrl, body)))
         }

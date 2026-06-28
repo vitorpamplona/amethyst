@@ -23,12 +23,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.quartz.nip34Git.git.GitCommit
 import com.vitorpamplona.quartz.nip34Git.git.GitHttpClient
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
+import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -115,6 +118,18 @@ class GitRepositoryBrowserViewModel(
         snapshot: GitRepoSnapshot,
         oid: String,
     ): ByteArray = snapshot.readBlob(oid)
+
+    /** Recent commits ending at the snapshot's tip, most recent first. */
+    suspend fun loadHistory(snapshot: GitRepoSnapshot): List<GitCommit> = withContext(Dispatchers.IO) { client.loadHistory(snapshot.cloneUrl, snapshot.headCommit) }
+
+    /** The diff a commit introduced (commit vs its first parent). */
+    suspend fun commitDiff(
+        snapshot: GitRepoSnapshot,
+        commit: GitCommit,
+    ): ParsedPatch =
+        withContext(Dispatchers.IO) {
+            client.computeDiff(snapshot.cloneUrl, commit.oid, commit.parents.firstOrNull())
+        }
 
     /** http(s) clone URLs to try, in order, including a `.git` variant when missing. */
     private fun candidateUrls(): List<String> {

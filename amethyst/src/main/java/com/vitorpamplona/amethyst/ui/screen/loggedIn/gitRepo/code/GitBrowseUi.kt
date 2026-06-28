@@ -38,6 +38,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -141,27 +142,39 @@ fun RepoInfoBar(
     branches: List<String> = emptyList(),
     tags: List<String> = emptyList(),
     onSelectRef: ((String?) -> Unit)? = null,
+    onHistory: (() -> Unit)? = null,
 ) {
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (onSelectRef != null && (branches.size + tags.size) > 1) {
-            BranchSelector(branch, branches, tags, onSelectRef)
-        } else if (branch != null) {
-            InfoChip(symbol = MaterialSymbols.AltRoute, label = branch)
+        Row(
+            modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (onSelectRef != null && (branches.size + tags.size) > 1) {
+                BranchSelector(branch, branches, tags, onSelectRef)
+            } else if (branch != null) {
+                InfoChip(symbol = MaterialSymbols.AltRoute, label = branch)
+            }
+            InfoChip(symbol = MaterialSymbols.Commit, label = headCommit.take(7), monospace = true)
+            Text(
+                text = pluralStringResource(R.plurals.git_repo_item_count, entryCount, entryCount),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+            )
         }
-        InfoChip(symbol = MaterialSymbols.Commit, label = headCommit.take(7), monospace = true)
-        Text(
-            text = pluralStringResource(R.plurals.git_repo_item_count, entryCount, entryCount),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-        )
+        if (onHistory != null) {
+            IconButton(onClick = onHistory) {
+                Icon(
+                    symbol = MaterialSymbols.History,
+                    contentDescription = stringRes(R.string.git_repo_commits),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }
 

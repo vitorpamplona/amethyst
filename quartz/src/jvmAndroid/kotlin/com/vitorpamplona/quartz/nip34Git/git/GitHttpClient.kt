@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
+import java.util.PriorityQueue
 
 /**
  * High-level read-only browser for a git repository served over smart-HTTP.
@@ -72,7 +73,7 @@ class GitHttpClient(
                 deepen = 1,
                 // When the server can't filter, a shallow fetch already pulls every blob, so the
                 // snapshot is fully self-contained and no lazy per-file fetch is needed.
-                filterBlobNone = caps.supportsFilter,
+                filter = "blob:none",
             )
         val objects = Packfile.parse(pack)
 
@@ -104,6 +105,72 @@ class GitHttpClient(
             transport = transport,
             caps = caps,
         )
+    }
+
+    /**
+     * Loads up to [depth] commits of history starting at [startCommit] (or the
+     * server's HEAD), most recent first. Uses a shallow `tree:0` fetch so only the
+     * commit objects come down — no trees or blobs. The shallow boundary caps how
+     * far back the log goes.
+     */
+    suspend fun loadHistory(
+        cloneUrl: String,
+        startCommit: String?,
+        depth: Int = 50,
+    ): List<GitCommit> {
+        require(cloneUrl.startsWith("http://") || cloneUrl.startsWith("https://")) {
+            "unsupported git transport (only http/https): $cloneUrl"
+        }
+        val caps = transport.fetchCapabilities(cloneUrl)
+        if (!caps.supportsFetch) throw GitHttpException("server does not speak git protocol v2 (fetch)")
+
+        val start =
+            startCommit?.takeIf { it.isNotBlank() }
+                ?: run {
+                    if (!caps.supportsLsRefs) throw GitHttpException("server can't list refs")
+                    val refs = transport.lsRefs(cloneUrl, caps)
+                    selectHead(refs, null)?.oid ?: throw GitHttpException("could not resolve HEAD")
+                }
+
+        val pack =
+            transport.fetchPack(
+                cloneUrl = cloneUrl,
+                caps = caps,
+                wants = listOf(start),
+                deepen = depth,
+                // tree:0 → commits only; if the server can't filter, blob:none still works (we ignore the trees).
+                filter = if (caps.supportsFilter) "tree:0" else "blob:none",
+            )
+        val objects = Packfile.parse(pack)
+        val commits = HashMap<String, GitCommit>()
+        for (obj in objects.values) {
+            if (obj.type == GitObjectType.COMMIT) {
+                val commit = GitObjectParser.parseCommit(obj.oid, obj.data)
+                commits[commit.oid] = commit
+            }
+        }
+
+        // Walk parents most-recent-first (like `git log`), bounded by depth and the shallow set.
+        val result = ArrayList<GitCommit>()
+        val visited = HashSet<String>()
+        val frontier = PriorityQueue<GitCommit>(compareByDescending { it.authorTimeSec })
+        commits[start]?.let {
+            frontier.add(it)
+            visited.add(start)
+        }
+        while (frontier.isNotEmpty() && result.size < depth) {
+            val commit = frontier.poll()
+            result.add(commit)
+            for (parent in commit.parents) {
+                if (parent !in visited) {
+                    commits[parent]?.let {
+                        frontier.add(it)
+                        visited.add(parent)
+                    }
+                }
+            }
+        }
+        return result
     }
 
     /**
@@ -139,7 +206,7 @@ class GitHttpClient(
                 caps = caps,
                 wants = listOf(headCommit, base).distinct(),
                 deepen = 1,
-                filterBlobNone = caps.supportsFilter,
+                filter = "blob:none",
             )
         val objects = Packfile.parse(treePack)
 
@@ -179,7 +246,7 @@ class GitHttpClient(
 
         val needed = changes.flatMap { listOfNotNull(it.oldOid, it.newOid) }.filter { it !in blobs }.distinct()
         if (needed.isNotEmpty() && caps.supportsFilter) {
-            val blobPack = transport.fetchPack(cloneUrl, caps, needed, deepen = null, filterBlobNone = true)
+            val blobPack = transport.fetchPack(cloneUrl, caps, needed, deepen = null, filter = "blob:none")
             for ((oid, obj) in Packfile.parse(blobPack)) {
                 if (obj.type == GitObjectType.BLOB) blobs[oid] = obj.data
             }
@@ -359,7 +426,7 @@ class GitRepoSnapshot(
                     caps = caps,
                     wants = listOf(oid),
                     deepen = null,
-                    filterBlobNone = caps.supportsFilter,
+                    filter = "blob:none",
                 )
             val obj =
                 Packfile.parse(pack)[oid]

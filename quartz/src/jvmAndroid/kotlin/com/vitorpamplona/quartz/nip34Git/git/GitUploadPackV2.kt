@@ -45,7 +45,7 @@ object GitUploadPackV2 {
         objectFormat: String,
         wants: List<String>,
         deepen: Int?,
-        filterBlobNone: Boolean,
+        filter: String?,
     ): ByteArray =
         PktLineCodec.build {
             write(PktLineCodec.dataLine("command=fetch\n"))
@@ -54,7 +54,7 @@ object GitUploadPackV2 {
             write(PktLineCodec.dataLine("no-progress\n"))
             wants.forEach { write(PktLineCodec.dataLine("want $it\n")) }
             if (deepen != null) write(PktLineCodec.dataLine("deepen $deepen\n"))
-            if (filterBlobNone) write(PktLineCodec.dataLine("filter blob:none\n"))
+            if (filter != null) write(PktLineCodec.dataLine("filter $filter\n"))
             write(PktLineCodec.dataLine("done\n"))
             write(PktLineCodec.FLUSH)
         }
