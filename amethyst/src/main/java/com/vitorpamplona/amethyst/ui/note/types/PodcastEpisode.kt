@@ -194,7 +194,15 @@ fun RenderPodcastEpisode(
                 )
             }
 
-            value?.takeIf { !makeItShort }?.let { PodcastValueSplits(it) }
+            value?.takeIf { !makeItShort }?.let {
+                PodcastValueSplits(
+                    value = it,
+                    note = note,
+                    episodeName = title,
+                    podcastName = null,
+                    accountViewModel = accountViewModel,
+                )
+            }
 
             markdown?.takeIf { !makeItShort }?.let {
                 Spacer(Modifier.padding(top = 4.dp))

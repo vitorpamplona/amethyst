@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuild
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.V4VPaymentHandler
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -83,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
+import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
@@ -157,6 +159,8 @@ import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip92IMeta.imeta
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.podcasts.PodcastBoostagram
+import com.vitorpamplona.quartz.podcasts.PodcastValue
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -949,6 +953,51 @@ class AccountViewModel(
             onProgress = onProgress,
             onPayViaIntent = onPayViaIntent,
             zapType = effectiveType,
+        )
+    }
+
+    /**
+     * Executes a Podcasting-2.0 value-for-value split for [totalSats] sats: pays every recipient in
+     * the show/episode's [PodcastValue] block their weighted share (lnaddress via LNURL-pay, node via
+     * NWC keysend with the boostagram TLV). Errors surface on [toastManager]; progress on [onProgress].
+     */
+    fun payV4V(
+        value: PodcastValue,
+        totalSats: Long,
+        podcastName: String?,
+        episodeName: String?,
+        zappedNote: Note?,
+        context: Context,
+        onProgress: (Float) -> Unit = {},
+    ) = launchSigner {
+        val boostagram =
+            PodcastBoostagram(
+                podcast = podcastName,
+                episode = episodeName,
+                action = PodcastBoostagram.ACTION_BOOST,
+                appName = "Amethyst",
+                valueMsatTotal = totalSats * 1000,
+                senderName = account.userProfile().toBestDisplayName(),
+            )
+
+        V4VPaymentHandler(account).pay(
+            value = value,
+            totalMilliSats = totalSats * 1000,
+            boostagram = boostagram,
+            zappedNote = zappedNote,
+            context = context,
+            okHttpClient = httpClientBuilder::okHttpClientForMoney,
+            onError = { title, message ->
+                toastManager.toast(title, message)
+            },
+            onProgress = onProgress,
+            onPayInvoicesViaIntent = { invoices ->
+                invoices.forEach { invoice ->
+                    payViaIntent(invoice, context, onPaid = {}, onError = {
+                        toastManager.toast(stringRes(context, R.string.error_dialog_zap_error), it)
+                    })
+                }
+            },
         )
     }
 

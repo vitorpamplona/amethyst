@@ -932,6 +932,12 @@
     <string name="podcast_role_cohost">Co-host</string>
     <string name="podcast_role_editor">Editor</string>
     <string name="podcast_author_verified">Verified author</string>
+    <string name="podcast_value_send">Send value</string>
+    <string name="podcast_value_sending">Sending value…</string>
+    <string name="podcast_value_sent">Value sent</string>
+    <string name="podcast_value_error_title">Value-for-Value error</string>
+    <string name="podcast_value_no_recipients">This podcast has no payable value recipients.</string>
+    <string name="podcast_value_keysend_requires_nwc">Connect a Nostr Wallet Connect wallet to send to keysend (node) recipients.</string>
     <plurals name="podcast_episode_count">
         <item quantity="one">%1$d episode</item>
         <item quantity="other">%1$d episodes</item>

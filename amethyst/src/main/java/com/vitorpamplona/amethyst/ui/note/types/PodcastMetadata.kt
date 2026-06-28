@@ -175,7 +175,15 @@ fun RenderPodcastMetadata(
                 )
             }
 
-            value?.takeIf { !makeItShort }?.let { PodcastValueSplits(it) }
+            value?.takeIf { !makeItShort }?.let {
+                PodcastValueSplits(
+                    value = it,
+                    note = note,
+                    episodeName = null,
+                    podcastName = title,
+                    accountViewModel = accountViewModel,
+                )
+            }
 
             if (fundingUrls.isNotEmpty() && !makeItShort) {
                 val uriHandler = LocalUriHandler.current
