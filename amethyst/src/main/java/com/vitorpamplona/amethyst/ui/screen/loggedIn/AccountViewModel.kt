@@ -959,7 +959,13 @@ class AccountViewModel(
     /**
      * Executes a Podcasting-2.0 value-for-value split for [totalSats] sats: pays every recipient in
      * the show/episode's [PodcastValue] block their weighted share (lnaddress via LNURL-pay, node via
-     * NWC keysend with the boostagram TLV). Errors surface on [toastManager]; progress on [onProgress].
+     * NWC keysend with the boostagram TLV).
+     *
+     * [streaming] marks this as a per-minute streaming payment rather than a one-off boost: the
+     * boostagram action becomes "stream" and errors are swallowed instead of toasted — a streaming
+     * session fires once a minute and we don't want per-minute toast spam. One-off boosts surface
+     * errors on [toastManager]. The external-wallet intent fallback is skipped while [streaming]
+     * (you can't auto-fire a wallet app every minute); streaming is gated to NWC/CLINK callers.
      */
     fun payV4V(
         value: PodcastValue,
@@ -968,13 +974,14 @@ class AccountViewModel(
         episodeName: String?,
         zappedNote: Note?,
         context: Context,
+        streaming: Boolean = false,
         onProgress: (Float) -> Unit = {},
     ) = launchSigner {
         val boostagram =
             PodcastBoostagram(
                 podcast = podcastName,
                 episode = episodeName,
-                action = PodcastBoostagram.ACTION_BOOST,
+                action = if (streaming) PodcastBoostagram.ACTION_STREAM else PodcastBoostagram.ACTION_BOOST,
                 appName = "Amethyst",
                 valueMsatTotal = totalSats * 1000,
                 senderName = account.userProfile().toBestDisplayName(),
@@ -988,14 +995,16 @@ class AccountViewModel(
             context = context,
             okHttpClient = httpClientBuilder::okHttpClientForMoney,
             onError = { title, message ->
-                toastManager.toast(title, message)
+                if (!streaming) toastManager.toast(title, message)
             },
             onProgress = onProgress,
             onPayInvoicesViaIntent = { invoices ->
-                invoices.forEach { invoice ->
-                    payViaIntent(invoice, context, onPaid = {}, onError = {
-                        toastManager.toast(stringRes(context, R.string.error_dialog_zap_error), it)
-                    })
+                if (!streaming) {
+                    invoices.forEach { invoice ->
+                        payViaIntent(invoice, context, onPaid = {}, onError = {
+                            toastManager.toast(stringRes(context, R.string.error_dialog_zap_error), it)
+                        })
+                    }
                 }
             },
         )

@@ -938,6 +938,11 @@
     <string name="podcast_value_error_title">Value-for-Value error</string>
     <string name="podcast_value_no_recipients">This podcast has no payable value recipients.</string>
     <string name="podcast_value_keysend_requires_nwc">Connect a Nostr Wallet Connect wallet to send to keysend (node) recipients.</string>
+    <string name="podcast_value_stream">Stream sats</string>
+    <string name="podcast_value_stream_rate">%1$d sats/min</string>
+    <string name="podcast_value_stream_hint">Sends value automatically while you listen.</string>
+    <string name="podcast_value_streamed_total">Streamed %1$d sats this session</string>
+    <string name="podcast_value_stream_requires_wallet">Connect a Nostr Wallet Connect or debit wallet to stream sats while listening.</string>
     <plurals name="podcast_episode_count">
         <item quantity="one">%1$d episode</item>
         <item quantity="other">%1$d episodes</item>

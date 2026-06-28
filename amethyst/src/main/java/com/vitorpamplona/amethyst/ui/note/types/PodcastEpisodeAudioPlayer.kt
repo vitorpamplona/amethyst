@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,6 +37,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMedia
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.syntheticWaveformFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
+import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 
 // The voice player's internal controls are laid out for 100.dp; 80.dp is the tightest height
 // that still fits the play button without clipping it. Shared so the feed card and the
@@ -70,10 +72,11 @@ fun PodcastEpisodeAudioPlayer(
                 ?: syntheticWaveformFor(note.idHex)
         }
 
-    Row(
-        PLAYER_HEIGHT_MODIFIER,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    // The episode's value-for-value block, if any — drives the per-minute streaming control below
+    // the player. Pulled through the spec-neutral PodcastEpisode interface so both kinds work.
+    val value = remember(note) { (note.event as? PodcastEpisode)?.episodeValue() }
+
+    Column(Modifier.fillMaxWidth()) {
         GetMediaItem(
             videoUri = audio.url,
             title = title,
@@ -91,13 +94,29 @@ fun PodcastEpisodeAudioPlayer(
                 muted = false,
             ) { controller ->
                 PauseControllerWhenInBackground(controller)
-                RenderVoicePlayer(
-                    mediaItem = mediaItem,
-                    controllerState = controller,
-                    waveform = waveform,
-                    borderModifier = borderModifier,
-                    accountViewModel = accountViewModel,
-                )
+                Row(
+                    PLAYER_HEIGHT_MODIFIER,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RenderVoicePlayer(
+                        mediaItem = mediaItem,
+                        controllerState = controller,
+                        waveform = waveform,
+                        borderModifier = borderModifier,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+
+                value?.let {
+                    PodcastStreamingControl(
+                        value = it,
+                        note = note,
+                        episodeName = title,
+                        podcastName = null,
+                        controllerState = controller,
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
         }
     }
