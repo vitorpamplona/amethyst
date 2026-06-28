@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
-import com.vitorpamplona.quartz.kinds.KindNames
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindNameFor
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -33,14 +33,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 /** Human-readable label for a [NostrSignerOp]. */
 fun NostrSignerOp.label(context: Context): String =
     when (this) {
-        is NostrSignerOp.SignKind -> {
-            val name = KindNames.nameFor(kind)
-            if (name != null) {
-                context.getString(R.string.napplet_op_sign_kind_named, name, kind)
-            } else {
-                context.getString(R.string.napplet_op_sign_kind, kind)
-            }
-        }
+        is NostrSignerOp.SignKind -> context.getString(R.string.napplet_op_sign_kind_named, kindNameFor(context, kind), kind)
         NostrSignerOp.Encrypt -> context.getString(R.string.napplet_op_encrypt)
         NostrSignerOp.Decrypt -> context.getString(R.string.napplet_op_decrypt)
     }

@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -204,6 +205,7 @@ private fun ConnectedAppCard(
     entry: ConnectedAppEntry,
     onClick: () -> Unit,
 ) {
+    val iconModel = rememberNappletIconModel(entry.coordinate)
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -215,6 +217,7 @@ private fun ConnectedAppCard(
         ) {
             FavoriteAppIcon(
                 app = FavoriteApp.NostrApp(entry.coordinate, entry.title, 0L, entry.iconUrl),
+                iconModel = iconModel,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(48.dp),
             )
