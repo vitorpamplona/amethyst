@@ -44,6 +44,8 @@ import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
+import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
+import com.vitorpamplona.amethyst.napplet.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
@@ -73,6 +75,7 @@ import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.TorCircuitHealthTracker
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
@@ -529,6 +532,15 @@ class AppModules(
     // Show messages from the Relay and controls their dismissal
     val notifyCoordinator = NotifyCoordinator(client)
 
+    // Persists per-relay NIP-42 ALLOW/DENY overrides across app restarts.
+    val relayAuthPermissionStore by lazy {
+        DataStoreRelayAuthPermissionStore(appContext)
+    }
+
+    // Singleton stores for napplet permissions — DataStore v1 enforces one instance per file.
+    val nappletPermissionStore by lazy { DataStoreNappletPermissionStore(appContext) }
+    val signerPermissionStore by lazy { DataStoreNostrSignerPermissionStore(appContext) }
+
     // Authenticates with relays.
     val authCoordinator = AuthCoordinator(client, applicationIOScope)
 
@@ -792,6 +804,13 @@ class AppModules(
         applicationIOScope.launch {
             CachedRobohash
             resourceCacheInit()
+        }
+
+        // Initialize napplet permission stores on an IO thread to avoid StrictMode violations
+        // when ConnectedAppsScreen first accesses them on the main thread.
+        applicationIOScope.launch {
+            nappletPermissionStore
+            signerPermissionStore
         }
 
         // registers to receive events

@@ -41,13 +41,15 @@ class NappletConsentSummary(
         capability: NappletCapability,
         request: NappletRequest,
     ): NappletConsentInfo {
-        val title = identity.identifier.ifBlank { context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8)) }
+        val untitled = context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8))
+        val (title, iconUrl) = resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
         return NappletConsentInfo(
             appletTitle = title,
             coordinate = identity.coordinate,
             capabilityLabel = context.getString(capability.labelRes()),
             operationSummary = summaryFor(request),
             allowAlways = capability.canGrantAlways,
+            iconUrl = iconUrl,
         )
     }
 

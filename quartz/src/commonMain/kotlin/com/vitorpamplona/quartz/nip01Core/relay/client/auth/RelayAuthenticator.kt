@@ -51,7 +51,12 @@ object EmptyIAuthStatus : IAuthStatus {
 class RelayAuthenticator(
     val client: INostrClient,
     val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-    val signWithAllLoggedInUsers: suspend (EventTemplate<RelayAuthEvent>) -> List<RelayAuthEvent>,
+    /**
+     * Signs the auth template for every currently-logged-in account and returns the signed events.
+     * The [relay] parameter allows callers to check per-relay auth policy before signing.
+     * Returns an empty list to skip authentication for this relay.
+     */
+    val signWithAllLoggedInUsers: suspend (relay: NormalizedRelayUrl, EventTemplate<RelayAuthEvent>) -> List<RelayAuthEvent>,
 ) : IAuthStatus {
     // Connection callbacks fire on the per-relay OkHttp dispatcher thread, so
     // this state is mutated concurrently — LargeCache wraps a platform-tuned
@@ -93,7 +98,7 @@ class RelayAuthenticator(
             // so an uncaught throwable here crashes the whole app. Swallow + log them.
             try {
                 val ev = RelayAuthEvent.build(relay.url, msg.challenge)
-                signWithAllLoggedInUsers(ev).forEach { authEvent ->
+                signWithAllLoggedInUsers(relay.url, ev).forEach { authEvent ->
                     // only send replies to new challenges to avoid infinite loop:
                     if (authStatus.get(relay.url)?.saveAuthSubmission(authEvent) == true) {
                         relay.sendIfConnected(AuthCmd(authEvent))

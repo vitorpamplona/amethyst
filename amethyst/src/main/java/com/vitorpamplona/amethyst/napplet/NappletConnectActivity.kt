@@ -23,8 +23,11 @@ package com.vitorpamplona.amethyst.napplet
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,7 +35,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,6 +45,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -53,26 +60,21 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
-import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.napplet.signers.AppConnectResult
+import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
-/**
- * The capability-consent dialog, shown in the **main** process (the only place trusted to
- * make a grant). It renders the [NappletConsentInfo] for a pending request and reports the
- * user's [GrantState] back through [NappletConsentCoordinator]. The untrusted applet never
- * sees or drives this UI.
- */
-class NappletConsentActivity : ComponentActivity() {
+class NappletConnectActivity : ComponentActivity() {
     private var token: String? = null
     private var decided = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val token = intent.getStringExtra(NappletConsentCoordinator.EXTRA_TOKEN)
+        val token = intent.getStringExtra(NappletConnectCoordinator.EXTRA_TOKEN)
         this.token = token
-        val info = token?.let { NappletConsentCoordinator.infoFor(it) }
-
+        val info = token?.let { NappletConnectCoordinator.infoFor(it) }
         if (token == null || info == null) {
             finish()
             return
@@ -80,16 +82,21 @@ class NappletConsentActivity : ComponentActivity() {
 
         setContent {
             AmethystTheme {
-                NappletConsentDialog(
+                NappletConnectScreen(
                     info = info,
-                    onDecision = { grant ->
+                    onConnect = { policy ->
                         decided = true
-                        NappletConsentCoordinator.complete(token, grant)
+                        NappletConnectCoordinator.complete(token, AppConnectResult.Connected(policy))
                         finish()
                     },
-                    onDismiss = {
+                    onBlock = {
                         decided = true
-                        NappletConsentCoordinator.cancel(token)
+                        NappletConnectCoordinator.complete(token, AppConnectResult.Blocked)
+                        finish()
+                    },
+                    onCancel = {
+                        decided = true
+                        NappletConnectCoordinator.complete(token, AppConnectResult.Cancelled)
                         finish()
                     },
                 )
@@ -98,22 +105,23 @@ class NappletConsentActivity : ComponentActivity() {
     }
 
     override fun finish() {
-        // If the system tears us down before the user chose, fail closed.
-        if (!decided) token?.let { NappletConsentCoordinator.cancel(it) }
+        if (!decided) token?.let { NappletConnectCoordinator.cancel(it) }
         super.finish()
     }
 }
 
 @Composable
-private fun NappletConsentDialog(
-    info: NappletConsentInfo,
-    onDecision: (GrantState) -> Unit,
-    onDismiss: () -> Unit,
+private fun NappletConnectScreen(
+    info: NappletConnectInfo,
+    onConnect: (AppSignerPolicy) -> Unit,
+    onBlock: () -> Unit,
+    onCancel: () -> Unit,
 ) {
-    val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.85f
+    var selected by remember { mutableStateOf(AppSignerPolicy.REASONABLE) }
+    val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.9f
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Surface(
@@ -132,7 +140,7 @@ private fun NappletConsentDialog(
                         .verticalScroll(rememberScrollState())
                         .padding(vertical = 24.dp),
             ) {
-                // Centered header: icon + app name + capability category + coordinate
+                // Centered header: icon + app name + connect subtitle
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -149,86 +157,125 @@ private fun NappletConsentDialog(
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        info.capabilityLabel,
+                        stringResource(R.string.napplet_connect_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        info.coordinate.substringAfter(':', "").ifBlank { info.coordinate.substringBefore(':').take(12) + "…" },
+                        info.domain,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
                 }
 
-                // Operation detail box (may include content preview)
-                if (info.operationSummary.isNotBlank()) {
-                    Spacer(Modifier.height(12.dp))
-                    Surface(
-                        modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = MaterialTheme.shapes.medium,
-                    ) {
-                        SelectionContainer {
-                            Text(
-                                info.operationSummary,
-                                modifier = Modifier.padding(12.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(12.dp))
+
+                Text(
+                    stringResource(R.string.napplet_connect_how_handle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                )
+                Spacer(Modifier.height(8.dp))
+
+                // Trust level options
+                Column(
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    PolicyOption(
+                        selected = selected == AppSignerPolicy.FULL_TRUST,
+                        icon = "❤",
+                        label = stringResource(R.string.napplet_policy_full_trust),
+                        description = stringResource(R.string.napplet_policy_full_trust_desc),
+                        onClick = { selected = AppSignerPolicy.FULL_TRUST },
+                    )
+                    PolicyOption(
+                        selected = selected == AppSignerPolicy.REASONABLE,
+                        icon = "👍",
+                        label = stringResource(R.string.napplet_policy_reasonable),
+                        description = stringResource(R.string.napplet_policy_reasonable_desc),
+                        onClick = { selected = AppSignerPolicy.REASONABLE },
+                    )
+                    PolicyOption(
+                        selected = selected == AppSignerPolicy.PARANOID,
+                        icon = "🕶",
+                        label = stringResource(R.string.napplet_policy_paranoid),
+                        description = stringResource(R.string.napplet_policy_paranoid_desc),
+                        onClick = { selected = AppSignerPolicy.PARANOID },
+                    )
                 }
 
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider()
                 Spacer(Modifier.height(8.dp))
 
-                if (info.allowAlways) {
-                    Button(
-                        onClick = { onDecision(GrantState.ALLOW_ALWAYS) },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    ) {
-                        Text(stringResource(R.string.napplet_consent_allow_always))
-                    }
-                    OutlinedButton(
-                        onClick = { onDecision(GrantState.ALLOW_ONCE) },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    ) {
-                        Text(stringResource(R.string.napplet_consent_allow_once))
-                    }
-                } else {
-                    Button(
-                        onClick = { onDecision(GrantState.ALLOW_ONCE) },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    ) {
-                        Text(stringResource(R.string.napplet_consent_allow_once))
-                    }
-                }
-
-                Spacer(Modifier.height(4.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(8.dp))
-
-                OutlinedButton(
-                    onClick = { onDecision(GrantState.ASK) },
+                Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Text(
-                        stringResource(R.string.napplet_consent_not_now),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                    Button(onClick = { onConnect(selected) }, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.napplet_connect_button))
+                    }
                 }
+
                 OutlinedButton(
-                    onClick = { onDecision(GrantState.DENY) },
+                    onClick = onBlock,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
                     Text(
-                        stringResource(R.string.napplet_consent_deny_always),
+                        stringResource(R.string.napplet_connect_block, info.domain),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PolicyOption(
+    selected: Boolean,
+    icon: String,
+    label: String,
+    description: String,
+    onClick: () -> Unit,
+) {
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    val bgColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+
+    Surface(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .border(width = if (selected) 2.dp else 1.dp, color = borderColor, shape = RoundedCornerShape(12.dp))
+                .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = bgColor,
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(icon, style = MaterialTheme.typography.headlineSmall)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (selected) {
+                Icon(
+                    symbol = MaterialSymbols.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
         }
     }
