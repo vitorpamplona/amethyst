@@ -54,6 +54,9 @@ class UiSettingsFlow(
     val showProfileFollowersFeed: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val dontShowOnchainPublicWarning: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val suggestWorkoutsFromHealthConnect: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
+    val accentColor: MutableStateFlow<AccentColorType> = MutableStateFlow(AccentColorType.PURPLE),
+    val fontFamily: MutableStateFlow<FontFamilyType> = MutableStateFlow(FontFamilyType.SYSTEM),
+    val fontSize: MutableStateFlow<FontSizeType> = MutableStateFlow(FontSizeType.NORMAL),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -82,6 +85,9 @@ class UiSettingsFlow(
             showProfileFollowersFeed,
             dontShowOnchainPublicWarning,
             suggestWorkoutsFromHealthConnect,
+            accentColor,
+            fontFamily,
+            fontSize,
         )
 
     // emits at every change in any of the propertyes.
@@ -114,6 +120,9 @@ class UiSettingsFlow(
                 flows[22] as Boolean,
                 flows[23] as Boolean,
                 flows[24] as BooleanType,
+                flows[25] as AccentColorType,
+                flows[26] as FontFamilyType,
+                flows[27] as FontSizeType,
             )
         }
 
@@ -144,6 +153,9 @@ class UiSettingsFlow(
             showProfileFollowersFeed.value,
             dontShowOnchainPublicWarning.value,
             suggestWorkoutsFromHealthConnect.value,
+            accentColor.value,
+            fontFamily.value,
+            fontSize.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -249,6 +261,18 @@ class UiSettingsFlow(
             suggestWorkoutsFromHealthConnect.tryEmit(torSettings.suggestWorkoutsFromHealthConnect)
             any = true
         }
+        if (accentColor.value != torSettings.accentColor) {
+            accentColor.tryEmit(torSettings.accentColor)
+            any = true
+        }
+        if (fontFamily.value != torSettings.fontFamily) {
+            fontFamily.tryEmit(torSettings.fontFamily)
+            any = true
+        }
+        if (fontSize.value != torSettings.fontSize) {
+            fontSize.tryEmit(torSettings.fontSize)
+            any = true
+        }
 
         return any
     }
@@ -299,6 +323,9 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.showProfileFollowersFeed),
                 MutableStateFlow(uiSettings.dontShowOnchainPublicWarning),
                 MutableStateFlow(uiSettings.suggestWorkoutsFromHealthConnect),
+                MutableStateFlow(uiSettings.accentColor),
+                MutableStateFlow(uiSettings.fontFamily),
+                MutableStateFlow(uiSettings.fontSize),
             )
     }
 }

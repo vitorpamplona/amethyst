@@ -120,6 +120,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.favorites.FavoriteAlgoFeedsListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabThemeWatcher
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FavoriteAppManifestPreloader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.BrowseEmojiSetsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.display.EmojiPackScreen
@@ -158,7 +159,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.MusicPlaylistsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.MusicTracksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.NewMusicPlaylistScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.NewMusicTrackScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.NappletPermissionsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppDetailScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.NappletsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby.NestLobbyScreen
@@ -186,6 +188,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.PublicChatsScre
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.RelayFeedScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relayauth.RelayAuthSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSyncScreen
@@ -274,6 +277,9 @@ fun AppNavigation(
                 EmbeddedTabLayer(bottomBarItems.favoriteIds())
                 // Warm every pinned tab at startup so the first tap is instant (content already local).
                 EmbeddedTabPreloader(accountViewModel)
+                // Rebuild the warm surfaces in the new theme when the app's DARK/LIGHT preference flips
+                // (an embed WebView's theme is fixed at construction, so it can't follow a live switch).
+                EmbeddedTabThemeWatcher()
             }
         }
     }
@@ -335,7 +341,9 @@ fun BuildNavigation(
         composableFromEnd<Route.FavoriteApps> { FavoriteAppsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.WebApp> { WebAppScreen(it.url, accountViewModel, nav) }
         composableFromEndArgs<Route.NostrApp> { NostrAppScreen(it.coordinate, accountViewModel, nav) }
-        composableFromEnd<Route.NappletPermissions> { NappletPermissionsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.ConnectedApps> { ConnectedAppsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.ConnectedAppDetail> { ConnectedAppDetailScreen(it.coordinate, accountViewModel, nav) }
+        composableFromEnd<Route.RelayAuthSettings> { RelayAuthSettingsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.SoftwareAppDetail> { SoftwareAppDetailScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Calendars> { CalendarsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CalendarCollections> { CalendarCollectionsScreen(accountViewModel, nav) }

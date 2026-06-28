@@ -36,6 +36,19 @@ val Purple200 = Color(0xFFBB86FC)
 val Purple500 = Color(0xFF6200EE)
 val Purple700 = Color(0xFF3700B3)
 val Teal200 = Color(0xFF03DAC5)
+
+// Accent palette options selected through Settings -> Accent Color.
+// Each accent ships a brighter variant for the dark theme and a deeper variant for the light theme.
+val AccentBlueDark = Color(0xFF82B1FF)
+val AccentBlueLight = Color(0xFF1565C0)
+val AccentGreenDark = Color(0xFF80CBC4)
+val AccentGreenLight = Color(0xFF2E7D32)
+val AccentOrangeDark = Color(0xFFFFB74D)
+val AccentOrangeLight = Color(0xFFE65100)
+val AccentRedDark = Color(0xFFEF9A9A)
+val AccentRedLight = Color(0xFFC62828)
+val AccentPinkDark = Color(0xFFF48FB1)
+val AccentPinkLight = Color(0xFFAD1457)
 val BitcoinOrange = Color(0xFFF7931A)
 val RoyalBlue = Color(0xFF4169E1)
 

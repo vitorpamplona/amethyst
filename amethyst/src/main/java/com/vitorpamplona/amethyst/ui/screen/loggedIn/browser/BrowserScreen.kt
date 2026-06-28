@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -70,10 +71,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.browser.DefaultWebClients
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.browser.OmniboxSuggestions
+import com.vitorpamplona.amethyst.commons.browser.SuggestedWebApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
@@ -83,12 +88,22 @@ import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
+import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.favoriteAppItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.NsitesFilterAssemblerSubscription
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /** How many of the most recent history entries the idle browser home surfaces under "Recent". */
@@ -132,7 +147,10 @@ private fun BrowserLauncher(
 
     var field by remember { mutableStateOf(TextFieldValue("")) }
 
-    // Favorites + visit history flattened into the neutral candidate shape the ranker consumes.
+    // Favorites + visit history + the hardcoded Discover apps, flattened into the neutral candidate shape
+    // the ranker consumes — so typing the omnibox finds a suggested app even before its first visit. The
+    // ranker dedupes by host, and favorites/history outscore a plain default, so a default that the user
+    // already pinned or visited collapses into that higher-ranked row instead of showing twice.
     val candidates =
         remember(apps, history) {
             buildList {
@@ -148,17 +166,68 @@ private fun BrowserLauncher(
                         ),
                     )
                 }
+                DefaultWebClients.list.forEach { add(OmniboxSuggestions.Candidate(it.app.url, it.app.label, isFavorite = false)) }
             }
+        }
+
+    // Visited URLs, so the suggestion list can tell a Recent result from a Discover one (and only the
+    // former offers "Remove from history").
+    val historyUrls = remember(history) { history.mapTo(HashSet()) { it.url } }
+
+    // Discover nsites & napplets — the NIP-5A sites and NIP-5D apps published by the people the user
+    // follows. Same feed + follow-list filter the dedicated nSites/nApplets screens use (set those to
+    // "All Follows" for a pure follows list): the subscriptions pull manifests into LocalCache while the
+    // Browser tab is open, and we observe the addressable store and keep the matching authors'.
+    NsitesFilterAssemblerSubscription(accountViewModel)
+    NappletsFilterAssemblerSubscription(accountViewModel)
+
+    val nsiteNotes by remember {
+        Amethyst.instance.cache.observeNotes(Filter(kinds = listOf(RootSiteEvent.KIND, NamedSiteEvent.KIND)))
+    }.collectAsStateWithLifecycle(emptyList())
+    val nappletNotes by remember {
+        Amethyst.instance.cache.observeNotes(Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND)))
+    }.collectAsStateWithLifecycle(emptyList())
+
+    val nsiteFollows by accountViewModel.account.liveNsitesFollowLists.collectAsStateWithLifecycle()
+    val nsiteListName by accountViewModel.account.settings.defaultNsitesFollowList
+        .collectAsStateWithLifecycle()
+    val nappletFollows by accountViewModel.account.liveNappletsFollowLists.collectAsStateWithLifecycle()
+    val nappletListName by accountViewModel.account.settings.defaultNappletsFollowList
+        .collectAsStateWithLifecycle()
+    val myPubkey = accountViewModel.account.userProfile().pubkeyHex
+
+    // Drop ones already pinned — they show under Favorites, not twice.
+    val favoriteCoordinates = remember(apps) { apps.filterIsInstance<FavoriteApp.NostrApp>().mapTo(HashSet()) { it.coordinate } }
+    val followedNsites =
+        remember(nsiteNotes, nsiteFollows, nsiteListName, myPubkey, favoriteCoordinates) {
+            nsiteNotes.toDiscoverApps(nsiteListName == TopFilter.Mine, myPubkey, nsiteFollows::matchAuthor, favoriteCoordinates)
+        }
+    val followedNapplets =
+        remember(nappletNotes, nappletFollows, nappletListName, myPubkey, favoriteCoordinates) {
+            nappletNotes.toDiscoverApps(nappletListName == TopFilter.Mine, myPubkey, nappletFollows::matchAuthor, favoriteCoordinates)
         }
 
     // What the user actually typed, excluding any selected ghost-completion suffix (selection.min is the
     // caret when collapsed, or the start of the highlighted suffix when a completion is showing).
     val typed = field.text.take(field.selection.min.coerceIn(0, field.text.length))
-    val suggestions = remember(typed, candidates) { OmniboxSuggestions.rank(typed, candidates) }
+    val suggestions = remember(typed, candidates) { OmniboxSuggestions.rank(typed, candidates, limit = 12) }
 
     fun open(text: String) {
         val target = OmniboxInput.resolve(text) ?: return
         FavoriteAppLauncher.launchUrl(context, target.url, target.forceTor)
+    }
+
+    // Pin/unpin a plain web URL by its favorite id. Shared by the suggestion list and the Recent rows.
+    fun toggleFavorite(
+        url: String,
+        label: String,
+    ) {
+        val id = "url:$url"
+        if (FavoriteAppsRegistry.isFavorite(id)) {
+            FavoriteAppsRegistry.remove(id)
+        } else {
+            FavoriteAppsRegistry.add(FavoriteApp.WebApp(url, label.ifBlank { OmniboxInput.hostOf(url) ?: url }, System.currentTimeMillis()))
+        }
     }
 
     // Inline autocomplete: when the user appends a character, offer the top host as selected ghost text so
@@ -206,39 +275,29 @@ private fun BrowserLauncher(
                 SuggestionGrid(
                     suggestions = suggestions,
                     iconKeys = iconKeys,
+                    historyUrls = historyUrls,
                     onOpen = { open(it.url) },
+                    onToggleFavorite = { toggleFavorite(it.url, it.label) },
+                    onRemoveFromHistory = { BrowserHistoryRegistry.remove(it) },
                     modifier = contentModifier,
                 )
-            apps.isEmpty() && history.isEmpty() ->
-                Box(
-                    contentModifier.padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        stringResource(R.string.favorite_apps_empty),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             else -> {
                 val favoriteUrls = remember(apps) { apps.filterIsInstance<FavoriteApp.WebApp>().mapTo(HashSet()) { it.url } }
+                // Hardcoded starter web apps, minus any the user already pinned (those show under Favorites).
+                val suggested = remember(favoriteUrls) { DefaultWebClients.list.filter { it.app.url !in favoriteUrls } }
                 BrowserHome(
                     apps = apps,
                     history = history,
                     iconKeys = iconKeys,
                     favoriteUrls = favoriteUrls,
+                    suggested = suggested,
+                    nsites = followedNsites,
+                    napplets = followedNapplets,
                     onOpenApp = { FavoriteAppLauncher.launch(context, it) },
                     onRemoveApp = { FavoriteAppsRegistry.remove(it.id) },
+                    onAddApp = { FavoriteAppsRegistry.add(it) },
                     onOpenUrl = { open(it) },
-                    onToggleRecentFavorite = { entry ->
-                        val id = "url:" + entry.url
-                        if (FavoriteAppsRegistry.isFavorite(id)) {
-                            FavoriteAppsRegistry.remove(id)
-                        } else {
-                            FavoriteAppsRegistry.add(
-                                FavoriteApp.WebApp(entry.url, entry.title.ifBlank { entry.host }, System.currentTimeMillis()),
-                            )
-                        }
-                    },
+                    onToggleRecentFavorite = { entry -> toggleFavorite(entry.url, entry.title.ifBlank { entry.host }) },
                     onRemoveRecent = { BrowserHistoryRegistry.remove(it) },
                     modifier = contentModifier,
                 )
@@ -305,25 +364,50 @@ private fun OmniBar(
     }
 }
 
-/** The typed-state body: ranked suggestions split into a highlighted Favorites group then Recent. */
+/**
+ * The typed-state body: ranked suggestions split into a highlighted Favorites group, then Recent (visited
+ * sites), then Discover (the hardcoded web apps the user hasn't pinned or visited yet). Every row carries
+ * the same 3-dot menu as the idle Recent cards (pin/unpin; plus remove-from-history for visited sites).
+ */
 @Composable
 private fun SuggestionGrid(
     suggestions: List<OmniboxSuggestions.Suggestion>,
     iconKeys: Set<String>,
+    historyUrls: Set<String>,
     onOpen: (OmniboxSuggestions.Suggestion) -> Unit,
+    onToggleFavorite: (OmniboxSuggestions.Suggestion) -> Unit,
+    onRemoveFromHistory: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val favorites = suggestions.filter { it.isFavorite }
-    val others = suggestions.filterNot { it.isFavorite }
+    val recent = suggestions.filter { !it.isFavorite && it.url in historyUrls }
+    val discover = suggestions.filter { !it.isFavorite && it.url !in historyUrls }
+
+    fun LazyGridScope.section(
+        keyPrefix: String,
+        title: Int,
+        rows: List<OmniboxSuggestions.Suggestion>,
+        highlighted: Boolean,
+    ) {
+        if (rows.isEmpty()) return
+        item(key = "h-$keyPrefix") { SectionHeader(stringResource(title)) }
+        items(rows, key = { "$keyPrefix:" + it.url }) { suggestion ->
+            SuggestionRow(
+                suggestion = suggestion,
+                iconKeys = iconKeys,
+                highlighted = highlighted,
+                removableFromHistory = suggestion.url in historyUrls,
+                onClick = { onOpen(suggestion) },
+                onToggleFavorite = { onToggleFavorite(suggestion) },
+                onRemoveFromHistory = { onRemoveFromHistory(suggestion.url) },
+            )
+        }
+    }
+
     LazyVerticalGrid(columns = GridCells.Fixed(1), modifier = modifier) {
-        if (favorites.isNotEmpty()) {
-            item(key = "h-fav") { SectionHeader(stringResource(R.string.browser_favorites)) }
-            items(favorites, key = { "f:" + it.url }) { SuggestionRow(it, iconKeys, highlighted = true) { onOpen(it) } }
-        }
-        if (others.isNotEmpty()) {
-            item(key = "h-rec") { SectionHeader(stringResource(R.string.favorite_app_recent)) }
-            items(others, key = { "o:" + it.url }) { SuggestionRow(it, iconKeys, highlighted = false) { onOpen(it) } }
-        }
+        section("f", R.string.browser_favorites, favorites, highlighted = true)
+        section("o", R.string.favorite_app_recent, recent, highlighted = false)
+        section("s", R.string.browser_suggested, discover, highlighted = false)
     }
 }
 
@@ -332,15 +416,19 @@ private fun SuggestionRow(
     suggestion: OmniboxSuggestions.Suggestion,
     iconKeys: Set<String>,
     highlighted: Boolean,
+    removableFromHistory: Boolean,
     onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onRemoveFromHistory: () -> Unit,
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
                 .background(if (highlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else Color.Transparent)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SiteIcon(suggestion.host, suggestion.isFavorite, iconKeys, Modifier.size(24.dp))
@@ -363,6 +451,33 @@ private fun SuggestionRow(
                 )
             }
         }
+        Box {
+            IconButton(onClick = { menuOpen = true }) {
+                Icon(MaterialSymbols.MoreVert, contentDescription = stringResource(R.string.browser_recent_options))
+            }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(if (suggestion.isFavorite) R.string.favorite_app_remove else R.string.favorite_app_add)) },
+                    leadingIcon = {
+                        Icon(if (suggestion.isFavorite) MaterialSymbols.Star else MaterialSymbols.StarBorder, contentDescription = null)
+                    },
+                    onClick = {
+                        menuOpen = false
+                        onToggleFavorite()
+                    },
+                )
+                if (removableFromHistory) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.browser_recent_remove)) },
+                        leadingIcon = { Icon(MaterialSymbols.Delete, contentDescription = null) },
+                        onClick = {
+                            menuOpen = false
+                            onRemoveFromHistory()
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -373,8 +488,12 @@ private fun BrowserHome(
     history: List<BrowserHistoryEntry>,
     iconKeys: Set<String>,
     favoriteUrls: Set<String>,
+    suggested: List<SuggestedWebApp>,
+    nsites: List<DiscoverNostrApp>,
+    napplets: List<DiscoverNostrApp>,
     onOpenApp: (FavoriteApp) -> Unit,
     onRemoveApp: (FavoriteApp) -> Unit,
+    onAddApp: (FavoriteApp) -> Unit,
     onOpenUrl: (String) -> Unit,
     onToggleRecentFavorite: (BrowserHistoryEntry) -> Unit,
     onRemoveRecent: (String) -> Unit,
@@ -404,6 +523,180 @@ private fun BrowserHome(
                     onRemove = { onRemoveRecent(entry.url) },
                 )
             }
+        }
+        if (nsites.isNotEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-nsite") { SectionHeader(stringResource(R.string.browser_discover_nsites)) }
+            items(nsites, span = { GridItemSpan(maxLineSpan) }, key = { "ns:" + it.app.coordinate }) { entry ->
+                NostrAppRow(entry, onClick = { onOpenApp(entry.app) }, onAddFavorite = { onAddApp(entry.app) })
+            }
+        }
+        if (napplets.isNotEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-napp") { SectionHeader(stringResource(R.string.browser_discover_napplets)) }
+            items(napplets, span = { GridItemSpan(maxLineSpan) }, key = { "np:" + it.app.coordinate }) { entry ->
+                NostrAppRow(entry, onClick = { onOpenApp(entry.app) }, onAddFavorite = { onAddApp(entry.app) })
+            }
+        }
+        if (suggested.isNotEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-sug") { SectionHeader(stringResource(R.string.browser_suggested)) }
+            items(suggested, span = { GridItemSpan(maxLineSpan) }, key = { "s:" + it.app.url }) { entry ->
+                SuggestedRow(
+                    entry = entry,
+                    iconKeys = iconKeys,
+                    onClick = { onOpenApp(entry.app) },
+                    onAddFavorite = { onAddApp(entry.app) },
+                )
+            }
+        }
+    }
+}
+
+/** A Discover row: the app's own icon, its name, and a one-line description, with a star to pin it. */
+@Composable
+private fun SuggestedRow(
+    entry: SuggestedWebApp,
+    iconKeys: Set<String>,
+    onClick: () -> Unit,
+    onAddFavorite: () -> Unit,
+) {
+    val iconModel = remember(entry, iconKeys) { OmniboxInput.hostOf(entry.app.url)?.let(BrowserIconRegistry::iconModelFor) }
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onClick)
+                .padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FavoriteAppIcon(
+            app = entry.app,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(28.dp),
+            iconModel = iconModel,
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                entry.app.label,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                entry.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        IconButton(onClick = onAddFavorite) {
+            Icon(MaterialSymbols.StarBorder, contentDescription = stringResource(R.string.favorite_app_add))
+        }
+    }
+}
+
+/** A followed nsite/napplet, resolved into its launchable [app] plus the manifest [description]. */
+private data class DiscoverNostrApp(
+    val app: FavoriteApp.NostrApp,
+    val description: String?,
+)
+
+/** How many followed nsites/napplets each Discover section surfaces, so the launcher stays tidy. */
+private const val DISCOVER_NOSTR_LIMIT = 12
+
+/**
+ * Keeps the [Note]s authored by the followed set (or by the user, in the "Mine" case — the shared
+ * matcher resolves Mine to all-follows, so it can't serve that case), drops ones already pinned, maps
+ * each to its launchable [DiscoverNostrApp], and caps the result.
+ */
+private fun List<Note>.toDiscoverApps(
+    mine: Boolean,
+    myPubkey: String,
+    matchAuthor: (String) -> Boolean,
+    excludeCoordinates: Set<String>,
+): List<DiscoverNostrApp> =
+    asSequence()
+        .filter { note ->
+            val author = note.event?.pubKey ?: return@filter false
+            if (mine) author == myPubkey else matchAuthor(author)
+        }.mapNotNull { it.toDiscoverNostrApp() }
+        .filter { it.app.coordinate !in excludeCoordinates }
+        .take(DISCOVER_NOSTR_LIMIT)
+        .toList()
+
+/** Resolve a cached nsite/napplet manifest note into a launchable favorite + its description, or null. */
+private fun Note.toDiscoverNostrApp(): DiscoverNostrApp? {
+    val event = event ?: return null
+    val coordinate = FavoriteAppLauncher.coordinateOf(event)
+    val label: String
+    val description: String?
+    when (event) {
+        is RootSiteEvent -> {
+            label = event.title()?.ifBlank { null } ?: "Website"
+            description = event.description()
+        }
+        is NamedSiteEvent -> {
+            label = event.title()?.ifBlank { null } ?: event.identifier()
+            description = event.description()
+        }
+        is RootNappletEvent -> {
+            label = event.title()?.ifBlank { null } ?: "App"
+            description = event.description()
+        }
+        is NamedNappletEvent -> {
+            label = event.title()?.ifBlank { null } ?: event.identifier()
+            description = event.description()
+        }
+        else -> return null
+    }
+    return DiscoverNostrApp(FavoriteApp.NostrApp(coordinate, label, 0L), description)
+}
+
+/** A Discover row for a followed nsite/napplet: its manifest icon, name, and description, with a pin star. */
+@Composable
+private fun NostrAppRow(
+    discover: DiscoverNostrApp,
+    onClick: () -> Unit,
+    onAddFavorite: () -> Unit,
+) {
+    val app = discover.app
+    val iconModel = rememberNappletIconModel(app.coordinate)
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onClick)
+                .padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FavoriteAppIcon(
+            app = app,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(28.dp),
+            iconModel = iconModel,
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                app.label,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (!discover.description.isNullOrBlank()) {
+                Text(
+                    discover.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        IconButton(onClick = onAddFavorite) {
+            Icon(MaterialSymbols.StarBorder, contentDescription = stringResource(R.string.favorite_app_add))
         }
     }
 }

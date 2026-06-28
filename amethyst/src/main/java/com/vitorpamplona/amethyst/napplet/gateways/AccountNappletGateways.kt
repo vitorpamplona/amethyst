@@ -41,10 +41,17 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletUploadGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletUploadResult
 import com.vitorpamplona.amethyst.commons.napplet.NappletWalletGateway
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.napplet.signers.NostrConnectPrompt
+import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerConsentPrompt
+import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.napplet.NappletConnectCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletConsentSummary
 import com.vitorpamplona.amethyst.napplet.NappletNotificationStore
+import com.vitorpamplona.amethyst.napplet.NappletSignerConsentCoordinator
+import com.vitorpamplona.amethyst.napplet.buildConnectInfo
+import com.vitorpamplona.amethyst.napplet.buildSignerConsentInfo
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -72,6 +79,7 @@ class AccountNappletGateways(
     private val ledger: NappletPermissionLedger,
     private val storage: NappletStorage,
     private val httpClient: (useProxy: Boolean) -> OkHttpClient,
+    private val signerLedger: NostrSignerPermissionLedger? = null,
 ) {
     private val consentSummary = NappletConsentSummary(context)
 
@@ -129,7 +137,23 @@ class AccountNappletGateways(
                 }
             }
 
-        return NappletBroker(account.signer, ledger, consent, relay, storage, wallet, resource, upload = upload, identityReads = identityReads, theme = theme, notify = notify)
+        val connectPrompt =
+            NostrConnectPrompt { identity ->
+                NappletConnectCoordinator.requestConnect(
+                    context = context,
+                    info = buildConnectInfo(context, identity),
+                )
+            }
+
+        val signerConsent =
+            NostrSignerConsentPrompt { identity, op, request ->
+                NappletSignerConsentCoordinator.requestConsent(
+                    context = context,
+                    info = buildSignerConsentInfo(context, identity, op, request),
+                )
+            }
+
+        return NappletBroker(account.signer, ledger, consent, signerLedger = signerLedger, nostrConnectPrompt = connectPrompt, signerConsentPrompt = signerConsent, relay = relay, storage = storage, wallet = wallet, resource = resource, upload = upload, identityReads = identityReads, theme = theme, notify = notify)
     }
 
     /**

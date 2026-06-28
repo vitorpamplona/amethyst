@@ -35,6 +35,7 @@ data class NappletConsentInfo(
     val operationSummary: String,
     /** Whether a persistent "Always allow" choice may be offered (false for per-use caps like payments). */
     val allowAlways: Boolean,
+    val iconUrl: String? = null,
 )
 
 /**

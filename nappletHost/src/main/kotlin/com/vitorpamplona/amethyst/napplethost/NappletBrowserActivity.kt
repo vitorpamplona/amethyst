@@ -24,6 +24,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
@@ -40,6 +41,7 @@ import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -58,7 +60,6 @@ import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
-import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
@@ -93,6 +94,10 @@ class NappletBrowserActivity : ComponentActivity() {
     private var resumed = false
     private var controlSheet: NappletControlSheet? = null
     private var consolePanel: NappletConsolePanel? = null
+
+    // A thin determinate progress bar pinned to the top edge (browser-style), driven by the chrome
+    // client's onProgressChanged; hidden at 100%.
+    private val topProgressBar by lazy { buildTopProgressBar() }
 
     // Visit-history gating: only a clean main-frame load (no error) is recorded, so a misspelled/
     // unresolved address never enters history. Reset on each main-frame page start.
@@ -200,6 +205,8 @@ class NappletBrowserActivity : ComponentActivity() {
                             Gravity.BOTTOM,
                         ),
                 )
+                // Added last so the thin loading bar paints above the content (and over the grabber's top edge).
+                addView(topProgressBar)
             }
         setContentView(root)
         // Pad by the system bars + cutout, but NOT the IME — windowSoftInputMode=adjustResize shrinks the
@@ -307,16 +314,20 @@ class NappletBrowserActivity : ComponentActivity() {
                 safeBrowsingEnabled = true
             }
         }
-        if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
-            WebSettingsCompat.setAlgorithmicDarkeningAllowed(wv.settings, true)
-        }
         WebView.setWebContentsDebuggingEnabled(false)
         wv.webViewClient = BrowserClient()
         wv.webChromeClient = BrowserChromeClient()
     }
 
-    /** Captures favicon and console output; the only source of both is the WebChromeClient. */
+    /** Captures favicon and console output, and drives the top loading bar; all come from the WebChromeClient. */
     private inner class BrowserChromeClient : WebChromeClient() {
+        override fun onProgressChanged(
+            view: WebView,
+            newProgress: Int,
+        ) {
+            updateLoadProgress(newProgress)
+        }
+
         override fun onReceivedIcon(
             view: WebView,
             icon: Bitmap?,
@@ -377,6 +388,15 @@ class NappletBrowserActivity : ComponentActivity() {
             // A main-frame failure (DNS miss on a misspelled host, no connection, …) disqualifies this
             // navigation from history. Sub-resource errors are irrelevant to whether the page opened.
             if (request.isForMainFrame) mainFrameLoadFailed = true
+            logConsoleError(request, getString(R.string.napplet_console_load_error, error.errorCode, error.description?.toString().orEmpty()))
+        }
+
+        override fun onReceivedHttpError(
+            view: WebView,
+            request: WebResourceRequest,
+            errorResponse: WebResourceResponse,
+        ) {
+            logConsoleError(request, getString(R.string.napplet_console_http_error, errorResponse.statusCode, errorResponse.reasonPhrase.orEmpty()))
         }
 
         override fun onPageCommitVisible(
@@ -657,6 +677,39 @@ class NappletBrowserActivity : ComponentActivity() {
             addView(View(this@NappletBrowserActivity).apply { layoutParams = LinearLayout.LayoutParams(1, dp(20)) })
             addView(ProgressBar(this@NappletBrowserActivity))
         }
+
+    /**
+     * A thin determinate progress bar pinned to the top edge, like a browser's. Driven by
+     * [BrowserChromeClient.onProgressChanged]: visible while the page loads and gone at 100%.
+     */
+    private fun buildTopProgressBar(): ProgressBar =
+        ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            isIndeterminate = false
+            visibility = View.GONE
+            progressTintList = ColorStateList.valueOf(resolveThemeColor(android.R.attr.colorPrimary))
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(3), Gravity.TOP)
+        }
+
+    /** Shows the thin top bar at [progress]% while loading, hiding it once the page is fully loaded. */
+    private fun updateLoadProgress(progress: Int) {
+        if (progress >= 100) {
+            topProgressBar.visibility = View.GONE
+        } else {
+            topProgressBar.progress = progress
+            topProgressBar.visibility = View.VISIBLE
+        }
+    }
+
+    /** Appends a single ERROR line to the console panel and refreshes the chrome's unread count. */
+    private fun logConsoleError(
+        request: WebResourceRequest,
+        message: String,
+    ) {
+        val panel = consolePanel ?: return
+        panel.appendLog(ConsoleMessage.MessageLevel.ERROR, message, request.url?.toString().orEmpty(), 0)
+        controlSheet?.updateConsoleCount(panel.entryCount)
+    }
 
     private fun resolveThemeColor(attr: Int): Int {
         val tv = android.util.TypedValue()

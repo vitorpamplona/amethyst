@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.halilibo.richtext.ui.HeadingStyle
+import com.vitorpamplona.amethyst.model.FontFamilyType
 
 // Set of Material typography styles to start with
 val Typography =
@@ -51,6 +52,39 @@ val Typography =
     )
      */
     )
+
+// Maps the user-selected font preference to a Compose [FontFamily].
+// SYSTEM returns null so the platform default is used unchanged.
+fun FontFamilyType.toFontFamily(): FontFamily? =
+    when (this) {
+        FontFamilyType.SYSTEM -> null
+        FontFamilyType.SANS_SERIF -> FontFamily.SansSerif
+        FontFamilyType.SERIF -> FontFamily.Serif
+        FontFamilyType.MONOSPACE -> FontFamily.Monospace
+    }
+
+// Applies the chosen [FontFamily] to every text style so Material components pick it up too.
+// A null family leaves the typography untouched (platform default).
+fun Typography.withFontFamily(fontFamily: FontFamily?): Typography {
+    if (fontFamily == null) return this
+    return copy(
+        displayLarge = displayLarge.copy(fontFamily = fontFamily),
+        displayMedium = displayMedium.copy(fontFamily = fontFamily),
+        displaySmall = displaySmall.copy(fontFamily = fontFamily),
+        headlineLarge = headlineLarge.copy(fontFamily = fontFamily),
+        headlineMedium = headlineMedium.copy(fontFamily = fontFamily),
+        headlineSmall = headlineSmall.copy(fontFamily = fontFamily),
+        titleLarge = titleLarge.copy(fontFamily = fontFamily),
+        titleMedium = titleMedium.copy(fontFamily = fontFamily),
+        titleSmall = titleSmall.copy(fontFamily = fontFamily),
+        bodyLarge = bodyLarge.copy(fontFamily = fontFamily),
+        bodyMedium = bodyMedium.copy(fontFamily = fontFamily),
+        bodySmall = bodySmall.copy(fontFamily = fontFamily),
+        labelLarge = labelLarge.copy(fontFamily = fontFamily),
+        labelMedium = labelMedium.copy(fontFamily = fontFamily),
+        labelSmall = labelSmall.copy(fontFamily = fontFamily),
+    )
+}
 
 val Font4SP = 4.sp
 val Font6SP = 6.sp

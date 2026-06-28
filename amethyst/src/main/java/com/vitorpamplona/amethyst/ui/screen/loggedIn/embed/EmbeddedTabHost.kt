@@ -56,6 +56,15 @@ object EmbeddedTabHost {
     var activeId by mutableStateOf<String?>(null)
         private set
 
+    /**
+     * Bumped whenever the app's resolved DARK/LIGHT theme flips (see [rebuildAllForTheme]). The embed
+     * WebView's theme is locked in at construction (`nightThemedContext`), so following a theme change
+     * means rebuilding the surface — the favorite screens and the preloader key their acquisition on this
+     * so they re-acquire a freshly-themed session instead of the stale warm one.
+     */
+    var themeEpoch by mutableStateOf(0)
+        private set
+
     /** Window-space bounds of the active tab's reserved content area. */
     var contentBounds by mutableStateOf(Rect.Zero)
         private set
@@ -157,5 +166,18 @@ object EmbeddedTabHost {
         val copy = warm.toList()
         warm.clear()
         copy.forEach { it.controller.teardown() }
+    }
+
+    /**
+     * The app theme changed: tear down every warm session (their WebViews are pinned to the old theme)
+     * and bump [themeEpoch] so the visible screen and the preloader re-acquire freshly-themed sessions.
+     * Unlike [evictAll] this keeps [activeId], so the visible tab re-activates the instant its screen
+     * re-acquires — the user just sees the current tab reload in the new theme, not a blanked-out surface.
+     */
+    fun rebuildAllForTheme() {
+        val copy = warm.toList()
+        warm.clear()
+        copy.forEach { it.controller.teardown() }
+        themeEpoch += 1
     }
 }
