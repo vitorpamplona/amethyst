@@ -88,9 +88,11 @@ class NewPodcastEpisodeViewModel : ViewModel() {
     private var dTag: String? = null
     private var loadedEvent: Podcasting20EpisodeEvent? = null
 
-    /** Carried across an edit so we don't drop the original publish date or value splits on save. */
+    /** Editable value-for-value split for this episode (overrides the show's split). */
+    val splitEditor = V4VSplitEditorState()
+
+    /** Carried across an edit so we don't drop the original publish date on save. */
     private var preservedPubDate: String? = null
-    private var preservedValue: PodcastValue? = null
 
     val isEditing: Boolean
         get() = loadedEvent != null
@@ -110,7 +112,7 @@ class NewPodcastEpisodeViewModel : ViewModel() {
                 dTag = editDTag
                 loadedEvent = existing
                 preservedPubDate = existing.pubDate()
-                preservedValue = existing.value()
+                splitEditor.load(existing.value())
                 title.value = existing.title().orEmpty()
                 description.value = existing.description().orEmpty()
                 audioUrl.value =
@@ -196,6 +198,7 @@ class NewPodcastEpisodeViewModel : ViewModel() {
                 transcriptUrl = transcriptUrl.value.trim().ifBlank { null },
                 chaptersUrl = chaptersUrl.value.trim().ifBlank { null },
                 topics = PodcastComposerMedia.parseCsv(topics.value),
+                value = splitEditor.toPodcastValue(),
                 coverOrchestrator = coverMedia.value,
                 audioOrchestrator = audioMedia.value,
                 existingCoverUrl = coverUrl.value.trim().ifBlank { null },
@@ -255,6 +258,7 @@ class NewPodcastEpisodeViewModel : ViewModel() {
         val transcriptUrl: String?,
         val chaptersUrl: String?,
         val topics: List<String>,
+        val value: PodcastValue?,
         val coverOrchestrator: MultiOrchestrator?,
         val audioOrchestrator: MultiOrchestrator?,
         val existingCoverUrl: String?,
@@ -315,7 +319,7 @@ class NewPodcastEpisodeViewModel : ViewModel() {
                 season = snapshot.season,
                 transcriptUrl = snapshot.transcriptUrl,
                 chaptersUrl = snapshot.chaptersUrl,
-                value = preservedValue,
+                value = snapshot.value,
                 topics = snapshot.topics,
             )
         account.signAndComputeBroadcast(template)

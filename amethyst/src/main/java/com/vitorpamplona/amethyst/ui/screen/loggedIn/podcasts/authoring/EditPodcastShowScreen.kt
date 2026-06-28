@@ -169,6 +169,8 @@ fun EditPodcastShowScreen(
             SwitchRow(stringRes(R.string.podcast_show_explicit), vm.explicit.value) { vm.explicit.value = it }
             SwitchRow(stringRes(R.string.podcast_show_complete), vm.complete.value) { vm.complete.value = it }
             SwitchRow(stringRes(R.string.podcast_show_locked), vm.locked.value) { vm.locked.value = it }
+
+            V4VSplitEditor(vm.splitEditor)
         }
     }
 }

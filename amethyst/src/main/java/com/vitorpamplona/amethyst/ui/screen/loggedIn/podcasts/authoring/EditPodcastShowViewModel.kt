@@ -34,7 +34,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
-import com.vitorpamplona.quartz.podcasts.PodcastValue
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -82,9 +81,11 @@ class EditPodcastShowViewModel : ViewModel() {
     val mediaQualitySlider = mutableStateOf(1)
     val stripMetadata = mutableStateOf(true)
 
+    /** Editable value-for-value split for the show. */
+    val splitEditor = V4VSplitEditorState()
+
     /** Fields the editor doesn't surface but must not drop on save. */
     private var preservedGuid: String? = null
-    private var preservedValue: PodcastValue? = null
     private var hasExisting = false
 
     fun init(accountViewModel: AccountViewModel) {
@@ -98,7 +99,7 @@ class EditPodcastShowViewModel : ViewModel() {
         if (existing != null) {
             hasExisting = true
             preservedGuid = existing.guid()
-            preservedValue = existing.showValue()
+            splitEditor.load(existing.showValue())
             title.value = existing.showTitle().orEmpty()
             description.value = existing.showDescription().orEmpty()
             author.value = existing.showAuthor().orEmpty()
@@ -162,7 +163,7 @@ class EditPodcastShowViewModel : ViewModel() {
                         type = type.value.trim().ifBlank { null },
                         complete = complete.value.takeIf { it },
                         guid = preservedGuid,
-                        value = preservedValue,
+                        value = splitEditor.toPodcastValue(),
                     ),
                 coverOrchestrator = coverOrch,
                 server = server,

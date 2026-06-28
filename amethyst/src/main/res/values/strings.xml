@@ -1004,6 +1004,18 @@
         <item quantity="one">%1$d trailer</item>
         <item quantity="other">%1$d trailers</item>
     </plurals>
+    <string name="podcast_value_editor_hint">Add recipients to split incoming sats by weight. Listeners boost or stream value to these destinations.</string>
+    <string name="podcast_value_add_recipient">Add recipient</string>
+    <string name="podcast_value_remove_recipient">Remove recipient</string>
+    <string name="podcast_value_recipient_name">Name (optional)</string>
+    <string name="podcast_value_type_lnaddress">Lightning address</string>
+    <string name="podcast_value_type_node">Node (keysend)</string>
+    <string name="podcast_value_lnaddress">Lightning address</string>
+    <string name="podcast_value_lnaddress_hint">name@example.com</string>
+    <string name="podcast_value_node_pubkey">Node pubkey</string>
+    <string name="podcast_value_node_pubkey_hint">02abc… (33-byte hex)</string>
+    <string name="podcast_value_weight">Weight</string>
+    <string name="podcast_value_fee">Fee</string>
     <plurals name="podcast_episode_count">
         <item quantity="one">%1$d episode</item>
         <item quantity="other">%1$d episodes</item>

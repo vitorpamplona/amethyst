@@ -250,6 +250,9 @@ fun NewPodcastEpisodeScreen(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 )
+
+                // Episode-level V4V override; leave empty to inherit the show's split.
+                V4VSplitEditor(vm.splitEditor)
             }
 
             if (vm.isEditing) {
