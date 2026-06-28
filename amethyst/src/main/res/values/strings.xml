@@ -1006,6 +1006,10 @@
     </plurals>
     <string name="podcast_value_editor_hint">Add recipients to split incoming sats by weight. Listeners boost or stream value to these destinations.</string>
     <string name="podcast_value_add_recipient">Add recipient</string>
+    <string name="podcast_value_add_address">Add address manually</string>
+    <string name="podcast_value_search_user">Add a Nostr user</string>
+    <string name="podcast_value_search_user_hint">Search by name or @handle</string>
+    <string name="podcast_value_user_no_lnaddress">This user has no Lightning address</string>
     <string name="podcast_value_remove_recipient">Remove recipient</string>
     <string name="podcast_value_recipient_name">Name (optional)</string>
     <string name="podcast_value_type_lnaddress">Lightning address</string>

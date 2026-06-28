@@ -252,7 +252,7 @@ fun NewPodcastEpisodeScreen(
                 )
 
                 // Episode-level V4V override; leave empty to inherit the show's split.
-                V4VSplitEditor(vm.splitEditor)
+                V4VSplitEditor(vm.splitEditor, accountViewModel)
             }
 
             if (vm.isEditing) {

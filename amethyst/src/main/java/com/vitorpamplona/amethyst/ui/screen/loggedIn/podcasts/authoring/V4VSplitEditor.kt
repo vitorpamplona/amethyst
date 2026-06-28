@@ -24,9 +24,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.FilterChip
@@ -37,6 +40,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,18 +52,32 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
 /**
- * Editor for a Podcasting-2.0 value-for-value split: a card listing each recipient (name, lnaddress
- * vs node toggle, address, weight, optional fee) plus an "Add recipient" action. Each recipient's
- * share of incoming sats is shown live as a percentage of the total weight. Drives a
- * [V4VSplitEditorState]; the owning composer reads [V4VSplitEditorState.toPodcastValue] on save.
+ * Editor for a Podcasting-2.0 value-for-value split. Recipients are added the Amethyst-native way —
+ * search for a Nostr user and they're rendered with avatar + name, their lightning address resolved
+ * automatically — with a manual "add address" fallback for raw lightning addresses or node keysend
+ * destinations. Each recipient's share of incoming sats is shown live as a percentage of the total
+ * weight. Drives a [V4VSplitEditorState]; the owning composer reads [V4VSplitEditorState.toPodcastValue].
  */
 @Composable
-fun V4VSplitEditor(state: V4VSplitEditorState) {
+fun V4VSplitEditor(
+    state: V4VSplitEditorState,
+    accountViewModel: AccountViewModel,
+) {
     val total = state.totalSplit()
+    val userSuggestions =
+        remember { UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder()) }
+    var search by remember { mutableStateOf("") }
 
     Column(
         modifier =
@@ -92,27 +112,60 @@ fun V4VSplitEditor(state: V4VSplitEditorState) {
         }
 
         state.recipients.forEach { draft ->
-            RecipientCard(
-                draft = draft,
-                total = total,
-                onRemove = { state.remove(draft) },
+            if (draft.user.value != null) {
+                UserRecipientCard(draft, total, accountViewModel, onRemove = { state.remove(draft) })
+            } else {
+                ManualRecipientCard(draft, total, onRemove = { state.remove(draft) })
+            }
+        }
+
+        // Search a Nostr user to add (resolves their lightning address). Beautiful path.
+        OutlinedTextField(
+            value = search,
+            onValueChange = { newValue ->
+                search = newValue
+                if (newValue.length > 2) userSuggestions.processCurrentWord(newValue) else userSuggestions.reset()
+            },
+            label = { Text(stringRes(R.string.podcast_value_search_user)) },
+            placeholder = { Text(stringRes(R.string.podcast_value_search_user_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+
+        if (search.length > 2) {
+            ShowUserSuggestionList(
+                userSuggestions = userSuggestions,
+                onSelect = { user ->
+                    val added = state.addUser(user)
+                    if (!added) {
+                        accountViewModel.toastManager.toast(
+                            R.string.podcast_value_for_value,
+                            R.string.podcast_value_user_no_lnaddress,
+                        )
+                    }
+                    search = ""
+                    userSuggestions.reset()
+                },
+                accountViewModel = accountViewModel,
+                modifier = SuggestionListDefaultHeightPage,
             )
         }
 
-        TextButton(onClick = { state.add() }, modifier = Modifier.fillMaxWidth()) {
+        // Fallback for raw destinations (a node pubkey for keysend, or a non-Nostr lightning address).
+        TextButton(onClick = { state.addManual() }, modifier = Modifier.fillMaxWidth()) {
             Icon(symbol = MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(text = stringRes(R.string.podcast_value_add_recipient), modifier = Modifier.padding(start = 6.dp))
+            Text(text = stringRes(R.string.podcast_value_add_address), modifier = Modifier.padding(start = 6.dp))
         }
     }
 }
 
 @Composable
-private fun RecipientCard(
-    draft: RecipientDraft,
+private fun RecipientShell(
     total: Int,
+    draft: RecipientDraft,
     onRemove: () -> Unit,
+    content: @Composable RowScope.() -> Unit,
 ) {
-    val isNode by draft.isNode
     val weight =
         draft.split.value
             .trim()
@@ -128,6 +181,75 @@ private fun RecipientCard(
                 .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            content()
+            Text(
+                text = stringRes(R.string.podcast_value_split_percent, percent),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            IconButton(onClick = onRemove) {
+                Icon(
+                    symbol = MaterialSymbols.Delete,
+                    contentDescription = stringRes(R.string.podcast_value_remove_recipient),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+
+        WeightAndFeeRow(draft, weight)
+    }
+}
+
+@Composable
+private fun UserRecipientCard(
+    draft: RecipientDraft,
+    total: Int,
+    accountViewModel: AccountViewModel,
+    onRemove: () -> Unit,
+) {
+    val user = draft.user.value ?: return
+    RecipientShell(total, draft, onRemove) {
+        BaseUserPicture(user, Size40dp, accountViewModel = accountViewModel)
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            UsernameDisplay(user, accountViewModel = accountViewModel)
+            val lud = user.lnAddress()
+            Text(
+                text = lud ?: stringRes(R.string.podcast_value_user_no_lnaddress),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.grayText,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ManualRecipientCard(
+    draft: RecipientDraft,
+    total: Int,
+    onRemove: () -> Unit,
+) {
+    val isNode by draft.isNode
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        val weight =
+            draft.split.value
+                .trim()
+                .toIntOrNull() ?: 0
+        val percent = if (total > 0 && weight > 0) weight * 100 / total else 0
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = stringRes(R.string.podcast_value_split_percent, percent),
@@ -170,15 +292,7 @@ private fun RecipientCard(
         OutlinedTextField(
             value = draft.address.value,
             onValueChange = { draft.address.value = it },
-            label = {
-                Text(
-                    if (isNode) {
-                        stringRes(R.string.podcast_value_node_pubkey)
-                    } else {
-                        stringRes(R.string.podcast_value_lnaddress)
-                    },
-                )
-            },
+            label = { Text(if (isNode) stringRes(R.string.podcast_value_node_pubkey) else stringRes(R.string.podcast_value_lnaddress)) },
             placeholder = {
                 Text(if (isNode) stringRes(R.string.podcast_value_node_pubkey_hint) else stringRes(R.string.podcast_value_lnaddress_hint))
             },
@@ -187,21 +301,29 @@ private fun RecipientCard(
             isError = draft.address.value.isBlank(),
         )
 
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = draft.split.value,
-                onValueChange = { input -> draft.split.value = input.filter { it.isDigit() } },
-                label = { Text(stringRes(R.string.podcast_value_weight)) },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = weight <= 0,
-            )
-            FilterChip(
-                selected = draft.fee.value,
-                onClick = { draft.fee.value = !draft.fee.value },
-                label = { Text(stringRes(R.string.podcast_value_fee)) },
-            )
-        }
+        WeightAndFeeRow(draft, weight)
+    }
+}
+
+@Composable
+private fun WeightAndFeeRow(
+    draft: RecipientDraft,
+    weight: Int,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = draft.split.value,
+            onValueChange = { input -> draft.split.value = input.filter { it.isDigit() } },
+            label = { Text(stringRes(R.string.podcast_value_weight)) },
+            modifier = Modifier.weight(1f),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            isError = weight <= 0,
+        )
+        FilterChip(
+            selected = draft.fee.value,
+            onClick = { draft.fee.value = !draft.fee.value },
+            label = { Text(stringRes(R.string.podcast_value_fee)) },
+        )
     }
 }
