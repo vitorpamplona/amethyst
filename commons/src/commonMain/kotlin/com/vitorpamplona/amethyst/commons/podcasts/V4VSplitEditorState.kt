@@ -18,11 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring
+package com.vitorpamplona.amethyst.commons.podcasts
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.podcasts.PodcastValue
 import com.vitorpamplona.quartz.podcasts.PodcastValueRecipient
 
@@ -32,6 +32,9 @@ import com.vitorpamplona.quartz.podcasts.PodcastValueRecipient
  * [PodcastValue] on save (or null when there are no payable recipients). The suggested amount /
  * currency / enabled flag on a loaded block are carried through untouched — the editor only manages
  * the recipient list.
+ *
+ * Lives in `commons` (a CLI-safe snapshot-state holder, no Compose UI) so any front end can drive a
+ * V4V split editor; the actual editor composable is platform-side.
  */
 class V4VSplitEditorState {
     val recipients = mutableStateListOf<RecipientDraft>()
