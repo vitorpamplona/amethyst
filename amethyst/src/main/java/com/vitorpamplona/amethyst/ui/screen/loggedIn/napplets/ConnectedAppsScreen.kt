@@ -68,14 +68,13 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.ConnectedAppsFilterAssemblerSubscription
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
@@ -93,6 +92,7 @@ fun ConnectedAppsScreen(
     val signerLedger = remember { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
 
     var items by remember { mutableStateOf<List<ConnectedAppEntry>?>(null) }
+    var authors by remember { mutableStateOf<Set<HexKey>>(emptySet()) }
 
     LaunchedEffect(Unit) {
         val initial =
@@ -100,28 +100,10 @@ fun ConnectedAppsScreen(
                 loadConnectedApps(capabilityLedger, signerLedger)
             }
         items = initial
-
-        // Fetch manifests for all entries so the reactive cards can display title + icon.
-        launch(Dispatchers.IO) {
-            if (initial.isEmpty()) return@launch
-            val authors = initial.map { it.coordinate.substringBefore(':') }.toSet()
-            val filter =
-                Filter(
-                    kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND),
-                    authors = authors.toList(),
-                )
-            val relays = accountViewModel.account.homeRelays.flow.value
-            if (relays.isEmpty()) return@launch
-            runCatching {
-                val events =
-                    accountViewModel.account.client.fetchAll(
-                        filters = relays.associateWith { listOf(filter) },
-                        timeoutMs = 15_000L,
-                    )
-                events.forEach { LocalCache.justConsume(it, null, false) }
-            }
-        }
+        authors = initial.map { it.coordinate.substringBefore(':') }.toSet()
     }
+
+    ConnectedAppsFilterAssemblerSubscription(accountViewModel, authors)
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringResource(R.string.napplet_permissions_title), nav) },
