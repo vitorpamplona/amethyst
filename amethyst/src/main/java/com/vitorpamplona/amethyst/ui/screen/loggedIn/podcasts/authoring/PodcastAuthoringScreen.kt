@@ -40,6 +40,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -63,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.MyPodcastFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -85,11 +87,31 @@ fun PodcastAuthoringScreen(
 ) {
     val me = accountViewModel.account.userProfile().pubkeyHex
 
-    // Bump on each resume so returning from a composer re-scans LocalCache.
+    // Keep a REQ open for the creator's own catalog while the hub is visible, so the lists below
+    // fill in from relays even when nothing was cached yet.
+    MyPodcastFilterAssemblerSubscription(accountViewModel)
+
+    // Re-scan LocalCache on each resume (returning from a composer) and whenever the creator's own
+    // podcast events arrive over the open REQ, so the lists stay current without a manual refresh.
     var refresh by remember { mutableIntStateOf(0) }
     LifecycleResumeEffect(Unit) {
         refresh++
         onPauseOrDispose { }
+    }
+    LaunchedEffect(me) {
+        LocalCache.live.newEventBundles.collect { bundle ->
+            val mine =
+                bundle.any {
+                    val e = it.event
+                    e?.pubKey == me &&
+                        (
+                            e is Podcasting20EpisodeEvent ||
+                                e is Podcasting20TrailerEvent ||
+                                (e is AppSpecificDataEvent && e.dTag() == Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG)
+                        )
+                }
+            if (mine) refresh++
+        }
     }
 
     val show =
