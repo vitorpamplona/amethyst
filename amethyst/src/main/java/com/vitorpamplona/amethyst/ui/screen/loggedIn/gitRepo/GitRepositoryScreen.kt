@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -43,6 +45,7 @@ import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +55,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -62,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -394,7 +399,23 @@ private fun StatusSplitFeed(
         if (selectedLabel != null && selectedLabel !in labels) selectedLabel = null
     }
 
-    Column(Modifier.fillMaxSize()) {
+    // The filter header is drawn statically below the disappearing top bar, so it must
+    // consume the scaffold's top inset itself. The inner feed then renders with the top
+    // inset zeroed — otherwise its LazyColumn re-applies the full bar height as content
+    // padding on top of the header, leaving the empty band reported above the items.
+    val scaffoldPadding = LocalDisappearingScaffoldPadding.current
+    val layoutDirection = LocalLayoutDirection.current
+    val feedPadding =
+        remember(scaffoldPadding, layoutDirection) {
+            PaddingValues(
+                start = scaffoldPadding.calculateStartPadding(layoutDirection),
+                top = 0.dp,
+                end = scaffoldPadding.calculateEndPadding(layoutDirection),
+                bottom = scaffoldPadding.calculateBottomPadding(),
+            )
+        }
+
+    Column(Modifier.fillMaxSize().padding(top = scaffoldPadding.calculateTopPadding())) {
         Row(
             modifier =
                 Modifier
@@ -456,15 +477,17 @@ private fun StatusSplitFeed(
             }
         }
 
-        RefresheableFeedView(
-            viewModel = if (showClosed) closedViewModel else openViewModel,
-            routeForLastRead = null,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            onLoaded = { loaded, listState ->
-                GitItemFeedLoaded(loaded, listState, accountViewModel, nav, labelFilter = selectedLabel)
-            },
-        )
+        CompositionLocalProvider(LocalDisappearingScaffoldPadding provides feedPadding) {
+            RefresheableFeedView(
+                viewModel = if (showClosed) closedViewModel else openViewModel,
+                routeForLastRead = null,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onLoaded = { loaded, listState ->
+                    GitItemFeedLoaded(loaded, listState, accountViewModel, nav, labelFilter = selectedLabel)
+                },
+            )
+        }
     }
 }
 
