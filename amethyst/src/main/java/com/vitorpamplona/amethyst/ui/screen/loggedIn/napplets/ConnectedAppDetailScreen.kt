@@ -398,20 +398,41 @@ private fun CapabilityDetailRow(
             Text(
                 stringResource(R.string.napplet_permissions_blocked),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.error,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            Switch(
-                checked = grant == GrantState.ALLOW_ALWAYS,
-                onCheckedChange = onSetAllowed,
-            )
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    stringResource(
+                        if (grant == GrantState.ALLOW_ALWAYS) {
+                            R.string.napplet_consent_allow_always
+                        } else {
+                            R.string.napplet_consent_deny_always
+                        },
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color =
+                        if (grant == GrantState.ALLOW_ALWAYS) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
+                )
+                Switch(
+                    checked = grant == GrantState.ALLOW_ALWAYS,
+                    onCheckedChange = onSetAllowed,
+                )
+            }
         }
 
         Spacer(Modifier.size(4.dp))
         IconButton(onClick = onRevoke) {
             Icon(
-                MaterialSymbols.Block,
-                contentDescription = stringResource(R.string.napplet_permissions_revoke),
+                MaterialSymbols.Refresh,
+                contentDescription = stringResource(R.string.napplet_permissions_ask_each_time),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )

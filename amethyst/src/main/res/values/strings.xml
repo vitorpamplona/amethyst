@@ -701,8 +701,9 @@
     <string name="napplet_permissions_empty">No nApplet permissions yet</string>
     <string name="napplet_permissions_empty_subtitle">Permissions you grant to nApplets will appear here.</string>
     <string name="napplet_permissions_forget">Forget this nApplet</string>
-    <string name="napplet_permissions_blocked">Blocked</string>
+    <string name="napplet_permissions_blocked">Requires per-use approval</string>
     <string name="napplet_permissions_revoke">Revoke</string>
+    <string name="napplet_permissions_ask_each_time">Ask me each time</string>
     <string name="napplet_none_found">No nApplets found yet.</string>
     <string name="napplet_fallback_title">nApplet %1$s…</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
