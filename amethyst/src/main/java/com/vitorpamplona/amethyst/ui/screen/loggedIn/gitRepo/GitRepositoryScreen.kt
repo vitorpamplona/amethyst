@@ -308,7 +308,7 @@ private fun GitRepositoryHome(
             val currentEvent = event
             if (currentEvent != null) {
                 GitRepositoryOverviewSections(currentEvent, accountViewModel, nav)
-                RepoSocialRow(note, accountViewModel)
+                RepoSocialRow(note, accountViewModel, nav)
             }
 
             if (snapshot != null) {

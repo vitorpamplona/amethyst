@@ -35,7 +35,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,10 +49,11 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactionCount
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplyCount
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
+import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.ReplyReaction
+import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -74,40 +74,23 @@ private val CardShape = RoundedCornerShape(15.dp)
 fun RepoSocialRow(
     note: AddressableNote,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
-    val reactionCount by observeNoteReactionCount(note, accountViewModel)
-    val replyCount by observeNoteReplyCount(note, accountViewModel)
-    val zapState by observeNoteZaps(note, accountViewModel)
-    val zapCount = zapState?.note?.zaps?.size ?: note.zaps.size
-
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        SocialStat(MaterialSymbols.Bolt, zapCount, MaterialTheme.colorScheme.primary)
-        SocialStat(MaterialSymbols.Favorite, reactionCount, MaterialTheme.colorScheme.error)
-        SocialStat(MaterialSymbols.Forum, replyCount, MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun SocialStat(
-    symbol: MaterialSymbol,
-    count: Int,
-    tint: Color,
-) {
+    val grayTint = MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier =
             Modifier
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(22.dp),
     ) {
-        Icon(symbol = symbol, contentDescription = null, modifier = Modifier.size(16.dp), tint = tint)
-        Text(
-            text = compactCount(count),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
+        ZapReaction(baseNote = note, grayTint = grayTint, accountViewModel = accountViewModel, nav = nav)
+        LikeReaction(baseNote = note, grayTint = grayTint, accountViewModel = accountViewModel, nav = nav)
+        ReplyReaction(baseNote = note, grayTint = grayTint, accountViewModel = accountViewModel) {
+            nav.nav { routeReplyTo(note, accountViewModel.account) }
+        }
     }
 }
 
