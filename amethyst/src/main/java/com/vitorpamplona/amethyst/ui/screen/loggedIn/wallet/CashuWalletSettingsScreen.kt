@@ -341,11 +341,14 @@ fun CashuWalletSettingsScreen(
                 TextButton(
                     onClick = {
                         showDeleteWalletConfirm = false
-                        // Tear down the wallet, then drop back to the wallet
-                        // screen, which re-renders to its empty/create state
-                        // once walletEvent flips to null.
+                        // Tear down the wallet, then go to the top-level Wallet
+                        // hub — NOT back to CashuWalletScreen, which on an empty
+                        // wallet auto-launches the find-or-create wizard and
+                        // would funnel the user straight back into creating the
+                        // wallet they just deleted. newStack pops the Cashu
+                        // screens off the back stack so the wizard never composes.
                         viewModel.deleteWallet(onDone = {})
-                        nav.popBack()
+                        nav.newStack(Route.Wallet)
                     },
                 ) { Text(stringRes(R.string.cashu_settings_delete_wallet)) }
             },
