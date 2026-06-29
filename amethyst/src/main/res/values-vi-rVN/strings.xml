@@ -684,6 +684,13 @@
     <plurals name="napplet_consent_pay_amount">
         <item quantity="other">nApplet này muốn thanh toán hóa đơn Lightning %1$d sats.</item>
     </plurals>
+    <!-- Signer permissions: first-connect dialog -->
+    <!-- Signer trust levels -->
+    <!-- Signer per-op consent dialog -->
+    <!-- Signer op labels -->
+    <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <!-- Permissions management screen -->
+    <!-- Relay Authentication (NIP-42) settings -->
     <string name="nip82_repository_label">Nguồn: %1$s</string>
     <string name="nip82_download">Tải xuống</string>
     <string name="nip82_section_about">Giới thiệu</string>

@@ -623,8 +623,8 @@
     <string name="exercise_circuit">循环训练</string>
     <string name="exercise_emom">EMOM</string>
     <string name="exercise_amrap">AMRAP</string>
-    <string name="software_apps">应用</string>
-    <string name="route_software_apps">应用</string>
+    <string name="software_apps">App Store</string>
+    <string name="route_software_apps">App Store</string>
     <string name="napplets">nApplets</string>
     <string name="nsites">nSites</string>
     <string name="nsite_none_found">尚未找到nSite。</string>
@@ -637,9 +637,12 @@
     <string name="browser_go">打开</string>
     <string name="browser_clear">清除</string>
     <string name="browser_favorites">收藏夹</string>
+    <string name="browser_suggested">发现 web 应用</string>
+    <string name="browser_discover_nsites">您关注的人的站点</string>
+    <string name="browser_discover_napplets">您关注的人的应用</string>
     <string name="browser_recent_options">选项</string>
     <string name="browser_recent_remove">从历史记录中删除</string>
-    <string name="favorite_apps">喜欢的应用</string>
+    <string name="favorite_apps">Web 应用</string>
     <string name="favorite_apps_empty">还没有喜欢的应用。打开 web 客户端或 nsite 并点击⭐来固定它。</string>
     <string name="favorite_app_add">添加至收藏夹</string>
     <string name="favorite_app_remove">从收藏中移除</string>
@@ -662,6 +665,7 @@
     <string name="napplet_permissions_forget">忘记此 nApplet</string>
     <string name="napplet_permissions_blocked">已阻止</string>
     <string name="napplet_permissions_revoke">撤销</string>
+    <string name="napplet_permissions_ask_each_time">每次询问我</string>
     <string name="napplet_none_found">尚未找到 nApplets 。</string>
     <string name="napplet_fallback_title">nApplet %1$s…</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
@@ -709,6 +713,71 @@
     <plurals name="napplet_consent_pay_amount">
         <item quantity="other">此 nApplet 想要支付 %1$d sat 的闪电发票。</item>
     </plurals>
+    <!-- Signer permissions: first-connect dialog -->
+    <string name="napplet_connect_title">连接到 Nostr</string>
+    <string name="napplet_connect_subtitle">想要连接到您的 Nostr 帐户</string>
+    <string name="napplet_connect_how_handle">应如何处理此应用的请求？</string>
+    <string name="napplet_connect_button">连接</string>
+    <string name="napplet_connect_block">屏蔽和忽略 %1$s</string>
+    <!-- Signer trust levels -->
+    <string name="napplet_policy_full_trust">我完全信任它</string>
+    <string name="napplet_policy_full_trust_desc">自动签署所有请求(付款除外)</string>
+    <string name="napplet_policy_reasonable">让我们讲理</string>
+    <string name="napplet_policy_reasonable_desc">自动批准大多数常见请求</string>
+    <string name="napplet_policy_paranoid">我有点偏执</string>
+    <string name="napplet_policy_paranoid_desc">不要在不问我的情况下签署任何东西！</string>
+    <!-- Signer per-op consent dialog -->
+    <string name="napplet_consent_wants_to">想要 %1$s</string>
+    <string name="napplet_consent_show_event">显示事件</string>
+    <string name="napplet_consent_hide_event">隐藏事件</string>
+    <string name="napplet_consent_more_options">更多选项</string>
+    <string name="napplet_consent_fewer_options">较少选项</string>
+    <string name="napplet_signer_allow_once">允许一次</string>
+    <string name="napplet_signer_allow_session">此会话允许</string>
+    <string name="napplet_signer_allow_24h">允许24小时</string>
+    <string name="napplet_signer_allow_30d">允许 30 天</string>
+    <string name="napplet_signer_allow_op">不要再次询问 %1$s</string>
+    <string name="napplet_signer_allow_all">不要再次询问任何Nostr请求</string>
+    <string name="napplet_signer_deny_once">拒绝</string>
+    <string name="napplet_signer_deny_op">总是拒绝 %1$s</string>
+    <string name="napplet_signer_last_used">上次使用</string>
+    <string name="napplet_signer_expires">过期时间</string>
+    <!-- Signer op labels -->
+    <string name="napplet_op_sign_kind">签署类型 %1$d 事件</string>
+    <string name="napplet_op_sign_kind_named">签署 %1$s (类型： %2$d)</string>
+    <string name="napplet_op_encrypt">加密消息</string>
+    <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <string name="napplet_op_decrypt">读取您的私信</string>
+    <!-- Permissions management screen -->
+    <string name="napplet_permissions_title">已连接的应用程序</string>
+    <string name="napplet_permissions_revoke_all">撤销所有权限</string>
+    <string name="napplet_permissions_overrides">操作覆盖</string>
+    <string name="napplet_signer_permissions_empty">尚未连接任何应用。</string>
+    <string name="napplet_signer_permissions_revoke_all">撤销所有权限</string>
+    <string name="napplet_decision_allow">允许</string>
+    <string name="napplet_decision_ask">询问</string>
+    <string name="napplet_decision_deny">拒绝</string>
+    <string name="napplet_connected_apps_search_keywords">应用程序权限签名者napplet nsite webapp 信任已连接</string>
+    <string name="napplet_connected_app_trust_level">签署信任级别</string>
+    <string name="napplet_connected_app_capabilities">功能</string>
+    <string name="napplet_connected_app_forget">忘记这个应用</string>
+    <string name="napplet_connected_app_op_overrides">签名操作覆盖</string>
+    <string name="napplet_connected_app_empty">尚未连接应用。\n\n当 web app 连接到你的 Nostr 密钥，它会出现在这里。</string>
+    <!-- Relay Authentication (NIP-42) settings -->
+    <string name="relay_auth_settings_title">中继身份认证</string>
+    <string name="relay_auth_search_keywords">auth authentication relay sign verify nip-42 identity</string>
+    <string name="relay_auth_global_policy">全局政策</string>
+    <string name="relay_auth_policy_always">总是认证身份</string>
+    <string name="relay_auth_policy_always_desc">为每个请求身份认证挑战的中继签署它</string>
+    <string name="relay_auth_policy_never">从不认证</string>
+    <string name="relay_auth_policy_never_desc">忽略所有中继的认证挑战</string>
+    <string name="relay_auth_policy_if_in_my_list">仅我的中继</string>
+    <string name="relay_auth_policy_if_in_my_list_desc">仅通过您的中继列表中的中继进行身份认证</string>
+    <string name="relay_auth_per_relay_overrides">不同中继设置覆盖</string>
+    <string name="relay_auth_no_overrides">没有不同中继设置覆盖 — 所有中继使用全局政策</string>
+    <string name="relay_auth_decision_allow">允许</string>
+    <string name="relay_auth_decision_deny">拒绝</string>
+    <string name="relay_auth_remove_override">删除覆盖</string>
     <string name="nip82_repository_label">来源： %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">下载</string>
@@ -1441,6 +1510,26 @@
     <string name="wallet_connect">钱包绑定</string>
     <string name="language">语言</string>
     <string name="theme">主题</string>
+    <string name="accent_color">强调色</string>
+    <string name="accent_color_description">所有按钮和链接使用的主颜色</string>
+    <string name="accent_color_purple">紫色</string>
+    <string name="accent_color_blue">蓝色</string>
+    <string name="accent_color_green">绿色</string>
+    <string name="accent_color_orange">橙色</string>
+    <string name="accent_color_red">红色</string>
+    <string name="accent_color_pink">粉色</string>
+    <string name="font_family">字体</string>
+    <string name="font_family_description">在整个应用程序中使用的字体</string>
+    <string name="font_family_system">系统默认</string>
+    <string name="font_family_sans_serif">Sans Serif</string>
+    <string name="font_family_serif">Serif</string>
+    <string name="font_family_monospace">等宽字体</string>
+    <string name="font_size">字体大小</string>
+    <string name="font_size_description">在整个应用程序缩放文本大小</string>
+    <string name="font_size_small">小</string>
+    <string name="font_size_normal">正常</string>
+    <string name="font_size_large">大</string>
+    <string name="font_size_huge">巨大</string>
     <string name="automatically_load_images_gifs">图像预览</string>
     <string name="automatically_play_videos">视频播放</string>
     <string name="autoplay_videos">自动播放视频</string>
@@ -2240,11 +2329,15 @@
     <string name="git_repo_tab_overview">概述</string>
     <string name="git_repo_tab_issues">议题</string>
     <string name="git_repo_tab_patches">补丁 &amp; PR</string>
+    <string name="git_repo_filter_open">打开</string>
+    <string name="git_repo_filter_closed">关闭 &amp; 已解决</string>
+    <string name="git_untitled">无标题</string>
     <string name="git_repo_section_about">关于</string>
     <string name="git_repo_section_links">链接</string>
     <string name="git_repo_section_maintainers">维护者</string>
     <string name="git_repo_section_topics">话题</string>
     <string name="git_repo_personal_fork">个人派生</string>
+    <string name="git_repositories">Git 仓库</string>
     <string name="nsite_title">静态网站: %1$s</string>
     <string name="napplet_card_title">nApple: %1$s</string>
     <string name="napplet_card_permissions">权限：</string>
