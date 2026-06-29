@@ -1016,6 +1016,7 @@
     </plurals>
     <string name="private_bookmarks">Private Bookmarks</string>
     <string name="public_bookmarks">Public Bookmarks</string>
+    <string name="repository_bookmarks">Repositories</string>
     <string name="add_to_private_bookmarks">Add to Private Bookmarks</string>
     <string name="add_to_public_bookmarks">Add to Public Bookmarks</string>
     <string name="remove_from_private_bookmarks">Remove from Private Bookmarks</string>
