@@ -1075,45 +1075,31 @@ class CashuWalletOps(
     }
 
     /**
-     * NUT-09 wallet restore — recover proofs the wallet previously
-     * minted at [mintUrl] but whose kind:7375 token events have been lost
-     * (rogue relay, NIP-09 from a compromised key, fresh device with no
-     * cache backup). Uses the wallet's NUT-13 seed to re-derive every
-     * past secret/r pair and asks the mint which it has signed.
+     * NUT-09 read-only probe — scan the mint for proofs derivable from
+     * [seed] WITHOUT publishing anything. Returns the UNSPENT proofs that
+     * aren't already held locally ([existingSecrets]) plus their total, so
+     * a caller can show the recoverable amount before committing (the
+     * find-my-wallet wizard's "structural + balance" check of each
+     * discovered wallet). Pair with [publishRecoveredProofs] to adopt the
+     * funds into the wallet.
      *
      * Process:
      *  1. Fetch the mint's active keyset.
      *  2. Drive [CashuMintOperations.restore] — scans counters in batches
-     *     until [emptyBatchesToStop] empty batches in a row signal
-     *     "this keyset has no more proofs further down".
-     *  3. Filter the returned proofs through /v1/checkstate to keep
-     *     only UNSPENT ones — NUT-09 alone returns even spent proofs.
-     *  4. Publish surviving proofs as one kind:7375.
-     *  5. Bump the persisted counter past the highest seen so future
-     *     mints don't reuse a slot we just confirmed in use.
+     *     until enough empty batches in a row signal "no more proofs".
+     *  3. Filter the returned proofs through /v1/checkstate to keep only
+     *     UNSPENT ones — NUT-09 alone returns even spent proofs.
+     *  4. Drop secrets already present in [existingSecrets].
      *
-     * Returns the number of unspent sats recovered. The caller's UI
-     * surfaces this to the user.
-     *
-     * [existingSecrets] is the set of NUT-00 `secret` strings the wallet
-     * already holds locally (across all kind:7375 events). Recovered
-     * proofs whose secret is already in this set are skipped — they're
-     * not "newly recovered", just re-derived copies of proofs we already
-     * accounted for. Without this filter every Resync click would
-     * publish a fresh kind:7375 with the same proofs and inflate the
-     * balance, since the balance sums proofs across every kind:7375.
-     *
-     * Idempotent — re-running after a successful restore returns 0
-     * (every counter still produces the same proofs the mint already
-     * marked spent in the previous round of publishing + redemption,
-     * AND every UNSPENT slot is now in [existingSecrets]).
+     * Since it neither signs, swaps, nor publishes, this is safe to run
+     * speculatively across many candidate wallets/seeds.
      */
-    suspend fun restoreFromMint(
+    suspend fun scanRecoverableProofs(
         mintUrl: String,
         seed: ByteArray,
         startCounter: Long = 0L,
         existingSecrets: Set<String> = emptySet(),
-    ): RestoreOutcome {
+    ): RecoverableProofs {
         seedWarmer()
         val mintOps = ops(mintUrl)
         val activeKeyset = mintOps.activeKeyset()
@@ -1124,13 +1110,7 @@ class CashuWalletOps(
                 startCounter = startCounter,
             )
         if (result.proofs.isEmpty()) {
-            return RestoreOutcome(
-                keysetId = result.keysetId,
-                amountRecoveredSats = 0L,
-                proofsRecovered = 0,
-                nextCounterAfterScan = result.nextCounterAfterScan,
-                tokenEvent = null,
-            )
+            return RecoverableProofs(mintUrl, result.keysetId, emptyList(), result.nextCounterAfterScan)
         }
 
         // /v1/checkstate filters out proofs that were minted but already
@@ -1138,25 +1118,44 @@ class CashuWalletOps(
         // already-spent proofs that the mint would reject at next swap.
         val stateMap = mintOps.checkStates(result.proofs.map { it.proof })
         val unspent =
-            result.proofs.filter { recovered ->
-                stateMap[recovered.proof.secret] == ProofState.UNSPENT &&
-                    recovered.proof.secret !in existingSecrets
-            }
-        if (unspent.isEmpty()) {
+            result.proofs
+                .filter { recovered ->
+                    stateMap[recovered.proof.secret] == ProofState.UNSPENT &&
+                        recovered.proof.secret !in existingSecrets
+                }.map { it.proof }
+        return RecoverableProofs(mintUrl, result.keysetId, unspent, result.nextCounterAfterScan)
+    }
+
+    /**
+     * Publish the proofs from a [scanRecoverableProofs] probe as one fresh
+     * kind:7375 + a kind:7376 IN history row — the same tail a NUT-09
+     * restore or a mint-from-LN uses. No-op (zero outcome) when the probe
+     * found nothing.
+     *
+     * Deliberately does NOT advance any persistent NUT-13 counter: counter
+     * bookkeeping belongs to the caller, because recovering from a
+     * *foreign* wallet's seed (the wizard moving an old wallet's funds into
+     * the main wallet) must not bump THIS wallet's counter for the shared
+     * keyset — the recovered proofs are bearer tokens, and the main
+     * wallet's own counter only governs the secrets IT derives.
+     */
+    suspend fun publishRecoveredProofs(recoverable: RecoverableProofs): RestoreOutcome {
+        val proofs = recoverable.proofs
+        if (proofs.isEmpty()) {
             return RestoreOutcome(
-                keysetId = result.keysetId,
+                keysetId = recoverable.keysetId,
                 amountRecoveredSats = 0L,
                 proofsRecovered = 0,
-                nextCounterAfterScan = result.nextCounterAfterScan,
+                nextCounterAfterScan = recoverable.nextCounterAfterScan,
                 tokenEvent = null,
             )
         }
 
-        val totalSats = unspent.sumOf { it.proof.amount }
+        val totalSats = proofs.sumOf { it.amount }
         val tokenContent =
             TokenContent(
-                mint = mintUrl,
-                proofs = unspent.map { it.proof },
+                mint = recoverable.mintUrl,
+                proofs = proofs,
             )
         val tokenTemplate = CashuTokenEvent.build(tokenContent, signer)
         val tokenEvent = signer.sign(tokenTemplate)
@@ -1176,13 +1175,34 @@ class CashuWalletOps(
         publish(historyEvent)
 
         return RestoreOutcome(
-            keysetId = result.keysetId,
+            keysetId = recoverable.keysetId,
             amountRecoveredSats = totalSats,
-            proofsRecovered = unspent.size,
-            nextCounterAfterScan = result.nextCounterAfterScan,
+            proofsRecovered = proofs.size,
+            nextCounterAfterScan = recoverable.nextCounterAfterScan,
             tokenEvent = tokenEvent,
         )
     }
+
+    /**
+     * NUT-09 wallet restore — recover proofs the wallet previously
+     * minted at [mintUrl] but whose kind:7375 token events have been lost
+     * (rogue relay, NIP-09 from a compromised key, fresh device with no
+     * cache backup). Convenience composition of [scanRecoverableProofs] +
+     * [publishRecoveredProofs]; see those for details.
+     *
+     * [existingSecrets] is the set of NUT-00 `secret` strings the wallet
+     * already holds locally (across all kind:7375 events) — recovered
+     * proofs whose secret is already in this set are skipped so re-running
+     * doesn't republish duplicates and inflate the balance.
+     *
+     * Idempotent — re-running after a successful restore returns 0.
+     */
+    suspend fun restoreFromMint(
+        mintUrl: String,
+        seed: ByteArray,
+        startCounter: Long = 0L,
+        existingSecrets: Set<String> = emptySet(),
+    ): RestoreOutcome = publishRecoveredProofs(scanRecoverableProofs(mintUrl, seed, startCounter, existingSecrets))
 
     companion object {
         /**
@@ -1202,6 +1222,21 @@ data class MigrationResult(
     val amountMigrated: Long,
     val proofsMigrated: Int,
 )
+
+/**
+ * Unpublished result of a NUT-09 scan. See [CashuWalletOps.scanRecoverableProofs].
+ * [proofs] are the UNSPENT, not-already-held proofs ready to be adopted into
+ * the wallet via [CashuWalletOps.publishRecoveredProofs]; [amountSats] sums them.
+ */
+data class RecoverableProofs(
+    val mintUrl: String,
+    val keysetId: String,
+    val proofs: List<CashuProof>,
+    val nextCounterAfterScan: Long,
+) {
+    val amountSats: Long get() = proofs.sumOf { it.amount }
+    val isEmpty: Boolean get() = proofs.isEmpty()
+}
 
 /** Result of a NUT-09 wallet restore. See [CashuWalletOps.restoreFromMint]. */
 data class RestoreOutcome(
