@@ -122,6 +122,9 @@ kotlin {
 
                 // Compose Multiplatform Resources
                 implementation(libs.jetbrains.compose.components.resources)
+
+                // KMP syntax highlighter (Apache-2.0) for the git code browser.
+                implementation(libs.highlights)
             }
         }
 

@@ -20,53 +20,63 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.model.LocalCache.observeEvents
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
 /**
  * Cross-screen index of the most recent NIP-34 status event (kinds
  * 1630-1633) per target id, kept up to date from
- * [LocalCache.live.newEventBundles]. Status events are not tracked in
+ * [LocalCache.observeEvents]. Status events are not tracked in
  * `Note.replies` (see `LocalCache.computeReplyTo`), so the only way to
  * find them otherwise would be a full cache scan per row.
+ *
+ * The kind-indexed [observeEvents] re-emits the whole matching list on every new
+ * status event (and seeds it from the cache index via `init()`), so [latestByTarget]
+ * is just that list reduced to the latest-per-target map. Shared [SharingStarted.Eagerly]
+ * — never `WhileSubscribed` — because callers (e.g. [isClosedOrResolved] and the feed
+ * filters) read `.value` synchronously and must not see a stale map when no one is
+ * actively collecting. `null` means "not loaded yet".
  */
 object GitStatusIndex {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val started = AtomicBoolean(false)
 
-    private val mutableLatestByTarget = MutableStateFlow<Map<HexKey, GitStatusEvent>?>(null)
-    val latestByTarget: StateFlow<Map<HexKey, GitStatusEvent>?> = mutableLatestByTarget.asStateFlow()
+    private val statusKinds =
+        listOf(
+            GitStatusEvent.KIND_OPEN,
+            GitStatusEvent.KIND_APPLIED,
+            GitStatusEvent.KIND_CLOSED,
+            GitStatusEvent.KIND_DRAFT,
+        )
 
-    fun startIfNeeded() {
-        if (!started.compareAndSet(false, true)) return
-        scope.launch {
-            // Subscribe to bundle updates BEFORE the initial scan via onStart, so any
-            // events that arrive between scan start and collector attach are picked up.
-            LocalCache.live.newEventBundles
-                .onStart {
-                    val initial = HashMap<HexKey, GitStatusEvent>()
-                    LocalCache.notes.forEach { _, note ->
-                        val event = note.event as? GitStatusEvent ?: return@forEach
-                        val target = event.rootEventId() ?: return@forEach
-                        val current = initial[target]
-                        if (current == null || event.createdAt > current.createdAt) {
-                            initial[target] = event
-                        }
-                    }
-                    mutableLatestByTarget.value = initial
-                }.collect { bundle -> processBundle(bundle) }
+    val latestByTarget: StateFlow<Map<HexKey, GitStatusEvent>?> =
+        LocalCache
+            .observeEvents<GitStatusEvent>(Filter(kinds = statusKinds))
+            .map { reduceLatestByTarget(it) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, null)
+
+    private fun reduceLatestByTarget(events: List<GitStatusEvent>): Map<HexKey, GitStatusEvent> {
+        val latest = HashMap<HexKey, GitStatusEvent>()
+        for (event in events) {
+            val target = event.rootEventId() ?: continue
+            val current = latest[target]
+            if (current == null || event.createdAt > current.createdAt) {
+                latest[target] = event
+            }
         }
+        return latest
     }
 
     /**
@@ -83,21 +93,5 @@ object GitStatusIndex {
     ): Boolean {
         val event = map?.get(targetId) ?: return false
         return event is GitStatusClosedEvent || event is GitStatusAppliedEvent
-    }
-
-    private fun processBundle(bundle: Set<Note>) {
-        val snapshot = mutableLatestByTarget.value ?: emptyMap()
-        var modified: HashMap<HexKey, GitStatusEvent>? = null
-        for (note in bundle) {
-            val event = note.event as? GitStatusEvent ?: continue
-            val target = event.rootEventId() ?: continue
-            val map = modified ?: snapshot
-            val current = map[target]
-            if (current == null || event.createdAt > current.createdAt) {
-                if (modified == null) modified = HashMap(snapshot)
-                modified[target] = event
-            }
-        }
-        modified?.let { mutableLatestByTarget.value = it }
     }
 }

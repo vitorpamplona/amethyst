@@ -21,14 +21,18 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,13 +41,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.model.GitPullRequestUpdateIndex
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
@@ -87,15 +95,20 @@ fun GitItemFeedLoaded(
     listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: INav,
+    labelFilter: String? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val list =
+        remember(items, labelFilter) {
+            if (labelFilter == null) items.list else items.list.filter { labelFilter in gitLabelsOf(it.event) }
+        }
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(
-            items.list,
+            list,
             key = { _, item -> item.idHex },
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
@@ -196,15 +209,78 @@ private fun GitItemRowContent(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
+            val labels = remember(note.event) { gitLabelsOf(note.event) }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(top = 2.dp),
+            ) {
+                GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
+                if (note.event is GitPullRequestEvent) {
+                    GitRevisedChip(note.idHex)
+                }
+                labels.take(6).forEach { LabelChip(it) }
+            }
         }
     }
 }
 
-private fun gitSubjectOf(event: Event?): String? =
+@Composable
+private fun LabelChip(label: String) {
+    Text(
+        text = "#$label",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+    )
+}
+
+/** Small "Revised" badge shown when a pull request has a later kind-1619 update. */
+@Composable
+private fun GitRevisedChip(prIdHex: String) {
+    val index by GitPullRequestUpdateIndex.latestByPullRequest.collectAsStateWithLifecycle()
+    if (index?.get(prIdHex) == null) return
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Sync,
+            contentDescription = null,
+            modifier = Modifier.size(12.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = stringRes(R.string.git_pr_revised),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
+    }
+}
+
+internal fun gitSubjectOf(event: Event?): String? =
     when (event) {
         is GitIssueEvent -> event.subject()?.takeIf { it.isNotBlank() }
         is GitPullRequestEvent -> event.subject()?.takeIf { it.isNotBlank() }
         is GitPatchEvent -> event.subject()?.takeIf { it.isNotBlank() }
         else -> null
     }
+
+internal fun gitLabelsOf(event: Event?): List<String> =
+    when (event) {
+        is GitIssueEvent -> event.topics()
+        is GitPullRequestEvent -> event.labels()
+        else -> emptyList()
+    }.filter { it.isNotBlank() }.distinct()

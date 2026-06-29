@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.GitRepositoryListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
@@ -59,10 +60,12 @@ fun ListOfBookmarkGroupsScreen(
         defaultBookmarks = accountViewModel.account.bookmarkState,
         oldBookmarks = accountViewModel.account.oldBookmarkState,
         pinnedNotes = accountViewModel.account.pinState,
+        repositories = accountViewModel.account.gitRepositoryListState,
         listSource = accountViewModel.account.labeledBookmarkLists.listFeedFlow,
         openDefaultBookmarks = { nav.nav(Route.Bookmarks) },
         openOldBookmarks = { nav.nav(Route.OldBookmarks) },
         openPinnedNotes = { nav.nav(Route.PinnedNotes) },
+        openRepositories = { nav.nav(Route.BookmarkedRepositories) },
         addBookmarkGroup = { nav.nav(Route.BookmarkGroupMetadataEdit()) },
         openBookmarkGroup = { identifier, bookmarkType ->
             nav.nav(Route.BookmarkGroupView(identifier, bookmarkType))
@@ -101,10 +104,12 @@ fun ListOfBookmarkGroupsFeed(
     defaultBookmarks: BookmarkListState,
     oldBookmarks: OldBookmarkListState,
     pinnedNotes: PinListState,
+    repositories: GitRepositoryListState,
     listSource: StateFlow<List<LabeledBookmarkList>>,
     openDefaultBookmarks: () -> Unit,
     openOldBookmarks: () -> Unit,
     openPinnedNotes: () -> Unit,
+    openRepositories: () -> Unit,
     addBookmarkGroup: () -> Unit,
     openBookmarkGroup: (identifier: String, bookmarkType: BookmarkType) -> Unit,
     renameBookmarkGroup: (bookmarkGroup: LabeledBookmarkList) -> Unit,
@@ -148,10 +153,12 @@ fun ListOfBookmarkGroupsFeed(
                 defaultBookmarks = defaultBookmarks,
                 oldBookmarks = oldBookmarks,
                 pinnedNotes = pinnedNotes,
+                repositories = repositories,
                 groupListFeedSource = listSource,
                 openDefaultBookmarks = openDefaultBookmarks,
                 openOldBookmarks = openOldBookmarks,
                 openPinnedNotes = openPinnedNotes,
+                openRepositories = openRepositories,
                 onOpenItem = openBookmarkGroup,
                 onRenameItem = renameBookmarkGroup,
                 onItemDescriptionChange = changeBookmarkGroupDescription,

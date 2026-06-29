@@ -48,18 +48,36 @@ class GitRepositoriesFeedFilter(
     override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
     override fun feed(): List<Note> {
-        val params = buildFilterParams(account)
-
         val notes =
-            LocalCache.addressables.filterIntoSet(GitRepositoryEvent.KIND) { _, it ->
-                val noteEvent = it.event
-                noteEvent is GitRepositoryEvent && params.match(noteEvent, it.relays)
+            if (followList() == TopFilter.Mine) {
+                val me = account.userProfile().pubkeyHex
+                LocalCache.addressables.filterIntoSet(GitRepositoryEvent.KIND) { _, it -> isMine(it, me) }
+            } else {
+                val params = buildFilterParams(account)
+                LocalCache.addressables.filterIntoSet(GitRepositoryEvent.KIND) { _, it ->
+                    val noteEvent = it.event
+                    noteEvent is GitRepositoryEvent && params.match(noteEvent, it.relays)
+                }
             }
 
         return sort(notes)
     }
 
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> {
+        if (followList() == TopFilter.Mine) {
+            val me = account.userProfile().pubkeyHex
+            return newItems.filterTo(HashSet()) { isMine(it, me) }
+        }
+        return innerApplyFilter(newItems)
+    }
+
+    private fun isMine(
+        note: Note,
+        me: String,
+    ): Boolean {
+        val noteEvent = note.event
+        return noteEvent is GitRepositoryEvent && noteEvent.pubKey == me
+    }
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(

@@ -39,7 +39,6 @@ class RepositoryPatchesFeedViewModel(
         // Status events (kinds 1630-1633) don't mutate the patch/PR note, so the additive
         // feed update can't move an item between the Open/Closed buckets on its own.
         // Watch the status index and force a full re-partition whenever it changes.
-        GitStatusIndex.startIfNeeded()
         viewModelScope.launch(Dispatchers.IO) {
             GitStatusIndex.latestByTarget.collect { invalidateData() }
         }

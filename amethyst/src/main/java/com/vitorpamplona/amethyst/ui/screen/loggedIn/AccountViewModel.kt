@@ -1217,6 +1217,18 @@ class AccountViewModel(
             direct = { account.removeBookmark(note, false) },
         )
 
+    /** Stars/unstars a git repository in the user's NIP-51 kind 10018 list. */
+    fun toggleRepositoryBookmark(
+        note: AddressableNote,
+        isBookmarked: Boolean,
+    ) = launchSigner {
+        if (isBookmarked) {
+            account.removeGitRepositoryBookmark(note)
+        } else {
+            account.addGitRepositoryBookmark(note)
+        }
+    }
+
     /** NIP-32: tags [note] with [hashtag] by publishing a kind 1985 label event. */
     fun labelWithHashtag(
         note: Note,

@@ -47,6 +47,7 @@ lifecycleRuntimeKtx = "2.11.0"
 lightcompressor-enhanced = "2.2.1"
 jlatexmath = "1.4"
 markdown = "f92ef49c9d"
+highlights = "1.1.0"
 material3 = "1.9.0"
 media3 = "1.10.1"
 mockk = "1.14.11"
@@ -191,6 +192,7 @@ jlatexmath-font-cyrillic = { module = "com.github.rikkahub.jlatexmath-android:jl
 markdown-commonmark = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-commonmark", version.ref = "markdown" }
 markdown-ui = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui", version.ref = "markdown" }
 markdown-ui-material3 = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui-material3", version.ref = "markdown" }
+highlights = { group = "dev.snipme", name = "highlights", version.ref = "highlights" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}

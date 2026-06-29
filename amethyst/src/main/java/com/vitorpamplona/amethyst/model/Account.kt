@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPacksState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.model.nip51Lists.GitRepositoryListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
@@ -397,6 +398,7 @@ class Account(
     val appRecommendations = AppRecommendationsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
+    val gitRepositoryListState = GitRepositoryListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
     val ownedEmojiPacks = OwnedEmojiPacksState(signer, cache, scope)
@@ -3008,6 +3010,16 @@ class Account(
 
     suspend fun removeFromGallery(note: Note) {
         delete(note)
+    }
+
+    suspend fun addGitRepositoryBookmark(note: AddressableNote) {
+        if (!isWriteable()) return
+        sendMyPublicAndPrivateOutbox(gitRepositoryListState.addRepository(note))
+    }
+
+    suspend fun removeGitRepositoryBookmark(note: AddressableNote) {
+        if (!isWriteable()) return
+        gitRepositoryListState.removeRepository(note)?.let { sendMyPublicAndPrivateOutbox(it) }
     }
 
     suspend fun addBookmark(
