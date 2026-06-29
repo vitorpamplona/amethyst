@@ -21,12 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,13 +31,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
-import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -52,32 +47,30 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * First tab of the repository screen. Renders the repository's README as rich
- * markdown when it can be fetched, otherwise falls back to the announcement's
- * own description so the tab is never empty.
+ * The repository's README as embeddable column content — no scroll container or
+ * scaffold padding of its own, so the project home screen renders it inline below
+ * the repository facts inside a single scroll. Falls back to the announcement's own
+ * description when no README file can be fetched, so the section is never empty.
  */
 @Composable
-fun GitReadmeTab(
+fun GitReadmeSection(
     state: GitBrowseState,
     viewModel: GitRepositoryBrowserViewModel,
     event: GitRepositoryEvent,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val scaffoldPadding = LocalDisappearingScaffoldPadding.current
-
     val snapshot = (state as? GitBrowseState.Loaded)?.snapshot
     val readme = remember(snapshot) { snapshot?.let { findReadme(it.rootEntries()) } }
 
     if (snapshot != null && readme != null) {
-        ReadmeContent(snapshot, viewModel, readme, accountViewModel, nav, scaffoldPaddingTop = scaffoldPadding)
+        ReadmeContent(snapshot, viewModel, readme, accountViewModel, nav)
     } else {
         ReadmeFallback(
             event = event,
             loading = state is GitBrowseState.Loading,
             accountViewModel = accountViewModel,
             nav = nav,
-            scaffoldPaddingTop = scaffoldPadding,
         )
     }
 }
@@ -89,7 +82,6 @@ private fun ReadmeContent(
     readme: GitTreeEntry,
     accountViewModel: AccountViewModel,
     nav: INav,
-    scaffoldPaddingTop: PaddingValues,
 ) {
     val content by
         produceState<String?>(null, readme.oid) {
@@ -104,30 +96,21 @@ private fun ReadmeContent(
         }
 
     when (val text = content) {
-        null -> GitLoadingBox(stringRes(R.string.git_repo_code_loading), Modifier.padding(scaffoldPaddingTop))
-        "" -> GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(R.string.git_repo_file_load_error), Modifier.padding(scaffoldPaddingTop))
+        null -> StatusLine(stringRes(R.string.git_repo_code_loading))
+        "" -> StatusLine(stringRes(R.string.git_repo_file_load_error))
         else -> {
             val background = MaterialTheme.colorScheme.background
             val backgroundColor = remember { mutableStateOf(background) }
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(scaffoldPaddingTop)
-                        .padding(horizontal = 12.dp, vertical = 12.dp),
-            ) {
-                RichTextViewer(
-                    content = text,
-                    canPreview = true,
-                    quotesLeft = 1,
-                    modifier = Modifier.fillMaxWidth(),
-                    tags = EmptyTagList,
-                    backgroundColor = backgroundColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
+            RichTextViewer(
+                content = text,
+                canPreview = true,
+                quotesLeft = 1,
+                modifier = Modifier.fillMaxWidth(),
+                tags = EmptyTagList,
+                backgroundColor = backgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
         }
     }
 }
@@ -138,51 +121,45 @@ private fun ReadmeFallback(
     loading: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
-    scaffoldPaddingTop: PaddingValues,
 ) {
     val description = event.description()?.takeIf { it.isNotBlank() }
     if (description == null) {
-        if (loading) {
-            GitLoadingBox(stringRes(R.string.git_repo_code_loading), Modifier.padding(scaffoldPaddingTop))
-        } else {
-            GitMessageBox(MaterialSymbols.Description, stringRes(R.string.git_repo_readme_missing), Modifier.padding(scaffoldPaddingTop))
-        }
+        StatusLine(
+            if (loading) stringRes(R.string.git_repo_code_loading) else stringRes(R.string.git_repo_readme_missing),
+        )
         return
     }
 
     val background = MaterialTheme.colorScheme.background
     val backgroundColor = remember { mutableStateOf(background) }
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(scaffoldPaddingTop)
-                .padding(horizontal = 12.dp, vertical = 12.dp),
-    ) {
-        Text(
-            text = event.name() ?: event.dTag(),
-            style = MaterialTheme.typography.headlineSmall,
-        )
+    Column(Modifier.fillMaxWidth()) {
         RichTextViewer(
             content = description,
             canPreview = true,
             quotesLeft = 1,
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
             tags = EmptyTagList,
             backgroundColor = backgroundColor,
             accountViewModel = accountViewModel,
             nav = nav,
         )
         if (loading) {
-            Text(
-                text = stringRes(R.string.git_repo_code_loading),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                modifier = Modifier.padding(top = 16.dp),
-            )
+            StatusLine(stringRes(R.string.git_repo_code_loading), topPadding = 16.dp)
         }
     }
+}
+
+@Composable
+private fun StatusLine(
+    text: String,
+    topPadding: androidx.compose.ui.unit.Dp = 0.dp,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+        modifier = Modifier.padding(top = topPadding),
+    )
 }
 
 /** Picks the most README-like file in the root, preferring markdown. */

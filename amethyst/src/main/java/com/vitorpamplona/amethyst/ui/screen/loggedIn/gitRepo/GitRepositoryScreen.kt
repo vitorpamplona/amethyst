@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,15 +35,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SecondaryTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -50,11 +50,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,6 +65,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -73,9 +74,9 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -84,20 +85,28 @@ import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code.GitCodeTab
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code.GitReadmeTab
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code.GitReadmeSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal.RepositoryIssuesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal.RepositoryPatchesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.datasource.RepositoryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+
+// ---------------------------------------------------------------------------
+// Project Home + drill-in screens.
+//
+// The repository is presented as a scrollable "project home" (facts + README +
+// navigation cards) rather than a tab bar. Code, Issues and Pull Requests are
+// dedicated screens, each owning its own disappearing top bar — so per-section
+// headers (branch/search selectors, status filters) track the bar correctly and
+// heavy content (the code browser, the feeds) only loads when navigated to.
+// ---------------------------------------------------------------------------
 
 @Composable
 fun GitRepositoryScreen(
@@ -107,12 +116,45 @@ fun GitRepositoryScreen(
 ) {
     LoadAddressableNote(address, accountViewModel) { note ->
         note?.let {
-            PrepareGitRepositoryScreen(
+            GitRepositoryHome(
                 note = it,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
         }
+    }
+}
+
+@Composable
+fun GitRepositoryCodeScreen(
+    address: Address,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadAddressableNote(address, accountViewModel) { note ->
+        note?.let { GitRepositoryCode(it, accountViewModel, nav) }
+    }
+}
+
+@Composable
+fun GitRepositoryIssuesScreen(
+    address: Address,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadAddressableNote(address, accountViewModel) { note ->
+        note?.let { GitRepositoryIssues(it, accountViewModel, nav) }
+    }
+}
+
+@Composable
+fun GitRepositoryPullsScreen(
+    address: Address,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadAddressableNote(address, accountViewModel) { note ->
+        note?.let { GitRepositoryPulls(it, accountViewModel, nav) }
     }
 }
 
@@ -127,92 +169,54 @@ private class GitRepositoryBrowserViewModelFactory(
 }
 
 @Composable
-private fun PrepareGitRepositoryScreen(
+private fun rememberRepoBrowser(
     note: AddressableNote,
     accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val openIssuesViewModel: RepositoryIssuesFeedViewModel =
-        viewModel(
-            key = note.idHex + "GitRepoIssuesOpen",
-            factory = RepositoryIssuesFeedViewModel.Factory(note, accountViewModel.account, showClosed = false),
-        )
-
-    val closedIssuesViewModel: RepositoryIssuesFeedViewModel =
-        viewModel(
-            key = note.idHex + "GitRepoIssuesClosed",
-            factory = RepositoryIssuesFeedViewModel.Factory(note, accountViewModel.account, showClosed = true),
-        )
-
-    val openPatchesViewModel: RepositoryPatchesFeedViewModel =
-        viewModel(
-            key = note.idHex + "GitRepoPatchesOpen",
-            factory = RepositoryPatchesFeedViewModel.Factory(note, accountViewModel.account, showClosed = false),
-        )
-
-    val closedPatchesViewModel: RepositoryPatchesFeedViewModel =
-        viewModel(
-            key = note.idHex + "GitRepoPatchesClosed",
-            factory = RepositoryPatchesFeedViewModel.Factory(note, accountViewModel.account, showClosed = true),
-        )
-
-    val browserViewModel: GitRepositoryBrowserViewModel =
-        viewModel(
-            key = note.idHex + "GitRepoBrowser",
-            factory = GitRepositoryBrowserViewModelFactory(accountViewModel.httpClientBuilder::okHttpClientForPreview),
-        )
-
-    GitRepositoryScreen(
-        note = note,
-        openIssuesViewModel = openIssuesViewModel,
-        closedIssuesViewModel = closedIssuesViewModel,
-        openPatchesViewModel = openPatchesViewModel,
-        closedPatchesViewModel = closedPatchesViewModel,
-        browserViewModel = browserViewModel,
-        accountViewModel = accountViewModel,
-        nav = nav,
+): GitRepositoryBrowserViewModel =
+    viewModel(
+        key = note.idHex + "GitRepoBrowser",
+        factory = GitRepositoryBrowserViewModelFactory(accountViewModel.httpClientBuilder::okHttpClientForPreview),
     )
+
+/**
+ * Subscribes to the repository's issues/patches/status events while [event] is loaded.
+ *
+ * RepositoryContentSubAssembler.updateFilter reads note.event and bails out if it isn't a
+ * GitRepositoryEvent yet. The compose subscription manager doesn't re-run updateFilter when
+ * note.event later mutates, so subscribing before the event arrives (cold-start / deep-link)
+ * leaves an empty filter forever. Gating on event presence makes the subscription composable
+ * enter composition only once the repo event is loaded.
+ */
+@Composable
+private fun RepoContentSubscription(
+    note: AddressableNote,
+    event: GitRepositoryEvent?,
+    accountViewModel: AccountViewModel,
+) {
+    if (event != null) {
+        RepositoryFilterAssemblerSubscription(note, accountViewModel.dataSources().gitRepository)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GitRepositoryScreen(
+private fun GitRepositoryHome(
     note: AddressableNote,
-    openIssuesViewModel: RepositoryIssuesFeedViewModel,
-    closedIssuesViewModel: RepositoryIssuesFeedViewModel,
-    openPatchesViewModel: RepositoryPatchesFeedViewModel,
-    closedPatchesViewModel: RepositoryPatchesFeedViewModel,
-    browserViewModel: GitRepositoryBrowserViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchLifecycleAndUpdateModel(openIssuesViewModel)
-    WatchLifecycleAndUpdateModel(closedIssuesViewModel)
-    WatchLifecycleAndUpdateModel(openPatchesViewModel)
-    WatchLifecycleAndUpdateModel(closedPatchesViewModel)
-
+    val browserViewModel = rememberRepoBrowser(note, accountViewModel)
     val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
 
-    // Start the smart-HTTP browser as soon as the repository announcement arrives,
-    // so the README and Code tabs can fetch from its clone URL.
+    // Start the smart-HTTP browser as soon as the announcement arrives, so the README renders.
     LaunchedEffect(event) {
         event?.let { browserViewModel.loadOnce(it.clones()) }
     }
     val browserState by browserViewModel.state.collectAsStateWithLifecycle()
 
-    // RepositoryContentSubAssembler.updateFilter reads note.event and bails out if it isn't
-    // a GitRepositoryEvent yet. The compose subscription manager doesn't re-run updateFilter
-    // when note.event later mutates, so subscribing before the event has arrived (cold-start
-    // / deep-link case) leaves an empty filter forever. Gate the subscription composable on
-    // event presence so it enters composition (and fires DisposableEffect → subscribe → fresh
-    // updateFilter) only once the repo event is loaded.
-    if (event != null) {
-        RepositoryFilterAssemblerSubscription(note, accountViewModel.dataSources().gitRepository)
-    }
+    RepoContentSubscription(note, event, accountViewModel)
 
-    val pagerState = rememberForeverPagerState(note.idHex + "GitRepoScreenPagerState") { 5 }
     var showSettings by rememberSaveable(note.idHex) { mutableStateOf(false) }
-
     val currentEventForSettings = event
     if (showSettings && currentEventForSettings != null) {
         GitRepoSettingsDialog(currentEventForSettings, accountViewModel) { showSettings = false }
@@ -221,121 +225,231 @@ private fun GitRepositoryScreen(
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            Column {
-                ShorterTopAppBar(
-                    title = {
-                        TopBarTitle(event = event, fallback = note.dTag())
-                    },
-                    navigationIcon = {
-                        Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+            ShorterTopAppBar(
+                title = { TopBarTitle(event = event, fallback = note.dTag()) },
+                navigationIcon = {
+                    Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                    }
+                },
+                actions = {
+                    val bookmarkedSet by accountViewModel.account.gitRepositoryListState.publicRepositoryAddressSet
+                        .collectAsStateWithLifecycle()
+                    val isBookmarked = remember(bookmarkedSet, note) { bookmarkedSet.contains(note.address) }
+                    IconButton(onClick = { accountViewModel.toggleRepositoryBookmark(note, isBookmarked) }) {
+                        Icon(
+                            symbol = if (isBookmarked) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkBorder,
+                            contentDescription = stringRes(R.string.git_repo_bookmark),
+                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (event != null && accountViewModel.isLoggedUser(event?.pubKey)) {
+                        IconButton(onClick = { showSettings = true }) {
+                            Icon(MaterialSymbols.Edit, contentDescription = stringRes(R.string.git_repo_settings_title))
                         }
-                    },
-                    actions = {
-                        val bookmarkedSet by accountViewModel.account.gitRepositoryListState.publicRepositoryAddressSet
-                            .collectAsStateWithLifecycle()
-                        val isBookmarked = remember(bookmarkedSet, note) { bookmarkedSet.contains(note.address) }
-                        IconButton(onClick = { accountViewModel.toggleRepositoryBookmark(note, isBookmarked) }) {
-                            Icon(
-                                symbol = if (isBookmarked) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkBorder,
-                                contentDescription = stringRes(R.string.git_repo_bookmark),
-                                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        if (event != null && accountViewModel.isLoggedUser(event?.pubKey)) {
-                            IconButton(onClick = { showSettings = true }) {
-                                Icon(MaterialSymbols.Edit, contentDescription = stringRes(R.string.git_repo_settings_title))
-                            }
-                        }
-                    },
-                )
-
-                SecondaryTabRow(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                    modifier = TabRowHeight,
-                    selectedTabIndex = pagerState.currentPage,
-                ) {
-                    val coroutineScope = rememberCoroutineScope()
-                    Tab(
-                        selected = pagerState.currentPage == 0,
-                        text = { Text(stringRes(R.string.git_repo_tab_readme)) },
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                    )
-                    Tab(
-                        selected = pagerState.currentPage == 1,
-                        text = { Text(stringRes(R.string.git_repo_tab_code)) },
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                    )
-                    Tab(
-                        selected = pagerState.currentPage == 2,
-                        text = { Text(stringRes(R.string.git_repo_tab_overview)) },
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                    )
-                    Tab(
-                        selected = pagerState.currentPage == 3,
-                        text = { Text(stringRes(R.string.git_repo_tab_issues)) },
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
-                    )
-                    Tab(
-                        selected = pagerState.currentPage == 4,
-                        text = { Text(stringRes(R.string.git_repo_tab_patches)) },
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(4) } },
-                    )
-                }
-            }
+                    }
+                },
+            )
         },
         accountViewModel = accountViewModel,
     ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-        ) { page ->
-            when (page) {
-                0 -> {
-                    val currentEvent = event
-                    if (currentEvent != null) {
-                        GitReadmeTab(browserState, browserViewModel, currentEvent, accountViewModel, nav)
-                    } else {
-                        EmptyMessage(stringRes(R.string.loading_feed))
-                    }
-                }
+        val scaffoldPadding = LocalDisappearingScaffoldPadding.current
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(scaffoldPadding)
+                    .padding(horizontal = 12.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            val currentEvent = event
+            if (currentEvent != null) {
+                GitRepositoryOverviewSections(currentEvent, accountViewModel, nav)
+            }
 
-                1 -> {
-                    GitCodeTab(browserState, browserViewModel, accountViewModel, nav)
-                }
+            RepoNavCards(note, nav)
 
-                2 -> {
-                    val currentEvent = event
-                    if (currentEvent != null) {
-                        GitRepositoryOverview(currentEvent, accountViewModel, nav)
-                    } else {
-                        EmptyMessage(stringRes(R.string.loading_feed))
-                    }
-                }
-
-                3 -> {
-                    GitIssuesTab(
-                        note = note,
-                        event = event,
-                        openViewModel = openIssuesViewModel,
-                        closedViewModel = closedIssuesViewModel,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
-
-                4 -> {
-                    StatusSplitFeed(
-                        persistKey = note.idHex + "GitRepoPatchesStatus",
-                        openViewModel = openPatchesViewModel,
-                        closedViewModel = closedPatchesViewModel,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
+            if (currentEvent != null) {
+                GitReadmeSection(browserState, browserViewModel, currentEvent, accountViewModel, nav)
+            } else {
+                EmptyMessage(stringRes(R.string.loading_feed))
             }
         }
+    }
+}
+
+@Composable
+private fun GitRepositoryCode(
+    note: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val browserViewModel = rememberRepoBrowser(note, accountViewModel)
+    val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
+    LaunchedEffect(event) {
+        event?.let { browserViewModel.loadOnce(it.clones()) }
+    }
+    val browserState by browserViewModel.state.collectAsStateWithLifecycle()
+    RepoContentSubscription(note, event, accountViewModel)
+
+    GitRepoSubScreenScaffold(event, note.dTag(), accountViewModel, nav) {
+        GitCodeTab(browserState, browserViewModel, accountViewModel, nav)
+    }
+}
+
+@Composable
+private fun GitRepositoryIssues(
+    note: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val openViewModel: RepositoryIssuesFeedViewModel =
+        viewModel(
+            key = note.idHex + "GitRepoIssuesOpen",
+            factory = RepositoryIssuesFeedViewModel.Factory(note, accountViewModel.account, showClosed = false),
+        )
+    val closedViewModel: RepositoryIssuesFeedViewModel =
+        viewModel(
+            key = note.idHex + "GitRepoIssuesClosed",
+            factory = RepositoryIssuesFeedViewModel.Factory(note, accountViewModel.account, showClosed = true),
+        )
+    WatchLifecycleAndUpdateModel(openViewModel)
+    WatchLifecycleAndUpdateModel(closedViewModel)
+
+    val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
+    RepoContentSubscription(note, event, accountViewModel)
+
+    GitRepoSubScreenScaffold(event, note.dTag(), accountViewModel, nav) {
+        GitIssuesTab(
+            note = note,
+            event = event,
+            openViewModel = openViewModel,
+            closedViewModel = closedViewModel,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+}
+
+@Composable
+private fun GitRepositoryPulls(
+    note: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val openViewModel: RepositoryPatchesFeedViewModel =
+        viewModel(
+            key = note.idHex + "GitRepoPatchesOpen",
+            factory = RepositoryPatchesFeedViewModel.Factory(note, accountViewModel.account, showClosed = false),
+        )
+    val closedViewModel: RepositoryPatchesFeedViewModel =
+        viewModel(
+            key = note.idHex + "GitRepoPatchesClosed",
+            factory = RepositoryPatchesFeedViewModel.Factory(note, accountViewModel.account, showClosed = true),
+        )
+    WatchLifecycleAndUpdateModel(openViewModel)
+    WatchLifecycleAndUpdateModel(closedViewModel)
+
+    val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
+    RepoContentSubscription(note, event, accountViewModel)
+
+    GitRepoSubScreenScaffold(event, note.dTag(), accountViewModel, nav) {
+        StatusSplitFeed(
+            persistKey = note.idHex + "GitRepoPatchesStatus",
+            openViewModel = openViewModel,
+            closedViewModel = closedViewModel,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+}
+
+/** Shared scaffold for the Code / Issues / Pull Requests drill-in screens: a back arrow and the repo title. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GitRepoSubScreenScaffold(
+    event: GitRepositoryEvent?,
+    fallbackTitle: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    content: @Composable () -> Unit,
+) {
+    DisappearingScaffold(
+        isInvertedLayout = false,
+        topBar = {
+            ShorterTopAppBar(
+                title = { TopBarTitle(event = event, fallback = fallbackTitle) },
+                navigationIcon = {
+                    Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                    }
+                },
+            )
+        },
+        accountViewModel = accountViewModel,
+    ) {
+        content()
+    }
+}
+
+/** The Code / Issues / Pull Requests entry points on the project home. */
+@Composable
+private fun RepoNavCards(
+    note: AddressableNote,
+    nav: INav,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        RepoNavCard(MaterialSymbols.Code, stringRes(R.string.git_repo_tab_code)) {
+            nav.nav(Route.GitRepositoryCode(note.address))
+        }
+        RepoNavCard(MaterialSymbols.ErrorOutline, stringRes(R.string.git_repo_tab_issues)) {
+            nav.nav(Route.GitRepositoryIssues(note.address))
+        }
+        RepoNavCard(MaterialSymbols.CallMerge, stringRes(R.string.git_repo_tab_patches)) {
+            nav.nav(Route.GitRepositoryPulls(note.address))
+        }
+    }
+}
+
+@Composable
+private fun RepoNavCard(
+    symbol: MaterialSymbol,
+    title: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(15.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(
+            symbol = symbol,
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            symbol = MaterialSymbols.ChevronRight,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+        )
     }
 }
 
@@ -383,8 +497,8 @@ private fun NewIssueButton(onClick: () -> Unit) {
  * Wraps a feed in an Open / Closed &amp; Resolved status filter, swapping between two
  * status-scoped feed view models. Each view model already filters by NIP-34 status, so the
  * selector only chooses which one is rendered. The selection survives configuration changes
- * and tab swipes via [persistKey]. An optional [headerAction] (e.g. a "New issue" button)
- * is shown at the trailing edge of the filter row.
+ * via [persistKey]. An optional [headerAction] (e.g. a "New issue" button) is shown at the
+ * trailing edge of the filter row.
  */
 @Composable
 private fun StatusSplitFeed(
@@ -546,7 +660,7 @@ private fun EmptyMessage(text: String) {
     Box(
         modifier =
             Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center,
     ) {

@@ -150,48 +150,57 @@ private fun CodeBrowser(
 
     val entries = remember(snapshot, pathString) { snapshot.entriesAt(path).orEmpty() }
 
-    Column(Modifier.fillMaxSize().padding(scaffoldPaddingTop)) {
-        RepoInfoBar(
-            branch = snapshot.branch,
-            headCommit = snapshot.headCommit,
-            entryCount = entries.size,
-            branches = snapshot.branches,
-            tags = snapshot.tags,
-            onSelectRef = { viewModel.switchRef(it) },
-            onHistory = { showHistory = true },
-        )
-        FileSearchField(query = query, onQueryChange = { query = it })
-        HorizontalDivider(thickness = 0.5.dp)
+    // A single scrolling list so the branch/search header rides along with the disappearing
+    // top bar instead of staying pinned below it. The header rows are the first list items;
+    // the file/search rows follow, all under one contentPadding for the scaffold inset.
+    val results = remember(snapshot, query) { if (searching) snapshot.searchFiles(query.trim()) else emptyList() }
 
-        if (searching) {
-            val results = remember(snapshot, query) { snapshot.searchFiles(query.trim()) }
-            if (results.isEmpty()) {
-                GitMessageBox(MaterialSymbols.Search, stringRes(R.string.git_repo_no_search_results))
-            } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(results, key = { it.joinToString("/") }) { result ->
-                        SearchResultRow(result) { openFilePath = result.joinToString("/") }
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 40.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
-                        )
-                    }
-                }
-            }
-            return@Column
+    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = scaffoldPaddingTop) {
+        item(key = "repo-info-bar") {
+            RepoInfoBar(
+                branch = snapshot.branch,
+                headCommit = snapshot.headCommit,
+                entryCount = entries.size,
+                branches = snapshot.branches,
+                tags = snapshot.tags,
+                onSelectRef = { viewModel.switchRef(it) },
+                onHistory = { showHistory = true },
+            )
+        }
+        item(key = "file-search") {
+            FileSearchField(query = query, onQueryChange = { query = it })
+            HorizontalDivider(thickness = 0.5.dp)
         }
 
-        Breadcrumb(
-            path = path,
-            onNavigate = { depth -> pathString = path.take(depth).joinToString("/") },
-        )
-        HorizontalDivider(thickness = 0.5.dp)
-        if (entries.isEmpty()) {
-            GitMessageBox(MaterialSymbols.Folder, stringRes(R.string.git_repo_empty_folder))
+        if (searching) {
+            if (results.isEmpty()) {
+                item(key = "no-results") {
+                    GitMessageBox(MaterialSymbols.Search, stringRes(R.string.git_repo_no_search_results), Modifier.fillParentMaxWidth())
+                }
+            } else {
+                items(results, key = { "result/" + it.joinToString("/") }) { result ->
+                    SearchResultRow(result) { openFilePath = result.joinToString("/") }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 40.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                    )
+                }
+            }
         } else {
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(entries, key = { it.name }) { entry ->
+            item(key = "breadcrumb") {
+                Breadcrumb(
+                    path = path,
+                    onNavigate = { depth -> pathString = path.take(depth).joinToString("/") },
+                )
+                HorizontalDivider(thickness = 0.5.dp)
+            }
+            if (entries.isEmpty()) {
+                item(key = "empty-folder") {
+                    GitMessageBox(MaterialSymbols.Folder, stringRes(R.string.git_repo_empty_folder), Modifier.fillParentMaxWidth())
+                }
+            } else {
+                items(entries, key = { "entry/" + it.name }) { entry ->
                     EntryRow(
                         entry = entry,
                         onClick = {
