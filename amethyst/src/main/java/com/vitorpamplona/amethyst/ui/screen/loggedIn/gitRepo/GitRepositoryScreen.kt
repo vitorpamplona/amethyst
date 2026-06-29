@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.GitStatusIndex
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -82,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -163,7 +165,7 @@ fun GitRepositoryPullsScreen(
  * Builds the [GitRepositoryBrowserViewModel]. The factory lives app-side because the KMP
  * lifecycle artifact used in commons doesn't expose the `create(Class<T>)` override.
  */
-private class GitRepositoryBrowserViewModelFactory(
+internal class GitRepositoryBrowserViewModelFactory(
     private val okHttpClient: (String) -> OkHttpClient,
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T = GitRepositoryBrowserViewModel(okHttpClient) as T
@@ -258,6 +260,20 @@ private fun GitRepositoryHome(
                 .take(6)
         }
 
+    // Nav-card badges count only the OPEN issues/PRs. The open/closed split needs the status
+    // index (kinds 1630-1633), which is started here so the home reflects it without visiting
+    // the Issues screen first; the count is then derived directly from the live index.
+    LaunchedEffect(Unit) { GitStatusIndex.startIfNeeded() }
+    val statusMap by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
+    val openIssueCount =
+        remember(openIssueItems, closedIssueItems, statusMap) {
+            (openIssueItems + closedIssueItems).distinctBy { it.idHex }.count { !GitStatusIndex.isClosedOrResolved(it.idHex, statusMap) }
+        }
+    val openPullCount =
+        remember(openPatchItems, closedPatchItems, statusMap) {
+            (openPatchItems + closedPatchItems).distinctBy { it.idHex }.count { !GitStatusIndex.isClosedOrResolved(it.idHex, statusMap) }
+        }
+
     var showSettings by rememberSaveable(note.idHex) { mutableStateOf(false) }
     val currentEventForSettings = event
     if (showSettings && currentEventForSettings != null) {
@@ -290,6 +306,9 @@ private fun GitRepositoryHome(
                             Icon(MaterialSymbols.Edit, contentDescription = stringRes(R.string.git_repo_settings_title))
                         }
                     }
+                    Row(Modifier.padding(end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        MoreOptionsButton(note, accountViewModel = accountViewModel, nav = nav)
+                    }
                 },
             )
         },
@@ -309,7 +328,6 @@ private fun GitRepositoryHome(
             if (currentEvent != null) {
                 RepoHero(currentEvent)
                 RepoMaintainersRow(currentEvent, accountViewModel, nav)
-                RepoSocialRow(note, accountViewModel, nav)
             }
 
             if (snapshot != null) {
@@ -325,11 +343,12 @@ private fun GitRepositoryHome(
                 snapshot.tipCommit?.let { RepoLastCommit(it) }
             }
 
-            RepoNavCards(note, openIssueItems.size, openPatchItems.size, nav)
+            RepoNavCards(note, openIssueCount, openPullCount, nav)
 
             RepoActivityPulse(activity, accountViewModel, nav)
 
             if (currentEvent != null) {
+                RepoSocialRow(note, accountViewModel, nav)
                 GitReadmeSection(browserState, browserViewModel, currentEvent, accountViewModel, nav)
             } else {
                 EmptyMessage(stringRes(R.string.loading_feed))
@@ -462,7 +481,7 @@ private fun RepoNavCards(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         RepoNavCard(MaterialSymbols.Code, stringRes(R.string.git_repo_tab_code), null) {
             nav.nav(Route.GitRepositoryCode(note.address))
@@ -490,7 +509,7 @@ private fun RepoNavCard(
                 .clip(RoundedCornerShape(15.dp))
                 .background(MaterialTheme.colorScheme.surface)
                 .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
