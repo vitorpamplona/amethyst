@@ -29,11 +29,11 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
 /**
  * Cross-screen index of the most recent NIP-34 status event (kinds
@@ -42,15 +42,15 @@ import java.util.concurrent.atomic.AtomicBoolean
  * `Note.replies` (see `LocalCache.computeReplyTo`), so the only way to
  * find them otherwise would be a full cache scan per row.
  *
- * The kind-indexed [observeEvents] subscription replaces both the full-cache
- * `onStart` scan and the per-bundle type filtering the old
- * `LocalCache.live.newEventBundles` flow needed: the observable's `init()` seeds
- * the matching set from the index and re-emits the whole list on every new
- * status event, so we just reduce it to the latest-per-target map each time.
+ * The kind-indexed [observeEvents] re-emits the whole matching list on every new
+ * status event (and seeds it from the cache index via `init()`), so [latestByTarget]
+ * is just that list reduced to the latest-per-target map. Shared [SharingStarted.Eagerly]
+ * — never `WhileSubscribed` — because callers (e.g. [isClosedOrResolved] and the feed
+ * filters) read `.value` synchronously and must not see a stale map when no one is
+ * actively collecting. `null` means "not loaded yet".
  */
 object GitStatusIndex {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val started = AtomicBoolean(false)
 
     private val statusKinds =
         listOf(
@@ -60,19 +60,14 @@ object GitStatusIndex {
             GitStatusEvent.KIND_DRAFT,
         )
 
-    private val mutableLatestByTarget = MutableStateFlow<Map<HexKey, GitStatusEvent>?>(null)
-    val latestByTarget: StateFlow<Map<HexKey, GitStatusEvent>?> = mutableLatestByTarget.asStateFlow()
+    val latestByTarget: StateFlow<Map<HexKey, GitStatusEvent>?> =
+        LocalCache
+            .observeEvents<GitStatusEvent>(Filter(kinds = statusKinds))
+            .map { reduceLatestByTarget(it) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, null)
 
-    fun startIfNeeded() {
-        if (!started.compareAndSet(false, true)) return
-        scope.launch {
-            LocalCache
-                .observeEvents<GitStatusEvent>(Filter(kinds = statusKinds))
-                .collect { events -> mutableLatestByTarget.value = latestByTarget(events) }
-        }
-    }
-
-    private fun latestByTarget(events: List<GitStatusEvent>): Map<HexKey, GitStatusEvent> {
+    private fun reduceLatestByTarget(events: List<GitStatusEvent>): Map<HexKey, GitStatusEvent> {
         val latest = HashMap<HexKey, GitStatusEvent>()
         for (event in events) {
             val target = event.rootEventId() ?: continue

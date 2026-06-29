@@ -257,9 +257,8 @@ private fun GitRepositoryHome(
         }
 
     // Nav-card badges count only the OPEN issues/PRs. The open/closed split needs the status
-    // index (kinds 1630-1633), which is started here so the home reflects it without visiting
-    // the Issues screen first; the count is then derived directly from the live index.
-    LaunchedEffect(Unit) { GitStatusIndex.startIfNeeded() }
+    // index (kinds 1630-1633); it's an eagerly-shared StateFlow, so the home reflects it without
+    // visiting the Issues screen first. The count is derived directly from the live index.
     val statusMap by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
     val openIssueCount =
         remember(openIssueItems, closedIssueItems, statusMap) {

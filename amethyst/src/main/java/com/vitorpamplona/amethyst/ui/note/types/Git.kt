@@ -582,7 +582,6 @@ private fun RenderGitPullRequestEvent(
 ) {
     // A later pull-request update (kind 1619) revises this PR with a newer commit /
     // merge base. Fold the most recent one in so the card reflects the current state.
-    LaunchedEffect(Unit) { GitPullRequestUpdateIndex.startIfNeeded() }
     val updateIndex by GitPullRequestUpdateIndex.latestByPullRequest.collectAsStateWithLifecycle()
     val update = updateIndex?.get(note.idHex)
 

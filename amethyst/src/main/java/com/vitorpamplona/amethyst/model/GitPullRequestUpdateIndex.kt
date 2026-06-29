@@ -27,11 +27,11 @@ import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
 /**
  * Cross-screen index of the most recent NIP-34 pull-request update event
@@ -41,29 +41,21 @@ import java.util.concurrent.atomic.AtomicBoolean
  * than listing updates separately. Like [GitStatusIndex], updates aren't tracked
  * in `Note.replies`, so a per-row cache scan would otherwise be required.
  *
- * The kind-indexed [observeEvents] subscription replaces both the full-cache
- * `onStart` scan and the per-bundle type filtering the old
- * `LocalCache.live.newEventBundles` flow needed: the observable's `init()` seeds
- * the matching set from the index and re-emits the whole list on every new 1619,
- * so we just reduce it to the latest-per-parent map each time. PR updates are
- * rare, so recomputing the full map per emission is cheaper than it scanning
- * every event of every kind.
+ * The kind-indexed [observeEvents] re-emits the whole matching list on every new
+ * 1619 (and seeds it from the cache index via `init()`), so [latestByPullRequest]
+ * is just that list reduced to the latest-per-parent map. Shared [SharingStarted.Eagerly]
+ * — never `WhileSubscribed` — because callers read `.value` synchronously and must
+ * not see a stale map when no one is actively collecting. `null` means "not loaded yet".
  */
 object GitPullRequestUpdateIndex {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val started = AtomicBoolean(false)
 
-    private val mutableLatestByPullRequest = MutableStateFlow<Map<HexKey, GitPullRequestUpdateEvent>?>(null)
-    val latestByPullRequest: StateFlow<Map<HexKey, GitPullRequestUpdateEvent>?> = mutableLatestByPullRequest.asStateFlow()
-
-    fun startIfNeeded() {
-        if (!started.compareAndSet(false, true)) return
-        scope.launch {
-            LocalCache
-                .observeEvents<GitPullRequestUpdateEvent>(Filter(kinds = listOf(GitPullRequestUpdateEvent.KIND)))
-                .collect { events -> mutableLatestByPullRequest.value = latestByParent(events) }
-        }
-    }
+    val latestByPullRequest: StateFlow<Map<HexKey, GitPullRequestUpdateEvent>?> =
+        LocalCache
+            .observeEvents<GitPullRequestUpdateEvent>(Filter(kinds = listOf(GitPullRequestUpdateEvent.KIND)))
+            .map { latestByParent(it) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, null)
 
     private fun latestByParent(events: List<GitPullRequestUpdateEvent>): Map<HexKey, GitPullRequestUpdateEvent> {
         val latest = HashMap<HexKey, GitPullRequestUpdateEvent>()

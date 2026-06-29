@@ -37,7 +37,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -244,7 +243,6 @@ private fun LabelChip(label: String) {
 /** Small "Revised" badge shown when a pull request has a later kind-1619 update. */
 @Composable
 private fun GitRevisedChip(prIdHex: String) {
-    LaunchedEffect(Unit) { GitPullRequestUpdateIndex.startIfNeeded() }
     val index by GitPullRequestUpdateIndex.latestByPullRequest.collectAsStateWithLifecycle()
     if (index?.get(prIdHex) == null) return
 

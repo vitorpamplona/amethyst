@@ -30,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -75,7 +74,6 @@ fun GitStatusActions(
     val canModerate = remember(event, note) { canModerate(repoAddress, note, accountViewModel) }
     if (!canModerate) return
 
-    LaunchedEffect(Unit) { GitStatusIndex.startIfNeeded() }
     val index by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
     if (index == null) return
     val current = index?.get(note.idHex)
