@@ -1146,25 +1146,51 @@ class CashuWalletState(
     }
 
     /**
-     * Adopt a discovered wallet as the account's live + main wallet: consume
-     * it into [LocalCache] (so [applyEvents] indexes it and persists the
-     * on-disk backup, exactly like the launch-time restore) and rebroadcast
-     * it — plus any discovered kind:10019 — to the user's outbox via the
-     * publish bridge, so the next launch finds it without another crawl.
+     * Adopt a discovered wallet as the account's live + main wallet by
+     * **re-signing a fresh** kind:17375 + kind:10019 with the discovered
+     * wallet's own mints and P2PK key.
      *
-     * kind:17375 is replaceable, so rebroadcasting the user's own newest
-     * event is all it takes to make it canonical.
+     * We deliberately do NOT rebroadcast the discovered event verbatim. The
+     * crawl may surface a wallet the user already DELETED: the user's own
+     * NIP-09 kind:5 (from [CashuWalletOps.deleteWallet]) carries both an `e`
+     * tag (the old event id) and an `a` tag (the replaceable `17375:pubkey:`
+     * address). Re-publishing the same event loses on both — relays that
+     * honored the deletion reject the duplicate id, and the `a`-tag rule
+     * re-deletes any version with `created_at <= deletion.created_at` the
+     * moment the kind:5 propagates back (on relays and in our own LocalCache).
+     *
+     * A freshly-signed event sidesteps both: a new id isn't covered by the
+     * `e` tag, and `created_at = now` is newer than the past deletion so it
+     * survives the `a`-tag rule. Same key + mints means the same nutzap
+     * address and the same recoverable funds (the NUT-13 seed is derived from
+     * the key, independent of the event id). [nutzapInfo] is unused in this
+     * path — publishWalletEvents re-issues a fresh kind:10019 advertising our
+     * current inbox relays — but is kept for the decrypt-failure fallback.
      */
     suspend fun adoptDiscoveredWallet(
         wallet: CashuWalletEvent,
         nutzapInfo: NutzapInfoEvent? = null,
     ) {
         check(started) { NOT_STARTED_MESSAGE }
-        LocalCache.justConsumeMyOwnEvent(wallet)
-        publishEvent(wallet)
-        if (nutzapInfo != null) {
-            LocalCache.justConsumeMyOwnEvent(nutzapInfo)
-            publishEvent(nutzapInfo)
+        val config = decryptDiscoveredWallet(wallet)
+        if (config != null && config.mints.isNotEmpty()) {
+            ops.publishWalletEvents(
+                mints = config.mints,
+                p2pkPrivkeyHex = config.privkeyHex,
+                nutzapRelays = inboxRelaysFlow.value.toList(),
+            )
+        } else {
+            // Couldn't decrypt (shouldn't happen for a wallet the wizard
+            // surfaced as valid) — fall back to rebroadcasting the raw event so
+            // it's at least findable. This keeps the original id/created_at and
+            // so remains vulnerable to a prior deletion, but it's the best we
+            // can do without the plaintext to re-sign from.
+            LocalCache.justConsumeMyOwnEvent(wallet)
+            publishEvent(wallet)
+            if (nutzapInfo != null) {
+                LocalCache.justConsumeMyOwnEvent(nutzapInfo)
+                publishEvent(nutzapInfo)
+            }
         }
     }
 
