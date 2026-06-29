@@ -26,11 +26,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -39,13 +35,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,7 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -68,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
+import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
@@ -210,10 +205,11 @@ private fun GitRepositoryHome(
 ) {
     val browserViewModel = rememberRepoBrowser(note, accountViewModel)
     val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
+    val cacheKey = remember(note) { note.address.toValue() }
 
     // Start the smart-HTTP browser as soon as the announcement arrives, so the README renders.
     LaunchedEffect(event) {
-        event?.let { browserViewModel.loadOnce(it.clones()) }
+        event?.let { browserViewModel.loadOnce(it.clones(), cacheKey) }
     }
     val browserState by browserViewModel.state.collectAsStateWithLifecycle()
 
@@ -250,7 +246,7 @@ private fun GitRepositoryHome(
     val openPatchItems = rememberGitFeedItems(openPatches)
     val closedPatchItems = rememberGitFeedItems(closedPatches)
 
-    val snapshot = (browserState as? GitBrowseState.Loaded)?.snapshot
+    val snapshot = (browserState as? GitBrowseState.Loaded)?.snapshot ?: remember(cacheKey) { GitRepoSnapshotCache.get(cacheKey) }
     val fileNames = remember(snapshot) { snapshot?.walkFileNames() ?: emptyList() }
     val languageSlices = remember(fileNames) { computeLanguageBreakdown(fileNames) }
     val activity =
@@ -322,7 +318,7 @@ private fun GitRepositoryHome(
                     .verticalScroll(rememberScrollState())
                     .padding(scaffoldPadding)
                     .padding(horizontal = 12.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             val currentEvent = event
             if (currentEvent != null) {
@@ -367,8 +363,9 @@ private fun GitRepositoryCode(
 ) {
     val browserViewModel = rememberRepoBrowser(note, accountViewModel)
     val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
+    val cacheKey = remember(note) { note.address.toValue() }
     LaunchedEffect(event) {
-        event?.let { browserViewModel.loadOnce(it.clones()) }
+        event?.let { browserViewModel.loadOnce(it.clones(), cacheKey) }
     }
     val browserState by browserViewModel.state.collectAsStateWithLifecycle()
     RepoContentSubscription(note, event, accountViewModel)
@@ -400,15 +397,21 @@ private fun GitRepositoryIssues(
     val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
     RepoContentSubscription(note, event, accountViewModel)
 
-    GitRepoSubScreenScaffold(event, note.dTag(), accountViewModel, nav) {
-        GitIssuesTab(
-            note = note,
-            event = event,
-            openViewModel = openViewModel,
-            closedViewModel = closedViewModel,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+    var showNewIssue by rememberSaveable(note.idHex) { mutableStateOf(false) }
+
+    StatusFeedScreen(
+        persistKey = note.idHex + "GitRepoIssuesStatus",
+        event = event,
+        fallbackTitle = note.dTag(),
+        openViewModel = openViewModel,
+        closedViewModel = closedViewModel,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        floatingButton = if (event != null) ({ NewIssueFab { showNewIssue = true } }) else null,
+    )
+
+    if (showNewIssue && event != null) {
+        GitNewIssueDialog(repoNote = note, accountViewModel = accountViewModel, onDismiss = { showNewIssue = false })
     }
 }
 
@@ -434,18 +437,23 @@ private fun GitRepositoryPulls(
     val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
     RepoContentSubscription(note, event, accountViewModel)
 
-    GitRepoSubScreenScaffold(event, note.dTag(), accountViewModel, nav) {
-        StatusSplitFeed(
-            persistKey = note.idHex + "GitRepoPatchesStatus",
-            openViewModel = openViewModel,
-            closedViewModel = closedViewModel,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
+    StatusFeedScreen(
+        persistKey = note.idHex + "GitRepoPatchesStatus",
+        event = event,
+        fallbackTitle = note.dTag(),
+        openViewModel = openViewModel,
+        closedViewModel = closedViewModel,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
 }
 
-/** Shared scaffold for the Code / Issues / Pull Requests drill-in screens: a back arrow and the repo title. */
+/**
+ * Shared scaffold for the Code / Issues / Pull Requests drill-in screens: a back arrow and the
+ * repo title. [belowBar] (e.g. status-filter chips) is rendered inside the disappearing top bar
+ * so it hides with it instead of leaving a static band, and [floatingButton] feeds the scaffold's
+ * FAB slot.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GitRepoSubScreenScaffold(
@@ -453,20 +461,26 @@ private fun GitRepoSubScreenScaffold(
     fallbackTitle: String,
     accountViewModel: AccountViewModel,
     nav: INav,
+    belowBar: (@Composable () -> Unit)? = null,
+    floatingButton: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            ShorterTopAppBar(
-                title = { TopBarTitle(event = event, fallback = fallbackTitle) },
-                navigationIcon = {
-                    Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = nav::popBack) { ArrowBackIcon() }
-                    }
-                },
-            )
+            Column {
+                ShorterTopAppBar(
+                    title = { TopBarTitle(event = event, fallback = fallbackTitle) },
+                    navigationIcon = {
+                        Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                        }
+                    },
+                )
+                belowBar?.invoke()
+            }
         },
+        floatingButton = floatingButton,
         accountViewModel = accountViewModel,
     ) {
         content()
@@ -555,60 +569,21 @@ private fun RepoNavCard(
 }
 
 /**
- * The Issues tab: the open/closed status feed plus a "New issue" composer reachable
- * from the filter row once the repository announcement has loaded.
+ * A drill-in screen showing an Open / Closed &amp; Resolved status feed. The status + label
+ * filter chips live inside the disappearing top bar (so they hide with it and the feed scrolls
+ * cleanly under them), while the feed body uses the scaffold's normal content padding.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GitIssuesTab(
-    note: AddressableNote,
-    event: GitRepositoryEvent?,
-    openViewModel: RepositoryIssuesFeedViewModel,
-    closedViewModel: RepositoryIssuesFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    var showNewIssue by rememberSaveable(note.idHex) { mutableStateOf(false) }
-
-    StatusSplitFeed(
-        persistKey = note.idHex + "GitRepoIssuesStatus",
-        openViewModel = openViewModel,
-        closedViewModel = closedViewModel,
-        accountViewModel = accountViewModel,
-        nav = nav,
-        headerAction = if (event != null) ({ NewIssueButton { showNewIssue = true } }) else null,
-    )
-
-    if (showNewIssue && event != null) {
-        GitNewIssueDialog(repoNote = note, accountViewModel = accountViewModel, onDismiss = { showNewIssue = false })
-    }
-}
-
-@Composable
-private fun NewIssueButton(onClick: () -> Unit) {
-    FilledTonalButton(
-        onClick = onClick,
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-    ) {
-        Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-        Text(stringRes(R.string.git_new_issue_button), modifier = Modifier.padding(start = 6.dp))
-    }
-}
-
-/**
- * Wraps a feed in an Open / Closed &amp; Resolved status filter, swapping between two
- * status-scoped feed view models. Each view model already filters by NIP-34 status, so the
- * selector only chooses which one is rendered. The selection survives configuration changes
- * via [persistKey]. An optional [headerAction] (e.g. a "New issue" button) is shown at the
- * trailing edge of the filter row.
- */
-@Composable
-private fun StatusSplitFeed(
+private fun StatusFeedScreen(
     persistKey: String,
+    event: GitRepositoryEvent?,
+    fallbackTitle: String,
     openViewModel: FeedViewModel,
     closedViewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
-    headerAction: (@Composable () -> Unit)? = null,
+    floatingButton: (@Composable () -> Unit)? = null,
 ) {
     var showClosed by rememberSaveable(persistKey) { mutableStateOf(false) }
     var selectedLabel by rememberSaveable(persistKey) { mutableStateOf<String?>(null) }
@@ -627,23 +602,48 @@ private fun StatusSplitFeed(
         if (selectedLabel != null && selectedLabel !in labels) selectedLabel = null
     }
 
-    // The filter header is drawn statically below the disappearing top bar, so it must
-    // consume the scaffold's top inset itself. The inner feed then renders with the top
-    // inset zeroed — otherwise its LazyColumn re-applies the full bar height as content
-    // padding on top of the header, leaving the empty band reported above the items.
-    val scaffoldPadding = LocalDisappearingScaffoldPadding.current
-    val layoutDirection = LocalLayoutDirection.current
-    val feedPadding =
-        remember(scaffoldPadding, layoutDirection) {
-            PaddingValues(
-                start = scaffoldPadding.calculateStartPadding(layoutDirection),
-                top = 0.dp,
-                end = scaffoldPadding.calculateEndPadding(layoutDirection),
-                bottom = scaffoldPadding.calculateBottomPadding(),
+    GitRepoSubScreenScaffold(
+        event = event,
+        fallbackTitle = fallbackTitle,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        belowBar = {
+            StatusFilterChips(
+                showClosed = showClosed,
+                onShowClosed = { showClosed = it },
+                openCount = openItems.size,
+                closedCount = closedItems.size,
+                selectedLabel = selectedLabel,
+                onSelectLabel = { selectedLabel = it },
+                labels = labels,
             )
-        }
+        },
+        floatingButton = floatingButton,
+    ) {
+        RefresheableFeedView(
+            viewModel = if (showClosed) closedViewModel else openViewModel,
+            routeForLastRead = null,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            onLoaded = { loaded, listState ->
+                GitItemFeedLoaded(loaded, listState, accountViewModel, nav, labelFilter = selectedLabel)
+            },
+        )
+    }
+}
 
-    Column(Modifier.fillMaxSize().padding(top = scaffoldPadding.calculateTopPadding())) {
+/** The Open/Closed status chips plus the optional label-filter row, shown inside the top bar. */
+@Composable
+private fun StatusFilterChips(
+    showClosed: Boolean,
+    onShowClosed: (Boolean) -> Unit,
+    openCount: Int,
+    closedCount: Int,
+    selectedLabel: String?,
+    onSelectLabel: (String?) -> Unit,
+    labels: List<String>,
+) {
+    Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
         Row(
             modifier =
                 Modifier
@@ -654,8 +654,8 @@ private fun StatusSplitFeed(
         ) {
             FilterChip(
                 selected = !showClosed,
-                onClick = { showClosed = false },
-                label = { Text(countedLabel(stringRes(R.string.git_repo_filter_open), openItems.size)) },
+                onClick = { onShowClosed(false) },
+                label = { Text(countedLabel(stringRes(R.string.git_repo_filter_open), openCount)) },
                 leadingIcon =
                     if (!showClosed) {
                         { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
@@ -665,8 +665,8 @@ private fun StatusSplitFeed(
             )
             FilterChip(
                 selected = showClosed,
-                onClick = { showClosed = true },
-                label = { Text(countedLabel(stringRes(R.string.git_repo_filter_closed), closedItems.size)) },
+                onClick = { onShowClosed(true) },
+                label = { Text(countedLabel(stringRes(R.string.git_repo_filter_closed), closedCount)) },
                 leadingIcon =
                     if (showClosed) {
                         { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
@@ -674,10 +674,6 @@ private fun StatusSplitFeed(
                         null
                     },
             )
-            if (headerAction != null) {
-                Spacer(Modifier.weight(1f))
-                headerAction()
-            }
         }
 
         if (labels.isNotEmpty()) {
@@ -692,31 +688,28 @@ private fun StatusSplitFeed(
             ) {
                 FilterChip(
                     selected = selectedLabel == null,
-                    onClick = { selectedLabel = null },
+                    onClick = { onSelectLabel(null) },
                     label = { Text(stringRes(R.string.git_repo_label_all)) },
                 )
                 labels.forEach { label ->
                     FilterChip(
                         selected = selectedLabel == label,
-                        onClick = { selectedLabel = if (selectedLabel == label) null else label },
+                        onClick = { onSelectLabel(if (selectedLabel == label) null else label) },
                         label = { Text("#$label") },
                     )
                 }
             }
         }
-
-        CompositionLocalProvider(LocalDisappearingScaffoldPadding provides feedPadding) {
-            RefresheableFeedView(
-                viewModel = if (showClosed) closedViewModel else openViewModel,
-                routeForLastRead = null,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                onLoaded = { loaded, listState ->
-                    GitItemFeedLoaded(loaded, listState, accountViewModel, nav, labelFilter = selectedLabel)
-                },
-            )
-        }
     }
+}
+
+@Composable
+private fun NewIssueFab(onClick: () -> Unit) {
+    ExtendedFloatingActionButton(
+        onClick = onClick,
+        icon = { Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(20.dp)) },
+        text = { Text(stringRes(R.string.git_new_issue_button)) },
+    )
 }
 
 /** Appends a count to a chip label, e.g. "Open · 3". Hidden while the feed is still empty/loading. */

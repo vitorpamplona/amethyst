@@ -62,6 +62,7 @@ class GitRepositoryBrowserViewModel(
 
     private var cloneUrls: List<String> = emptyList()
     private var started = false
+    private var cacheKey: String? = null
 
     /** The branch/tag currently displayed (null = the server's default branch). */
     var currentRef: String? = null
@@ -70,11 +71,25 @@ class GitRepositoryBrowserViewModel(
     /**
      * Loads the repository once, using the announcement's clone URLs. Safe to call
      * on every recomposition; only the first call (after the event has arrived) runs.
+     *
+     * When [cacheKey] (the repository address) has an already-fetched default-branch snapshot
+     * in [GitRepoSnapshotCache], it is served synchronously and no new clone is performed — so
+     * revisiting a repo across screens, and the share-to-image renderer, reuse it instantly.
      */
-    fun loadOnce(cloneUrls: List<String>) {
+    fun loadOnce(
+        cloneUrls: List<String>,
+        cacheKey: String? = null,
+    ) {
         if (started) return
         started = true
         this.cloneUrls = cloneUrls
+        this.cacheKey = cacheKey
+
+        val cached = GitRepoSnapshotCache.get(cacheKey)
+        if (cached != null) {
+            _state.value = GitBrowseState.Loaded(cached)
+            return
+        }
         reload()
     }
 
@@ -97,6 +112,8 @@ class GitRepositoryBrowserViewModel(
             for (url in candidates) {
                 try {
                     val snapshot = client.open(url, currentRef)
+                    // Only the default branch is cached; named refs are transient selections.
+                    if (currentRef == null) GitRepoSnapshotCache.put(cacheKey, snapshot)
                     _state.value = GitBrowseState.Loaded(snapshot)
                     return@launch
                 } catch (e: CancellationException) {

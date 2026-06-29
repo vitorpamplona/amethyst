@@ -75,7 +75,7 @@ private val CardShape = RoundedCornerShape(15.dp)
 // Hero / identity — name, description and topics in the dashboard language.
 // ---------------------------------------------------------------------------
 
-/** The top-bar title: owner avatar + project name. */
+/** The top-bar title: owner avatar + project name, with the repo description as a subtitle. */
 @Composable
 fun RepoTitleBar(
     event: GitRepositoryEvent?,
@@ -84,48 +84,47 @@ fun RepoTitleBar(
     nav: INav,
 ) {
     val owner = event?.pubKey?.let { LocalCache.checkGetOrCreateUser(it) }
+    val description = event?.description()?.takeIf { it.isNotBlank() }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (owner != null) {
             ClickableUserPicture(
                 baseUser = owner,
-                size = 22.dp,
+                size = 28.dp,
                 accountViewModel = accountViewModel,
                 onClick = { nav.nav(Route.Profile(it.pubkeyHex)) },
             )
         }
-        Text(
-            text = event?.name() ?: fallback,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
-        )
+        Column(Modifier.weight(1f, fill = false)) {
+            Text(
+                text = event?.name() ?: fallback,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.grayText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
     }
 }
 
-/** The repository's description and topic chips (identity lives in the top bar). */
+/** The repository's topic chips and personal-fork badge (name + description live in the top bar). */
 @Composable
 fun RepoHero(event: GitRepositoryEvent) {
-    val description = event.description()?.takeIf { it.isNotBlank() }
     val topics = remember(event) { event.hashtags().filter { it.isNotBlank() } }
     val isFork = event.isPersonalFork()
-    if (description == null && topics.isEmpty() && !isFork) return
+    if (topics.isEmpty() && !isFork) return
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (description != null) {
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-            )
-        }
-        if (isFork || topics.isNotEmpty()) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (isFork) PillChip(stringRes(R.string.git_repo_personal_fork))
-                topics.forEach { PillChip("#$it") }
-            }
-        }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (isFork) PillChip(stringRes(R.string.git_repo_personal_fork))
+        topics.forEach { PillChip("#$it") }
     }
 }
 

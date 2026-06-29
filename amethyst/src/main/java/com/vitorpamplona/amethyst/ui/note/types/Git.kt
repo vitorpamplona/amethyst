@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
+import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.GitPullRequestUpdateIndex
@@ -878,14 +879,18 @@ private fun RepoSnapshotDashboard(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val cacheKey = remember(noteEvent) { noteEvent.address().toValue() }
     val browser: GitRepositoryBrowserViewModel =
         viewModel(
             key = note.idHex + "GitRepoCardBrowser",
             factory = GitRepositoryBrowserViewModelFactory(accountViewModel.httpClientBuilder::okHttpClientForPreview),
         )
-    LaunchedEffect(noteEvent) { browser.loadOnce(noteEvent.clones()) }
+    LaunchedEffect(noteEvent) { browser.loadOnce(noteEvent.clones(), cacheKey) }
     val browserState by browser.state.collectAsStateWithLifecycle()
-    val snapshot = (browserState as? GitBrowseState.Loaded)?.snapshot ?: return
+    // Prefer the live state, but fall back to a cached snapshot so an already-fetched repo
+    // renders synchronously — including in the share-to-image capture, which won't wait for a
+    // fresh clone.
+    val snapshot = (browserState as? GitBrowseState.Loaded)?.snapshot ?: remember(cacheKey) { GitRepoSnapshotCache.get(cacheKey) } ?: return
 
     val fileNames = remember(snapshot) { snapshot.walkFileNames() }
     val slices = remember(fileNames) { computeLanguageBreakdown(fileNames) }
