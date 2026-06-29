@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.nip34Git
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
 import com.vitorpamplona.quartz.nip34Git.git.GitHttpClient
@@ -141,12 +140,6 @@ class GitRepositoryBrowserViewModel(
             if (!url.removeSuffix("/").endsWith(".git")) out.add(url.removeSuffix("/") + ".git")
         }
         return out.toList()
-    }
-
-    class Factory(
-        private val okHttpClient: (String) -> OkHttpClient,
-    ) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = GitRepositoryBrowserViewModel(okHttpClient) as T
     }
 
     companion object {

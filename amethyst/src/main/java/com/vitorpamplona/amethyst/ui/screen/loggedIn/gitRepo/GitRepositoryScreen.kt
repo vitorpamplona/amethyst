@@ -59,6 +59,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -95,6 +97,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
 
 @Composable
 fun GitRepositoryScreen(
@@ -111,6 +114,16 @@ fun GitRepositoryScreen(
             )
         }
     }
+}
+
+/**
+ * Builds the [GitRepositoryBrowserViewModel]. The factory lives app-side because the KMP
+ * lifecycle artifact used in commons doesn't expose the `create(Class<T>)` override.
+ */
+private class GitRepositoryBrowserViewModelFactory(
+    private val okHttpClient: (String) -> OkHttpClient,
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = GitRepositoryBrowserViewModel(okHttpClient) as T
 }
 
 @Composable
@@ -146,7 +159,7 @@ private fun PrepareGitRepositoryScreen(
     val browserViewModel: GitRepositoryBrowserViewModel =
         viewModel(
             key = note.idHex + "GitRepoBrowser",
-            factory = GitRepositoryBrowserViewModel.Factory(accountViewModel.httpClientBuilder::okHttpClientForPreview),
+            factory = GitRepositoryBrowserViewModelFactory(accountViewModel.httpClientBuilder::okHttpClientForPreview),
         )
 
     GitRepositoryScreen(
