@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,23 +49,154 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.ReplyReaction
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 private val CardShape = RoundedCornerShape(15.dp)
+
+// ---------------------------------------------------------------------------
+// Hero / identity — name, description and topics in the dashboard language.
+// ---------------------------------------------------------------------------
+
+@Composable
+fun RepoHero(
+    event: GitRepositoryEvent,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            val owner = LocalCache.checkGetOrCreateUser(event.pubKey)
+            if (owner != null) {
+                ClickableUserPicture(
+                    baseUser = owner,
+                    size = 40.dp,
+                    accountViewModel = accountViewModel,
+                    onClick = { nav.nav(Route.Profile(it.pubkeyHex)) },
+                )
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (owner != null) {
+                        UsernameDisplay(baseUser = owner, accountViewModel = accountViewModel)
+                        Text(
+                            text = " / ",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.grayText,
+                        )
+                    }
+                    Text(
+                        text = event.name() ?: event.dTag(),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                }
+                if (event.isPersonalFork()) {
+                    PillChip(stringRes(R.string.git_repo_personal_fork))
+                }
+            }
+        }
+
+        val description = event.description()?.takeIf { it.isNotBlank() }
+        if (description != null) {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+            )
+        }
+
+        val topics = remember(event) { event.hashtags().filter { it.isNotBlank() } }
+        if (topics.isNotEmpty()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                topics.forEach { PillChip("#$it") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PillChip(label: String) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.grayText,
+        modifier =
+            Modifier
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                .padding(horizontal = 10.dp, vertical = 3.dp),
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Maintainers — a compact avatar cluster.
+// ---------------------------------------------------------------------------
+
+@Composable
+fun RepoMaintainersRow(
+    event: GitRepositoryEvent,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val maintainers = remember(event) { listOfNotNull(event.pubKey).plus(event.maintainers()).distinct() }
+    if (maintainers.isEmpty()) return
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringRes(R.string.git_repo_maintained_by),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.grayText,
+        )
+        maintainers.take(6).forEach { hex -> MaintainerAvatar(hex, accountViewModel, nav) }
+        if (maintainers.size > 6) {
+            Text(
+                text = "+" + (maintainers.size - 6),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.grayText,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MaintainerAvatar(
+    pubKeyHex: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val user = LocalCache.checkGetOrCreateUser(pubKeyHex) ?: return
+    ClickableUserPicture(
+        baseUser = user,
+        size = 28.dp,
+        accountViewModel = accountViewModel,
+        onClick = { nav.nav(Route.Profile(it.pubkeyHex)) },
+    )
+}
 
 // ---------------------------------------------------------------------------
 // Social pulse — zaps, reactions and comments on the repository announcement.

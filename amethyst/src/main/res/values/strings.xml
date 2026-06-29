@@ -2651,6 +2651,7 @@
     <string name="git_repo_stat_files">Files</string>
     <string name="git_repo_stat_updated">Updated</string>
     <string name="git_repo_recent_activity">Recent activity</string>
+    <string name="git_repo_maintained_by">Maintained by</string>
     <string name="git_untitled">Untitled</string>
     <string name="git_repo_section_about">About</string>
     <string name="git_repo_section_links">Links</string>
