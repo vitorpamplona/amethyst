@@ -318,12 +318,11 @@ private fun GitRepositoryHome(
                     .verticalScroll(rememberScrollState())
                     .padding(scaffoldPadding)
                     .padding(horizontal = 12.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             val currentEvent = event
             if (currentEvent != null) {
                 RepoHero(currentEvent)
-                RepoMaintainersRow(currentEvent, accountViewModel, nav)
             }
 
             if (snapshot != null) {
@@ -339,6 +338,8 @@ private fun GitRepositoryHome(
                 snapshot.tipCommit?.let { commit ->
                     RepoLastCommit(commit) { nav.nav(Route.GitRepositoryCode(note.address)) }
                 }
+            } else if (currentEvent != null && !repoHasFetchableClone(currentEvent)) {
+                RepoExternalNotice(currentEvent)
             }
 
             RepoNavCards(note, openIssueCount, openPullCount, nav)
@@ -371,7 +372,21 @@ private fun GitRepositoryCode(
     RepoContentSubscription(note, event, accountViewModel)
 
     GitRepoSubScreenScaffold(event, note.dTag(), accountViewModel, nav) {
-        GitCodeTab(browserState, browserViewModel, accountViewModel, nav)
+        val ev = event
+        if (ev != null && !repoHasFetchableClone(ev)) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(LocalDisappearingScaffoldPadding.current)
+                        .padding(12.dp),
+            ) {
+                RepoExternalNotice(ev)
+            }
+        } else {
+            GitCodeTab(browserState, browserViewModel, accountViewModel, nav)
+        }
     }
 }
 

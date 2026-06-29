@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -62,7 +63,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -139,53 +139,6 @@ private fun PillChip(label: String) {
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                 .padding(horizontal = 10.dp, vertical = 3.dp),
-    )
-}
-
-// ---------------------------------------------------------------------------
-// Maintainers — a compact avatar cluster.
-// ---------------------------------------------------------------------------
-
-@Composable
-fun RepoMaintainersRow(
-    event: GitRepositoryEvent,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val maintainers = remember(event) { listOfNotNull(event.pubKey).plus(event.maintainers()).distinct() }
-    if (maintainers.isEmpty()) return
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            text = stringRes(R.string.git_repo_maintained_by),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.grayText,
-        )
-        maintainers.take(6).forEach { hex -> MaintainerAvatar(hex, accountViewModel, nav) }
-        if (maintainers.size > 6) {
-            Text(
-                text = "+" + (maintainers.size - 6),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.grayText,
-            )
-        }
-    }
-}
-
-@Composable
-private fun MaintainerAvatar(
-    pubKeyHex: HexKey,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val user = LocalCache.checkGetOrCreateUser(pubKeyHex) ?: return
-    ClickableUserPicture(
-        baseUser = user,
-        size = 28.dp,
-        accountViewModel = accountViewModel,
-        onClick = { nav.nav(Route.Profile(it.pubkeyHex)) },
     )
 }
 
@@ -376,6 +329,49 @@ fun computeLanguageBreakdown(files: List<String>): List<LanguageSlice> {
         slices.add(LanguageSlice("Other", remainder / total, Color(OTHER_COLOR)))
     }
     return slices
+}
+
+// ---------------------------------------------------------------------------
+// External-host notice — for repos we can't clone over http(s) (htree://, nostr://, …).
+// ---------------------------------------------------------------------------
+
+/** True when the repo can be cloned over http(s), i.e. the smart-HTTP browser can fetch it. */
+fun repoHasFetchableClone(event: GitRepositoryEvent): Boolean = event.clones().any { it.startsWith("http://") || it.startsWith("https://") }
+
+/**
+ * Shown instead of the snapshot dashboard for repos whose only clone URLs use a transport the
+ * smart-HTTP browser can't fetch (e.g. Iris's `htree://`). Offers the web URL as an
+ * open-in-browser fallback when one is present.
+ */
+@Composable
+fun RepoExternalNotice(event: GitRepositoryEvent) {
+    val web = remember(event) { event.webs().firstOrNull { it.startsWith("http://") || it.startsWith("https://") } }
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(CardShape)
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(MaterialSymbols.Public, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+            Text(
+                text = stringRes(R.string.git_repo_external_host_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Text(
+            text = stringRes(R.string.git_repo_external_host_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.grayText,
+        )
+        if (web != null) {
+            ClickableUrl(url = web, urlText = stringRes(R.string.git_repo_open_in_browser))
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

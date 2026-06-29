@@ -2680,6 +2680,9 @@
     <string name="git_repo_stat_updated">Updated</string>
     <string name="git_repo_recent_activity">Recent activity</string>
     <string name="git_repo_maintained_by">Maintained by</string>
+    <string name="git_repo_external_host_title">Hosted externally</string>
+    <string name="git_repo_external_host_body">This repository can\'t be cloned over http(s), so the code view isn\'t available here.</string>
+    <string name="git_repo_open_in_browser">Open in browser</string>
     <string name="git_untitled">Untitled</string>
     <string name="git_repo_section_about">About</string>
     <string name="git_repo_section_links">Links</string>

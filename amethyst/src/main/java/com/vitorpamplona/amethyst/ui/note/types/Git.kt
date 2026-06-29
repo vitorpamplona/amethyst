@@ -76,10 +76,12 @@ import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryBrowserViewModelFactory
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoExternalNotice
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoLanguageBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoLastCommit
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoStatTiles
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.computeLanguageBreakdown
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.repoHasFetchableClone
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
@@ -102,7 +104,7 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 private val CardShape = QuoteBorder
 private val ChipShape = RoundedCornerShape(8.dp)
-private val CardPadding = PaddingValues(Size10dp)
+private val CardPadding = PaddingValues(start = Size10dp, top = Size10dp, end = Size10dp, bottom = Size5dp)
 private val HeaderSpacing = Arrangement.spacedBy(Size8dp)
 private val LinkRowSpacing = Arrangement.spacedBy(Size8dp)
 
@@ -890,7 +892,16 @@ private fun RepoSnapshotDashboard(
     // Prefer the live state, but fall back to a cached snapshot so an already-fetched repo
     // renders synchronously — including in the share-to-image capture, which won't wait for a
     // fresh clone.
-    val snapshot = (browserState as? GitBrowseState.Loaded)?.snapshot ?: remember(cacheKey) { GitRepoSnapshotCache.get(cacheKey) } ?: return
+    val snapshot = (browserState as? GitBrowseState.Loaded)?.snapshot ?: remember(cacheKey) { GitRepoSnapshotCache.get(cacheKey) }
+    if (snapshot == null) {
+        // Repos we can't clone over http(s) (e.g. Iris's htree://) get an open-in-browser notice
+        // instead of an indefinitely-empty dashboard.
+        if (!repoHasFetchableClone(noteEvent)) {
+            Spacer(modifier = HalfDoubleVertSpacer)
+            RepoExternalNotice(noteEvent)
+        }
+        return
+    }
 
     val fileNames = remember(snapshot) { snapshot.walkFileNames() }
     val slices = remember(fileNames) { computeLanguageBreakdown(fileNames) }
