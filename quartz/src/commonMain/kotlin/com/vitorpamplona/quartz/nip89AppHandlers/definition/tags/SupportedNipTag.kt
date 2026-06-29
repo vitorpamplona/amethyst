@@ -22,35 +22,49 @@ package com.vitorpamplona.quartz.nip89AppHandlers.definition.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.ensure
 
-class PlatformLinkTag(
-    val platform: String,
-    val uri: String,
-    val entityType: String?,
+/**
+ * A NIP an app handler declares it supports. NostrHub publishes these as `i` tags
+ * pointing at the NIP spec markdown files, e.g.
+ *
+ * ```
+ * ["i", "https://github.com/nostr-protocol/nips/blob/master/01.md"]
+ * ```
+ *
+ * The NIP identifier (`01`, `5A`, ...) is extracted from the file name. The
+ * original [url] is kept so the UI can open the spec.
+ */
+class SupportedNipTag(
+    val nip: String,
+    val url: String,
 ) {
-    fun toTagArray() = assemble(platform, uri, entityType)
+    fun toTagArray() = assemble(url)
 
     companion object {
-        fun match(tag: Tag): Boolean =
-            // Needs at least the platform code and the uri (2 elements). The entity
-            // type (index 2) is optional per NIP-89, so a 2-element link still matches.
-            if (tag.has(1)) {
-                tag[0] == PlatformType.IOS.code || tag[0] == PlatformType.WEB.code || tag[0] == PlatformType.ANDROID.code
-            } else {
-                false
-            }
+        const val TAG_NAME = "i"
 
-        fun parse(tag: Tag): PlatformLinkTag? {
-            if (match(tag)) return PlatformLinkTag(tag[0], tag[1], tag.getOrNull(2))
-            return null
+        // The trailing `<id>.md` segment of a NIP spec url. NIP ids are 1-3
+        // alphanumeric chars ("1", "01", "5A", "B7", ...).
+        private val NIP_FILE = Regex("""/([0-9A-Za-z]{1,3})\.md(?:[?#].*)?$""")
+
+        fun parseNip(url: String): String? =
+            NIP_FILE
+                .find(url)
+                ?.groupValues
+                ?.get(1)
+                ?.uppercase()
+
+        fun parse(tag: Tag): SupportedNipTag? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+
+            val nip = parseNip(tag[1]) ?: return null
+            return SupportedNipTag(nip, tag[1])
         }
 
-        fun assemble(
-            platform: String,
-            uri: String,
-            entityType: String?,
-        ) = arrayOfNotNull(platform, uri, entityType)
+        fun assemble(url: String) = arrayOfNotNull(TAG_NAME, url)
     }
 }

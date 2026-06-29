@@ -40,20 +40,26 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +72,7 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -84,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -92,10 +100,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.KindChip
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.tags.SupportedNipTag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -247,8 +258,21 @@ fun RenderAppDefinition(
                     }
                 }
 
-                Row(modifier = Modifier.padding(top = 4.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
                     ByAuthorChip(noteEvent.pubKey, accountViewModel, nav)
+
+                    val client = remember(noteEvent) { noteEvent.client()?.name }
+                    if (!client.isNullOrBlank()) {
+                        Text(
+                            text = stringRes(R.string.app_definition_via, client),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
                 }
 
                 val website = remember(theAppMetadata) { theAppMetadata.website }
@@ -288,14 +312,34 @@ fun RenderAppDefinition(
                     }
                 }
 
+                val categories = remember(noteEvent) { noteEvent.categories().distinct() }
+                if (categories.isNotEmpty()) {
+                    SectionLabel(stringRes(R.string.app_definition_categories))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(top = 6.dp),
+                    ) {
+                        categories.forEach { CategoryChip(it) }
+                    }
+                }
+
+                val relatedAddresses = remember(noteEvent) { noteEvent.relatedAddresses() }
+                if (relatedAddresses.isNotEmpty()) {
+                    SectionLabel(stringRes(R.string.app_definition_related))
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(top = 6.dp),
+                    ) {
+                        relatedAddresses.forEach { aTag ->
+                            RelatedEventRow(aTag, accountViewModel, nav)
+                        }
+                    }
+                }
+
                 val platforms = remember(noteEvent) { noteEvent.platformLinks().map { it.platform }.distinct() }
                 if (platforms.isNotEmpty()) {
-                    Text(
-                        text = stringRes(R.string.app_definition_available_on),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
+                    SectionLabel(stringRes(R.string.app_definition_available_on))
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -307,12 +351,7 @@ fun RenderAppDefinition(
 
                 val supportedKinds = remember(noteEvent) { noteEvent.supportedKinds() }
                 if (supportedKinds.isNotEmpty()) {
-                    Text(
-                        text = stringRes(R.string.app_definition_handles),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
+                    SectionLabel(stringRes(R.string.app_definition_handles))
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -326,6 +365,189 @@ fun RenderAppDefinition(
                         }
                     }
                 }
+
+                val supportedNips = remember(noteEvent) { noteEvent.supportedNips() }
+                if (supportedNips.isNotEmpty()) {
+                    SupportedNipsSection(supportedNips)
+                }
+            }
+        }
+    }
+}
+
+private const val VISIBLE_SUPPORTED_NIP_LIMIT = 8
+
+/** A section header matching the metrics used by the platforms/handles rows. */
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 8.dp),
+    )
+}
+
+/**
+ * NIPs the app declares it supports (NostrHub-style `i` tags). Shows a handful of
+ * chips inline with a "+N" overflow that opens a bottom sheet listing every NIP,
+ * each one opening its spec.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SupportedNipsSection(nips: List<SupportedNipTag>) {
+    var showAllSheet by rememberSaveable { mutableStateOf(false) }
+    val visible = remember(nips) { nips.take(VISIBLE_SUPPORTED_NIP_LIMIT) }
+    val overflow = (nips.size - VISIBLE_SUPPORTED_NIP_LIMIT).coerceAtLeast(0)
+    val uri = LocalUriHandler.current
+
+    SectionLabel(stringRes(R.string.app_definition_implements))
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.padding(top = 6.dp, bottom = 5.dp),
+    ) {
+        visible.forEach { nip ->
+            NipChip(nip.nip) { runCatching { uri.openUri(nip.url) } }
+        }
+        if (overflow > 0) {
+            OverflowChip(overflow) { showAllSheet = true }
+        }
+    }
+
+    if (showAllSheet) {
+        AllNipsSheet(nips = nips, onDismiss = { showAllSheet = false })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AllNipsSheet(
+    nips: List<SupportedNipTag>,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    val uri = LocalUriHandler.current
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Text(
+            text = stringRes(R.string.app_definition_supported_nips),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        )
+        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            items(items = nips, key = { it.url }) { nip ->
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val target = nip.url
+                                scope.launch {
+                                    sheetState.hide()
+                                    onDismiss()
+                                    runCatching { uri.openUri(target) }
+                                }
+                            }.padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    NipChip(nip.nip)
+                    Spacer(modifier = Modifier.size(12.dp))
+                    Text(
+                        text = nip.url.removePrefix("https://"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NipChip(
+    nip: String,
+    onClick: (() -> Unit)? = null,
+) {
+    val shape = RoundedCornerShape(50)
+    Surface(
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = if (onClick != null) Modifier.clip(shape).clickable(onClick = onClick) else Modifier,
+    ) {
+        Text(
+            text = stringRes(R.string.app_definition_nip, nip),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun CategoryChip(category: String) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
+        Text(
+            text = category,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}
+
+/**
+ * Compact, tappable row for an `a`-tag reference (source repo, store listing, ...).
+ * Loads the addressable event so the tap can open it; the d-tag is shown as the
+ * label since publishers use human-readable identifiers there.
+ */
+@Composable
+private fun RelatedEventRow(
+    aTag: ATag,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val address = remember(aTag) { Address(aTag.kind, aTag.pubKeyHex, aTag.dTag) }
+    val shape = RoundedCornerShape(8.dp)
+
+    LoadAddressableNote(address, accountViewModel) { note ->
+        Surface(
+            shape = shape,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clip(shape)
+                    .clickable {
+                        if (note != null) {
+                            routeFor(note, accountViewModel.account)?.let { nav.nav(it) }
+                        }
+                    },
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            ) {
+                KindChip(aTag.kind)
+                if (aTag.dTag.isNotBlank()) {
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text(
+                        text = aTag.dTag,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
@@ -335,10 +557,15 @@ private const val VISIBLE_SUPPORTED_KIND_LIMIT = 12
 
 /** Same shape and metrics as [KindChip] so it lines up with the kind chips. */
 @Composable
-private fun OverflowChip(count: Int) {
+private fun OverflowChip(
+    count: Int,
+    onClick: (() -> Unit)? = null,
+) {
+    val shape = RoundedCornerShape(50)
     Surface(
-        shape = RoundedCornerShape(50),
+        shape = shape,
         color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = if (onClick != null) Modifier.clip(shape).clickable(onClick = onClick) else Modifier,
     ) {
         Text(
             text = "+$count",
