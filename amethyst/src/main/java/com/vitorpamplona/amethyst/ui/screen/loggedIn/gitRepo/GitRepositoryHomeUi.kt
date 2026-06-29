@@ -57,7 +57,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.ReplyReaction
-import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -77,49 +76,44 @@ private val CardShape = RoundedCornerShape(15.dp)
 // Hero / identity — name, description and topics in the dashboard language.
 // ---------------------------------------------------------------------------
 
+/** The top-bar title: owner avatar + project name. */
 @Composable
-fun RepoHero(
-    event: GitRepositoryEvent,
+fun RepoTitleBar(
+    event: GitRepositoryEvent?,
+    fallback: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            val owner = LocalCache.checkGetOrCreateUser(event.pubKey)
-            if (owner != null) {
-                ClickableUserPicture(
-                    baseUser = owner,
-                    size = 40.dp,
-                    accountViewModel = accountViewModel,
-                    onClick = { nav.nav(Route.Profile(it.pubkeyHex)) },
-                )
-            }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (owner != null) {
-                        UsernameDisplay(baseUser = owner, accountViewModel = accountViewModel)
-                        Text(
-                            text = " / ",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.grayText,
-                        )
-                    }
-                    Text(
-                        text = event.name() ?: event.dTag(),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                }
-                if (event.isPersonalFork()) {
-                    PillChip(stringRes(R.string.git_repo_personal_fork))
-                }
-            }
+    val owner = event?.pubKey?.let { LocalCache.checkGetOrCreateUser(it) }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (owner != null) {
+            ClickableUserPicture(
+                baseUser = owner,
+                size = 22.dp,
+                accountViewModel = accountViewModel,
+                onClick = { nav.nav(Route.Profile(it.pubkeyHex)) },
+            )
         }
+        Text(
+            text = event?.name() ?: fallback,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+    }
+}
 
-        val description = event.description()?.takeIf { it.isNotBlank() }
+/** The repository's description and topic chips (identity lives in the top bar). */
+@Composable
+fun RepoHero(event: GitRepositoryEvent) {
+    val description = event.description()?.takeIf { it.isNotBlank() }
+    val topics = remember(event) { event.hashtags().filter { it.isNotBlank() } }
+    val isFork = event.isPersonalFork()
+    if (description == null && topics.isEmpty() && !isFork) return
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (description != null) {
             Text(
                 text = description,
@@ -127,10 +121,9 @@ fun RepoHero(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
             )
         }
-
-        val topics = remember(event) { event.hashtags().filter { it.isNotBlank() } }
-        if (topics.isNotEmpty()) {
+        if (isFork || topics.isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (isFork) PillChip(stringRes(R.string.git_repo_personal_fork))
                 topics.forEach { PillChip("#$it") }
             }
         }

@@ -268,7 +268,7 @@ private fun GitRepositoryHome(
         isInvertedLayout = false,
         topBar = {
             ShorterTopAppBar(
-                title = { TopBarTitle(event = event, fallback = note.dTag()) },
+                title = { RepoTitleBar(event = event, fallback = note.dTag(), accountViewModel = accountViewModel, nav = nav) },
                 navigationIcon = {
                     Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = nav::popBack) { ArrowBackIcon() }
@@ -307,7 +307,7 @@ private fun GitRepositoryHome(
         ) {
             val currentEvent = event
             if (currentEvent != null) {
-                RepoHero(currentEvent, accountViewModel, nav)
+                RepoHero(currentEvent)
                 RepoMaintainersRow(currentEvent, accountViewModel, nav)
                 RepoSocialRow(note, accountViewModel, nav)
             }
