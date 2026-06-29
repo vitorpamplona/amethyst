@@ -846,7 +846,7 @@ private fun RenderGitRepositoryEvent(
             )
         }
 
-        RepoSnapshotDashboard(noteEvent, note, accountViewModel)
+        RepoSnapshotDashboard(noteEvent, note, accountViewModel, nav)
 
         if (topics.isNotEmpty()) {
             Spacer(modifier = HalfDoubleVertSpacer)
@@ -876,6 +876,7 @@ private fun RepoSnapshotDashboard(
     noteEvent: GitRepositoryEvent,
     note: Note,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val browser: GitRepositoryBrowserViewModel =
         viewModel(
@@ -900,8 +901,8 @@ private fun RepoSnapshotDashboard(
         Spacer(modifier = HalfDoubleVertSpacer)
         RepoLanguageBar(slices)
     }
-    snapshot.tipCommit?.let {
+    snapshot.tipCommit?.let { commit ->
         Spacer(modifier = HalfDoubleVertSpacer)
-        RepoLastCommit(it)
+        RepoLastCommit(commit) { nav.nav(Route.GitRepository(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())) }
     }
 }

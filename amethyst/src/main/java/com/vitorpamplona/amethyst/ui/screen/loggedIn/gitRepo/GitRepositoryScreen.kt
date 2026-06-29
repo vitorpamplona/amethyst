@@ -340,7 +340,9 @@ private fun GitRepositoryHome(
                 if (languageSlices.isNotEmpty()) {
                     RepoLanguageBar(languageSlices)
                 }
-                snapshot.tipCommit?.let { RepoLastCommit(it) }
+                snapshot.tipCommit?.let { commit ->
+                    RepoLastCommit(commit) { nav.nav(Route.GitRepositoryCode(note.address)) }
+                }
             }
 
             RepoNavCards(note, openIssueCount, openPullCount, nav)
