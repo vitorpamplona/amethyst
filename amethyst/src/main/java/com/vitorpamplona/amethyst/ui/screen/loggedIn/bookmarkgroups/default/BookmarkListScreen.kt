@@ -55,7 +55,6 @@ import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal.BookmarkPrivateFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal.BookmarkPublicFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal.BookmarkRepositoriesFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
@@ -77,31 +76,18 @@ fun BookmarkListScreen(
             factory = BookmarkPrivateFeedViewModel.Factory(accountViewModel.account),
         )
 
-    val repositoriesFeedViewModel: BookmarkRepositoriesFeedViewModel =
-        viewModel(
-            key = "NostrBookmarkRepositoriesFeedViewModel",
-            factory = BookmarkRepositoriesFeedViewModel.Factory(accountViewModel.account),
-        )
-
     val bookmarkState by accountViewModel.account.bookmarkState.bookmarks
         .collectAsStateWithLifecycle(null)
-
-    val repositoryBookmarks by accountViewModel.account.gitRepositoryListState.publicRepositoryAddressSet
-        .collectAsStateWithLifecycle()
 
     LaunchedEffect(bookmarkState) {
         publicFeedViewModel.invalidateData()
         privateFeedViewModel.invalidateData()
     }
 
-    LaunchedEffect(repositoryBookmarks) {
-        repositoriesFeedViewModel.invalidateData()
-    }
-
     // Preload all bookmarked events so they don't load one-by-one when scrolling
-    PreloadBookmarkEvents(bookmarkState, repositoryBookmarks, accountViewModel)
+    PreloadBookmarkEvents(bookmarkState, accountViewModel)
 
-    RenderBookmarkScreen(publicFeedViewModel, privateFeedViewModel, repositoriesFeedViewModel, bookmarkState, accountViewModel, nav)
+    RenderBookmarkScreen(publicFeedViewModel, privateFeedViewModel, bookmarkState, accountViewModel, nav)
 }
 
 @Composable
@@ -109,12 +95,11 @@ fun BookmarkListScreen(
 private fun RenderBookmarkScreen(
     publicFeedViewModel: BookmarkPublicFeedViewModel,
     privateFeedViewModel: BookmarkPrivateFeedViewModel,
-    repositoriesFeedViewModel: BookmarkRepositoriesFeedViewModel,
     bookmarkState: com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState.BookmarkList?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val pagerState = rememberPagerState { 3 }
+    val pagerState = rememberPagerState { 2 }
     val coroutineScope = rememberCoroutineScope()
 
     val cache = accountViewModel.account.cache
@@ -161,11 +146,6 @@ private fun RenderBookmarkScreen(
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                         text = { Text(text = stringRes(R.string.public_bookmarks)) },
                     )
-                    Tab(
-                        selected = pagerState.currentPage == 2,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                        text = { Text(text = stringRes(R.string.repository_bookmarks)) },
-                    )
                 }
             }
         },
@@ -186,15 +166,6 @@ private fun RenderBookmarkScreen(
                     1 -> {
                         RefresheableFeedView(
                             publicFeedViewModel,
-                            null,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
-
-                    2 -> {
-                        RefresheableFeedView(
-                            repositoriesFeedViewModel,
                             null,
                             accountViewModel = accountViewModel,
                             nav = nav,
@@ -227,18 +198,14 @@ private fun RenderBookmarkScreen(
 @Composable
 private fun PreloadBookmarkEvents(
     bookmarkState: com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState.BookmarkList?,
-    repositoryBookmarks: Set<com.vitorpamplona.quartz.nip01Core.core.Address>,
     accountViewModel: AccountViewModel,
 ) {
     val eventFinder = accountViewModel.dataSources().eventFinder
     val account = accountViewModel.account
 
     val queries =
-        remember(bookmarkState, repositoryBookmarks) {
-            val allNotes =
-                bookmarkState?.public.orEmpty() +
-                    bookmarkState?.private.orEmpty() +
-                    repositoryBookmarks.map { account.cache.getOrCreateAddressableNote(it) }
+        remember(bookmarkState) {
+            val allNotes = bookmarkState?.public.orEmpty() + bookmarkState?.private.orEmpty()
             allNotes
                 .filter { it.event == null }
                 .map { EventFinderQueryState(it, account) }

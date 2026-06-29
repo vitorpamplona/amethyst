@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.metadat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.ArticleBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.PostBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.OldBookmarkListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.repositories.BookmarkedRepositoriesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.BrowserScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
@@ -444,6 +445,7 @@ fun BuildNavigation(
         composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
         composableFromEnd<Route.OldBookmarks> { OldBookmarkListScreen(accountViewModel, nav) }
         composableFromEnd<Route.PinnedNotes> { PinnedNotesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.BookmarkedRepositories> { BookmarkedRepositoriesScreen(accountViewModel, nav) }
         composableFromEnd<Route.WebBookmarks> { WebBookmarksScreen(accountViewModel, nav) }
         composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
         composableFromEnd<Route.ScheduledPosts> { ScheduledPostsScreen(accountViewModel, nav) }

@@ -18,28 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.repositories.dal
 
+import androidx.compose.runtime.Stable
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.dal.FeedFilter
+import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 
-/**
- * The user's bookmarked (starred) git repositories — the public NIP-51 kind 10018
- * [com.vitorpamplona.amethyst.commons.model.nip51Lists.GitRepositoryListState] addresses
- * resolved to their addressable notes, newest first. Mirrors [BookmarkPublicFeedFilter] but
- * sources its list from the repository bookmark state instead of the kind-10003 note bookmarks.
- */
-class BookmarkRepositoriesFeedFilter(
+@Stable
+class BookmarkRepositoriesFeedViewModel(
     val account: Account,
-) : FeedFilter<Note>() {
-    override fun feedKey(): String =
-        account.gitRepositoryListState.publicRepositoryAddressSet.value
-            .hashCode()
-            .toString()
-
-    override fun feed(): List<Note> =
-        account.gitRepositoryListState.publicRepositoryAddressSet.value
-            .map { account.cache.getOrCreateAddressableNote(it) }
-            .sortedByDescending { it.createdAt() ?: 0L }
+) : AndroidFeedViewModel(BookmarkRepositoriesFeedFilter(account)) {
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = BookmarkRepositoriesFeedViewModel(account) as T
+    }
 }

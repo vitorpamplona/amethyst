@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.GitRepositoryListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
@@ -59,10 +60,12 @@ fun ListOfBookmarkGroupsFeedView(
     defaultBookmarks: BookmarkListState,
     oldBookmarks: OldBookmarkListState,
     pinnedNotes: PinListState,
+    repositories: GitRepositoryListState,
     groupListFeedSource: StateFlow<List<LabeledBookmarkList>>,
     openDefaultBookmarks: () -> Unit,
     openOldBookmarks: () -> Unit,
     openPinnedNotes: () -> Unit,
+    openRepositories: () -> Unit,
     onOpenItem: (String, BookmarkType) -> Unit,
     onRenameItem: (targetBookmarkGroup: LabeledBookmarkList) -> Unit,
     onItemDescriptionChange: (bookmarkGroup: LabeledBookmarkList) -> Unit,
@@ -88,6 +91,11 @@ fun ListOfBookmarkGroupsFeedView(
 
         item {
             PinnedNotesList(pinnedNotes, openPinnedNotes)
+            HorizontalDivider(thickness = DividerThickness)
+        }
+
+        item {
+            RepositoriesBookmarkList(repositories, openRepositories)
             HorizontalDivider(thickness = DividerThickness)
         }
 
@@ -190,6 +198,50 @@ fun PinnedNotesList(
                 BookmarkMembershipStatusAndNumberDisplay(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     postBookmarksSize = pinState.size,
+                    articleBookmarksSize = 0,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+fun RepositoriesBookmarkList(
+    repositories: GitRepositoryListState,
+    openRepositories: () -> Unit,
+) {
+    val repositoryAddresses by repositories.publicRepositoryAddressSet.collectAsStateWithLifecycle()
+
+    ListItem(
+        modifier = Modifier.clickable(onClick = openRepositories),
+        headlineContent = {
+            Text(stringRes(R.string.repository_bookmarks), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        },
+        supportingContent = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    stringRes(R.string.repository_bookmarks_explainer),
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 2,
+                )
+            }
+        },
+        leadingContent = {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Code,
+                    contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                    modifier = Size40Modifier,
+                )
+                Spacer(StdVertSpacer)
+                BookmarkMembershipStatusAndNumberDisplay(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    postBookmarksSize = repositoryAddresses.size,
                     articleBookmarksSize = 0,
                 )
             }

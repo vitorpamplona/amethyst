@@ -302,6 +302,8 @@ sealed class Route {
 
     @Serializable object PinnedNotes : Route()
 
+    @Serializable object BookmarkedRepositories : Route()
+
     @Serializable object BookmarkGroups : Route()
 
     @Serializable object InterestSets : Route()
