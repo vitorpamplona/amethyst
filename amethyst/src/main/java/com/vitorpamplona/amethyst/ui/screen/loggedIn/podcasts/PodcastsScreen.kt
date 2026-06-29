@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts
 
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -94,6 +95,7 @@ fun PodcastsScreen(
             FabBottomBarPadded(nav) {
                 FloatingActionButton(
                     onClick = { nav.nav(Route.PodcastAuthoring) },
+                    shape = CircleShape,
                     containerColor = MaterialTheme.colorScheme.primary,
                 ) {
                     Icon(

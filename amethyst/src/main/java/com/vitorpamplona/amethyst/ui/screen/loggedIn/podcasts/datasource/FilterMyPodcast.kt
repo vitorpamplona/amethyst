@@ -23,23 +23,24 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies.PODCASTING20_METADATA_KINDS
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies.PODCAST_METADATA_D_FILTER
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies.filterPodcastEventsByAuthors
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
-
-// What the authoring hub needs about the logged-in creator's OWN Podcasting-2.0 catalog:
-// the addressable episodes (kind 30054) and trailers (kind 30055)...
-private val MyPodcastFeedKinds = listOf(Podcasting20EpisodeEvent.KIND, Podcasting20TrailerEvent.KIND)
 
 /**
  * REQ for the logged-in creator's own Podcasting-2.0 catalog, so the authoring hub reliably shows
  * their show, episodes and trailers even on a fresh install (rather than only what happens to be in
- * [LocalCache]). Two filters: the addressable episodes/trailers by author, and the show-metadata
- * `kind:30078` constrained to `#d=["podcast-metadata"]` (that kind is overloaded, so the constraint
- * keeps the REQ from pulling every app's NIP-78 data). Queried on the creator's own outbox relays.
+ * [LocalCache]). Queried on the creator's own outbox relays.
+ *
+ * Two separate filters per relay, and they can't be merged:
+ * - episodes (kind 30054) + trailers (kind 30055) by author, with no tag constraint; and
+ * - the show metadata (kind 30078) constrained to `#d=["podcast-metadata"]`. That NIP-78 app-data
+ *   kind is heavily overloaded, so without the `#d` constraint this REQ would pull every app's data
+ *   (including the user's private settings) for the pubkey. The constraint must stay off the episodes
+ *   filter, since each episode/trailer carries its own `d` tag — a combined `#d` would match nothing.
  */
 fun filterMyPodcast(
     user: User,
@@ -49,21 +50,32 @@ fun filterMyPodcast(
         user.outboxRelays()?.ifEmpty { null }
             ?: (user.allUsedRelays() + LocalCache.relayHints.hintsForKey(user.pubkeyHex))
 
-    val authors = setOf(user.pubkeyHex)
+    val authors = listOf(user.pubkeyHex)
 
     return relays.flatMap { relay ->
-        filterPodcastEventsByAuthors(
-            relay = relay,
-            kinds = MyPodcastFeedKinds,
-            authors = authors,
-            since = since?.get(relay)?.time,
-        ) +
-            filterPodcastEventsByAuthors(
+        val sinceTime = since?.get(relay)?.time
+        listOf(
+            RelayBasedFilter(
                 relay = relay,
-                kinds = PODCASTING20_METADATA_KINDS,
-                authors = authors,
-                since = since?.get(relay)?.time,
-                additionalTags = PODCAST_METADATA_D_FILTER,
-            )
+                filter =
+                    Filter(
+                        authors = authors,
+                        kinds = listOf(Podcasting20EpisodeEvent.KIND, Podcasting20TrailerEvent.KIND),
+                        since = sinceTime,
+                        limit = 200,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        authors = authors,
+                        kinds = listOf(AppSpecificDataEvent.KIND),
+                        tags = mapOf("d" to listOf(Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG)),
+                        since = sinceTime,
+                        limit = 10,
+                    ),
+            ),
+        )
     }
 }
