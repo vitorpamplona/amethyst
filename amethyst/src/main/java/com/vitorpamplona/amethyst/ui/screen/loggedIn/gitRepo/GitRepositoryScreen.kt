@@ -412,8 +412,6 @@ private fun GitRepositoryIssues(
     val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
     RepoContentSubscription(note, event, accountViewModel)
 
-    var showNewIssue by rememberSaveable(note.idHex) { mutableStateOf(false) }
-
     StatusFeedScreen(
         persistKey = note.idHex + "GitRepoIssuesStatus",
         event = event,
@@ -422,12 +420,8 @@ private fun GitRepositoryIssues(
         closedViewModel = closedViewModel,
         accountViewModel = accountViewModel,
         nav = nav,
-        floatingButton = if (event != null) ({ NewIssueFab { showNewIssue = true } }) else null,
+        floatingButton = if (event != null) ({ NewIssueFab { nav.nav(Route.GitRepositoryNewIssue(note.address)) } }) else null,
     )
-
-    if (showNewIssue && event != null) {
-        GitNewIssueDialog(repoNote = note, accountViewModel = accountViewModel, onDismiss = { showNewIssue = false })
-    }
 }
 
 @Composable
@@ -720,8 +714,11 @@ private fun StatusFilterChips(
 
 @Composable
 private fun NewIssueFab(onClick: () -> Unit) {
+    // The app theme overrides shapes.large (the extended-FAB default) to 0.dp, which makes the
+    // FAB square — so pin an explicit rounded shape here.
     ExtendedFloatingActionButton(
         onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
         icon = { Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(20.dp)) },
         text = { Text(stringRes(R.string.git_new_issue_button)) },
     )
