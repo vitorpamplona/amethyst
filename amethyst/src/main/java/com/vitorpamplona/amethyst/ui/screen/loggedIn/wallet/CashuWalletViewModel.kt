@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.MintQuoteStarted
 import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
@@ -35,10 +36,13 @@ import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenB64Parser
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.startsWith
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -279,13 +283,45 @@ class CashuWalletViewModel : ViewModel() {
      */
     val directory get() = account!!.cashuMintDirectoryState
 
-    /** Open the NIP-87 mint directory subscription against the account's outbox relays. */
+    /** Re-subscribes the directory as the account's relay flows settle. */
+    private var directoryRelayJob: Job? = null
+
+    /**
+     * Open the NIP-87 mint directory subscription.
+     *
+     * Subscribes **reactively** to the account's relay flows rather than to a
+     * one-shot snapshot. A freshly-restored account (notably the find-or-create
+     * wizard's "create a new wallet" path) may still be loading its relay lists
+     * when the picker opens; a snapshot would capture an empty set, hit
+     * [CashuMintDirectoryState]'s empty-relay early-out, and never retry —
+     * leaving the mint suggestions blank even though the edit-mints screen shows
+     * them later. Collecting the flow re-subscribes the moment relays arrive.
+     *
+     * Relay set = the union of the user's OUTBOX relays (where they'd publish
+     * their own recommendations) and their INDEXER relays, which aggregate the
+     * broad NIP-87 mint announcements/recommendations and fall back to a curated
+     * default set — so the picker is populated even for a brand-new user who has
+     * no wallet and no recommendations of their own yet.
+     */
     fun openMintDirectory() {
         val acc = account ?: return
-        directory.open(this, acc.outboxRelays.flow.value)
+        directoryRelayJob?.cancel()
+        directoryRelayJob =
+            viewModelScope.launch {
+                combine(acc.outboxRelays.flow, acc.indexerRelayList.flow) { outbox, indexer ->
+                    outbox + indexer
+                }.collect { relays ->
+                    // open() is idempotent per opener (a Set add), so repeated
+                    // calls just re-point the shared subscription at the new
+                    // relay set; a single close() still tears it down.
+                    directory.open(this@CashuWalletViewModel, relays)
+                }
+            }
     }
 
     fun closeMintDirectory() {
+        directoryRelayJob?.cancel()
+        directoryRelayJob = null
         directory.close(this)
     }
 
