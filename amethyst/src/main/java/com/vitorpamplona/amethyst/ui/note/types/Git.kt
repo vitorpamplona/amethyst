@@ -38,6 +38,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -50,13 +51,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
+import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
+import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.GitPullRequestUpdateIndex
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
@@ -68,6 +75,13 @@ import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryBrowserViewModelFactory
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoExternalNotice
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoLanguageBar
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoLastCommit
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoStatTiles
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.computeLanguageBreakdown
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.repoHasFetchableClone
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
@@ -83,13 +97,14 @@ import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.patch.UnifiedDiffParser
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 private val CardShape = QuoteBorder
 private val ChipShape = RoundedCornerShape(8.dp)
-private val CardPadding = PaddingValues(Size10dp)
+private val CardPadding = PaddingValues(start = Size10dp, top = Size10dp, end = Size10dp, bottom = Size5dp)
 private val HeaderSpacing = Arrangement.spacedBy(Size8dp)
 private val LinkRowSpacing = Arrangement.spacedBy(Size8dp)
 
@@ -433,7 +448,26 @@ private fun RenderGitPatchEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
-        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+        // In a collapsed feed preview keep the lightweight markdown body; in the
+        // full (thread) view parse the patch into a proper file-by-file diff.
+        val parsed = if (makeItShort) null else remember(noteEvent) { UnifiedDiffParser.parse(noteEvent.content) }
+        if (parsed != null && parsed.hasDiff) {
+            if (parsed.message.isNotBlank()) {
+                Text(
+                    text = parsed.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(modifier = HalfDoubleVertSpacer)
+            }
+            GitDiffView(parsed, Modifier.fillMaxWidth())
+        } else {
+            GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        if (!makeItShort) {
+            GitStatusActions(note, accountViewModel)
+        }
     }
 }
 
@@ -504,6 +538,10 @@ private fun RenderGitIssueEvent(
         Spacer(modifier = HalfDoubleVertSpacer)
 
         GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+
+        if (!makeItShort) {
+            GitStatusActions(note, accountViewModel)
+        }
     }
 }
 
@@ -542,6 +580,11 @@ private fun RenderGitPullRequestEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // A later pull-request update (kind 1619) revises this PR with a newer commit /
+    // merge base. Fold the most recent one in so the card reflects the current state.
+    val updateIndex by GitPullRequestUpdateIndex.latestByPullRequest.collectAsStateWithLifecycle()
+    val update = updateIndex?.get(note.idHex)
+
     GitCardContainer {
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
         if (repository != null) {
@@ -565,6 +608,15 @@ private fun RenderGitPullRequestEvent(
             )
 
             GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
+
+            if (update != null) {
+                TypeChip(
+                    text = stringRes(id = R.string.git_pr_revised),
+                    background = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    symbol = MaterialSymbols.Sync,
+                )
+            }
         }
 
         val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
@@ -573,9 +625,18 @@ private fun RenderGitPullRequestEvent(
         }
 
         val branch = remember(noteEvent) { noteEvent.branchName()?.takeIf { it.isNotBlank() } }
-        val currentCommit = remember(noteEvent) { noteEvent.currentCommit()?.takeIf { it.isNotBlank() } }
-        val mergeBase = remember(noteEvent) { noteEvent.mergeBase()?.takeIf { it.isNotBlank() } }
-        val cloneUrls = remember(noteEvent) { noteEvent.cloneUrls().filter { it.isNotBlank() } }
+        val currentCommit =
+            remember(noteEvent, update) {
+                (update?.currentCommit() ?: noteEvent.currentCommit())?.takeIf { it.isNotBlank() }
+            }
+        val mergeBase =
+            remember(noteEvent, update) {
+                (update?.mergeBase() ?: noteEvent.mergeBase())?.takeIf { it.isNotBlank() }
+            }
+        val cloneUrls =
+            remember(noteEvent, update) {
+                (update?.cloneUrls()?.filter { it.isNotBlank() }?.ifEmpty { null } ?: noteEvent.cloneUrls().filter { it.isNotBlank() })
+            }
 
         if (branch != null || currentCommit != null || mergeBase != null) {
             Spacer(modifier = StdVertSpacer)
@@ -609,6 +670,11 @@ private fun RenderGitPullRequestEvent(
         Spacer(modifier = HalfDoubleVertSpacer)
 
         GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+
+        if (!makeItShort) {
+            GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel)
+            GitStatusActions(note, accountViewModel)
+        }
     }
 }
 
@@ -729,8 +795,6 @@ private fun RenderGitRepositoryEvent(
 ) {
     val title = noteEvent.name() ?: noteEvent.dTag()
     val summary = noteEvent.description()
-    val web = noteEvent.web()
-    val clone = noteEvent.clone()
     val topics = remember(noteEvent) { noteEvent.hashtags().filter { it.isNotBlank() } }
     val isPersonalFork = remember(noteEvent) { noteEvent.isPersonalFork() }
 
@@ -784,25 +848,7 @@ private fun RenderGitRepositoryEvent(
             )
         }
 
-        if (web != null || clone != null) {
-            Spacer(modifier = HalfDoubleVertSpacer)
-            Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
-                web?.let {
-                    LinkRow(
-                        symbol = MaterialSymbols.Public,
-                        contentDescription = stringRes(id = R.string.git_web_address),
-                        url = it,
-                    )
-                }
-                clone?.let {
-                    LinkRow(
-                        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
-                        contentDescription = stringRes(id = R.string.git_clone_address),
-                        url = it,
-                    )
-                }
-            }
-        }
+        RepoSnapshotDashboard(noteEvent, note, accountViewModel, nav)
 
         if (topics.isNotEmpty()) {
             Spacer(modifier = HalfDoubleVertSpacer)
@@ -819,5 +865,59 @@ private fun RenderGitRepositoryEvent(
                 }
             }
         }
+    }
+}
+
+/**
+ * Loads a shallow snapshot of the repository over smart-HTTP and renders the same
+ * stat tiles / language bar / last-commit strip used on the project home, in place of
+ * the old web/clone links. Fetches lazily (once) when the card is composed.
+ */
+@Composable
+private fun RepoSnapshotDashboard(
+    noteEvent: GitRepositoryEvent,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val cacheKey = remember(noteEvent) { noteEvent.address().toValue() }
+    val browser: GitRepositoryBrowserViewModel =
+        viewModel(
+            key = note.idHex + "GitRepoCardBrowser",
+            factory = GitRepositoryBrowserViewModelFactory(accountViewModel.httpClientBuilder::okHttpClientForPreview),
+        )
+    LaunchedEffect(noteEvent) { browser.loadOnce(noteEvent.clones(), cacheKey) }
+    val browserState by browser.state.collectAsStateWithLifecycle()
+    // Prefer the live state, but fall back to a cached snapshot so an already-fetched repo
+    // renders synchronously — including in the share-to-image capture, which won't wait for a
+    // fresh clone.
+    val snapshot = (browserState as? GitBrowseState.Loaded)?.snapshot ?: remember(cacheKey) { GitRepoSnapshotCache.get(cacheKey) }
+    if (snapshot == null) {
+        // Repos we can't clone over http(s) (e.g. Iris's htree://) get an open-in-browser notice
+        // instead of an indefinitely-empty dashboard.
+        if (!repoHasFetchableClone(noteEvent)) {
+            Spacer(modifier = HalfDoubleVertSpacer)
+            RepoExternalNotice(noteEvent)
+        }
+        return
+    }
+
+    val fileNames = remember(snapshot) { snapshot.walkFileNames() }
+    val slices = remember(fileNames) { computeLanguageBreakdown(fileNames) }
+
+    Spacer(modifier = HalfDoubleVertSpacer)
+    RepoStatTiles(
+        branches = snapshot.branches.size,
+        tags = snapshot.tags.size,
+        files = fileNames.size,
+        updatedEpochSec = snapshot.tipCommit?.authorTimeSec,
+    )
+    if (slices.isNotEmpty()) {
+        Spacer(modifier = HalfDoubleVertSpacer)
+        RepoLanguageBar(slices)
+    }
+    snapshot.tipCommit?.let { commit ->
+        Spacer(modifier = HalfDoubleVertSpacer)
+        RepoLastCommit(commit) { nav.nav(Route.GitRepository(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())) }
     }
 }

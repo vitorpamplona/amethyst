@@ -23,3 +23,5 @@ package com.vitorpamplona.amethyst.model.nip51Lists
 typealias BookmarkListState = com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 
 typealias OldBookmarkListState = com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
+
+typealias GitRepositoryListState = com.vitorpamplona.amethyst.commons.model.nip51Lists.GitRepositoryListState

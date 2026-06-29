@@ -40,6 +40,15 @@ import androidx.compose.ui.unit.dp
 val LocalDisappearingScaffoldPadding = compositionLocalOf { PaddingValues(0.dp) }
 
 /**
+ * The surrounding [DisappearingScaffold]'s bar state, exposed so inner content that swaps its
+ * scrollable in place — and thereby resets the scroll position to the top without emitting a
+ * scroll delta — can pull the bar back into view. Without this the bar can stay stuck at its
+ * hidden offset over fresh top-of-list content, leaving a blank band. Null when no scaffold
+ * provides it.
+ */
+val LocalDisappearingBarState = compositionLocalOf<DisappearingBarState?> { null }
+
+/**
  * Merges two [PaddingValues] component-wise, resolving start/end against the current
  * [LocalLayoutDirection].
  */

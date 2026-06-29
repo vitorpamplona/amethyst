@@ -310,6 +310,24 @@ class TopNavFilterState(
             )
         }
 
+    private val _gitRepositoryRoutes =
+        combineTransform(
+            livePeopleListsFlow,
+            liveInterestFlows,
+        ) { peopleLists, interests ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    // Git repository announcements can be narrowed by author, hashtag and geohash,
+                    // so this mirrors the kind3 catalog plus "Mine" — the user's own repositories.
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow),
+                    peopleLists,
+                    interests,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
     private val _kind3GlobalPeople =
         livePeopleListsFlow.transform { peopleLists ->
             checkNotInMainThread()
@@ -382,6 +400,11 @@ class TopNavFilterState(
 
     val musicRoutes =
         _musicRoutes
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow, muteListFollow))
+
+    val gitRepositoryRoutes =
+        _gitRepositoryRoutes
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow, muteListFollow))
 

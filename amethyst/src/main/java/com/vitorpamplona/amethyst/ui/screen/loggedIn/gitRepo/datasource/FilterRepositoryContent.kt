@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
@@ -37,6 +38,7 @@ val RepositoryContentKinds =
         GitIssueEvent.KIND,
         GitPatchEvent.KIND,
         GitPullRequestEvent.KIND,
+        GitPullRequestUpdateEvent.KIND,
         GitStatusOpenEvent.KIND,
         GitStatusAppliedEvent.KIND,
         GitStatusClosedEvent.KIND,
