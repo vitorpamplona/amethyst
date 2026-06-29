@@ -645,6 +645,9 @@
     <string name="browser_go">खोलें</string>
     <string name="browser_clear">साफ़ करें</string>
     <string name="browser_favorites">पसंदीदा</string>
+    <string name="browser_suggested">जाल क्रमक आविष्करण</string>
+    <string name="browser_discover_nsites">आपके द्वारा अनुचरित लोगों के स्थल</string>
+    <string name="browser_discover_napplets">आपके द्वारा अनुचरित लोगों के क्रमक</string>
     <string name="browser_recent_options">विकल्प</string>
     <string name="browser_recent_remove">इतिहास से हटाएँ</string>
     <string name="favorite_apps">पसंदीदा ऐप्स</string>
@@ -670,6 +673,7 @@
     <string name="napplet_permissions_forget">इस नोस्टर संलग्नक्रमक को भूल जाएँ</string>
     <string name="napplet_permissions_blocked">बाधित</string>
     <string name="napplet_permissions_revoke">निराकरण</string>
+    <string name="napplet_permissions_ask_each_time">प्रत्येक बार मुझसे पूछें</string>
     <string name="napplet_none_found">कोई नोस्टर संलग्नक्रमक प्राप्त नहीं अब तक।</string>
     <string name="napplet_fallback_title">नोस्टर संलग्नक्रमक %1$s…</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
@@ -718,6 +722,71 @@
         <item quantity="one">यह नोस्टर संलग्नक्रमक %1$d साट् का एक लैटनिंग चालान का भुगतान करना चाहता है।</item>
         <item quantity="other">यह नोस्टर संलग्नक्रमक %1$d साट्स का एक लैटनिंग चालान का भुगतान करना चाहता है।</item>
     </plurals>
+    <!-- Signer permissions: first-connect dialog -->
+    <string name="napplet_connect_title">नोस्टर से संयोजन</string>
+    <string name="napplet_connect_subtitle">आपके नोस्टर लेखा के साथ संयोजन करना चाहता है</string>
+    <string name="napplet_connect_how_handle">इस क्रमक के अनुरोध कैसे सम्भालना चाहिए।</string>
+    <string name="napplet_connect_button">संयोजन</string>
+    <string name="napplet_connect_block">अवरोधन तथा उपेक्षा %1$s</string>
+    <!-- Signer trust levels -->
+    <string name="napplet_policy_full_trust">मैं पूर्णतः इस पर विश्वास करता हूँ</string>
+    <string name="napplet_policy_full_trust_desc">सभी अनुरोधों का स्वतः हस्ताक्षरण (भुगतान अतिरिक्त)</string>
+    <string name="napplet_policy_reasonable">तर्कसंगत रहें</string>
+    <string name="napplet_policy_reasonable_desc">सभी सामान्य अनुरोधों को स्वतःस्वीकार</string>
+    <string name="napplet_policy_paranoid">मैं थोडा चिन्ताग्रस्त</string>
+    <string name="napplet_policy_paranoid_desc">मुझसे पूछे बिना कुछ भी हस्ताक्षर नहीं करना।</string>
+    <!-- Signer per-op consent dialog -->
+    <string name="napplet_consent_wants_to">%1$s चाहता है</string>
+    <string name="napplet_consent_show_event">घटना दिखाएँ</string>
+    <string name="napplet_consent_hide_event">घटना छिपाएँ</string>
+    <string name="napplet_consent_more_options">अधिक विकल्प</string>
+    <string name="napplet_consent_fewer_options">अल्पतर विकल्प</string>
+    <string name="napplet_signer_allow_once">एक बार अनुमत</string>
+    <string name="napplet_signer_allow_session">इस सत्र के लिए अनुमत</string>
+    <string name="napplet_signer_allow_24h">अनुमत २४ घण्टों के लिए</string>
+    <string name="napplet_signer_allow_30d">अनुमत ३० दिनों के लिए</string>
+    <string name="napplet_signer_allow_op">पुनःप्रश्न ना करें %1$s के लिए</string>
+    <string name="napplet_signer_allow_all">पुनःप्रश्न ना करें किसी भी नोस्टर अनुरोध के लिए</string>
+    <string name="napplet_signer_deny_once">अस्वीकार</string>
+    <string name="napplet_signer_deny_op">सर्वदा अंस्वीकार %1$s</string>
+    <string name="napplet_signer_last_used">पूर्व उपयुक्त</string>
+    <string name="napplet_signer_expires">समाप्ति</string>
+    <!-- Signer op labels -->
+    <string name="napplet_op_sign_kind">प्रकार %1$d घटना हस्ताक्षरण</string>
+    <string name="napplet_op_sign_kind_named">%1$s के लिए हस्ताक्षरण (प्रकार : %2$d)</string>
+    <string name="napplet_op_encrypt">सन्देश रहस्यीकरण</string>
+    <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <string name="napplet_op_decrypt">आपके निजी सन्देशों का पठन</string>
+    <!-- Permissions management screen -->
+    <string name="napplet_permissions_title">संयोजित क्रमक</string>
+    <string name="napplet_permissions_revoke_all">सभी अनुमतियों का निराकरण</string>
+    <string name="napplet_permissions_overrides">परिचालन आवरक आदेश</string>
+    <string name="napplet_signer_permissions_empty">कोई क्रमक संयोजित नहीं अब तक।</string>
+    <string name="napplet_signer_permissions_revoke_all">सभी अनुमतियों का निराकरण</string>
+    <string name="napplet_decision_allow">अनुमत</string>
+    <string name="napplet_decision_ask">पूछें</string>
+    <string name="napplet_decision_deny">अस्वीकार</string>
+    <string name="napplet_connected_apps_search_keywords">क्रमक अनुमतियाँ हस्ताक्षरकर्ता नोस्टरसंलग्नक्रमक नोस्टरस्थल जालक्रमक विश्वास संयोजित</string>
+    <string name="napplet_connected_app_trust_level">हस्ताक्षरण विश्वास स्तर</string>
+    <string name="napplet_connected_app_capabilities">क्षमताएँ</string>
+    <string name="napplet_connected_app_forget">इस क्रमक को भूल जाएँ</string>
+    <string name="napplet_connected_app_op_overrides">हस्ताक्षरण परिचालन आवरक आदेश</string>
+    <string name="napplet_connected_app_empty">कोई क्रमक संयोजित नहीं अब तक। \n\n जब एक जाल क्रमक आपकी नोस्टर कुंचिका के साथ जुडता है तब वह यहाँ प्रकट होगा।</string>
+    <!-- Relay Authentication (NIP-42) settings -->
+    <string name="relay_auth_settings_title">पुनःप्रसारक प्रमाणीकरण</string>
+    <string name="relay_auth_search_keywords">प्रमाण प्रमाणीकरण पुनःप्रसारक हस्ताक्षरण सत्यापन निप॰४२ परिचय</string>
+    <string name="relay_auth_global_policy">वैश्विक नीति</string>
+    <string name="relay_auth_policy_always">सर्वदा प्रमाणीकरण</string>
+    <string name="relay_auth_policy_always_desc">प्रमाणीकरण चुनौतियों को हस्ताक्षर प्रत्येक पुनःप्रसारक के लिए जो इसका अनुरोध करता है</string>
+    <string name="relay_auth_policy_never">प्रमाणीकरण कभी ना करें</string>
+    <string name="relay_auth_policy_never_desc">प्रमाणीकरण चुनौतियों की उपेक्षा सभी पुनःप्रसारकों के प्रति</string>
+    <string name="relay_auth_policy_if_in_my_list">केवल मेरे पुनःप्रसारक</string>
+    <string name="relay_auth_policy_if_in_my_list_desc">केवल उन पुनःप्ररसारकों के साथ प्रमाणीकरण जो आपके पुनःप्रसारक सूची में हैं</string>
+    <string name="relay_auth_per_relay_overrides">प्रति पुनःप्रसारक आवरक आदेश</string>
+    <string name="relay_auth_no_overrides">कोई प्रति पुनःप्रसारक आवरक आदेश नहीं। वैश्विक नीति सर्वत्र लागू</string>
+    <string name="relay_auth_decision_allow">अनुमत</string>
+    <string name="relay_auth_decision_deny">अस्वीकार</string>
+    <string name="relay_auth_remove_override">आवरक आदेश हटाएँ</string>
     <string name="nip82_repository_label">स्रोत : %1$s</string>
     <string name="nip82_version_label">संस्करण %1$s</string>
     <string name="nip82_download">अवरोहण</string>
@@ -1455,6 +1524,26 @@
     <string name="wallet_connect">धनकोष संयोजन</string>
     <string name="language">भाषा</string>
     <string name="theme">प्रदर्शनशैली</string>
+    <string name="accent_color">उपवर्ण</string>
+    <string name="accent_color_description">मुख्य वर्ण घुण्डियाँ तथा योजकों के लिए प्रयुक्त</string>
+    <string name="accent_color_purple">बैंगनी</string>
+    <string name="accent_color_blue">नील</string>
+    <string name="accent_color_green">हरित</string>
+    <string name="accent_color_orange">नारंग</string>
+    <string name="accent_color_red">रक्त</string>
+    <string name="accent_color_pink">पाटल</string>
+    <string name="font_family">अक्षरशैली</string>
+    <string name="font_family_description">अक्षरशैली क्रमक में सर्वत्र प्रयुक्त</string>
+    <string name="font_family_system">यन्त्र मूलविकल्प</string>
+    <string name="font_family_sans_serif">रेखारहित</string>
+    <string name="font_family_serif">सरेखा</string>
+    <string name="font_family_monospace">समविस्तार</string>
+    <string name="font_size">अक्षर आकार</string>
+    <string name="font_size_description">क्रमक में सर्वत्र लेख आकार वर्धन</string>
+    <string name="font_size_small">छोटा</string>
+    <string name="font_size_normal">सामान्य</string>
+    <string name="font_size_large">बडा</string>
+    <string name="font_size_huge">बहुत बडा</string>
     <string name="automatically_load_images_gifs">चित्र पूर्वीक्षण</string>
     <string name="automatically_play_videos">चलचित्र का चालन</string>
     <string name="autoplay_videos">स्वतःचालन चलचित्र</string>
@@ -2275,6 +2364,7 @@
     <string name="git_repo_section_maintainers">परिपालक</string>
     <string name="git_repo_section_topics">विषय सूची</string>
     <string name="git_repo_personal_fork">व्यक्तिगत पतभेद</string>
+    <string name="git_repositories">गिट क्रमलेखकोश</string>
     <string name="nsite_title">स्थिर जालस्थान : %1$s</string>
     <string name="napplet_card_title">नोस्टर संलग्नक्रमक : %1$s</string>
     <string name="napplet_card_permissions">अनुमतियाँ :</string>

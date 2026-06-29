@@ -718,6 +718,13 @@
         <item quantity="one">Ez a nKisalkalmazás ki szeretne fizetni egy %1$d satoshi értékű Lightning számlát.</item>
         <item quantity="other">Ez a nKisalkalmazás ki szeretne fizetni egy %1$d satoshi értékű Lightning számlát.</item>
     </plurals>
+    <!-- Signer permissions: first-connect dialog -->
+    <!-- Signer trust levels -->
+    <!-- Signer per-op consent dialog -->
+    <!-- Signer op labels -->
+    <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <!-- Permissions management screen -->
+    <!-- Relay Authentication (NIP-42) settings -->
     <string name="nip82_repository_label">Forrás: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Letöltés</string>
