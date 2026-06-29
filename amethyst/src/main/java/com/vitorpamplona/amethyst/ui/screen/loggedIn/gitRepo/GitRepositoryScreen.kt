@@ -292,7 +292,7 @@ private fun GitRepositoryHome(
                     val isBookmarked = remember(bookmarkedSet, note) { bookmarkedSet.contains(note.address) }
                     IconButton(onClick = { accountViewModel.toggleRepositoryBookmark(note, isBookmarked) }) {
                         Icon(
-                            symbol = if (isBookmarked) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkBorder,
+                            symbol = if (isBookmarked) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkAdd,
                             contentDescription = stringRes(R.string.git_repo_bookmark),
                             tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )

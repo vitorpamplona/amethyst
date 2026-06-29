@@ -54,6 +54,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingBarNestedScroll
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingBarState
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberDisappearingBarState
 import com.vitorpamplona.amethyst.ui.components.getActivityWindow
@@ -199,7 +200,10 @@ private fun ScaffoldLayout(
 
         val contentPlaceable =
             subcompose(DisappearingSlot.Content) {
-                CompositionLocalProvider(LocalDisappearingScaffoldPadding provides contentPadding) {
+                CompositionLocalProvider(
+                    LocalDisappearingScaffoldPadding provides contentPadding,
+                    LocalDisappearingBarState provides state,
+                ) {
                     mainContent(contentPadding)
                 }
             }.firstOrNull()?.measure(

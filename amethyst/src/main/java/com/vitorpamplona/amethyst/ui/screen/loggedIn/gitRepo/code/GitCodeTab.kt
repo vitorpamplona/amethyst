@@ -43,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -107,6 +109,14 @@ private fun CodeBrowser(
     var pathString by rememberSaveable(snapshot.headCommit) { mutableStateOf("") }
     var openFilePath by rememberSaveable(snapshot.headCommit) { mutableStateOf<String?>(null) }
     var showHistory by rememberSaveable(snapshot.headCommit) { mutableStateOf(false) }
+
+    // Each of these toggles swaps the scrollable content in place, which lands the new view at
+    // the top with no scroll delta. Pull the disappearing top bar back into view so it doesn't
+    // stay stranded at its hidden offset, leaving a blank band over the fresh content.
+    val barState = LocalDisappearingBarState.current
+    LaunchedEffect(pathString, openFilePath, showHistory) {
+        barState?.resetToVisible()
+    }
 
     if (showHistory) {
         Column(Modifier.fillMaxSize().padding(scaffoldPaddingTop)) {
