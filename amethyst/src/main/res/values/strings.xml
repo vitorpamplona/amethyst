@@ -2056,6 +2056,9 @@
     <string name="cashu_wizard_adopting">Setting up your wallet…</string>
     <string name="cashu_wizard_retry">Search again</string>
     <string name="cashu_wizard_mints_label">Mints: %1$s</string>
+    <string name="cashu_created_title">Wallet Created</string>
+    <string name="cashu_created_subtitle">Now pick a few mints to host your sats.</string>
+    <string name="cashu_created_pick_mints">Pick mints</string>
     <string name="cashu_balance">Balance</string>
     <string name="cashu_mints">Mints</string>
     <string name="cashu_mint_url">Mint URL</string>

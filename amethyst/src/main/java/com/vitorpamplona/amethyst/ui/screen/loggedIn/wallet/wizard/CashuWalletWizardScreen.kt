@@ -166,7 +166,7 @@ fun CashuWalletWizardScreen(
                         BusyState(stringRes(R.string.cashu_wizard_analyzing), null)
 
                     is WizardState.NoWallet ->
-                        NoWalletContent(onCreate = { nav.nav(Route.CashuWalletMints) })
+                        NoWalletContent(onCreate = { nav.nav(Route.CashuWalletCreated) })
 
                     is WizardState.Single ->
                         SingleContent(
