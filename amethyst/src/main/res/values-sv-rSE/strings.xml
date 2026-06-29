@@ -709,6 +709,13 @@
         <item quantity="one">Det här nApplet vill betala en Lightning-faktura på %1$d sat.</item>
         <item quantity="other">Det här nApplet vill betala en Lightning-faktura på %1$d sats.</item>
     </plurals>
+    <!-- Signer permissions: first-connect dialog -->
+    <!-- Signer trust levels -->
+    <!-- Signer per-op consent dialog -->
+    <!-- Signer op labels -->
+    <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <!-- Permissions management screen -->
+    <!-- Relay Authentication (NIP-42) settings -->
     <string name="nip82_repository_label">Källa: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Ladda ner</string>

@@ -640,6 +640,9 @@
     <string name="browser_go">Abrir</string>
     <string name="browser_clear">Borrar</string>
     <string name="browser_favorites">Favoritos</string>
+    <string name="browser_suggested">Descubre apps web</string>
+    <string name="browser_discover_nsites">Sitios de personas que sigues</string>
+    <string name="browser_discover_napplets">Apps de personas que sigues</string>
     <string name="browser_recent_options">Opciones</string>
     <string name="browser_recent_remove">Eliminar del historial</string>
     <string name="favorite_apps">Aplicaciones favoritas</string>
@@ -711,6 +714,13 @@
         <item quantity="one">Este nApplet quiere pagar una factura Lightning de %1$d sat.</item>
         <item quantity="other">Este nApplet quiere pagar una factura Lightning de %1$d sats.</item>
     </plurals>
+    <!-- Signer permissions: first-connect dialog -->
+    <!-- Signer trust levels -->
+    <!-- Signer per-op consent dialog -->
+    <!-- Signer op labels -->
+    <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <!-- Permissions management screen -->
+    <!-- Relay Authentication (NIP-42) settings -->
     <string name="nip82_repository_label">Fuente: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Descargar</string>
@@ -1447,6 +1457,7 @@
     <string name="wallet_connect">Wallet Connect</string>
     <string name="language">Idioma</string>
     <string name="theme">Tema</string>
+    <string name="accent_color">Color de acento</string>
     <string name="automatically_load_images_gifs">Vista previa de imagen</string>
     <string name="automatically_play_videos">Reproducción de video</string>
     <string name="autoplay_videos">Reproducción automática de vídeos</string>

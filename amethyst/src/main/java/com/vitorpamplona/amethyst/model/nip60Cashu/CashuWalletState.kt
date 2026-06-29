@@ -1039,6 +1039,161 @@ class CashuWalletState(
         return outcome
     }
 
+    // ============================================================
+    // Find-my-wallet wizard support (cross-relay discovery)
+    // ============================================================
+
+    /**
+     * Decrypt a discovered kind:17375 (possibly authored by another client,
+     * pulled in by [com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.wizard.CashuWalletDiscovery])
+     * into its mint list + wallet P2PK private key. Returns null if the
+     * content can't be decrypted (not really ours / signer rejected).
+     */
+    suspend fun decryptDiscoveredWallet(event: CashuWalletEvent): DiscoveredWalletConfig? =
+        runCatching {
+            DiscoveredWalletConfig(
+                mints = event.mints(signer),
+                privkeyHex = event.privkey(signer),
+            )
+        }.onFailure {
+            Log.w("CashuWallet") { "Failed to decrypt discovered wallet ${event.id.take(8)}: ${it.message}" }
+        }.getOrNull()
+
+    /**
+     * Read-only probe of how much ecash is recoverable from a wallet's
+     * NUT-13 seed, per mint, WITHOUT publishing anything. Drives the
+     * wizard's "structural + balance" verification of each discovered
+     * wallet — including OLD/duplicate wallets whose [privkeyHex] differs
+     * from the main wallet's. Mints that error (unreachable, no funds) are
+     * simply absent from the result. Secrets already held by the main
+     * wallet are excluded so the figure reflects *new* recoverable funds.
+     */
+    suspend fun probeRecoverableFromSeed(
+        privkeyHex: String,
+        mints: List<String>,
+    ): Map<String, Long> {
+        check(started) { NOT_STARTED_MESSAGE }
+        val seed = CashuDeterministic.deriveWalletSeed(privkeyHex.hexToByteArray())
+        val existingSecrets =
+            _tokenEntries.value
+                .flatMap { it.content.proofs }
+                .mapTo(HashSet()) { it.secret }
+        val result = LinkedHashMap<String, Long>()
+        for (mint in mints) {
+            val recoverable =
+                runCatching { ops.scanRecoverableProofs(mint, seed, existingSecrets = existingSecrets) }
+                    .onFailure { Log.w("CashuWallet") { "Probe of $mint failed: ${describeMintError(it)}" } }
+                    .getOrNull() ?: continue
+            if (!recoverable.isEmpty) result[mint] = recoverable.amountSats
+        }
+        return result
+    }
+
+    /**
+     * Recover every spendable proof derivable from [privkeyHex]'s NUT-13
+     * seed at [mints] into the **current** wallet: each mint is re-scanned
+     * (NUT-09 + NUT-07) and its UNSPENT proofs are published as fresh
+     * kind:7375 owned by this account. Funds locked to an OLD wallet's key
+     * thus land in the main wallet as bearer proofs (surfacing as a
+     * configured- or unconfigured-mint balance the user can then move).
+     *
+     * [bumpCounter] advances this wallet's persistent NUT-13 counter past the
+     * recovered slots — correct ONLY when [privkeyHex] is the **main** wallet's
+     * own key (the wizard adopting a discovered wallet's own balance). For a
+     * FOREIGN old/duplicate wallet it must stay false: the foreign seed's slots
+     * are unrelated to the main seed's, so bumping would corrupt the main
+     * wallet's counter (see [CashuWalletOps.publishRecoveredProofs]).
+     *
+     * Returns the total sats recovered across all mints.
+     */
+    suspend fun recoverFromSeed(
+        privkeyHex: String,
+        mints: List<String>,
+        bumpCounter: Boolean = false,
+    ): Long {
+        check(started) { NOT_STARTED_MESSAGE }
+        val seed = CashuDeterministic.deriveWalletSeed(privkeyHex.hexToByteArray())
+        var total = 0L
+        for (mint in mints) {
+            // existingSecrets is re-read per mint so a proof published while
+            // recovering an earlier mint isn't double-counted here.
+            val existingSecrets =
+                _tokenEntries.value
+                    .flatMap { it.content.proofs }
+                    .mapTo(HashSet()) { it.secret }
+            val outcome =
+                runCatching {
+                    val recoverable = ops.scanRecoverableProofs(mint, seed, existingSecrets = existingSecrets)
+                    val published = ops.publishRecoveredProofs(recoverable)
+                    if (bumpCounter) {
+                        // Advance past EVERY slot the mint signed, even when all
+                        // recovered proofs were already spent (recoverable.proofs
+                        // empty after the NUT-07 filter). nextCounterAfterScan is
+                        // set from the pre-checkstate scan, so the delta still
+                        // covers those slots — without this a fully-spent adopt on
+                        // a fresh device would leave the counter at 0 and the next
+                        // mint would reuse an already-signed slot (unspendable).
+                        val current = settings.peekCashuCounter(recoverable.keysetId)
+                        val delta = (recoverable.nextCounterAfterScan - current).coerceAtLeast(0L)
+                        if (delta > 0) settings.reserveCashuCounters(recoverable.keysetId, delta.toInt())
+                    }
+                    published
+                }.onFailure { Log.w("CashuWallet") { "Recover from $mint failed: ${describeMintError(it)}" } }
+                    .getOrNull() ?: continue
+            total += outcome.amountRecoveredSats
+        }
+        return total
+    }
+
+    /**
+     * Adopt a discovered wallet as the account's live + main wallet by
+     * **re-signing a fresh** kind:17375 + kind:10019 with the discovered
+     * wallet's own mints and P2PK key.
+     *
+     * We deliberately do NOT rebroadcast the discovered event verbatim. The
+     * crawl may surface a wallet the user already DELETED: the user's own
+     * NIP-09 kind:5 (from [CashuWalletOps.deleteWallet]) carries both an `e`
+     * tag (the old event id) and an `a` tag (the replaceable `17375:pubkey:`
+     * address). Re-publishing the same event loses on both — relays that
+     * honored the deletion reject the duplicate id, and the `a`-tag rule
+     * re-deletes any version with `created_at <= deletion.created_at` the
+     * moment the kind:5 propagates back (on relays and in our own LocalCache).
+     *
+     * A freshly-signed event sidesteps both: a new id isn't covered by the
+     * `e` tag, and `created_at = now` is newer than the past deletion so it
+     * survives the `a`-tag rule. Same key + mints means the same nutzap
+     * address and the same recoverable funds (the NUT-13 seed is derived from
+     * the key, independent of the event id). [nutzapInfo] is unused in this
+     * path — publishWalletEvents re-issues a fresh kind:10019 advertising our
+     * current inbox relays — but is kept for the decrypt-failure fallback.
+     */
+    suspend fun adoptDiscoveredWallet(
+        wallet: CashuWalletEvent,
+        nutzapInfo: NutzapInfoEvent? = null,
+    ) {
+        check(started) { NOT_STARTED_MESSAGE }
+        val config = decryptDiscoveredWallet(wallet)
+        if (config != null && config.mints.isNotEmpty()) {
+            ops.publishWalletEvents(
+                mints = config.mints,
+                p2pkPrivkeyHex = config.privkeyHex,
+                nutzapRelays = inboxRelaysFlow.value.toList(),
+            )
+        } else {
+            // Couldn't decrypt (shouldn't happen for a wallet the wizard
+            // surfaced as valid) — fall back to rebroadcasting the raw event so
+            // it's at least findable. This keeps the original id/created_at and
+            // so remains vulnerable to a prior deletion, but it's the best we
+            // can do without the plaintext to re-sign from.
+            LocalCache.justConsumeMyOwnEvent(wallet)
+            publishEvent(wallet)
+            if (nutzapInfo != null) {
+                LocalCache.justConsumeMyOwnEvent(nutzapInfo)
+                publishEvent(nutzapInfo)
+            }
+        }
+    }
+
     /**
      * Scan held kind:7375 events for accidental duplicates and NIP-09
      * delete the redundant ones. An event B is redundant when there
@@ -1434,6 +1589,15 @@ class CashuWalletState(
         private const val NOT_STARTED_MESSAGE = "CashuWalletState.start() not called"
     }
 }
+
+/**
+ * Decrypted config of a discovered kind:17375 — its configured [mints] and
+ * wallet P2PK private key. See [CashuWalletState.decryptDiscoveredWallet].
+ */
+data class DiscoveredWalletConfig(
+    val mints: List<String>,
+    val privkeyHex: String?,
+)
 
 /** Mint + recipient pubkey resolved from a kind:10019. */
 data class NutzapTarget(

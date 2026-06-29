@@ -726,6 +726,13 @@
         <item quantity="many">Tento nApplet chce zaplatit Lightning fakturu za %1$d sats.</item>
         <item quantity="other">Tento nApplet chce zaplatit Lightning fakturu za %1$d sats.</item>
     </plurals>
+    <!-- Signer permissions: first-connect dialog -->
+    <!-- Signer trust levels -->
+    <!-- Signer per-op consent dialog -->
+    <!-- Signer op labels -->
+    <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <!-- Permissions management screen -->
+    <!-- Relay Authentication (NIP-42) settings -->
     <string name="nip82_repository_label">Zdroj: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Stáhnout</string>

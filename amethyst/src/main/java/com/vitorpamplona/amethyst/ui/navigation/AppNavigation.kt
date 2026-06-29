@@ -226,11 +226,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.UrlPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.UrlScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddCashuWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddClinkDebitWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddNwcWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuMintRecommendationsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuMintsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuWalletSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainTransactionsScreen
@@ -241,6 +241,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletReceiveScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletSendScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletTransactionsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.wizard.CashuWalletCreatedScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.wizard.CashuWalletWizardScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.WebBookmarksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.NewWorkoutScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutsScreen
@@ -383,9 +385,11 @@ fun BuildNavigation(
         composableFromEndArgs<Route.WalletDetail> { WalletDetailScreen(it.walletId, accountViewModel, nav) }
         composableFromEnd<Route.WalletAdd> { AddWalletScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.WalletAddNwc> { AddNwcWalletScreen(accountViewModel, nav, it.nip47) }
-        composableFromEnd<Route.WalletAddCashu> { AddCashuWalletScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CashuWalletMints> { CashuMintsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.WalletAddClinkDebit> { AddClinkDebitWalletScreen(accountViewModel, nav, it.ndebit) }
         composableFromEnd<Route.CashuWallet> { CashuWalletScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CashuWalletWizard> { CashuWalletWizardScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CashuWalletCreated> { CashuWalletCreatedScreen(nav) }
         composableFromEnd<Route.CashuWalletSettings> { CashuWalletSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CashuMintRecommendations> { CashuMintRecommendationsScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.SendPayment> { SendPaymentScreen(it.userHex, it.method, it.lnAddressOverride, it.btcAddressOverride, accountViewModel, nav) }
