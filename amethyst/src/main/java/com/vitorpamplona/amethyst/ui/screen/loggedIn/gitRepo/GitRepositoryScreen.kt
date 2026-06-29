@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
@@ -216,6 +217,47 @@ private fun GitRepositoryHome(
 
     RepoContentSubscription(note, event, accountViewModel)
 
+    // Feed view models power the issue/PR counts on the nav cards and the recent-activity pulse.
+    val openIssues: RepositoryIssuesFeedViewModel =
+        viewModel(
+            key = note.idHex + "GitRepoIssuesOpen",
+            factory = RepositoryIssuesFeedViewModel.Factory(note, accountViewModel.account, showClosed = false),
+        )
+    val closedIssues: RepositoryIssuesFeedViewModel =
+        viewModel(
+            key = note.idHex + "GitRepoIssuesClosed",
+            factory = RepositoryIssuesFeedViewModel.Factory(note, accountViewModel.account, showClosed = true),
+        )
+    val openPatches: RepositoryPatchesFeedViewModel =
+        viewModel(
+            key = note.idHex + "GitRepoPatchesOpen",
+            factory = RepositoryPatchesFeedViewModel.Factory(note, accountViewModel.account, showClosed = false),
+        )
+    val closedPatches: RepositoryPatchesFeedViewModel =
+        viewModel(
+            key = note.idHex + "GitRepoPatchesClosed",
+            factory = RepositoryPatchesFeedViewModel.Factory(note, accountViewModel.account, showClosed = true),
+        )
+    WatchLifecycleAndUpdateModel(openIssues)
+    WatchLifecycleAndUpdateModel(closedIssues)
+    WatchLifecycleAndUpdateModel(openPatches)
+    WatchLifecycleAndUpdateModel(closedPatches)
+
+    val openIssueItems = rememberGitFeedItems(openIssues)
+    val closedIssueItems = rememberGitFeedItems(closedIssues)
+    val openPatchItems = rememberGitFeedItems(openPatches)
+    val closedPatchItems = rememberGitFeedItems(closedPatches)
+
+    val snapshot = (browserState as? GitBrowseState.Loaded)?.snapshot
+    val fileNames = remember(snapshot) { snapshot?.walkFileNames() ?: emptyList() }
+    val languageSlices = remember(fileNames) { computeLanguageBreakdown(fileNames) }
+    val activity =
+        remember(openIssueItems, closedIssueItems, openPatchItems, closedPatchItems) {
+            (openIssueItems + closedIssueItems + openPatchItems + closedPatchItems)
+                .sortedByDescending { it.createdAt() ?: 0L }
+                .take(6)
+        }
+
     var showSettings by rememberSaveable(note.idHex) { mutableStateOf(false) }
     val currentEventForSettings = event
     if (showSettings && currentEventForSettings != null) {
@@ -266,9 +308,25 @@ private fun GitRepositoryHome(
             val currentEvent = event
             if (currentEvent != null) {
                 GitRepositoryOverviewSections(currentEvent, accountViewModel, nav)
+                RepoSocialRow(note, accountViewModel)
             }
 
-            RepoNavCards(note, nav)
+            if (snapshot != null) {
+                RepoStatTiles(
+                    branches = snapshot.branches.size,
+                    tags = snapshot.tags.size,
+                    files = fileNames.size,
+                    updatedEpochSec = snapshot.tipCommit?.authorTimeSec,
+                )
+                if (languageSlices.isNotEmpty()) {
+                    RepoLanguageBar(languageSlices)
+                }
+                snapshot.tipCommit?.let { RepoLastCommit(it) }
+            }
+
+            RepoNavCards(note, openIssueItems.size, openPatchItems.size, nav)
+
+            RepoActivityPulse(activity, accountViewModel, nav)
 
             if (currentEvent != null) {
                 GitReadmeSection(browserState, browserViewModel, currentEvent, accountViewModel, nav)
@@ -397,19 +455,21 @@ private fun GitRepoSubScreenScaffold(
 @Composable
 private fun RepoNavCards(
     note: AddressableNote,
+    openIssues: Int,
+    openPulls: Int,
     nav: INav,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        RepoNavCard(MaterialSymbols.Code, stringRes(R.string.git_repo_tab_code)) {
+        RepoNavCard(MaterialSymbols.Code, stringRes(R.string.git_repo_tab_code), null) {
             nav.nav(Route.GitRepositoryCode(note.address))
         }
-        RepoNavCard(MaterialSymbols.ErrorOutline, stringRes(R.string.git_repo_tab_issues)) {
+        RepoNavCard(MaterialSymbols.ErrorOutline, stringRes(R.string.git_repo_tab_issues), openIssues) {
             nav.nav(Route.GitRepositoryIssues(note.address))
         }
-        RepoNavCard(MaterialSymbols.CallMerge, stringRes(R.string.git_repo_tab_patches)) {
+        RepoNavCard(MaterialSymbols.CallMerge, stringRes(R.string.git_repo_tab_patches), openPulls) {
             nav.nav(Route.GitRepositoryPulls(note.address))
         }
     }
@@ -419,6 +479,7 @@ private fun RepoNavCards(
 private fun RepoNavCard(
     symbol: MaterialSymbol,
     title: String,
+    count: Int?,
     onClick: () -> Unit,
 ) {
     Row(
@@ -444,6 +505,24 @@ private fun RepoNavCard(
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f),
         )
+        if (count != null && count > 0) {
+            Text(
+                text =
+                    if (count > 999) {
+                        "999+"
+                    } else {
+                        count.toString()
+                    },
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                        .padding(horizontal = 9.dp, vertical = 2.dp),
+            )
+        }
         Icon(
             symbol = MaterialSymbols.ChevronRight,
             contentDescription = null,

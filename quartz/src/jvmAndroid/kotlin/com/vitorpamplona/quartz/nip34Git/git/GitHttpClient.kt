@@ -93,6 +93,8 @@ class GitHttpClient(
             }
         }
 
+        val tipCommit = runCatching { GitObjectParser.parseCommit(head.oid, commit.data) }.getOrNull()
+
         return GitRepoSnapshot(
             cloneUrl = cloneUrl,
             headCommit = head.oid,
@@ -104,6 +106,7 @@ class GitHttpClient(
             blobs = blobs,
             transport = transport,
             caps = caps,
+            tipCommit = tipCommit,
         )
     }
 
@@ -353,12 +356,39 @@ class GitRepoSnapshot(
     blobs: Map<String, ByteArray>,
     private val transport: GitSmartHttpTransport,
     private val caps: GitCapabilities,
+    /** The tip commit object, parsed up-front so the UI can show it without another fetch. */
+    val tipCommit: GitCommit? = null,
 ) {
     private val blobs = HashMap<String, ByteArray>(blobs)
     private val blobMutex = Mutex()
 
     /** Entries at the repository root, folders first. */
     fun rootEntries(): List<GitTreeEntry> = sortForDisplay(trees[rootTreeOid].orEmpty())
+
+    /**
+     * Every blob (file) path reachable from the tip tree, depth-first. Folders and submodules
+     * are not included. Drives the home screen's language breakdown; the whole tree is already
+     * in memory (the snapshot is fetched with `blob:none`, so all trees came down).
+     */
+    fun walkFileNames(): List<String> {
+        val out = ArrayList<String>()
+        val stack = ArrayDeque<Pair<String, String>>()
+        stack.addLast(rootTreeOid to "")
+        val seen = HashSet<String>()
+        while (stack.isNotEmpty()) {
+            val (treeOid, prefix) = stack.removeLast()
+            if (!seen.add(treeOid + "@" + prefix)) continue
+            val entries = trees[treeOid] ?: continue
+            for (e in entries) {
+                if (e.isFolder) {
+                    stack.addLast(e.oid to "$prefix${e.name}/")
+                } else if (!e.isSubmodule) {
+                    out.add("$prefix${e.name}")
+                }
+            }
+        }
+        return out
+    }
 
     /**
      * Entries inside the directory at [path] (a list of path segments). Returns

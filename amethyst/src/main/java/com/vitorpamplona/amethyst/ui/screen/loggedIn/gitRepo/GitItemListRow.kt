@@ -272,7 +272,7 @@ private fun GitRevisedChip(prIdHex: String) {
     }
 }
 
-private fun gitSubjectOf(event: Event?): String? =
+internal fun gitSubjectOf(event: Event?): String? =
     when (event) {
         is GitIssueEvent -> event.subject()?.takeIf { it.isNotBlank() }
         is GitPullRequestEvent -> event.subject()?.takeIf { it.isNotBlank() }
