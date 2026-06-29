@@ -53,11 +53,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
-import com.vitorpamplona.amethyst.ui.note.LikeReaction
-import com.vitorpamplona.amethyst.ui.note.ReplyReaction
-import com.vitorpamplona.amethyst.ui.note.ZapReaction
+import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -201,22 +198,16 @@ fun RepoSocialRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val grayTint = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(
-        modifier =
-            Modifier
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(22.dp),
-    ) {
-        ZapReaction(baseNote = note, grayTint = grayTint, accountViewModel = accountViewModel, nav = nav)
-        LikeReaction(baseNote = note, grayTint = grayTint, accountViewModel = accountViewModel, nav = nav)
-        ReplyReaction(baseNote = note, grayTint = grayTint, accountViewModel = accountViewModel) {
-            nav.nav { routeReplyTo(note, accountViewModel.account) }
-        }
-    }
+    // The standard note footer: reply, boost, like, zap (+ zapraiser and the reaction gallery),
+    // so the repository announcement gets the exact same interactions as any other note.
+    ReactionsRow(
+        baseNote = note,
+        showReactionDetail = true,
+        addPadding = false,
+        editState = null,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
 }
 
 // ---------------------------------------------------------------------------

@@ -25,7 +25,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -209,7 +208,7 @@ private fun CodeBrowser(
                         },
                     )
                     HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
+                        modifier = Modifier.padding(start = 44.dp),
                         thickness = 0.5.dp,
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
                     )
@@ -359,9 +358,9 @@ private fun EntryRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 12.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         val symbol =
             when {
@@ -370,21 +369,12 @@ private fun EntryRow(
                 else -> MaterialSymbols.Description
             }
         val tint = if (entry.isFolder) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-        Box(
-            modifier =
-                Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(tint.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                symbol = symbol,
-                contentDescription = null,
-                modifier = Modifier.size(19.dp),
-                tint = tint,
-            )
-        }
+        Icon(
+            symbol = symbol,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = tint,
+        )
         Text(
             text = entry.name,
             style = MaterialTheme.typography.bodyMedium,
