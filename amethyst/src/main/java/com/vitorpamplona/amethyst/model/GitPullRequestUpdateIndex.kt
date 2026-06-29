@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.model.LocalCache.observeEvents
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,17 +30,24 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Cross-screen index of the most recent NIP-34 pull-request update event
  * (kind 1619) per parent pull-request id, kept up to date from
- * [LocalCache.live.newEventBundles]. A PR update *revises* its parent PR with a
+ * [LocalCache.observeEvents]. A PR update *revises* its parent PR with a
  * newer commit / merge base, so the UI folds the latest one into the PR rather
  * than listing updates separately. Like [GitStatusIndex], updates aren't tracked
  * in `Note.replies`, so a per-row cache scan would otherwise be required.
+ *
+ * The kind-indexed [observeEvents] subscription replaces both the full-cache
+ * `onStart` scan and the per-bundle type filtering the old
+ * `LocalCache.live.newEventBundles` flow needed: the observable's `init()` seeds
+ * the matching set from the index and re-emits the whole list on every new 1619,
+ * so we just reduce it to the latest-per-parent map each time. PR updates are
+ * rare, so recomputing the full map per emission is cheaper than it scanning
+ * every event of every kind.
  */
 object GitPullRequestUpdateIndex {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -50,35 +59,21 @@ object GitPullRequestUpdateIndex {
     fun startIfNeeded() {
         if (!started.compareAndSet(false, true)) return
         scope.launch {
-            LocalCache.live.newEventBundles
-                .onStart {
-                    val initial = HashMap<HexKey, GitPullRequestUpdateEvent>()
-                    LocalCache.notes.forEach { _, note ->
-                        val event = note.event as? GitPullRequestUpdateEvent ?: return@forEach
-                        val target = event.parentPullRequestId() ?: return@forEach
-                        val current = initial[target]
-                        if (current == null || event.createdAt > current.createdAt) {
-                            initial[target] = event
-                        }
-                    }
-                    mutableLatestByPullRequest.value = initial
-                }.collect { bundle -> processBundle(bundle) }
+            LocalCache
+                .observeEvents<GitPullRequestUpdateEvent>(Filter(kinds = listOf(GitPullRequestUpdateEvent.KIND)))
+                .collect { events -> mutableLatestByPullRequest.value = latestByParent(events) }
         }
     }
 
-    private fun processBundle(bundle: Set<Note>) {
-        val snapshot = mutableLatestByPullRequest.value ?: emptyMap()
-        var modified: HashMap<HexKey, GitPullRequestUpdateEvent>? = null
-        for (note in bundle) {
-            val event = note.event as? GitPullRequestUpdateEvent ?: continue
+    private fun latestByParent(events: List<GitPullRequestUpdateEvent>): Map<HexKey, GitPullRequestUpdateEvent> {
+        val latest = HashMap<HexKey, GitPullRequestUpdateEvent>()
+        for (event in events) {
             val target = event.parentPullRequestId() ?: continue
-            val map = modified ?: snapshot
-            val current = map[target]
+            val current = latest[target]
             if (current == null || event.createdAt > current.createdAt) {
-                if (modified == null) modified = HashMap(snapshot)
-                modified[target] = event
+                latest[target] = event
             }
         }
-        modified?.let { mutableLatestByPullRequest.value = it }
+        return latest
     }
 }
