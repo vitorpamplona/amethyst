@@ -254,13 +254,19 @@ sealed class Route {
         val nip47: String? = null,
     ) : Route()
 
-    @Serializable object WalletAddCashu : Route()
+    @Serializable object CashuWalletMints : Route()
 
     @Serializable data class WalletAddClinkDebit(
         val ndebit: String? = null,
     ) : Route()
 
     @Serializable object CashuWallet : Route()
+
+    /** Find-or-create wizard, shown when no NIP-60 wallet is loaded. */
+    @Serializable object CashuWalletWizard : Route()
+
+    /** Celebratory interstitial after choosing to create a new wallet. */
+    @Serializable object CashuWalletCreated : Route()
 
     @Serializable object CashuWalletSettings : Route()
 

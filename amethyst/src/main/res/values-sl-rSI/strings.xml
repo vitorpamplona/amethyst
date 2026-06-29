@@ -746,6 +746,13 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
         <item quantity="few">Ta nApplet želi plačati Lightning račun za %1$d sate.</item>
         <item quantity="other">Ta nApplet želi plačati Lightning račun za %1$d satov.</item>
     </plurals>
+    <!-- Signer permissions: first-connect dialog -->
+    <!-- Signer trust levels -->
+    <!-- Signer per-op consent dialog -->
+    <!-- Signer op labels -->
+    <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <!-- Permissions management screen -->
+    <!-- Relay Authentication (NIP-42) settings -->
     <string name="nip82_repository_label">Vir: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Prenos</string>

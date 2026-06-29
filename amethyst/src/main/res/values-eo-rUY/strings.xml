@@ -705,6 +705,13 @@
         <item quantity="one">Ĉi tiu nApplet volas pagi Lightning-fakturon por %1$d sat.</item>
         <item quantity="other">Ĉi tiu nApplet volas pagi Lightning-fakturon por %1$d sats.</item>
     </plurals>
+    <!-- Signer permissions: first-connect dialog -->
+    <!-- Signer trust levels -->
+    <!-- Signer per-op consent dialog -->
+    <!-- Signer op labels -->
+    <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <!-- Permissions management screen -->
+    <!-- Relay Authentication (NIP-42) settings -->
     <string name="nip82_repository_label">Fonto: %1$s</string>
     <string name="nip82_download">Elŝuti</string>
     <string name="nip82_section_about">Pri</string>

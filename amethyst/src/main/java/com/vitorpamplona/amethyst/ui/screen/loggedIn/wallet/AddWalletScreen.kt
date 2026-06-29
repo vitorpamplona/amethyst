@@ -103,7 +103,11 @@ fun AddWalletScreen(
                 icon = MaterialSymbols.AccountBalanceWallet,
                 title = stringRes(R.string.wallet_add_cashu_title),
                 description = stringRes(R.string.wallet_add_cashu_description),
-                onClick = { nav.popUpTo(Route.WalletAddCashu, Route.WalletAdd::class) },
+                // Route through the find-or-create wizard, not straight to the
+                // mint manager: a portable NIP-60 wallet may already exist on
+                // relays, and creating one here would clobber it (kind:17375 is
+                // replaceable). The wizard offers "create new" when none is found.
+                onClick = { nav.popUpTo(Route.CashuWalletWizard, Route.WalletAdd::class) },
             )
             WalletTypeCard(
                 icon = MaterialSymbols.Bolt,
