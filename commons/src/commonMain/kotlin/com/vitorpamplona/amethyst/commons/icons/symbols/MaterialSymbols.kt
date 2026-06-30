@@ -214,6 +214,7 @@ object MaterialSymbols {
     val SettingsInputAntenna = MaterialSymbol("\uE8BF")
     val Share = MaterialSymbol("\uE80D")
     val Shield = MaterialSymbol("\uE9E0")
+    val Shuffle = MaterialSymbol("\uE043")
     val SkipNext = MaterialSymbol("\uE044")
     val SkipPrevious = MaterialSymbol("\uE045")
     val SmartDisplay = MaterialSymbol("\uF06A")

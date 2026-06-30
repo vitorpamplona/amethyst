@@ -95,3 +95,8 @@ val LocalRelayListMutator =
     compositionLocalOf<com.vitorpamplona.amethyst.commons.relays.health.RelayListMutator?> {
         null
     }
+
+val LocalFollowPacksState =
+    compositionLocalOf<com.vitorpamplona.amethyst.desktop.followpacks.FollowPacksState?> {
+        null
+    }

@@ -77,6 +77,10 @@ sealed class DeckColumnType {
         val feedEmoji: String = "",
     ) : DeckColumnType()
 
+    object Discover : DeckColumnType()
+
+    object FollowPacks : DeckColumnType()
+
     fun title(): String =
         when (this) {
             HomeFeed -> "Home"
@@ -99,6 +103,8 @@ sealed class DeckColumnType {
             is Thread -> "Thread"
             is Hashtag -> "#$tag"
             is CustomFeed -> feedName.ifEmpty { "Feed" }
+            Discover -> "Discover"
+            FollowPacks -> "Follow Packs"
         }
 
     fun typeKey(): String =
@@ -123,6 +129,8 @@ sealed class DeckColumnType {
             is Thread -> "thread"
             is Hashtag -> "hashtag"
             is CustomFeed -> "custom_feed"
+            Discover -> "discover"
+            FollowPacks -> "follow_packs"
         }
 }
 

@@ -439,6 +439,29 @@ private fun RenderBechSegment(
     localCache: DesktopLocalCache?,
     callbacks: RichTextCallbacks,
 ) {
+    // Try NAddress first — kind 39089 (Follow Pack) renders as a rich card.
+    val naddr =
+        remember(segment.segmentText) {
+            com.vitorpamplona.quartz.nip19Bech32.entities
+                .NAddress
+                .parse(segment.segmentText)
+        }
+    if (naddr != null && naddr.kind == com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent.KIND) {
+        val followPacks = com.vitorpamplona.amethyst.desktop.ui.deck.LocalFollowPacksState.current
+        val relayManager = com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager.current
+        if (localCache != null && relayManager != null && followPacks != null) {
+            com.vitorpamplona.amethyst.desktop.followpacks.ui
+                .RenderFollowPackCard(
+                    address = naddr,
+                    cache = localCache,
+                    iAccount = null,
+                    relayManager = relayManager,
+                    onOpenPack = { /* no nav callback available in rich-text context */ },
+                )
+            return
+        }
+    }
+
     val resolved =
         remember(segment.segmentText, localCache) {
             resolveBech32(segment.segmentText, localCache)
