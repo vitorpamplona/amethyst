@@ -44,6 +44,10 @@ origin: docs/brainstorms/2026-06-18-fix-macos-bunker-relogin-brainstorm.md
 
 # 🐛 fix(desktop): macOS forced re-login on cold boot — ProGuard strips java-keyring backend
 
+> **Status:** in-progress — PR 1 defense-in-depth (keychainUnavailable signal + login banner + tests) landed, but the actual cold-boot root cause is still open/unidentified.
+> _Audited 2026-06-30._
+
+
 ## Overview
 
 User on macOS using the recent Amethyst Desktop release (official GitHub DMG) is forced to re-log-in with their NIP-46 bunker on **every** cold boot — 100 % reproducible. Investigation determined the bug is **not bunker-specific**: every macOS release-DMG user whose account requires a key stored in the OS keychain loses their session on cold boot (bunker, nsec, NWC). Bunker is the loudest symptom because re-pasting a bunker URI is high-friction; nsec users likely re-paste quickly and never report.

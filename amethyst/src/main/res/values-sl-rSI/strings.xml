@@ -753,6 +753,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <!-- Permissions management screen -->
     <!-- Relay Authentication (NIP-42) settings -->
+    <string name="relay_auth_search_keywords"></string>
     <string name="nip82_repository_label">Vir: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Prenos</string>

@@ -61,13 +61,16 @@ class NappletControlSheet(
     // toggling inline — used by the nSite host, where switching routing rebuilds the whole session.
     private val onNetworkTap: (() -> Unit)? = null,
     private val onInfo: (() -> Unit)? = null,
+    // When non-null, a "Manage permissions" row is added that taps through to this — used to open the
+    // main process's editable Connected Apps detail screen for this surface.
+    private val onPermissions: (() -> Unit)? = null,
     // The live URL of a plain-website browser. Non-null only for the direct-WebView browser (never an
     // nsite/napplet), where it renders an editable address row; [onNavigate] loads what the user types.
     liveUrl: String? = null,
     private val onNavigate: ((String) -> Unit)? = null,
-    // When non-null, a "Console" row is added to the pull-down sheet. The callback toggles the
-    // browser's console log panel; the count label is updated via [updateConsoleCount].
-    private val onConsole: (() -> Unit)? = null,
+    // When non-null, a "Console" toggle row is added to the pull-down sheet. The callback is invoked with
+    // the new visibility each time the user flips it; the count label is updated via [updateConsoleCount].
+    private val onConsole: ((Boolean) -> Unit)? = null,
     // When non-null, a favorite toggle row is shown; called with the current URL and new isFavorite state.
     isFavoriteInitially: Boolean = false,
     private val onFavoriteToggle: ((url: String, isFavorite: Boolean) -> Unit)? = null,
@@ -80,6 +83,7 @@ class NappletControlSheet(
     private var torOn = torInitiallyOn
     private var currentUrl = liveUrl
     private var isFavorite = isFavoriteInitially
+    private var consoleShowing = false
 
     private val panel: LinearLayout
     private var torLabel: TextView? = null
@@ -87,6 +91,7 @@ class NappletControlSheet(
     private var addressField: EditText? = null
     private var securityGlyph: TextView? = null
     private var consoleLabel: TextView? = null
+    private var consoleSwitch: Switch? = null
     private var favoriteLabel: TextView? = null
 
     init {
@@ -129,25 +134,40 @@ class NappletControlSheet(
                     },
                 )
             }
-            onConsole?.let { console ->
+            onPermissions?.let { manage ->
+                addView(
+                    actionRow("⚙", context.getString(R.string.napplet_chrome_manage_permissions)) {
+                        collapse()
+                        manage()
+                    },
+                )
+            }
+            onConsole?.let {
                 val label =
                     TextView(context).apply {
                         text = context.getString(CommonsR.string.browser_console_title_short)
                         setTextColor(onSurface)
                         textSize = 15f
                         setPadding(dp(8), 0, 0, 0)
+                        // Weight 1 so the label fills and shoves the Switch to the end, like the Tor row.
+                        layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
                     }
                 consoleLabel = label
+                // Display-only switch (the whole row is the touch target), matching the Tor row + Compose twin.
+                val toggle =
+                    Switch(context).apply {
+                        isChecked = consoleShowing
+                        isClickable = false
+                        isFocusable = false
+                    }
+                consoleSwitch = toggle
                 addView(
                     LinearLayout(context).apply {
                         orientation = HORIZONTAL
                         gravity = Gravity.CENTER_VERTICAL
                         setPadding(dp(8), dp(10), dp(8), dp(10))
                         isClickable = true
-                        setOnClickListener {
-                            collapse()
-                            console()
-                        }
+                        setOnClickListener { toggleConsole() }
                         addView(
                             TextView(context).apply {
                                 text = ">"
@@ -155,10 +175,11 @@ class NappletControlSheet(
                                 textSize = 18f
                                 width = dp(28)
                                 gravity = Gravity.CENTER
-                                typeface = android.graphics.Typeface.MONOSPACE
+                                typeface = Typeface.MONOSPACE
                             },
                         )
                         addView(label)
+                        addView(toggle)
                     },
                 )
             }
@@ -365,6 +386,14 @@ class NappletControlSheet(
         torLabel?.text = context.getString(if (next) R.string.napplet_net_tor_label else R.string.napplet_net_open_label)
         securityGlyph?.text = securityGlyphFor(currentUrl.orEmpty())
         onToggleTor(next)
+    }
+
+    private fun toggleConsole() {
+        consoleShowing = !consoleShowing
+        consoleSwitch?.isChecked = consoleShowing
+        // Collapse the top sheet on toggle, like the Compose twin, so the bottom console isn't hidden behind it.
+        collapse()
+        onConsole?.invoke(consoleShowing)
     }
 
     private fun actionRow(

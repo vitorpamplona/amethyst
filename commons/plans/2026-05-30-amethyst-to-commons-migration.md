@@ -1,5 +1,8 @@
 # Amethyst → Commons Migration Plan
 
+> **Status:** queued — the keystone Phase A is untouched: no `Account.kt`/`LocalCache.kt` engine in commons, the amethyst monoliths remain (3757 + 4092 LOC), and `commons/model/account` still holds only the pre-existing `AccountInfo/AccountStorage/SignerType` scaffolding the plan's §0 marks as already-present.
+> _Audited 2026-06-30._
+
 **Date:** 2026-05-30 · **Owning module:** `commons` · **Status:** plan (no code moved yet)
 
 Goal: move the **shared** parts of the `amethyst` Android app down into `commons`

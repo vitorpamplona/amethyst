@@ -26,6 +26,11 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.commons.napplet.permissions.PermissionDecision
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
+import com.vitorpamplona.amethyst.commons.napplet.signers.AppConnectResult
+import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
+import com.vitorpamplona.amethyst.commons.napplet.signers.InMemoryNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.napplet.signers.NostrConnectPrompt
+import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -279,6 +284,56 @@ class NappletBrokerTest {
 
             assertEquals(1, prompt.calls) // siblings honored the recorded ALLOW_ALWAYS instead of re-prompting
             responses.forEach { assertEquals(NappletResponse.PublicKey(signer.pubKey), it) }
+        }
+
+    /** A first-connect prompt that returns a scripted sequence of answers and counts its calls. */
+    private class ScriptedConnectPrompt(
+        private vararg val answers: AppConnectResult,
+    ) : NostrConnectPrompt {
+        var calls = 0
+            private set
+
+        override suspend fun request(identity: NappletIdentity): AppConnectResult {
+            val answer = answers[minOf(calls, answers.size - 1)]
+            calls++
+            return answer
+        }
+    }
+
+    @Test
+    fun cancellingFirstConnectThenRetryingRePromptsOnceCooldownLapses() =
+        runTest {
+            // Repro for the reported bug: dismissing the "Connect to Nostr" dialog (Back) used to
+            // suppress every future prompt for the broker's whole lifetime, with nothing in Connected
+            // Apps to clear. The user could never re-trigger login. After the fix the suppression is a
+            // short self-clearing cooldown: a deliberate retry past it prompts again.
+            var clock = 1_000L
+            val connect = ScriptedConnectPrompt(AppConnectResult.Cancelled, AppConnectResult.Connected(AppSignerPolicy.REASONABLE))
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.DENY),
+                    signerLedger = signerLedger,
+                    nostrConnectPrompt = connect,
+                    nowMillis = { clock },
+                )
+
+            // 1. User dismisses the dialog → Denied, and no policy is persisted (nothing to clear).
+            assertIs<NappletResponse.Denied>(broker.handle(applet, NappletRequest.GetPublicKey, allDeclared))
+            assertNull(signerLedger.store.loadPolicy(applet.coordinate))
+
+            // 2. A request inside the cooldown is suppressed silently (no second dialog) — this drains
+            //    the load-time burst without re-prompting per request.
+            assertIs<NappletResponse.Denied>(broker.handle(applet, NappletRequest.GetPublicKey, allDeclared))
+            assertEquals(1, connect.calls)
+
+            // 3. The user retries after the cooldown lapses → the dialog shows again and they connect.
+            clock += 10_000L
+            assertEquals(NappletResponse.PublicKey(signer.pubKey), broker.handle(applet, NappletRequest.GetPublicKey, allDeclared))
+            assertEquals(2, connect.calls)
+            assertEquals(AppSignerPolicy.REASONABLE, signerLedger.store.loadPolicy(applet.coordinate))
         }
 
     @Test

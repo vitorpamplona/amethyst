@@ -151,6 +151,23 @@ fun isHashtagRoute(uri: String) = uri.startsWith("hashtag?id=") || uri.startsWit
 
 fun isUrlRoute(uri: String) = uri.startsWith("url?id=") || uri.startsWith("nostr:url?id=")
 
+fun isConnectedAppRoute(uri: String) = uri.startsWith("connectedapp?coordinate=") || uri.startsWith("nostr:connectedapp?coordinate=")
+
+/**
+ * The Connected Apps permission-detail route for an app coordinate (`pubkey:dtag` for a napplet/nsite,
+ * `browser:<origin>` for a web client). Fired by the sandbox host so a running full-screen surface can
+ * jump straight to its editable permissions; the coordinate is URL-encoded into the [coordinate] param.
+ */
+fun connectedAppRoute(uri: String): Route.ConnectedAppDetail? {
+    val coordinate =
+        runCatching {
+            val raw = java.net.URI(uri.removePrefix("nostr:")).findParameterValue("coordinate") ?: return null
+            URLDecoder.decode(raw, Charsets.UTF_8.name())
+        }.getOrNull()?.takeIf { it.isNotBlank() } ?: return null
+
+    return Route.ConnectedAppDetail(coordinate)
+}
+
 fun urlRoute(uri: String): Route.Url? {
     val url =
         runCatching {
@@ -180,6 +197,9 @@ fun uriToRoute(
     }
     if (isUrlRoute(uri)) {
         return urlRoute(uri)
+    }
+    if (isConnectedAppRoute(uri)) {
+        return connectedAppRoute(uri)
     }
 
     val nip19 = Nip19Parser.uriToRoute(uri)?.entity

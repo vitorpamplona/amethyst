@@ -1,5 +1,8 @@
 # Congestion control for `:quic` — implementation plan
 
+> **Status:** abandoned — parked indefinitely; no `CongestionController` exists in code, and the one real concern was instead solved by the smaller `SendBuffer.bestEffort` drop-lost-ranges fix that shipped.
+> _Audited 2026-06-30._
+
 **Status:** **parked indefinitely 2026-05-05.** After drafting this
 plan we concluded the audio-rooms workload doesn't actually need CC —
 see [Why](#why-and-why-this-is-honestly-low-priority) below. The one

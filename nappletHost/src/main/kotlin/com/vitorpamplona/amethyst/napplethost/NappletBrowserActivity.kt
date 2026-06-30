@@ -629,12 +629,31 @@ class NappletBrowserActivity : ComponentActivity() {
             torInitiallyOn = if (proxyPort > 0) useTor else null,
             onToggleTor = { setNetworkMode(it) },
             onInfo = null,
+            onPermissions = { openPermissions() },
             liveUrl = startUrl,
             onNavigate = { loadAddress(it) },
-            onConsole = { consolePanel?.toggle() },
+            onConsole = { show -> consolePanel?.setShowing(show) },
             isFavoriteInitially = intent.getBooleanExtra(EXTRA_IS_FAVORITE, false),
             onFavoriteToggle = { url, _ -> sendFavoriteToggle(url) },
         ).also { controlSheet = it }
+
+    /**
+     * Ask the broker to open the editable permission screen for the site currently displayed. NIP-07 grants
+     * for a plain browser are keyed per visited origin (`browser:<origin>`), so we send the live origin and
+     * the broker launches the main activity at that Connected Apps detail.
+     */
+    private fun openPermissions() {
+        val liveUrl = if (this::webView.isInitialized) webView.url ?: startUrl else startUrl
+        val uri = runCatching { Uri.parse(liveUrl) }.getOrNull() ?: return
+        val scheme = uri.scheme?.takeIf { it.isNotBlank() } ?: return
+        val host = uri.host?.takeIf { it.isNotBlank() } ?: return
+        val origin = "$scheme://$host" + if (uri.port > 0) ":${uri.port}" else ""
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_OPEN_PERMISSIONS).apply {
+                data = Bundle().apply { putString(NappletIpc.KEY_BROWSER_ORIGIN, origin) }
+            }
+        if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
+    }
 
     private fun sendFavoriteToggle(url: String) {
         val host =

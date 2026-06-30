@@ -308,6 +308,8 @@ class DeckState(
                 "thread" -> param?.let { DeckColumnType.Thread(it) }
                 "hashtag" -> param?.let { DeckColumnType.Hashtag(it) }
                 "custom_feed" -> param?.let { DeckColumnType.CustomFeed(feedId = it) }
+                "discover" -> DeckColumnType.Discover
+                "follow_packs" -> DeckColumnType.FollowPacks
                 else -> null
             }
         }

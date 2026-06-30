@@ -7,6 +7,10 @@ date: 2026-04-23
 
 # feat: DesktopRelayConfig — Single Source of Truth for All Relay Categories
 
+> **Status:** abandoned — Superseded — the proposed single DesktopRelayConfig class was never built; relay state landed as DesktopRelayCategories/LocalRelayCategories instead.
+> _Audited 2026-06-30._
+
+
 ## Problem
 
 The current relay wiring is broken. Multiple classes (`DesktopRelayCategories`, `DesktopAccountRelays`, `RelayConnectionManager`) each hold parts of relay state, leading to race conditions, empty initial values, and screens using inconsistent relay sources.

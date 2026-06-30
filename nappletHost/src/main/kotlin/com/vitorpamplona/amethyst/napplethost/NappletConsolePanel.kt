@@ -37,11 +37,17 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
- * The full-screen browser's **bottom pull-up sheet** for JavaScript console output. Collapsed it's
- * a small grabber at the bottom edge, symmetric to [NappletControlSheet]'s top grabber. Pull it up
- * (or tap) to reveal a scrollable log of [console.log / warn / error / debug] messages captured
- * from the page via `WebChromeClient.onConsoleMessage`. Capped at [MAX_ENTRIES] entries (oldest
- * dropped on overflow). Built in plain Views like [NappletControlSheet] — no Compose/Material.
+ * The full-screen browser's **bottom pull-up sheet** for JavaScript console output. The whole sheet is
+ * hidden until the user flips the Console **toggle** in [NappletControlSheet] ([setShowing]); turned on,
+ * it reveals a small grabber at the bottom edge (symmetric to that sheet's top grabber) already pulled
+ * up. Pull it down/up (or tap) to collapse/expand the scrollable log of
+ * [console.log / warn / error / debug] messages captured from the page via
+ * `WebChromeClient.onConsoleMessage`. Capped at [MAX_ENTRIES] entries (oldest dropped on overflow).
+ * Built in plain Views like [NappletControlSheet] — no Compose/Material.
+ *
+ * Its grabber + panel are elevated above [NappletControlSheet]'s panel so that, when both are open at
+ * once (e.g. in landscape), this bottom sheet draws on top of the top pull-down sheet — mirroring the
+ * Compose layer, where `BottomConsoleSheet` is composed after `TopControlSheet`.
  */
 @SuppressLint("UseSwitchCompatOrMaterialCode")
 class NappletConsolePanel(
@@ -52,6 +58,7 @@ class NappletConsolePanel(
     private val surface = resolveThemeColor(android.R.attr.colorBackground)
 
     private var expanded = false
+    private var showing = false
     private val panel: LinearLayout
     private lateinit var logContainer: LinearLayout
     private lateinit var scrollView: ScrollView
@@ -59,6 +66,9 @@ class NappletConsolePanel(
     init {
         orientation = VERTICAL
         gravity = Gravity.CENTER_HORIZONTAL
+        // Hidden until the Console toggle turns it on; matches the Compose `BottomConsoleSheet`, which is
+        // only composed while the toggle is on.
+        visibility = View.GONE
 
         panel = buildPanel().also { addView(it) }
         addView(buildGrabber())
@@ -68,7 +78,8 @@ class NappletConsolePanel(
         LinearLayout(context).apply {
             orientation = VERTICAL
             visibility = View.GONE
-            elevation = dp(6).toFloat()
+            // Above NappletControlSheet's panel (6dp) so an open console draws over an open top sheet.
+            elevation = dp(8).toFloat()
             background =
                 GradientDrawable().apply {
                     cornerRadii = floatArrayOf(dp(16).toFloat(), dp(16).toFloat(), dp(16).toFloat(), dp(16).toFloat(), 0f, 0f, 0f, 0f)
@@ -123,9 +134,21 @@ class NappletConsolePanel(
     var entryCount: Int = 0
         private set
 
-    /** Toggles the panel's expanded/collapsed state; used by the control sheet's Console row. */
-    fun toggle() {
-        if (expanded) collapse() else expand()
+    /**
+     * Shows or hides the entire sheet (grabber + log), driven by the control sheet's Console **toggle**:
+     * off hides everything, on reveals the sheet already pulled up — mirroring the Compose
+     * `BottomConsoleSheet`, which is only composed while the toggle is on and opens expanded.
+     */
+    fun setShowing(show: Boolean) {
+        if (show == showing) return
+        showing = show
+        if (show) {
+            visibility = View.VISIBLE
+            expand()
+        } else {
+            collapse()
+            visibility = View.GONE
+        }
     }
 
     fun appendLog(
@@ -205,6 +228,8 @@ class NappletConsolePanel(
                     gravity = Gravity.CENTER_HORIZONTAL
                 }
             setPadding(dp(16), dp(7), dp(16), dp(7))
+            // Above NappletControlSheet's panel (6dp) so the grabber stays on top of an open top sheet.
+            elevation = dp(8).toFloat()
             background =
                 GradientDrawable().apply {
                     cornerRadii = floatArrayOf(dp(12).toFloat(), dp(12).toFloat(), dp(12).toFloat(), dp(12).toFloat(), 0f, 0f, 0f, 0f)

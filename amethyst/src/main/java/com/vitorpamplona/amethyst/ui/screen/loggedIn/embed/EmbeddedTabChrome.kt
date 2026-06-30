@@ -37,6 +37,11 @@ data class EmbeddedTabChrome(
     val onToggleTor: () -> Unit = {},
     /** The "what it can access" sheet, for sandboxed napplets/nsites; null for a plain web client. */
     val onInfo: (() -> Unit)? = null,
+    /**
+     * Opens this app's editable permission screen (the "Connected Apps" detail) so the user can change
+     * trust level and per-capability grants as they browse; null when the surface has no managed identity.
+     */
+    val onPermissions: (() -> Unit)? = null,
     /** Whether the current URL/app is already saved as a favorite. */
     val isFavorite: Boolean = false,
     /** Toggles the current site/app in the favorites registry; null when not applicable. */

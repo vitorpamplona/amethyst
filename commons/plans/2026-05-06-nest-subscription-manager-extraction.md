@@ -1,5 +1,8 @@
 # Extract `NestSubscriptionManager` from `NestViewModel`
 
+> **Status:** in-progress — the stepping-stone `ActiveSubscription.kt` is extracted, but the orchestration class `NestSubscriptionManager` does not exist and `reconcileSubscriptions`/`openSubscription`/`closeSubscription`/`fetchSpeakerCatalog` still live in the 2295-line `NestViewModel`.
+> _Audited 2026-06-30._
+
 **Status**: deferred — flagged in the audit pass, not landed yet.
 
 ## Why
