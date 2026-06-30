@@ -8,6 +8,9 @@ origin: desktopApp/plans/2026-05-12-wallet-zapping-phase1-2-plan.md
 
 # Desktop Wallet & Zapping Test Coverage
 
+> **Status:** in-progress — Phase 1 (`NwcPaymentHandlerTest`) and Phase 4 (`NwcRpcIntegrationTest`) shipped, but Phase 2 (`WalletColumnStateTest`) and Phase 3 (`ZapDialogLogicTest`) are absent from the codebase.
+> _Audited 2026-06-30._
+
 ## Enhancement Summary (Deepened 2026-05-12)
 
 **Key implementation insights from deepening research:**

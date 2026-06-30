@@ -8,6 +8,10 @@ origin: docs/brainstorms/2026-04-29-feed-metadata-loading-optimization-brainstor
 
 # perf: Viewport-aware feed metadata loading
 
+> **Status:** in-progress — Base MetadataPreloader/MetadataRateLimiter infra exists, but the viewport-aware (LazyListState/snapshotFlow) selection in the plan is not clearly wired.
+> _Audited 2026-06-30._
+
+
 ## Enhancement Summary
 
 **Deepened on:** 2026-04-29

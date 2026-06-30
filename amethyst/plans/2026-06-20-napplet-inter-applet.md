@@ -1,5 +1,8 @@
 # Napplet inter-applet communication (NAP-INC / NAP-INTENT) — design notes
 
+> **Status:** queued — Explicitly deferred; no `MESSAGING` capability exists in `NappletCapability` and the prerequisites (multi-applet hosting, archetype registry) are unbuilt.
+> _Audited 2026-06-30._
+
 **Date:** 2026-06-20
 **Status:** Deferred — design only. Prereqs not yet built (see below).
 **Parent:** `amethyst/plans/2026-06-19-napplet-sandbox-host.md`

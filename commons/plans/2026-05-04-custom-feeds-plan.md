@@ -1,5 +1,8 @@
 # Custom Feeds for Amethyst Desktop
 
+> **Status:** in-progress — data model, repository, serializer, builder, search bridge, kind 31890 event, and desktop drawer/dialog/screen all shipped, but Phase 1.5 relay filters (`FeedFilterFactory`/`CustomFilterFeedFilter`/assemblers), the DVM marketplace, kind 10090 sync, and PeopleList/InterestSet resolution are unbuilt ("coming soon").
+> _Audited 2026-06-30._
+
 **Date:** 2026-05-04
 **Branch:** `feat/desktop-custom-feeds`
 **Status:** Planning

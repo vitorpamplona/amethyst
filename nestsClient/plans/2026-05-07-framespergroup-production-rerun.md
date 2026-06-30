@@ -1,5 +1,8 @@
 # Plan: re-run HCgOY field tests against current production
 
+> **Status:** queued — specced and pickup-ready but not started; needs prod-rig access to run the two-phone field test that settles the framesPerGroup pin-vs-default question.
+> _Audited 2026-06-30._
+
 **Status:** specced — pickup ready (needs prod-rig access).
 **Cross-ref:** `nestsClient/plans/2026-05-07-framespergroup-reconciliation.md`
 documents the conflict between the cliff plan's value (5) and

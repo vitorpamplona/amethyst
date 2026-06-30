@@ -1,5 +1,8 @@
 # Local Bitcoin headers explorer for NIP-03 OTS
 
+> **Status:** queued — no `quartz/.../bitcoin/` package exists; there is no `LocalHeadersBitcoinExplorer`/`BitcoinPeer`/`HeaderStore`, only the pre-existing HTTP `OkHttpBitcoinExplorer`.
+> _Audited 2026-06-30._
+
 **Date:** 2026-05-08 (revised 2026-05-19)
 **Branch:** `claude/review-bitcoin-blockchain-plan-6NGZ5` (originally `claude/review-ots-blockchain-deps-bKns7`)
 **Module:** `quartz/` (with thin Android wiring in `amethyst/`)
