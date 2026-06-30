@@ -315,6 +315,8 @@ sealed class Route {
 
     @Serializable object BookmarkedRepositories : Route()
 
+    @Serializable object BookmarkedPodcasts : Route()
+
     @Serializable object BookmarkGroups : Route()
 
     @Serializable object InterestSets : Route()

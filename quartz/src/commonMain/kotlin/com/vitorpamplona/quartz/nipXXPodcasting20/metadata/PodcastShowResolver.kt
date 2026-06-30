@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nipXXPodcasting20.metadata
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 import com.vitorpamplona.quartz.podcasts.PodcastShow
 
 /**
@@ -33,6 +35,16 @@ import com.vitorpamplona.quartz.podcasts.PodcastShow
 fun isPodcastShowEvent(event: Event?): Boolean =
     event is PodcastMetadataEvent ||
         (event is AppSpecificDataEvent && event.dTag() == Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG)
+
+/**
+ * Whether [event] is any podcast event — a show ([isPodcastShowEvent]), an episode (NIP-F4 `kind:54`
+ * or Podcasting-2.0 `kind:30054`, both [PodcastEpisode]), or a Podcasting-2.0 trailer (`kind:30055`).
+ * Used to pull podcast items out of mixed lists (e.g. the NIP-51 bookmark list) for podcast-only views.
+ */
+fun isPodcastEvent(event: Event?): Boolean =
+    isPodcastShowEvent(event) ||
+        event is PodcastEpisode ||
+        event is Podcasting20TrailerEvent
 
 /**
  * Adapts [event] to the spec-neutral [PodcastShow], or returns null if it is not a podcast show

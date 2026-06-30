@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.isPodcastEvent
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
@@ -66,6 +67,7 @@ fun ListOfBookmarkGroupsFeedView(
     openOldBookmarks: () -> Unit,
     openPinnedNotes: () -> Unit,
     openRepositories: () -> Unit,
+    openPodcasts: () -> Unit,
     onOpenItem: (String, BookmarkType) -> Unit,
     onRenameItem: (targetBookmarkGroup: LabeledBookmarkList) -> Unit,
     onItemDescriptionChange: (bookmarkGroup: LabeledBookmarkList) -> Unit,
@@ -96,6 +98,11 @@ fun ListOfBookmarkGroupsFeedView(
 
         item {
             RepositoriesBookmarkList(repositories, openRepositories)
+            HorizontalDivider(thickness = DividerThickness)
+        }
+
+        item {
+            PodcastsBookmarkList(defaultBookmarks, openPodcasts)
             HorizontalDivider(thickness = DividerThickness)
         }
 
@@ -242,6 +249,54 @@ fun RepositoriesBookmarkList(
                 BookmarkMembershipStatusAndNumberDisplay(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     postBookmarksSize = repositoryAddresses.size,
+                    articleBookmarksSize = 0,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+fun PodcastsBookmarkList(
+    defaultBookmarks: BookmarkListState,
+    openPodcasts: () -> Unit,
+) {
+    val bookmarkState by defaultBookmarks.bookmarks.collectAsStateWithLifecycle()
+
+    // Podcasts live in the same kind:10003 list as everything else, so count the podcast subset.
+    val podcastCount =
+        (bookmarkState.public + bookmarkState.private).count { isPodcastEvent(it.event) }
+
+    ListItem(
+        modifier = Modifier.clickable(onClick = openPodcasts),
+        headlineContent = {
+            Text(stringRes(R.string.podcast_bookmarks), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        },
+        supportingContent = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    stringRes(R.string.podcast_bookmarks_explainer),
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 2,
+                )
+            }
+        },
+        leadingContent = {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Podcasts,
+                    contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                    modifier = Size40Modifier,
+                )
+                Spacer(StdVertSpacer)
+                BookmarkMembershipStatusAndNumberDisplay(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    postBookmarksSize = podcastCount,
                     articleBookmarksSize = 0,
                 )
             }

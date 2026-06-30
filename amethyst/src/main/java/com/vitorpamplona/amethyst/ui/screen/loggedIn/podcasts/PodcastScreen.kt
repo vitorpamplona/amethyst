@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.note.types.PodcastBookmarkButton
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.dal.OnePodcastFeedViewModel
@@ -128,6 +129,13 @@ fun PodcastScreen(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
+                },
+                actions = {
+                    // Only offer bookmarking once the show metadata has loaded — there must be a
+                    // resolved event to add to the NIP-51 list. The button reflects bookmarked state.
+                    if (show != null) {
+                        PodcastBookmarkButton(metadataNote, accountViewModel)
+                    }
                 },
                 popBack = nav::popBack,
             )
