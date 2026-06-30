@@ -87,3 +87,55 @@ fun INostrClient.negentropySyncEvents(
         fetchBatch = fetchBatch,
         timeoutMs = timeoutMs,
     )
+
+/**
+ * Streaming "try negentropy, else page" — the [Flow] form of
+ * [negentropySyncOrFetch]. Emits each event individually as it arrives from
+ * whichever transport delivered it, deduped by id across both phases, then
+ * completes. Unlike [negentropySyncEvents] it never throws on a relay that can't
+ * reconcile; it pages instead.
+ *
+ * See [negentropySyncEvents] for the buffering/backpressure note and
+ * [negentropySync] for the meaning of every parameter.
+ */
+fun INostrClient.negentropySyncOrFetchEvents(
+    relay: NormalizedRelayUrl,
+    filter: Filter,
+    maxEvents: Int = 0,
+    maxConcurrentReqs: Int = 8,
+    fetchBatch: Int = 500,
+    timeoutMs: Long = 30_000L,
+): Flow<Event> =
+    callbackFlow {
+        negentropySyncOrFetch(
+            relay = relay,
+            filter = filter,
+            maxEvents = maxEvents,
+            maxConcurrentReqs = maxConcurrentReqs,
+            fetchBatch = fetchBatch,
+            timeoutMs = timeoutMs,
+        ) { event ->
+            trySend(event)
+        }
+
+        close()
+
+        awaitClose { }
+    }.buffer(Channel.UNLIMITED)
+
+fun INostrClient.negentropySyncOrFetchEvents(
+    relay: String,
+    filter: Filter,
+    maxEvents: Int = 0,
+    maxConcurrentReqs: Int = 8,
+    fetchBatch: Int = 500,
+    timeoutMs: Long = 30_000L,
+): Flow<Event> =
+    negentropySyncOrFetchEvents(
+        relay = RelayUrlNormalizer.normalize(relay),
+        filter = filter,
+        maxEvents = maxEvents,
+        maxConcurrentReqs = maxConcurrentReqs,
+        fetchBatch = fetchBatch,
+        timeoutMs = timeoutMs,
+    )

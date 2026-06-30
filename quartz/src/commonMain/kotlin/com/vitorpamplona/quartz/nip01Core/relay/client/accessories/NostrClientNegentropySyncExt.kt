@@ -41,7 +41,7 @@ import kotlin.coroutines.coroutineContext
 import kotlin.math.min
 
 /**
- * Outcome of a [negentropySync] run.
+ * Outcome of a successful [negentropySync] run.
  *
  * @property needCount  ids the relay had that we lacked (i.e. everything that
  *   matched [Filter] on the relay — this sync always reconciles against an empty
@@ -51,17 +51,12 @@ import kotlin.math.min
  * @property downloaded distinct events actually delivered through `onEvent`.
  * @property windows    number of `created_at` windows the matched set was split
  *   into (`1` when the relay reconciled the whole filter in one shot).
- * @property fellBackToPaging `true` if at least one window could not be
- *   reconciled by negentropy (relay rejected it, e.g. strfry's
- *   `max_sync_events`, or did not support NIP-77) and was downloaded via
- *   [fetchAllPages] instead.
  */
 class NegentropySyncResult(
     val needCount: Int,
     val haveCount: Int,
     val downloaded: Int,
     val windows: Int,
-    val fellBackToPaging: Boolean,
 )
 
 /**
@@ -77,19 +72,25 @@ class NegentropySyncResult(
  *     so a huge set never opens thousands of subs at once.
  *  3. Handles the relay-side cap on negentropy (strfry's `max_sync_events`,
  *     observed as `NEG-ERR … "blocked: too many query results"`): the [filter] is
- *     split by `created_at` windows and each window reconciled on its own. A
- *     window that still overflows is halved and retried; a minimal window that
- *     still cannot reconcile (or a relay that does not speak NIP-77) falls back to
- *     [fetchAllPages] for that window and sets [NegentropySyncResult.fellBackToPaging].
+ *     split by `created_at` windows and each window reconciled on its own, a
+ *     window that still overflows being halved and retried.
+ *
+ * This method is negentropy-only. It does NOT silently fall back to plain paging:
+ * if a window genuinely cannot be reconciled — a minimal `created_at` window still
+ * over the relay's cap, or a relay that does not speak NIP-77 / drops the session /
+ * times out — it throws [NegentropySyncException] so the caller chooses what to do.
+ * For the common "try negentropy, else page" shape, use [negentropySyncOrFetch].
  *
  * Scope is controlled entirely by [filter] — narrow it (kinds, authors, `since`,
  * tags, …) to download a slice instead of everything. The accessory keeps memory
  * bounded by reconciling and downloading one window at a time and by capping the
  * delivered set at [maxEvents].
  *
- * Coroutine-cancellable: on completion, cancel, or reaching [maxEvents] all `REQ`
- * subscriptions are unsubscribed and the negentropy session is closed and its
- * listener removed, so nothing leaks.
+ * Coroutine-cancellable: on completion, cancel, reaching [maxEvents], or a thrown
+ * [NegentropySyncException], all `REQ` subscriptions are unsubscribed and the
+ * negentropy session is closed and its listener removed, so nothing leaks.
+ *
+ * @throws NegentropySyncException when a window cannot be reconciled via NIP-77.
  *
  * @param relay             the relay to sync from.
  * @param filter            what to download. A single filter (NEG-OPEN is single-filter).
@@ -113,15 +114,14 @@ suspend fun INostrClient.negentropySync(
 ): NegentropySyncResult {
     var need = 0
     var windows = 0
-    var fellBack = false
 
     var downloaded = 0
     val seen = HashSet<HexKey>()
 
     coroutineScope {
-        // Single funnel for every delivered event (from REQ batches AND from the
-        // paging fallback), so dedup + the maxEvents cap + onEvent run on one
-        // coroutine even though the relay reader threads produce concurrently.
+        // Single funnel for every delivered event, so dedup + the maxEvents cap +
+        // onEvent run on one coroutine even though the relay reader threads produce
+        // concurrently.
         val events = Channel<Event>(Channel.UNLIMITED)
 
         val producer =
@@ -134,7 +134,6 @@ suspend fun INostrClient.negentropySync(
                         fetchBatch = fetchBatch,
                         maxConcurrentReqs = maxConcurrentReqs,
                         onWindow = { windows++ },
-                        onPaged = { fellBack = true },
                         // Only accumulate here; progress is reported from the single
                         // consumer loop below so the user callback is never invoked
                         // from two coroutines at once.
@@ -165,7 +164,6 @@ suspend fun INostrClient.negentropySync(
         haveCount = 0,
         downloaded = downloaded,
         windows = windows,
-        fellBackToPaging = fellBack,
     )
 }
 
@@ -191,9 +189,112 @@ suspend fun INostrClient.negentropySync(
     )
 
 /**
+ * Result of [negentropySyncOrFetch].
+ *
+ * @property downloaded   distinct events delivered through `onEvent` (across whichever
+ *   path ran).
+ * @property pagedFallback `true` if negentropy could not reconcile and the events
+ *   came from [fetchAllPages] instead.
+ * @property negentropy    the negentropy outcome when it succeeded; `null` on fallback.
+ * @property fallbackCause why negentropy was abandoned; `null` when it succeeded.
+ */
+class NegentropyOrFetchResult(
+    val downloaded: Int,
+    val pagedFallback: Boolean,
+    val negentropy: NegentropySyncResult?,
+    val fallbackCause: NegentropySyncException?,
+)
+
+/**
+ * "Try negentropy, else page." Runs [negentropySync] and, if it throws
+ * [NegentropySyncException] (relay can't reconcile the set — no NIP-77 support, an
+ * over-cap minimal window, a disconnect, …), transparently falls back to
+ * [fetchAllPages] over the same [filter].
+ *
+ * This is the convenience combinator for the common case where you just want the
+ * events and don't care which transport delivered them. Events are deduped by id
+ * across both phases, so anything the negentropy attempt already delivered before
+ * failing is not delivered again by the paging phase. [maxEvents] is honored across
+ * both phases.
+ *
+ * Use [negentropySync] directly if you want to decide the fallback yourself (try
+ * another relay, narrow the filter, abort, …) instead of always paging.
+ */
+suspend fun INostrClient.negentropySyncOrFetch(
+    relay: NormalizedRelayUrl,
+    filter: Filter,
+    maxEvents: Int = 0,
+    maxConcurrentReqs: Int = 8,
+    fetchBatch: Int = 500,
+    timeoutMs: Long = 30_000L,
+    onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
+    onEvent: (Event) -> Unit,
+): NegentropyOrFetchResult {
+    val seen = HashSet<HexKey>()
+    var delivered = 0
+
+    // Shared dedup + cap across both phases. Returns true if the event was new and
+    // delivered. Both phases run sequentially, so no concurrent access.
+    fun accept(event: Event): Boolean {
+        if ((maxEvents <= 0 || delivered < maxEvents) && seen.add(event.id)) {
+            delivered++
+            onEvent(event)
+            return true
+        }
+        return false
+    }
+
+    return try {
+        val result =
+            negentropySync(
+                relay = relay,
+                filter = filter,
+                maxEvents = maxEvents,
+                maxConcurrentReqs = maxConcurrentReqs,
+                fetchBatch = fetchBatch,
+                timeoutMs = timeoutMs,
+                onProgress = onProgress,
+            ) { accept(it) }
+        NegentropyOrFetchResult(delivered, pagedFallback = false, negentropy = result, fallbackCause = null)
+    } catch (e: NegentropySyncException) {
+        // Negentropy couldn't enumerate the set — page the whole filter instead,
+        // skipping anything the negentropy attempt already delivered.
+        val pageFilter = if (maxEvents > 0) filter.copy(limit = maxEvents) else filter
+        fetchAllPages(relay, listOf(pageFilter), timeoutMs) { event ->
+            if (accept(event)) onProgress?.invoke(delivered, delivered)
+        }
+        NegentropyOrFetchResult(delivered, pagedFallback = true, negentropy = null, fallbackCause = e)
+    }
+}
+
+suspend fun INostrClient.negentropySyncOrFetch(
+    relay: String,
+    filter: Filter,
+    maxEvents: Int = 0,
+    maxConcurrentReqs: Int = 8,
+    fetchBatch: Int = 500,
+    timeoutMs: Long = 30_000L,
+    onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
+    onEvent: (Event) -> Unit,
+): NegentropyOrFetchResult =
+    negentropySyncOrFetch(
+        relay = RelayUrlNormalizer.normalize(relay),
+        filter = filter,
+        maxEvents = maxEvents,
+        maxConcurrentReqs = maxConcurrentReqs,
+        fetchBatch = fetchBatch,
+        timeoutMs = timeoutMs,
+        onProgress = onProgress,
+        onEvent = onEvent,
+    )
+
+/**
  * Recursively reconciles [filter] for [relay], splitting by `created_at` windows
  * whenever the relay rejects the set as too large, and downloading the ids of each
  * window as it resolves. Runs on a single coroutine; [deliver] funnels events out.
+ *
+ * Throws [NegentropySyncException] for any window negentropy cannot reconcile (a
+ * minimal window still over the cap, or an unavailable/erroring relay).
  */
 private suspend fun INostrClient.syncWindow(
     relay: NormalizedRelayUrl,
@@ -202,7 +303,6 @@ private suspend fun INostrClient.syncWindow(
     fetchBatch: Int,
     maxConcurrentReqs: Int,
     onWindow: () -> Unit,
-    onPaged: () -> Unit,
     onNeed: (Int) -> Unit,
     deliver: (Event) -> Unit,
 ) {
@@ -219,26 +319,28 @@ private suspend fun INostrClient.syncWindow(
             val lo = filter.since ?: 0L
             val hi = filter.until ?: TimeUtils.now()
             if (hi - lo <= MIN_WINDOW_SECONDS) {
-                // A minimal window that still overflows: negentropy can't help —
-                // page it. Paging is bounded by created_at cursors, not the
-                // negentropy cap, so it always terminates.
-                onWindow()
-                onPaged()
-                fetchAllPages(relay, listOf(filter), timeoutMs, onEvent = deliver)
+                // A minimal window that still overflows: negentropy genuinely can't
+                // enumerate this slice. Surface it — paging is the caller's call.
+                throw NegentropySyncException(
+                    relay = relay,
+                    window = filter,
+                    reason = NegentropySyncException.Reason.OVER_MAX_SYNC_EVENTS,
+                    detail = "created_at window [$lo, $hi] still exceeds the relay's max_sync_events",
+                )
             } else {
                 val mid = lo + (hi - lo) / 2
-                syncWindow(relay, filter.copy(since = lo, until = mid), timeoutMs, fetchBatch, maxConcurrentReqs, onWindow, onPaged, onNeed, deliver)
-                syncWindow(relay, filter.copy(since = mid + 1, until = hi), timeoutMs, fetchBatch, maxConcurrentReqs, onWindow, onPaged, onNeed, deliver)
+                syncWindow(relay, filter.copy(since = lo, until = mid), timeoutMs, fetchBatch, maxConcurrentReqs, onWindow, onNeed, deliver)
+                syncWindow(relay, filter.copy(since = mid + 1, until = hi), timeoutMs, fetchBatch, maxConcurrentReqs, onWindow, onNeed, deliver)
             }
         }
 
-        is ReconcileOutcome.Failed -> {
-            // Relay doesn't speak NIP-77, disconnected, or timed out mid-reconcile.
-            // Fall back to paging for this window rather than giving up.
-            onWindow()
-            onPaged()
-            fetchAllPages(relay, listOf(filter), timeoutMs, onEvent = deliver)
-        }
+        is ReconcileOutcome.Failed ->
+            throw NegentropySyncException(
+                relay = relay,
+                window = filter,
+                reason = NegentropySyncException.Reason.UNAVAILABLE,
+                detail = outcome.detail,
+            )
     }
 }
 
@@ -251,8 +353,10 @@ private sealed interface ReconcileOutcome {
     /** Relay rejected the set as too large (strfry `max_sync_events`). */
     object Overflow : ReconcileOutcome
 
-    /** Reconciliation could not complete (no NIP-77 support, disconnect, timeout). */
-    object Failed : ReconcileOutcome
+    /** Reconciliation could not complete; [detail] says why. */
+    class Failed(
+        val detail: String,
+    ) : ReconcileOutcome
 }
 
 /**
@@ -318,7 +422,7 @@ private suspend fun INostrClient.reconcileWindow(
             withTimeoutOrNull(timeoutMs) {
                 connectedRelaysFlow().first { relay in it }
             }
-        if (connected == null) return ReconcileOutcome.Failed
+        if (connected == null) return ReconcileOutcome.Failed("could not connect within ${timeoutMs}ms")
 
         manager.startSync(relayClient, subId, filter, localEvents = emptyList())
 
@@ -332,15 +436,15 @@ private suspend fun INostrClient.reconcileWindow(
                             return@withTimeoutOrNull if (isOverflow(signal.reason)) {
                                 ReconcileOutcome.Overflow
                             } else {
-                                ReconcileOutcome.Failed
+                                ReconcileOutcome.Failed(signal.reason)
                             }
                     }
                 }
                 @Suppress("UNREACHABLE_CODE")
-                ReconcileOutcome.Failed
+                ReconcileOutcome.Failed("unreachable")
             }
 
-        return outcome ?: ReconcileOutcome.Failed
+        return outcome ?: ReconcileOutcome.Failed("reconcile timed out after ${timeoutMs}ms")
     } finally {
         manager.closeSync(relayClient, subId)
         removeConnectionListener(manager)
