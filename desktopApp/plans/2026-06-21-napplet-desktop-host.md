@@ -1,5 +1,8 @@
 # Desktop napplet / nsite host — implementation plan
 
+> **Status:** in-progress — the three shared extractions are DONE (`NappletRequestRouter`, `NappletWebContract`, `StaticWebsiteCard` in commons), but the desktop edge (KCEF/JCEF engine, scheme handler, transport, gateways, host UI) has no code in `desktopApp/`.
+> _Audited 2026-06-30._
+
 **Date:** 2026-06-21. Goal: a desktop NIP-5A (nsite) + NIP-5D (napplet) host that **reuses the
 shared core** the Android host already runs on, so the two stay wire- and policy-identical. This
 doc is the map: what already works for free, what desktop must build, and the decisions to make.

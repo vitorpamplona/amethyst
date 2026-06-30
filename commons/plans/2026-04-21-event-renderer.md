@@ -9,6 +9,9 @@ consumers: cli, desktopApp, amethyst
 
 # feat(commons): cross-platform event renderer
 
+> **Status:** queued — no `rendering/` subsystem, `RenderedEvent`, or `EventRenderer` exists anywhere in the tree; front-matter status is still "proposed".
+> _Audited 2026-06-30._
+
 ## Overview
 
 Introduce a `commons/commonMain/.../rendering/` subsystem that turns a

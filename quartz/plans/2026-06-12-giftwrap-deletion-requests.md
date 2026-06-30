@@ -1,5 +1,8 @@
 # TODO: Deletion Requests (kind 5) for Gift Wraps
 
+> **Status:** queued — none of the four steps landed: `HostStub` still lacks a `recipient` field and `DeletionIndex` has no gift-wrap recipient-authored handling; header itself reads "Open — not implemented".
+> _Audited 2026-06-30._
+
 **Date:** 2026-06-12
 **Status:** Open — design agreed, not implemented
 **Modules:** quartz (`DeletionIndex`), amethyst (`LocalCache`)

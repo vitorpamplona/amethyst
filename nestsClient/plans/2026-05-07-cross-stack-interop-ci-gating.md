@@ -1,5 +1,8 @@
 # Plan: wire CI gating for the cross-stack interop suite
 
+> **Status:** queued — infra was wired (`21947bc5`) then DEFERRED/removed by maintainer over wallclock cost; kept in-tree as the ready-made target for a future CI-gating revisit.
+> _Audited 2026-06-30._
+
 **Status:** ⏸ DEFERRED 2026-05-07.
 The infrastructure to wire CI is ready — both jobs landed in
 commit `21947bc5` and a 10/10 stability sweep × 22 tests =

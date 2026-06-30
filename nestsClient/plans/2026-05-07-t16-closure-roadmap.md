@@ -1,5 +1,8 @@
 # T16 closure roadmap — full coverage with correct behaviours
 
+> **Status:** in-progress — Priorities 1 & 2 closed and the suite passes in-suite, but P3 (CI gating) is deferred and the framesPerGroup rerun + two upstream items remain open, so the roadmap's "fully closed" goal is not reached.
+> _Audited 2026-06-30._
+
 **Goal state.** Every spec'd cross-stack scenario green in suite-mode
 sweeps, asserting its full design intent (no soft-passes, no vacuous
 threshold loosening), with CI gating live and stable.
