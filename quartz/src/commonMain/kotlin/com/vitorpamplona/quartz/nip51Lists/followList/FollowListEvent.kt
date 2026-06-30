@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.remove
@@ -67,6 +68,8 @@ class FollowListEvent(
     fun followIds() = tags.followIds()
 
     fun followIdSet() = tags.followIdSet()
+
+    fun hashtags(): List<String> = tags.mapNotNull(HashtagTag::parse)
 
     companion object {
         const val KIND = 39089

@@ -190,6 +190,12 @@ sealed class DesktopScreen {
     data object Settings : DesktopScreen()
 
     data object LocalRelaySettings : DesktopScreen()
+
+    data class FollowPackDetail(
+        val addressTag: String,
+    ) : DesktopScreen()
+
+    data object FollowPackBrowseAll : DesktopScreen()
 }
 
 /** Reference to active Tor manager for shutdown hook. Set by App composable. */
@@ -1239,6 +1245,18 @@ fun MainContent(
             DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays)
         }
 
+    // Follow Packs state — single per-account holder for Discover + sidebar + naddr cards
+    val followPacksState =
+        remember(iAccount, localCache, relayManager, scope) {
+            com.vitorpamplona.amethyst.desktop.followpacks
+                .FollowPacksState(
+                    cache = localCache,
+                    relayManager = relayManager,
+                    kind3FollowList = iAccount.kind3FollowList,
+                    scope = scope,
+                )
+        }
+
     // Aggregated relay categories (feed, notifications, search, DM)
     val relayCategories =
         remember(iAccount.nip65RelayList, accountRelays, relayManager) {
@@ -1497,6 +1515,7 @@ fun MainContent(
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager provides relayManager,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayHealthStore provides relayHealthStore,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayListMutator provides relayListMutator,
+        com.vitorpamplona.amethyst.desktop.ui.deck.LocalFollowPacksState provides followPacksState,
     ) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {

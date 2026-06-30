@@ -131,4 +131,6 @@ fun DeckColumnType.icon(): MaterialSymbol =
         is DeckColumnType.Thread -> MaterialSymbols.AutoMirrored.Article
         is DeckColumnType.Hashtag -> MaterialSymbols.Tag
         is DeckColumnType.CustomFeed -> MaterialSymbols.Tune
+        DeckColumnType.Discover -> MaterialSymbols.Explore
+        DeckColumnType.FollowPacks -> MaterialSymbols.Apps
     }
