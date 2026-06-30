@@ -40,10 +40,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
@@ -97,12 +98,18 @@ import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.KindChip
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
@@ -351,19 +358,7 @@ fun RenderAppDefinition(
 
                 val supportedKinds = remember(noteEvent) { noteEvent.supportedKinds() }
                 if (supportedKinds.isNotEmpty()) {
-                    SectionLabel(stringRes(R.string.app_definition_handles))
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.padding(top = 6.dp, bottom = 5.dp),
-                    ) {
-                        val visible = supportedKinds.take(VISIBLE_SUPPORTED_KIND_LIMIT)
-                        visible.forEach { KindChip(it) }
-                        val overflow = supportedKinds.size - VISIBLE_SUPPORTED_KIND_LIMIT
-                        if (overflow > 0) {
-                            OverflowChip(overflow)
-                        }
-                    }
+                    SupportedKindsSection(supportedKinds)
                 }
 
                 val supportedNips = remember(noteEvent) { noteEvent.supportedNips() }
@@ -420,7 +415,66 @@ private fun SupportedNipsSection(nips: List<SupportedNipTag>) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Kinds the app handles. Mirrors [SupportedNipsSection]: a few chips inline with a
+ * "+N" overflow that opens a bottom sheet listing every handled kind.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SupportedKindsSection(kinds: List<Int>) {
+    var showAllSheet by rememberSaveable { mutableStateOf(false) }
+    val visible = remember(kinds) { kinds.take(VISIBLE_SUPPORTED_KIND_LIMIT) }
+    val overflow = (kinds.size - VISIBLE_SUPPORTED_KIND_LIMIT).coerceAtLeast(0)
+
+    SectionLabel(stringRes(R.string.app_definition_handles))
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.padding(top = 6.dp, bottom = 5.dp),
+    ) {
+        visible.forEach { KindChip(it) }
+        if (overflow > 0) {
+            OverflowChip(overflow) { showAllSheet = true }
+        }
+    }
+
+    if (showAllSheet) {
+        AllKindsSheet(kinds = kinds, onDismiss = { showAllSheet = false })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun AllKindsSheet(
+    kinds: List<Int>,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Text(
+            text = stringRes(R.string.app_definition_handles),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+        ) {
+            kinds.forEach { KindChip(it) }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun AllNipsSheet(
     nips: List<SupportedNipTag>,
@@ -439,31 +493,23 @@ private fun AllNipsSheet(
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
         )
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items(items = nips, key = { it.url }) { nip ->
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                val target = nip.url
-                                scope.launch {
-                                    sheetState.hide()
-                                    onDismiss()
-                                    runCatching { uri.openUri(target) }
-                                }
-                            }.padding(horizontal = 20.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    NipChip(nip.nip)
-                    Spacer(modifier = Modifier.size(12.dp))
-                    Text(
-                        text = nip.url.removePrefix("https://"),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+        ) {
+            nips.forEach { nip ->
+                NipChip(nip.nip) {
+                    val target = nip.url
+                    scope.launch {
+                        sheetState.hide()
+                        onDismiss()
+                        runCatching { uri.openUri(target) }
+                    }
                 }
             }
         }
@@ -506,9 +552,10 @@ private fun CategoryChip(category: String) {
 }
 
 /**
- * Compact, tappable row for an `a`-tag reference (source repo, store listing, ...).
- * Loads the addressable event so the tap can open it; the d-tag is shown as the
- * label since publishers use human-readable identifiers there.
+ * Tappable row for an `a`-tag reference (source repo, store listing, NIP, ...).
+ * These are vouched for by the handler's author, so we show the referenced event's
+ * author avatar plus its real name (the app/repo/NIP title rather than the raw
+ * d-tag), falling back to the d-tag only when the event hasn't loaded yet.
  */
 @Composable
 private fun RelatedEventRow(
@@ -520,6 +567,14 @@ private fun RelatedEventRow(
     val shape = RoundedCornerShape(8.dp)
 
     LoadAddressableNote(address, accountViewModel) { note ->
+        if (note == null) return@LoadAddressableNote
+
+        val noteState by observeNote(note, accountViewModel)
+        val name =
+            remember(noteState) {
+                relatedEventName(noteState.note.event)?.ifBlank { null } ?: aTag.dTag
+            }
+
         Surface(
             shape = shape,
             color = MaterialTheme.colorScheme.surfaceVariant,
@@ -527,23 +582,29 @@ private fun RelatedEventRow(
                 Modifier
                     .fillMaxWidth()
                     .clip(shape)
-                    .clickable {
-                        if (note != null) {
-                            routeFor(note, accountViewModel.account)?.let { nav.nav(it) }
-                        }
-                    },
+                    .clickable { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } },
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
             ) {
-                KindChip(aTag.kind)
-                if (aTag.dTag.isNotBlank()) {
-                    Spacer(modifier = Modifier.size(8.dp))
+                noteState.note.author?.let { author ->
+                    BaseUserPicture(author, 26.dp, accountViewModel)
+                    Spacer(modifier = Modifier.size(10.dp))
+                }
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = aTag.dTag,
+                        text = name,
                         style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = kindLabel(aTag.kind),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.placeholderText,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -552,6 +613,25 @@ private fun RelatedEventRow(
         }
     }
 }
+
+/** The human title for a related addressable event, by kind, or null if unknown. */
+private fun relatedEventName(event: Event?): String? =
+    when (event) {
+        is SoftwareApplicationEvent -> event.name()
+        is GitRepositoryEvent -> event.name()
+        is NipTextEvent -> event.title()
+        else -> null
+    }
+
+/** Short kind label for a related reference (e.g. "App" for a software application). */
+@Composable
+private fun kindLabel(kind: Int): String =
+    if (kind == SoftwareApplicationEvent.KIND) {
+        stringRes(R.string.app_definition_kind_app)
+    } else {
+        val resId = kindDisplayName(kind)
+        if (resId != -1) stringRes(resId) else (KindNames.nameFor(kind) ?: "k$kind")
+    }
 
 private const val VISIBLE_SUPPORTED_KIND_LIMIT = 12
 
