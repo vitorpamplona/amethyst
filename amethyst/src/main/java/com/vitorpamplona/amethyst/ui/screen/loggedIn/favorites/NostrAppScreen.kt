@@ -146,6 +146,10 @@ private fun EmbeddedNostrAppTab(
         }
     }
 
+    // The permission-ledger key is the addressable coordinate without its kind prefix (`pubkey:dtag`),
+    // matching how the Connected Apps screen keys napplet/nsite grants (see NappletIdentity.coordinate).
+    val permissionCoordinate = remember(coordinate) { coordinate.substringAfter(':') }
+
     // Stable per app (title/coordinate/isFavorite don't change often), so the tab layer isn't recomposed every frame.
     val chrome =
         remember(title, coordinate, isFavorite, controller) {
@@ -155,6 +159,7 @@ private fun EmbeddedNostrAppTab(
                 onReload = { controller.reload() },
                 onOpenFull = { FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis())) },
                 onInfo = { showAccess = true },
+                onPermissions = { nav.nav(Route.ConnectedAppDetail(permissionCoordinate)) },
                 isFavorite = isFavorite,
                 onFavorite = {
                     val favId = "nostr:$coordinate"

@@ -838,8 +838,22 @@ class NappletHostActivity : ComponentActivity() {
             torInitiallyOn = if (profile.exposesNetwork && proxyPort > 0) useTor else null,
             onNetworkTap = if (profile.exposesNetwork && proxyPort > 0) ({ setNetworkMode(!useTor) }) else null,
             onInfo = { showAccessDialog() },
+            onPermissions = { openPermissions() },
             onConsole = { show -> consolePanel?.setShowing(show) },
         ).also { controlSheet = it }
+
+    /**
+     * Ask the broker to open this napplet's editable permission screen. The sandbox can't state its own
+     * coordinate, so we send only the launch token; the broker resolves it to the trusted coordinate and
+     * launches the main activity at the Connected Apps detail.
+     */
+    private fun openPermissions() {
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_OPEN_PERMISSIONS).apply {
+                data = Bundle().apply { putString(NappletIpc.KEY_LAUNCH_TOKEN, launchToken) }
+            }
+        if (brokerMessenger != null) sendToBroker(msg)
+    }
 
     private fun buildConsolePanel(): View =
         NappletConsolePanel(this).also {

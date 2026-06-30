@@ -129,6 +129,12 @@ fun TopControlSheet(
                             info()
                         }
                     }
+                    chrome.onPermissions?.let { openPermissions ->
+                        SheetItem(MaterialSymbols.Tune, stringResource(R.string.napplet_manage_permissions)) {
+                            onExpandedChange(false)
+                            openPermissions()
+                        }
+                    }
                     SheetItem(MaterialSymbols.OpenInFull, stringResource(R.string.favorite_app_open_window)) {
                         onExpandedChange(false)
                         chrome.onOpenFull()

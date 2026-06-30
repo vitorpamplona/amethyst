@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.app.Service
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -47,6 +48,7 @@ import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
 import com.vitorpamplona.amethyst.napplethost.NappletIpc
+import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -216,6 +218,20 @@ class NappletBrokerService : Service() {
             return true
         }
 
+        // A running full-screen sandbox surface asks to open its editable permission screen. The sandbox
+        // can't state its own coordinate, so a napplet/nsite sends its launch token (resolved here to the
+        // trusted coordinate) and a browser sends its visited origin (keyed as `browser:<origin>`). Open
+        // the main activity at that Connected Apps detail.
+        if (msg.what == NappletIpc.MSG_OPEN_PERMISSIONS) {
+            val data = msg.data ?: return true
+            val coordinate =
+                data.getString(NappletIpc.KEY_LAUNCH_TOKEN)?.let { NappletLaunchRegistry.resolve(it)?.identity?.coordinate }
+                    ?: data.getString(NappletIpc.KEY_BROWSER_ORIGIN)?.takeIf { it.isNotBlank() }?.let { "browser:$it" }
+                    ?: return true
+            openConnectedAppDetail(coordinate)
+            return true
+        }
+
         // Browser mode mints a fresh launch token per visited origin, so NIP-07 consent is scoped to the
         // one site the request came from. The origin is the trusted source origin the WebView reported
         // (the sandbox can't forge it), and the synthetic identity keys the permission ledger per host.
@@ -332,6 +348,21 @@ class NappletBrokerService : Service() {
             ).broker()
         cachedBroker = account to broker
         return broker
+    }
+
+    /**
+     * Brings the main activity (a `singleInstance`) forward at the Connected Apps detail for [coordinate],
+     * via the in-process `connectedapp?coordinate=` deep link that [com.vitorpamplona.amethyst.ui.uriToRoute]
+     * resolves. Used when a full-screen sandbox surface taps "Manage permissions".
+     */
+    private fun openConnectedAppDetail(coordinate: String) {
+        val intent =
+            Intent(applicationContext, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                data = Uri.parse("nostr:connectedapp?coordinate=" + Uri.encode(coordinate))
+            }
+        runCatching { applicationContext.startActivity(intent) }
+            .onFailure { Log.w("NappletBrokerService", "Could not open Connected Apps detail", it) }
     }
 
     private fun reply(

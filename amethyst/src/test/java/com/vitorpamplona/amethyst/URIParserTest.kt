@@ -20,10 +20,14 @@
  */
 package com.vitorpamplona.amethyst
 
+import com.vitorpamplona.amethyst.ui.connectedAppRoute
+import com.vitorpamplona.amethyst.ui.isConnectedAppRoute
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.urlRoute
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.net.URLEncoder
 
@@ -39,5 +43,33 @@ class URIParserTest {
     @Test
     fun ignoresMalformedEncodedUrlRoutes() {
         assertNull(urlRoute("nostr:url?id=%"))
+    }
+
+    @Test
+    fun parsesNappletConnectedAppRoute() {
+        val coordinate = "abc123:my-app"
+        val route = connectedAppRoute("nostr:connectedapp?coordinate=${URLEncoder.encode(coordinate, Charsets.UTF_8.name())}")
+
+        assertEquals(Route.ConnectedAppDetail(coordinate), route)
+    }
+
+    @Test
+    fun parsesBrowserConnectedAppRoute() {
+        val coordinate = "browser:https://example.com"
+        val route = connectedAppRoute("nostr:connectedapp?coordinate=${URLEncoder.encode(coordinate, Charsets.UTF_8.name())}")
+
+        assertEquals(Route.ConnectedAppDetail(coordinate), route)
+    }
+
+    @Test
+    fun ignoresBlankConnectedAppCoordinate() {
+        assertNull(connectedAppRoute("nostr:connectedapp?coordinate="))
+    }
+
+    @Test
+    fun recognizesConnectedAppRoutePrefixes() {
+        assertTrue(isConnectedAppRoute("connectedapp?coordinate=abc"))
+        assertTrue(isConnectedAppRoute("nostr:connectedapp?coordinate=abc"))
+        assertFalse(isConnectedAppRoute("nostr:url?id=abc"))
     }
 }

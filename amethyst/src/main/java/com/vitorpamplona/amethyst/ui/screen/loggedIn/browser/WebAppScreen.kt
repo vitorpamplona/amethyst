@@ -151,6 +151,12 @@ private fun EmbeddedWebAppTab(
                         FavoriteAppsRegistry.add(FavoriteApp.WebApp(currentUrl, hostLabel(currentUrl), System.currentTimeMillis()))
                     }
                 },
+                // NIP-07 grants for a plain web client are keyed per visited origin as `browser:<origin>`
+                // (see NappletBrokerService.BROWSER_IDENTITY_AUTHOR); jump straight to that detail screen.
+                onPermissions =
+                    browserOrigin(currentUrl)?.let { origin ->
+                        { nav.nav(Route.ConnectedAppDetail("browser:$origin")) }
+                    },
             )
         }
     // Publish the top-sheet controls to the tab layer (which draws them over the z-below surface). In a
@@ -188,3 +194,14 @@ private fun EmbeddedWebAppTab(
 
 /** The host of [url] for the tab title, falling back to the raw string. */
 internal fun hostLabel(url: String): String = runCatching { Uri.parse(url).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
+
+/**
+ * The `scheme://host[:port]` origin of [url] — the exact form the sandbox reports for NIP-07 consent, so
+ * it matches the `browser:<origin>` permission-ledger key. Null when [url] has no usable scheme/host.
+ */
+internal fun browserOrigin(url: String): String? {
+    val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return null
+    val scheme = uri.scheme?.takeIf { it.isNotBlank() } ?: return null
+    val host = uri.host?.takeIf { it.isNotBlank() } ?: return null
+    return "$scheme://$host" + if (uri.port > 0) ":${uri.port}" else ""
+}

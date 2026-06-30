@@ -61,6 +61,9 @@ class NappletControlSheet(
     // toggling inline — used by the nSite host, where switching routing rebuilds the whole session.
     private val onNetworkTap: (() -> Unit)? = null,
     private val onInfo: (() -> Unit)? = null,
+    // When non-null, a "Manage permissions" row is added that taps through to this — used to open the
+    // main process's editable Connected Apps detail screen for this surface.
+    private val onPermissions: (() -> Unit)? = null,
     // The live URL of a plain-website browser. Non-null only for the direct-WebView browser (never an
     // nsite/napplet), where it renders an editable address row; [onNavigate] loads what the user types.
     liveUrl: String? = null,
@@ -128,6 +131,14 @@ class NappletControlSheet(
                     actionRow("ⓘ", context.getString(R.string.napplet_chrome_permissions_desc)) {
                         collapse()
                         info()
+                    },
+                )
+            }
+            onPermissions?.let { manage ->
+                addView(
+                    actionRow("⚙", context.getString(R.string.napplet_chrome_manage_permissions)) {
+                        collapse()
+                        manage()
                     },
                 )
             }
