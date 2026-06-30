@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAl
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.MultiHashtagFeedFlow
+import com.vitorpamplona.amethyst.model.topNavFeeds.mine.MineFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.NoteFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayFeedFlow
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -93,7 +94,7 @@ class FeedTopNavFilterState(
             }
 
             TopFilter.Mine -> {
-                AllFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
+                MineFeedFlow(signer.pubKey, blockedRelays, proxyRelays)
             }
 
             is TopFilter.Community, is TopFilter.PeopleList, is TopFilter.MuteList -> {

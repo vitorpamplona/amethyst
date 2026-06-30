@@ -39,7 +39,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -75,17 +74,14 @@ fun NsitesScreen(
 
     val followFilter by accountViewModel.account.liveNsitesFollowLists
         .collectAsStateWithLifecycle()
-    val listName by accountViewModel.account.settings.defaultNsitesFollowList
-        .collectAsStateWithLifecycle()
-    val myPubkey = accountViewModel.account.userProfile().pubkeyHex
 
     val visible =
-        remember(nsites, followFilter, listName, myPubkey) {
+        remember(nsites, followFilter) {
             nsites.filter { note ->
                 val author = note.event?.pubKey ?: return@filter false
-                // "Mine" matches the user's own sites; the shared author-matcher resolves Mine to
-                // all-follows (see the SubAssembler), so it can't be used for the Mine case here.
-                if (listName == TopFilter.Mine) author == myPubkey else followFilter.matchAuthor(author)
+                // Covers "Mine" too: the shared author-matcher now resolves Mine to the user's own
+                // pubkey, so matchAuthor already narrows to the user.
+                followFilter.matchAuthor(author)
             }
         }
 

@@ -39,7 +39,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -77,17 +76,14 @@ fun NappletsScreen(
 
     val followFilter by accountViewModel.account.liveNappletsFollowLists
         .collectAsStateWithLifecycle()
-    val listName by accountViewModel.account.settings.defaultNappletsFollowList
-        .collectAsStateWithLifecycle()
-    val myPubkey = accountViewModel.account.userProfile().pubkeyHex
 
     val visible =
-        remember(napplets, followFilter, listName, myPubkey) {
+        remember(napplets, followFilter) {
             napplets.filter { note ->
                 val author = note.event?.pubKey ?: return@filter false
-                // "Mine" matches the user's own napplets; the shared author-matcher resolves Mine to
-                // all-follows (see the SubAssembler), so it can't be used for the Mine case here.
-                if (listName == TopFilter.Mine) author == myPubkey else followFilter.matchAuthor(author)
+                // Covers "Mine" too: the shared author-matcher now resolves Mine to the user's own
+                // pubkey, so matchAuthor already narrows to the user.
+                followFilter.matchAuthor(author)
             }
         }
 

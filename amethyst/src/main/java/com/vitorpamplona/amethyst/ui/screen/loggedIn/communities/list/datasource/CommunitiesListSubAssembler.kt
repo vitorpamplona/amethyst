@@ -43,15 +43,11 @@ class CommunitiesListSubAssembler(
         key: CommunitiesListQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        val listName = key.listName()
+        // "Mine" needs no special-case: the shared TopFilter.Mine flow now resolves to an author
+        // filter scoped to the user, so followsPerRelay() already carries authors=[me].
         val defaultSince = key.feedStates.communitiesList.lastNoteCreatedAtIfFilled()
 
-        return if (listName == TopFilter.Mine) {
-            val outbox = key.account.outboxRelays.flow.value
-            filterCommunitiesMine(key.account.userProfile().pubkeyHex, outbox, since)
-        } else {
-            makeCommunitiesFilter(key.followsPerRelay(), since, defaultSince)
-        }
+        return makeCommunitiesFilter(key.followsPerRelay(), since, defaultSince)
     }
 
     override fun user(key: CommunitiesListQueryState) = key.account.userProfile()
