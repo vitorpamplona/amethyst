@@ -3754,7 +3754,12 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is PodcastMetadataEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
+                    // Drop the known "Mock Podcast" spam flood instead of caching thousands of them.
+                    if (event.isMockSpam()) {
+                        false
+                    } else {
+                        consumeBaseReplaceable(event, relay, wasVerified)
+                    }
                 }
 
                 is AuthoredPodcastsEvent -> {
