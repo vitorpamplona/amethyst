@@ -27,7 +27,7 @@ import com.vitorpamplona.geode.testing.preload
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySync
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySyncAsFlow
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySyncEvents
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
@@ -35,7 +35,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.last
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
@@ -107,21 +107,21 @@ class NostrClientNegentropySyncTest : RelayClientTest() {
         }
 
     @Test
-    fun flowVariantEmitsAllEvents() =
+    fun flowVariantStreamsEachEvent() =
         runBlocking {
             defaultRelay.preload(SyntheticEvents.batch(12, kind = 1))
 
-            val last =
+            val events =
                 withTimeout(20_000) {
                     client
-                        .negentropySyncAsFlow(
+                        .negentropySyncEvents(
                             relay = defaultRelayUrl,
                             filter = Filter(kinds = listOf(1)),
-                        ).last()
+                        ).toList()
                 }
 
-            assertEquals(12, last.size)
-            assertEquals(12, last.map { it.id }.toSet().size)
+            assertEquals(12, events.size)
+            assertEquals(12, events.map { it.id }.toSet().size)
         }
 
     /**

@@ -25,30 +25,36 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 
 /**
- * Flow form of [negentropySync]: runs the sync while collected and emits the
- * accumulated events as a growing list on each new arrival, then completes when
- * the sync finishes (mirroring [com.vitorpamplona.quartz.nip01Core.relay.client.reqs.fetchAsFlow]).
- * Cancelling the collector cancels the sync and tears down its subscriptions via
- * [awaitClose].
+ * Streaming form of [negentropySync]: emits each event **individually** as it
+ * arrives, then completes when the sync finishes. Nothing is accumulated, so it
+ * stays O(1) in memory regardless of how many events the relay holds.
+ *
+ * Events are buffered with [Channel.UNLIMITED] because [negentropySync] delivers
+ * them through a non-suspending callback on the relay reader thread: a bounded
+ * buffer would force the producer to drop events when the collector lags. A slow
+ * collector therefore lets the buffer grow — apply your own
+ * [kotlinx.coroutines.flow.buffer]/`conflate`/`collectLatest` downstream if you
+ * need a different policy. Cancelling the collector cancels the sync and tears
+ * down its subscriptions via [awaitClose].
  *
  * See [negentropySync] for the meaning of every parameter.
  */
-fun INostrClient.negentropySyncAsFlow(
+fun INostrClient.negentropySyncEvents(
     relay: NormalizedRelayUrl,
     filter: Filter,
     maxEvents: Int = 0,
     maxConcurrentReqs: Int = 8,
     fetchBatch: Int = 500,
     timeoutMs: Long = 30_000L,
-): Flow<List<Event>> =
+): Flow<Event> =
     callbackFlow {
-        var current = listOf<Event>()
-
         negentropySync(
             relay = relay,
             filter = filter,
@@ -57,24 +63,23 @@ fun INostrClient.negentropySyncAsFlow(
             fetchBatch = fetchBatch,
             timeoutMs = timeoutMs,
         ) { event ->
-            current = current + event
-            trySend(current)
+            trySend(event)
         }
 
         close()
 
         awaitClose { }
-    }
+    }.buffer(Channel.UNLIMITED)
 
-fun INostrClient.negentropySyncAsFlow(
+fun INostrClient.negentropySyncEvents(
     relay: String,
     filter: Filter,
     maxEvents: Int = 0,
     maxConcurrentReqs: Int = 8,
     fetchBatch: Int = 500,
     timeoutMs: Long = 30_000L,
-): Flow<List<Event>> =
-    negentropySyncAsFlow(
+): Flow<Event> =
+    negentropySyncEvents(
         relay = RelayUrlNormalizer.normalize(relay),
         filter = filter,
         maxEvents = maxEvents,
