@@ -97,6 +97,15 @@ object NappletIpc {
      */
     const val MSG_TOGGLE_WEB_FAVORITE = 11
 
+    /**
+     * Host → broker: open this surface's editable permission screen (the main-process "Connected Apps"
+     * detail) so the user can change its trust level / grants while it's running. A sandbox napplet/nsite
+     * carries [KEY_LAUNCH_TOKEN] (the broker resolves it to the trusted coordinate, since the sandbox
+     * can't state its own); a browser carries [KEY_BROWSER_ORIGIN] (keyed as `browser:<origin>`). The
+     * broker launches the main activity at that coordinate. Fire-and-forget; no reply needed.
+     */
+    const val MSG_OPEN_PERMISSIONS = 12
+
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
 
