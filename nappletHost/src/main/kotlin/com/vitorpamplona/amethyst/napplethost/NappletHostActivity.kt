@@ -838,7 +838,7 @@ class NappletHostActivity : ComponentActivity() {
             torInitiallyOn = if (profile.exposesNetwork && proxyPort > 0) useTor else null,
             onNetworkTap = if (profile.exposesNetwork && proxyPort > 0) ({ setNetworkMode(!useTor) }) else null,
             onInfo = { showAccessDialog() },
-            onConsole = { consolePanel?.toggle() },
+            onConsole = { show -> consolePanel?.setShowing(show) },
         ).also { controlSheet = it }
 
     private fun buildConsolePanel(): View =
