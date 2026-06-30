@@ -967,6 +967,8 @@
     </plurals>
     <string name="private_bookmarks">私人书签</string>
     <string name="public_bookmarks">公开书签</string>
+    <string name="repository_bookmarks">仓库</string>
+    <string name="repository_bookmarks_explainer">您已加入书签的 git 仓库</string>
     <string name="add_to_private_bookmarks">添加到私人书签</string>
     <string name="add_to_public_bookmarks">添加到公开书签</string>
     <string name="remove_from_private_bookmarks">从私人书签中移除</string>
@@ -1840,6 +1842,10 @@
     <string name="cashu_no_wallet_description">创建一个Cashu钱包来持有电子现金令牌并接收nutzaps。</string>
     <string name="cashu_discovering">正在寻找你的钱包…</string>
     <string name="cashu_discovering_description">NIP-60 钱包跨客户端同步。如果您在这个Nostr 密钥下在其他应用中另建了一个钱包，它应该在几秒钟内显示。</string>
+    <string name="cashu_wizard_title">设置你的钱包</string>
+    <string name="cashu_wizard_searching">正在寻找你的钱包…</string>
+    <string name="cashu_wizard_searching_description">在所有中继中搜索在你的 Nostr 密钥下发布的 Cashu 钱包。</string>
+    <string name="cashu_wizard_searching_progress">正在搜索中继… %1$d / %2$d</string>
     <string name="cashu_balance">余额</string>
     <string name="cashu_mints">铸币厂</string>
     <string name="cashu_mint_url">铸币厂 URL</string>
