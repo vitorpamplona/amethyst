@@ -79,6 +79,8 @@ class NappletBroker(
     private val signerLedger: NostrSignerPermissionLedger? = null,
     private val nostrConnectPrompt: NostrConnectPrompt? = null,
     private val signerConsentPrompt: NostrSignerConsentPrompt? = null,
+    // Wall-clock source (ms) for the post-cancel re-prompt cooldown; injectable for tests.
+    private val nowMillis: () -> Long = { TimeUtils.nowMillis() },
 ) {
     // Serializes the consent-prompt path so concurrent requests queue into one dialog at a time
     // (see [authorizeWithConsent]). Only the prompt is held here; non-prompting paths and execute()
@@ -93,11 +95,16 @@ class NappletBroker(
     // Only accessed under signerConsentLock.
     private val sessionAllows = mutableSetOf<String>()
 
-    // Apps whose first-connect dialog the user dismissed with Cancel this session.
-    // Cancelling means "not now" — we suppress re-prompting within the same session so a
-    // napplet that fires many requests doesn't show the dialog on every one.
+    // Apps whose first-connect dialog the user just dismissed with Cancel, mapped to the wall-clock
+    // instant (ms) their re-prompt suppression expires. Cancelling means "not now": for a brief
+    // cooldown we drop re-prompts so the burst of requests a page/napplet fires on load (relays +
+    // storage + identity, all racing) doesn't relaunch the dialog once per request. Once the cooldown
+    // lapses the entry is stale, so a fresh request — e.g. the user deliberately re-triggering login —
+    // prompts again. (A plain "suppress forever" set used to lock the user out: a single Cancel killed
+    // every future prompt for the broker's whole lifetime, and because Cancel persists nothing there
+    // was no Connected-Apps entry to clear to recover.)
     // Only accessed under signerConsentLock.
-    private val sessionCancelled = mutableSetOf<String>()
+    private val cancelledUntil = mutableMapOf<String, Long>()
 
     /**
      * Authorizes and runs [request] on behalf of [identity]. [declared] is the capability set the
@@ -357,12 +364,19 @@ class NappletBroker(
             // Re-check after acquiring lock: a sibling request may have set the policy while we waited.
             if (sl.hasPolicy(identity.coordinate)) return@withLock true
 
-            // Suppress re-prompting if the user already cancelled this session.
-            if (identity.coordinate in sessionCancelled) return@withLock false
+            // Within the post-cancel cooldown, suppress re-prompting so a load-time burst doesn't
+            // relaunch the dialog per request. Once it lapses, drop the stale entry and fall through to
+            // prompt again — this is what lets the user retry after dismissing the dialog. The cooldown
+            // self-clears, so there is nothing to hunt down and clear in Connected Apps.
+            cancelledUntil[identity.coordinate]?.let { until ->
+                if (nowMillis() < until) return@withLock false
+                cancelledUntil.remove(identity.coordinate)
+            }
 
             val prompt = nostrConnectPrompt ?: return@withLock true
             when (val result = prompt.request(identity)) {
                 is AppConnectResult.Connected -> {
+                    cancelledUntil.remove(identity.coordinate)
                     sl.setPolicy(identity.coordinate, result.policy)
                     // Bulk-grant non-payment capabilities only for non-paranoid policies.
                     // PARANOID users chose "ask me for everything" — leave the capability ledger
@@ -384,7 +398,7 @@ class NappletBroker(
                     false
                 }
                 AppConnectResult.Cancelled -> {
-                    sessionCancelled.add(identity.coordinate)
+                    cancelledUntil[identity.coordinate] = nowMillis() + CANCEL_REPROMPT_COOLDOWN_MS
                     false
                 }
             }
@@ -444,4 +458,13 @@ class NappletBroker(
                 }
             }
         }
+
+    companion object {
+        /**
+         * How long (ms) a Cancel on the first-connect dialog suppresses re-prompting for the same app.
+         * Long enough to absorb the burst of requests a page/napplet fires on load without relaunching
+         * the dialog per request; short enough that a deliberate user retry seconds later prompts again.
+         */
+        private const val CANCEL_REPROMPT_COOLDOWN_MS = 3_000L
+    }
 }
