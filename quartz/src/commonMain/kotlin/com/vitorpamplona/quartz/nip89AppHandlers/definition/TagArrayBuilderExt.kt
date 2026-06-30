@@ -22,5 +22,9 @@ package com.vitorpamplona.quartz.nip89AppHandlers.definition
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent.Companion.PlatformLink
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.tags.SupportedNipTag
 
 fun TagArrayBuilder<AppDefinitionEvent>.links(links: List<PlatformLink>) = addAll(links.map { it.toTagArray() })
+
+/** Adds one `i` tag per supported NIP, pointing at the NIP spec markdown file. */
+fun TagArrayBuilder<AppDefinitionEvent>.supportedNips(urls: List<String>) = addAll(urls.map { SupportedNipTag.assemble(it) })

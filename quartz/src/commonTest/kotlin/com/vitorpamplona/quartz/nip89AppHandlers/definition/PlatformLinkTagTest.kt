@@ -90,8 +90,26 @@ class PlatformLinkTagTest {
         val tagArray = original.toTagArray()
         val parsed = PlatformLinkTag.parse(tagArray)
 
-        // Without entityType, tag only has 2 elements, so match requires has(2) which means 3 elements
-        // This is expected behavior per NIP-89 spec (entityType is specified)
-        assertNull(parsed)
+        // The entity type is optional per NIP-89, so a 2-element link must still parse.
+        assertNotNull(parsed)
+        assertEquals("android", parsed.platform)
+        assertEquals("amethyst://open/<bech32>", parsed.uri)
+        assertNull(parsed.entityType)
+    }
+
+    @Test
+    fun parsesAndroidIntentLinkWithoutEntityType() {
+        // The real-world shape published by NostrHub: a 2-element android intent link.
+        val tag =
+            arrayOf(
+                "android",
+                "intent:<bech32>#Intent;scheme=nostr;package=com.vitorpamplona.amethyst;end`;",
+            )
+        val result = PlatformLinkTag.parse(tag)
+
+        assertNotNull(result)
+        assertEquals("android", result.platform)
+        assertEquals("intent:<bech32>#Intent;scheme=nostr;package=com.vitorpamplona.amethyst;end`;", result.uri)
+        assertNull(result.entityType)
     }
 }

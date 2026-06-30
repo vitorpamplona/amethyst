@@ -25,7 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTags
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.isTaggedKind
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
@@ -33,6 +37,7 @@ import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.client
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.tags.PlatformLinkTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -103,6 +108,18 @@ class AppDefinitionEvent(
 
     fun platformLinks() = tags.platformLinks()
 
+    /** Categories the app declares via `t` tags (e.g. "social", "video"). */
+    fun categories() = tags.hashtags()
+
+    /** NIPs the app declares it supports via NostrHub-style `i` tags. */
+    fun supportedNips() = tags.supportedNips()
+
+    /** Related addressable events referenced via `a` tags (source repo, store listing, ...). */
+    fun relatedAddresses() = tags.taggedATags()
+
+    /** The client (NIP-89 `client` tag) that published this handler, if any. */
+    fun client() = tags.client().firstOrNull()
+
     override fun publishedAt(): Long? {
         val publishedAt = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
 
@@ -134,6 +151,10 @@ class AppDefinitionEvent(
             details: AppMetadata,
             supportedKinds: Set<Int>,
             links: List<PlatformLink>,
+            categories: List<String> = emptyList(),
+            supportedNips: List<String> = emptyList(),
+            relatedAddresses: List<ATag> = emptyList(),
+            client: String? = null,
             dTag: String = Uuid.random().toString(),
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<AppDefinitionEvent>.() -> Unit = {},
@@ -141,6 +162,10 @@ class AppDefinitionEvent(
             dTag(dTag)
             kinds(supportedKinds)
             links(links)
+            if (categories.isNotEmpty()) hashtags(categories)
+            if (supportedNips.isNotEmpty()) supportedNips(supportedNips)
+            if (relatedAddresses.isNotEmpty()) aTags(relatedAddresses)
+            client?.let { client(it) }
             initializer()
         }
     }

@@ -615,6 +615,13 @@
     <string name="app_definition_handles">Handles</string>
     <string name="app_definition_by">by</string>
     <string name="app_definition_available_on">Available on</string>
+    <string name="app_definition_categories">Categories</string>
+    <string name="app_definition_related">Related</string>
+    <string name="app_definition_implements">Implements</string>
+    <string name="app_definition_supported_nips">Supported NIPs</string>
+    <string name="app_definition_via">via %1$s</string>
+    <string name="app_definition_nip">NIP-%1$s</string>
+    <string name="app_definition_kind_app">App</string>
     <string name="platform_web">Web</string>
     <string name="platform_android">Android</string>
     <string name="platform_ios">iOS</string>
