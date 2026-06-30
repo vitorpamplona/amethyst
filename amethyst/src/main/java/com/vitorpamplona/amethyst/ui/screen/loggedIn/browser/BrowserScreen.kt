@@ -90,7 +90,6 @@ import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -189,22 +188,17 @@ private fun BrowserLauncher(
     }.collectAsStateWithLifecycle(emptyList())
 
     val nsiteFollows by accountViewModel.account.liveNsitesFollowLists.collectAsStateWithLifecycle()
-    val nsiteListName by accountViewModel.account.settings.defaultNsitesFollowList
-        .collectAsStateWithLifecycle()
     val nappletFollows by accountViewModel.account.liveNappletsFollowLists.collectAsStateWithLifecycle()
-    val nappletListName by accountViewModel.account.settings.defaultNappletsFollowList
-        .collectAsStateWithLifecycle()
-    val myPubkey = accountViewModel.account.userProfile().pubkeyHex
 
     // Drop ones already pinned — they show under Favorites, not twice.
     val favoriteCoordinates = remember(apps) { apps.filterIsInstance<FavoriteApp.NostrApp>().mapTo(HashSet()) { it.coordinate } }
     val followedNsites =
-        remember(nsiteNotes, nsiteFollows, nsiteListName, myPubkey, favoriteCoordinates) {
-            nsiteNotes.toDiscoverApps(nsiteListName == TopFilter.Mine, myPubkey, nsiteFollows::matchAuthor, favoriteCoordinates)
+        remember(nsiteNotes, nsiteFollows, favoriteCoordinates) {
+            nsiteNotes.toDiscoverApps(nsiteFollows::matchAuthor, favoriteCoordinates)
         }
     val followedNapplets =
-        remember(nappletNotes, nappletFollows, nappletListName, myPubkey, favoriteCoordinates) {
-            nappletNotes.toDiscoverApps(nappletListName == TopFilter.Mine, myPubkey, nappletFollows::matchAuthor, favoriteCoordinates)
+        remember(nappletNotes, nappletFollows, favoriteCoordinates) {
+            nappletNotes.toDiscoverApps(nappletFollows::matchAuthor, favoriteCoordinates)
         }
 
     // What the user actually typed, excluding any selected ghost-completion suffix (selection.min is the
@@ -606,20 +600,18 @@ private data class DiscoverNostrApp(
 private const val DISCOVER_NOSTR_LIMIT = 12
 
 /**
- * Keeps the [Note]s authored by the followed set (or by the user, in the "Mine" case — the shared
- * matcher resolves Mine to all-follows, so it can't serve that case), drops ones already pinned, maps
- * each to its launchable [DiscoverNostrApp], and caps the result.
+ * Keeps the [Note]s authored by the followed set, drops ones already pinned, maps each to its
+ * launchable [DiscoverNostrApp], and caps the result. Covers the "Mine" selection too: the shared
+ * matcher now resolves Mine to the user's own pubkey, so [matchAuthor] already narrows to the user.
  */
 private fun List<Note>.toDiscoverApps(
-    mine: Boolean,
-    myPubkey: String,
     matchAuthor: (String) -> Boolean,
     excludeCoordinates: Set<String>,
 ): List<DiscoverNostrApp> =
     asSequence()
         .filter { note ->
             val author = note.event?.pubKey ?: return@filter false
-            if (mine) author == myPubkey else matchAuthor(author)
+            matchAuthor(author)
         }.mapNotNull { it.toDiscoverNostrApp() }
         .filter { it.app.coordinate !in excludeCoordinates }
         .take(DISCOVER_NOSTR_LIMIT)

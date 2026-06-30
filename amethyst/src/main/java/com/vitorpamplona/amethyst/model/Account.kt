@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayStat
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.marmot.KeyPackageRelayListState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountHomeRelayState
+import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountMineRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountOutboxRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.NotificationInboxRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.UserMetadataState
@@ -416,6 +417,7 @@ class Account(
     // Relay settings
     val homeRelays = AccountHomeRelayState(nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val outboxRelays = AccountOutboxRelayState(nip65RelayList, privateStorageRelayList, localRelayList, broadcastRelayList, scope)
+    val mineRelays = AccountMineRelayState(nip65RelayList, privateStorageRelayList, localRelayList, proxyRelayList, scope)
     val dmRelays = DmInboxRelayState(dmRelayList, nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val notificationRelays = NotificationInboxRelayState(nip65RelayList, localRelayList, scope)
 
@@ -508,6 +510,7 @@ class Account(
             followsRelays = defaultGlobalRelays.flow,
             blockedRelays = blockedRelayList.flow,
             proxyRelays = proxyRelayList.flow,
+            mineRelays = mineRelays.flow,
             relayFeeds = relayFeedsList.flow,
             caches = feedDecryptionCaches,
             signer = signer,

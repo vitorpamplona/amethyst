@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.subassemblies.filterNappletsMine
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -51,12 +50,8 @@ class NappletsFilterSubAssembler(
         key: NappletsQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        // "Mine" bypasses the follow-list machinery: query the user's own napplets by author against
-        // their outbox relays (same pattern as badges/music). The shared TopFilter.Mine flow falls
-        // back to all-follows, so it can't be used here.
-        if (key.listName() == TopFilter.Mine) {
-            return filterNappletsMine(key.account.userProfile().pubkeyHex, key.account.outboxRelays.flow.value, since)
-        }
+        // "Mine" needs no special-case: the shared TopFilter.Mine flow now resolves to an author
+        // filter scoped to the user, so followsPerRelay() already carries authors=[me].
         return makeNappletsFilter(key.followsPerRelay(), since)
     }
 

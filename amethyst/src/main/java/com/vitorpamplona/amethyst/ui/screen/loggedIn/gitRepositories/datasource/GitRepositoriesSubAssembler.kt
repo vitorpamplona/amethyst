@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.datasource.subassemblies.filterGitRepositoriesMine
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -43,13 +42,9 @@ class GitRepositoriesSubAssembler(
         key: GitRepositoriesQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        // "Mine" bypasses the follow-list machinery: query the user's own repositories by author
-        // against their outbox relays (same pattern as music/badges), because the shared
-        // TopFilter.Mine flow falls back to all-follows.
-        if (key.listName() == TopFilter.Mine) {
-            val outbox = key.account.outboxRelays.flow.value
-            return filterGitRepositoriesMine(key.account.userProfile().pubkeyHex, outbox, since)
-        }
+        // "Mine" needs no special-case: the shared TopFilter.Mine flow now resolves to an author
+        // filter scoped to the user, so followsPerRelay() already carries authors=[me] against the
+        // user's own outbox.
         val feedSettings = key.followsPerRelay()
 
         return makeGitRepositoriesFilter(feedSettings, since, key.feedStates.gitRepositoriesFeed.lastNoteCreatedAtIfFilled())
