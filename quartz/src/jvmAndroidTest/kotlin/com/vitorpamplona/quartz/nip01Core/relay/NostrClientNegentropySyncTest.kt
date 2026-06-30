@@ -128,6 +128,45 @@ class NostrClientNegentropySyncTest : RelayClientTest() {
         }
 
     /**
+     * Forces the relay to split its NEG-MSG responses into many small frames
+     * (`frameSizeLimit` at the library floor) so reconciliation spans many rounds,
+     * and downloads through a small, bounded pipeline (`fetchBatch`/`maxConcurrentReqs`).
+     * Exercises the streaming + back-pressure path end to end: every event must still
+     * be delivered exactly once with nothing accumulated.
+     */
+    @Test
+    fun multiRoundReconcileStreamsEveryEventThrough() =
+        runBlocking {
+            val hub = InProcessRelays(negentropySettings = NegentropySettings(frameSizeLimit = 4096))
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            val client = NostrClient(hub, scope)
+            try {
+                val url = RelayUrlNormalizer.normalize("ws://127.0.0.1:7784/")
+                hub.getOrCreate(url).preload(SyntheticEvents.batch(1500, kind = 1))
+
+                val got = mutableListOf<Event>()
+                val result =
+                    withTimeout(60_000) {
+                        client.negentropySync(
+                            relay = url,
+                            filter = Filter(kinds = listOf(1)),
+                            fetchBatch = 50,
+                            maxConcurrentReqs = 4,
+                        ) { got.add(it) }
+                    }
+
+                assertEquals(1500, got.size, "every event delivered across many reconcile rounds")
+                assertEquals(1500, got.map { it.id }.toSet().size, "each exactly once")
+                assertEquals(1500, result.downloaded)
+                assertEquals(1500, result.needCount)
+            } finally {
+                client.disconnect()
+                scope.cancel()
+                hub.close()
+            }
+        }
+
+    /**
      * A relay that caps negentropy below the matched-set size (strfry's
      * `max_sync_events`) but whose events are spread across distinct `created_at`
      * values. Windowing alone resolves the cap — each window ends up under it — so

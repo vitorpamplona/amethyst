@@ -23,18 +23,23 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip77Negentropy.INegentropyListener
-import com.vitorpamplona.quartz.nip77Negentropy.NegentropyManager
+import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
+import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
+import com.vitorpamplona.quartz.nip77Negentropy.NegentropySession
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.coroutineContext
@@ -64,12 +69,17 @@ class NegentropySyncResult(
  * one (deduped by id) through [onEvent]. A high-level wrapper over NIP-77
  * negentropy that hides the parts that make the raw protocol painful to use:
  *
- *  1. Reconciles the relay's matched set against an empty local set via a
- *     [NegentropyManager], accumulating the ids the relay has (`needIds`) across
- *     rounds until completion.
+ *  1. Reconciles the relay's matched set against an empty local set, **streaming**
+ *     the ids the relay has straight into the download pipeline as each NIP-77
+ *     round arrives — the full id list is never materialised.
  *  2. Downloads those ids through at most [maxConcurrentReqs] concurrent `REQ`
- *     subscriptions of [fetchBatch] ids each, refilling as each `EOSE` arrives,
- *     so a huge set never opens thousands of subs at once.
+ *     subscriptions of [fetchBatch] ids each, refilling as each `EOSE` arrives. The
+ *     reconciliation, the id queue and event delivery are all back-pressured, so a
+ *     slow consumer throttles the whole chain and **peak memory is bounded by the
+ *     pipeline depth, not by the window size** — a multi-million-event window
+ *     streams through in roughly constant memory. No id/event dedup set is held:
+ *     NIP-77 yields a distinct id set, so each event is requested (and returned)
+ *     exactly once.
  *  3. Handles the relay-side cap on negentropy (strfry's `max_sync_events`,
  *     observed as `NEG-ERR … "blocked: too many query results"`): the [filter] is
  *     split by `created_at` windows and each window reconciled on its own, a
@@ -82,9 +92,8 @@ class NegentropySyncResult(
  * For the common "try negentropy, else page" shape, use [negentropySyncOrFetch].
  *
  * Scope is controlled entirely by [filter] — narrow it (kinds, authors, `since`,
- * tags, …) to download a slice instead of everything. The accessory keeps memory
- * bounded by reconciling and downloading one window at a time and by capping the
- * delivered set at [maxEvents].
+ * tags, …) to download a slice instead of everything. [maxEvents] additionally caps
+ * the delivered set.
  *
  * Coroutine-cancellable: on completion, cancel, reaching [maxEvents], or a thrown
  * [NegentropySyncException], all `REQ` subscriptions are unsubscribed and the
@@ -99,6 +108,11 @@ class NegentropySyncResult(
  *   it at or below the relay's per-connection subscription cap.
  * @param fetchBatch        ids per download `REQ`.
  * @param timeoutMs         max wait for a single reconcile round or download page's `EOSE`.
+ *   The relay builds its whole negentropy snapshot before the FIRST round responds,
+ *   which is O(matched set) — for a multi-million-event filter that first response can
+ *   take a minute or more (a real strfry took ~73s for an unbounded kind:0 set), so
+ *   raise this for very large syncs. It is only a ceiling — download REQs return on
+ *   their `EOSE`, so a generous value costs nothing in the common case.
  * @param onProgress        optional `(needSoFar, downloaded)` ticks as work proceeds.
  * @param onEvent           called once per distinct event, on the relay reader thread.
  */
@@ -114,49 +128,57 @@ suspend fun INostrClient.negentropySync(
 ): NegentropySyncResult {
     var need = 0
     var windows = 0
-
     var downloaded = 0
-    val seen = HashSet<HexKey>()
 
-    coroutineScope {
-        // Single funnel for every delivered event, so dedup + the maxEvents cap +
-        // onEvent run on one coroutine even though the relay reader threads produce
-        // concurrently.
-        val events = Channel<Event>(Channel.UNLIMITED)
+    // Pin the relay in the pool's "desired" set for the whole sync. A NEG-OPEN is not
+    // a REQ, so during a reconcile round (before that window's first download REQ
+    // exists) the relay would otherwise look unwanted and the pool would disconnect
+    // it — fatal mid-sync, and frequent when many small windows each have such a gap.
+    // A never-matching keep-alive subscription holds the connection open without
+    // delivering anything.
+    val keepAliveSubId = newSubId()
+    subscribe(keepAliveSubId, mapOf(relay to listOf(Filter(ids = listOf(KEEP_ALIVE_ID)))), null)
+    try {
+        coroutineScope {
+            // Bounded funnel: every delivered event passes through this one consumer
+            // (so onEvent + the maxEvents cap run single-threaded) and the bound
+            // back-pressures the download workers when the consumer can't keep up.
+            val events = Channel<Event>(DELIVERY_BUFFER)
 
-        val producer =
-            launch {
-                try {
-                    syncWindow(
-                        relay = relay,
-                        filter = filter,
-                        timeoutMs = timeoutMs,
-                        fetchBatch = fetchBatch,
-                        maxConcurrentReqs = maxConcurrentReqs,
-                        onWindow = { windows++ },
-                        // Only accumulate here; progress is reported from the single
-                        // consumer loop below so the user callback is never invoked
-                        // from two coroutines at once.
-                        onNeed = { need += it },
-                        deliver = { events.trySend(it) },
-                    )
-                } finally {
-                    events.close()
+            val producer =
+                launch {
+                    try {
+                        syncWindow(
+                            relay = relay,
+                            filter = filter,
+                            timeoutMs = timeoutMs,
+                            fetchBatch = fetchBatch,
+                            maxConcurrentReqs = maxConcurrentReqs,
+                            onWindow = { windows++ },
+                            // Only accumulate here; progress is reported from the
+                            // single consumer loop below so the user callback is never
+                            // invoked from two coroutines at once.
+                            onNeed = { need += it },
+                            deliver = { events.send(it) },
+                        )
+                    } finally {
+                        events.close()
+                    }
                 }
-            }
 
-        for (event in events) {
-            if (seen.add(event.id)) {
+            for (event in events) {
                 downloaded++
                 onEvent(event)
                 onProgress?.invoke(need, downloaded)
                 if (maxEvents in 1..downloaded) break
             }
-        }
 
-        // If we broke out early (cap reached) the producer may still be working —
-        // stop it. If the producer finished normally this is a no-op.
-        producer.cancel()
+            // If we broke out early (cap reached) the producer may still be working —
+            // stop it. If the producer finished normally this is a no-op.
+            producer.cancel()
+        }
+    } finally {
+        unsubscribe(keepAliveSubId)
     }
 
     return NegentropySyncResult(
@@ -304,16 +326,12 @@ private suspend fun INostrClient.syncWindow(
     maxConcurrentReqs: Int,
     onWindow: () -> Unit,
     onNeed: (Int) -> Unit,
-    deliver: (Event) -> Unit,
+    deliver: suspend (Event) -> Unit,
 ) {
     coroutineContext.ensureActive()
 
-    when (val outcome = reconcileWindow(relay, filter, timeoutMs)) {
-        is ReconcileOutcome.Ids -> {
-            onWindow()
-            onNeed(outcome.needIds.size)
-            downloadIds(relay, outcome.needIds, fetchBatch, maxConcurrentReqs, timeoutMs, deliver)
-        }
+    when (val outcome = downloadWindow(relay, filter, timeoutMs, fetchBatch, maxConcurrentReqs, onNeed, deliver)) {
+        is ReconcileOutcome.Complete -> onWindow()
 
         is ReconcileOutcome.Overflow -> {
             val lo = filter.since ?: 0L
@@ -345,10 +363,8 @@ private suspend fun INostrClient.syncWindow(
 }
 
 private sealed interface ReconcileOutcome {
-    /** Reconciliation completed; [needIds] are the ids the relay has that we lack. */
-    class Ids(
-        val needIds: List<HexKey>,
-    ) : ReconcileOutcome
+    /** Reconciliation completed; every id was streamed to the downloader. */
+    object Complete : ReconcileOutcome
 
     /** Relay rejected the set as too large (strfry `max_sync_events`). */
     object Overflow : ReconcileOutcome
@@ -360,108 +376,115 @@ private sealed interface ReconcileOutcome {
 }
 
 /**
- * Drives one NIP-77 reconciliation of [filter] against an EMPTY local set, so the
- * resulting `needIds` are every id the relay holds for that filter. Registers a
- * [NegentropyManager], sends `NEG-OPEN`, and walks the rounds until completion,
- * error, or [timeoutMs]. Always closes the session and removes the listener.
+ * Drives one NIP-77 reconciliation of [filter] against an EMPTY local set, sending
+ * `NEG-OPEN` and walking the rounds itself (rather than via [NegentropyManager]) so
+ * it can apply back-pressure: each round's `needIds` are handed to [sendBatch] —
+ * which suspends while the download queue is full — *before* the next round is
+ * acked, so the relay's id stream is paced to the downloader and never piles up.
+ *
+ * The ids are streamed, not returned; the result is only the terminal outcome.
+ * Always sends `NEG-CLOSE` and removes the listener on the way out.
  */
-private suspend fun INostrClient.reconcileWindow(
+private suspend fun INostrClient.reconcileStreaming(
     relay: NormalizedRelayUrl,
     filter: Filter,
     timeoutMs: Long,
+    fetchBatch: Int,
+    onNeed: (Int) -> Unit,
+    sendBatch: suspend (List<HexKey>) -> Unit,
 ): ReconcileOutcome {
+    val targetUrl = relay
     val relayClient = getOrCreateRelay(relay)
     val subId = newSubId()
-    val signals = Channel<NegSignal>(Channel.UNLIMITED)
-    val needIds = ArrayList<HexKey>()
+    val session = NegentropySession(subId, filter, localEvents = emptyList())
+
+    // Reader-thread → driver hand-off. Holds at most one frame: the relay only sends
+    // the next one once we ack, and we ack only after this round's ids are queued.
+    val incoming = Channel<NegFrame>(Channel.UNLIMITED)
 
     val listener =
-        object : INegentropyListener {
-            override fun onHaveIds(
-                relay: NormalizedRelayUrl,
-                subId: String,
-                haveIds: List<String>,
+        object : RelayConnectionListener {
+            override fun onIncomingMessage(
+                relay: IRelayClient,
+                msgStr: String,
+                msg: Message,
             ) {
-                // Empty local set: there is nothing the relay can lack. Ignore.
+                when (msg) {
+                    is NegMsgMessage -> if (msg.subId == subId) incoming.trySend(NegFrame.Msg(msg.message))
+                    is NegErrMessage -> if (msg.subId == subId) incoming.trySend(NegFrame.Err(msg.reason))
+                    else -> Unit
+                }
             }
 
-            override fun onNeedIds(
-                relay: NormalizedRelayUrl,
-                subId: String,
-                needIds: List<String>,
-            ) {
-                signals.trySend(NegSignal.Need(needIds))
-            }
-
-            override fun onComplete(
-                relay: NormalizedRelayUrl,
-                subId: String,
-            ) {
-                signals.trySend(NegSignal.Complete)
-            }
-
-            override fun onError(
-                relay: NormalizedRelayUrl,
-                subId: String,
-                reason: String,
-            ) {
-                signals.trySend(NegSignal.Error(reason))
+            override fun onDisconnected(relay: IRelayClient) {
+                if (relay.url == targetUrl) incoming.trySend(NegFrame.Err("closed: relay disconnected"))
             }
         }
 
-    val manager = NegentropyManager(listener)
-    addConnectionListener(manager)
+    addConnectionListener(listener)
     try {
         // NEG-OPEN is a one-shot command. Unlike a REQ — which the client replays
         // from its active-request state every time a relay (re)connects — a dropped
-        // NEG-OPEN is never resent. `sendOrConnectAndSync` on a cold relay only
-        // kicks off the connect and silently drops the command, so we must connect
-        // and wait until the relay is ready before opening the session.
+        // NEG-OPEN is never resent, so we must connect and wait until the relay is
+        // ready before sending it.
         relayClient.connect()
         val connected =
             withTimeoutOrNull(timeoutMs) {
-                connectedRelaysFlow().first { relay in it }
+                connectedRelaysFlow().first { targetUrl in it }
             }
         if (connected == null) return ReconcileOutcome.Failed("could not connect within ${timeoutMs}ms")
 
-        manager.startSync(relayClient, subId, filter, localEvents = emptyList())
+        relayClient.sendIfConnected(session.open())
 
-        val outcome =
-            withTimeoutOrNull(timeoutMs) {
-                while (true) {
-                    when (val signal = signals.receive()) {
-                        is NegSignal.Need -> needIds.addAll(signal.ids)
-                        is NegSignal.Complete -> return@withTimeoutOrNull ReconcileOutcome.Ids(needIds)
-                        is NegSignal.Error ->
-                            return@withTimeoutOrNull if (isOverflow(signal.reason)) {
-                                ReconcileOutcome.Overflow
-                            } else {
-                                ReconcileOutcome.Failed(signal.reason)
-                            }
+        while (true) {
+            // Time only the wait for the relay's next frame — never our own
+            // back-pressured streaming of the previous frame's ids.
+            val frame =
+                withTimeoutOrNull(timeoutMs) { incoming.receive() }
+                    ?: return ReconcileOutcome.Failed("reconcile round timed out after ${timeoutMs}ms")
+
+            when (frame) {
+                is NegFrame.Err ->
+                    return if (isOverflow(frame.reason)) ReconcileOutcome.Overflow else ReconcileOutcome.Failed(frame.reason)
+
+                is NegFrame.Msg -> {
+                    val result = session.processMessage(frame.payload)
+                    val needIds = result.needIds
+                    if (needIds.isNotEmpty()) {
+                        onNeed(needIds.size)
+                        var i = 0
+                        while (i < needIds.size) {
+                            val end = min(i + fetchBatch, needIds.size)
+                            // Copy each batch so the frame's full id list can be freed
+                            // as soon as it is chunked; suspends under back-pressure.
+                            sendBatch(ArrayList(needIds.subList(i, end)))
+                            i = end
+                        }
+                    }
+                    val next = result.nextCmd
+                    if (next != null) {
+                        relayClient.sendIfConnected(next)
+                    } else {
+                        return ReconcileOutcome.Complete
                     }
                 }
-                @Suppress("UNREACHABLE_CODE")
-                ReconcileOutcome.Failed("unreachable")
             }
-
-        return outcome ?: ReconcileOutcome.Failed("reconcile timed out after ${timeoutMs}ms")
+        }
     } finally {
-        manager.closeSync(relayClient, subId)
-        removeConnectionListener(manager)
-        signals.close()
+        relayClient.sendIfConnected(session.close())
+        removeConnectionListener(listener)
+        incoming.close()
     }
 }
 
-private sealed interface NegSignal {
-    class Need(
-        val ids: List<HexKey>,
-    ) : NegSignal
+private sealed interface NegFrame {
+    class Msg(
+        val payload: String,
+    ) : NegFrame
 
-    object Complete : NegSignal
-
-    class Error(
+    class Err(
         val reason: String,
-    ) : NegSignal
+    ) : NegFrame
 }
 
 /**
@@ -476,49 +499,71 @@ private fun isOverflow(reason: String): Boolean =
         reason.startsWith("blocked", ignoreCase = true)
 
 /**
- * Downloads [ids] from [relay] through at most [maxConcurrentReqs] concurrent
- * `REQ`s of [fetchBatch] ids each. A fixed worker pool drains a batch queue, so at
- * most [maxConcurrentReqs] subscriptions are ever open at once, each refilled as
- * its `EOSE` arrives.
+ * Reconciles [filter] and streams its ids straight into a bounded download pool, so
+ * reconciliation and download overlap and peak memory stays independent of the
+ * window's size. At most [maxConcurrentReqs] `REQ`s of [fetchBatch] ids are open at
+ * once; the id queue is bounded so a slow download back-pressures reconciliation.
+ * Returns the terminal [ReconcileOutcome]; events go out through [deliver].
  */
-private suspend fun INostrClient.downloadIds(
+private suspend fun INostrClient.downloadWindow(
     relay: NormalizedRelayUrl,
-    ids: List<HexKey>,
+    filter: Filter,
+    timeoutMs: Long,
     fetchBatch: Int,
     maxConcurrentReqs: Int,
-    timeoutMs: Long,
-    deliver: (Event) -> Unit,
-) {
-    if (ids.isEmpty()) return
-
-    val batches = Channel<List<HexKey>>(Channel.UNLIMITED)
-    val chunks = ids.chunked(fetchBatch)
-    chunks.forEach { batches.trySend(it) }
-    batches.close()
-
-    val workers = min(maxConcurrentReqs.coerceAtLeast(1), chunks.size)
-
+    onNeed: (Int) -> Unit,
+    deliver: suspend (Event) -> Unit,
+): ReconcileOutcome =
     coroutineScope {
-        repeat(workers) {
-            launch {
-                for (batch in batches) {
-                    coroutineContext.ensureActive()
-                    fetchByIds(relay, batch, timeoutMs, deliver)
+        val workerCount = maxConcurrentReqs.coerceAtLeast(1)
+
+        // Bounded: when full, reconcileStreaming suspends instead of letting the
+        // relay's id stream accumulate. This is what keeps memory O(pipeline), not
+        // O(window).
+        val idBatches = Channel<List<HexKey>>(workerCount)
+
+        val workers =
+            List(workerCount) {
+                launch {
+                    for (batch in idBatches) {
+                        coroutineContext.ensureActive()
+                        for (event in fetchByIds(relay, batch, timeoutMs)) {
+                            deliver(event)
+                        }
+                    }
                 }
             }
-        }
-    }
-}
 
-/** One `REQ` for [batch] ids; delivers each event, returns on `EOSE`/close/timeout. */
+        val outcome =
+            reconcileStreaming(relay, filter, timeoutMs, fetchBatch, onNeed) { batch ->
+                idBatches.send(batch)
+            }
+
+        idBatches.close()
+        workers.joinAll()
+        outcome
+    }
+
+/**
+ * One `REQ` for [batch] ids; collects the matching events and returns them on
+ * `EOSE`/close/timeout. All events for a single relay arrive on its one reader
+ * thread, so collecting here needs no synchronisation.
+ *
+ * Events are deduped *within this batch* (a [HashSet] bounded by the batch size, so
+ * still O(pipeline) memory). A REQ-by-ids should return each id once, but the client
+ * may re-send the REQ on a reconnect/filter-sync mid-flight, which makes the relay
+ * replay the batch; without this the same event would be delivered twice. We rely on
+ * NIP-77 yielding a distinct id set across batches, so no global dedup is needed.
+ */
 private suspend fun INostrClient.fetchByIds(
     relay: NormalizedRelayUrl,
     batch: List<HexKey>,
     timeoutMs: Long,
-    deliver: (Event) -> Unit,
-) {
+): List<Event> {
     val subId = newSubId()
     val done = Channel<Unit>(Channel.CONFLATED)
+    val collected = ArrayList<Event>(batch.size)
+    val seen = HashSet<HexKey>(batch.size)
 
     val listener =
         object : SubscriptionListener {
@@ -528,7 +573,7 @@ private suspend fun INostrClient.fetchByIds(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                deliver(event)
+                if (seen.add(event.id)) collected.add(event)
             }
 
             override fun onEose(
@@ -564,7 +609,19 @@ private suspend fun INostrClient.fetchByIds(
         unsubscribe(subId)
         done.close()
     }
+    return collected
 }
 
-/** Seconds: a window this small that still overflows is paged instead of split. */
+/** Seconds: a window this small that still overflows can't be split further. */
 private const val MIN_WINDOW_SECONDS = 1L
+
+/** Bounded buffer between the download workers and the single delivery consumer. */
+private const val DELIVERY_BUFFER = 256
+
+/**
+ * A 32-byte id that no real event can have (all `f`s), used only to hold a
+ * never-matching keep-alive subscription that keeps the relay connected for the
+ * duration of a sync. Synthetic/real event ids are SHA-256 digests, so this never
+ * collides with an actual event.
+ */
+private val KEEP_ALIVE_ID = "f".repeat(64)
