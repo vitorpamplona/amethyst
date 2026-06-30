@@ -25,9 +25,11 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 
 // A single-podcast screen fetches everything authored by the show's pubkey, across both drafts:
@@ -51,16 +53,31 @@ fun filterOnePodcast(
         user.outboxRelays()?.ifEmpty { null }
             ?: (user.allUsedRelays() + LocalCache.relayHints.hintsForKey(user.pubkeyHex))
 
-    return relays.map { relay ->
-        RelayBasedFilter(
-            relay = relay,
-            filter =
-                Filter(
-                    kinds = OnePodcastKinds,
-                    authors = listOf(user.pubkeyHex),
-                    limit = 500,
-                    since = since?.get(relay)?.time,
-                ),
+    return relays.flatMap { relay ->
+        listOf(
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = OnePodcastKinds,
+                        authors = listOf(user.pubkeyHex),
+                        limit = 500,
+                        since = since?.get(relay)?.time,
+                    ),
+            ),
+            // Podcasting-2.0 show metadata rides on the generic NIP-78 app-data kind (30078),
+            // so it needs its own #d=podcast-metadata filter rather than a bare kind match.
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = listOf(AppSpecificDataEvent.KIND),
+                        authors = listOf(user.pubkeyHex),
+                        tags = mapOf("d" to listOf(Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG)),
+                        limit = 1,
+                        since = since?.get(relay)?.time,
+                    ),
+            ),
         )
     }
 }
