@@ -631,7 +631,7 @@ class NappletBrowserActivity : ComponentActivity() {
             onInfo = null,
             liveUrl = startUrl,
             onNavigate = { loadAddress(it) },
-            onConsole = { consolePanel?.toggle() },
+            onConsole = { show -> consolePanel?.setShowing(show) },
             isFavoriteInitially = intent.getBooleanExtra(EXTRA_IS_FAVORITE, false),
             onFavoriteToggle = { url, _ -> sendFavoriteToggle(url) },
         ).also { controlSheet = it }
