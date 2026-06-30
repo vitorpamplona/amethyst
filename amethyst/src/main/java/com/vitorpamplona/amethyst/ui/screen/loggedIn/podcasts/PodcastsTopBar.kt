@@ -62,7 +62,7 @@ private fun PodcastsTopNavFilterBar(
     accountViewModel: AccountViewModel,
     onChange: (FeedDefinition) -> Unit,
 ) {
-    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
+    val allLists by followListsModel.podcastRoutes.collectAsStateWithLifecycle()
 
     FeedFilterSpinner(
         placeholderCode = listName,

@@ -62,9 +62,10 @@ private fun PodcastEpisodesTopNavFilterBar(
     accountViewModel: AccountViewModel,
     onChange: (FeedDefinition) -> Unit,
 ) {
-    // Same content-style catalog as Music/Articles — All Follows, Your Follows, kind3
-    // Follows, Around Me, Global, people lists, interest sets, mute list.
-    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
+    // Same content-style catalog as Music — All Follows, Your Follows, kind3 Follows,
+    // Around Me, Global, Mine (the user's own published shows/episodes), people lists,
+    // interest sets, mute list.
+    val allLists by followListsModel.podcastRoutes.collectAsStateWithLifecycle()
 
     FeedFilterSpinner(
         placeholderCode = listName,
