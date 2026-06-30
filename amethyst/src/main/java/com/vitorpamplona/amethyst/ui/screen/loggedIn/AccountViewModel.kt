@@ -161,6 +161,8 @@ import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentD
 import com.vitorpamplona.quartz.nip92IMeta.imeta
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.podcasts.PodcastBoostagram
+import com.vitorpamplona.quartz.podcasts.PodcastEpisode
+import com.vitorpamplona.quartz.podcasts.PodcastShow
 import com.vitorpamplona.quartz.podcasts.PodcastValue
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -942,6 +944,27 @@ class AccountViewModel(
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
         zapType: LnZapEvent.ZapType? = null,
     ) = launchSigner {
+        // A podcast note (episode or show) can carry a Podcasting-2.0 value-for-value block. When it
+        // does, "zapping" it means paying that split — lnaddress recipients go out as real zaps (with
+        // receipts, which drive this same button's icon/counter), node recipients go out as keysend.
+        // This makes the standard zap button the single payment action for V4V content.
+        val v4v =
+            (note.event as? PodcastEpisode)?.episodeValue()
+                ?: (note.event as? PodcastShow)?.showValue()
+        if (v4v != null && v4v.recipients.any { it.split > 0 && !it.address.isNullOrBlank() }) {
+            executeV4V(
+                value = v4v,
+                totalMilliSats = amountInMillisats,
+                podcastName = (note.event as? PodcastShow)?.showTitle(),
+                episodeName = (note.event as? PodcastEpisode)?.episodeTitle(),
+                zappedNote = note,
+                context = context,
+                streaming = false,
+                onProgress = onProgress,
+            )
+            return@launchSigner
+        }
+
         val requestedType = zapType ?: defaultZapType()
 
         // Zaps on private rumors are forced to PRIVATE so the sender and
@@ -990,22 +1013,54 @@ class AccountViewModel(
         streaming: Boolean = false,
         onProgress: (Float) -> Unit = {},
     ) = launchSigner {
+        executeV4V(
+            value = value,
+            totalMilliSats = totalSats * 1000,
+            podcastName = podcastName,
+            episodeName = episodeName,
+            zappedNote = zappedNote,
+            context = context,
+            streaming = streaming,
+            onProgress = onProgress,
+        )
+    }
+
+    /**
+     * Shared V4V execution used by both [payV4V] and the V4V reroute inside [zap]. Must be called
+     * from within a [launchSigner] block (it does signing). [streaming] = true marks per-minute
+     * payments: errors are swallowed (no per-minute toast spam), the external-wallet intent fallback
+     * is skipped (can't auto-launch a wallet every minute), and lnaddress shares are paid WITHOUT a
+     * zap request so streaming doesn't publish a receipt every minute. One-off boosts ([streaming] =
+     * false) pay lnaddress shares as real zaps, producing receipts that feed the zap button's UI.
+     */
+    private suspend fun executeV4V(
+        value: PodcastValue,
+        totalMilliSats: Long,
+        podcastName: String?,
+        episodeName: String?,
+        zappedNote: Note?,
+        context: Context,
+        streaming: Boolean,
+        onProgress: (Float) -> Unit,
+    ) {
         val boostagram =
             PodcastBoostagram(
                 podcast = podcastName,
                 episode = episodeName,
                 action = if (streaming) PodcastBoostagram.ACTION_STREAM else PodcastBoostagram.ACTION_BOOST,
                 appName = "Amethyst",
-                valueMsatTotal = totalSats * 1000,
+                valueMsatTotal = totalMilliSats,
                 senderName = account.userProfile().toBestDisplayName(),
             )
 
         V4VPaymentHandler(account).pay(
             value = value,
-            totalMilliSats = totalSats * 1000,
+            totalMilliSats = totalMilliSats,
             boostagram = boostagram,
             zappedNote = zappedNote,
             context = context,
+            asZap = !streaming,
+            zapType = LnZapEvent.ZapType.PUBLIC,
             okHttpClient = httpClientBuilder::okHttpClientForMoney,
             onError = { title, message ->
                 if (!streaming) toastManager.toast(title, message)

@@ -195,13 +195,7 @@ fun RenderPodcastEpisode(
             }
 
             value?.takeIf { !makeItShort }?.let {
-                PodcastValueSplits(
-                    value = it,
-                    note = note,
-                    episodeName = title,
-                    podcastName = null,
-                    accountViewModel = accountViewModel,
-                )
+                PodcastValueSplits(value = it)
             }
 
             markdown?.takeIf { !makeItShort }?.let {
