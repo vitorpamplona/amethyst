@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.topNavFeeds.mine
 
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByProxyTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -33,38 +32,33 @@ import kotlinx.coroutines.flow.map
 
 /**
  * Resolves the "Mine" top-nav selection to an author filter scoped to the logged-in user's own
- * pubkey. Mirrors [com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsFeedFlow]'s
- * outbox/proxy split: in proxy mode it pins the author to the configured proxy relays, otherwise it
- * resolves the user's own NIP-65 outbox via OutboxRelayLoader.
+ * pubkey, pinned to the user's own relays — their outbox, private-storage, local and proxy relays
+ * (see [com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountMineRelayState]). Unlike the
+ * follow filters, "Mine" doesn't need per-author outbox resolution from cache: the only author is
+ * the user, and the user's relays are already known from their own account state — so we pin the
+ * fixed set directly via [AuthorsByProxyTopNavFilter] (it associates each given relay with the
+ * authors, which is exactly "query my relays for my events").
  *
- * This is the single source of truth for "Mine". Both the relay sub-assemblers (through each screen's
- * `liveXFollowListsPerRelay`) and the local DAL filters (through `liveXFollowLists`) consume the
- * produced [AuthorsByOutboxTopNavFilter] / [AuthorsByProxyTopNavFilter], so screens no longer need a
- * dedicated `TopFilter.Mine` branch: the generic author path already narrows to the user. It also
- * means outbox changes re-invalidate automatically — the per-relay flow is an `OutboxLoaderState`
- * over the user's own outbox, so a NIP-65 update re-emits without a screen-specific trigger.
+ * This is the single source of truth for "Mine". Both the relay sub-assemblers (through each
+ * screen's `liveXFollowListsPerRelay`) and the local DAL filters (through `liveXFollowLists`)
+ * consume the produced [AuthorsByProxyTopNavFilter], so screens no longer need a dedicated
+ * `TopFilter.Mine` branch: the generic author path already narrows to the user. It also makes
+ * relay-set changes re-invalidate automatically — `liveXFollowListsPerRelay` re-emits whenever
+ * [mineRelays] changes, through the sub-assemblers' existing `followsPerRelayFlow` collector.
  */
 class MineFeedFlow(
     val myPubkey: HexKey,
-    val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
-    val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val mineRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
-    fun convert(proxyRelays: Set<NormalizedRelayUrl>): IFeedTopNavFilter =
-        if (proxyRelays.isEmpty()) {
-            AuthorsByOutboxTopNavFilter(
-                authors = setOf(myPubkey),
-                blockedRelays = blockedRelays,
-            )
-        } else {
-            AuthorsByProxyTopNavFilter(
-                authors = setOf(myPubkey),
-                proxyRelays = proxyRelays,
-            )
-        }
+    fun convert(relays: Set<NormalizedRelayUrl>): IFeedTopNavFilter =
+        AuthorsByProxyTopNavFilter(
+            authors = setOf(myPubkey),
+            proxyRelays = relays,
+        )
 
-    override fun flow(): Flow<IFeedTopNavFilter> = proxyRelays.map(::convert)
+    override fun flow(): Flow<IFeedTopNavFilter> = mineRelays.map(::convert)
 
-    override fun startValue(): IFeedTopNavFilter = convert(proxyRelays.value)
+    override fun startValue(): IFeedTopNavFilter = convert(mineRelays.value)
 
     override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
         collector.emit(startValue())

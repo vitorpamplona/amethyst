@@ -63,6 +63,7 @@ class FeedTopNavFilterState(
     val followsRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val mineRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val relayFeeds: StateFlow<Set<NormalizedRelayUrl>>,
     val caches: FeedDecryptionCaches,
     val signer: NostrSigner,
@@ -94,7 +95,7 @@ class FeedTopNavFilterState(
             }
 
             TopFilter.Mine -> {
-                MineFeedFlow(signer.pubKey, blockedRelays, proxyRelays)
+                MineFeedFlow(signer.pubKey, mineRelays)
             }
 
             is TopFilter.Community, is TopFilter.PeopleList, is TopFilter.MuteList -> {
