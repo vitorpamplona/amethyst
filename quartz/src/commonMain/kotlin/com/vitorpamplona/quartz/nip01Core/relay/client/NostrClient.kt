@@ -342,6 +342,8 @@ class NostrClient(
         listeners.forEach { it.onCannotConnect(relay, errorMessage) }
     }
 
+    override fun getOrCreateRelay(url: NormalizedRelayUrl): IRelayClient = relayPool.getOrCreateRelay(url)
+
     override fun addConnectionListener(listener: RelayConnectionListener) {
         listeners = listeners.plus(listener)
     }
