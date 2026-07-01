@@ -371,6 +371,29 @@ Hex.isEqual(hex, bytes)  // compare hex to bytes without decoding
 
 Constants `PUBKEY_LENGTH` / `EVENT_ID_LENGTH` (both 64) live in `nip01Core.core`.
 
+## Core Utilities (time, random, event id)
+
+Reuse these instead of hand-rolling — each avoids a common mistake:
+
+```kotlin
+import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.sha256.sha256
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
+
+TimeUtils.now()            // Unix SECONDS for created_at — not currentTimeMillis()/1000
+TimeUtils.oneHourAgo()     // relative filter bounds (…Ago / …FromNow); all in seconds
+RandomInstance.bytes(32)   // secure random (SecureRandom) — for nonces/keys, not kotlin.random.Random
+RandomInstance.randomChars()   // 16-char subscription id
+
+sha256(bytes)              // raw hash primitive
+EventHasher.hashId(pubKey, createdAt, kind, tags, content)   // canonical event id
+EventHasher.hashIdCheck(id, pubKey, createdAt, kind, tags, content)  // verify untrusted events
+```
+
+`EventHasher` serializes `[0, pubkey, created_at, kind, tags, content]` in the
+exact form NIP-01 requires — prefer it over calling `sha256` on your own JSON.
+
 ## Bech32 Encoding (NIP-19)
 
 Encoding uses extension functions on `ByteArray` (`nip19Bech32/ByteArrayExt.kt`);
