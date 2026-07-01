@@ -269,6 +269,7 @@ class AccountSettings(
     var callMaxBitrateBps: Int = 1_500_000,
     val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.IF_IN_MY_LIST),
+    val relayAuthTrustFollowsForReads: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) : EphemeralChatRepository,
     PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
@@ -1482,6 +1483,13 @@ class AccountSettings(
     fun changeDefaultRelayAuthPolicy(policy: RelayAuthPolicy) {
         if (defaultRelayAuthPolicy.value != policy) {
             defaultRelayAuthPolicy.tryEmit(policy)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeRelayAuthTrustFollowsForReads(enabled: Boolean) {
+        if (relayAuthTrustFollowsForReads.value != enabled) {
+            relayAuthTrustFollowsForReads.tryEmit(enabled)
             saveAccountSettings()
         }
     }

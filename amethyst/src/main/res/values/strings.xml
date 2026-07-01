@@ -827,6 +827,8 @@
     <string name="relay_auth_policy_if_in_my_list_desc">Only authenticate with relays in your relay list</string>
     <string name="relay_auth_policy_trusted_follows">My relays and people I follow</string>
     <string name="relay_auth_policy_trusted_follows_desc">Also authenticate with relays that serve people you follow, such as sending a message to a friend. You\'ll be asked about anyone else.</string>
+    <string name="relay_auth_trust_reads">Also trust when reading their posts</string>
+    <string name="relay_auth_trust_reads_desc">Log in automatically to download posts from people you follow, not just to message or notify them.</string>
     <string name="relay_auth_prompt_title">Log in to this relay?</string>
     <string name="relay_auth_prompt_message">This relay asks you to log in before it will:</string>
     <string name="relay_auth_reason_send_dm">Send your private message to:</string>

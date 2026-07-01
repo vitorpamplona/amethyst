@@ -157,6 +157,7 @@ private object PrefKeys {
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
     const val ALWAYS_ON_NOTIFICATION_SERVICE = "always_on_notification_service"
     const val DEFAULT_RELAY_AUTH_POLICY = "default_relay_auth_policy"
+    const val RELAY_AUTH_TRUST_FOLLOWS_FOR_READS = "relay_auth_trust_follows_for_reads"
     const val SPLIT_NOTIFICATIONS_ENABLED = "split_notifications_enabled"
     const val SHOW_MESSAGES_IN_NOTIFICATIONS = "show_messages_in_notifications"
 
@@ -509,6 +510,7 @@ object LocalPreferences {
                     putBoolean(PrefKeys.CALLS_ENABLED, settings.callsEnabled.value)
                     putBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, settings.alwaysOnNotificationService.value)
                     putString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, settings.defaultRelayAuthPolicy.value.name)
+                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_FOLLOWS_FOR_READS, settings.relayAuthTrustFollowsForReads.value)
                     putBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, settings.splitNotificationsEnabled.value)
                     putBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, settings.showMessagesInNotifications.value)
                     // Any account that reaches a save has its notification filter in its
@@ -629,6 +631,7 @@ object LocalPreferences {
                         getString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, null)
                             ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
                             ?: RelayAuthPolicy.IF_IN_MY_LIST
+                    val relayAuthTrustFollowsForReads = getBoolean(PrefKeys.RELAY_AUTH_TRUST_FOLLOWS_FOR_READS, false)
                     val splitNotificationsEnabled = getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)
                     val showMessagesInNotifications = getBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, true)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
@@ -833,6 +836,7 @@ object LocalPreferences {
                         hideNIP17WarningDialog = hideNIP17WarningDialog,
                         alwaysOnNotificationService = MutableStateFlow(alwaysOnNotificationService),
                         defaultRelayAuthPolicy = MutableStateFlow(defaultRelayAuthPolicy),
+                        relayAuthTrustFollowsForReads = MutableStateFlow(relayAuthTrustFollowsForReads),
                         splitNotificationsEnabled = MutableStateFlow(splitNotificationsEnabled),
                         showMessagesInNotifications = MutableStateFlow(showMessagesInNotifications),
                         backupUserMetadata = latestUserMetadataResolved,
