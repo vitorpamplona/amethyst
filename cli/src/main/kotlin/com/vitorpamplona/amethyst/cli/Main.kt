@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.cli.commands.NotesCommands
 import com.vitorpamplona.amethyst.cli.commands.NsiteCommands
 import com.vitorpamplona.amethyst.cli.commands.OfferCommands
 import com.vitorpamplona.amethyst.cli.commands.OutboxCommand
+import com.vitorpamplona.amethyst.cli.commands.Podcast20Commands
 import com.vitorpamplona.amethyst.cli.commands.PodcastCommands
 import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
 import com.vitorpamplona.amethyst.cli.commands.PublishCommand
@@ -233,6 +234,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "serve" -> ServeCommand.run(dataDir, tail)
         "cashu" -> CashuCommands.dispatch(dataDir, tail)
         "podcast" -> PodcastCommands.dispatch(dataDir, tail)
+        "podcast20" -> Podcast20Commands.dispatch(dataDir, tail)
         "bunker" -> BunkerCommand.run(dataDir, tail)
         else -> {
             System.err.println("unknown subcommand: $head")
@@ -477,6 +479,21 @@ private fun printUsage() {
         |      --audio URL[,URL] [--audio-type MIME]
         |      [--image URL] [--content MARKDOWN]
         |  podcast list [USER] [--limit N]              list a user's metadata + episodes
+        |
+        |Podcasts (Podcasting 2.0 / podstr):
+        |  podcast20 metadata --title T                 publish kind:30078 show metadata (JSON body)
+        |      [--description D] [--author A] [--image URL] [--language L]
+        |      [--categories A,B] [--funding URL,URL] [--website URL]
+        |      [--copyright C] [--type episodic|serial] [--explicit] [--complete]
+        |      [--value-json JSON]                       value-for-value split block
+        |  podcast20 episode --title T --audio URL[,URL]  publish a kind:30054 episode
+        |      [--d ID] [--audio-type MIME] [--description D] [--image URL]
+        |      [--duration SECS] [--video URL] [--video-type MIME]
+        |      [--episode N] [--season N] [--transcript URL] [--chapters URL]
+        |      [--value-json JSON] [--topic A,B] [--content MARKDOWN] [--pubdate RFC2822]
+        |  podcast20 trailer --title T --url URL          publish a kind:30055 trailer
+        |      [--d ID] [--type MIME] [--length BYTES] [--season N] [--pubdate RFC2822]
+        |  podcast20 list [USER] [--limit N]            list a creator's metadata + episodes + trailers
         |
         |Static websites (NIP-5A kind:15128/35128):
         |  nsite fetch AUTHOR [--d ID] [--path P]      resolve one path over Nostr + Blossom and

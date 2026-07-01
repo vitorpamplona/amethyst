@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,7 +55,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.resolvePodcastShow
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -65,14 +67,23 @@ fun RenderPodcastMetadata(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? PodcastMetadataEvent ?: return
+    val noteEvent = note.event ?: return
+    // Resolves NIP-F4 kind:10154 and Podcasting-2.0 kind:30078 shows to one PodcastShow view.
+    val show = remember(noteEvent) { resolvePodcastShow(noteEvent) } ?: return
 
-    val title = remember(noteEvent) { noteEvent.title() }
-    val image = remember(noteEvent) { noteEvent.image() }
-    val description = remember(noteEvent) { noteEvent.description() }
-    val websites = remember(noteEvent) { noteEvent.websites() }
-    // Each podcast is its own keypair, so the author pubkey IS the podcast id used to open
-    // its dedicated screen with the full episode list.
+    val title = remember(noteEvent) { show.showTitle() }
+    val author = remember(noteEvent) { show.showAuthor() }
+    val image = remember(noteEvent) { show.showImage() }
+    val description = remember(noteEvent) { show.showDescription() }
+    val websites = remember(noteEvent) { show.showWebsites() }
+    val categories = remember(noteEvent) { show.showCategories() }
+    val fundingUrls = remember(noteEvent) { show.showFundingUrls() }
+    val isExplicit = remember(noteEvent) { show.showIsExplicit() }
+    val isComplete = remember(noteEvent) { show.showIsComplete() }
+    val copyright = remember(noteEvent) { show.showCopyright() }
+    val value = remember(noteEvent) { show.showValue() }
+    // In both drafts the show's author pubkey IS the podcast id used to open its dedicated
+    // screen with the full episode list (episodes are authored by the same key).
     val podcastPubkey = remember(noteEvent) { noteEvent.pubKey }
 
     Column(
@@ -89,15 +100,63 @@ fun RenderPodcastMetadata(
                     .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(Size5dp),
         ) {
-            title?.let {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+            ) {
+                title?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                PodcastBookmarkButton(note, accountViewModel)
+            }
+
+            author?.let {
                 Text(
-                    text = it,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
+                    text = stringRes(R.string.podcast_by_author, it),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.grayText,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth(),
                 )
+            }
+
+            if (isExplicit || isComplete || categories.isNotEmpty()) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (isComplete) {
+                        PodcastBadge(
+                            label = stringRes(R.string.podcast_completed),
+                            symbol = MaterialSymbols.CheckCircle,
+                            container = MaterialTheme.colorScheme.tertiaryContainer,
+                            content = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                    }
+                    if (isExplicit) {
+                        PodcastBadge(
+                            label = stringRes(R.string.podcast_explicit),
+                            symbol = null,
+                            container = MaterialTheme.colorScheme.errorContainer,
+                            content = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
+                    categories.forEach { category ->
+                        PodcastBadge(
+                            label = category,
+                            symbol = MaterialSymbols.Tag,
+                            container = MaterialTheme.colorScheme.secondaryContainer,
+                            content = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                    }
+                }
             }
 
             description?.takeIf { !makeItShort }?.let {
@@ -116,21 +175,49 @@ fun RenderPodcastMetadata(
                 )
             }
 
+            value?.takeIf { !makeItShort }?.let {
+                PodcastValueSplits(value = it)
+            }
+
+            if (fundingUrls.isNotEmpty() && !makeItShort) {
+                val uriHandler = LocalUriHandler.current
+                Button(
+                    onClick = { runCatching { uriHandler.openUri(fundingUrls.first()) } },
+                    modifier = Modifier.fillMaxWidth().padding(top = Size5dp),
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.Favorite,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Text(
+                        text = stringRes(R.string.podcast_support_show),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+            }
+
             if (websites.isNotEmpty() && !makeItShort) {
+                val uriHandler = LocalUriHandler.current
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(Size5dp),
                     verticalArrangement = Arrangement.spacedBy(Size5dp),
                 ) {
                     websites.forEach { website ->
-                        Text(
-                            text = website,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.grayText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        PodcastLinkChip(website, MaterialSymbols.Public) { runCatching { uriHandler.openUri(website) } }
                     }
                 }
+            }
+
+            copyright?.takeIf { !makeItShort }?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.grayText,
+                    modifier = Modifier.padding(top = Size5dp),
+                )
             }
 
             // Affordance that this card opens a full show page with every episode.

@@ -44,32 +44,43 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.types.PodcastCoverCard
+import com.vitorpamplona.amethyst.ui.note.types.PodcastPeople
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.podcasts.PodcastShow
 
 /**
  * Hero header for a single podcast screen: large cover art, title, websites and the show
  * description (rich text + translation, same as a profile's About), followed by the
  * "Episodes (N)" section divider that the episode rows hang under.
+ *
+ * Spec-neutral: [show] is either a NIP-F4 [PodcastMetadataEvent] (kind 10154) or a Podcasting-2.0
+ * show (kind 30078, `d=podcast-metadata`), both adapting to the shared [PodcastShow]. The claimed-
+ * author verification row is NIP-F4 only (its `p`-tag claims + kind:10064 counter-claims), so it's
+ * shown only when the underlying event is a [PodcastMetadataEvent].
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PodcastHeader(
     metadataNote: Note,
-    metadataEvent: PodcastMetadataEvent?,
+    show: PodcastShow?,
     episodeCount: Int?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val title = remember(metadataEvent) { metadataEvent?.title() }
-    val image = remember(metadataEvent) { metadataEvent?.image() }
-    val description = remember(metadataEvent) { metadataEvent?.description() }
-    val websites = remember(metadataEvent) { metadataEvent?.websites() ?: emptyList() }
-    val tags = remember(metadataEvent) { metadataEvent?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+    val title = remember(show) { show?.showTitle() }
+    val image = remember(show) { show?.showImage() }
+    val description = remember(show) { show?.showDescription() }
+    val websites = remember(show) { show?.showWebsites() ?: emptyList() }
+    val f4 = show as? PodcastMetadataEvent
+    val claimedAuthors = remember(f4) { f4?.claimedAuthors() ?: emptyList() }
+    val podcastPubkey = remember(f4) { f4?.pubKey }
+    val tags = remember(metadataNote) { metadataNote.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
     Column(Modifier.fillMaxWidth()) {
         PodcastCoverCard(image, metadataNote, accountViewModel)
@@ -122,11 +133,37 @@ fun PodcastHeader(
                     nav = nav,
                 )
             }
+
+            if (claimedAuthors.isNotEmpty() && podcastPubkey != null) {
+                PodcastAuthors(podcastPubkey, claimedAuthors, accountViewModel, nav)
+            }
+
+            val persons = remember(show) { show?.showPersons() ?: emptyList() }
+            PodcastPeople(persons, accountViewModel, nav)
+        }
+
+        // Standard engagement row for the show itself (comment / zap / react), like any other
+        // content detail. Only shown once the show event resolves so it acts on a real note.
+        if (show != null) {
+            HorizontalDivider(thickness = DividerThickness)
+
+            ReactionsRow(
+                baseNote = metadataNote,
+                showReactionDetail = true,
+                addPadding = true,
+                editState = null,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+
+            PodcastTopSupporters(metadataNote, accountViewModel, nav)
         }
 
         // Only render once episodes have actually loaded — avoids flashing "0 episodes"
         // under the cover while the relay request is still in flight.
         episodeCount?.let { count ->
+            HorizontalDivider(thickness = DividerThickness)
+
             Text(
                 text = pluralStringResource(R.plurals.podcast_episode_count, count, count),
                 style = MaterialTheme.typography.titleMedium,

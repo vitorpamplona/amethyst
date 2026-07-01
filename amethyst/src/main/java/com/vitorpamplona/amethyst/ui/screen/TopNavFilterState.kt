@@ -328,6 +328,24 @@ class TopNavFilterState(
             )
         }
 
+    private val _podcastRoutes =
+        combineTransform(
+            livePeopleListsFlow,
+            liveInterestFlows,
+        ) { peopleLists, interests ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    // Same content-style catalog as kind3GlobalPeopleRoutes, plus "Mine" so the
+                    // podcasts + episodes screens can show only the user's own published shows/episodes.
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow),
+                    peopleLists,
+                    interests,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
     private val _kind3GlobalPeople =
         livePeopleListsFlow.transform { peopleLists ->
             checkNotInMainThread()
@@ -405,6 +423,11 @@ class TopNavFilterState(
 
     val gitRepositoryRoutes =
         _gitRepositoryRoutes
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow, muteListFollow))
+
+    val podcastRoutes =
+        _podcastRoutes
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow, muteListFollow))
 

@@ -309,6 +309,8 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 
 interface EventBuilder {
     fun build(
@@ -566,6 +568,8 @@ class EventFactory {
                 PodcastEpisodeEvent.KIND -> PodcastEpisodeEvent(id, pubKey, createdAt, tags, content, sig)
                 AuthoredPodcastsEvent.KIND -> AuthoredPodcastsEvent(id, pubKey, createdAt, tags, content, sig)
                 FavoritePodcastsListEvent.KIND -> FavoritePodcastsListEvent(id, pubKey, createdAt, tags, content, sig)
+                Podcasting20EpisodeEvent.KIND -> Podcasting20EpisodeEvent(id, pubKey, createdAt, tags, content, sig)
+                Podcasting20TrailerEvent.KIND -> Podcasting20TrailerEvent(id, pubKey, createdAt, tags, content, sig)
                 ProductEvent.KIND -> ProductEvent(id, pubKey, createdAt, tags, content, sig)
                 PrivateDmEvent.KIND -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
                 PrivateOutboxRelayListEvent.KIND -> PrivateOutboxRelayListEvent(id, pubKey, createdAt, tags, content, sig)

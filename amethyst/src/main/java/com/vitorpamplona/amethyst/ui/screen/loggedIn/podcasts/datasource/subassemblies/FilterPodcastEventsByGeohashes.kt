@@ -31,6 +31,7 @@ fun filterPodcastEventsByGeohashes(
     kinds: List<Int>,
     geotags: Set<String>,
     since: Long?,
+    additionalTags: Map<String, List<String>>? = null,
 ): List<RelayBasedFilter> {
     if (geotags.isEmpty()) return emptyList()
 
@@ -40,7 +41,7 @@ fun filterPodcastEventsByGeohashes(
             filter =
                 Filter(
                     kinds = kinds,
-                    tags = mapOf("g" to geotags.sorted()),
+                    tags = mergeFilterTags(mapOf("g" to geotags.sorted()), additionalTags),
                     limit = 100,
                     since = since,
                 ),
@@ -53,6 +54,7 @@ fun filterPodcastEventsByGeohashes(
     kinds: List<Int>,
     since: SincePerRelayMap?,
     defaultSince: Long?,
+    additionalTags: Map<String, List<String>>? = null,
 ): List<RelayBasedFilter> {
     if (geoSet.set.isEmpty()) return emptyList()
 
@@ -66,6 +68,7 @@ fun filterPodcastEventsByGeohashes(
                     kinds = kinds,
                     geotags = it.value.geotags,
                     since = since?.get(it.key)?.time ?: defaultSince,
+                    additionalTags = additionalTags,
                 )
             }
         }.flatten()

@@ -36,15 +36,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 
 private val PLAYER_SHAPE = Modifier.clip(RoundedCornerShape(12.dp))
 
@@ -59,15 +62,28 @@ fun PodcastEpisodeListItem(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? PodcastEpisodeEvent ?: return
+    val noteEvent = note.event ?: return
+    // Both kind 54 (NIP-F4) and kind 30054 (Podcasting 2.0) episodes implement PodcastEpisode.
+    val episode = noteEvent as? PodcastEpisode ?: return
 
-    val title = remember(noteEvent) { noteEvent.title() }
-    val description = remember(noteEvent) { noteEvent.description() }
-    val firstAudio = remember(noteEvent) { noteEvent.audios().firstOrNull() }
-    val image = remember(noteEvent) { noteEvent.image() }
+    val title = remember(noteEvent) { episode.episodeTitle() }
+    val description = remember(noteEvent) { episode.episodeDescription() }
+    // Prefer audio; fall back to a video source so video-only episodes still play inline.
+    val media = remember(noteEvent) { episode.episodeAudio().firstOrNull() ?: episode.episodeVideo() }
+    val image = remember(noteEvent) { episode.episodeImage() }
+    val season = remember(noteEvent) { episode.episodeSeason() }
+    val episodeNumber = remember(noteEvent) { episode.episodeNumber() }
 
     val context = LocalContext.current
     val dateStr = remember(noteEvent) { timeAgo(noteEvent.createdAt, context, prefix = "") }
+    val seasonEpisodeLabel =
+        when {
+            season != null && episodeNumber != null -> stringRes(R.string.podcast_season_episode, season, episodeNumber)
+            episodeNumber != null -> stringRes(R.string.podcast_episode_number, episodeNumber)
+            season != null -> stringRes(R.string.podcast_season, season)
+            else -> null
+        }
+    val subtitle = listOfNotNull(seasonEpisodeLabel, dateStr.takeIf { it.isNotBlank() }).joinToString(" · ")
 
     Column(
         modifier =
@@ -77,7 +93,7 @@ fun PodcastEpisodeListItem(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(Size5dp),
     ) {
-        dateStr.takeIf { it.isNotBlank() }?.let {
+        subtitle.takeIf { it.isNotBlank() }?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.labelMedium,
@@ -107,7 +123,7 @@ fun PodcastEpisodeListItem(
             )
         }
 
-        firstAudio?.let { audio ->
+        media?.let { audio ->
             PodcastEpisodeAudioPlayer(
                 audio = audio,
                 note = note,
@@ -117,5 +133,16 @@ fun PodcastEpisodeListItem(
                 accountViewModel = accountViewModel,
             )
         }
+
+        // Standard engagement row per episode (comment / zap / react) — same as every other note.
+        // addPadding = false since the row already sits inside this item's horizontal padding.
+        ReactionsRow(
+            baseNote = note,
+            showReactionDetail = true,
+            addPadding = false,
+            editState = null,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }

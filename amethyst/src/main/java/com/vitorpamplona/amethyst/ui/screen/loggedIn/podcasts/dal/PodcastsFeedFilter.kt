@@ -28,11 +28,15 @@ import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
+import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.isPodcastShowEvent
 
 /**
- * Show-level podcast metadata (kind 10154) is a replaceable event, so it lives in
- * `LocalCache.addressables` — same shape as the music-playlists filter.
+ * Merges show-level podcast metadata from both drafts into one list. NIP-F4 shows (kind 10154)
+ * and Podcasting-2.0 shows (kind 30078 NIP-78 app-data with `d="podcast-metadata"`) are both
+ * replaceable, so they live in `LocalCache.addressables`. [isPodcastShowEvent] gates inclusion
+ * (the kind-30078 scan would otherwise see unrelated app-data, so the `d`-tag check matters).
  */
 class PodcastsFeedFilter(
     val account: Account,
@@ -53,11 +57,15 @@ class PodcastsFeedFilter(
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
-        val notes =
+        val f4 =
             LocalCache.addressables.filterIntoSet(PodcastMetadataEvent.KIND) { _, it ->
                 accept(it, params)
             }
-        return sort(notes)
+        val podcasting20 =
+            LocalCache.addressables.filterIntoSet(AppSpecificDataEvent.KIND) { _, it ->
+                accept(it, params)
+            }
+        return sort(f4 + podcasting20)
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
@@ -77,8 +85,8 @@ class PodcastsFeedFilter(
         note: Note,
         params: FilterByListParams,
     ): Boolean {
-        val noteEvent = note.event
-        return noteEvent is PodcastMetadataEvent &&
+        val noteEvent = note.event ?: return false
+        return isPodcastShowEvent(noteEvent) &&
             params.match(noteEvent, note.relays) &&
             (params.isHiddenList || account.isAcceptable(note))
     }

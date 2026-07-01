@@ -198,6 +198,7 @@ import com.vitorpamplona.amethyst.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastTrailerListItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.ExerciseTemplateDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutDisplay
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -325,6 +326,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
@@ -344,6 +346,9 @@ import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
+import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -982,8 +987,37 @@ private fun RenderNoteRow(
             RenderPodcastEpisode(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
         }
 
+        is Podcasting20EpisodeEvent -> {
+            RenderPodcastEpisode(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+        }
+
+        is Podcasting20TrailerEvent -> {
+            PodcastTrailerListItem(baseNote, accountViewModel, nav)
+        }
+
         is PodcastMetadataEvent -> {
             RenderPodcastMetadata(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+        }
+
+        is AppSpecificDataEvent -> {
+            // kind:30078 is overloaded; only the Podcasting-2.0 show-metadata variant renders as a
+            // podcast card. Anything else (e.g. a client's own settings) keeps the text fallback.
+            if (noteEvent.dTag() == Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG) {
+                RenderPodcastMetadata(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+            } else {
+                RenderTextEvent(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    unPackReply,
+                    backgroundColor,
+                    editState,
+                    accountViewModel,
+                    nav,
+                    isBoostedNote = isBoostedNote,
+                )
+            }
         }
 
         is DraftWrapEvent -> {

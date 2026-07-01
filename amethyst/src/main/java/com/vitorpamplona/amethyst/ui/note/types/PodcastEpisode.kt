@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -30,27 +33,36 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 
 // Bottom-rounded border on the audio player so it visually butts up against the cover's
 // top-rounded corners as one card. Constant — keep out of recomposition.
 private val PLAYER_BORDER_MODIFIER =
     Modifier.clip(RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp))
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RenderPodcastEpisode(
     note: Note,
@@ -60,21 +72,32 @@ fun RenderPodcastEpisode(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? PodcastEpisodeEvent ?: return
+    val noteEvent = note.event ?: return
+    // Both NIP-F4 (kind 54) and Podcasting-2.0 (kind 30054) episodes implement PodcastEpisode,
+    // so this one renderer serves both. Title/image/description/audio come through the shared
+    // abstraction; content and tags come from the underlying event.
+    val episode = noteEvent as? PodcastEpisode ?: return
 
-    val title = remember(noteEvent) { noteEvent.title() }
-    val image = remember(noteEvent) { noteEvent.image() }
-    val description = remember(noteEvent) { noteEvent.description() }
-    // Pick the first audio URL. Publishers may emit multiple containers in their preferred
-    // order; clients with codec preferences can extend this later.
-    val firstAudio = remember(noteEvent) { noteEvent.audios().firstOrNull() }
+    val title = remember(noteEvent) { episode.episodeTitle() }
+    val image = remember(noteEvent) { episode.episodeImage() }
+    val description = remember(noteEvent) { episode.episodeDescription() }
+    // Prefer audio (podcasts are audio-first); fall back to the video source if that's all the
+    // episode ships. The media-controller player handles both.
+    val media = remember(noteEvent) { episode.episodeAudio().firstOrNull() ?: episode.episodeVideo() }
+    val hasVideo = remember(noteEvent) { episode.episodeVideo() != null }
+    val season = remember(noteEvent) { episode.episodeSeason() }
+    val episodeNumber = remember(noteEvent) { episode.episodeNumber() }
+    val transcriptUrl = remember(noteEvent) { episode.episodeTranscriptUrl() }
+    val chaptersUrl = remember(noteEvent) { episode.episodeChaptersUrl() }
+    val value = remember(noteEvent) { episode.episodeValue() }
+    var chaptersExpanded by remember(noteEvent) { mutableStateOf(false) }
     // Suppress the markdown block if blank — title + description already describe a short
     // episode. Otherwise hand off to RichText below.
     val markdown = remember(noteEvent) { noteEvent.content.ifBlank { null } }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
         PodcastCoverCard(image, note, accountViewModel)
-        firstAudio?.let { audio ->
+        media?.let { audio ->
             PodcastEpisodeAudioPlayer(
                 audio = audio,
                 note = note,
@@ -92,15 +115,67 @@ fun RenderPodcastEpisode(
                     .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(Size5dp),
         ) {
-            title?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+            ) {
+                title?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                PodcastBookmarkButton(note, accountViewModel)
+            }
+
+            if (season != null || episodeNumber != null || hasVideo || transcriptUrl != null || chaptersUrl != null) {
+                val uriHandler = LocalUriHandler.current
+                val seasonEpisodeLabel =
+                    when {
+                        season != null && episodeNumber != null -> stringRes(R.string.podcast_season_episode, season, episodeNumber)
+                        episodeNumber != null -> stringRes(R.string.podcast_episode_number, episodeNumber)
+                        season != null -> stringRes(R.string.podcast_season, season)
+                        else -> null
+                    }
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    seasonEpisodeLabel?.let {
+                        PodcastBadge(
+                            label = it,
+                            symbol = null,
+                            container = MaterialTheme.colorScheme.secondaryContainer,
+                            content = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                    }
+                    if (hasVideo) {
+                        PodcastBadge(
+                            label = stringRes(R.string.podcast_video),
+                            symbol = MaterialSymbols.Videocam,
+                            container = MaterialTheme.colorScheme.tertiaryContainer,
+                            content = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                    }
+                    transcriptUrl?.let { url ->
+                        PodcastLinkChip(stringRes(R.string.podcast_transcript), MaterialSymbols.Description) {
+                            runCatching { uriHandler.openUri(url) }
+                        }
+                    }
+                    chaptersUrl?.let {
+                        PodcastLinkChip(stringRes(R.string.podcast_chapters), MaterialSymbols.Checklist) {
+                            chaptersExpanded = !chaptersExpanded
+                        }
+                    }
+                }
+            }
+
+            if (chaptersExpanded) {
+                chaptersUrl?.let { PodcastChaptersSection(it, accountViewModel) }
             }
 
             description?.let {
@@ -117,6 +192,18 @@ fun RenderPodcastEpisode(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+            }
+
+            value?.takeIf { !makeItShort }?.let {
+                PodcastValueSplits(value = it)
+            }
+
+            if (!makeItShort) {
+                val persons = remember(noteEvent) { episode.episodePersons() }
+                PodcastPeople(persons, accountViewModel, nav)
+
+                val transcriptUrl = remember(noteEvent) { episode.episodeTranscriptUrl() }
+                transcriptUrl?.let { PodcastTranscriptView(it, accountViewModel) }
             }
 
             markdown?.takeIf { !makeItShort }?.let {
