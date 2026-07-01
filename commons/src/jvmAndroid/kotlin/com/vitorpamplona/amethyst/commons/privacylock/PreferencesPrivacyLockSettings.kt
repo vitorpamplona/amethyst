@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Compan
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.KEY_FIRST_RUN_CARD_SEEN
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.KEY_INACTIVITY_TIMER
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.KEY_LOCK_ENABLED
+import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.KEY_PASSWORD_HASHED
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.KEY_REDACTION_LEVEL
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.NODE_NAME
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,11 +52,13 @@ class PreferencesPrivacyLockSettings(
     private val mutableRedaction =
         MutableStateFlow(DmRedactionLevel.fromOrdinal(prefs.getInt(KEY_REDACTION_LEVEL, DmRedactionLevel.DEFAULT.ordinal)))
     private val mutableFirstRunSeen = MutableStateFlow(prefs.getBoolean(KEY_FIRST_RUN_CARD_SEEN, false))
+    private val mutablePasswordHashed = MutableStateFlow<String?>(prefs.get(KEY_PASSWORD_HASHED, null))
 
     override val lockEnabled: StateFlow<Boolean> = mutableEnabled.asStateFlow()
     override val inactivityTimer: StateFlow<InactivityTimer> = mutableTimer.asStateFlow()
     override val redactionLevel: StateFlow<DmRedactionLevel> = mutableRedaction.asStateFlow()
     override val firstRunCardSeen: StateFlow<Boolean> = mutableFirstRunSeen.asStateFlow()
+    override val passwordHashed: StateFlow<String?> = mutablePasswordHashed.asStateFlow()
 
     override fun setLockEnabled(enabled: Boolean) {
         mutableEnabled.value = enabled
@@ -83,5 +86,10 @@ class PreferencesPrivacyLockSettings(
     override fun setFirstRunCardSeen(seen: Boolean) {
         mutableFirstRunSeen.value = seen
         prefs.putBoolean(KEY_FIRST_RUN_CARD_SEEN, seen)
+    }
+
+    override fun setPasswordHashed(saltAndHash: String?) {
+        mutablePasswordHashed.value = saltAndHash
+        if (saltAndHash == null) prefs.remove(KEY_PASSWORD_HASHED) else prefs.put(KEY_PASSWORD_HASHED, saltAndHash)
     }
 }

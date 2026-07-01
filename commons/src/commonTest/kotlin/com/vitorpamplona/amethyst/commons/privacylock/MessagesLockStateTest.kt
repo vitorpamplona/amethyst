@@ -41,11 +41,13 @@ class MessagesLockStateTest {
         private val mutableTimer = MutableStateFlow(timer)
         private val mutableRedaction = MutableStateFlow(DmRedactionLevel.DEFAULT)
         private val mutableFirstRunSeen = MutableStateFlow(false)
+        private val mutablePasswordHashed = MutableStateFlow<String?>(null)
 
         override val lockEnabled: StateFlow<Boolean> = mutableLockEnabled.asStateFlow()
         override val inactivityTimer: StateFlow<InactivityTimer> = mutableTimer.asStateFlow()
         override val redactionLevel: StateFlow<DmRedactionLevel> = mutableRedaction.asStateFlow()
         override val firstRunCardSeen: StateFlow<Boolean> = mutableFirstRunSeen.asStateFlow()
+        override val passwordHashed: StateFlow<String?> = mutablePasswordHashed.asStateFlow()
 
         override fun setLockEnabled(enabled: Boolean) {
             mutableLockEnabled.value = enabled
@@ -61,6 +63,10 @@ class MessagesLockStateTest {
 
         override fun setFirstRunCardSeen(seen: Boolean) {
             mutableFirstRunSeen.value = seen
+        }
+
+        override fun setPasswordHashed(saltAndHash: String?) {
+            mutablePasswordHashed.value = saltAndHash
         }
     }
 

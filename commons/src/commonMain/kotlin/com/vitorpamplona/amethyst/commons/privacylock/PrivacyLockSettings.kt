@@ -40,6 +40,14 @@ interface PrivacyLockSettings {
     val redactionLevel: StateFlow<DmRedactionLevel>
     val firstRunCardSeen: StateFlow<Boolean>
 
+    /**
+     * Non-null when the user has set a password on this device. Value is
+     * `salt$hash` (both base64) — never a raw password.
+     * Platforms may use this differently: Android does not use it today
+     * (biometric is authoritative); Desktop uses it as the unlock gate.
+     */
+    val passwordHashed: StateFlow<String?>
+
     fun setLockEnabled(enabled: Boolean)
 
     fun setInactivityTimer(timer: InactivityTimer)
@@ -48,6 +56,9 @@ interface PrivacyLockSettings {
 
     fun setFirstRunCardSeen(seen: Boolean)
 
+    /** Store a `salt$hash` combined string; pass `null` to clear. */
+    fun setPasswordHashed(saltAndHash: String?)
+
     companion object {
         const val DEFAULT_LOCK_ENABLED = false
         const val NODE_NAME = "com/vitorpamplona/amethyst/privacylock"
@@ -55,5 +66,6 @@ interface PrivacyLockSettings {
         const val KEY_INACTIVITY_TIMER = "inactivity_timer_ordinal"
         const val KEY_REDACTION_LEVEL = "redaction_level_ordinal"
         const val KEY_FIRST_RUN_CARD_SEEN = "first_run_card_seen"
+        const val KEY_PASSWORD_HASHED = "password_hashed"
     }
 }

@@ -291,6 +291,21 @@ fun main() {
         // Callback set by App() for single pane navigation from MenuBar
         var navigateToScreen by remember { mutableStateOf<((DeckColumnType) -> Unit)?>(null) }
 
+        // Messages privacy lock: app-global settings + state holder. Initial
+        // LockState is seeded synchronously inside MessagesLockState from
+        // the java.util.prefs value so the first composition sees the correct
+        // state (deep-link race fix, plan §Security Hardening H1).
+        val privacyLockSettings =
+            remember {
+                com.vitorpamplona.amethyst.commons.privacylock
+                    .PreferencesPrivacyLockSettings()
+            }
+        val messagesLockState =
+            remember {
+                com.vitorpamplona.amethyst.commons.privacylock
+                    .MessagesLockState(privacyLockSettings, windowScope)
+            }
+
         // Window title-bar / taskbar thumbnail icon. On macOS the source logo
         // is wrapped in a squircle so it matches every other dock icon; on
         // other platforms the raw transparent logo is used as-is.
@@ -602,6 +617,8 @@ fun main() {
                 LocalWindowState provides windowState,
                 LocalAwtWindow provides window,
                 LocalIsImmersiveFullscreen provides immersiveFullscreenState,
+                com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState provides messagesLockState,
+                com.vitorpamplona.amethyst.desktop.security.LocalPrivacyLockSettings provides privacyLockSettings,
             ) {
                 key(appRestartKey) {
                     CompositionLocalProvider(
@@ -2073,6 +2090,13 @@ fun RelaySettingsScreen(
                 HorizontalDivider()
                 Spacer(Modifier.height(16.dp))
             }
+
+            // Privacy lock section
+            com.vitorpamplona.amethyst.desktop.ui.settings
+                .PrivacyLockSettingsScreen()
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
 
             val logoutScope = rememberCoroutineScope()
             OutlinedButton(
