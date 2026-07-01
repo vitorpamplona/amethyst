@@ -223,13 +223,20 @@ a gift wrap, which is encrypted) — but drive the common cases off quartz state
 ### Generic fixes to land in quartz (`nip01Core/relay/client/`)
 
 1. **Treat `auth-required` as a first-class deferred state, not a burned retry.**
-   Today `PoolEventOutboxState.newResponse` sends `auth-required` down the
-   generic-failure path, and `isDone() = responses.size > 2 || tries.size > 3`
-   drops the event after 3 NAKs — which can fire *before* AUTH completes. Port
-   the `StandaloneRelayClient` behavior (`!msg.message.startsWith("auth-required")`)
-   into `PoolEventOutbox`: an `auth-required` NAK marks the event **pending-auth**
-   for that relay, does **not** count toward `isDone()`, and is re-sent by the
-   existing `syncFilters` once auth succeeds.
+   *(Landed — commit 2.)* The resend-after-auth path already works:
+   `syncFilters` on the auth `OK` re-sends every still-pending EVENT, so the
+   common single-round case (send → `auth-required` → auth → resend → accepted)
+   already delivered. The narrow bug: `PoolEventOutboxState.newResponse` sent
+   `auth-required` down the generic-failure path, so each NAK consumed the
+   per-relay retry budget (`isDone() = responses.size > 2 || tries.size > 3`).
+   Budget exhaustion isn't checked on the NAK itself but on the **next
+   `newTry`** — i.e. the resend `syncFilters` issues after the auth `OK`. So
+   across *repeated* rounds (slow external NIP-55 signer, reconnect churn, or a
+   relay that re-challenges) the saved event could be **evicted right as it was
+   about to be redelivered**. Fix: `auth-required` records no failure and leaves
+   `relaysRemaining` untouched (mirrors `StandaloneRelayClient`'s
+   `!msg.message.startsWith("auth-required")`), so the existing resend can
+   redeliver no matter how many auth rounds elapse first.
 2. **Real retry policy instead of a hard count.** Replace the `>2 / >3` cliff
    with bounded retries + backoff, and a **terminal "gave up" notification**
    (via `RelayConnectionListener` / a publish-result callback) so events are
