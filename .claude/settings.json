@@ -1,5 +1,17 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|mcp__github__create_pull_request",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pre-push-spotless.sh",
+            "timeout": 180
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [
