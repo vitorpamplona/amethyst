@@ -67,5 +67,5 @@ object RelayFixtures {
     fun vitorShort(): List<Event> = OptimizedJsonMapper.fromJsonToEventList(loadString("nostr_vitor_short.json"))
 
     /** Loads `nostr_vitor_startup_data.json.gz` — the larger Vitor startup corpus. */
-    fun vitorStartup(): List<Event> = OptimizedJsonMapper.fromJsonToEventList(loadGzipString("nostr_vitor_startup_data.json"))
+    fun vitorStartup(): List<Event> = OptimizedJsonMapper.fromJsonToEventList(loadGzipString("nostr_vitor_startup_data.json.gz"))
 }

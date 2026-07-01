@@ -58,7 +58,7 @@ class LargeDBSignatureCheck {
     fun insertStartupDatabase() =
         runBlocking {
             // This file includes duplicates
-            val fullDBInputStream = javaClass.classLoader?.getResourceAsStream("nostr_vitor_startup_data.json")
+            val fullDBInputStream = javaClass.classLoader?.getResourceAsStream("nostr_vitor_startup_data.json.gz")
 
             val eventArray =
                 JacksonMapper.mapper.readValue<ArrayList<Event>>(
