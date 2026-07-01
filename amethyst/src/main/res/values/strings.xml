@@ -1011,6 +1011,11 @@
     <string name="podcast_value_for_value">Value-for-Value</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_zap_split_hint">Zaps to this are split between:</string>
+    <string name="podcast_comment_action">Comment</string>
+    <plurals name="podcast_comment_count">
+        <item quantity="one">%1$d comment</item>
+        <item quantity="other">%1$d comments</item>
+    </plurals>
     <string name="podcast_role_host">Host</string>
     <string name="podcast_role_cohost">Co-host</string>
     <string name="podcast_role_editor">Editor</string>
