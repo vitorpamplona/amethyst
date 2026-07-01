@@ -82,7 +82,9 @@ private class HostSession(
 
     override val signalOptions: Set<String> = emptySet()
 
-    override fun notifySessionRendered(supportedSignalOptions: Set<String>) {}
+    override fun notifySessionRendered(supportedSignalOptions: Set<String>) {
+        // No-op: signalOptions is empty, so there are no supported signals to report back on.
+    }
 
     override fun notifyResized(
         width: Int,
@@ -92,11 +94,17 @@ private class HostSession(
         webView.requestLayout()
     }
 
-    override fun notifyZOrderChanged(isZOrderOnTop: Boolean) {}
+    override fun notifyZOrderChanged(isZOrderOnTop: Boolean) {
+        // No-op: the WebView's z-order within the SurfaceControlViewHost surface is fixed.
+    }
 
-    override fun notifyConfigurationChanged(configuration: Configuration) {}
+    override fun notifyConfigurationChanged(configuration: Configuration) {
+        // No-op: the WebView handles configuration changes itself; the session needs no extra action.
+    }
 
-    override fun notifyUiChanged(uiContainerInfo: Bundle) {}
+    override fun notifyUiChanged(uiContainerInfo: Bundle) {
+        // No-op: no host-side reaction is needed to UI-container geometry updates.
+    }
 
     override fun close() {
         // The library may call close() off the main thread; WebView.destroy() (and the tabs mutation)

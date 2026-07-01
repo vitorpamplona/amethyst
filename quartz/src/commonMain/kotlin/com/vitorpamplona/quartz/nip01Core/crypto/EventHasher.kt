@@ -24,7 +24,23 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
+/**
+ * Computes and verifies Nostr **event ids** (NIP-01).
+ *
+ * An id is the SHA-256 of the canonically serialized array
+ * `[0, pubkey, created_at, kind, tags, content]` — UTF-8, no whitespace, in that
+ * exact order. Getting that serialization right by hand is easy to botch (it is
+ * what makes relays reject an event), so route through here rather than calling
+ * `sha256` on your own JSON. Signing/building via the typed event builders already
+ * does this for you; reach for `EventHasher` when validating events from an
+ * untrusted source or hashing a not-yet-wrapped template.
+ *
+ * ```kotlin
+ * val ok = EventHasher.hashIdCheck(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+ * ```
+ */
 object EventHasher {
+    /** Raw 32-byte id digest for the given event fields. See [hashId] for the hex form. */
     fun hashIdBytes(
         pubKey: HexKey,
         createdAt: Long,
@@ -33,6 +49,7 @@ object EventHasher {
         content: String,
     ): ByteArray = sha256(EventHasherSerializer.fastMakeJsonForId(pubKey, createdAt, kind, tags, content))
 
+    /** The event id as a lower-case 64-char hex string. */
     fun hashId(
         pubKey: HexKey,
         createdAt: Long,
@@ -41,6 +58,7 @@ object EventHasher {
         content: String,
     ): String = hashIdBytes(pubKey, createdAt, kind, tags, content).toHexKey()
 
+    /** True when [id] matches the id computed from the other fields — use to validate untrusted events. */
     fun hashIdCheck(
         id: HexKey,
         pubKey: HexKey,

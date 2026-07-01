@@ -134,19 +134,140 @@ val privKeyHex: String? = keyPair.privKey?.toHexKey()
 
 ```kotlin
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 
 // ByteArray → hex
 val hex = byteArray.toHexKey()
 
 // hex → ByteArray
-val bytes = HexKey.decodeHex(hex)
+val bytes = hex.hexToByteArray()
 
 // Bech32 import (npub, nsec)
 val parsed = Nip19Parser.uriToRoute("npub1abc...")
 // or
 val parsed = Nip19Parser.uriToRoute("nsec1abc...")
 ```
+
+> Hex ↔ ByteArray is a first-class utility in Quartz — see **§3.1 Hex utilities** below.
+
+---
+
+### 3.1 Hex utilities (HexKey ↔ ByteArray)
+
+Nostr keys, event ids and signatures travel as lower-case hex strings. Quartz
+models this with the `HexKey` typealias (just a `String`) plus extension
+functions — **do not** write your own byte loop or pull in a third-party codec.
+
+**Packages:** `com.vitorpamplona.quartz.nip01Core.core` (the extensions) and
+`com.vitorpamplona.quartz.utils` (the underlying `Hex` object).
+
+```kotlin
+import com.vitorpamplona.quartz.nip01Core.core.HexKey            // typealias = String
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey          // ByteArray → hex
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray    // hex → ByteArray
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
+import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.utils.Hex
+
+// Encode / decode
+val hex: HexKey = pubKeyBytes.toHexKey()      // lower-case, 2 chars per byte
+val bytes: ByteArray = hex.hexToByteArray()   // throws on odd length
+
+// Untrusted input → decode safely
+val maybe: ByteArray? = userInput.hexToByteArrayOrNull()  // null if not valid hex
+
+// Validate without decoding (no allocation)
+Hex.isHex(userInput)        // even-length, all hex digits (any length)
+Hex.isHex64(userInput)      // fast path for a 32-byte key/id (checks first 64 chars)
+hex.isValid()               // 64 chars AND valid hex (pubkey / event-id shape)
+
+// Compare a hex string to raw bytes without decoding
+Hex.isEqual(incomingHexId, myIdBytes)
+```
+
+| Need | Call | Notes |
+|------|------|-------|
+| ByteArray → hex | `bytes.toHexKey()` | lower-case output |
+| hex → ByteArray (strict) | `hex.hexToByteArray()` | throws on odd length |
+| hex → ByteArray (safe) | `hex.hexToByteArrayOrNull()` | `null` on invalid hex |
+| is this valid hex? | `Hex.isHex(s)` / `Hex.isHex64(s)` | `isHex64` ~30% faster for keys/ids |
+| is this a pubkey/id shape? | `hex.isValid()` | 64 chars + valid hex |
+| hex == bytes? | `Hex.isEqual(hex, bytes)` | no decode allocation |
+
+Constants `PUBKEY_LENGTH` and `EVENT_ID_LENGTH` (both `64`) live in the same
+`nip01Core.core` package.
+
+---
+
+### 3.2 Everyday utilities (time, random, hashing, bech32, base64)
+
+These small helpers exist so you don't reinvent them — and several have a
+footgun the built-in avoids. **Prefer them over stdlib/hand-rolled equivalents.**
+
+**Time — `TimeUtils` (`com.vitorpamplona.quartz.utils`).** Everything is in Unix
+**seconds** (what `created_at` and filter `since`/`until` use), *not* millis.
+
+```kotlin
+import com.vitorpamplona.quartz.utils.TimeUtils
+
+val createdAt = TimeUtils.now()          // seconds — for created_at. NOT currentTimeMillis()/1000
+val since = TimeUtils.oneDayAgo()        // relative filter bounds: oneHourAgo(), fiveMinutesAgo()…
+val fresh = TimeUtils.withinTenMinutes(event.createdAt)  // NIP-42/NIP-98 freshness
+// TimeUtils.nowMillis() is the only millisecond helper — non-protocol use only.
+```
+
+**Secure random — `RandomInstance` (`utils`).** Backed by `SecureRandom`; use it
+for anything security-sensitive instead of `kotlin.random.Random`.
+
+```kotlin
+import com.vitorpamplona.quartz.utils.RandomInstance
+
+val nonce = RandomInstance.bytes(32)     // nonces, salts, keys
+val subId = RandomInstance.randomChars() // 16-char [a-zA-Z0-9] subscription id
+```
+
+**Hashing — `sha256(...)` + `EventHasher`.** `sha256` is the raw primitive; to
+compute/verify an **event id** use `EventHasher`, which canonically serializes
+`[0, pubkey, created_at, kind, tags, content]` before hashing (getting this wrong
+is what makes relays reject an event). Typed builders already do this for you.
+
+```kotlin
+import com.vitorpamplona.quartz.utils.sha256.sha256
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
+
+val digest = sha256(bytes)               // raw 32-byte hash
+val id = EventHasher.hashId(pubKey, createdAt, kind, tags, content)
+val valid = EventHasher.hashIdCheck(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+```
+
+**Bech32.** For `npub`/`nsec`/`note`/… prefer the NIP-19 layer (`ByteArray.toNpub()`,
+`Nip19Parser.uriToRoute(...)` — see §10). Drop to the low-level
+`Bech32` object (`nip19Bech32.bech32`) only for a custom prefix:
+
+```kotlin
+import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+
+val addr = Bech32.encodeBytes("npub", pubKeyBytes, Bech32.Encoding.Bech32)
+val bytes = "npub1...".bechToBytes("npub")   // decode + assert the prefix
+```
+
+**Base64.** Quartz has no wrapper — use the Kotlin stdlib `kotlin.io.encoding.Base64`
+directly, and match the variant the spec wants: NIP-44/NIP-04 payloads use
+`Base64.Default` (standard, padded); url-safe contexts use `Base64.UrlSafe`
+(configure padding via `.withPadding(...)`).
+
+| Need | Call |
+|------|------|
+| Now (event `created_at`) | `TimeUtils.now()` (seconds) |
+| Relative filter bound | `TimeUtils.oneDayAgo()` / `oneHourAgo()` / … |
+| Secure random bytes | `RandomInstance.bytes(n)` |
+| Subscription id | `RandomInstance.randomChars()` |
+| Raw hash | `sha256(bytes)` |
+| Event id / verify | `EventHasher.hashId(...)` / `hashIdCheck(...)` |
+| Bech32 custom prefix | `Bech32.encodeBytes(hrp, bytes, enc)` / `s.bechToBytes(hrp)` |
+| Base64 | `kotlin.io.encoding.Base64` (`.Default` / `.UrlSafe`) |
 
 ---
 
@@ -644,6 +765,13 @@ val results = store.query<Event>(Filter(search = "bitcoin"))
 | Sign event | `signer.sign(template)` | `nip01Core.signers` |
 | Serialize | `event.toJson()` | `nip01Core.core` |
 | Parse | `Event.fromJson(json)` | `nip01Core.core` |
+| ByteArray → hex | `bytes.toHexKey()` | `nip01Core.core` |
+| hex → ByteArray | `hex.hexToByteArray()` / `hex.hexToByteArrayOrNull()` | `nip01Core.core` |
+| Validate hex | `Hex.isHex(s)` / `Hex.isHex64(s)` / `hex.isValid()` | `utils`, `nip01Core.core` |
+| Now (seconds) | `TimeUtils.now()` | `utils` |
+| Relative time | `TimeUtils.oneDayAgo()` / `oneHourAgo()` | `utils` |
+| Secure random | `RandomInstance.bytes(n)` / `randomChars()` | `utils` |
+| Hash / event id | `sha256(bytes)` / `EventHasher.hashId(...)` | `utils.sha256`, `nip01Core.crypto` |
 | Normalize relay URL | `RelayUrlNormalizer.normalize("wss://...")` | `nip01Core.relay.normalizer` |
 | Setup relay client | `NostrClient(BasicOkHttpWebSocket.Builder { okhttp })` | `nip01Core.relay.client` |
 | Subscribe | `client.openReqSubscription(subId, mapOf(relay to filters), listener)` | `nip01Core.relay.client` |

@@ -59,7 +59,7 @@ data class MagnifierFrame(
     val captureMs: Double,
     val requestStampNanos: Long,
 ) {
-    override fun equals(other: Any?) = this === other
+    override fun equals(other: Any?) = other is MagnifierFrame && this === other
 
     override fun hashCode() = System.identityHashCode(this)
 }

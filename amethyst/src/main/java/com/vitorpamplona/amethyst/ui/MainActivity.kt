@@ -145,6 +145,8 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
+private const val NOSTR_URI_PREFIX = "nostr:"
+
 fun isNotificationRoute(uri: String) = uri.startsWith("notifications", true) || uri.startsWith("nostr:notifications", true)
 
 fun isHashtagRoute(uri: String) = uri.startsWith("hashtag?id=") || uri.startsWith("nostr:hashtag?id=")
@@ -161,7 +163,7 @@ fun isConnectedAppRoute(uri: String) = uri.startsWith("connectedapp?coordinate="
 fun connectedAppRoute(uri: String): Route.ConnectedAppDetail? {
     val coordinate =
         runCatching {
-            val raw = java.net.URI(uri.removePrefix("nostr:")).findParameterValue("coordinate") ?: return null
+            val raw = java.net.URI(uri.removePrefix(NOSTR_URI_PREFIX)).findParameterValue("coordinate") ?: return null
             URLDecoder.decode(raw, Charsets.UTF_8.name())
         }.getOrNull()?.takeIf { it.isNotBlank() } ?: return null
 
@@ -171,7 +173,7 @@ fun connectedAppRoute(uri: String): Route.ConnectedAppDetail? {
 fun urlRoute(uri: String): Route.Url? {
     val url =
         runCatching {
-            val rawUrl = java.net.URI(uri.removePrefix("nostr:")).findParameterValue("id") ?: return null
+            val rawUrl = java.net.URI(uri.removePrefix(NOSTR_URI_PREFIX)).findParameterValue("id") ?: return null
             URLDecoder.decode(rawUrl, Charsets.UTF_8.name())
         }.getOrNull() ?: return null
 
@@ -189,11 +191,11 @@ fun uriToRoute(
     account: Account,
 ): Route? {
     if (isNotificationRoute(uri)) {
-        val scrollTo = runCatching { java.net.URI(uri.removePrefix("nostr:")).findParameterValue("scrollTo") }.getOrNull()
+        val scrollTo = runCatching { java.net.URI(uri.removePrefix(NOSTR_URI_PREFIX)).findParameterValue("scrollTo") }.getOrNull()
         return Route.Notification(scrollToEventId = scrollTo)
     }
     if (isHashtagRoute(uri)) {
-        return Route.Hashtag(uri.removePrefix("nostr:").removePrefix("hashtag?id=").lowercase())
+        return Route.Hashtag(uri.removePrefix(NOSTR_URI_PREFIX).removePrefix("hashtag?id=").lowercase())
     }
     if (isUrlRoute(uri)) {
         return urlRoute(uri)

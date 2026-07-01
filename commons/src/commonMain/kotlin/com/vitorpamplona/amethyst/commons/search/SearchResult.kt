@@ -50,11 +50,4 @@ sealed class SearchResult {
         val dTag: String,
         val displayId: String,
     ) : SearchResult()
-
-    /**
-     * Hashtag search.
-     */
-    data class HashtagResult(
-        val hashtag: String,
-    ) : SearchResult()
 }

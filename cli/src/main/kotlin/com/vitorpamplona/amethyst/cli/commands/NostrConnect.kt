@@ -51,6 +51,8 @@ import okhttp3.OkHttpClient
  * which only parses). The signer side lives in [BunkerCommand].
  */
 object NostrConnect {
+    private const val NOSTRCONNECT_SCHEME = "nostrconnect://"
+
     data class Offer(
         val clientPubkey: String,
         val relays: Set<NormalizedRelayUrl>,
@@ -60,8 +62,8 @@ object NostrConnect {
 
     /** Parse `nostrconnect://<client-pubkey>?relay=…&secret=…&name=…` (percent-decoded). */
     fun parseOffer(uri: String): Offer? {
-        if (!uri.startsWith("nostrconnect://")) return null
-        val parts = uri.removePrefix("nostrconnect://").split("?", limit = 2)
+        if (!uri.startsWith(NOSTRCONNECT_SCHEME)) return null
+        val parts = uri.removePrefix(NOSTRCONNECT_SCHEME).split("?", limit = 2)
         val clientPubkey = parts[0].lowercase()
         if (clientPubkey.length != 64 || clientPubkey.any { it !in "0123456789abcdef" }) return null
         val relays = mutableSetOf<NormalizedRelayUrl>()
@@ -89,7 +91,7 @@ object NostrConnect {
     ): String {
         val enc = { s: String -> java.net.URLEncoder.encode(s, "UTF-8") }
         return buildString {
-            append("nostrconnect://").append(clientPubkey)
+            append(NOSTRCONNECT_SCHEME).append(clientPubkey)
             append("?").append(relays.joinToString("&") { "relay=${enc(it.url)}" })
             append("&secret=").append(enc(secret))
             if (name != null) append("&name=").append(enc(name))

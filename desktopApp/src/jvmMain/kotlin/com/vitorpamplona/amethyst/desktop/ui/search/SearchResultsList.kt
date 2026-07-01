@@ -60,7 +60,8 @@ import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
-import com.vitorpamplona.amethyst.desktop.ui.toNoteDisplayData
+import com.vitorpamplona.amethyst.desktop.ui.note.SpamCheckedNoteRender
+import com.vitorpamplona.amethyst.desktop.ui.rememberDisplayData
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 
 @Composable
@@ -153,24 +154,36 @@ fun SearchResultsList(
             if (!collapsed) {
                 val displayNotes = textNotes.take(5)
                 items(displayNotes, key = { "note-${it.id}" }) { event ->
-                    NoteCard(
-                        note = event.toNoteDisplayData(localCache),
+                    SpamCheckedNoteRender(
+                        displayedEvent = event,
+                        noteIdHex = event.id,
                         localCache = localCache,
-                        onClick = { onNavigateToThread(event.id) },
-                        onAuthorClick = onNavigateToProfile,
-                        onMentionClick = onNavigateToProfile,
-                    )
+                    ) {
+                        NoteCard(
+                            note = event.rememberDisplayData(localCache),
+                            localCache = localCache,
+                            onClick = { onNavigateToThread(event.id) },
+                            onAuthorClick = onNavigateToProfile,
+                            onMentionClick = onNavigateToProfile,
+                        )
+                    }
                 }
                 if (textNotes.size > 5) {
                     item(key = "notes-expand") {
                         ExpandableSection(
                             remaining = textNotes.drop(5),
                         ) { event ->
-                            NoteCard(
-                                note = event.toNoteDisplayData(localCache),
-                                onClick = { onNavigateToThread(event.id) },
-                                onAuthorClick = onNavigateToProfile,
-                            )
+                            SpamCheckedNoteRender(
+                                displayedEvent = event,
+                                noteIdHex = event.id,
+                                localCache = localCache,
+                            ) {
+                                NoteCard(
+                                    note = event.rememberDisplayData(localCache),
+                                    onClick = { onNavigateToThread(event.id) },
+                                    onAuthorClick = onNavigateToProfile,
+                                )
+                            }
                         }
                     }
                 }
@@ -197,24 +210,36 @@ fun SearchResultsList(
             }
             if (!collapsed) {
                 items(articles.take(5), key = { "article-${it.id}" }) { event ->
-                    NoteCard(
-                        note = event.toNoteDisplayData(localCache),
+                    SpamCheckedNoteRender(
+                        displayedEvent = event,
+                        noteIdHex = event.id,
                         localCache = localCache,
-                        onClick = { onNavigateToThread(event.id) },
-                        onAuthorClick = onNavigateToProfile,
-                        onMentionClick = onNavigateToProfile,
-                    )
+                    ) {
+                        NoteCard(
+                            note = event.rememberDisplayData(localCache),
+                            localCache = localCache,
+                            onClick = { onNavigateToThread(event.id) },
+                            onAuthorClick = onNavigateToProfile,
+                            onMentionClick = onNavigateToProfile,
+                        )
+                    }
                 }
                 if (articles.size > 5) {
                     item(key = "articles-expand") {
                         ExpandableSection(
                             remaining = articles.drop(5),
                         ) { event ->
-                            NoteCard(
-                                note = event.toNoteDisplayData(localCache),
-                                onClick = { onNavigateToThread(event.id) },
-                                onAuthorClick = onNavigateToProfile,
-                            )
+                            SpamCheckedNoteRender(
+                                displayedEvent = event,
+                                noteIdHex = event.id,
+                                localCache = localCache,
+                            ) {
+                                NoteCard(
+                                    note = event.rememberDisplayData(localCache),
+                                    onClick = { onNavigateToThread(event.id) },
+                                    onAuthorClick = onNavigateToProfile,
+                                )
+                            }
                         }
                     }
                 }
@@ -239,13 +264,19 @@ fun SearchResultsList(
             }
             if (!collapsed) {
                 items(otherNotes.take(5), key = { "other-${it.id}" }) { event ->
-                    NoteCard(
-                        note = event.toNoteDisplayData(localCache),
+                    SpamCheckedNoteRender(
+                        displayedEvent = event,
+                        noteIdHex = event.id,
                         localCache = localCache,
-                        onClick = { onNavigateToThread(event.id) },
-                        onAuthorClick = onNavigateToProfile,
-                        onMentionClick = onNavigateToProfile,
-                    )
+                    ) {
+                        NoteCard(
+                            note = event.rememberDisplayData(localCache),
+                            localCache = localCache,
+                            onClick = { onNavigateToThread(event.id) },
+                            onAuthorClick = onNavigateToProfile,
+                            onMentionClick = onNavigateToProfile,
+                        )
+                    }
                 }
             }
         }

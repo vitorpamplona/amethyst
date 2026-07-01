@@ -83,6 +83,18 @@ interface INostrClient : AutoCloseable {
 
     fun removeConnectionListener(listener: RelayConnectionListener)
 
+    /**
+     * Returns the [IRelayClient] for [url], creating and registering it in the
+     * connection pool if it is not there yet.
+     *
+     * Most callers should never need this — [subscribe]/[count]/[publish] manage
+     * the pool for you. It exists for accessories that must drive a single relay
+     * directly, such as NIP-77 negentropy (which sends `NEG-OPEN` and walks the
+     * reconciliation rounds on one connection). The default implementation throws;
+     * only a real pool-backed client can hand out relay clients.
+     */
+    fun getOrCreateRelay(url: NormalizedRelayUrl): IRelayClient = throw UnsupportedOperationException("This INostrClient does not expose relay clients")
+
     fun getReqFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>?
 
     fun getCountFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>?

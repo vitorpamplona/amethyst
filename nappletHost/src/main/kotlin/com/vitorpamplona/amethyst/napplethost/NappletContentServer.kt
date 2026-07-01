@@ -121,7 +121,7 @@ class NappletContentServer(
         if (url == NappletWebContract.SHELL_URL) return serveShell()
         if (url == appOrigin || url.startsWith("$appOrigin/")) {
             // A document navigation accepts text/html; a sub-resource (js/css/img) does not.
-            val acceptsHtml = request.requestHeaders["Accept"]?.contains("text/html", ignoreCase = true) == true
+            val acceptsHtml = request.requestHeaders["Accept"]?.contains(MIME_HTML, ignoreCase = true) == true
             return serveAppResource(url, acceptsHtml)
         }
         // Off-origin: a locked napplet 404s (connect-src 'none' means it shouldn't ask). An nSite in
@@ -134,7 +134,7 @@ class NappletContentServer(
         // origin so the shell frames exactly this applet (and the CSP frame-src is pinned to it too).
         val html = shellHtmlBytes.decodeToString().replace(NappletWebContract.APP_ORIGIN_PLACEHOLDER, appOrigin).encodeToByteArray()
         return WebResourceResponse(
-            "text/html",
+            MIME_HTML,
             "utf-8",
             200,
             "OK",
@@ -167,7 +167,7 @@ class NappletContentServer(
         if (resolution !is StaticSiteResolution.Resolved) return notFound()
 
         val (mime, charset) = splitContentType(resolution.contentType)
-        val isHtml = mime.equals("text/html", ignoreCase = true)
+        val isHtml = mime.equals(MIME_HTML, ignoreCase = true)
         val bytes = if (isHtml) injectShim(resolution.bytes) else resolution.bytes
 
         // Locked napplets get the strict app CSP (connect-src 'none', etc.). An nSite in website mode
@@ -222,5 +222,6 @@ class NappletContentServer(
     companion object {
         // Marker "server" for a Resolved served from the local content-addressed cache.
         private const val CACHE_SERVER = "cache"
+        private const val MIME_HTML = "text/html"
     }
 }

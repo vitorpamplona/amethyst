@@ -18,34 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.datasource
+package com.vitorpamplona.amethyst.commons.moderation
 
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.compositionLocalOf
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
-private const val COMMUNITIES_MINE_LIMIT = 300
+/**
+ * Settings for the hashtag-spam filter, provided at App() root by each
+ * front end (Desktop, Android). Defaults to an error so missing provision
+ * fails loudly during development; production binaries always wire this.
+ */
+val LocalHashtagSpamSettings: ProvidableCompositionLocal<HashtagSpamSettings> =
+    compositionLocalOf { error("LocalHashtagSpamSettings not provided. Wire it at App() root.") }
 
-fun filterCommunitiesMine(
-    pubkey: HexKey,
-    relays: Set<NormalizedRelayUrl>,
-    since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    if (relays.isEmpty() || pubkey.isEmpty()) return emptyList()
-    val authors = listOf(pubkey)
-    return relays.map { relay ->
-        RelayBasedFilter(
-            relay = relay,
-            filter =
-                Filter(
-                    kinds = listOf(CommunityDefinitionEvent.KIND),
-                    authors = authors,
-                    limit = COMMUNITIES_MINE_LIMIT,
-                    since = since?.get(relay)?.time,
-                ),
-        )
-    }
-}
+/**
+ * Pubkeys exempted from the hashtag-spam check — the active account's
+ * follow set union the active account's own pubkey. Updated by the App()
+ * root whenever the active account changes. Defaults to empty (strict
+ * filter applies to everyone) so leaf composables can read it without a
+ * null check.
+ */
+val LocalSpamExemptKeys: ProvidableCompositionLocal<Set<HexKey>> =
+    compositionLocalOf { emptySet() }

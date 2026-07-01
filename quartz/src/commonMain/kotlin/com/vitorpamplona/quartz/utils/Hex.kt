@@ -20,6 +20,24 @@
  */
 package com.vitorpamplona.quartz.utils
 
+/**
+ * Fast, allocation-conscious hex codec used throughout Quartz for keys, event
+ * ids and signatures. Backed by pre-computed lookup tables and benchmarked
+ * against the secp256k1 codec and Kotlin's stdlib `HexFormat` (see
+ * `benchmark/.../HexBenchmark.kt`).
+ *
+ * Most call sites should prefer the extension functions in
+ * [com.vitorpamplona.quartz.nip01Core.core] — `ByteArray.toHexKey()` and
+ * `HexKey.hexToByteArray()` — which delegate here. Reach for this object
+ * directly when you want to validate without decoding ([isHex] / [isHex64]) or
+ * compare a hex string to raw bytes without allocating ([isEqual]).
+ *
+ * ```kotlin
+ * val hex = Hex.encode(bytes) // ByteArray -> lower-case hex
+ * val bytes = Hex.decode(hex) // hex (any case) -> ByteArray
+ * if (Hex.isHex64(id)) { ... } // is this a valid 32-byte hex id?
+ * ```
+ */
 object Hex {
     private const val LOWER_CASE_HEX = "0123456789abcdef"
     private const val UPPER_CASE_HEX = "0123456789ABCDEF"
@@ -36,7 +54,12 @@ object Hex {
             (LOWER_CASE_HEX[(it shr 4)].code shl 8) or LOWER_CASE_HEX[(it and 0xF)].code
         }
 
-    // 47ns in debug on the Emulator
+    /**
+     * True when [hex] is a non-null, even-length string of only hex digits
+     * (upper or lower case). Rejects odd lengths and stray non-hex chars (e.g.
+     * emoji in `p` tags) instead of throwing. ~47ns in debug on the Emulator;
+     * use [isHex64] when the length is known to be 64.
+     */
     fun isHex(hex: String?): Boolean {
         if (hex == null) return false
         if (hex.length and 1 != 0) return false
@@ -63,7 +86,12 @@ object Hex {
         return true
     }
 
-    // 30% faster than isHex
+    /**
+     * Validates the first 64 chars of [hex] as hex digits — the fast path for
+     * checking a 32-byte pubkey or event id. ~30% faster than [isHex] because
+     * the length is fixed and the checks are unrolled. Assumes [hex] is at least
+     * 64 chars long; it does not verify the total length.
+     */
     fun isHex64(hex: String): Boolean =
         try {
             hexToByte[hex[0].code] >= 0 &&
@@ -144,6 +172,12 @@ object Hex {
             false
         }
 
+    /**
+     * Decodes [hex] (upper or lower case) into bytes. Requires an even length —
+     * throws [IllegalArgumentException] otherwise. Does not itself validate the
+     * characters, so guard untrusted input with [isHex] first (or use
+     * `HexKey.hexToByteArrayOrNull()`).
+     */
     fun decode(hex: String): ByteArray {
         // faster version of hex decoder
         require(hex.length and 1 == 0) {
@@ -154,6 +188,7 @@ object Hex {
         }
     }
 
+    /** Encodes [input] as a lower-case hex string (two chars per byte). */
     fun encode(input: ByteArray): String {
         val out = CharArray(input.size * 2)
         var outIdx = 0
@@ -165,6 +200,12 @@ object Hex {
         return out.concatToString()
     }
 
+    /**
+     * True when the hex string [id] encodes exactly the bytes [ourId], compared
+     * without allocating a decode buffer. Handy for matching an incoming hex id
+     * against bytes you already hold. Assumes [id] is at least `2 * ourId.size`
+     * chars and lower-case (as produced by [encode]).
+     */
     fun isEqual(
         id: String,
         ourId: ByteArray,

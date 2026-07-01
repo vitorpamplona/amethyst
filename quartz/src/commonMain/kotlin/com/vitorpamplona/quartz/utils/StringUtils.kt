@@ -32,6 +32,13 @@ fun Int.bytesUsedInMemory(): Int = 4
 
 fun Boolean.bytesUsedInMemory(): Int = 8
 
+/**
+ * Case-insensitive [contains] that does **not** allocate a lowercased copy of the
+ * receiver — it scans in place comparing each char against both cases of [term].
+ * Preferred over `this.lowercase().contains(term.lowercase())` on hot paths (feed
+ * search, tag matching). When testing the same term against many strings, precompute
+ * a [DualCase] and use the two-arg overload / [containsAny] to hoist the casing work.
+ */
 fun String.containsIgnoreCase(term: String): Boolean {
     if (term.isEmpty()) return true // Empty string is contained
 
@@ -41,6 +48,7 @@ fun String.containsIgnoreCase(term: String): Boolean {
     return containsIgnoreCase(whatLowercase, whatUppercase)
 }
 
+/** [containsIgnoreCase] variant taking the term's cases precomputed — see [DualCase]. */
 fun String.containsIgnoreCase(
     whatLowercase: String,
     whatUppercase: String,
@@ -68,6 +76,7 @@ fun String.containsIgnoreCase(
     return false
 }
 
+/** Case-insensitive [startsWith], allocation-free, taking the prefix's cases precomputed. */
 fun String.startsWithIgnoreCase(
     whatLowercase: String,
     whatUppercase: String,
@@ -89,6 +98,7 @@ fun String.startsWithIgnoreCase(
     return true
 }
 
+/** True when this contains any of [terms] (case-insensitive). Empty list ⇒ true. */
 fun String.containsAny(terms: List<DualCase>): Boolean {
     if (terms.isEmpty()) return true // Empty string is contained
 
@@ -99,6 +109,7 @@ fun String.containsAny(terms: List<DualCase>): Boolean {
     return terms.any { containsIgnoreCase(it.lowercase, it.uppercase) }
 }
 
+/** True when this starts with any of [terms] (case-insensitive). Empty list ⇒ true. */
 fun String.startsWithAny(terms: List<DualCase>): Boolean {
     if (terms.isEmpty()) return true // Empty string is contained
 
@@ -111,6 +122,12 @@ fun String.startsWithAny(terms: List<DualCase>): Boolean {
 
 fun String.startsWith(prefix: DualCase): Boolean = startsWithIgnoreCase(prefix.lowercase, prefix.uppercase)
 
+/**
+ * A search term with its lower- and upper-case forms computed once, so the
+ * allocation-free case-insensitive matchers ([containsIgnoreCase], [startsWithIgnoreCase],
+ * [containsAny], [startsWithAny]) can be run against many strings without re-casing
+ * the term each time. Build once, reuse across a feed scan.
+ */
 class DualCase(
     val lowercase: String,
     val uppercase: String,

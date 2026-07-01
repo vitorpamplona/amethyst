@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # Need tags so scripts/translators.sh can resolve the last v* release tag
           # for the "since last tag" window.
@@ -54,7 +54,7 @@ jobs:
       - name: Open or update the combined Crowdin PR
         # peter-evans/create-pull-request is MIT-licensed CI-only tooling (not
         # linked into any shipped artifact). It no-ops when there is no diff.
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: main
