@@ -1,0 +1,269 @@
+# Contextual AUTH Permissions — Ask *why*, and trust follows
+
+**Date:** 2026-07-01
+**Module:** `amethyst` (+ shared bits in `commons`)
+**Status:** Design / proposal
+
+## Context
+
+Now that Amethyst answers NIP-42 relay AUTH challenges, we need to decide
+*when* to reveal the user's identity to a relay — and, crucially, to tell the
+user **why** an auth is being requested so they can make an informed choice.
+
+The motivating cases:
+
+- **NIP-17 DM send.** The recipient's DM inbox relays (kind 10050) may require
+  auth. If we silently refuse, the message never leaves the device and the user
+  has no idea why. We should ask: *"Relay X wants you to log in to deliver your
+  private message to Alice — allow?"*
+- **Public inbox notifications.** Replying to / mentioning / reacting to someone
+  publishes to *their* NIP-65 inbox (kind 10002 read relays), which may require
+  auth.
+- **Feed download from outboxes.** Reading a followed author's posts may require
+  auth to *their* write/outbox relays.
+
+We also want an **automatic mode** for users who trust Amethyst's judgement:
+auth (or not) based on a follow-graph heuristic — *if I follow the counterparty
+(in any follow list), I trust them enough to reveal my identity to the relay
+that serves them.* And regardless of mode, **explicit per-relay overrides** must
+be able to force-allow or force-block a single relay. The blocked-relay list
+(kind 10006) is a hard block.
+
+## What already exists (reuse — do NOT rebuild)
+
+The NIP-42 plumbing and a first-cut permission gate are already in place:
+
+| Piece | Location |
+|---|---|
+| AUTH challenge receipt, kind-22242 signing, resend-on-OK | `quartz/.../nip01Core/relay/client/auth/RelayAuthenticator.kt`, `RelayAuthStatus.kt`, `nip42RelayAuth/RelayAuthEvent.kt` |
+| Permission gate (per logged-in account) | `amethyst/.../service/relayClient/authCommand/model/AuthCoordinator.kt` |
+| Decision engine (per-relay override → global policy) | `.../authCommand/model/RelayAuthPermissionLedger.kt` |
+| Policy enum `ALWAYS`/`NEVER`/`IF_IN_MY_LIST`, decision enum `ALLOW`/`DENY` | `commons/.../relayauth/RelayAuthPolicy.kt` |
+| Per-relay override persistence interface + DataStore impl | `commons/.../relayauth/RelayAuthPermissionStore.kt`, `amethyst/.../authCommand/model/DataStoreRelayAuthPermissionStore.kt` |
+| Settings screen (global policy + per-relay list) | `amethyst/.../ui/screen/loggedIn/relayauth/RelayAuthSettingsScreen.kt` |
+| Global policy setting, persisted local-only | `AccountSettings.defaultRelayAuthPolicy`, `LocalPreferences` key `DEFAULT_RELAY_AUTH_POLICY` |
+| Blocked-relay list (kind 10006) | `amethyst/.../model/nip51Lists/blockedRelays/BlockedRelayListState.kt` (`.flow`) |
+| Follow checks | `Account.isFollowing(...)`, `Account.allFollows.flow.value.authors`, `FollowListsState.isUserInFollowSets(...)` |
+| DM / NIP-65 relay lookups | `DmRelayListState`, `Nip65RelayListState` (+ per-user via `LocalCache`) |
+
+## The gap
+
+`RelayAuthPermissionLedger.decide(relayUrl)` receives **only a relay URL**. It
+resolves ALLOW/DENY **silently and immediately**. Three things are missing:
+
+1. **No purpose/"why".** The decision point can't tell a DM-send from a
+   feed-read from a stranger's random challenge, so it can't explain itself or
+   attribute the relay to a counterparty.
+2. **No interactive ASK.** `RelayAuthDecision` is binary. A DENY silently drops
+   the auth (and the send fails with no feedback).
+3. **No follow-based trust.** `IF_IN_MY_LIST` only checks *my own* relays, never
+   "this relay belongs to someone I follow."
+
+## Recommended architecture
+
+Four changes, smallest surface first.
+
+### 1. Carry the *purpose* to the decision point — `AuthPurpose` + an intent registry
+
+New (in `commons/.../relayauth/`, KMP-safe, no Android deps):
+
+```kotlin
+sealed interface AuthPurpose {
+    data class SendDM(val recipients: Set<HexKey>) : AuthPurpose          // recipient DM inboxes (10050)
+    data class NotifyInbox(val recipients: Set<HexKey>) : AuthPurpose     // recipient NIP-65 read relays
+    data class ReadOutbox(val author: HexKey?) : AuthPurpose              // author write/outbox relays
+    data object MyOwnRelay : AuthPurpose                                  // relay in my own lists
+    data object Unknown : AuthPurpose                                     // bare challenge, no attribution
+}
+```
+
+The auth path is **reactive** (relay pushes the challenge; the lambda only knows
+the URL), so the send/subscribe side must **register its intent before opening
+the connection**. New main-process component (lives with the coordinator, since
+`LocalCache`/`Account` are main-process only):
+
+```kotlin
+// amethyst/.../service/relayClient/authCommand/model/RelayAuthIntentRegistry.kt
+class RelayAuthIntentRegistry {
+    fun register(relay: NormalizedRelayUrl, purpose: AuthPurpose)   // short TTL entry
+    fun purposesFor(relay: NormalizedRelayUrl): List<AuthPurpose>   // read at decision time
+}
+```
+
+Representative registration sites (each already computes its target relays):
+- NIP-17 DM send → `SendDM(recipients)` on each recipient DM-inbox relay.
+- Reply/mention/reaction broadcast → `NotifyInbox(recipients)`.
+- Outbox feed subscriptions → `ReadOutbox(author)`.
+
+*Race note:* keying by relay URL means concurrent purposes can collide; store a
+small time-bounded **set** per relay and let the resolver consider all live
+entries (the prompt can say "to send your DM to Alice and 2 others"). Acceptable
+for a UX hint + trust check; the persisted decision is what actually gates.
+
+### 1b. Persist *why* each relay was granted (grant rationale)
+
+The decision stays **relay-based**, but each relay's stored record must also
+remember **why** it was granted, so the settings screen can show, per relay,
+purpose-grouped lines of counterparty users (with avatars):
+
+> **wss://inbox.example.com** — Allowed
+> · To send DMs to: (avatars) Alice, Bob, Carol
+> · To download posts from: (avatars) Dave, Erin
+
+Extend the persisted per-relay record from a bare `RelayAuthDecision` to
+`decision + rationale`, where the rationale is an accumulated map keyed by
+purpose kind:
+
+```kotlin
+// commons/.../relayauth/RelayAuthGrant.kt (new)
+data class RelayAuthGrant(
+    val decision: RelayAuthDecision,
+    // purpose kind -> counterparty pubkeys seen for this relay under that purpose
+    val rationale: Map<AuthPurposeKind, Set<HexKey>> = emptyMap(),
+    val lastUsedAt: Long = 0L,
+)
+enum class AuthPurposeKind { SEND_DM, NOTIFY_INBOX, READ_OUTBOX, MY_OWN_RELAY }
+```
+
+The rationale is **updated every time** an auth is granted/re-used for that
+relay: merge the current `AuthPurpose` counterparties into the matching kind's
+set and refresh `lastUsedAt`. This keeps the "why" current as new
+DMs/notifications/feeds route through the relay. Store only pubkeys — names and
+avatars are resolved for display from `LocalCache` at render time, so the store
+stays privacy-light and small.
+
+### 2. Add an `ASK` outcome and a context-aware resolver
+
+Extend the decision enum and generalize `decide()`:
+
+```kotlin
+enum class RelayAuthDecision { ALLOW, DENY, ASK }   // ASK added
+
+class RelayAuthContext(val relayUrl: String, val purposes: List<AuthPurpose>)
+```
+
+`RelayAuthPermissionLedger.decide(ctx)` precedence (highest → lowest):
+
+1. **Blocked-relay list** (kind 10006) → `DENY`. Never reveal identity to a
+   blocked relay, whatever the policy.
+2. **Explicit per-relay override** (`RelayAuthPermissionStore`) → return it.
+3. **Global policy**:
+   - `NEVER` → `DENY`
+   - `ALWAYS` → `ALLOW`
+   - `IF_IN_MY_LIST` → `ALLOW` if relay ∈ my relay lists, else fall through
+   - `TRUSTED_FOLLOWS` *(new — see idea A below)* → `ALLOW` if relay ∈ my lists
+     **or** any counterparty in `ctx.purposes` is followed (`Account.allFollows`
+     / `FollowListsState.isUserInFollowSets`) and the purpose permits it; else
+     fall through.
+4. **Fall-through**: `ASK` if the purpose is attributable (we can show a reason);
+   otherwise `DENY` silently (don't prompt for anonymous stranger challenges).
+
+Keep the current relay-only `decide(url)` as a thin overload calling
+`decide(RelayAuthContext(url, registry.purposesFor(url)))` so existing callers
+compile.
+
+Whenever the resolver yields `ALLOW` and an auth is actually sent — regardless
+of *how* it was allowed (auto policy, stored override, or a just-approved ASK) —
+call `store.recordUse(relayUrl, purpose)` for each attributed purpose so the
+grant rationale (§1b) stays current.
+
+### 3. Surface the ASK prompt to the UI and await the answer
+
+The `signWithAllLoggedInUsers` lambda in `AuthCoordinator` is **already a
+`suspend` context**, so the resolver can suspend and await a user decision — no
+restructuring of the auth send path.
+
+- Add an event stream on the coordinator (or account):
+  `SharedFlow<RelayAuthRequest>` where
+  `RelayAuthRequest(relay, purposes, reply: CompletableDeferred<UserAuthChoice>)`.
+  (Follows the repo's one-shot-event flow pattern — see `kotlin-flow-state-event-modeling`.)
+- A composable observer (registered in the logged-in scaffold) collects the flow
+  and shows a dialog: *"{relay} requires you to log in to {reason}."* with
+  actions **Allow once / Always allow this relay / Block this relay**. The last
+  two write through `RelayAuthPermissionLedger.setDecision(...)`.
+- The lambda `await`s the deferred (bounded by a timeout consistent with
+  `RelayAuthStatus`), then proceeds to sign or returns `emptyList()`.
+
+Reason strings are derived from `AuthPurpose` via a small mapper (resolve
+recipient pubkeys → display names through `LocalCache`).
+
+### 4. New policy mode + settings
+
+- Add `TRUSTED_FOLLOWS` to `RelayAuthPolicy` (recommended — idea A).
+- `RelayAuthSettingsScreen`: add the new mode with an explanatory blurb; the
+  per-relay override list already supports force-allow/force-block (now
+  three-state incl. "ask"). No storage-format change if we keep decisions
+  per-relay (idea B, recommended default).
+
+## A few ideas / open decisions
+
+These are the knobs where more than one answer is defensible. Recommendation
+first.
+
+- **A. Follow-based trust shape.** *(Recommended: new `TRUSTED_FOLLOWS` policy
+  mode.)* Cleanest extension of the existing enum + settings radio group.
+  Alternatives: a separate independent "trust relays of people I follow" toggle
+  that layers on any base mode (more flexible, more UI); or never-automatic —
+  follow-status only pre-selects the "remember" button in the ASK dialog (most
+  conservative).
+
+- **B. Decision memory granularity.** *(Decided: per-relay — the decision gate
+  is one ALLOW/DENY per relay.)* We keep the gate relay-based but enrich the
+  stored record with the grant rationale (§1b) so the settings screen can
+  explain each relay. Rejected alternative: making the *gate itself*
+  per-purpose × per-relay (allow relay X for DMs but keep asking for feed reads)
+  — richer but more confusing; the rationale display gives the transparency
+  without splitting the gate.
+
+- **C. In-flight send when auth isn't yet granted.** *(Recommended to start:
+  best-effort — show the prompt; current send may fail; user retries after
+  granting, leaning on existing resend.)* Alternative: park the outgoing event
+  and auto-flush on auth success (message never lost) — best UX but a larger
+  change to the send pipeline; good as a fast-follow.
+
+- **D. Which purposes auto-trust covers.** DMs and public inbox notifications are
+  clear yes. Outbox/feed reads ("maybe" in the brief) could be a sub-toggle
+  under `TRUSTED_FOLLOWS` so reading is treated more liberally than writing.
+
+## Files to touch
+
+- `commons/.../relayauth/RelayAuthPolicy.kt` — add `TRUSTED_FOLLOWS`, add `ASK`.
+- `commons/.../relayauth/AuthPurpose.kt` — **new** sealed hierarchy + `RelayAuthContext` + `AuthPurposeKind`.
+- `commons/.../relayauth/RelayAuthGrant.kt` — **new** per-relay record (decision + rationale, §1b).
+- `commons/.../relayauth/RelayAuthPermissionStore.kt` + `amethyst/.../DataStoreRelayAuthPermissionStore.kt`
+  — store/load `RelayAuthGrant` (decision + rationale) instead of a bare decision; add a
+  `recordUse(relayUrl, purpose)` merge that updates the rationale + `lastUsedAt`.
+- `amethyst/.../authCommand/model/RelayAuthPermissionLedger.kt` — context-aware
+  `decide(ctx)`, blocked-list + follow-trust inputs, `ASK` fall-through.
+- `amethyst/.../authCommand/model/RelayAuthIntentRegistry.kt` — **new**.
+- `amethyst/.../authCommand/model/AuthCoordinator.kt` — build `RelayAuthContext`
+  from the registry, emit `RelayAuthRequest` on `ASK`, await the reply.
+- Wire the ledger's new inputs where it's constructed (blocked-list flow,
+  follow-check, relay-ownership lookups from `DmRelayListState`/`Nip65RelayListState`).
+- Registration calls at the DM sender, reply/reaction broadcaster, and outbox
+  feed subscription.
+- `amethyst/.../ui/screen/loggedIn/relayauth/RelayAuthSettingsScreen.kt` — new
+  mode; three-state per-relay overrides; **per-relay rationale rows** grouped by
+  purpose ("To send DMs to: …", "To download posts from: …") rendering
+  counterparty avatars + names resolved from `LocalCache`.
+- New composable dialog + observer for `RelayAuthRequest`, hosted in the
+  logged-in scaffold.
+
+## Verification
+
+- **Unit (commons/amethyst JVM):** table-test `decide(ctx)` across the
+  precedence ladder — blocked beats override beats policy; `TRUSTED_FOLLOWS`
+  allows a followed-counterparty relay and falls to `ASK` for a stranger;
+  `Unknown` purpose → silent `DENY`.
+- **Intent registry:** register/expire, multi-purpose merge on one relay.
+- **Grant rationale:** `recordUse` merges new counterparties into the right
+  purpose kind, dedupes, refreshes `lastUsedAt`; `allDecisions()`/settings query
+  returns the grouped rationale for rendering.
+- **`amy` interop:** drive a NIP-17 send to a recipient whose 10050 relay
+  requires auth against a local auth-required relay (`amy serve` / geode) and
+  confirm the AUTH round-trip + delivery once allowed. (Enforces the
+  verify-don't-guess rule.)
+- **Manual:** send a DM to a followed vs non-followed npub on an auth-required
+  inbox under each policy mode; confirm the prompt copy names the right reason
+  and that Always/Block persist.
+- `./gradlew :commons:test :amethyst:testDebugUnitTest` and `./gradlew spotlessApply`.
