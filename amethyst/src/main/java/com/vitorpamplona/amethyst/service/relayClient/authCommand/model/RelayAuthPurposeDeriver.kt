@@ -49,7 +49,9 @@ object RelayAuthPurposeDeriver {
             if (event.kind == GiftWrapEvent.KIND) {
                 dmRecipients.addAll(pTags)
             } else {
-                notifyRecipients.addAll(pTags)
+                // We're notifying the people the event references, not its author — drop the
+                // author's own key so a self-p-tag doesn't read as "notify yourself".
+                notifyRecipients.addAll(pTags - event.pubKey)
             }
         }
 
