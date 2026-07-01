@@ -31,6 +31,7 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
@@ -87,8 +88,21 @@ object FlexibleIntListSerializer : KSerializer<List<String>?> {
     ) {
         if (value == null) {
             encoder.encodeNull()
-        } else {
-            listSerializer.serialize(encoder, value)
+            return
         }
+
+        require(encoder is JsonEncoder) { "This serializer can only be used with Json format" }
+
+        // NIP-11 expects `supported_nips` as an array of integers ([1, 11, 42]),
+        // so emit numeric entries as JSON numbers. Non-numeric ids (rare, but the
+        // model tolerates them) fall back to JSON strings so nothing is lost.
+        val array =
+            JsonArray(
+                value.map { nip ->
+                    val asLong = nip.toLongOrNull()
+                    if (asLong != null) JsonPrimitive(asLong) else JsonPrimitive(nip)
+                },
+            )
+        encoder.encodeJsonElement(array)
     }
 }

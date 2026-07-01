@@ -1,6 +1,6 @@
 ---
 name: quartz-integration
-description: Integration guide for using the Quartz Nostr KMP library in external projects. Use when: (1) adding Quartz as a Gradle dependency, (2) setting up NostrClient with WebSocket, (3) creating/signing/sending events, (4) building relay subscriptions with Filter, (5) handling keys with KeyPair/NostrSignerInternal, (6) using Bech32 encoding/decoding (NIP-19), (7) platform-specific setup (Android vs JVM/Desktop), (8) NIP-57 zaps, NIP-17 DMs, NIP-44 encryption in external projects.
+description: Integration guide for using the Quartz Nostr KMP library in external projects. Use when: (1) adding Quartz as a Gradle dependency, (2) setting up NostrClient with WebSocket, (3) creating/signing/sending events, (4) building relay subscriptions with Filter, (5) handling keys with KeyPair/NostrSignerInternal, (6) using Bech32 encoding/decoding (NIP-19), (7) platform-specific setup (Android vs JVM/Desktop), (8) NIP-57 zaps, NIP-17 DMs, NIP-44 encryption in external projects, (9) running a relay on Quartz and serving/building its NIP-11 relay information document (application/nostr+json).
 ---
 
 # Quartz Integration Guide
@@ -755,7 +755,100 @@ val results = store.query<Event>(Filter(search = "bitcoin"))
 
 ---
 
-## 15. Quick Reference
+## 15. NIP-11 Relay Information Document
+
+If you're standing up a relay on Quartz's relay-server code, serve your NIP-11
+document with the **type-safe builder** — don't hand-write the JSON string.
+
+**Package:** `com.vitorpamplona.quartz.nip11RelayInfo`
+
+```kotlin
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip11RelayInfo.relayInformation
+
+val info =
+    relayInformation {
+        name = "sot"
+        description = "NIP-50 profile search ranked by Nostr web-of-trust"
+        software = "https://github.com/vitorpamplona/sot"
+        version = "0.1"
+        supports(1, 11, 42, 50)   // ints → spec-compliant [1,11,42,50] in the JSON
+    }
+
+val json = info.toJson()          // null/empty fields are omitted
+```
+
+Serve it at the relay root, branching on the `Accept` header (Ktor example):
+
+```kotlin
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import io.ktor.http.ContentType
+
+get("/") {
+    val accept = call.request.headers[HttpHeaders.Accept].orEmpty()
+    if (accept.contains(Nip11RelayInformation.CONTENT_TYPE)) {      // "application/nostr+json"
+        call.respondText(json, ContentType.parse(Nip11RelayInformation.CONTENT_TYPE))
+    } else {
+        call.respondText("Open a WebSocket (NIP-01) or send Accept: ${Nip11RelayInformation.CONTENT_TYPE}")
+    }
+}
+```
+
+### Nested objects, lists, and enforced limits
+
+```kotlin
+val info =
+    relayInformation {
+        name = "Paid Relay"
+        supports(1, 11, 42)
+        supportsExtensions("nip50-search")   // supported_nip_extensions
+        countries("US", "CA")                // relay_countries; also languages(...), tags(...)
+        nip50Features("profile_search")      // the `nip50` field
+
+        // limitation { } — camelCase maps to NIP-11 snake_case fields
+        limitation {
+            maxSubscriptions = 20
+            maxFilters = 10
+            authRequired = true
+        }
+
+        // fees { } — each helper is repeatable
+        fees {
+            admission(amount = 1000, unit = "msats")
+            publication(amount = 100, unit = "msats", kinds = listOf(1, 30023))
+        }
+
+        // retention(...) — call once per policy entry
+        retention(kinds = listOf(0, 3), count = 1)
+    }
+```
+
+**Keep advertised limits in sync with enforced ones.** If you build a
+`RelayLimits` for the server's policy chain, hand the *same* object to the
+builder so what you publish can never drift from what you enforce:
+
+```kotlin
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
+
+val limits = RelayLimits(maxSubscriptions = 20, maxFilters = 10, maxLimit = 500, authRequired = true)
+
+val info =
+    relayInformation {
+        name = "My Relay"
+        supports(1, 11, 42, 45)
+        limitation(limits)        // == limits.toNip11Limitation()
+    }
+```
+
+To load an operator-supplied doc from disk or a string instead of building it,
+use `Nip11RelayInformation.fromJson(json)`.
+
+> `geode` (Quartz's standalone relay) builds its default document exactly this
+> way — see `geode/.../RelayInfo.kt`.
+
+---
+
+## 16. Quick Reference
 
 | Task | API | Package |
 |------|-----|---------|
@@ -779,6 +872,8 @@ val results = store.query<Event>(Filter(search = "bitcoin"))
 | NIP-44 encrypt | `signer.nip44Encrypt(text, recipientPubKey)` | `nip01Core.signers` |
 | Bech32 decode | `Nip19Parser.uriToRoute("npub1...")` | `nip19Bech32` |
 | Bech32 encode | `Nip19Bech32.createNPub(pubKeyHex)` | `nip19Bech32` |
+| Build NIP-11 doc | `relayInformation { name = ...; supports(1, 11) }` | `nip11RelayInfo` |
+| Serialize NIP-11 doc | `info.toJson()` (media type `Nip11RelayInformation.CONTENT_TYPE`) | `nip11RelayInfo` |
 
 ## Common Event Kinds
 
