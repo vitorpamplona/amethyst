@@ -20,12 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -44,13 +53,18 @@ import com.vitorpamplona.amethyst.ui.stringRes
  *
  * Bookmarked state is read from the public bookmark id/address **sets** (not `List<Note>`
  * containment) so it reflects reliably for addressable notes and updates the moment the list
- * changes; a toast confirms each add/remove so the action is never silent.
+ * changes — the icon flipping filled/outline is the feedback, no toast needed.
+ *
+ * Rendered as a compact clickable glyph (not a Material [androidx.compose.material3.IconButton],
+ * whose 48dp minimum touch target would stand taller than the title it sits beside). [iconSize]
+ * defaults to a single title line so it aligns when placed next to a show/episode title.
  */
 @Composable
 fun PodcastBookmarkButton(
     note: Note,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
+    iconSize: Dp = 20.dp,
 ) {
     val bookmarkState = accountViewModel.account.bookmarkState
 
@@ -66,17 +80,21 @@ fun PodcastBookmarkButton(
             }
         }
 
-    IconButton(
-        onClick = {
-            if (isBookmarked) {
-                accountViewModel.removePublicBookmark(note)
-                accountViewModel.toastManager.toast(R.string.bookmarks_title, R.string.podcast_bookmark_removed)
-            } else {
-                accountViewModel.addPublicBookmark(note)
-                accountViewModel.toastManager.toast(R.string.bookmarks_title, R.string.podcast_bookmark_added)
-            }
-        },
-        modifier = modifier,
+    Box(
+        modifier =
+            modifier
+                .clip(CircleShape)
+                .clickable(
+                    role = Role.Button,
+                    onClick = {
+                        if (isBookmarked) {
+                            accountViewModel.removePublicBookmark(note)
+                        } else {
+                            accountViewModel.addPublicBookmark(note)
+                        }
+                    },
+                ).padding(4.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Icon(
             symbol = if (isBookmarked) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkAdd,
@@ -85,6 +103,7 @@ fun PodcastBookmarkButton(
                     if (isBookmarked) R.string.remove_from_public_bookmarks else R.string.add_to_public_bookmarks,
                 ),
             tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(iconSize),
         )
     }
 }
