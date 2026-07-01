@@ -33,6 +33,14 @@ enum class RelayAuthPolicy {
 
     /** Authenticate only with relays explicitly listed in the user's relay list. */
     IF_IN_MY_LIST,
+
+    /**
+     * Authenticate with relays in the user's own list, and additionally with relays that
+     * serve someone the user follows (any follow list) for the current purpose — e.g. the
+     * DM inbox of a friend you're messaging. Relays that can't be attributed to a followed
+     * counterparty fall through to an explicit prompt ([RelayAuthVerdict.ASK]).
+     */
+    TRUSTED_FOLLOWS,
 }
 
 /** A persisted per-relay override decision. */

@@ -47,6 +47,11 @@ class RelayAuthPermissionLedger(
             RelayAuthPolicy.NEVER -> RelayAuthDecision.DENY
             RelayAuthPolicy.IF_IN_MY_LIST ->
                 if (isInMyRelayList(relayUrl)) RelayAuthDecision.ALLOW else RelayAuthDecision.DENY
+            // This URL-only entry point has no purpose/counterparty context, so it can only
+            // apply the "in my list" half of TRUSTED_FOLLOWS. The follow-graph half runs in the
+            // context-aware path (RelayAuthResolver) once the challenge purpose is known.
+            RelayAuthPolicy.TRUSTED_FOLLOWS ->
+                if (isInMyRelayList(relayUrl)) RelayAuthDecision.ALLOW else RelayAuthDecision.DENY
         }
     }
 

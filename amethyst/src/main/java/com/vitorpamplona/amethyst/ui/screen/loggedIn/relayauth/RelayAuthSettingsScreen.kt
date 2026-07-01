@@ -128,6 +128,12 @@ fun RelayAuthSettingsScreen(
                                     R.string.relay_auth_policy_if_in_my_list_desc,
                                     MaterialSymbols.PrivacyTip,
                                 )
+                            RelayAuthPolicy.TRUSTED_FOLLOWS ->
+                                Triple(
+                                    R.string.relay_auth_policy_trusted_follows,
+                                    R.string.relay_auth_policy_trusted_follows_desc,
+                                    MaterialSymbols.Group,
+                                )
                         }
                     PolicyCard(
                         selected = globalPolicy == policy,
