@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -132,5 +133,16 @@ fun PodcastEpisodeListItem(
                 accountViewModel = accountViewModel,
             )
         }
+
+        // Standard engagement row per episode (comment / zap / react) — same as every other note.
+        // addPadding = false since the row already sits inside this item's horizontal padding.
+        ReactionsRow(
+            baseNote = note,
+            showReactionDetail = true,
+            addPadding = false,
+            editState = null,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
