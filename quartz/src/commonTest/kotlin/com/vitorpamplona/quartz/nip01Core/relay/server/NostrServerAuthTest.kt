@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.OptionalAuthPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PassThroughPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
@@ -460,6 +461,100 @@ class NostrServerAuthTest {
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(1, okMessages.size)
             assertTrue(okMessages[0].contains(",true,"))
+
+            server.close()
+        }
+
+    // -- NIP-42: optional AUTH -------------------------------------------------
+
+    @Test
+    fun optionalAuthSendsChallengeOnConnect() =
+        runTest {
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher, policyBuilder = { OptionalAuthPolicy(relayUrl) })
+            val collector = MessageCollector()
+
+            server.connect(collector.sendCallback)
+
+            assertEquals(1, collector.messages.size)
+            assertTrue(collector.messages[0].contains("\"AUTH\""))
+
+            server.close()
+        }
+
+    @Test
+    fun optionalAuthAllowsCommandsWithoutAuth() =
+        runTest {
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher, policyBuilder = { OptionalAuthPolicy(relayUrl) })
+            val collector = MessageCollector()
+
+            val session = server.connect(collector.sendCallback)
+
+            // The challenge was sent, but a client that ignores it can still write.
+            val event = testEvent()
+            session.receive("""["EVENT",${event.toJson()}]""")
+
+            val okMessages = collector.rawMessagesContaining("OK")
+            assertEquals(1, okMessages.size)
+            assertTrue(okMessages[0].contains(",true,"))
+            assertFalse((session.policy as OptionalAuthPolicy).isAuthenticated())
+
+            // REQ works too — no CLOSED with auth-required.
+            session.receive("""["REQ","sub1",{"kinds":[1]}]""")
+            assertTrue(collector.rawMessagesContaining("EOSE").isNotEmpty())
+            assertTrue(collector.rawMessagesContaining("CLOSED").isEmpty())
+
+            server.close()
+        }
+
+    @Test
+    fun optionalAuthStillRecordsAuthenticatedUsers() =
+        runTest {
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher, policyBuilder = { OptionalAuthPolicy(relayUrl) })
+            val collector = MessageCollector()
+
+            val session = server.connect(collector.sendCallback)
+            val msg = OptimizedJsonMapper.fromJsonToMessage(collector.messages[0]) as AuthMessage
+
+            // A client that DOES authenticate is still verified and recorded, so
+            // downstream policies can gate on identity.
+            session.receive(authJson(authEvent(challenge = msg.challenge)))
+
+            val okMessages = collector.rawMessagesContaining("OK")
+            assertEquals(1, okMessages.size)
+            assertTrue(okMessages[0].contains(",true,"))
+            assertTrue((session.policy as OptionalAuthPolicy).isAuthenticated())
+            assertTrue(session.requestContext.authenticatedUsers.contains(pubkey))
+
+            server.close()
+        }
+
+    @Test
+    fun optionalAuthRejectsInvalidAuthButKeepsWorking() =
+        runTest {
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher, policyBuilder = { OptionalAuthPolicy(relayUrl) })
+            val collector = MessageCollector()
+
+            val session = server.connect(collector.sendCallback)
+
+            // A bogus AUTH is rejected (challenge mismatch) but the connection is
+            // not authenticated and commands still flow.
+            session.receive(authJson(authEvent(challenge = "wrong-challenge")))
+
+            val okMessages = collector.rawMessagesContaining("OK")
+            assertEquals(1, okMessages.size)
+            assertTrue(okMessages[0].contains(",false,"))
+            assertTrue(okMessages[0].contains("challenge"))
+            assertFalse((session.policy as OptionalAuthPolicy).isAuthenticated())
+
+            val event = testEvent()
+            session.receive("""["EVENT",${event.toJson()}]""")
+            val allOk = collector.rawMessagesContaining("OK")
+            assertEquals(2, allOk.size)
+            assertTrue(allOk[1].contains(",true,"))
 
             server.close()
         }
