@@ -39,10 +39,14 @@ interface EmbeddedSurfaceController {
     fun attachView(view: SandboxedSdkView)
 
     /** The session became the visible tab. */
-    fun onShown() {}
+    fun onShown() {
+        // Optional hook: default no-op. Controllers that don't pause/resume applet JS need no action.
+    }
 
     /** The session is warm but off-screen; a controller may pause its applet here. */
-    fun onHidden() {}
+    fun onHidden() {
+        // Optional hook: default no-op. Controllers that don't pause/resume applet JS need no action.
+    }
 
     /** Permanently close the session (unbind the service); used on eviction. */
     fun teardown()
@@ -59,5 +63,7 @@ interface EmbeddedSurfaceController {
     var onLoadStatusChanged: ((EmbeddedLoadStatus) -> Unit)?
 
     /** Re-attempt the load from scratch (the overlay's Retry); default no-op. */
-    fun retry() {}
+    fun retry() {
+        // Default no-op: only controllers that report a real load state (and thus can fail) override this.
+    }
 }

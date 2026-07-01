@@ -85,14 +85,18 @@ class RemoteImeView(
                     start: Int,
                     count: Int,
                     after: Int,
-                ) {}
+                ) {
+                    // No-op: TextWatcher requires this override, but only afterTextChanged drives our flush.
+                }
 
                 override fun onTextChanged(
                     s: CharSequence?,
                     start: Int,
                     before: Int,
                     count: Int,
-                ) {}
+                ) {
+                    // No-op: TextWatcher requires this override, but only afterTextChanged drives our flush.
+                }
 
                 override fun afterTextChanged(s: Editable?) {
                     if (!applyingRemote) onEdited?.invoke()
