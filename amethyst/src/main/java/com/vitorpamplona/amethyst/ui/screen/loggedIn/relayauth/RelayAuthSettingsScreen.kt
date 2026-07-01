@@ -38,6 +38,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -150,6 +151,30 @@ fun RelayAuthSettingsScreen(
                         label = stringResource(titleRes),
                         description = stringResource(descRes),
                         onClick = { account.settings.changeDefaultRelayAuthPolicy(policy) },
+                    )
+                }
+            }
+
+            if (globalPolicy == RelayAuthPolicy.TRUSTED_FOLLOWS) {
+                val trustReads by account.settings.relayAuthTrustFollowsForReads.collectAsState()
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.relay_auth_trust_reads),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            text = stringResource(R.string.relay_auth_trust_reads_desc),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = trustReads,
+                        onCheckedChange = { account.settings.changeRelayAuthTrustFollowsForReads(it) },
                     )
                 }
             }
