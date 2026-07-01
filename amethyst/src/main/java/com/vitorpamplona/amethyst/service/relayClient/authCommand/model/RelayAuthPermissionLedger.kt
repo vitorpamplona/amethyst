@@ -72,6 +72,18 @@ class RelayAuthPermissionLedger(
     /** Convenience for callers with no purpose context (e.g. a bare challenge). */
     suspend fun decide(relayUrl: String): RelayAuthVerdict = decide(RelayAuthContext(relayUrl))
 
+    /**
+     * Records why [ctx]'s relay was authenticated with, so the settings screen can show the
+     * counterparties behind each grant. Only purposes that name counterparties are recorded.
+     */
+    suspend fun recordGrant(ctx: RelayAuthContext) {
+        val additions =
+            ctx.purposes
+                .filter { it.counterparties.isNotEmpty() }
+                .associate { it.kind to it.counterparties }
+        if (additions.isNotEmpty()) store.recordUse(ctx.relayUrl, additions)
+    }
+
     /** Stores a per-relay override for [relayUrl]. */
     suspend fun setDecision(
         relayUrl: String,

@@ -102,6 +102,9 @@ class AuthCoordinator(
                     }
 
                 if (shouldAuth) {
+                    // Remember why we granted this relay so the settings screen can explain it.
+                    currentLedgers.firstOrNull()?.recordGrant(context)
+
                     // distinct() returns Set<Account> (the key type U of ListWithUniqueSetCache)
                     val results =
                         authWithAccounts.distinct().mapNotNull {

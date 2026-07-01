@@ -57,14 +57,19 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.PolicyCard
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -82,10 +87,14 @@ fun RelayAuthSettingsScreen(
     val globalPolicy by account.settings.defaultRelayAuthPolicy.collectAsState()
 
     var perRelayOverrides by remember { mutableStateOf<Map<String, RelayAuthDecision>>(emptyMap()) }
+    var rationales by remember { mutableStateOf<Map<String, Map<AuthPurposeKind, Set<HexKey>>>>(emptyMap()) }
     var reloadKey by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(reloadKey) {
-        perRelayOverrides = withContext(Dispatchers.IO) { store.allDecisions() }
+        withContext(Dispatchers.IO) {
+            perRelayOverrides = store.allDecisions()
+            rationales = store.allRationales()
+        }
     }
 
     Scaffold(
@@ -198,9 +207,93 @@ fun RelayAuthSettingsScreen(
                     )
                 }
             }
+
+            if (rationales.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.relay_auth_why_authenticated),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Spacer(Modifier.height(4.dp))
+
+                rationales.entries.sortedBy { it.key }.forEach { (url, rationale) ->
+                    RelayRationaleCard(url, rationale, accountViewModel)
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
         }
     }
 }
+
+@Composable
+private fun RelayRationaleCard(
+    url: String,
+    rationale: Map<AuthPurposeKind, Set<HexKey>>,
+    accountViewModel: AccountViewModel,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(text = url, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
+            rationale.forEach { (kind, pubkeys) ->
+                Text(
+                    text = stringResource(reasonRes(kind)),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                pubkeys.forEach { pubkey ->
+                    RationaleUserRow(pubkey, accountViewModel)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RationaleUserRow(
+    pubkey: HexKey,
+    accountViewModel: AccountViewModel,
+) {
+    LoadUserForRationale(pubkey, accountViewModel) { user ->
+        if (user != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(start = 8.dp),
+            ) {
+                ClickableUserPicture(user, 28.dp, accountViewModel)
+                UsernameDisplay(user, accountViewModel = accountViewModel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadUserForRationale(
+    pubkey: HexKey,
+    accountViewModel: AccountViewModel,
+    content: @Composable (User?) -> Unit,
+) {
+    var user by remember(pubkey) { mutableStateOf(accountViewModel.getUserIfExists(pubkey)) }
+    if (user == null) {
+        LaunchedEffect(pubkey) { user = accountViewModel.checkGetOrCreateUser(pubkey) }
+    }
+    content(user)
+}
+
+private fun reasonRes(kind: AuthPurposeKind): Int =
+    when (kind) {
+        AuthPurposeKind.SEND_DM -> R.string.relay_auth_reason_send_dm
+        AuthPurposeKind.NOTIFY_INBOX -> R.string.relay_auth_reason_notify_inbox
+        AuthPurposeKind.READ_OUTBOX -> R.string.relay_auth_reason_read_outbox
+        AuthPurposeKind.MY_OWN_RELAY -> R.string.relay_auth_reason_my_own_relay
+    }
 
 @Composable
 private fun PerRelayOverrideRow(
