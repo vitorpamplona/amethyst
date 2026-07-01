@@ -35,7 +35,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Exercises a [SQLiteEventStore] created with `enableFullTextSearch = false`.
+ * Exercises a [SQLiteEventStore] built with an [IndexingStrategy] whose
+ * `indexFullTextSearch` is `false`.
  *
  * The store must behave exactly like a normal store for every non-search
  * operation while (a) never creating the `event_fts` table or its delete
@@ -51,7 +52,11 @@ class NoFullTextSearchTest {
         Secp256k1Instance
     }
 
-    private fun store() = SQLiteEventStore(dbName = null, enableFullTextSearch = false)
+    private fun store() =
+        SQLiteEventStore(
+            dbName = null,
+            indexStrategy = DefaultIndexingStrategy(indexFullTextSearch = false),
+        )
 
     private fun objectExists(
         db: SQLiteConnection,

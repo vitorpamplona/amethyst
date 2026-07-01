@@ -195,10 +195,16 @@ FTS indexing has a write-time cost: every inserted `SearchableEvent` is
 tokenized into the `event_fts` virtual table, and an `AFTER DELETE`
 trigger keeps that table in sync on every deletion. If you never serve
 NIP-50 search from this store — e.g. a relay that offloads search to an
-external engine like Vespa — pass `enableFullTextSearch = false`:
+external engine like Vespa — turn it off through the `IndexingStrategy`,
+alongside the other per-index toggles. `indexFullTextSearch` defaults to
+`true` (search is a core feature); set it to `false`:
 
 ```kotlin
-val eventStore = EventStore("dbname.db", relayUrlIdentifier, enableFullTextSearch = false)
+val eventStore = EventStore(
+    "dbname.db",
+    relayUrlIdentifier,
+    indexStrategy = DefaultIndexingStrategy(indexFullTextSearch = false),
+)
 ```
 
 With FTS off:

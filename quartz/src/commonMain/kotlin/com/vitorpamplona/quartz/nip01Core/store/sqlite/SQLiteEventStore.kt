@@ -43,14 +43,6 @@ class SQLiteEventStore(
     val relay: NormalizedRelayUrl? = null,
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
     val numReaders: Int = 4,
-    /**
-     * When `false`, NIP-50 full-text search indexing is turned off: no
-     * `event_fts` table or delete trigger is created, inserts skip the
-     * FTS tokenization cost, and `search` filters return no matches.
-     * Use for stores that never serve search from SQLite (e.g. a relay
-     * that offloads NIP-50 to an external engine like Vespa).
-     */
-    val enableFullTextSearch: Boolean = true,
 ) {
     companion object {
         const val DATABASE_VERSION = 2
@@ -58,7 +50,7 @@ class SQLiteEventStore(
 
     val seedModule = SeedModule()
 
-    val fullTextSearchModule = FullTextSearchModule(enableFullTextSearch)
+    val fullTextSearchModule = FullTextSearchModule(indexStrategy.indexFullTextSearch)
     val eventIndexModule =
         EventIndexesModule(
             seedModule::hasher,
