@@ -52,15 +52,16 @@ object SearchCommand {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "search <user|note> <query> [--limit N] [--timeout SECS]")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "user" -> searchUsers(dataDir, rest)
-            "note" -> searchNotes(dataDir, rest)
-            else -> Output.error("bad_args", "search ${tail[0]} — expected user|note")
-        }
-    }
+    ): Int =
+        route(
+            "search",
+            tail,
+            "search <user|note> <query> [--limit N] [--timeout SECS]",
+            mapOf(
+                "user" to { rest -> searchUsers(dataDir, rest) },
+                "note" to { rest -> searchNotes(dataDir, rest) },
+            ),
+        )
 
     private suspend fun searchUsers(
         dataDir: DataDir,
@@ -144,8 +145,7 @@ object SearchCommand {
         timeoutMs: Long,
         render: (List<Event>) -> List<Map<String, Any?>>,
     ): Int {
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val relays =
                 SearchActions.resolveSearchRelays(
@@ -172,8 +172,6 @@ object SearchCommand {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 

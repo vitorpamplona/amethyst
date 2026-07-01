@@ -21,10 +21,13 @@
 package com.vitorpamplona.amethyst.ui.actions.uploads
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.IconButton
@@ -51,6 +54,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -101,7 +105,9 @@ fun TakePicture(onPictureTaken: (ImmutableList<SelectedMedia>) -> Unit) {
                 if (it) {
                     scope.launch(Dispatchers.IO) {
                         cameraUri = getPhotoUri(context)
-                        cameraUri?.let { launcher.launch(it) }
+                        cameraUri?.let { uri ->
+                            launcher.launchOrToast(context, uri) { onPictureTaken(persistentListOf()) }
+                        }
                     }
                 }
             },
@@ -111,7 +117,9 @@ fun TakePicture(onPictureTaken: (ImmutableList<SelectedMedia>) -> Unit) {
         LaunchedEffect(key1 = Unit) {
             launch(Dispatchers.IO) {
                 cameraUri = getPhotoUri(context)
-                cameraUri?.let { launcher.launch(it) }
+                cameraUri?.let { uri ->
+                    launcher.launchOrToast(context, uri) { onPictureTaken(persistentListOf()) }
+                }
             }
         }
     } else {
@@ -132,6 +140,28 @@ fun PictureButton(onClick: () -> Unit) {
             modifier = Modifier.height(22.dp),
             tint = MaterialTheme.colorScheme.onBackground,
         )
+    }
+}
+
+/**
+ * Launches the camera capture intent, switching to the main thread so the
+ * [ActivityResultLauncher] is invoked safely. Devices without a camera app throw
+ * [ActivityNotFoundException] from the underlying [android.app.Activity.startActivityForResult];
+ * in that case we surface a toast and run [onUnavailable] to dismiss the capture flow instead of
+ * crashing.
+ */
+private suspend fun ActivityResultLauncher<Uri>.launchOrToast(
+    context: Context,
+    uri: Uri,
+    onUnavailable: () -> Unit,
+) {
+    withContext(Dispatchers.Main) {
+        try {
+            this@launchOrToast.launch(uri)
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(context, R.string.no_camera_app_found, Toast.LENGTH_LONG).show()
+            onUnavailable()
+        }
     }
 }
 
@@ -188,7 +218,9 @@ fun TakeVideo(onVideoTaken: (ImmutableList<SelectedMedia>) -> Unit) {
                 if (it) {
                     scope.launch(Dispatchers.IO) {
                         videoUri = getVideoUri(context)
-                        videoUri?.let { launcher.launch(it) }
+                        videoUri?.let { uri ->
+                            launcher.launchOrToast(context, uri) { onVideoTaken(persistentListOf()) }
+                        }
                     }
                 }
             },
@@ -198,7 +230,9 @@ fun TakeVideo(onVideoTaken: (ImmutableList<SelectedMedia>) -> Unit) {
         LaunchedEffect(key1 = Unit) {
             launch(Dispatchers.IO) {
                 videoUri = getVideoUri(context)
-                videoUri?.let { launcher.launch(it) }
+                videoUri?.let { uri ->
+                    launcher.launchOrToast(context, uri) { onVideoTaken(persistentListOf()) }
+                }
             }
         }
     } else {

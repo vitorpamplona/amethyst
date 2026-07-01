@@ -21,9 +21,14 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -36,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
@@ -90,6 +96,16 @@ sealed class TopFilter(
 
     @Serializable
     object Global : TopFilter(" Global ")
+
+    /**
+     * Notifications-only curated mode: like [Global] it admits authors the
+     * user doesn't follow, but it also applies per-kind relevance heuristics
+     * to remove less interesting notes (reactions/reposts that don't target
+     * the user's own notes, unrelated thread replies, etc.). In Notifications,
+     * [Global] shows every event that p-tags the user instead.
+     */
+    @Serializable
+    object Selected : TopFilter(" Selected ")
 
     @Serializable
     object AllFollows : TopFilter(" All Follows ")
@@ -170,10 +186,14 @@ class AccountSettings(
     val hideCommunityRulesViolations: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val defaultHomeFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultStoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
-    val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Selected),
     val defaultDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPollsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultNappletsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultNsitesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultWorkoutsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultGitRepositoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultCalendarsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultProductsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AroundMe),
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
@@ -191,13 +211,18 @@ class AccountSettings(
     val defaultBrowseEmojiSetsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultCommunitiesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultFollowPacksFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultAppRecommendationsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
-    val defaultNwcWalletId: MutableStateFlow<String?> = MutableStateFlow(null),
+    val clinkDebitWallets: MutableStateFlow<List<ClinkDebitWalletEntryNorm>> = MutableStateFlow(emptyList()),
+    // The unified default spend rail (an NWC wallet OR a CLINK debit). Persisted under a
+    // new key, migrated from the legacy NWC-only `defaultNwcWalletId`.
+    val defaultPaymentSourceId: MutableStateFlow<String?> = MutableStateFlow(null),
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var hideNIP17WarningDialog: Boolean = false,
     val alwaysOnNotificationService: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val splitNotificationsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val showMessagesInNotifications: MutableStateFlow<Boolean> = MutableStateFlow(true),
     var backupUserMetadata: MetadataEvent? = null,
     var backupContactList: ContactListEvent? = null,
     var backupDMRelayList: ChatMessageRelayListEvent? = null,
@@ -243,6 +268,7 @@ class AccountSettings(
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
     var callMaxBitrateBps: Int = 1_500_000,
     val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.IF_IN_MY_LIST),
 ) : EphemeralChatRepository,
     PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
@@ -272,6 +298,13 @@ class AccountSettings(
     fun toggleSplitNotificationsEnabled(): Boolean {
         val newValue = !splitNotificationsEnabled.value
         splitNotificationsEnabled.tryEmit(newValue)
+        saveAccountSettings()
+        return newValue
+    }
+
+    fun toggleShowMessagesInNotifications(): Boolean {
+        val newValue = !showMessagesInNotifications.value
+        showMessagesInNotifications.tryEmit(newValue)
         saveAccountSettings()
         return newValue
     }
@@ -325,14 +358,26 @@ class AccountSettings(
         return false
     }
 
-    fun defaultNwcWallet(): NwcWalletEntryNorm? {
-        val id = defaultNwcWalletId.value
-        val wallets = nwcWallets.value
-        return if (id != null) {
-            wallets.firstOrNull { it.id == id }
-        } else {
-            wallets.firstOrNull()
+    fun changeAudioVisualizer(style: VisualizerStyle): Boolean {
+        if (syncedSettings.media.audioVisualizer.value != style) {
+            syncedSettings.media.audioVisualizer.tryEmit(style)
+            saveAccountSettings()
+            return true
         }
+        return false
+    }
+
+    /** The selected default spend rail across both NWC wallets and CLINK debits. */
+    fun defaultPaymentSource(): PaymentSource? = PaymentSourceResolver.resolveDefault(nwcWallets.value, clinkDebitWallets.value, defaultPaymentSourceId.value)
+
+    /**
+     * The NWC wallet to use for NWC-only flows (balance display, mint top-up). Resolves
+     * the unified default when it points at an NWC wallet, otherwise falls back to the
+     * first NWC wallet so those flows keep working even when a debit is the zap default.
+     */
+    fun defaultNwcWallet(): NwcWalletEntryNorm? {
+        val wallets = nwcWallets.value
+        return wallets.firstOrNull { it.id == defaultPaymentSourceId.value } ?: wallets.firstOrNull()
     }
 
     fun defaultZapPaymentRequest(): Nip47WalletConnect.Nip47URINorm? = defaultNwcWallet()?.uri
@@ -343,8 +388,10 @@ class AccountSettings(
             nwcWallets.tryEmit(nwcWallets.value.toMutableList().apply { set(existing, wallet) })
         } else {
             nwcWallets.tryEmit(nwcWallets.value + wallet)
-            if (nwcWallets.value.size == 1) {
-                defaultNwcWalletId.tryEmit(wallet.id)
+            // First configured source of any kind becomes the default; adding more never
+            // silently changes an existing default.
+            if (defaultPaymentSourceId.value == null) {
+                defaultPaymentSourceId.tryEmit(wallet.id)
             }
         }
         saveAccountSettings()
@@ -354,16 +401,68 @@ class AccountSettings(
     fun removeNwcWallet(walletId: String): Boolean {
         val wallets = nwcWallets.value.filter { it.id != walletId }
         nwcWallets.tryEmit(wallets)
-        if (defaultNwcWalletId.value == walletId) {
-            defaultNwcWalletId.tryEmit(wallets.firstOrNull()?.id)
+        reassignDefaultIfRemoved(walletId)
+        saveAccountSettings()
+        return true
+    }
+
+    fun addClinkDebitWallet(wallet: ClinkDebitWalletEntryNorm): Boolean {
+        val existing = clinkDebitWallets.value.indexOfFirst { it.id == wallet.id }
+        if (existing >= 0) {
+            clinkDebitWallets.tryEmit(clinkDebitWallets.value.toMutableList().apply { set(existing, wallet) })
+        } else {
+            clinkDebitWallets.tryEmit(clinkDebitWallets.value + wallet)
+            if (defaultPaymentSourceId.value == null) {
+                defaultPaymentSourceId.tryEmit(wallet.id)
+            }
         }
         saveAccountSettings()
         return true
     }
 
-    fun setDefaultNwcWallet(walletId: String): Boolean {
-        if (defaultNwcWalletId.value != walletId && nwcWallets.value.any { it.id == walletId }) {
-            defaultNwcWalletId.tryEmit(walletId)
+    fun removeClinkDebitWallet(walletId: String): Boolean {
+        clinkDebitWallets.tryEmit(clinkDebitWallets.value.filter { it.id != walletId })
+        reassignDefaultIfRemoved(walletId)
+        saveAccountSettings()
+        return true
+    }
+
+    fun renameClinkDebitWallet(
+        walletId: String,
+        newName: String,
+    ): Boolean {
+        val wallets = clinkDebitWallets.value.toMutableList()
+        val index = wallets.indexOfFirst { it.id == walletId }
+        if (index >= 0) {
+            wallets[index] = wallets[index].copy(name = newName)
+            clinkDebitWallets.tryEmit(wallets)
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
+    /** When the removed source was the default, fall back to the first remaining source. */
+    private fun reassignDefaultIfRemoved(walletId: String) {
+        if (defaultPaymentSourceId.value == walletId) {
+            defaultPaymentSourceId.tryEmit(PaymentSourceResolver.resolveDefault(nwcWallets.value, clinkDebitWallets.value, null)?.id)
+        }
+    }
+
+    /** Resets the default to the first remaining source if it no longer points at anything. */
+    private fun reassignDefaultIfMissing() {
+        val id = defaultPaymentSourceId.value ?: return
+        val exists = nwcWallets.value.any { it.id == id } || clinkDebitWallets.value.any { it.id == id }
+        if (!exists) {
+            defaultPaymentSourceId.tryEmit(PaymentSourceResolver.resolveDefault(nwcWallets.value, clinkDebitWallets.value, null)?.id)
+        }
+    }
+
+    /** Selects the unified default across both NWC wallets and CLINK debits. */
+    fun setDefaultPaymentSource(sourceId: String): Boolean {
+        val exists = nwcWallets.value.any { it.id == sourceId } || clinkDebitWallets.value.any { it.id == sourceId }
+        if (defaultPaymentSourceId.value != sourceId && exists) {
+            defaultPaymentSourceId.tryEmit(sourceId)
             saveAccountSettings()
             return true
         }
@@ -389,7 +488,7 @@ class AccountSettings(
         if (newServer == null) {
             if (nwcWallets.value.isNotEmpty()) {
                 nwcWallets.tryEmit(emptyList())
-                defaultNwcWalletId.tryEmit(null)
+                reassignDefaultIfMissing()
                 saveAccountSettings()
                 return true
             }
@@ -542,6 +641,50 @@ class AccountSettings(
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultNappletsFollowList(name: FeedDefinition) {
+        changeDefaultNappletsFollowList(name.code)
+    }
+
+    fun changeDefaultNappletsFollowList(name: TopFilter) {
+        if (defaultNappletsFollowList.value != name) {
+            defaultNappletsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultNsitesFollowList(name: FeedDefinition) {
+        changeDefaultNsitesFollowList(name.code)
+    }
+
+    fun changeDefaultNsitesFollowList(name: TopFilter) {
+        if (defaultNsitesFollowList.value != name) {
+            defaultNsitesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultWorkoutsFollowList(name: FeedDefinition) {
+        changeDefaultWorkoutsFollowList(name.code)
+    }
+
+    fun changeDefaultWorkoutsFollowList(name: TopFilter) {
+        if (defaultWorkoutsFollowList.value != name) {
+            defaultWorkoutsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultGitRepositoriesFollowList(name: FeedDefinition) {
+        changeDefaultGitRepositoriesFollowList(name.code)
+    }
+
+    fun changeDefaultGitRepositoriesFollowList(name: TopFilter) {
+        if (defaultGitRepositoriesFollowList.value != name) {
+            defaultGitRepositoriesFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }
@@ -722,6 +865,17 @@ class AccountSettings(
         }
     }
 
+    fun changeDefaultAppRecommendationsFollowList(name: FeedDefinition) {
+        changeDefaultAppRecommendationsFollowList(name.code)
+    }
+
+    fun changeDefaultAppRecommendationsFollowList(name: TopFilter) {
+        if (defaultAppRecommendationsFollowList.value != name) {
+            defaultAppRecommendationsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
     // ---
     // language services
     // ---
@@ -846,8 +1000,37 @@ class AccountSettings(
 
     fun updateNutzapInfo(newNutzapInfo: NutzapInfoEvent?) {
         if (newNutzapInfo == null || newNutzapInfo.tags.isEmpty()) return
+        // A mints-less kind:10019 is the "stop receiving nutzaps" tombstone
+        // (an empty replacement carrying only an `alt` tag). Don't restore it
+        // on next launch — backing it up would undo clearNutzapInfo() once the
+        // empty event round-trips back through LocalCache.
+        if (newNutzapInfo.mints().isEmpty()) {
+            clearNutzapInfo()
+            return
+        }
         if (backupNutzapInfo?.id != newNutzapInfo.id) {
             backupNutzapInfo = newNutzapInfo
+            saveAccountSettings()
+        }
+    }
+
+    /**
+     * Drop the cached kind:17375 so a relaunch doesn't restore a wallet the
+     * user just deleted. Called when the wallet event is NIP-09 deleted —
+     * without this the [backupCashuWallet] would be re-consumed into
+     * LocalCache on next launch and resurrect the deleted wallet.
+     */
+    fun clearCashuWallet() {
+        if (backupCashuWallet != null) {
+            backupCashuWallet = null
+            saveAccountSettings()
+        }
+    }
+
+    /** Drop the cached kind:10019. Mirror of [clearCashuWallet] for the nutzap info. */
+    fun clearNutzapInfo() {
+        if (backupNutzapInfo != null) {
+            backupNutzapInfo = null
             saveAccountSettings()
         }
     }
@@ -1129,6 +1312,17 @@ class AccountSettings(
     }
 
     // ---
+    // pinned chatrooms
+    // ---
+
+    fun toggleChatroomPin(room: ChatroomKey) {
+        syncedSettings.chats.pinnedChatrooms.update {
+            if (room in it) it - room else it + room
+        }
+        saveAccountSettings()
+    }
+
+    // ---
     // viewed poll results
     // ---
 
@@ -1281,6 +1475,13 @@ class AccountSettings(
     fun changeCallsEnabled(enabled: Boolean) {
         if (callsEnabled.value != enabled) {
             callsEnabled.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultRelayAuthPolicy(policy: RelayAuthPolicy) {
+        if (defaultRelayAuthPolicy.value != policy) {
+            defaultRelayAuthPolicy.tryEmit(policy)
             saveAccountSettings()
         }
     }

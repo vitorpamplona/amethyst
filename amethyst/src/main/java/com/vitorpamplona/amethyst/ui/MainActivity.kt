@@ -51,6 +51,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.UriParser
 import kotlinx.coroutines.CancellationException
@@ -58,6 +59,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.net.URLDecoder
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -147,6 +149,35 @@ fun isNotificationRoute(uri: String) = uri.startsWith("notifications", true) || 
 
 fun isHashtagRoute(uri: String) = uri.startsWith("hashtag?id=") || uri.startsWith("nostr:hashtag?id=")
 
+fun isUrlRoute(uri: String) = uri.startsWith("url?id=") || uri.startsWith("nostr:url?id=")
+
+fun isConnectedAppRoute(uri: String) = uri.startsWith("connectedapp?coordinate=") || uri.startsWith("nostr:connectedapp?coordinate=")
+
+/**
+ * The Connected Apps permission-detail route for an app coordinate (`pubkey:dtag` for a napplet/nsite,
+ * `browser:<origin>` for a web client). Fired by the sandbox host so a running full-screen surface can
+ * jump straight to its editable permissions; the coordinate is URL-encoded into the [coordinate] param.
+ */
+fun connectedAppRoute(uri: String): Route.ConnectedAppDetail? {
+    val coordinate =
+        runCatching {
+            val raw = java.net.URI(uri.removePrefix("nostr:")).findParameterValue("coordinate") ?: return null
+            URLDecoder.decode(raw, Charsets.UTF_8.name())
+        }.getOrNull()?.takeIf { it.isNotBlank() } ?: return null
+
+    return Route.ConnectedAppDetail(coordinate)
+}
+
+fun urlRoute(uri: String): Route.Url? {
+    val url =
+        runCatching {
+            val rawUrl = java.net.URI(uri.removePrefix("nostr:")).findParameterValue("id") ?: return null
+            URLDecoder.decode(rawUrl, Charsets.UTF_8.name())
+        }.getOrNull() ?: return null
+
+    return UrlId.toScopeOrNull(url)?.let { Route.Url(it) }
+}
+
 fun isWalletConnectRoute(uri: String) = uri.startsWith("dlnwc?value=") || uri.startsWith("amethyst+walletconnect:dlnwc?value=") || uri.startsWith("amethyst+walletconnect://dlnwc?value=")
 
 fun isMarmotGroupRoute(uri: String) = uri.startsWith("marmot:")
@@ -163,6 +194,12 @@ fun uriToRoute(
     }
     if (isHashtagRoute(uri)) {
         return Route.Hashtag(uri.removePrefix("nostr:").removePrefix("hashtag?id=").lowercase())
+    }
+    if (isUrlRoute(uri)) {
+        return urlRoute(uri)
+    }
+    if (isConnectedAppRoute(uri)) {
+        return connectedAppRoute(uri)
     }
 
     val nip19 = Nip19Parser.uriToRoute(uri)?.entity

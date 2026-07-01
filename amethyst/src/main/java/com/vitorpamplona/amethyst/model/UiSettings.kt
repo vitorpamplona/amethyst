@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 import kotlinx.serialization.Serializable
 
 @Stable
@@ -44,7 +44,7 @@ data class UiSettings(
     val automaticallyProposeAiImprovements: BooleanType = BooleanType.ALWAYS,
     val useTrackedBroadcasts: BooleanType = BooleanType.ALWAYS,
     val automaticallyCreateDrafts: BooleanType = BooleanType.ALWAYS,
-    val bottomBarItems: List<NavBarItem> = DefaultBottomBarItems,
+    val bottomBarItems: List<BottomBarEntry> = DefaultBottomBarEntries,
     val showHomeNewThreadsTab: Boolean = true,
     val showHomeConversationsTab: Boolean = true,
     val showHomeEverythingTab: Boolean = false,
@@ -53,6 +53,10 @@ data class UiSettings(
     val showProfileZapReceivedFeed: Boolean = true,
     val showProfileFollowersFeed: Boolean = true,
     val dontShowOnchainPublicWarning: Boolean = false,
+    val suggestWorkoutsFromHealthConnect: BooleanType = BooleanType.ALWAYS,
+    val accentColor: AccentColorType = AccentColorType.PURPLE,
+    val fontFamily: FontFamilyType = FontFamilyType.SYSTEM,
+    val fontSize: FontSizeType = FontSizeType.NORMAL,
 )
 
 enum class ThemeType(
@@ -70,6 +74,68 @@ fun parseThemeType(code: Int?): ThemeType =
         ThemeType.LIGHT.screenCode -> ThemeType.LIGHT
         ThemeType.DARK.screenCode -> ThemeType.DARK
         else -> ThemeType.SYSTEM
+    }
+
+enum class AccentColorType(
+    val screenCode: Int,
+    val resourceId: Int,
+) {
+    PURPLE(0, R.string.accent_color_purple),
+    BLUE(1, R.string.accent_color_blue),
+    GREEN(2, R.string.accent_color_green),
+    ORANGE(3, R.string.accent_color_orange),
+    RED(4, R.string.accent_color_red),
+    PINK(5, R.string.accent_color_pink),
+}
+
+fun parseAccentColorType(screenCode: Int): AccentColorType =
+    when (screenCode) {
+        AccentColorType.PURPLE.screenCode -> AccentColorType.PURPLE
+        AccentColorType.BLUE.screenCode -> AccentColorType.BLUE
+        AccentColorType.GREEN.screenCode -> AccentColorType.GREEN
+        AccentColorType.ORANGE.screenCode -> AccentColorType.ORANGE
+        AccentColorType.RED.screenCode -> AccentColorType.RED
+        AccentColorType.PINK.screenCode -> AccentColorType.PINK
+        else -> AccentColorType.PURPLE
+    }
+
+enum class FontFamilyType(
+    val screenCode: Int,
+    val resourceId: Int,
+) {
+    SYSTEM(0, R.string.font_family_system),
+    SANS_SERIF(1, R.string.font_family_sans_serif),
+    SERIF(2, R.string.font_family_serif),
+    MONOSPACE(3, R.string.font_family_monospace),
+}
+
+fun parseFontFamilyType(screenCode: Int): FontFamilyType =
+    when (screenCode) {
+        FontFamilyType.SYSTEM.screenCode -> FontFamilyType.SYSTEM
+        FontFamilyType.SANS_SERIF.screenCode -> FontFamilyType.SANS_SERIF
+        FontFamilyType.SERIF.screenCode -> FontFamilyType.SERIF
+        FontFamilyType.MONOSPACE.screenCode -> FontFamilyType.MONOSPACE
+        else -> FontFamilyType.SYSTEM
+    }
+
+enum class FontSizeType(
+    val scale: Float,
+    val screenCode: Int,
+    val resourceId: Int,
+) {
+    SMALL(0.85f, 0, R.string.font_size_small),
+    NORMAL(1.0f, 1, R.string.font_size_normal),
+    LARGE(1.15f, 2, R.string.font_size_large),
+    HUGE(1.3f, 3, R.string.font_size_huge),
+}
+
+fun parseFontSizeType(screenCode: Int): FontSizeType =
+    when (screenCode) {
+        FontSizeType.SMALL.screenCode -> FontSizeType.SMALL
+        FontSizeType.NORMAL.screenCode -> FontSizeType.NORMAL
+        FontSizeType.LARGE.screenCode -> FontSizeType.LARGE
+        FontSizeType.HUGE.screenCode -> FontSizeType.HUGE
+        else -> FontSizeType.NORMAL
     }
 
 enum class ConnectivityType(

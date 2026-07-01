@@ -52,6 +52,7 @@ import kotlinx.coroutines.launch
 fun UrlPreviewCard(
     url: String,
     previewInfo: UrlInfoItem,
+    onUrlComments: (() -> Unit)? = null,
 ) {
     val uri = LocalUriHandler.current
     val popupExpanded =
@@ -74,6 +75,15 @@ fun UrlPreviewCard(
                     scope.launch {
                         clipboardManager.setText(url)
                         popupExpanded.value = false
+                    }
+                }
+                onUrlComments?.let {
+                    M3ActionRow(
+                        icon = MaterialSymbols.Link,
+                        text = stringRes(R.string.kind_comments),
+                    ) {
+                        popupExpanded.value = false
+                        it()
                     }
                 }
             }

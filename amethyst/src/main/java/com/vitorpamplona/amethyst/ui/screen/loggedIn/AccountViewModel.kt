@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.annotation.SuppressLint
+import android.app.NotificationManager
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -30,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -37,15 +39,17 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuToken
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCache
@@ -62,17 +66,19 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
-import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
@@ -86,6 +92,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.ReloadMintRequest
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
+import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
@@ -97,6 +105,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
@@ -130,7 +139,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
@@ -146,6 +154,7 @@ import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip92IMeta.imeta
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -259,63 +268,75 @@ class AccountViewModel(
             .set(callManager, this)
     }
 
+    /**
+     * Every known relay worth crawling for a full-history sweep (Event Sync,
+     * Cashu wallet discovery): relays that have connected at least once or were
+     * never tried, ordered busiest-first so the most fruitful are queried first.
+     */
+    fun crawlRelayDb(): List<NormalizedRelayUrl> {
+        val stats = Amethyst.instance.relayStats.snapshot()
+
+        val relays =
+            account.cache.relayHints.relayDB
+                .keys()
+                .filter { url ->
+                    val relayStat = stats[url]
+                    // has connected at least once OR never tried.
+                    if (relayStat != null) {
+                        relayStat.connectionCompleted > 0 || relayStat.connectionTentatives == 0
+                    } else {
+                        true
+                    }
+                }
+
+        val sortMap = relays.associateWith { stats.get(it)?.receivedBytes }
+
+        return relays.sortedByDescending { sortMap[it] }
+    }
+
+    /**
+     * A fresh, relay-authenticated [INostrClient] whose received events do NOT
+     * land in the production [com.vitorpamplona.amethyst.model.LocalCache] — for
+     * crawls (Event Sync, Cashu wallet discovery). The caller must `close()` it.
+     */
+    fun buildCrawlClient(): INostrClient {
+        // Create a new scope that inherits the ViewModel's lifecycle
+        // but uses a SupervisorJob so child failures are independent.
+        val customScope = CoroutineScope(viewModelScope.coroutineContext + SupervisorJob())
+
+        // Provides a relay pool
+        val newClient = NostrClient(Amethyst.instance.websocketBuilder, customScope)
+
+        // Authenticates with relays (registers itself with the client).
+        RelayAuthenticator(
+            newClient,
+            customScope,
+            signWithAllLoggedInUsers = { _, authTemplate ->
+                if (account.signer.isWriteable()) {
+                    try {
+                        listOf(account.signer.sign(authTemplate))
+                    } catch (e: Exception) {
+                        Log.e("AuthCoordinator", "Failed trying to authenticate a writeable account", e)
+                        emptyList()
+                    }
+                } else {
+                    emptyList()
+                }
+            },
+        )
+
+        return newClient
+    }
+
     val eventSync =
         EventSync(
             accountPubKey = account.signer.pubKey,
-            relayDb = {
-                val stats = Amethyst.instance.relayStats.snapshot()
-
-                val relays =
-                    account.cache.relayHints.relayDB
-                        .keys()
-                        .filter { url ->
-                            val relayStat = stats[url]
-                            // has connected at least once OR never tried.
-                            if (relayStat != null) {
-                                relayStat.connectionCompleted > 0 || relayStat.connectionTentatives == 0
-                            } else {
-                                true
-                            }
-                        }
-
-                val sortMap = relays.associateWith { stats.get(it)?.receivedBytes }
-
-                relays.sortedByDescending { sortMap[it] }
-            },
+            relayDb = { crawlRelayDb() },
             outboxTargets = { account.nip65RelayList.outboxFlow.value },
             inboxTargets = { account.nip65RelayList.inboxFlow.value },
             dmTargets = { account.dmRelayList.flow.value },
-            clientBuilder = {
-                // creates a new client to make sure these events don't end up polluting the local cache.
-
-                // Create a new scope that inherits the ViewModel's lifecycle
-                // but uses a SupervisorJob so child failures are independent.
-                val customScope = CoroutineScope(viewModelScope.coroutineContext + SupervisorJob())
-
-                // Provides a relay pool
-                val newClient = NostrClient(Amethyst.instance.websocketBuilder, customScope)
-
-                // Authenticates with relays.
-                val auth =
-                    RelayAuthenticator(
-                        newClient,
-                        customScope,
-                        signWithAllLoggedInUsers = { authTemplate ->
-                            if (account.signer.isWriteable()) {
-                                try {
-                                    listOf(account.signer.sign(authTemplate))
-                                } catch (e: Exception) {
-                                    Log.e("AuthCoordinator", "Failed trying to authenticate a writeable account", e)
-                                    emptyList()
-                                }
-                            } else {
-                                emptyList()
-                            }
-                        },
-                    )
-
-                newClient
-            },
+            // creates a new client to make sure these events don't end up polluting the local cache.
+            clientBuilder = { buildCrawlClient() },
             scope = viewModelScope,
         )
 
@@ -486,9 +507,18 @@ class AccountViewModel(
         launchSigner {
             val currentReactions = note.allReactionsOfContentByAuthor(userProfile(), reaction)
             if (currentReactions.isNotEmpty()) {
-                account.delete(currentReactions)
+                // Gift-wrapped reactions are retracted with a gift-wrapped
+                // deletion to the same participants — a public NIP-09 would
+                // e-tag the private rumor id onto public relays.
+                val (privateRumors, publicReactions) = currentReactions.partition { it.isPrivateRumor() }
+                if (publicReactions.isNotEmpty()) {
+                    account.delete(publicReactions)
+                }
+                if (privateRumors.isNotEmpty()) {
+                    account.deletePrivately(privateRumors, note)
+                }
             } else {
-                if (settings.useTrackedBroadcasts() && note.event !is NIP17Group) {
+                if (settings.useTrackedBroadcasts() && note.event !is NIP17Group && !note.isPrivateRumor()) {
                     // Tracked broadcasting with progress feedback
                     account.createReactionEvent(note, reaction)?.let { (event, relays) ->
                         broadcastTracker.trackBroadcast(
@@ -704,6 +734,7 @@ class AccountViewModel(
                                     ?.content
                                     ?.ifBlank { null },
                                 showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                                it.response,
                             )
                     }.toMutableMap()
 
@@ -719,7 +750,7 @@ class AccountViewModel(
                     }
                 }
 
-            results.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
+            results.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info.copy(zapNote = decrypted.zapEvent) }
 
             onNewState(initialResults.values.toImmutableList())
         }
@@ -736,6 +767,7 @@ class AccountViewModel(
                             LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.request.author,
                             cachedPrivateRequest.content.ifBlank { null },
                             showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                            it.response,
                         )
                     } else {
                         ZapAmountCommentNotification(
@@ -744,6 +776,7 @@ class AccountViewModel(
                                 ?.content
                                 ?.ifBlank { null },
                             showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                            it.response,
                         )
                     }
                 } else {
@@ -753,6 +786,7 @@ class AccountViewModel(
                             ?.content
                             ?.ifBlank { null },
                         showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                        it.response,
                     )
                 }
             }.toImmutableList()
@@ -770,6 +804,7 @@ class AccountViewModel(
                             LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.first.author,
                             cachedPrivateRequest.content.ifBlank { null },
                             showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
+                            it.second,
                         )
                     } else {
                         ZapAmountCommentNotification(
@@ -778,6 +813,7 @@ class AccountViewModel(
                                 ?.content
                                 ?.ifBlank { null },
                             showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
+                            it.second,
                         )
                     }
                 } else {
@@ -787,6 +823,7 @@ class AccountViewModel(
                             ?.content
                             ?.ifBlank { null },
                         showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
+                        it.second,
                     )
                 }
             }.toImmutableList()
@@ -809,6 +846,7 @@ class AccountViewModel(
                                     ?.content
                                     ?.ifBlank { null },
                                 showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
+                                it.second,
                             )
                     }.toMutableMap()
 
@@ -827,7 +865,7 @@ class AccountViewModel(
                     }
                 }
 
-            decryptedInfo.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
+            decryptedInfo.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info.copy(zapNote = decrypted.zapEvent) }
 
             onNewState(initialResults.values.toImmutableList())
         }
@@ -839,7 +877,7 @@ class AccountViewModel(
         onNewState: (ZapAmountCommentNotification?) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            onNewState(innerDecryptAmountMessage(zapRequest, zapEvent))
+            onNewState(innerDecryptAmountMessage(zapRequest, zapEvent)?.copy(zapNote = zapEvent))
         }
     }
 
@@ -847,7 +885,7 @@ class AccountViewModel(
         val zapEvent = zapNote.event as? LnZapEvent ?: return null
         val zapRequest = zapEvent.zapRequest ?: return null
 
-        return innerDecryptAmountMessage(zapRequest, zapEvent)
+        return innerDecryptAmountMessage(zapRequest, zapEvent)?.copy(zapNote = zapNote)
     }
 
     suspend fun innerDecryptAmountMessage(
@@ -900,6 +938,18 @@ class AccountViewModel(
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
         zapType: LnZapEvent.ZapType? = null,
     ) = launchSigner {
+        val requestedType = zapType ?: defaultZapType()
+
+        // Zaps on private rumors are forced to PRIVATE so the sender and
+        // comment stay encrypted. NONZAP is kept: paying without a zap
+        // request produces no receipt at all, which is even more private.
+        val effectiveType =
+            if (note.isPrivateRumor() && requestedType != LnZapEvent.ZapType.NONZAP) {
+                LnZapEvent.ZapType.PRIVATE
+            } else {
+                requestedType
+            }
+
         ZapPaymentHandler(account).zap(
             note = note,
             amountMilliSats = amountInMillisats,
@@ -911,7 +961,7 @@ class AccountViewModel(
             onError = onError,
             onProgress = onProgress,
             onPayViaIntent = onPayViaIntent,
-            zapType = zapType ?: defaultZapType(),
+            zapType = effectiveType,
         )
     }
 
@@ -929,6 +979,16 @@ class AccountViewModel(
         onError: (String, String, User?) -> Unit,
         onProgress: (Float) -> Unit = {},
     ) = launchSigner {
+        // Nutzap events (kind 9321) are public and e-tag the zapped note —
+        // on a private rumor that would leak the rumor id to public relays.
+        if (baseNote.isPrivateRumor()) {
+            onError(
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_private_note),
+                baseNote.author,
+            )
+            return@launchSigner
+        }
         val recipient = baseNote.author?.pubkeyHex
         if (recipient == null) {
             onError(
@@ -963,9 +1023,40 @@ class AccountViewModel(
         } catch (e: Exception) {
             onError(
                 stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
-                com.vitorpamplona.amethyst.model.nip60Cashu
-                    .describeMintError(e),
+                describeMintError(e),
                 baseNote.author,
+            )
+        }
+    }
+
+    /**
+     * NIP-61 nutzap aimed at a profile rather than an event: the kind:9321
+     * carries only the `p` tag. Used by the profile Send Payment screen, which
+     * needs explicit success/error callbacks to drive its in-screen feedback.
+     */
+    fun sendNutzapToUser(
+        recipientPubKey: HexKey,
+        amountSats: Long,
+        message: String,
+        onError: (String, String, User?) -> Unit,
+        onProgress: (Float) -> Unit = {},
+        onSuccess: () -> Unit = {},
+    ) = launchSigner {
+        try {
+            account.cashuWalletState.sendNutzap(
+                amountSats = amountSats,
+                recipientPubKey = recipientPubKey,
+                zappedEvent = null,
+                message = message,
+                onProgress = onProgress,
+            )
+            onSuccess()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            onError(
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                describeMintError(e),
+                getUserIfExists(recipientPubKey),
             )
         }
     }
@@ -1068,6 +1159,18 @@ class AccountViewModel(
             direct = { account.removeBookmark(note, false) },
         )
 
+    /** Stars/unstars a git repository in the user's NIP-51 kind 10018 list. */
+    fun toggleRepositoryBookmark(
+        note: AddressableNote,
+        isBookmarked: Boolean,
+    ) = launchSigner {
+        if (isBookmarked) {
+            account.removeGitRepositoryBookmark(note)
+        } else {
+            account.addGitRepositoryBookmark(note)
+        }
+    }
+
     /** NIP-32: tags [note] with [hashtag] by publishing a kind 1985 label event. */
     fun labelWithHashtag(
         note: Note,
@@ -1093,6 +1196,17 @@ class AccountViewModel(
     }
 
     fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
+
+    /**
+     * Broadcast republishes public events directly and rumors as their
+     * delivering kind-1059 wrap. A rumor whose wrap is unknown can't be
+     * broadcast at all — publishing the unsigned event would disclose the
+     * private content.
+     */
+    fun canBroadcast(note: Note): Boolean {
+        val event = note.event ?: return false
+        return event.sig.isNotEmpty() || note.rumorHost != null
+    }
 
     fun timestamp(note: Note) = launchSigner { account.otsState.timestamp(note) }
 
@@ -1309,6 +1423,20 @@ class AccountViewModel(
             account.changeVideoPlayerButtonItems(items)
         }
 
+    fun audioVisualizerFlow(): StateFlow<VisualizerStyle> = account.settings.syncedSettings.media.audioVisualizer
+
+    fun changeAudioVisualizer(style: VisualizerStyle) =
+        launchSigner {
+            account.changeAudioVisualizer(style)
+        }
+
+    fun pinnedChatroomsFlow(): StateFlow<Set<ChatroomKey>> = account.settings.syncedSettings.chats.pinnedChatrooms
+
+    fun toggleChatroomPin(room: ChatroomKey) =
+        launchSigner {
+            account.toggleChatroomPin(room)
+        }
+
     fun updateZapAmounts(
         amountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,
@@ -1507,6 +1635,7 @@ class AccountViewModel(
     fun loadAndMarkAsRead(
         routeForLastRead: String,
         createdAt: Long?,
+        dismissNotificationId: HexKey? = null,
     ): Boolean {
         if (createdAt == null) return false
 
@@ -1517,10 +1646,19 @@ class AccountViewModel(
         if (onIsNew) {
             viewModelScope.launch(Dispatchers.IO) {
                 account.markAsRead(routeForLastRead, createdAt)
+                // The user is now looking at this event in-app, so clear any tray
+                // notification that was posted for it while the app was backgrounded.
+                dismissNotificationId?.let { dismissTrayNotificationFor(it) }
             }
         }
 
         return onIsNew
+    }
+
+    private fun dismissTrayNotificationFor(eventId: HexKey) {
+        ContextCompat
+            .getSystemService(Amethyst.instance.appContext, NotificationManager::class.java)
+            ?.dismissNotificationForEvent(eventId)
     }
 
     fun markAllChatNotesAsRead(notes: List<Note>) {
@@ -1619,6 +1757,11 @@ class AccountViewModel(
         replyToInnerEventId: HexKey? = null,
         replyToInnerAuthorPubKey: HexKey? = null,
     ) {
+        // Rewrites @npub…/@nprofile… mentions into nostr: URIs and collects
+        // the referenced users as p-tags. Lives here (not in the composer) so
+        // every send path gets mention handling.
+        val tagger = NewMessageTagger(text, null, null, this)
+        tagger.run()
         // Inner event construction lives on MarmotManager so CLI and UI don't drift.
         // persistOwn=false because Account.sendMarmotGroupMessage routes the outer
         // event through LocalCache which already handles own-message display.
@@ -1626,10 +1769,11 @@ class AccountViewModel(
             account.marmotManager
                 ?.buildTextMessage(
                     nostrGroupId = nostrGroupId,
-                    text = text,
+                    text = tagger.message,
                     replyToEventId = replyToInnerEventId,
                     replyToAuthorPubKey = replyToInnerAuthorPubKey,
                     persistOwn = false,
+                    mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
                 )
                 ?: return
         val relays = account.marmotGroupRelays(nostrGroupId)
@@ -1640,7 +1784,6 @@ class AccountViewModel(
         nostrGroupId: String,
         url: String,
         imeta: com.vitorpamplona.quartz.nip92IMeta.IMetaTag,
-        caption: String? = null,
     ) {
         val template =
             eventTemplate(
@@ -1648,9 +1791,6 @@ class AccountViewModel(
                 description = url,
             ) {
                 imeta(imeta)
-                if (!caption.isNullOrEmpty()) {
-                    alt(caption)
-                }
             }
         // MIP-03: inner events MUST remain unsigned (no `sig`) so a leaked
         // plaintext can't be replayed as a valid public kind:9. Authorship
@@ -2019,6 +2159,22 @@ class AccountViewModel(
         onSent()
     }
 
+    /**
+     * Pays a single BOLT-11 through a CLINK debit pointer (kind 21002) — the debit-rail
+     * counterpart of [sendZapPaymentRequestFor]. [onResult] receives the decrypted
+     * response (`isOk()` with optional preimage, or a GFY failure), or null on timeout,
+     * delivered on the main dispatcher so UI callbacks (toasts, dialogs) are safe.
+     * Untested end-to-end.
+     */
+    fun payInvoiceViaClinkDebit(
+        pointer: NDebit,
+        bolt11: String,
+        onResult: (DebitResponse?) -> Unit,
+    ) = launchSigner {
+        val response = ClinkDebitPayer.payInvoice(account, pointer, bolt11)
+        withContext(Dispatchers.Main) { onResult(response) }
+    }
+
     fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddress(account.signer.pubKey, dATag))
 
     fun updateInteractiveStoryReadingState(
@@ -2046,17 +2202,19 @@ class AccountViewModel(
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         context: Context,
+        zapType: LnZapEvent.ZapType? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val effectiveZapType = zapType ?: defaultZapType()
                 val zapRequest =
-                    if (defaultZapType() != LnZapEvent.ZapType.NONZAP) {
+                    if (effectiveZapType != LnZapEvent.ZapType.NONZAP) {
                         // NIP-57 Appendix F: include amount + lnurl so the receipt can be validated.
                         val splitLnurl = LnurlForm.toUrl(lnAddress)?.let(LnurlForm::urlToBech32)
                         account.createZapRequestFor(
                             user = user,
                             message = message,
-                            zapType = defaultZapType(),
+                            zapType = effectiveZapType,
                             amountMillisats = milliSats,
                             lnurl = splitLnurl,
                         )

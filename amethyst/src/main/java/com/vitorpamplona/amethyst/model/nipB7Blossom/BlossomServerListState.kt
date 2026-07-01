@@ -89,8 +89,8 @@ class BlossomServerListState(
             }.onStart {
                 emit(mergeServerList(flow.value))
             }.onEach { servers ->
-                if (servers.none { it == settings.defaultFileServer }) {
-                    settings.changeDefaultFileServer(servers.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0])
+                resetTargetOrNull(flow.value, servers, settings.defaultFileServer)?.let {
+                    settings.changeDefaultFileServer(it)
                 }
             }.flowOn(Dispatchers.IO)
             .stateIn(
@@ -127,3 +127,25 @@ class BlossomServerListState(
         alt: String,
     ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer)
 }
+
+/**
+ * Decides whether the persisted default file server must be reset, and to what.
+ *
+ * Returns the new default server, or `null` when no change should happen.
+ *
+ * The guard on [rawList] being non-empty is what prevents the startup race: before the user's
+ * [BlossomServersEvent] (kind 10063) loads from cache/relay, [rawList] is empty and [merged] is the
+ * transient [DEFAULT_MEDIA_SERVERS] fallback. Resetting against that fallback would clobber the
+ * locally-saved pick on every launch. Only reset once a real, loaded list is in hand and it no
+ * longer contains the current pick (e.g. the user removed it from their list).
+ */
+fun resetTargetOrNull(
+    rawList: List<String>,
+    merged: List<ServerName>,
+    current: ServerName,
+): ServerName? =
+    if (rawList.isNotEmpty() && merged.none { it == current }) {
+        merged.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0]
+    } else {
+        null
+    }

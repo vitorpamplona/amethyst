@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.datasource.ProfileAppRecommendationsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource.BadgesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource.ProfileBadgesFilterAssembler
@@ -46,15 +47,19 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasource
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.datasource.FollowPacksFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource.GeoHashFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.datasource.RepositoryFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.datasource.GitRepositoriesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.datasource.LiveStreamsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource.LongsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.MusicPlaylistsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.MusicTracksFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.ConnectedAppsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomLivenessAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.NsitesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.OnePodcastFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.PodcastEpisodesFilterAssembler
@@ -68,8 +73,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource.RelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.ShortsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.SoftwareAppsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.datasource.UrlFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.datasource.OnchainZapsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.datasource.WorkoutsFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
@@ -97,8 +104,8 @@ class RelaySubscriptionsCoordinator(
     // loaders of content that is not yet in the device.
     // they are active when looking at events, users, channels.
     val channelFinder = ChannelFinderFilterAssemblyGroup(client)
-    val eventFinder = EventFinderFilterAssembler(client)
     val userFinder = UserFinderFilterAssembler(client, cache, failureTracker)
+    val eventFinder = EventFinderFilterAssembler(client, cache, userFinder)
 
     // active when searching or tagging users.
     val search = SearchFilterAssembler(client, scope, cache)
@@ -112,6 +119,7 @@ class RelaySubscriptionsCoordinator(
     val profile = UserProfileFilterAssembler(client)
     val hashtags = HashtagFilterAssembler(client)
     val geohashes = GeoHashFilterAssembler(client)
+    val urls = UrlFilterAssembler(client)
     val relayFeed = RelayFeedFilterAssembler(client)
     val relayInfoNip66 = RelayInfoNip66FilterAssembler(client)
     val followPacks = FollowPackFeedFilterAssembler(client)
@@ -120,6 +128,8 @@ class RelaySubscriptionsCoordinator(
 
     val polls = PollsFilterAssembler(client)
     val pictures = PicturesFilterAssembler(client)
+    val workouts = WorkoutsFilterAssembler(client)
+    val gitRepositories = GitRepositoriesFilterAssembler(client)
     val calendars = CalendarsFilterAssembler(client)
     val products = ProductsFilterAssembler(client)
     val shorts = ShortsFilterAssembler(client)
@@ -136,8 +146,12 @@ class RelaySubscriptionsCoordinator(
     val podcasts = PodcastsFilterAssembler(client)
     val onePodcast = OnePodcastFilterAssembler(client)
     val softwareApps = SoftwareAppsFilterAssembler(client)
+    val napplets = NappletsFilterAssembler(client)
+    val connectedApps = ConnectedAppsFilterAssembler(client)
+    val nsites = NsitesFilterAssembler(client)
     val badges = BadgesFilterAssembler(client)
     val profileBadges = ProfileBadgesFilterAssembler(client)
+    val profileAppRecommendations = ProfileAppRecommendationsFilterAssembler(client)
     val browseEmojiSets = BrowseEmojiSetsFilterAssembler(client)
     val communitiesList = CommunitiesListFilterAssembler(client)
 
@@ -166,6 +180,8 @@ class RelaySubscriptionsCoordinator(
             discovery,
             polls,
             pictures,
+            workouts,
+            gitRepositories,
             calendars,
             products,
             shorts,
@@ -185,6 +201,7 @@ class RelaySubscriptionsCoordinator(
             softwareApps,
             badges,
             profileBadges,
+            profileAppRecommendations,
             browseEmojiSets,
             communitiesList,
             channelFinder,
@@ -199,6 +216,7 @@ class RelaySubscriptionsCoordinator(
             profile,
             hashtags,
             geohashes,
+            urls,
             relayFeed,
             relayInfoNip66,
             chess,

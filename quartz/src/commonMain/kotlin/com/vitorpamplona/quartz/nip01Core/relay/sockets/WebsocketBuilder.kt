@@ -27,4 +27,19 @@ interface WebsocketBuilder {
         url: NormalizedRelayUrl,
         out: WebSocketListener,
     ): WebSocket
+
+    /**
+     * Whether the transport for [url] is ready to dial right now. Returning false makes
+     * [com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient.connect]
+     * skip the dial entirely — no socket, no backoff growth — until a later reconnect pass
+     * finds it ready.
+     *
+     * The motivating case: a Tor-routed relay while Tor's SOCKS proxy isn't up yet. Without
+     * this gate the pool hammers the dead proxy with doomed dials during the whole Tor
+     * bootstrap window. The caller is responsible for re-triggering a reconnect once the
+     * transport becomes ready (e.g. on the Tor status flipping to Active).
+     *
+     * Defaults to true so non-proxied builders need no change.
+     */
+    fun canConnect(url: NormalizedRelayUrl): Boolean = true
 }

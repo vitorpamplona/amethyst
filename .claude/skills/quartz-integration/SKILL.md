@@ -7,7 +7,7 @@ description: Integration guide for using the Quartz Nostr KMP library in externa
 
 Reference for integrating `com.vitorpamplona.quartz:quartz` into external Nostr KMP projects.
 
-**Published artifact**: `com.vitorpamplona.quartz:quartz:1.11.0` (Maven Central)
+**Published artifact**: `com.vitorpamplona.quartz:quartz:1.12.6` (Maven Central)
 **Targets**: JVM 21+, Android (minSdk 21+), iOS (XCFramework `quartz-kmpKit`)
 **License**: MIT
 
@@ -19,7 +19,7 @@ Reference for integrating `com.vitorpamplona.quartz:quartz` into external Nostr 
 
 ```toml
 [versions]
-quartz = "1.11.0"
+quartz = "1.12.6"
 
 [libraries]
 quartz = { module = "com.vitorpamplona.quartz:quartz", version.ref = "quartz" }
@@ -41,7 +41,7 @@ kotlin {
 
 ```kotlin
 dependencies {
-    implementation("com.vitorpamplona.quartz:quartz:1.11.0")
+    implementation("com.vitorpamplona.quartz:quartz:1.12.6")
 }
 ```
 
@@ -447,23 +447,28 @@ val textNote = Event.fromJson(json) as? TextNoteEvent
 
 ```kotlin
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 
-// Decode any bech32 entity
-val result = Nip19Parser.uriToRoute("npub1abc...")
-// Returns: NPub | NSec | Note | NEvent | NProfile | NAddr | null
-
-when (val r = Nip19Parser.uriToRoute(input)) {
-    is Nip19Parser.Return.NPub    -> println("pubkey: ${r.hex}")
-    is Nip19Parser.Return.Note    -> println("event id: ${r.hex}")
-    is Nip19Parser.Return.NEvent  -> println("event: ${r.hex}, relays: ${r.relays}")
-    is Nip19Parser.Return.NProfile -> println("profile: ${r.hex}")
-    is Nip19Parser.Return.NAddr   -> println("address: ${r.kind}:${r.pubKey}:${r.dTag}")
-    null -> println("not a valid bech32 entity")
-    else -> {}
+// Decode any bech32 entity (plain or nostr:-prefixed).
+// uriToRoute() returns Nip19Parser.ParseReturn? — the parsed Entity is in .entity
+when (val entity = Nip19Parser.uriToRoute(input)?.entity) {
+    is NPub     -> println("pubkey: ${entity.hex}")
+    is NNote    -> println("event id: ${entity.hex}")
+    is NEvent   -> println("event: ${entity.hex}, relays: ${entity.relay}")
+    is NProfile -> println("profile: ${entity.hex}")
+    is NAddress -> println("address: ${entity.aTag()}")
+    null        -> println("not a valid bech32 entity")
+    else        -> {}
 }
 
-// The parser also handles nostr: URI scheme
-val result = Nip19Parser.uriToRoute("nostr:npub1abc...")
+// Encode: ByteArray extensions from nip19Bech32/ByteArrayExt.kt
+val npub = pubkeyBytes.toNpub()   // also toNsec(), toNote(), ...
+// TLV entities with relay hints (relays: List<NormalizedRelayUrl>)
+val nevent = NEvent.create(eventIdHex, authorHex, kind, relays)
 ```
 
 ---
@@ -601,21 +606,22 @@ In Xcode: drag & drop the `.xcframework` into your project, then use from Swift 
 
 ---
 
-## 14. Event Store (Android only)
+## 14. Event Store (SQLite, all platforms)
 
-SQLite-based storage with full NIP support (NIP-09, NIP-40, NIP-45, NIP-50, NIP-62):
+SQLite-backed storage in `commonMain` (JVM, Android, iOS — uses the bundled
+androidx.sqlite driver) with full NIP support (NIP-09, NIP-40, NIP-45, NIP-50,
+NIP-62). All operations are `suspend`:
 
 ```kotlin
-import com.vitorpamplona.quartz.nip01Core.store.EventStore
-import android.content.Context
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 
-val store = EventStore()
+val store = EventStore()  // default DB file "events.db"
 
 // Insert
 store.insert(event)
 
 // Query
-val events = store.query(
+val events = store.query<Event>(
     Filter(authors = listOf(pubKey), kinds = listOf(1), limit = 50)
 )
 
@@ -623,7 +629,7 @@ val events = store.query(
 val count = store.count(Filter(kinds = listOf(1)))
 
 // Full-text search (NIP-50)
-val results = store.query(Filter(search = "bitcoin"))
+val results = store.query<Event>(Filter(search = "bitcoin"))
 ```
 
 ---

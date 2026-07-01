@@ -37,13 +37,13 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.patch.tags.CommitPgpSigTag
 import com.vitorpamplona.quartz.nip34Git.patch.tags.CommitTag
 import com.vitorpamplona.quartz.nip34Git.patch.tags.Committer
 import com.vitorpamplona.quartz.nip34Git.patch.tags.CommitterTag
 import com.vitorpamplona.quartz.nip34Git.patch.tags.ParentCommitTag
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -57,7 +57,10 @@ class GitPatchEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
     EventHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = content
+
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
@@ -112,11 +115,40 @@ class GitPatchEvent(
     /** `true` if this event is tagged `["t", "root-revision"]` (root of a revision series). */
     fun isRootRevision(): Boolean = tags.any { HashtagTag.isTagged(it, ROOT_REVISION) }
 
+    /**
+     * Human-readable patch title. NIP-34 patches carry the raw `git format-patch`
+     * output in [content]; the title lives in the RFC-5322 `Subject:` header
+     * (e.g. `Subject: [PATCH 2/3] Fix the thing`). Returns that subject with any
+     * `[PATCH …]` bracket prefix removed and folded continuation lines unwrapped,
+     * or `null` when no `Subject:` header is present.
+     */
+    fun subject(): String? {
+        val builder = StringBuilder()
+        var found = false
+        for (line in content.lineSequence()) {
+            if (!found) {
+                if (line.startsWith(SUBJECT_HEADER)) {
+                    builder.append(line.substring(SUBJECT_HEADER.length).trim())
+                    found = true
+                }
+            } else if (line.startsWith(" ") || line.startsWith("\t")) {
+                // RFC-5322 folded header: continuation lines begin with whitespace.
+                builder.append(' ').append(line.trim())
+            } else {
+                break
+            }
+        }
+        if (!found) return null
+        return PATCH_PREFIX.replace(builder.toString().trim(), "").trim().ifBlank { null }
+    }
+
     companion object {
         const val KIND = 1617
-        const val ALT = "A Git Patch"
         const val ROOT = "root"
         const val ROOT_REVISION = "root-revision"
+
+        private const val SUBJECT_HEADER = "Subject:"
+        private val PATCH_PREFIX = Regex("^\\[PATCH[^]]*]\\s*")
 
         /**
          * Build a NIP-34 kind-1617 patch event with all required tags.
@@ -146,7 +178,6 @@ class GitPatchEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GitPatchEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, patch, createdAt) {
-            alt(ALT)
             repository(repository)
             euc(earliestUniqueCommit)
             pTag(repository.event.pubKey, repository.authorHomeRelay)

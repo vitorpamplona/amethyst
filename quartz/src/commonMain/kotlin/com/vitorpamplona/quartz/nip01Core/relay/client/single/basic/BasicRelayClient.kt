@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.cancellation.CancellationException
@@ -44,8 +45,11 @@ import kotlin.coroutines.cancellation.CancellationException
  * @property listener Interface to notify the application of relay events and errors.
  *
  * Reconnection Strategy:
- * - Uses exponential backoff to retry connections, starting with [DELAY_TO_RECONNECT_IN_SECS] (500ms).
+ * - Uses exponential backoff to retry connections, starting with [DELAY_TO_RECONNECT_IN_SECS].
  * - Doubles the delay between reconnection attempts in case of failure.
+ * - The backoff only resets after a connection stays open for at least
+ *   [STABLE_CONNECTION_IN_SECS], so relays that accept the handshake but
+ *   immediately drop the socket keep backing off instead of reconnecting in a loop.
  *
  * Message Handling:
  * - Processes relay messages (e.g., `EVENT`, `EOSE`, `OK`, `AUTH`) and delegates to appropriate callbacks.
@@ -56,23 +60,38 @@ open class BasicRelayClient(
     override val url: NormalizedRelayUrl,
     val socketBuilder: WebsocketBuilder,
     val listener: RelayConnectionListener,
+    val nowInSeconds: () -> Long = TimeUtils::now,
 ) : IRelayClient {
     companion object {
         // minimum wait time to reconnect: 1 second
         const val DELAY_TO_RECONNECT_IN_SECS = 1
+
+        // a connection must survive this long before a disconnect resets the
+        // reconnect backoff. Relays that accept the handshake and then
+        // immediately drop the socket would otherwise reset the backoff on
+        // every onOpen and reconnect in a tight ~3s loop forever.
+        const val STABLE_CONNECTION_IN_SECS = TimeUtils.ONE_MINUTE
     }
 
     private var socket: WebSocket? = null
 
     // True if it has received the onOpen call from the socket.
-    private var isReady: Boolean = false
+    // @Volatile: written on the serialized socket-callback thread, read from the
+    // relay-pool/timer thread (see RelayLoadingCursors for the same pattern).
+    @Volatile private var isReady: Boolean = false
     private var usingCompression: Boolean = false
 
     // keeps increasing the delay to connect when errors happen.
     // This avoids the constant desire to connect when the server is
-    // having trouble or offline.
-    private var lastConnectTentativeInSeconds: Long = 0L // the beginning of time.
-    private var delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
+    // having trouble or offline. @Volatile: read on the pool thread in
+    // connectAndSyncFiltersIfDisconnected, written on the socket-callback thread.
+    @Volatile private var lastConnectTentativeInSeconds: Long = 0L // the beginning of time.
+
+    @Volatile private var delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
+
+    // when the current connection became ready; used to decide if the
+    // connection was stable enough to reset the backoff on disconnect.
+    @Volatile private var connectedAtInSeconds: Long = 0L
 
     // Makes sure only one socket is open for each url
     private var connectingMutex = AtomicBoolean(false)
@@ -84,6 +103,12 @@ open class BasicRelayClient(
     override fun needsToReconnect() = socket?.needsReconnect() ?: true
 
     override fun connect() {
+        // Transport gate: skip the dial when the builder reports this relay's transport
+        // isn't ready (e.g. a Tor-routed relay while Tor's SOCKS port isn't up). Returning
+        // here before the mutex/socket/onConnecting means no doomed dial and no backoff
+        // growth; a later reconnect pass (fired when the transport becomes ready) will dial.
+        if (!socketBuilder.canConnect(url)) return
+
         // If there is a connection, don't wait.
         if (connectingMutex.exchange(true)) {
             return
@@ -97,13 +122,13 @@ open class BasicRelayClient(
 
             listener.onConnecting(this)
 
-            lastConnectTentativeInSeconds = TimeUtils.now()
+            lastConnectTentativeInSeconds = nowInSeconds()
 
             socket = socketBuilder.build(url, MyWebsocketListener())
             socket?.connect()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            listener.onCannotConnect(this, "Error when trying to connect: ${e.message}")
+            listener.onCannotConnect(this, "Error when trying to connect: ${e.message ?: e::class.simpleName}")
             listener.onDisconnected(this)
             dontTryAgainForALongTime()
             markConnectionAsClosed()
@@ -154,7 +179,9 @@ open class BasicRelayClient(
             } else {
                 socket?.disconnect()
 
+                // suppression rules below must match the raw message; displayMsg is for listener output only
                 val msg = t.message
+                val displayMsg = msg ?: t::class.simpleName
 
                 // checks if this is an actual failure. Closing the socket generates an onFailure as well.
                 // ignore tor errors.
@@ -167,9 +194,9 @@ open class BasicRelayClient(
                     )
                 ) {
                     if (code != null || response != null) {
-                        listener.onCannotConnect(this@BasicRelayClient, "Server Misconfigured. Response: $code $response. Exception: ${t.message}")
+                        listener.onCannotConnect(this@BasicRelayClient, "Server Misconfigured. Response: $code $response. Exception: $displayMsg")
                     } else {
-                        listener.onCannotConnect(this@BasicRelayClient, "WebSocket Failure: ${t.message}")
+                        listener.onCannotConnect(this@BasicRelayClient, "WebSocket Failure: $displayMsg")
                     }
                 } else {
                     // ignore local disconnect requests and tor errors
@@ -191,12 +218,21 @@ open class BasicRelayClient(
     fun markConnectionAsReady(usingCompression: Boolean) {
         this.isReady = true
         this.usingCompression = usingCompression
+        this.connectedAtInSeconds = nowInSeconds()
 
-        // resets any extra delays added during on offline state
-        this.delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
+        // The backoff delay is NOT reset here: a relay that accepts the
+        // handshake and then immediately fails would defeat the exponential
+        // backoff on every cycle. It resets in markConnectionAsClosed once
+        // the session proves stable (see STABLE_CONNECTION_IN_SECS).
     }
 
     fun markConnectionAsClosed() {
+        // resets any extra delays added while offline, but only if the
+        // session was stable; flapping relays keep their growing backoff.
+        if (isReady && nowInSeconds() - connectedAtInSeconds >= STABLE_CONNECTION_IN_SECS) {
+            this.delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
+        }
+
         this.socket = null
         this.isReady = false
         this.usingCompression = false
@@ -205,6 +241,7 @@ open class BasicRelayClient(
     override fun disconnect() {
         lastConnectTentativeInSeconds = 0L // this is not an error, so prepare to reconnect as soon as requested.
         delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
+        connectedAtInSeconds = 0L
         socket?.disconnect()
         socket = null
         isReady = false
@@ -212,12 +249,27 @@ open class BasicRelayClient(
     }
 
     override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) {
-        if (!isConnectionStarted() && !connectingMutex.load()) {
-            // waits 60 seconds to reconnect after disconnected.
-            if (ignoreRetryDelays || TimeUtils.now() > lastConnectTentativeInSeconds + delayToConnectInSeconds) {
-                upRelayDelayToConnect()
+        if (connectingMutex.load()) return
+
+        if (isConnectionStarted()) {
+            // A socket already exists. Normally leave it alone, but if it was opened for the wrong
+            // transport — e.g. the relay's Tor classification changed since (a clearnet relay now routed
+            // through the Tor proxy, or vice-versa) — tear it down and rebuild on the current transport.
+            // Without this an in-flight dial on the wrong transport can never be preempted: a still-
+            // connecting socket leaves isConnectionStarted() true (so the old guard skipped it) yet
+            // isConnected() false (so RelayPool.reconnectIfNeedsTo's connected-relay branch never runs),
+            // and the request blocks until that hung dial finally times out.
+            if (socket?.needsReconnect() == true) {
+                disconnect()
                 connect()
             }
+            return
+        }
+
+        // waits 60 seconds to reconnect after disconnected.
+        if (ignoreRetryDelays || nowInSeconds() > lastConnectTentativeInSeconds + delayToConnectInSeconds) {
+            upRelayDelayToConnect()
+            connect()
         }
     }
 

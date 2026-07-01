@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
@@ -51,7 +52,10 @@ class FileHeaderEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(summary(), content).joinToString("\n")
+
     fun url() = tags.firstNotNullOfOrNull(UrlTag::parse)
 
     fun urls() = tags.mapNotNull(UrlTag::parse)
@@ -88,7 +92,6 @@ class FileHeaderEvent(
 
     companion object {
         const val KIND = 1063
-        const val ALT_DESCRIPTION = "Verifiable file url"
 
         fun build(
             url: String,
@@ -97,7 +100,9 @@ class FileHeaderEvent(
             initializer: TagArrayBuilder<FileHeaderEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, caption ?: "", createdAt) {
             url(url)
-            caption?.ifBlank { null }?.let { alt(caption) } ?: alt(ALT_DESCRIPTION)
+            // NIP-94 accessibility description of the file (kept; the deprecated
+            // generic NIP-31 boilerplate alt is not written).
+            caption?.ifBlank { null }?.let { alt(it) }
             initializer()
         }
 
@@ -117,7 +122,9 @@ class FileHeaderEvent(
             initializer: TagArrayBuilder<FileHeaderEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, caption ?: "", createdAt) {
             url(url)
-            caption?.ifBlank { null }?.let { alt(caption) } ?: alt(ALT_DESCRIPTION)
+            // NIP-94 accessibility description of the file (kept; the deprecated
+            // generic NIP-31 boilerplate alt is not written).
+            caption?.ifBlank { null }?.let { alt(it) }
 
             hash?.let { hash(it) }
             size?.let { fileSize(it) }

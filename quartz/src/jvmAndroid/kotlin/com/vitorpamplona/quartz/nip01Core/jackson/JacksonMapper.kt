@@ -75,6 +75,10 @@ class JacksonMapper {
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, false)
                 .configure(DeserializationFeature.UNWRAP_ROOT_VALUE, false)
+                // Tolerate a single JSON object where a list is declared. Several Nostr-native
+                // RPCs (e.g. CLINK Manage `details`, typed `OfferData | OfferData[]`) return a
+                // bare object for single-item results and an array for lists; accept both.
+                .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
                 .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature())
                 .setDefaultPrettyPrinter(defaultPrettyPrinter)
                 .registerModule(
@@ -163,6 +167,8 @@ class JacksonMapper {
                         event.sig,
                     ),
                 )
+
+        fun toJsonPretty(template: EventTemplate<*>): String = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(template)
 
         fun toJson(event: ArrayNode): String = mapper.writeValueAsString(event)
 

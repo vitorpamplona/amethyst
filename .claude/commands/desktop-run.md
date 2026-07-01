@@ -12,7 +12,7 @@ Build and run the Amethyst Desktop application:
 
 If the build fails, check:
 
-1. **JDK Version**: Requires JDK 17+
+1. **JDK Version**: Requires JDK 21+ (`jvmToolchain(21)` in `desktopApp/build.gradle.kts`)
    ```bash
    java -version
    ```
@@ -39,7 +39,7 @@ If the build fails, check:
 ./gradlew :desktopApp:packageMsi
 
 # Linux
-./gradlew :desktopApp:packageDeb
+./gradlew :desktopApp:packageDeb   # or :desktopApp:packageRpm
 ```
 
-Outputs will be in `desktopApp/build/compose/binaries/`
+Outputs will be in `desktopApp/build/compose/binaries/main/`

@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip47WalletConnect.tags.EncryptionTag
 import com.vitorpamplona.quartz.nip47WalletConnect.tags.NotificationsTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -51,7 +50,6 @@ class NwcInfoEvent(
 
     companion object {
         const val KIND = 13194
-        const val ALT_DESCRIPTION = "Wallet service info"
 
         fun build(
             capabilities: List<String>,
@@ -60,7 +58,6 @@ class NwcInfoEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NwcInfoEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, capabilities.joinToString(" "), createdAt) {
-            alt(ALT_DESCRIPTION)
             encryptionSchemes?.let { addUnique(EncryptionTag.assemble(it)) }
             notificationTypes?.let { addUnique(NotificationsTag.assemble(it)) }
             initializer()

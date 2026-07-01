@@ -62,10 +62,10 @@ private fun MusicTracksTopNavFilterBar(
     accountViewModel: AccountViewModel,
     onChange: (FeedDefinition) -> Unit,
 ) {
-    // Music is content-style (like Articles / Long-form), so reuse the same route catalog
-    // as those feeds — All Follows, Your Follows, kind3 Follows, Around Me, Global, custom
-    // people lists, interest sets, mute list.
-    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
+    // Music is content-style (like Articles / Long-form), so reuse that route catalog — All
+    // Follows, Your Follows, kind3 Follows, Around Me, Global, custom people lists, interest
+    // sets, mute list — plus "Mine" for the user's own published tracks.
+    val allLists by followListsModel.musicRoutes.collectAsStateWithLifecycle()
 
     FeedFilterSpinner(
         placeholderCode = listName,

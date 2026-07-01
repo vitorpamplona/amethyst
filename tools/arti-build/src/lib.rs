@@ -167,7 +167,15 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize(
     std::fs::create_dir_all(&cache_dir).ok();
     std::fs::create_dir_all(&state_dir).ok();
 
-    let result: Result<()> = runtime.block_on(async {
+    // Bound the bootstrap so a hostile network (unreachable guards, wiped
+    // consensus) can't block this JNI call — and the Kotlin-side lifecycle lock
+    // it holds — indefinitely. On timeout the `create_bootstrapped` future is
+    // dropped, tearing down the partially built client, and -4 is returned so
+    // TorService can leave status Connecting and let the self-heal watchdog
+    // retry instead of wedging. The ABI is unchanged (still one String arg).
+    const BOOTSTRAP_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+
+    let outcome: jint = runtime.block_on(async {
         log_info!("Creating Arti client...");
 
         let mut builder = TorClientConfigBuilder::from_directories(state_dir, cache_dir);
@@ -184,27 +192,38 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize(
             builder.storage().permissions().dangerously_trust_everyone();
         }
 
-        let config = builder.build()?;
+        let config = match builder.build() {
+            Ok(c) => c,
+            Err(e) => {
+                log_error!("Failed to build Tor config: {:?}", e);
+                return -3;
+            }
+        };
 
-        let client = TorClient::create_bootstrapped(config).await?;
-
-        log_info!("Arti client created and bootstrapped");
-
-        *ARTI_CLIENT.lock().unwrap() = Some(Arc::new(client));
-
-        Ok(())
+        match tokio::time::timeout(BOOTSTRAP_TIMEOUT, TorClient::create_bootstrapped(config)).await {
+            Ok(Ok(client)) => {
+                log_info!("Arti client created and bootstrapped");
+                *ARTI_CLIENT.lock().unwrap() = Some(Arc::new(client));
+                0
+            }
+            Ok(Err(e)) => {
+                log_error!("Failed to bootstrap Tor client: {:?}", e);
+                -3
+            }
+            Err(_elapsed) => {
+                log_error!(
+                    "Tor bootstrap timed out after {}s — aborting so the client can be retried",
+                    BOOTSTRAP_TIMEOUT.as_secs()
+                );
+                -4
+            }
+        }
     });
 
-    match result {
-        Ok(_) => {
-            log_info!("Arti initialized successfully");
-            0
-        }
-        Err(e) => {
-            log_error!("Failed to initialize Arti: {:?}", e);
-            -3
-        }
+    if outcome == 0 {
+        log_info!("Arti initialized successfully");
     }
+    outcome
 }
 
 /// Start the SOCKS5 proxy on the specified port.

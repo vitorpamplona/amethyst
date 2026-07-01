@@ -40,6 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.relays.health.LatencyMetric
+import com.vitorpamplona.amethyst.commons.relays.health.RelayLatencySnapshot
+import com.vitorpamplona.amethyst.commons.relays.health.SlowReason
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
 import com.vitorpamplona.amethyst.desktop.network.RelayMetrics
 import com.vitorpamplona.amethyst.desktop.network.RelayStatus
@@ -51,6 +54,8 @@ import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 fun RelayMetricCard(
     status: RelayStatus,
     metrics: RelayMetrics?,
+    latency: RelayLatencySnapshot?,
+    slowReason: SlowReason?,
     isExpanded: Boolean,
     onToggleExpand: () -> Unit,
     nip11Fetcher: Nip11Fetcher,
@@ -123,6 +128,17 @@ fun RelayMetricCard(
                         )
                     }
 
+                    // Per-metric p50s (rolling last 50 samples). Three compact columns. Missing
+                    // metrics simply omit their cell — common during the first ~60 s after start
+                    // before the tracker's first snapshot lands.
+                    LatencyCell("OK", latency?.p50Of(LatencyMetric.OK_ACK))
+                    LatencyCell("EOSE", latency?.p50Of(LatencyMetric.EOSE))
+                    LatencyCell("FR", latency?.p50Of(LatencyMetric.FIRST_RESULT))
+
+                    if (slowReason != null) {
+                        SlowRelayChip(slowReason)
+                    }
+
                     // Event count
                     if (metrics != null && metrics.eventCount > 0) {
                         Text(
@@ -156,9 +172,58 @@ fun RelayMetricCard(
         }
 
         AnimatedVisibility(isExpanded) {
-            RelayDetailPanel(nip11)
+            RelayDetailPanel(nip11, latency = latency, slowReason = slowReason)
         }
     }
+}
+
+/** Compact single-column latency display: "label / p50ms" stacked. Hidden when no sample. */
+@Composable
+private fun LatencyCell(
+    label: String,
+    p50: Int?,
+) {
+    if (p50 == null) return
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            "${p50}ms",
+            style = MaterialTheme.typography.labelSmall,
+        )
+    }
+}
+
+/** "Slow: OK 2.4×" outlined chip. Static (no ripple) — matches UnhealthyRelayRow's tag style. */
+@Composable
+private fun SlowRelayChip(reason: SlowReason) {
+    val label =
+        when (reason.metric) {
+            LatencyMetric.OK_ACK -> "OK"
+            LatencyMetric.EOSE -> "EOSE"
+            LatencyMetric.FIRST_RESULT -> "FR"
+            LatencyMetric.PING -> "Ping"
+        }
+    val multiplierText = String.format("%.1f", reason.multiplier)
+    androidx.compose.material3.AssistChip(
+        onClick = {},
+        enabled = false,
+        label = {
+            Text(
+                "Slow: $label $multiplierText×",
+                style = MaterialTheme.typography.labelSmall,
+            )
+        },
+        colors =
+            androidx.compose.material3.AssistChipDefaults.assistChipColors(
+                disabledLabelColor = MaterialTheme.colorScheme.error,
+                disabledContainerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+            ),
+        border = null,
+    )
 }
 
 fun formatRelativeTime(epochMs: Long): String {

@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -63,7 +62,6 @@ class CashuTokenEvent(
 
     companion object {
         const val KIND = 7375
-        const val ALT_DESCRIPTION = "Cashu token"
 
         suspend fun build(
             tokenContent: TokenContent,
@@ -71,7 +69,6 @@ class CashuTokenEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CashuTokenEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             initializer()
         }.let { template ->
             val encryptedContent = signer.nip44Encrypt(TokenContentParser.toJson(tokenContent), signer.pubKey)

@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
-import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.commons.util.replace
@@ -61,7 +60,7 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
@@ -119,6 +118,24 @@ open class Note(
     var event: Event? = null
     var author: User? = null
     var replyTo: List<Note>? = null
+
+    /**
+     * The envelope that delivered this note when [event] is an unsealed
+     * rumor: normally the kind-1059 gift wrap, a bare kind-13 seal when
+     * one arrives unwrapped. Null for public events.
+     *
+     * Rumors are unsigned and must never be referenced or republished
+     * directly on public relays — consumers cite, broadcast, prune, and
+     * evict through this stub instead. Living on the Note (not on a
+     * global index, not on the quartz event) ties its lifetime to the
+     * note: whatever removes or garbage-collects the note frees the stub.
+     */
+    var rumorHost: HostStub? = null
+
+    /** Records the envelope that delivered this rumor. */
+    fun recordRumorHost(envelope: Event) {
+        rumorHost = HostStub(envelope.id, envelope.pubKey, envelope.kind, envelope.createdAt)
+    }
 
     var inGatherers: List<NotesGatherer>? = null
 
@@ -237,19 +254,17 @@ open class Note(
     open fun idNote() = toNEvent()
 
     open fun toNEvent(): String {
-        val myEvent = event
-        return if (myEvent is WrappedEvent) {
-            val host = myEvent.host
-            if (host != null) {
-                NEvent.create(
-                    host.id,
-                    host.pubKey,
-                    host.kind,
-                    relayHintUrl(),
-                )
-            } else {
-                NEvent.create(idHex, author?.pubkeyHex, event?.kind, relayHintUrl())
-            }
+        // Rumors are cited by the envelope that delivered them: the rumor id
+        // resolves to nothing on public relays and exposing it would leak the
+        // private event's identity.
+        val host = rumorHost
+        return if (host != null) {
+            NEvent.create(
+                host.id,
+                host.pubKey,
+                host.kind,
+                relayHintUrl(),
+            )
         } else {
             NEvent.create(idHex, author?.pubkeyHex, event?.kind, relayHintUrl())
         }
@@ -324,6 +339,16 @@ open class Note(
     open fun createdAt() = event?.createdAt
 
     fun isDraft() = event is DraftWrapEvent
+
+    /**
+     * True when this note's event is an unsealed NIP-59 rumor (a private
+     * reply, private reaction, or chat message that arrived inside a gift
+     * wrap). Rumors are unsigned by design — they are materialized with an
+     * empty signature — so they must never be e-tagged, quoted, reposted,
+     * or rebroadcast on public relays: any public event referencing this
+     * note's id leaks the private rumor id.
+     */
+    fun isPrivateRumor() = event?.sig?.isEmpty() == true
 
     fun loadEvent(
         event: Event,
@@ -697,7 +722,6 @@ open class Note(
         zapPaymentRequest: Note,
         zapPayment: Note?,
     ) {
-        checkNotInMainThread()
         if (zapPayments[zapPaymentRequest] == null) {
             val inserted = innerAddZapPayment(zapPaymentRequest, zapPayment)
             if (inserted) {

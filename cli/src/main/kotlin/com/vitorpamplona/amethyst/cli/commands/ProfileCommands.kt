@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
+import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -43,15 +45,16 @@ object ProfileCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "profile <show|edit> …")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "show" -> show(dataDir, rest)
-            "edit" -> edit(dataDir, rest)
-            else -> Output.error("bad_args", "profile ${tail[0]}")
-        }
-    }
+    ): Int =
+        route(
+            "profile",
+            tail,
+            "profile <show|edit> …",
+            mapOf(
+                "show" to { rest -> show(dataDir, rest) },
+                "edit" to { rest -> edit(dataDir, rest) },
+            ),
+        )
 
     private suspend fun show(
         dataDir: DataDir,
@@ -60,8 +63,7 @@ object ProfileCommands {
         val args = Args(rest)
         val refresh = args.bool("refresh")
         val timeoutSecs = args.longFlag("timeout", 8L)
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val pubKey =
                 args.positionalOrNull(0)?.let { ctx.requireUserHex(it) }
@@ -116,8 +118,6 @@ object ProfileCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -139,22 +139,27 @@ object ProfileCommands {
         val twitter = args.flag("twitter")
         val mastodon = args.flag("mastodon")
         val github = args.flag("github")
+        val clinkOffer = args.flag("clink-offer")
         val timeoutSecs = args.longFlag("timeout", 8L)
 
+        // A non-blank --clink-offer must be a real noffer; pass "" to clear the field.
+        if (!clinkOffer.isNullOrBlank() && ClinkPointerParser.parse(clinkOffer.trim()) !is NOffer) {
+            return Output.error("bad_args", "--clink-offer is not a valid noffer pointer (pass \"\" to clear)")
+        }
+
         val touched =
-            listOf(name, displayName, about, picture, banner, website, nip05, lud16, lud06, pronouns, twitter, mastodon, github)
+            listOf(name, displayName, about, picture, banner, website, nip05, lud16, lud06, pronouns, twitter, mastodon, github, clinkOffer)
                 .any { it != null }
         if (!touched) {
             return Output.error(
                 "bad_args",
                 "profile edit needs at least one of " +
                     "--name --display-name --about --picture --banner --website " +
-                    "--nip05 --lud16 --lud06 --pronouns --twitter --mastodon --github",
+                    "--nip05 --lud16 --lud06 --pronouns --twitter --mastodon --github --clink-offer",
             )
         }
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val targets = ctx.outboxRelays().ifEmpty { ctx.bootstrapRelays() }
             val latest =
@@ -182,6 +187,7 @@ object ProfileCommands {
                         twitter = twitter,
                         mastodon = mastodon,
                         github = github,
+                        clinkOffer = clinkOffer,
                     )
                 } else {
                     MetadataEvent.createNew(
@@ -198,6 +204,7 @@ object ProfileCommands {
                         twitter = twitter,
                         mastodon = mastodon,
                         github = github,
+                        clinkOffer = clinkOffer,
                     )
                 }
 
@@ -216,8 +223,6 @@ object ProfileCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 

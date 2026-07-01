@@ -49,8 +49,14 @@ object LoginCommand {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        // NIP-46 NostrConnect (client-initiated) login: no key positional —
+        // amy mints a transport key, prints an offer, and waits for a signer.
+        val preArgs = Args(rest)
+        if (preArgs.bool("nostrconnect")) {
+            return NostrConnect.login(dataDir, preArgs)
+        }
         if (rest.isEmpty()) {
-            return Output.error("bad_args", "login <nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05> [--password X]")
+            return Output.error("bad_args", "login <nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05|bunker://|--nostrconnect> [--password X]")
         }
         if (dataDir.identityExists()) {
             return Output.error("exists", "identity already exists at ${dataDir.identityFile}; use a fresh --data-dir or delete it first")
@@ -71,7 +77,9 @@ object LoginCommand {
             mapOf(
                 "npub" to identity.npub,
                 "hex" to identity.pubKeyHex,
-                "read_only" to !identity.hasPrivateKey,
+                "read_only" to !identity.canSign,
+                "signer" to if (identity.bunker != null) "bunker" else "local",
+                "bunker_relays" to identity.bunker?.relays,
                 "data_dir" to dataDir.root.absolutePath,
             ),
         )
@@ -82,6 +90,8 @@ object LoginCommand {
         key: String,
         args: Args,
     ): Identity? {
+        // 0. NIP-46 bunker connection string.
+        if (key.startsWith("bunker://")) return Identity.fromBunkerUri(key)
         // 1. ncryptsec — password mandatory.
         if (key.startsWith("ncryptsec")) {
             val pw =

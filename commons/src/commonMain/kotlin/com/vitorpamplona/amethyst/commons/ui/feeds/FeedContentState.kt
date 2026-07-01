@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
 import com.vitorpamplona.amethyst.commons.service.BasicBundledUpdate
-import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.utils.flattenToSet
@@ -87,8 +86,6 @@ class FeedContentState(
     fun lastNoteCreatedAtIfFilled() = lastNoteCreatedAtWhenFullyLoaded.value
 
     fun refreshSuspended() {
-        checkNotInMainThread()
-
         isRefreshing.value = true
         try {
             lastFeedKey = localFilter.feedKey()
@@ -135,6 +132,16 @@ class FeedContentState(
         if (feed is FeedState.Loaded) {
             val notes = (feed.feed.value.list - deletedNotes).toImmutableList()
             updateFeed(notes)
+        }
+    }
+
+    fun trimToSize(maxItems: Int) {
+        val current = _feedContent.value
+        if (current is FeedState.Loaded) {
+            val loaded = current.feed.value
+            if (loaded.list.size > maxItems) {
+                current.feed.tryEmit(LoadedFeedState(loaded.list.take(maxItems).toImmutableList(), loaded.showHidden))
+            }
         }
     }
 

@@ -36,7 +36,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -102,7 +101,6 @@ class PrivateDmEvent(
 
     companion object {
         const val KIND = 4
-        const val ALT = "Private Message"
         const val NIP_18_ADVERTISEMENT = "[//]: # (nip18)\n"
 
         fun prepareMessageToEncrypt(
@@ -139,7 +137,6 @@ class PrivateDmEvent(
                 ),
             createdAt = createdAt,
         ) {
-            alt(ALT)
             pTag(toUser)
             replyingTo?.let { reply(it) }
 

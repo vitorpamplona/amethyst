@@ -54,9 +54,10 @@ import org.junit.runner.RunWith
  * Asserts the three contracts the feature relies on:
  *   1. `feedKey` is mode-discriminated so each pinned tab caches independently.
  *   2. `followList()` honors `modeOverride` when set; falls back to the spinner setting otherwise.
- *   3. `buildFilterParams()` returns a GlobalTopNavFilter-backed FilterByListParams for
- *      `TopFilter.Global` (so `isGlobal()` is true, allowing non-follower notifications through),
- *      and a non-Global filter for `TopFilter.AllFollows` (forcing the follow-membership gate).
+ *   3. `buildFilterParams()` returns a GlobalTopNavFilter-backed FilterByListParams for both
+ *      `TopFilter.Global` and `TopFilter.Selected` (so `isGlobal()` is true, allowing
+ *      non-follower notifications through), and a non-Global filter for `TopFilter.AllFollows`
+ *      (forcing the follow-membership gate).
  */
 @RunWith(AndroidJUnit4::class)
 class NotificationFeedFilterModeOverrideTest {
@@ -66,13 +67,16 @@ class NotificationFeedFilterModeOverrideTest {
 
         private val client =
             NostrClient(
-                OkHttpWebSocket.Builder {
-                    OkHttpClient
-                        .Builder()
-                        .followRedirects(true)
-                        .followSslRedirects(true)
-                        .build()
-                },
+                OkHttpWebSocket.Builder(
+                    httpClient = {
+                        OkHttpClient
+                            .Builder()
+                            .followRedirects(true)
+                            .followSslRedirects(true)
+                            .build()
+                    },
+                    canDial = { true },
+                ),
                 scope,
             )
 
@@ -130,8 +134,8 @@ class NotificationFeedFilterModeOverrideTest {
     fun followListFallsBackToSpinnerWhenOverrideNull() {
         val spinner = NotificationFeedFilter(account)
 
-        account.settings.defaultNotificationFollowList.value = TopFilter.Global
-        assertEquals(TopFilter.Global, spinner.followList())
+        account.settings.defaultNotificationFollowList.value = TopFilter.Selected
+        assertEquals(TopFilter.Selected, spinner.followList())
 
         account.settings.defaultNotificationFollowList.value = TopFilter.AllFollows
         assertEquals(TopFilter.AllFollows, spinner.followList())
@@ -147,6 +151,22 @@ class NotificationFeedFilterModeOverrideTest {
         // which is how the Everyone tab admits notifications from non-followed authors.
         assertTrue(
             "Everyone tab's FilterByListParams must report isGlobal so non-followers pass the gate",
+            params.isGlobal(),
+        )
+    }
+
+    @Test
+    fun buildFilterParamsForSelectedOverrideReportsGlobal() {
+        val selected = NotificationFeedFilter(account, TopFilter.Selected)
+
+        val params = selected.buildFilterParams(account)
+
+        // Selected rides the same GlobalFeedFlow relay set as Global, so it must
+        // also report isGlobal and let non-followers through; the difference is
+        // that acceptableEvent applies the per-kind relevance heuristics, which
+        // Global skips.
+        assertTrue(
+            "Selected mode's FilterByListParams must report isGlobal so non-followers pass the gate",
             params.isGlobal(),
         )
     }

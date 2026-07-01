@@ -109,7 +109,9 @@ object MediaSaverToDisk {
 
             client.newCall(request).executeAsync().use { response ->
                 withContext(Dispatchers.IO) {
-                    check(response.isSuccessful)
+                    check(response.isSuccessful) {
+                        "Failed to download $url: HTTP ${response.code} ${response.message}"
+                    }
 
                     val trimmedUrl = trimInlineMetaData(url)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

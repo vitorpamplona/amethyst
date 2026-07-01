@@ -26,12 +26,12 @@ dependencyResolutionManagement {
         mavenCentral()
         maven { url = uri("https://jitpack.io") }
         maven { url = uri("https://raw.githubusercontent.com/guardianproject/gpmaven/master") }
-        maven { url = uri("https://mvn.0110.be/releases") }
     }
 }
 
 rootProject.name = "Amethyst"
 include(":amethyst")
+include(":nappletHost")
 include(":benchmark")
 include(":quartz")
 include(":geode")

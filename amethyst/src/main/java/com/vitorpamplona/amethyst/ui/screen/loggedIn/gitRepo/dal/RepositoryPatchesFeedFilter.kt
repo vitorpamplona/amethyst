@@ -22,20 +22,22 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.GitStatusIndex
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 
 class RepositoryPatchesFeedFilter(
     val repositoryNote: AddressableNote,
     val account: Account,
+    val showClosed: Boolean,
 ) : AdditiveFeedFilter<Note>() {
     private val repositoryAddressId = repositoryNote.address.toValue()
 
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-patches-" + repositoryNote.idHex
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-patches-" + (if (showClosed) "closed-" else "open-") + repositoryNote.idHex
 
     override fun feed(): List<Note> {
         val result =
@@ -49,12 +51,15 @@ class RepositoryPatchesFeedFilter(
 
     private fun matches(note: Note): Boolean {
         val event = note.event ?: return false
-        return when (event) {
-            is GitPatchEvent -> event.repositoryAddress()?.toValue() == repositoryAddressId
-            is GitPullRequestEvent -> event.repositoryAddress()?.toValue() == repositoryAddressId
-            else -> false
-        }
+        val belongsToRepo =
+            when (event) {
+                is GitPatchEvent -> event.repositoryAddress()?.toValue() == repositoryAddressId
+                is GitPullRequestEvent -> event.repositoryAddress()?.toValue() == repositoryAddressId
+                else -> false
+            }
+        if (!belongsToRepo) return false
+        return GitStatusIndex.isClosedOrResolved(note.idHex) == showClosed
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 }

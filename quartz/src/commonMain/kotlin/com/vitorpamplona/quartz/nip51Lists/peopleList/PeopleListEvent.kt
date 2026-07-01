@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -33,8 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
@@ -57,7 +55,12 @@ class PeopleListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    // Only the public label/description is indexed; members can live in NIP-44
+    // encrypted content and are intentionally never indexed.
+    override fun indexableContent() = listOfNotNull(titleOrName(), description()).joinToString("\n")
+
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
@@ -87,7 +90,6 @@ class PeopleListEvent(
     companion object {
         const val KIND = 30000
         const val BLOCK_LIST_D_TAG = "mute"
-        const val ALT = "List of people"
 
         fun createBlockAddress(pubKey: HexKey) = Address(KIND, pubKey, BLOCK_LIST_D_TAG)
 
@@ -256,12 +258,7 @@ class PeopleListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): PeopleListEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, content)
         }
@@ -294,7 +291,6 @@ class PeopleListEvent(
             createdAt = createdAt,
         ) {
             dTag(dTag)
-            alt(ALT)
             title(title)
             peoples(publicMembers)
 

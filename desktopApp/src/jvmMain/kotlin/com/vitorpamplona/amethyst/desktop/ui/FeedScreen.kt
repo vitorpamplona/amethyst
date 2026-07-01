@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.FollowAction
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
 import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncStatus
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
@@ -117,6 +118,8 @@ import com.vitorpamplona.amethyst.desktop.feeds.DesktopFollowingFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopGlobalFeedFilter
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
@@ -147,6 +150,8 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -1168,6 +1173,59 @@ private fun FeedTabsHeader(
     val relayCategories = LocalRelayCategories.current
     val searchRelays by relayCategories.searchRelays.collectAsState()
 
+    // Namecoin resolution wiring (matches SearchScreen.kt pattern).
+    // The home tab search bar must resolve <name>.bit / <name>.namecoin
+    // identifiers in the same way as the full Search screen so users get a
+    // consistent experience regardless of where they type the query.
+    val namecoinService = LocalNamecoinService.current
+    val namecoinPrefs = LocalNamecoinPreferences.current
+    val namecoinEnabled =
+        namecoinPrefs
+            ?.settings
+            ?.collectAsState()
+            ?.value
+            ?.enabled ?: false
+    val isNamecoinQuery =
+        remember(searchText.text) {
+            searchText.text.isNotBlank() &&
+                NamecoinNameResolver.isNamecoinIdentifier(searchText.text.trim())
+        }
+    var namecoinState by remember { mutableStateOf<NamecoinResolveState?>(null) }
+
+    // Resolve Namecoin identifiers, cancelling stale lookups when the user
+    // keeps typing. Uses resolveDetailed() so we get typed failure outcomes
+    // (NotFound / Expired / ServersUnreachable) instead of swallowed exceptions.
+    LaunchedEffect(searchText.text, namecoinEnabled) {
+        if (!namecoinEnabled || !isNamecoinQuery || namecoinService == null) {
+            namecoinState = null
+            return@LaunchedEffect
+        }
+        namecoinState = NamecoinResolveState.Loading
+        val outcome = namecoinService.resolveDetailed(searchText.text.trim())
+        namecoinState =
+            when (outcome) {
+                is NamecoinResolveOutcome.Success ->
+                    NamecoinResolveState.Resolved(outcome.result)
+                is NamecoinResolveOutcome.NameNotFound -> NamecoinResolveState.NotFound
+                is NamecoinResolveOutcome.NoNostrField ->
+                    NamecoinResolveState.Error("Name exists but has no Nostr pubkey")
+                is NamecoinResolveOutcome.MalformedRecord ->
+                    NamecoinResolveState.Error(
+                        "Namecoin record JSON is malformed: ${outcome.error}",
+                    )
+                is NamecoinResolveOutcome.ServersUnreachable ->
+                    NamecoinResolveState.Error(
+                        "ElectrumX servers unreachable — check your connection or try again",
+                    )
+                is NamecoinResolveOutcome.InvalidIdentifier ->
+                    NamecoinResolveState.Error("Invalid Namecoin identifier")
+                is NamecoinResolveOutcome.Timeout ->
+                    NamecoinResolveState.Error(
+                        "Resolution timed out — servers may be slow, try again",
+                    )
+            }
+    }
+
     // Sync search text to AdvancedSearchBarState
     LaunchedEffect(searchText.text) {
         searchState.updateFromText(searchText.text)
@@ -1423,6 +1481,21 @@ private fun FeedTabsHeader(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
+                    // Namecoin lookup row — rendered above the regular search
+                    // results when the query looks like a Namecoin identifier
+                    // (matches the pattern used in SearchScreen.kt).
+                    if (isNamecoinQuery && namecoinState != null) {
+                        InlineNamecoinResultRow(
+                            state = namecoinState!!,
+                            query = searchText.text.trim(),
+                            onClick = { pubkeyHex ->
+                                onSearchExpandedChange(false)
+                                onNavigateToProfile(pubkeyHex)
+                            },
+                        )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+
                     if (hasQuery) {
                         // Results stream in as they arrive
                         if (hasResults) {
@@ -1516,6 +1589,100 @@ private fun FeedTabsHeader(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Compact Namecoin lookup result row shown above the regular search
+ * results in the home tab inline search bar. Mirrors the resolve / loading
+ * / error UX of [SearchScreen]'s full Namecoin panel so users see the same
+ * outcome regardless of where they typed the identifier.
+ */
+@Composable
+private fun InlineNamecoinResultRow(
+    state: NamecoinResolveState,
+    query: String,
+    onClick: (String) -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            "Namecoin lookup",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        when (state) {
+            is NamecoinResolveState.Loading -> {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    LinearProgressIndicator(modifier = Modifier.width(80.dp))
+                    Text(
+                        "Resolving $query…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            is NamecoinResolveState.Resolved -> {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onClick(state.result.pubkey) }
+                            .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        MaterialSymbols.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "${state.result.namecoinName} → ${state.result.pubkey.take(12)}…",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        if (state.result.relays.isNotEmpty()) {
+                            Text(
+                                "Relays: ${state.result.relays.joinToString(", ")}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Icon(
+                        MaterialSymbols.AutoMirrored.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            is NamecoinResolveState.NotFound -> {
+                Text(
+                    "Name not found on Namecoin blockchain",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            is NamecoinResolveState.Error -> {
+                Text(
+                    "Resolution error: ${state.message}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
         }
     }

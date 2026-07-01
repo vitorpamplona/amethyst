@@ -101,6 +101,13 @@ fun ComposeSettingsContent(
                 description = R.string.tracked_broadcasts_setting_description,
             )
             SettingsDivider()
+            BooleanSwitchTile(
+                flow = sharedPrefs.suggestWorkoutsFromHealthConnect,
+                icon = MaterialSymbols.DirectionsRun,
+                title = R.string.suggest_workouts_setting_title,
+                description = R.string.suggest_workouts_setting_description,
+            )
+            SettingsDivider()
             AddClientTagTile(accountViewModel)
         }
     }

@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -37,7 +37,10 @@ class RootSiteEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+
     fun paths() = tags.sitePaths()
 
     fun servers() = tags.siteServers()
@@ -48,9 +51,13 @@ class RootSiteEvent(
 
     fun source() = tags.siteSource()
 
+    fun icon() = tags.siteIcon()
+
+    /** The bundled blob that best looks like this site's app icon, or null. See [NappletIconPath]. */
+    fun iconBlob() = NappletIconPath.choose(paths())
+
     companion object {
         const val KIND = 15128
-        const val ALT_DESCRIPTION = "Static Website"
 
         fun build(
             paths: List<PathTag>,
@@ -58,15 +65,16 @@ class RootSiteEvent(
             title: String? = null,
             description: String? = null,
             source: String? = null,
+            icon: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RootSiteEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             sitePaths(paths)
             if (servers.isNotEmpty()) siteServers(servers)
             title?.let { siteTitle(it) }
             description?.let { siteDescription(it) }
             source?.let { siteSource(it) }
+            icon?.let { siteIcon(it) }
             initializer()
         }
     }

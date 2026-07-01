@@ -47,7 +47,7 @@ import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -62,7 +62,10 @@ class TorrentCommentEvent(
 ) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     PubKeyHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = content
+
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(MarkedETag::parseAsHint)
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)
@@ -114,7 +117,6 @@ class TorrentCommentEvent(
     @Suppress("DEPRECATION")
     companion object {
         const val KIND = 2004
-        const val ALT_DESCRIPTION = "Comment for a Torrent file"
 
         fun build(
             message: String,
@@ -148,7 +150,6 @@ class TorrentCommentEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<TorrentCommentEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, post, createdAt) {
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

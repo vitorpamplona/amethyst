@@ -40,7 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.reference
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.AmountTag
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.ClosedAtTag
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.RelayListTag
@@ -57,7 +57,10 @@ class GoalEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(summary(), content).joinToString("\n")
+
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
@@ -84,7 +87,6 @@ class GoalEvent(
 
     companion object {
         const val KIND = 9041
-        const val ALT_DESCRIPTION = "Zap Goal"
 
         fun build(
             description: String,
@@ -110,7 +112,6 @@ class GoalEvent(
                 }
                 linked(it.toETag())
             }
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

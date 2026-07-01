@@ -26,6 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.test.Test
 
@@ -128,5 +131,211 @@ class SearchTest : BaseDBTest() {
             // v1's FTS row must be gone; v2's content takes over.
             db.assertQuery(null, Filter(search = "uniqalpha"))
             db.assertQuery(v2, Filter(search = "uniqbeta"))
+        }
+
+    @Test
+    fun testNewlySearchableKinds() =
+        forEachDB { db ->
+            // CalendarEvent indexes the title tag plus the free-text content.
+            val cal =
+                signer.sign(
+                    CalendarEvent.build(
+                        title = "uniqtitle Meetup",
+                        content = "annual uniqbody gathering",
+                    ),
+                )
+            // GitRepositoryEvent has an empty content field — its searchable
+            // text comes entirely from the name and description tags.
+            val repo =
+                signer.sign(
+                    GitRepositoryEvent.build(
+                        name = "uniqname",
+                        description = "uniqdesc nostr client",
+                    ),
+                )
+
+            db.store.insertEvent(cal)
+            db.store.insertEvent(repo)
+
+            // Title tag and content are both indexed for the calendar event.
+            db.assertQuery(cal, Filter(search = "uniqtitle"))
+            db.assertQuery(cal, Filter(search = "uniqbody"))
+
+            // Name and description tags are indexed even with empty content.
+            db.assertQuery(repo, Filter(search = "uniqname"))
+            db.assertQuery(repo, Filter(search = "uniqdesc"))
+            db.assertQuery(repo, Filter(kinds = listOf(GitRepositoryEvent.KIND), search = "uniqdesc"))
+        }
+
+    @Test
+    fun testProfileJsonFieldsAreSearchable() =
+        forEachDB { db ->
+            // Kind-0 content is JSON; we parse it and index names, bio, and the
+            // addresses people search by (nip05 email, lightning address, URLs).
+            val p =
+                signer.sign(
+                    MetadataEvent.createNew(
+                        name = "uniqalice",
+                        about = "loves uniqbio and coffee",
+                        nip05 = "alice@uniqmail.example",
+                        lnAddress = "alice@uniqln.example",
+                        website = "https://uniqsite.example",
+                    ),
+                )
+            db.store.insertEvent(p)
+
+            db.assertQuery(p, Filter(search = "uniqalice")) // name
+            db.assertQuery(p, Filter(search = "uniqbio")) // about
+            db.assertQuery(p, Filter(search = "uniqmail")) // nip05 email
+            db.assertQuery(p, Filter(search = "uniqln")) // lightning address
+            db.assertQuery(p, Filter(search = "uniqsite")) // website URL
+            db.assertQuery(p, Filter(kinds = listOf(MetadataEvent.KIND), search = "uniqalice"))
+        }
+
+    @Test
+    fun testReindexFullTextSearchRebuildsTheWholeIndex() =
+        forEachDB { db ->
+            // A calendar event (title tag + content) and a plain note. Both
+            // are searchable kinds, but we'll erase the FTS index to mimic
+            // events that were stored before their kind became searchable.
+            val cal =
+                signer.sign(
+                    CalendarEvent.build(
+                        title = "uniqtitle Meetup",
+                        content = "annual uniqbody gathering",
+                    ),
+                )
+            val note = signer.sign(TextNoteEvent.build("reindex uniqnote please", createdAt = TimeUtils.now()))
+
+            db.store.insertEvent(cal)
+            db.store.insertEvent(note)
+
+            // Wipe the FTS rows but keep the canonical event rows — this is
+            // the state a store ends up in after an upgrade adds search
+            // support for a kind that was inserted under the old code.
+            db.store.pool.useWriter { db.store.fullTextSearchModule.deleteAll(it) }
+            db.store.assertQuery(null, Filter(search = "uniqbody"))
+            db.store.assertQuery(null, Filter(search = "uniqnote"))
+
+            // Rebuilding from storage brings every searchable field back.
+            db.store.reindexFullTextSearch()
+            db.store.assertQuery(cal, Filter(search = "uniqtitle"))
+            db.store.assertQuery(cal, Filter(search = "uniqbody"))
+            db.store.assertQuery(note, Filter(search = "uniqnote"))
+
+            // Running it again must not duplicate rows (assertQuery expects
+            // exactly one match), proving the rebuild starts from a clean slate.
+            db.store.reindexFullTextSearch()
+            db.store.assertQuery(cal, Filter(search = "uniqbody"))
+            db.store.assertQuery(note, Filter(search = "uniqnote"))
+        }
+
+    @Test
+    fun testResumableReindexProcessesEveryEventInBatches() =
+        forEachDB { db ->
+            // A handful of searchable notes, each with a unique token.
+            val notes =
+                (0 until 5).map { i ->
+                    signer.sign(TextNoteEvent.build("uniqresume$i body", createdAt = TimeUtils.now() + i))
+                }
+            notes.forEach { db.store.insertEvent(it) }
+
+            // Mimic the post-upgrade state: canonical rows present, FTS empty.
+            db.store.pool.useWriter { db.store.fullTextSearchModule.deleteAll(it) }
+            db.store.assertQuery(null, Filter(search = "uniqresume0"))
+
+            // Drive the resumable path two events at a time, persisting only
+            // the opaque cursor between calls — exactly what a paused/resumed
+            // app would do.
+            var cursor: String? = null
+            var batches = 0
+            var processed = 0
+            do {
+                val progress = db.store.reindexFullTextSearch(cursor, batchSize = 2)
+                cursor = progress.cursor
+                processed += progress.processedThisBatch
+                batches++
+            } while (!progress.done)
+
+            // 5 events at 2 per batch ⇒ 3 batches (2 + 2 + 1).
+            kotlin.test.assertEquals(5, processed)
+            kotlin.test.assertEquals(3, batches)
+
+            // Every note is searchable again after the full run.
+            notes.forEachIndexed { i, n -> db.store.assertQuery(n, Filter(search = "uniqresume$i")) }
+        }
+
+    @Test
+    fun testResumableReindexKeepsSearchLiveAndIsIdempotent() =
+        forEachDB { db ->
+            val a = signer.sign(TextNoteEvent.build("uniqalpha note", createdAt = TimeUtils.now()))
+            val b = signer.sign(TextNoteEvent.build("uniqbeta note", createdAt = TimeUtils.now() + 1))
+            db.store.insertEvent(a)
+            db.store.insertEvent(b)
+
+            // First batch (size 1) reindexes only the lowest row_id; the
+            // untouched event keeps the FTS row it already had from insert,
+            // so search stays live for both throughout.
+            val first = db.store.reindexFullTextSearch(null, batchSize = 1)
+            kotlin.test.assertEquals(false, first.done)
+            db.store.assertQuery(a, Filter(search = "uniqalpha"))
+            db.store.assertQuery(b, Filter(search = "uniqbeta"))
+
+            // Finish, then run the whole loop again from scratch: delete-then-
+            // insert per event means no duplicate rows (assertQuery wants 1).
+            var cursor = first.cursor
+            do {
+                val p = db.store.reindexFullTextSearch(cursor, batchSize = 1)
+                cursor = p.cursor
+            } while (!p.done)
+
+            cursor = null
+            do {
+                val p = db.store.reindexFullTextSearch(cursor, batchSize = 10)
+                cursor = p.cursor
+            } while (!p.done)
+
+            db.store.assertQuery(a, Filter(search = "uniqalpha"))
+            db.store.assertQuery(b, Filter(search = "uniqbeta"))
+        }
+
+    @Test
+    fun testResumableReindexClampsNonPositiveBatchSize() =
+        forEachDB { db ->
+            val a = signer.sign(TextNoteEvent.build("uniqclamp note", createdAt = TimeUtils.now()))
+            db.store.insertEvent(a)
+            db.store.pool.useWriter { db.store.fullTextSearchModule.deleteAll(it) }
+
+            // batchSize 0 must not spin forever: it is clamped to one event
+            // per call. Cap the loop so a regression fails fast instead of
+            // hanging the suite.
+            var cursor: String? = null
+            var guard = 0
+            do {
+                val progress = db.store.reindexFullTextSearch(cursor, batchSize = 0)
+                cursor = progress.cursor
+                check(guard++ < 100) { "reindex did not terminate with batchSize=0" }
+            } while (!progress.done)
+
+            db.store.assertQuery(a, Filter(search = "uniqclamp"))
+        }
+
+    @Test
+    fun testChannelJsonFieldsAreSearchable() =
+        forEachDB { db ->
+            val chan =
+                signer.sign(
+                    ChannelCreateEvent.build(
+                        name = "uniqchan",
+                        about = "a uniqtopic discussion",
+                        picture = "https://uniqpic.example/c.jpg",
+                        relays = null,
+                    ),
+                )
+            db.store.insertEvent(chan)
+
+            db.assertQuery(chan, Filter(search = "uniqchan")) // name
+            db.assertQuery(chan, Filter(search = "uniqtopic")) // about
+            db.assertQuery(chan, Filter(search = "uniqpic")) // picture URL
         }
 }

@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -39,7 +39,10 @@ class GroupMetadataEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(name(), about()).joinToString("\n")
+
     fun groupId() = dTag()
 
     fun name() = tags.firstTagValue("name")
@@ -77,7 +80,6 @@ class GroupMetadataEvent(
 
     companion object {
         const val KIND = 39000
-        const val ALT_DESCRIPTION = "Group metadata"
 
         fun build(
             groupId: String,
@@ -88,7 +90,6 @@ class GroupMetadataEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GroupMetadataEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(groupId)
             name?.let { add(arrayOf("name", it)) }
             about?.let { add(arrayOf("about", it)) }

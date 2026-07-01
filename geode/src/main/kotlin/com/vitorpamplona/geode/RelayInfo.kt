@@ -38,10 +38,10 @@ data class RelayInfo(
     val json: String by lazy { JsonMapper.toJson(document) }
 
     companion object {
-        const val NAME = "geode"
-        const val DESCRIPTION = "Embedded Nostr relay from the Amethyst quartz library."
+        const val NAME = "Geode"
+        const val DESCRIPTION = "Nostr relay from Amethyst"
         const val SOFTWARE = "https://github.com/vitorpamplona/amethyst/tree/main/geode"
-        const val VERSION = "1.11.0"
+        const val VERSION = BuildConfig.VERSION
 
         /**
          * NIPs this relay implements out of the box. Single source of

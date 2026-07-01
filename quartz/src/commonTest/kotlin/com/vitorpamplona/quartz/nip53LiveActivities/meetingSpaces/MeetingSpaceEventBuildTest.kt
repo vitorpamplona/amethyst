@@ -58,7 +58,6 @@ class MeetingSpaceEventBuildTest {
         assertEquals("https://api.example.com/hall", byName["streaming"]?.single()?.get(1))
         assertEquals("The big room", byName["summary"]?.single()?.get(1))
         assertEquals("https://example.com/hall.png", byName["image"]?.single()?.get(1))
-        assertEquals(MeetingSpaceEvent.ALT, byName["alt"]?.single()?.get(1))
 
         val hostTag = byName["p"]?.single()
         assertNotNull(hostTag)
@@ -93,7 +92,6 @@ class MeetingSpaceEventBuildTest {
         assertEquals("planned", byName["status"]?.single()?.get(1))
         assertEquals("10", byName["current_participants"]?.single()?.get(1))
         assertEquals("100", byName["total_participants"]?.single()?.get(1))
-        assertEquals(MeetingRoomEvent.ALT, byName["alt"]?.single()?.get(1))
 
         val aTag = byName["a"]?.single()
         assertNotNull(aTag)

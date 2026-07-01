@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.LocationTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -49,7 +49,10 @@ class CalendarTimeSlotEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag.Companion::parse)
 
     fun location() = tags.firstNotNullOfOrNull(LocationTag.Companion::parse)
@@ -78,7 +81,6 @@ class CalendarTimeSlotEvent(
 
     companion object {
         const val KIND = 31923
-        const val ALT = "Calendar time-slot event"
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
@@ -98,7 +100,6 @@ class CalendarTimeSlotEvent(
             end?.let { endTimestamp(it) }
             startTzId?.let { startTzId(it) }
             endTzId?.let { endTzId(it) }
-            alt(ALT)
             initializer()
         }
     }

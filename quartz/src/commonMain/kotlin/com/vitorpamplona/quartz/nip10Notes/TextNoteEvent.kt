@@ -47,7 +47,6 @@ import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -65,7 +64,7 @@ class TextNoteEvent(
     PubKeyHintProvider,
     IForkableEvent,
     SearchableEvent {
-    override fun indexableContent() = "Subject: " + subject() + "\n" + content
+    override fun indexableContent() = listOfNotNull(subject(), content).joinToString("\n")
 
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(MarkedETag::parseAsHint)
@@ -123,19 +122,12 @@ class TextNoteEvent(
 
     companion object {
         const val KIND = 1
-        const val ALT = "A short note: "
-
-        private fun shortedMessageForAlt(msg: String): String {
-            if (msg.length < 50) return ALT + msg
-            return ALT + msg.take(50) + "..."
-        }
 
         fun build(
             note: String,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<TextNoteEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, note, createdAt) {
-            alt(shortedMessageForAlt(note))
             initializer()
         }
 
@@ -146,8 +138,6 @@ class TextNoteEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<TextNoteEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, note, createdAt) {
-            alt(shortedMessageForAlt(note))
-
             if (replyingTo != null || forkingFrom != null) {
                 markedETags(prepareETagsAsReplyTo(replyingTo, forkingFrom))
             }

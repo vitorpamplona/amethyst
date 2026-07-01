@@ -26,22 +26,40 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.Softw
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.SoftwareReleaseEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+
+// zapstore's relay indexes the entire software-app catalog (NIP-82), so the
+// global Apps feed always queries it in addition to the user's own relays —
+// unless the user has explicitly added it to their blocked relay list.
+val ZAPSTORE_APP_RELAY: NormalizedRelayUrl = "wss://relay.zapstore.dev".normalizeRelayUrl()
 
 fun filterSoftwareAppsGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
+    blockedRelays: Set<NormalizedRelayUrl> = emptySet(),
 ): List<RelayBasedFilter> {
-    if (relays.set.isEmpty()) return emptyList()
+    val relayUrls =
+        if (ZAPSTORE_APP_RELAY in blockedRelays) {
+            relays.set.keys
+        } else {
+            relays.set.keys + ZAPSTORE_APP_RELAY
+        }
 
-    return relays.set.map {
-        val sinceForRelay = since?.get(it.key)?.time ?: defaultSince
+    if (relayUrls.isEmpty()) return emptyList()
+
+    return relayUrls.map { relay ->
+        val sinceForRelay = since?.get(relay)?.time ?: defaultSince
         RelayBasedFilter(
-            relay = it.key,
+            relay = relay,
             filter =
                 Filter(
                     kinds = listOf(SoftwareApplicationEvent.KIND, SoftwareReleaseEvent.KIND),
-                    limit = 200,
+                    // Keep the limit < 100. Relays such as zapstore's score filter
+                    // specificity and treat a limit >= 100 (or none) as too vague,
+                    // rejecting the whole REQ with "filters are too vague".
+                    limit = 99,
                     since = sinceForRelay,
                 ),
         )

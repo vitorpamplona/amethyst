@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
-import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.model.mapNotNullIntoSet
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.DiscoverCommunityFeedFilter
@@ -40,19 +39,7 @@ class CommunitiesFeedFilter(
 
     override fun followList(): TopFilter = account.settings.defaultCommunitiesFollowList.value
 
-    private fun myPubkey(): String = account.userProfile().pubkeyHex
-
     override fun feed(): List<Note> {
-        if (followList() == TopFilter.Mine) {
-            val me = myPubkey()
-            val notes =
-                LocalCache.addressables.filterIntoSet(CommunityDefinitionEvent.KIND) { _, note ->
-                    val noteEvent = note.event
-                    noteEvent is CommunityDefinitionEvent && noteEvent.pubKey == me
-                }
-            return sort(notes)
-        }
-
         val filterParams =
             FilterByListParams.create(
                 followLists = account.liveCommunitiesFollowLists.value,
@@ -77,15 +64,6 @@ class CommunitiesFeedFilter(
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     override fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        if (followList() == TopFilter.Mine) {
-            val me = myPubkey()
-            return collection
-                .filterTo(HashSet()) {
-                    val noteEvent = it.event
-                    noteEvent is CommunityDefinitionEvent && noteEvent.pubKey == me
-                }
-        }
-
         val filterParams =
             FilterByListParams.create(
                 followLists = account.liveCommunitiesFollowLists.value,

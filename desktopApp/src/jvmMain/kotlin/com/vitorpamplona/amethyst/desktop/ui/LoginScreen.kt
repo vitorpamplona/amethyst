@@ -67,6 +67,7 @@ fun LoginScreen(
     var generatedAccount by remember { mutableStateOf<AccountState.LoggedIn?>(null) }
 
     val loginProgress by accountManager.loginProgress.collectAsState()
+    val keychainUnavailable by accountManager.keychainUnavailable.collectAsState()
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -87,11 +88,22 @@ fun LoginScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
+        if (keychainUnavailable) {
+            Spacer(Modifier.height(24.dp))
+            Text(
+                "Your saved session couldn't be restored from the OS keychain. Please log in again.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.widthIn(max = 480.dp),
+            )
+        }
+
         Spacer(Modifier.height(48.dp))
 
         LoginCard(
             onLogin = { keyInput ->
                 accountManager.loginWithKey(keyInput).map {
+                    accountManager.clearKeychainUnavailable()
                     onLoginSuccess()
                 }
             },
@@ -101,11 +113,13 @@ fun LoginScreen(
             },
             onLoginBunker = { bunkerUri ->
                 accountManager.loginWithBunker(bunkerUri).map {
+                    accountManager.clearKeychainUnavailable()
                     onLoginSuccess()
                 }
             },
             onLoginNostrConnect = { onUriGenerated ->
                 accountManager.loginWithNostrConnect(onUriGenerated).map {
+                    accountManager.clearKeychainUnavailable()
                     onLoginSuccess()
                 }
             },

@@ -39,13 +39,16 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 /**
@@ -78,6 +81,10 @@ class NotificationRelayService : Service() {
         private const val NOTIFICATION_ID = 9832
 
         private const val ACTION_START = "com.vitorpamplona.amethyst.START_NOTIFICATION_SERVICE"
+
+        // Throttle interval for refreshing the persistent notification's relay count.
+        // Keeps notification updates well under Android's rate limit (~10/s).
+        private const val NOTIFICATION_REFRESH_MS = 1000L
 
         const val ACTION_AUTO_RESTART = "com.vitorpamplona.amethyst.AUTO_RESTART_NOTIFICATION_SERVICE"
 
@@ -125,7 +132,6 @@ class NotificationRelayService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var relayServiceCollectorJob: Job? = null
     private var connectedRelayCount = 0
-    private var foregroundStarted = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -133,7 +139,7 @@ class NotificationRelayService : Service() {
         super.onCreate()
         Log.d(TAG, "Service created")
         createNotificationChannel()
-        initializeForeground()
+        ensureForeground()
     }
 
     override fun onStartCommand(
@@ -142,9 +148,16 @@ class NotificationRelayService : Service() {
         startId: Int,
     ): Int {
         Log.d(TAG, "Starting service")
-        // Safety: also call startForeground from onStartCommand in case
-        // onCreate didn't complete before onStartCommand fired (ntfy #1520)
-        initializeForeground()
+        // Every startForegroundService() call re-arms Android's "must call
+        // startForeground() within the timeout" requirement — including the repeated
+        // calls MainActivity.onResume fires on each resume, even when the service is
+        // already running and already foregrounded. We therefore call startForeground()
+        // on EVERY start command, not just the first. Skipping it on later starts (the
+        // old `if (foregroundStarted) return` guard) left the re-armed requirement
+        // unsatisfied and triggered ForegroundServiceDidNotStartInTimeException, which
+        // crashes the whole app. startForeground() is idempotent — repeated calls just
+        // refresh the existing notification.
+        if (!ensureForeground()) return START_NOT_STICKY
         startRelayConnection()
         return START_STICKY
     }
@@ -199,10 +212,20 @@ class NotificationRelayService : Service() {
         super.onDestroy()
     }
 
-    private fun initializeForeground() {
-        if (foregroundStarted) return
+    /**
+     * Promotes the service to the foreground. Called on creation AND on every
+     * [onStartCommand], because each [Context.startForegroundService] re-arms the
+     * "must call startForeground() within the timeout" requirement and the old code's
+     * early-return-when-already-started skipped it, crashing the app with
+     * ForegroundServiceDidNotStartInTimeException. Calling startForeground() repeatedly
+     * is safe — it just refreshes the existing notification.
+     *
+     * Returns true if the service is foregrounded, false if promotion failed (in which
+     * case the service has already been told to stop).
+     */
+    private fun ensureForeground(): Boolean {
         try {
-            val notification = buildNotification(0)
+            val notification = buildNotification(connectedRelayCount)
             ServiceCompat.startForeground(
                 this,
                 NOTIFICATION_ID,
@@ -213,16 +236,26 @@ class NotificationRelayService : Service() {
                     0
                 },
             )
-            foregroundStarted = true
+            return true
         } catch (e: Exception) {
+            // Any failure to promote to the foreground leaves the service in a
+            // "started but not foregrounded" zombie state. Once startForegroundService()
+            // has been called, Android expects startForeground() within the timeout; if it
+            // never lands it fires ForegroundServiceDidNotStartInTimeException and crashes
+            // the whole app. Tearing the service down clears the OS's fgRequired flag,
+            // which cancels that pending timeout, so we stopSelf() on EVERY failure path —
+            // not just ForegroundServiceStartNotAllowedException. Other causes include
+            // OEM-specific RemoteException/IllegalStateException and resource lookup
+            // failures while building the notification.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                 e is ForegroundServiceStartNotAllowedException
             ) {
                 Log.w(TAG, "Foreground service start not allowed, stopping self")
-                stopSelf()
             } else {
-                Log.e(TAG, "Failed to start foreground", e)
+                Log.e(TAG, "Failed to start foreground, stopping self", e)
             }
+            stopSelf()
+            return false
         }
     }
 
@@ -242,6 +275,7 @@ class NotificationRelayService : Service() {
      * drafts, and relay list changes. Since the service keeps the client connected,
      * those subscriptions remain active on the relays.
      */
+    @OptIn(FlowPreview::class)
     private fun startRelayConnection() {
         relayServiceCollectorJob?.cancel()
         relayServiceCollectorJob =
@@ -253,13 +287,22 @@ class NotificationRelayService : Service() {
                 }
 
                 launch {
-                    Amethyst.instance.client.connectedRelaysFlow().collectLatest { relays ->
-                        val count = relays.size
-                        if (count != connectedRelayCount) {
-                            connectedRelayCount = count
-                            updateNotification(count)
+                    // sample() caps how often we touch the notification. During feed
+                    // load/teardown connectedRelaysFlow churns dozens of times per second;
+                    // posting on every delta blows past Android's notification rate limit
+                    // (~10/s), which silently drops updates and leaves the visible count
+                    // stuck on a stale intermediate value. One refresh per second stays
+                    // well under the limit and always lands the settled count.
+                    Amethyst.instance.client
+                        .connectedRelaysFlow()
+                        .sample(NOTIFICATION_REFRESH_MS)
+                        .collectLatest { relays ->
+                            val count = relays.size
+                            if (count != connectedRelayCount) {
+                                connectedRelayCount = count
+                                updateNotification(count)
+                            }
                         }
-                    }
                 }
             }
     }
@@ -272,10 +315,15 @@ class NotificationRelayService : Service() {
 
     private fun buildNotification(connectedRelays: Int): Notification {
         val contentText =
-            if (connectedRelays > 0) {
-                getString(R.string.always_on_notif_connected, connectedRelays)
-            } else {
-                getString(R.string.always_on_notif_connecting)
+            when {
+                connectedRelays <= 0 -> getString(R.string.always_on_notif_connecting)
+                // Foreground: the pool also holds the feed/finder outbox relays, so the
+                // count reflects all connections, not just the inbox. Backgrounded, the
+                // feeds tear down and only inbox + DM relays remain.
+                MainActivity.isResumed ->
+                    pluralStringRes(this, R.plurals.always_on_notif_connected_foreground, connectedRelays, connectedRelays)
+                else ->
+                    pluralStringRes(this, R.plurals.always_on_notif_connected, connectedRelays, connectedRelays)
             }
 
         val openAppIntent =
@@ -294,7 +342,7 @@ class NotificationRelayService : Service() {
             .Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.always_on_notif_title))
             .setContentText(contentText)
-            .setSmallIcon(R.drawable.amethyst)
+            .setSmallIcon(R.drawable.amethyst_service)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setSilent(true)

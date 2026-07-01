@@ -1398,6 +1398,20 @@ class MoqLiteSession internal constructor(
         ) {
             gate.withLock {
                 if (publisherClosed) {
+                    // publisher.close() raced ahead — write Ended now so
+                    // the relay sees the proper lifecycle close on this bidi.
+                    runCatching {
+                        bidi.write(
+                            MoqLiteCodec.encodeAnnounce(
+                                MoqLiteAnnounce(
+                                    status = MoqLiteAnnounceStatus.Ended,
+                                    suffix = emittedSuffix,
+                                    hops = emptyList(),
+                                ),
+                                version,
+                            ),
+                        )
+                    }
                     runCatching { bidi.finish() }
                     return
                 }

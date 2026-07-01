@@ -3,45 +3,49 @@
 ## Visual Hierarchy
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Root Project                          │
-│                     (Amethyst)                           │
-└─────────────────────────────────────────────────────────┘
-                          │
-         ┌────────────────┼────────────────┐
-         │                │                │
-         ▼                ▼                ▼
-┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-│  :amethyst  │  │ :desktopApp │  │ :benchmark  │
-│  (Android)  │  │   (JVM)     │  │  (Android)  │
-└─────────────┘  └─────────────┘  └─────────────┘
-       │                │                │
-       │                │                │
-       └────────────────┼────────────────┘
-                        │
-                        ▼
-                ┌─────────────┐
-                │  :commons   │
-                │  (KMP UI)   │
-                │             │
-                │ jvmAndroid  │
-                │  /      \   │
-                │ jvm   android│
-                └─────────────┘
-                        │
-                        │
-                        ▼
-                ┌─────────────┐
-                │  :quartz    │
-                │(KMP Library)│
-                │             │
-                │ commonMain  │
-                │     │       │
-                │ jvmAndroid  │
-                │  /  |  \    │
-                │jvm and ios  │
-                └─────────────┘
+   Apps / harnesses                                  Libraries
+┌─────────────┐ ┌─────────────┐ ┌────────────┐
+│  :amethyst  │ │ :desktopApp │ │ :benchmark │
+│  (Android)  │ │    (JVM)    │ │ (Android)  │
+└──┬───┬───┬──┘ └──┬───────┬──┘ └─┬───────┬──┘
+   │   │   └───────┼────┐  │      │       │
+   │   │           │    │  │      │       │
+   │   ▼           ▼    │  │      ▼       │
+   │ ┌────────────────┐ │  │ (androidTest │
+   │ │   :commons     │◄┼──┼──only)       │
+   │ │   (KMP UI)     │ │  │              │
+   │ └───────┬────────┘ │  │              │
+   │         │     ▲    │  │              │
+   ▼         │     │    │  │              │
+┌──────────────┐   │  ┌─┴──┴─┐  ┌───────┐ │
+│ :nestsClient │   │  │ :cli │  │:geode │ │
+│ (KMP, MoQ)   │   │  │(JVM) │  │(JVM   │ │
+└──┬────────┬──┘   │  └──┬───┘  │relay) │ │
+   │        │      │     │      └───┬───┘ │
+   ▼        │      │     │          │     │
+┌────────┐  │      │     │          │     │
+│ :quic  │  │      │     │          │     │
+│ (KMP)  │  │      │     │          │     │
+└───┬────┘  │      │     │          │     │
+    │ ▲     │      │     │          │     │
+    │ └── :quic-interop  │          │     │
+    ▼       ▼      ▼     ▼          ▼     ▼
+        ┌──────────────────────────────┐
+        │           :quartz            │
+        │         (KMP Library)        │
+        └──────────────────────────────┘
 ```
+
+Verified edges (from each module's `build.gradle.kts`):
+
+- `:amethyst` → `:quartz`, `:commons`, `:nestsClient`
+- `:desktopApp` → `:quartz`, `:commons`
+- `:benchmark` → `:quartz`, `:commons` (androidTest only)
+- `:cli` → `:quartz`, `:commons`
+- `:geode` → `:quartz` (api + testFixtures)
+- `:nestsClient` → `:quartz` (api), `:quic`
+- `:quic` → `:quartz` (api)
+- `:quic-interop` → `:quic` (project dir: `quic/interop`)
 
 ## Module Details
 
@@ -86,10 +90,40 @@
 **Type:** Android Library
 **Targets:** Android
 **Dependencies:**
-- Modules: `:commons`, `:quartz`
+- Modules: `:commons`, `:quartz` (androidTest only)
 - External: AndroidX Benchmark
 
 **Role:** Performance benchmarking for Android builds
+
+### :cli (Amy CLI)
+**Type:** JVM Application (no Compose)
+**Dependencies:** `:quartz`, `:commons`
+
+**Role:** `amy`, the non-interactive command-line client; thin assembly layer, no new logic (see `amy-expert` skill)
+
+### :geode (Relay Server)
+**Type:** JVM Application (Ktor)
+**Dependencies:** `:quartz` (api + testFixtures)
+
+**Role:** Standalone Nostr relay built on quartz's relay-server code
+
+### :quic (QUIC Transport)
+**Type:** Kotlin Multiplatform Library
+**Dependencies:** `:quartz` (api)
+
+**Role:** Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport client (no JNI); transport for MoQ
+
+### :nestsClient (Audio Rooms)
+**Type:** Kotlin Multiplatform Library
+**Dependencies:** `:quartz` (api), `:quic`
+
+**Role:** MoQ / moq-lite audio-room client for the NIP-53 nests feature
+
+### :quic-interop (Interop Harness)
+**Type:** JVM Application (project dir `quic/interop`)
+**Dependencies:** `:quic`
+
+**Role:** QUIC interop-runner test client
 
 ## Dependency Flow Patterns
 
@@ -177,9 +211,9 @@ implementation(libs.jna)  // JAR variant
 implementation(compose.ui)              // Compose Multiplatform BOM
 implementation(compose.material3)
 
-// Version catalog alignment
-composeMultiplatform = "1.9.3"
-composeBom = "2025.12.01"  // AndroidX Compose
+// Version catalog alignment (re-check libs.versions.toml — these drift)
+composeMultiplatform = "1.11.1"
+composeBom = "2026.05.01"  // AndroidX Compose
 ```
 **Why:** Two Compose ecosystems (Multiplatform + AndroidX) must align
 

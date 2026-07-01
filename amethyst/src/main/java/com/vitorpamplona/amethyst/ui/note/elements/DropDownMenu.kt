@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
@@ -30,15 +29,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
-import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -47,7 +45,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
-import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
@@ -116,6 +113,23 @@ fun NoteDropDownMenu(
 ) {
     var reportDialogShowing by remember { mutableStateOf(false) }
     var addLabelDialogShowing by remember { mutableStateOf(false) }
+    var showShareSheet by remember { mutableStateOf(false) }
+
+    // Tapping "Share" hands the note's share options off to the shared Share
+    // drawer (ShareOptionsBottomSheet). We render it INSTEAD of the menu dialog
+    // — not on top of it — so the menu doesn't sit dimmed behind the sheet;
+    // dismissing the drawer closes the whole menu.
+    if (showShareSheet) {
+        ShareOptionsBottomSheet(
+            note = note,
+            nav = nav,
+            onDismiss = {
+                showShareSheet = false
+                onDismiss()
+            },
+        )
+        return
+    }
 
     val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
         DropDownParams(
@@ -158,8 +172,13 @@ fun NoteDropDownMenu(
         onDismiss = onDismiss,
     ) {
         val clipboardManager = LocalClipboard.current
-        val actContext = LocalContext.current
         val scope = rememberCoroutineScope()
+
+        // Unsealed rumors (private replies/posts received in gift wraps) are
+        // unsigned and must never be referenced by a public event: hide every
+        // action that would publish an e-tag of this note (broadcast, edit,
+        // OTS timestamp, pin, label, public bookmark, deletion request).
+        val isPrivateRumor = note.isPrivateRumor()
 
         // Follow section
         M3ActionSection {
@@ -183,7 +202,8 @@ fun NoteDropDownMenu(
             }
         }
 
-        // Copy & Share section
+        // Copy & Share section. The copy-to-clipboard rows live here (and only
+        // here); the "Share" row hands off to the shared Share drawer.
         M3ActionSection {
             M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_text)) {
                 val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
@@ -220,17 +240,10 @@ fun NoteDropDownMenu(
                     onDismiss()
                 }
             }
-            M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.quick_action_share)) {
-                val sendIntent =
-                    Intent().apply {
-                        action = Intent.ACTION_SEND
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, externalLinkForNote(note))
-                        putExtra(Intent.EXTRA_TITLE, stringRes(actContext, R.string.quick_action_share_browser_link))
-                    }
-                val shareIntent = Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
-                actContext.startActivity(shareIntent)
-                onDismiss()
+            if (!isPrivateRumor) {
+                M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.quick_action_share)) {
+                    showShareSheet = true
+                }
             }
         }
 
@@ -241,7 +254,7 @@ fun NoteDropDownMenu(
                     nav.nav { routeEditDraftTo(note, accountViewModel.account) }
                 }
             }
-            if (!note.isDraft()) {
+            if (!note.isDraft() && !isPrivateRumor) {
                 if (note.event is TextNoteEvent) {
                     if (state.isLoggedUser) {
                         M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.edit_post)) {
@@ -258,23 +271,30 @@ fun NoteDropDownMenu(
                     }
                 }
             }
-            M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(R.string.broadcast)) {
-                accountViewModel.broadcast(note)
-                onDismiss()
+            // Rumors are rebroadcast as their delivering gift wrap; hidden
+            // when the wrap is unknown (the unsigned rumor must never be
+            // published).
+            if (accountViewModel.canBroadcast(note)) {
+                M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(R.string.broadcast)) {
+                    accountViewModel.broadcast(note)
+                    onDismiss()
+                }
             }
         }
 
         // Timestamp & Bookmarks section
         M3ActionSection {
-            if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
-                M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_pending)) { onDismiss() }
-            } else {
-                M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_it)) {
-                    accountViewModel.timestamp(note)
-                    onDismiss()
+            if (!isPrivateRumor) {
+                if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
+                    M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_pending)) { onDismiss() }
+                } else {
+                    M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_it)) {
+                        accountViewModel.timestamp(note)
+                        onDismiss()
+                    }
                 }
             }
-            if (state.isLoggedUser) {
+            if (state.isLoggedUser && !isPrivateRumor) {
                 if (state.isPinnedNote) {
                     M3ActionRow(icon = MaterialSymbols.PushPin, text = stringRes(R.string.unpin_from_profile)) {
                         accountViewModel.removePin(note)
@@ -287,14 +307,22 @@ fun NoteDropDownMenu(
                     }
                 }
             }
-            M3ActionRow(icon = MaterialSymbols.Tag, text = stringRes(R.string.add_hashtag_label)) {
-                addLabelDialogShowing = true
+            if (!isPrivateRumor) {
+                M3ActionRow(icon = MaterialSymbols.Tag, text = stringRes(R.string.add_hashtag_label)) {
+                    addLabelDialogShowing = true
+                }
             }
             // Pick exactly one curation flow per kind: music tracks go to playlists, emoji
             // packs go to the emoji list, everything else gets the standard bookmark rows.
             // Showing both at once is noisy and makes "bookmark" feel like the catch-all when
             // it really isn't for these kinds.
             when {
+                isPrivateRumor -> {
+                    // No bookmark/playlist/emoji-list rows for private rumors:
+                    // those lists reference the note by id, which other devices
+                    // can't resolve from relays and public lists would leak.
+                }
+
                 note.event is MusicTrackEvent && note is AddressableNote -> {
                     // Music tracks (kind 36787) belong in playlists (kind 34139). The
                     // sheet behind this nav lets the user toggle membership across all of
@@ -372,7 +400,7 @@ fun NoteDropDownMenu(
                 }
                 onDismiss()
             }
-            if (state.isLoggedUser) {
+            if (state.isLoggedUser && !isPrivateRumor) {
                 M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.request_deletion), isDestructive = true) {
                     accountViewModel.delete(note)
                     onDismiss()

@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.opponent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
@@ -56,7 +55,6 @@ class LiveChessDrawOfferEvent(
 
     companion object {
         const val KIND = 30068
-        const val ALT_DESCRIPTION = "Chess draw offer"
 
         fun build(
             gameId: String,
@@ -67,7 +65,6 @@ class LiveChessDrawOfferEvent(
         ) = eventTemplate(KIND, message, createdAt) {
             dTag(gameId)
             opponent(opponent)
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

@@ -20,9 +20,13 @@
  */
 package com.vitorpamplona.amethyst.cli
 
+import com.vitorpamplona.amethyst.cli.stores.FileCashuKeysetCounterStore
 import com.vitorpamplona.amethyst.cli.stores.FileKeyPackageBundleStore
 import com.vitorpamplona.amethyst.cli.stores.FileMarmotMessageStore
 import com.vitorpamplona.amethyst.cli.stores.FileMlsGroupStateStore
+import com.vitorpamplona.amethyst.commons.cashu.CashuWalletReader
+import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
+import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
@@ -33,7 +37,9 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
@@ -41,14 +47,27 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
+import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
+import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
+import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.selects.select
@@ -91,14 +110,32 @@ class Context(
     val identity: Identity,
     val state: RunState,
 ) : AutoCloseable {
-    val signer = NostrSignerInternal(identity.keyPair())
-
     private val okhttp = OkHttpClient.Builder().build()
 
     val client: NostrClient =
         NostrClient(
             websocketBuilder = BasicOkHttpWebSocket.Builder { okhttp },
         )
+
+    /**
+     * The account's signer. For a local account this is a [NostrSignerInternal]
+     * over the stored key; for a NIP-46 bunker account it is a
+     * [NostrSignerRemote] that delegates signing/encryption to the remote
+     * signer over [client]. The remote signer's subscription + connect
+     * handshake are driven from [prepare].
+     */
+    val signer: NostrSigner =
+        identity.bunker?.let { b ->
+            NostrSignerRemote(
+                signer = NostrSignerInternal(identity.clientKeyPair()),
+                remotePubkey = b.remotePubkey,
+                relays = b.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet(),
+                client = client,
+                secret = b.connectSecret,
+                // Bunker requires web authorization: surface the URL; the request keeps waiting.
+                onAuthUrl = { url -> System.err.println("[nip46] authorize this request in a browser, then it will continue:\n  $url") },
+            )
+        } ?: NostrSignerInternal(identity.keyPair())
 
     /**
      * NIP-05 resolver for turning `alice@damus.io`-style identifiers into pubkeys.
@@ -127,15 +164,125 @@ class Context(
      * humans inspect these files. Verification always re-canonicalises,
      * so the stored bytes never feed back into a signature check.
      */
-    val store: IEventStore by lazy {
-        FsEventStore(
-            root = dataDir.eventsDir.toPath(),
-            eventToJson = com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper::toJsonPretty,
-        )
-    }
+    private val storeDelegate: Lazy<IEventStore> =
+        lazy {
+            FsEventStore(
+                root = dataDir.eventsDir.toPath(),
+                eventToJson = JacksonMapper::toJsonPretty,
+            )
+        }
+    val store: IEventStore by storeDelegate
 
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
     val marmot: MarmotManager = MarmotManager(signer, mlsStore, messageStore, keyPackageStore)
+
+    // ------------------------------------------------------------------
+    // Cashu (NIP-60 / NIP-61) — shared wallet code from commons
+    // ------------------------------------------------------------------
+
+    /** Durable NUT-13 counter store at `<data-dir>/cashu.json`. */
+    private val cashuCounters by lazy { FileCashuKeysetCounterStore(dataDir.cashuFile) }
+
+    @Volatile private var cachedCashuSeed: ByteArray? = null
+
+    /**
+     * Decrypt the wallet's NUT-13 seed once per run and cache it. The
+     * [DeterministicSecretFactory] thunk reads this synchronously, so any
+     * mint/swap op must warm it first (CashuWalletOps' seedWarmer does).
+     */
+    private suspend fun warmCashuSeed() {
+        if (cachedCashuSeed != null) return
+        val priv = cashuSnapshot().walletEvent?.let { runCatching { it.privkey(signer) }.getOrNull() } ?: return
+        cachedCashuSeed = CashuDeterministic.deriveWalletSeed(priv.hexToByteArray())
+    }
+
+    /**
+     * Wallet operations driven by the exact same `commons` [CashuWalletOps]
+     * the Android app uses. Wired to publish on the account's outbox relays,
+     * the shared OkHttp instance for mint HTTP, and the file-backed NUT-13
+     * counter store.
+     */
+    fun cashuOps(): CashuWalletOps =
+        CashuWalletOps(
+            signer = signer,
+            // Amethyst publishes cashu events via sendLiterallyEverywhere
+            // (all the user's relays). anyRelays() — outbox + inbox +
+            // keypackage — is the CLI's closest analog, so the wallet lands
+            // on the same broad relay set the app would use, not just outbox.
+            publish = { event -> publish(event, anyRelays()) },
+            okHttpClient = { okhttp },
+            secretFactory =
+                DeterministicSecretFactory(
+                    seedProvider = { cachedCashuSeed },
+                    reserveCounters = { keysetId, count -> cashuCounters.reserve(keysetId, count) },
+                ),
+            seedWarmer = { warmCashuSeed() },
+            seedForRestore = {
+                warmCashuSeed()
+                cachedCashuSeed
+            },
+            peekCashuCounter = { keysetId -> cashuCounters.peek(keysetId) },
+            reserveCashuCounters = { keysetId, count -> cashuCounters.reserve(keysetId, count) },
+        )
+
+    /**
+     * Project this account's locally-stored NIP-60/61/87 events into a wallet
+     * snapshot via the shared [CashuWalletReader] — the same decrypt +
+     * del-rollover + pending-quote logic the Android holder runs. Reads the
+     * cache only; commands that need fresh state should [drain] first.
+     */
+    suspend fun cashuSnapshot(): CashuWalletReader.WalletSnapshot {
+        val pk = identity.pubKeyHex
+        // Mirror commons' CashuWalletFilterAssembler exactly: authored wallet
+        // kinds by authors=[pk], inbound nutzaps by #p — so amy projects the
+        // same event set the Android app subscribes to.
+        val authored =
+            store.query<Event>(
+                Filter(
+                    authors = listOf(pk),
+                    kinds =
+                        listOf(
+                            CashuWalletEvent.KIND,
+                            CashuTokenEvent.KIND,
+                            CashuSpendingHistoryEvent.KIND,
+                            CashuMintQuoteEvent.KIND,
+                            NutzapInfoEvent.KIND,
+                            MintRecommendationEvent.KIND,
+                        ),
+                ),
+            )
+        val inboundNutzaps =
+            store.query<Event>(
+                Filter(kinds = listOf(NutzapEvent.KIND), tags = mapOf("p" to listOf(pk))),
+            )
+        return CashuWalletReader(signer).project(authored + inboundNutzaps)
+    }
+
+    /** Warm and return the wallet's NUT-13 seed, or null if no wallet. */
+    suspend fun cashuSeed(): ByteArray? {
+        warmCashuSeed()
+        return cachedCashuSeed
+    }
+
+    /**
+     * NUT-09 restore for one mint, mirroring Android's
+     * `CashuWalletState.restoreFromMint`: re-derive proofs from the seed
+     * (skipping secrets we already hold), then bump the persisted NUT-13
+     * counter past every slot the scan confirmed in use so later mints can't
+     * reuse one. Returns null when the wallet has no seed yet.
+     */
+    suspend fun cashuRestore(mintUrl: String): RestoreOutcome? {
+        val seed = cashuSeed() ?: return null
+        val existingSecrets =
+            cashuSnapshot()
+                .tokenEntries
+                .flatMap { it.content.proofs }
+                .mapTo(HashSet()) { it.secret }
+        val outcome = cashuOps().restoreFromMint(mintUrl = mintUrl, seed = seed, startCounter = 0L, existingSecrets = existingSecrets)
+        val delta = (outcome.nextCounterAfterScan - cashuCounters.peek(outcome.keysetId)).coerceAtLeast(0L)
+        if (delta > 0) cashuCounters.reserve(outcome.keysetId, delta.toInt())
+        return outcome
+    }
 
     private var prepared = false
 
@@ -148,6 +295,12 @@ class Context(
         if (prepared) return
         marmot.restoreAll()
         client.connect()
+        // A bunker account must open its NIP-46 response subscription and run
+        // the connect handshake before any signing/encryption call.
+        (signer as? NostrSignerRemote)?.let {
+            it.openSubscription()
+            it.connect()
+        }
         prepared = true
     }
 
@@ -176,6 +329,17 @@ class Context(
     suspend fun outboxRelays(): Set<NormalizedRelayUrl> =
         relaysOf(identity.pubKeyHex)?.writeRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
             ?: DefaultNIP65RelaySet
+
+    /**
+     * NIP-65 *read* (inbox) relays for this account — "where others reach me".
+     * Mirrors the Android app's NIP-65 inbox set (the `notificationRelays`
+     * flow). Used as the default `relay` tags advertised in a kind:10019
+     * nutzap-info event. Falls back to [outboxRelays] when no read relays are
+     * marked.
+     */
+    suspend fun nip65ReadRelays(): Set<NormalizedRelayUrl> =
+        relaysOf(identity.pubKeyHex)?.readRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
+            ?: outboxRelays()
 
     /**
      * DM inbox relays (NIP-17 kind:10050) for this account. Falls back
@@ -308,6 +472,43 @@ class Context(
             doneChannel.close()
         }
         return collected
+    }
+
+    /**
+     * Publish [request] to [relays], then wait for the FIRST event matching [responseFilter]
+     * — a live reply that arrives after our own EOSE, which [drain] would miss (it returns at
+     * EOSE). Verifies and stores the reply. Returns it, or null on timeout; always tears the
+     * subscription down. Used for request/response round-trips (e.g. a CLINK offer invoice).
+     */
+    suspend fun requestResponse(
+        request: Event,
+        relays: Set<NormalizedRelayUrl>,
+        responseFilter: Filter,
+        timeoutMs: Long = 15_000,
+    ): Event? {
+        if (relays.isEmpty()) return null
+        val reply = CompletableDeferred<Event>()
+        val subId = newSubId()
+        val filters = relays.associateWith { listOf(responseFilter) }
+        val listener =
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (!reply.isCompleted) reply.complete(event)
+                }
+            }
+        client.subscribe(subId, filters, listener)
+        return try {
+            publish(request, relays)
+            val event = withTimeoutOrNull(timeoutMs) { reply.await() } ?: return null
+            if (verifyAndStore(event)) event else null
+        } finally {
+            client.unsubscribe(subId)
+        }
     }
 
     /**
@@ -567,28 +768,23 @@ class Context(
 
     override fun close() {
         dataDir.saveRunState(state)
+        (signer as? NostrSignerRemote)?.let {
+            try {
+                it.closeSubscription()
+            } catch (_: Exception) {
+            }
+        }
         try {
             client.close()
         } catch (_: Exception) {
         }
         // Only close the store if it was actually opened — by-lazy
         // otherwise allocates the lock channel just to release it.
-        if (storeIsInitialized()) {
+        if (storeDelegate.isInitialized()) {
             try {
-                store.close()
+                storeDelegate.value.close()
             } catch (_: Exception) {
             }
-        }
-    }
-
-    private fun storeIsInitialized(): Boolean {
-        // Reflect on the lazy delegate to avoid forcing initialisation in close().
-        return try {
-            val field = javaClass.getDeclaredField("store\$delegate").apply { isAccessible = true }
-            val delegate = field.get(this) as Lazy<*>
-            delegate.isInitialized()
-        } catch (_: Throwable) {
-            false
         }
     }
 

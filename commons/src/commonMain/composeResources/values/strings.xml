@@ -55,6 +55,39 @@
     <string name="accessibility_user_avatar">User avatar</string>
     <string name="accessibility_navigate">Navigate</string>
 
+<!-- Relay history paging (shared feed markers + status card) -->
+    <string name="chats_history_loading_label">Loading:</string>
+    <string name="chats_history_fully_loaded_label">Fully loaded:</string>
+    <string name="chats_history_fully_loaded">(fully loaded)</string>
+    <string name="chats_history_by_relay">History by relay</string>
+    <string name="chats_history_stalled_retry">Will retry when you reopen this screen</string>
+    <string name="chats_history_older">Older %1$s messages</string>
+    <string name="chats_history_all_caught_up">All caught up</string>
+    <string name="chats_history_reached_start">Reached the start of your %1$s messages</string>
+    <string name="chats_history_subtitle">%1$s · %2$s · loaded since %3$s</string>
+    <string name="chats_history_subtitle_no_date">%1$s · %2$s</string>
+    <string name="chats_history_waiting">waiting on %1$s</string>
+    <string name="chats_history_incomplete">Some relays didn't respond</string>
+    <string name="chats_history_incomplete_sub">%1$s unreachable · tap to see which</string>
+    <string name="chats_history_relays_title">%1$s · history by relay</string>
+    <string name="chats_history_relay_since">since %1$s</string>
+    <string name="action_dismiss">Dismiss</string>
+    <plurals name="chats_history_relays">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="other">%1$d relays</item>
+    </plurals>
+
     <!-- Notes & Replies -->
     <string name="replying_to">replying to </string>
+
+    <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_kind">nApplet</string>
+    <string name="nsite_website_kind">nSite</string>
+    <string name="napplet_card_permissions">What it can access</string>
+    <string name="nsite_root_site">Root Site</string>
+    <string name="nsite_source">Source:</string>
+    <string name="nsite_servers">Servers:</string>
+    <string name="nsite_open">Open</string>
 </resources>

@@ -43,8 +43,6 @@ class Nip54InlineMetadata {
                         append(it.key)
                         append("=")
                         append(UrlEncoder.encode(value))
-                    } else {
-                        null
                     }
                 }
             }

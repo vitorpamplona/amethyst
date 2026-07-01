@@ -27,10 +27,14 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 /**
  * `amy relay <add|list|publish-lists>` — manage this account's relay sets.
@@ -51,15 +55,61 @@ object RelayCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "relay <add|list|publish-lists> …")
-        val sub = tail[0]
-        val rest = tail.drop(1).toTypedArray()
-        return when (sub) {
-            "add" -> add(dataDir, Args(rest))
-            "list" -> list(dataDir)
-            "publish-lists" -> publishLists(dataDir)
-            else -> Output.error("bad_args", "relay $sub")
+    ): Int =
+        route(
+            "relay",
+            tail,
+            "relay <add|list|publish-lists|info> …",
+            mapOf(
+                "add" to { rest -> add(dataDir, Args(rest)) },
+                "list" to { _ -> list(dataDir) },
+                "publish-lists" to { _ -> publishLists(dataDir) },
+                // `info` is also intercepted in Main before account resolution
+                // (it needs no account); routed here too for when one exists.
+                "info" to { rest -> info(rest) },
+            ),
+        )
+
+    /**
+     * `relay info URL` — fetch a relay's NIP-11 information document over
+     * HTTP (`Accept: application/nostr+json`) and print it. Local/stateless:
+     * no account, no websocket. Parsing lives in quartz
+     * ([Nip11RelayInformation.fromJson]); this only does the GET.
+     */
+    fun info(rest: Array<String>): Int {
+        val args = Args(rest)
+        val raw = args.positional(0, "relay-url")
+        val normalized =
+            raw.normalizeRelayUrlOrNull()
+                ?: return Output.error("bad_args", "invalid relay url: $raw")
+        val httpUrl = normalized.toHttp()
+
+        val request =
+            Request
+                .Builder()
+                .url(httpUrl)
+                .header("Accept", Nip11RelayInformation.CONTENT_TYPE)
+                .get()
+                .build()
+
+        return try {
+            OkHttpClient().newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return Output.error("http_error", "relay returned HTTP ${response.code} for $httpUrl")
+                }
+                val body = response.body.string()
+                val info = Nip11RelayInformation.fromJson(body)
+                Output.emit(
+                    mapOf(
+                        "relay" to normalized.url,
+                        "url" to httpUrl,
+                        "info" to Output.mapper.readTree(info.toJson()),
+                    ),
+                )
+                0
+            }
+        } catch (e: Exception) {
+            Output.error("fetch_failed", "could not fetch NIP-11 from $httpUrl: ${e.message}")
         }
     }
 
@@ -74,8 +124,7 @@ object RelayCommands {
                 ?: return Output.error("bad_args", "invalid relay url: $rawUrl")
 
         val targets = if (type == "all") listOf("nip65", "inbox", "key_package") else listOf(type)
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             val addedTo = mutableListOf<String>()
             val alreadyPresent = mutableListOf<String>()
             for (t in targets) {
@@ -89,8 +138,6 @@ object RelayCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -138,8 +185,7 @@ object RelayCommands {
     }
 
     private suspend fun list(dataDir: DataDir): Int {
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             val self = ctx.identity.pubKeyHex
             Output.emit(
                 mapOf(
@@ -149,14 +195,11 @@ object RelayCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
     private suspend fun publishLists(dataDir: DataDir): Int {
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val self = ctx.identity.pubKeyHex
             val nip65Event = ctx.relaysOf(self)
@@ -189,8 +232,6 @@ object RelayCommands {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

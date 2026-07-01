@@ -23,3 +23,6 @@ package com.vitorpamplona.quartz.nip89AppHandlers.clientTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
 fun Event.client() = tags.client()
+
+/** True when this event was published by the client named [name] (NIP-89, case-insensitive). */
+fun Event.isClient(name: String) = tags.isClient(name)

@@ -3,6 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools">
     <queries>
         <package android:name="org.torproject.android"/>
+        <!-- Health Connect data store (Android 8–13 ships it as a separate system app) -->
+        <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />
@@ -73,6 +78,16 @@
     <!-- Adds Geohash to posts if active -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- Reads finished workouts from Health Connect to suggest a kind 1301 post.
+         Read-only; requested on demand, never on cold start. -->
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_ELEVATION_GAINED" />
+
     <!-- Old permission to access media -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
@@ -90,7 +105,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Amethyst"
         android:largeHeap="true"
-        android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:hardwareAccelerated="true"
         android:localeConfig="@xml/locales_config"
@@ -107,6 +121,11 @@
             <intent-filter android:label="Amethyst">
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Health Connect privacy-policy rationale (required by Google when reading health data) -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
 
             <intent-filter android:label="Amethyst">
@@ -246,6 +265,22 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Health Connect privacy-policy rationale on Android 14+. Without this activity-alias
+             the permission request fails silently (no dialog appears). The system launches it,
+             guarded by START_VIEW_PERMISSION_USAGE, to show our privacy policy; it routes into
+             MainActivity. Android 13 and lower use the ACTION_SHOW_PERMISSIONS_RATIONALE
+             intent-filter declared on MainActivity above. -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".ui.MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
+
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
             android:screenOrientation="fullSensor"
@@ -364,6 +399,71 @@
 
         <receiver
             android:name=".service.call.CallNotificationReceiver"
+            android:exported="false" />
+
+        <!-- Sandboxed napplet/nsite host. Runs in an isolated process that holds no keys. -->
+        <activity
+            android:name="com.vitorpamplona.amethyst.napplethost.NappletHostActivity"
+            android:process=":napplet"
+            android:exported="false"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.Amethyst" />
+
+        <!-- Direct-WebView browser for a single web client. Runs in the isolated, keyless `:napplet`
+             process and hosts the WebView directly (not a streamed surface), so scroll/zoom/keyboard work
+             natively. adjustResize shrinks the window for the soft keyboard. Its own task/recents entry. -->
+        <activity
+            android:name="com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity"
+            android:process=":napplet"
+            android:exported="false"
+            android:autoRemoveFromRecents="true"
+            android:documentLaunchMode="intoExisting"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Amethyst" />
+
+        <!-- Capability-consent dialog. Runs in the main process (the only side trusted to grant). -->
+        <activity
+            android:name=".napplet.NappletConsentActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- First-connect "Connect to Nostr" dialog. -->
+        <activity
+            android:name=".napplet.NappletConnectActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- Per-operation signer consent dialog. -->
+        <activity
+            android:name=".napplet.NappletSignerConsentActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- Main-process broker: holds the signer and brokers capabilities for the sandbox. -->
+        <service
+            android:name=".napplet.NappletBrokerService"
+            android:exported="false" />
+
+        <!-- Embedded-browser provider: hosts the in-app browser WebView in the isolated, keyless
+             process and ships its rendered surface to the main app (SurfaceControlViewHost). -->
+        <service
+            android:name="com.vitorpamplona.amethyst.napplethost.NappletBrowserService"
+            android:process=":napplet"
+            android:exported="false" />
+
+        <!-- Embedded nsite/napplet provider: hosts the verified-blob WebView in the isolated, keyless
+             process and ships its surface to the main app, so a favorited nsite/napplet can render as
+             an in-app tab instead of taking over the screen. Same trust model as NappletHostActivity. -->
+        <service
+            android:name="com.vitorpamplona.amethyst.napplethost.NappletHostService"
+            android:process=":napplet"
             android:exported="false" />
 
     </application>

@@ -31,15 +31,20 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.model.AccentColorType
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
+import com.vitorpamplona.amethyst.model.FontFamilyType
+import com.vitorpamplona.amethyst.model.FontSizeType
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -117,6 +122,10 @@ class UiSharedPreferences(
         val UI_SHOW_PROFILE_ZAP_RECEIVED_FEED = booleanPreferencesKey("ui.show_profile_zap_received_feed")
         val UI_SHOW_PROFILE_FOLLOWERS_FEED = booleanPreferencesKey("ui.show_profile_followers_feed")
         val UI_DONT_SHOW_ONCHAIN_PUBLIC_WARNING = booleanPreferencesKey("ui.dont_show_onchain_public_warning")
+        val UI_SUGGEST_WORKOUTS_FROM_HEALTH_CONNECT = stringPreferencesKey("ui.suggest_workouts_from_health_connect")
+        val UI_ACCENT_COLOR = stringPreferencesKey("ui.accent_color")
+        val UI_FONT_FAMILY = stringPreferencesKey("ui.font_family")
+        val UI_FONT_SIZE = stringPreferencesKey("ui.font_size")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
@@ -143,7 +152,7 @@ class UiSharedPreferences(
                         preferences[UI_USE_TRACKED_BROADCASTS]?.let { BooleanType.valueOf(it) }
                             ?: if (featureSet == FeatureSetType.COMPLETE) BooleanType.ALWAYS else BooleanType.NEVER,
                     automaticallyCreateDrafts = preferences[UI_AUTOMATICALLY_CREATE_DRAFTS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
-                    bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarItems,
+                    bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarEntries,
                     showHomeNewThreadsTab = preferences[UI_SHOW_HOME_NEW_THREADS_TAB] ?: true,
                     showHomeConversationsTab = preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] ?: true,
                     showHomeEverythingTab = preferences[UI_SHOW_HOME_EVERYTHING_TAB] ?: false,
@@ -152,6 +161,11 @@ class UiSharedPreferences(
                     showProfileZapReceivedFeed = preferences[UI_SHOW_PROFILE_ZAP_RECEIVED_FEED] ?: true,
                     showProfileFollowersFeed = preferences[UI_SHOW_PROFILE_FOLLOWERS_FEED] ?: true,
                     dontShowOnchainPublicWarning = preferences[UI_DONT_SHOW_ONCHAIN_PUBLIC_WARNING] ?: false,
+                    suggestWorkoutsFromHealthConnect =
+                        preferences[UI_SUGGEST_WORKOUTS_FROM_HEALTH_CONNECT]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
+                    accentColor = preferences[UI_ACCENT_COLOR]?.let { AccentColorType.valueOf(it) } ?: AccentColorType.PURPLE,
+                    fontFamily = preferences[UI_FONT_FAMILY]?.let { FontFamilyType.valueOf(it) } ?: FontFamilyType.SYSTEM,
+                    fontSize = preferences[UI_FONT_SIZE]?.let { FontSizeType.valueOf(it) } ?: FontSizeType.NORMAL,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -191,7 +205,7 @@ class UiSharedPreferences(
                     preferences[UI_PROPOSE_AI_IMPROVEMENTS] = sharedSettings.automaticallyProposeAiImprovements.name
                     preferences[UI_USE_TRACKED_BROADCASTS] = sharedSettings.useTrackedBroadcasts.name
                     preferences[UI_AUTOMATICALLY_CREATE_DRAFTS] = sharedSettings.automaticallyCreateDrafts.name
-                    preferences[UI_BOTTOM_BAR_ITEMS] = sharedSettings.bottomBarItems.joinToString(",") { it.name }
+                    preferences[UI_BOTTOM_BAR_ITEMS] = JsonMapper.toJson(sharedSettings.bottomBarItems)
                     preferences[UI_SHOW_HOME_NEW_THREADS_TAB] = sharedSettings.showHomeNewThreadsTab
                     preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] = sharedSettings.showHomeConversationsTab
                     preferences[UI_SHOW_HOME_EVERYTHING_TAB] = sharedSettings.showHomeEverythingTab
@@ -200,6 +214,10 @@ class UiSharedPreferences(
                     preferences[UI_SHOW_PROFILE_ZAP_RECEIVED_FEED] = sharedSettings.showProfileZapReceivedFeed
                     preferences[UI_SHOW_PROFILE_FOLLOWERS_FEED] = sharedSettings.showProfileFollowersFeed
                     preferences[UI_DONT_SHOW_ONCHAIN_PUBLIC_WARNING] = sharedSettings.dontShowOnchainPublicWarning
+                    preferences[UI_SUGGEST_WORKOUTS_FROM_HEALTH_CONNECT] = sharedSettings.suggestWorkoutsFromHealthConnect.name
+                    preferences[UI_ACCENT_COLOR] = sharedSettings.accentColor.name
+                    preferences[UI_FONT_FAMILY] = sharedSettings.fontFamily.name
+                    preferences[UI_FONT_SIZE] = sharedSettings.fontSize.name
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -208,17 +226,29 @@ class UiSharedPreferences(
             }
         }
 
-        private fun decodeBottomBarItems(raw: String): List<NavBarItem> {
-            if (raw.isEmpty()) return emptyList()
-            return raw
-                .split(",")
-                .mapNotNull { name ->
-                    try {
-                        NavBarItem.valueOf(name)
-                    } catch (_: IllegalArgumentException) {
-                        null
-                    }
-                }
+        private fun decodeBottomBarItems(raw: String): List<BottomBarEntry>? {
+            if (raw.isBlank()) return DefaultBottomBarEntries
+            // Current format: a JSON list of BottomBarEntry (built-ins + favorites).
+            runCatching { return JsonMapper.fromJson<List<BottomBarEntry>>(raw) }
+            // Configs written before the stable @SerialName discriminators used the fully-qualified
+            // class name as the polymorphic "type" value. Rewrite it to the short name and retry, so a
+            // customized bar survives the upgrade instead of silently resetting to defaults.
+            runCatching {
+                val migrated =
+                    raw
+                        .replace(LEGACY_BUILTIN_DISCRIMINATOR, "builtIn")
+                        .replace(LEGACY_FAVORITE_DISCRIMINATOR, "favorite")
+                return JsonMapper.fromJson<List<BottomBarEntry>>(migrated)
+            }
+            // Oldest format: comma-joined NavBarItem enum names (before favorites/unified entries).
+            val legacy = raw.split(",").mapNotNull { name -> runCatching { NavBarItem.valueOf(name) }.getOrNull() }
+            if (legacy.isNotEmpty()) return legacy.map { BottomBarEntry.BuiltIn(it) }
+            // Unrecognizable — fall back to the defaults rather than leaving the bar empty.
+            return DefaultBottomBarEntries
         }
+
+        // The pre-@SerialName polymorphic discriminators (fully-qualified class names) for migration.
+        private const val LEGACY_BUILTIN_DISCRIMINATOR = "com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.BuiltIn"
+        private const val LEGACY_FAVORITE_DISCRIMINATOR = "com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.Favorite"
     }
 }

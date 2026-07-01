@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 
@@ -56,7 +56,7 @@ class ChatroomListNewFeedFilter(
                 }
             }
 
-        return (privateMessages + marmotGroups).sortedWith(DefaultFeedOrder)
+        return (privateMessages + marmotGroups).sortedByDefaultFeedOrder()
     }
 
     override fun updateListWith(
@@ -122,7 +122,7 @@ class ChatroomListNewFeedFilter(
                 if (room != null &&
                     (
                         newNote.author?.pubkeyHex != me.pubkeyHex &&
-                            room.senderIntersects(followingKeySet) &&
+                            !room.senderIntersects(followingKeySet) &&
                             !account.chatroomList.hasSentMessagesTo(roomKey)
                     ) &&
                     !account.isAllHidden(roomKey.users)
@@ -142,5 +142,5 @@ class ChatroomListNewFeedFilter(
         return newRelevantPrivateMessages
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 }

@@ -412,6 +412,11 @@ class SealedRumorEventHandler(
         if (rumorId == null) {
             processNewSealedRumor(event, eventNote, publicNote)
         } else {
+            // Replayed seal: re-link the rumor to its delivering envelope so
+            // broadcast can republish the wrap after a cache rebuild.
+            // publicNote is the outermost event of this unwrap chain — the
+            // kind-1059 wrap normally, the seal itself when it arrived bare.
+            publicNote.event?.let { envelope -> cache.getOrCreateNote(rumorId).recordRumorHost(envelope) }
             processExistingSealedRumor(rumorId, publicNote)
         }
     }
@@ -441,6 +446,12 @@ class SealedRumorEventHandler(
         cache.copyRelaysFromTo(publicNote, innerRumor)
 
         val innerRumorNote = cache.getOrCreateNote(innerRumor.id)
+
+        // Remember which envelope delivered this rumor (publicNote is the
+        // kind-1059 wrap normally, the seal itself when it arrived bare).
+        // Consumers cite/broadcast/prune/evict through this stub — the
+        // unsigned rumor itself must never be referenced publicly.
+        publicNote.event?.let { envelope -> innerRumorNote.recordRumorHost(envelope) }
 
         // Marmot Welcome: GiftWrap → Seal → WelcomeEvent. The Seal handler
         // is the actual point at which we see the kind:444 inner. Route it

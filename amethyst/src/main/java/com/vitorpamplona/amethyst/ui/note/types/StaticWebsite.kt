@@ -20,34 +20,87 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.ui.note.StaticWebsiteCard
+import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.ClickableUrl
+import com.vitorpamplona.amethyst.napplet.NappletLauncher
+import com.vitorpamplona.amethyst.napplethost.HostProfile
+import com.vitorpamplona.amethyst.napplethost.NappletBlobPrefetcher
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteToggleButton
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+@Composable
+fun RenderRootNappletEvent(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = baseNote.event as? RootNappletEvent ?: return
+    val context = LocalContext.current
+
+    PrefetchManifestBlobs(event.paths(), event.servers())
+
+    StaticWebsiteCard(
+        title = event.title(),
+        description = event.description(),
+        source = event.source(),
+        servers = event.servers(),
+        identifier = null,
+        isNapplet = true,
+        requires = event.requires(),
+        icon = event.icon(),
+        // Tapping Open hands off to the sandboxed :napplet process; the card itself never executes code.
+        onOpen =
+            if (event.paths().isNotEmpty()) {
+                { NappletLauncher.launch(context = context, manifest = event, authorPubKey = event.pubKey, identifier = "") }
+            } else {
+                null
+            },
+        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: "Napplet", event.icon()) },
+    )
+}
+
+@Composable
+fun RenderNamedNappletEvent(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = baseNote.event as? NamedNappletEvent ?: return
+    val context = LocalContext.current
+
+    PrefetchManifestBlobs(event.paths(), event.servers())
+
+    StaticWebsiteCard(
+        title = event.title(),
+        description = event.description(),
+        source = event.source(),
+        servers = event.servers(),
+        identifier = event.identifier(),
+        isNapplet = true,
+        requires = event.requires(),
+        icon = event.icon(),
+        onOpen =
+            if (event.paths().isNotEmpty()) {
+                { NappletLauncher.launch(context = context, manifest = event, authorPubKey = event.pubKey, identifier = event.identifier()) }
+            } else {
+                null
+            },
+        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: event.identifier(), event.icon()) },
+    )
+}
 
 @Composable
 fun RenderRootSiteEvent(
@@ -56,13 +109,37 @@ fun RenderRootSiteEvent(
     nav: INav,
 ) {
     val event = baseNote.event as? RootSiteEvent ?: return
+    val context = LocalContext.current
 
-    RenderStaticWebsite(
+    PrefetchManifestBlobs(event.paths(), event.servers())
+
+    StaticWebsiteCard(
         title = event.title(),
         description = event.description(),
         source = event.source(),
         servers = event.servers(),
         identifier = null,
+        isNapplet = false,
+        icon = event.icon(),
+        onOpen =
+            if (event.paths().isNotEmpty()) {
+                {
+                    NappletLauncher.launch(
+                        context = context,
+                        paths = event.paths(),
+                        servers = event.servers(),
+                        authorPubKey = event.pubKey,
+                        identifier = "",
+                        aggregateHash = null,
+                        title = event.title() ?: "nsite",
+                        requires = emptyList(),
+                        profile = HostProfile.WEBSITE,
+                    )
+                }
+            } else {
+                null
+            },
+        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: "nsite", event.icon()) },
     )
 }
 
@@ -73,91 +150,58 @@ fun RenderNamedSiteEvent(
     nav: INav,
 ) {
     val event = baseNote.event as? NamedSiteEvent ?: return
+    val context = LocalContext.current
 
-    RenderStaticWebsite(
+    PrefetchManifestBlobs(event.paths(), event.servers())
+
+    StaticWebsiteCard(
         title = event.title(),
         description = event.description(),
         source = event.source(),
         servers = event.servers(),
         identifier = event.identifier(),
+        isNapplet = false,
+        icon = event.icon(),
+        onOpen =
+            if (event.paths().isNotEmpty()) {
+                {
+                    NappletLauncher.launch(
+                        context = context,
+                        paths = event.paths(),
+                        servers = event.servers(),
+                        authorPubKey = event.pubKey,
+                        identifier = event.identifier(),
+                        aggregateHash = null,
+                        title = event.title() ?: event.identifier(),
+                        requires = emptyList(),
+                        profile = HostProfile.WEBSITE,
+                    )
+                }
+            } else {
+                null
+            },
+        headerActions = { FavoriteToggleButton(FavoriteAppLauncher.coordinateOf(event), event.title() ?: event.identifier(), event.icon()) },
     )
 }
 
+/**
+ * While a static-site / napplet card is on screen, eagerly download + verify all of its blobs into the
+ * shared content-addressed cache (Tor-routed), so tapping Open launches instantly. De-duplicated and
+ * cancellation-aware — it stops when the card scrolls out of composition.
+ */
 @Composable
-private fun RenderStaticWebsite(
-    title: String?,
-    description: String?,
-    source: String?,
+private fun PrefetchManifestBlobs(
+    paths: List<PathTag>,
     servers: List<String>,
-    identifier: String?,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .clip(shape = QuoteBorder)
-                .border(
-                    1.dp,
-                    MaterialTheme.colorScheme.subtleBorder,
-                    QuoteBorder,
-                ).padding(Size10dp),
-    ) {
-        Column {
-            val displayTitle =
-                title
-                    ?: identifier
-                    ?: stringRes(id = R.string.nsite_root_site)
-
-            Text(
-                text = stringRes(id = R.string.nsite_title, displayTitle),
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            description?.let {
-                Text(
-                    text = it,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = Size5dp),
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            HorizontalDivider(thickness = DividerThickness)
-
-            source?.let {
-                Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
-                    Text(
-                        text = stringRes(id = R.string.nsite_source),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(modifier = StdHorzSpacer)
-                    ClickableUrl(
-                        url = it,
-                        urlText = it.removePrefix("https://").removePrefix("http://"),
-                    )
-                }
-            }
-
-            if (servers.isNotEmpty()) {
-                Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
-                    Text(
-                        text = stringRes(id = R.string.nsite_servers),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(modifier = StdHorzSpacer)
-                    Column {
-                        servers.forEach { server ->
-                            ClickableUrl(
-                                url = server,
-                                urlText = server.removePrefix("https://").removePrefix("http://"),
-                            )
-                        }
-                    }
-                }
+    val context = LocalContext.current
+    LaunchedEffect(paths, servers) {
+        // Off the main thread: context.cacheDir touches disk (ensurePrivateCacheDirExists), so reading
+        // it on the composition dispatcher trips StrictMode. The prefetch itself is already IO-bound.
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val torPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
+                NappletBlobPrefetcher.prefetch(paths, servers, context.cacheDir, torPort)
             }
         }
     }

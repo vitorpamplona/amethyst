@@ -42,6 +42,8 @@ class MusicTracksSubAssembler(
         key: MusicTracksQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
+        // "Mine" needs no special-case: the shared TopFilter.Mine flow now resolves to an author
+        // filter scoped to the user, so followsPerRelay() already carries authors=[me].
         val feedSettings = key.followsPerRelay()
         // REQ now only asks for kind 36787 (tracks), so the `since` cursor lines up with
         // the tracks feed alone — no cross-feed min needed.

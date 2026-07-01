@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Decrypt
@@ -42,11 +43,13 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 class NostrSignerRemote(
     val signer: NostrSignerInternal,
@@ -55,6 +58,17 @@ class NostrSignerRemote(
     val client: INostrClient,
     val permissions: String? = null,
     val secret: String? = null,
+    /**
+     * Optional NIP-46 client metadata (name/url/image) advertised on the
+     * `connect` request so the bunker can show who is asking to connect.
+     */
+    val clientMetadata: BunkerClientMetadata? = null,
+    /**
+     * Invoked with the authorization URL when the bunker answers with a NIP-46
+     * `auth_url` challenge. Surface it (open a browser / print it); the pending
+     * request keeps waiting for the real response.
+     */
+    val onAuthUrl: ((String) -> Unit)? = null,
 ) : NostrSigner(signer.pubKey) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -64,6 +78,7 @@ class NostrSignerRemote(
             remoteKey = remotePubkey,
             relayList = relays,
             client = client,
+            onAuthUrl = onAuthUrl,
         )
 
     val subscription =
@@ -80,7 +95,19 @@ class NostrSignerRemote(
         ) { event ->
             if (event is NostrConnectEvent) {
                 scope.launch {
-                    manager.newResponse(event)
+                    // Incoming bunker responses come straight off the relay and are
+                    // decrypted here on a fire-and-forget launch whose scope carries no
+                    // CoroutineExceptionHandler. A malformed/hostile event (or a benign
+                    // SignerExceptions from decryption) must not escape and crash the app.
+                    try {
+                        manager.newResponse(event)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: SignerExceptions) {
+                        Log.d("NostrSignerRemote") { "Could not decrypt bunker response ${event.id}: ${e.message}" }
+                    } catch (e: Exception) {
+                        Log.w("NostrSignerRemote", "Failed to process bunker response ${event.id}", e)
+                    }
                 }
             }
         }
@@ -242,6 +269,7 @@ class NostrSignerRemote(
                         remoteKey = remotePubkey,
                         permissions = permissions,
                         secret = secret,
+                        clientMetadata = clientMetadata,
                     )
                 },
                 parser = ConnectResponse::parse,
@@ -309,6 +337,7 @@ class NostrSignerRemote(
             signer: NostrSignerInternal,
             client: INostrClient,
             permissions: String? = null,
+            clientMetadata: BunkerClientMetadata? = null,
         ): NostrSignerRemote {
             if (!bunkerUri.startsWith("bunker://")) throw Exception("Invalid bunker uri")
             val splitData = bunkerUri.split("?")
@@ -334,6 +363,7 @@ class NostrSignerRemote(
                 client = client,
                 permissions = permissions,
                 secret = secret,
+                clientMetadata = clientMetadata,
             )
         }
     }

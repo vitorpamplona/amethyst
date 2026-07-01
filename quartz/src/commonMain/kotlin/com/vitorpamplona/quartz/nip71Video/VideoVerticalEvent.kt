@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -40,11 +39,10 @@ class VideoVerticalEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : ReplaceableVideoEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : AddressableVideoEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope {
     companion object {
         const val KIND = 34236
-        const val ALT_DESCRIPTION = "Vertical Video"
 
         fun build(
             video: VideoMeta,
@@ -64,7 +62,6 @@ class VideoVerticalEvent(
             initializer: TagArrayBuilder<VideoVerticalEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description, createdAt) {
             dTag(dTag)
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

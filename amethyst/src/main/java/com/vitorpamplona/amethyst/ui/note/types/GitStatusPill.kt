@@ -29,7 +29,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,7 +73,6 @@ fun GitStatusPill(
     modifier: Modifier = Modifier,
     defaultIfMissing: StatusKind? = null,
 ) {
-    LaunchedEffect(Unit) { GitStatusIndex.startIfNeeded() }
     val index by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
     val map = index ?: return // hide pill until the initial scan completes — avoids a default-then-real flicker
     val kind = map[targetIdHex]?.statusKind() ?: defaultIfMissing ?: return

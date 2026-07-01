@@ -36,12 +36,12 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip14Subject.SubjectTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.pr.tags.BranchNameTag
 import com.vitorpamplona.quartz.nip34Git.pr.tags.CurrentCommitTag
 import com.vitorpamplona.quartz.nip34Git.pr.tags.MergeBaseTag
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.repository.tags.CloneTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -63,7 +63,10 @@ class GitPullRequestEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
     EventHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(subject(), content).joinToString("\n")
+
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
@@ -99,7 +102,6 @@ class GitPullRequestEvent(
 
     companion object {
         const val KIND = 1618
-        const val ALT = "A Git Pull Request"
 
         /**
          * Build a NIP-34 kind-1618 pull request event.
@@ -131,7 +133,6 @@ class GitPullRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GitPullRequestEvent>.() -> Unit = {},
         ) = eventTemplate<GitPullRequestEvent>(KIND, description, createdAt) {
-            alt(ALT)
             repository(repository)
             euc(earliestUniqueCommit)
             pTag(repository.event.pubKey, repository.authorHomeRelay)

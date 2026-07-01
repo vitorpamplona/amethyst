@@ -82,6 +82,14 @@ class TopNavFilterState(
             name = ResourceName(R.string.follow_list_global),
         )
 
+    // Notifications-only curated mode; in Notifications, Global itself shows
+    // every event that p-tags the user.
+    val selectedFollow =
+        FeedDefinition(
+            code = TopFilter.Selected,
+            name = ResourceName(R.string.follow_list_curated),
+        )
+
     val aroundMe =
         FeedDefinition(
             code = TopFilter.AroundMe,
@@ -107,6 +115,8 @@ class TopNavFilterState(
         )
 
     val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)
+
+    val defaultNotificationLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, selectedFollow, globalFollow, muteListFollow)
 
     fun mergePeopleLists(
         peopleLists: List<AddressableNote>,
@@ -282,12 +292,76 @@ class TopNavFilterState(
             )
         }
 
+    private val _musicRoutes =
+        combineTransform(
+            livePeopleListsFlow,
+            liveInterestFlows,
+        ) { peopleLists, interests ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    // Same content-style catalog as kind3GlobalPeopleRoutes, plus "Mine" so the
+                    // music + playlists screens can show only the user's own published items.
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow),
+                    peopleLists,
+                    interests,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
+    private val _gitRepositoryRoutes =
+        combineTransform(
+            livePeopleListsFlow,
+            liveInterestFlows,
+        ) { peopleLists, interests ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    // Git repository announcements can be narrowed by author, hashtag and geohash,
+                    // so this mirrors the kind3 catalog plus "Mine" — the user's own repositories.
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow),
+                    peopleLists,
+                    interests,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
     private val _kind3GlobalPeople =
         livePeopleListsFlow.transform { peopleLists ->
             checkNotInMainThread()
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
+                    peopleLists,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
+    // Author-only catalog for browse screens whose events carry no topical tags (no `t`/`g`/`a`),
+    // e.g. the nApplet (NIP-5D) and nSite (NIP-5A) manifests. These can only be narrowed by author,
+    // so the interest entries (hashtags, geohashes, communities, relays, favorites, interest sets)
+    // and AroundMe — none of which can match a tag-less manifest — are deliberately left out.
+    private val _authorOnlyRoutes =
+        livePeopleListsFlow.transform { peopleLists ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
+                    peopleLists,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
+    private val _notificationLists =
+        livePeopleListsFlow.transform { peopleLists ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, selectedFollow, globalFollow),
                     peopleLists,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
@@ -304,6 +378,16 @@ class TopNavFilterState(
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, defaultLists)
 
+    val authorOnlyRoutes =
+        _authorOnlyRoutes
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow, muteListFollow))
+
+    val notificationLists =
+        _notificationLists
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, defaultNotificationLists)
+
     val badgeRoutes =
         _badgeRoutes
             .flowOn(Dispatchers.IO)
@@ -313,6 +397,16 @@ class TopNavFilterState(
         _communityRoutes
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow, muteListFollow))
+
+    val musicRoutes =
+        _musicRoutes
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow, muteListFollow))
+
+    val gitRepositoryRoutes =
+        _gitRepositoryRoutes
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow, muteListFollow))
 
     fun destroy() {
         Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }

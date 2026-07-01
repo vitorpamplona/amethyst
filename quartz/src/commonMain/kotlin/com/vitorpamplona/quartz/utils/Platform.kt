@@ -23,3 +23,5 @@ package com.vitorpamplona.quartz.utils
 expect fun platform(): String
 
 expect fun currentTimeSeconds(): Long
+
+expect fun currentTimeMillis(): Long

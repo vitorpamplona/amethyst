@@ -18,8 +18,7 @@ object NotePublishCommand {
         val args = Args(rest)
         val text = args.positional(0, "text")
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
 
             val event = com.vitorpamplona.amethyst.commons.note
@@ -33,12 +32,14 @@ object NotePublishCommand {
                 "rejected_by"   to ack.filterValues { !it }.keys.map { it.url },
             ))
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }
 ```
+
+`Context` is `AutoCloseable`; wrap it in `use { }` so it's closed
+(RunState flushed, relays disconnected) on every exit path — never a
+hand-rolled `try { } finally { ctx.close() }`.
 
 `Output.emit(...)` handles the text-vs-JSON mode automatically. The
 result map IS the `--json` shape; the human-readable text default is
@@ -51,39 +52,34 @@ When a feature has several verbs (`note publish`, `note show`,
 
 ```kotlin
 object NoteCommands {
-    suspend fun dispatch(dataDir: DataDir, tail: Array<String>): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "note <publish|show|react>")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "publish" -> NotePublishCommand.run(dataDir, rest)
-            "show"    -> NoteShowCommand.run(dataDir, rest)
-            "react"   -> NoteReactCommand.run(dataDir, rest)
-            else      -> Output.error("bad_args", "note ${tail[0]}")
-        }
-    }
+    suspend fun dispatch(dataDir: DataDir, tail: Array<String>): Int =
+        route("note", tail, "note <publish|show|react>", mapOf(
+            "publish" to { rest -> NotePublishCommand.run(dataDir, rest) },
+            "show"    to { rest -> NoteShowCommand.run(dataDir, rest) },
+            "react"   to { rest -> NoteReactCommand.run(dataDir, rest) },
+        ))
 }
 ```
 
-Each verb gets its own file. Once a single file crosses ~200 lines,
-split it — see `GroupCommands.kt` and its siblings as the reference.
+The shared `route(name, tail, usage, routes)` helper (`Router.kt`)
+handles the empty-input and unknown-verb `bad_args` branches, so the
+`dispatch` body is just the verb→handler map. Each verb gets its own
+file. Once a single file crosses ~200 lines, split it — see
+`GroupCommands.kt` and its siblings as the reference.
 
 ## Wire-up checklist
 
 For every new command:
 
 1. File under `cli/commands/`.
-2. Branch in `Commands.kt`:
+2. Branch in `Main.kt`'s top-level `dispatch`, calling the command
+   object directly:
    ```kotlin
-   suspend fun note(dataDir: DataDir, tail: Array<String>): Int =
-       NoteCommands.dispatch(dataDir, tail)
+   "note" -> NoteCommands.dispatch(dataDir, tail)
    ```
-3. Branch in `Main.kt`'s top-level `dispatch`:
-   ```kotlin
-   "note" -> Commands.note(dataDir, tail)
-   ```
-4. Line in `printUsage()` explaining the verb.
-5. Row in `cli/README.md`'s command table.
-6. Status flip in `cli/ROADMAP.md` (🆕 / 📦 → ✅).
+3. Line in `printUsage()` explaining the verb.
+4. Row in `cli/README.md`'s command table.
+5. Status flip in `cli/ROADMAP.md` (🆕 / 📦 → ✅).
 
 ## What not to do
 
@@ -95,7 +91,7 @@ For every new command:
   them to `error: …` (text mode) / `{"error":…}` (JSON mode) plus the
   right exit code.
 - No holding a connection open across invocations — every run opens
-  a fresh `Context` and closes it in `finally`.
+  a fresh `Context` inside `use { }` so it closes on every exit path.
 - No blocking reads for user input — take a flag.
 - No global flags that collide with subcommand flags. `--name` is
   reserved for subcommand use (group/profile name); the global

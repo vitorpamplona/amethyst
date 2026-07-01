@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.actions.ZapActions
 import com.vitorpamplona.amethyst.commons.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
+import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -51,8 +53,10 @@ import okhttp3.OkHttpClient
  *   4. POST it to the recipient's LNURL-pay callback via
  *      [LightningAddressResolver] to receive a BOLT11 invoice.
  *
- * The invoice is printed but **not** auto-paid — amy has no NWC wallet
- * wired up yet. Paste the invoice into any LN wallet to settle.
+ * By default the invoice is printed but **not** auto-paid — paste it into any LN
+ * wallet to settle. Pass `--with <ndebit>` to settle it in-place through a CLINK
+ * debit pointer (kind-21002), mirroring how the app routes a zap through its
+ * default payment source; each recipient then also reports `paid` + `preimage`.
  */
 object ZapCommand {
     suspend fun dispatch(
@@ -72,7 +76,7 @@ object ZapCommand {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.size < 2) return Output.error("bad_args", "zap user <user> <sats> [--comment X] [--anon] [--timeout SECS]")
+        if (rest.size < 2) return Output.error("bad_args", "zap user <user> <sats> [--comment X] [--anon] [--with <ndebit>] [--timeout SECS]")
         val userArg = rest[0]
         val sats =
             rest[1].toLongOrNull()?.takeIf { it > 0 }
@@ -81,9 +85,16 @@ object ZapCommand {
         val comment = args.flag("comment") ?: ""
         val zapType = parseZapType(args)
         val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        val withFlag = args.flag("with")
+        val settleWith =
+            if (withFlag == null) {
+                null
+            } else {
+                (ClinkPointerParser.parse(withFlag.trim()) as? NDebit)?.takeIf { it.relays.isNotEmpty() }
+                    ?: return Output.error("bad_args", "--with must be a valid ndebit pointer with a relay")
+            }
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val recipient = ctx.requireUserHex(userArg)
             val metadata =
@@ -103,10 +114,8 @@ object ZapCommand {
                     zapType = zapType,
                 )
 
-            emitZapResult(ctx, sats, lnAddress, comment, request, zapType)
+            emitZapResult(ctx, sats, lnAddress, comment, request, zapType, timeoutMs, settleWith)
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -114,7 +123,7 @@ object ZapCommand {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.size < 2) return Output.error("bad_args", "zap event <event-id> <sats> [--comment X] [--anon] [--private] [--timeout SECS]")
+        if (rest.size < 2) return Output.error("bad_args", "zap event <event-id> <sats> [--comment X] [--anon] [--private] [--with <ndebit>] [--timeout SECS]")
         val eventId = rest[0]
         if (eventId.length != 64) return Output.error("bad_args", "event-id must be 64-hex (nevent bech32 not yet supported)")
         val sats =
@@ -124,9 +133,16 @@ object ZapCommand {
         val comment = args.flag("comment") ?: ""
         val zapType = parseZapType(args)
         val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        val withFlag = args.flag("with")
+        val settleWith =
+            if (withFlag == null) {
+                null
+            } else {
+                (ClinkPointerParser.parse(withFlag.trim()) as? NDebit)?.takeIf { it.relays.isNotEmpty() }
+                    ?: return Output.error("bad_args", "--with must be a valid ndebit pointer with a relay")
+            }
 
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val zappedEvent =
                 ctx.store.query<Event>(Filter(ids = listOf(eventId), limit = 1)).firstOrNull()
@@ -175,10 +191,8 @@ object ZapCommand {
                 )
             }
 
-            emitSplitZapResult(ctx, sats, comment, zappedEvent.id, zapType, requests)
+            emitSplitZapResult(ctx, sats, comment, zappedEvent.id, zapType, requests, timeoutMs, settleWith)
             return 0
-        } finally {
-            ctx.close()
         }
     }
 
@@ -189,6 +203,8 @@ object ZapCommand {
         comment: String,
         request: LnZapRequestEvent,
         zapType: LnZapEvent.ZapType,
+        timeoutMs: Long,
+        settleWith: NDebit?,
         zappedEventId: HexKey? = null,
     ) {
         // Reuse the same OkHttp instance the Context uses for nip-05 / WS;
@@ -205,8 +221,8 @@ object ZapCommand {
 
         when (result) {
             is LightningAddressResolver.Result.Success -> {
-                Output.emit(
-                    buildMap {
+                val base =
+                    buildMap<String, Any?> {
                         put("ln_address", lnAddress)
                         put("amount_sats", sats)
                         put("zap_type", zapType.name.lowercase())
@@ -214,14 +230,41 @@ object ZapCommand {
                         put("zap_request_id", request.id)
                         if (zappedEventId != null) put("zapped_event_id", zappedEventId)
                         put("invoice", result.invoice)
-                    },
-                )
+                    }
+                val settled = if (settleWith != null) settleEntry(ctx, settleWith, result.invoice, timeoutMs) else emptyMap()
+                Output.emit(base + settled)
             }
             is LightningAddressResolver.Result.Error -> {
                 Output.error("invoice_failed", result.message)
             }
         }
     }
+
+    /**
+     * Settles [bolt11] through a CLINK debit pointer (kind-21002, reusing [DebitCommands.settle])
+     * and returns the result fields (`paid` + `preimage`/`pay_error`) to merge into the zap
+     * output. Per-recipient for splits.
+     */
+    private suspend fun settleEntry(
+        ctx: Context,
+        debit: NDebit,
+        bolt11: String,
+        timeoutMs: Long,
+    ): Map<String, Any?> =
+        when (val outcome = DebitCommands.settle(ctx, debit, timeoutMs) { it.payInvoice(bolt11, null) }) {
+            DebitCommands.Settle.Timeout -> mapOf("paid" to false, "pay_error" to "no response from the debit service")
+            DebitCommands.Settle.BadReply -> mapOf("paid" to false, "pay_error" to "debit reply was not a kind-21002 event")
+            is DebitCommands.Settle.Replied ->
+                if (outcome.response.isOk()) {
+                    mapOf("paid" to true, "preimage" to outcome.response.preimage, "debit_request_id" to outcome.requestId)
+                } else {
+                    mapOf(
+                        "paid" to false,
+                        "pay_error" to (outcome.response.error?.takeIf { it.isNotBlank() } ?: "code ${outcome.response.code}"),
+                        "debit_request_id" to outcome.requestId,
+                    )
+                }
+        }
 
     /**
      * Multi-recipient (split-aware) event-zap result emitter. Fetches one
@@ -238,6 +281,8 @@ object ZapCommand {
         zappedEventId: HexKey,
         zapType: LnZapEvent.ZapType,
         requests: List<ZapActions.ZapRequestForSplit>,
+        timeoutMs: Long,
+        settleWith: NDebit?,
     ) {
         val resolver = LightningAddressResolver(httpClient = sharedOkHttp(ctx))
 
@@ -260,8 +305,10 @@ object ZapCommand {
                         "zap_request_id" to req.request.id,
                     )
                 when (result) {
-                    is LightningAddressResolver.Result.Success ->
+                    is LightningAddressResolver.Result.Success -> {
                         entry["invoice"] = result.invoice
+                        if (settleWith != null) entry.putAll(settleEntry(ctx, settleWith, result.invoice, timeoutMs))
+                    }
 
                     is LightningAddressResolver.Result.Error ->
                         entry["invoice_error"] = result.message

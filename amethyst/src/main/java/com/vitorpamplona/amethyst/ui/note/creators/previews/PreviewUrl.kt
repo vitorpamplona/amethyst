@@ -41,6 +41,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedState
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
@@ -48,9 +49,9 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.DisplayUrlWithLoadingSymbol
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewCard
-import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -84,7 +85,7 @@ fun PreviewUrl(
                 }
 
                 else -> {
-                    MyLoadUrlPreviewDirect(myUrlPreview, myUrlPreview, accountViewModel)
+                    MyLoadUrlPreviewDirect(myUrlPreview, myUrlPreview, accountViewModel, nav)
                 }
             }
         }
@@ -104,7 +105,7 @@ fun PreviewUrl(
         }
 
         RichTextParser.isUrlWithoutScheme(myUrlPreview) -> {
-            MyLoadUrlPreviewDirect("https://$myUrlPreview", myUrlPreview, accountViewModel)
+            MyLoadUrlPreviewDirect("https://$myUrlPreview", myUrlPreview, accountViewModel, nav)
         }
     }
 }
@@ -138,7 +139,7 @@ fun PreviewUrlFillWidth(
             }
 
             else -> {
-                MyLoadUrlPreviewDirectFillWidth(myUrlPreview, myUrlPreview, accountViewModel)
+                MyLoadUrlPreviewDirectFillWidth(myUrlPreview, myUrlPreview, accountViewModel, nav)
             }
         }
     } else if (RichTextParser.startsWithNIP19Scheme(myUrlPreview)) {
@@ -154,7 +155,7 @@ fun PreviewUrlFillWidth(
             nav = nav,
         )
     } else if (RichTextParser.isUrlWithoutScheme(myUrlPreview)) {
-        MyLoadUrlPreviewDirectFillWidth("https://$myUrlPreview", myUrlPreview, accountViewModel)
+        MyLoadUrlPreviewDirectFillWidth("https://$myUrlPreview", myUrlPreview, accountViewModel, nav)
     }
 }
 
@@ -200,6 +201,7 @@ private fun MyLoadUrlPreviewDirect(
     url: String,
     urlText: String,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")
     val urlPreviewState by
@@ -268,6 +270,7 @@ private fun MyLoadUrlPreviewDirectFillWidth(
     url: String,
     urlText: String,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")
     val urlPreviewState by
@@ -304,7 +307,11 @@ private fun MyLoadUrlPreviewDirectFillWidth(
                         accountViewModel = accountViewModel,
                     )
                 } else {
-                    UrlPreviewCard(url, previewInfo = state.previewInfo)
+                    UrlPreviewCard(
+                        url,
+                        previewInfo = state.previewInfo,
+                        onUrlComments = { nav.nav(Route.Url(url)) },
+                    )
                 }
             }
 

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.content.ComponentCallbacks2
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -45,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.D
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal.DraftEventsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.dal.BrowseEmojiSetsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.dal.FollowPacksFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.dal.GitRepositoriesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeEverythingFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter
@@ -70,8 +73,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.dal.ShortsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.dal.SoftwareAppsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmarkFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.dal.WorkoutFeedFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 class AccountFeedContentStates(
@@ -106,6 +111,8 @@ class AccountFeedContentStates(
     val communitiesList = FeedContentState(CommunitiesFeedFilter(account), scope, LocalCache)
 
     val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
+    val workoutsFeed = FeedContentState(WorkoutFeedFilter(account), scope, LocalCache)
+    val gitRepositoriesFeed = FeedContentState(GitRepositoriesFeedFilter(account), scope, LocalCache)
     val calendarAppointmentsFeed = FeedContentState(CalendarAppointmentsFeedFilter(account), scope, LocalCache)
     val calendarCollectionsFeed = FeedContentState(CalendarCollectionsFeedFilter(account), scope, LocalCache)
     val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache)
@@ -136,6 +143,16 @@ class AccountFeedContentStates(
     val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache)
 
     init {
+        // Under critical memory pressure, trim every feed down to 50 items to release
+        // the strong Note references that would otherwise keep pruned cache objects alive.
+        scope.launch(Dispatchers.IO) {
+            Amethyst.instance.trimLevelEvents.collect { level ->
+                if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
+                    trimFeedsToSize(200)
+                }
+            }
+        }
+
         // Marmot group list changes (new group, group marked known, group
         // metadata synced) don't flow through LocalCache.newEventBundles, so
         // the additive update path can't see them. Force a full feed rebuild
@@ -146,6 +163,17 @@ class AccountFeedContentStates(
                 dmKnown.invalidateData()
                 dmNew.invalidateData()
             }
+        }
+
+        // Pinning/unpinning a room only changes sort order, not membership, so no
+        // chat event flows through LocalCache. Force a rebuild to re-sort. This
+        // also fires when pins arrive via the synced AppSpecificData event.
+        scope.launch(Dispatchers.IO) {
+            account.settings.syncedSettings.chats.pinnedChatrooms
+                .drop(1)
+                .collect {
+                    dmKnown.invalidateData()
+                }
         }
 
         scope.launch(Dispatchers.IO) {
@@ -201,6 +229,8 @@ class AccountFeedContentStates(
         communitiesList.updateFeedWith(newNotes)
 
         picturesFeed.updateFeedWith(newNotes)
+        workoutsFeed.updateFeedWith(newNotes)
+        gitRepositoriesFeed.updateFeedWith(newNotes)
         productsFeed.updateFeedWith(newNotes)
         shortsFeed.updateFeedWith(newNotes)
         publicChatsFeed.updateFeedWith(newNotes)
@@ -261,6 +291,8 @@ class AccountFeedContentStates(
         communitiesList.deleteFromFeed(newNotes)
 
         picturesFeed.deleteFromFeed(newNotes)
+        workoutsFeed.deleteFromFeed(newNotes)
+        gitRepositoriesFeed.deleteFromFeed(newNotes)
         productsFeed.deleteFromFeed(newNotes)
         shortsFeed.deleteFromFeed(newNotes)
         publicChatsFeed.deleteFromFeed(newNotes)
@@ -288,6 +320,59 @@ class AccountFeedContentStates(
         drafts.deleteFromFeed(newNotes)
 
         webBookmarks.deleteFromFeed(newNotes)
+    }
+
+    fun trimFeedsToSize(maxItems: Int) {
+        homeNewThreads.trimToSize(maxItems)
+        homeReplies.trimToSize(maxItems)
+        homeEverything.trimToSize(maxItems)
+
+        dmKnown.trimToSize(maxItems)
+        dmNew.trimToSize(maxItems)
+
+        videoFeed.trimToSize(maxItems)
+
+        discoverFollowSets.trimToSize(maxItems)
+        discoverReads.trimToSize(maxItems)
+        discoverMarketplace.trimToSize(maxItems)
+        discoverDVMs.trimToSize(maxItems)
+        discoverLive.trimToSize(maxItems)
+        discoverCommunities.trimToSize(maxItems)
+        discoverPublicChats.trimToSize(maxItems)
+
+        pollsFeed.trimToSize(maxItems)
+        openPollsFeed.trimToSize(maxItems)
+        closedPollsFeed.trimToSize(maxItems)
+
+        badgesFeed.trimToSize(maxItems)
+        browseEmojiSetsFeed.trimToSize(maxItems)
+        communitiesList.trimToSize(maxItems)
+
+        picturesFeed.trimToSize(maxItems)
+        workoutsFeed.trimToSize(maxItems)
+        gitRepositoriesFeed.trimToSize(maxItems)
+        calendarAppointmentsFeed.trimToSize(maxItems)
+        calendarCollectionsFeed.trimToSize(maxItems)
+        productsFeed.trimToSize(maxItems)
+        shortsFeed.trimToSize(maxItems)
+        publicChatsFeed.trimToSize(maxItems)
+        followPacksFeed.trimToSize(maxItems)
+        liveStreamsFeed.trimToSize(maxItems)
+        nestsFeed.trimToSize(maxItems)
+        longsFeed.trimToSize(maxItems)
+        articlesFeed.trimToSize(maxItems)
+        musicTracksFeed.trimToSize(maxItems)
+        musicPlaylistsFeed.trimToSize(maxItems)
+        podcastEpisodesFeed.trimToSize(maxItems)
+        podcastsFeed.trimToSize(maxItems)
+        softwareAppsFeed.trimToSize(maxItems)
+
+        notifications.trimToSize(maxItems)
+        notificationsFollowing.trimToSize(maxItems)
+        notificationsEveryone.trimToSize(maxItems)
+
+        drafts.trimToSize(maxItems)
+        webBookmarks.trimToSize(maxItems)
     }
 
     fun destroy() {

@@ -25,18 +25,18 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.removeAny
 import com.vitorpamplona.quartz.nip51Lists.removeIgnoreCase
+import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -49,14 +49,22 @@ class InterestSetEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // Public title/description plus the public-interest hashtags. Private
+    // hashtags live in NIP-44 encrypted content and are never indexed.
+    override fun indexableContent() = (listOfNotNull(title(), description()) + publicHashtags()).joinToString("\n")
+
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+
+    fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
+
     fun publicHashtags() = tags.mapNotNull(HashtagTag::parse)
 
     suspend fun privateHashtags(signer: NostrSigner) = privateTags(signer)?.mapNotNull(HashtagTag::parse)
 
     companion object {
         const val KIND = 30015
-        const val ALT = "Interest Set"
 
         fun createAddress(
             pubKey: HexKey,
@@ -122,12 +130,7 @@ class InterestSetEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): InterestSetEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, content)
         }
@@ -160,7 +163,6 @@ class InterestSetEvent(
             createdAt = createdAt,
         ) {
             dTag(dTag)
-            alt(ALT)
             title(title)
             hashtags(publicHashtags)
 

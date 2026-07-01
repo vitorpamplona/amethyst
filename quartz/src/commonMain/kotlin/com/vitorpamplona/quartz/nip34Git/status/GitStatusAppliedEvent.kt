@@ -60,7 +60,6 @@ class GitStatusAppliedEvent(
 
     companion object {
         const val KIND = KIND_APPLIED
-        const val ALT = "A Git Applied Status"
 
         fun <T : Event> build(
             content: String,
@@ -73,7 +72,6 @@ class GitStatusAppliedEvent(
             initializer: TagArrayBuilder<GitStatusAppliedEvent>.() -> Unit = {},
         ) = GitStatusBuilders.buildStatus<GitStatusAppliedEvent, T>(
             kind = KIND,
-            altDescriptor = ALT,
             content = content,
             target = target,
             notify = notify,

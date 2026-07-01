@@ -91,16 +91,23 @@ fun ChatroomHeader(
  * Shared chatroom header for a group conversation.
  * Displays multiple user avatars and a combined room name.
  *
+ * When the group has a NIP-14 [subject] (group name), it is shown as the bold
+ * title with the participant list as a secondary line; otherwise the participant
+ * list is the title.
+ *
  * @param users List of users in the group conversation
+ * @param subject Optional NIP-14 group subject/name
  * @param modifier Layout modifier (defaults to standard padding)
  * @param onClick Called when the header is tapped
  */
 @Composable
 fun GroupChatroomHeader(
     users: List<User>,
+    subject: String? = null,
     modifier: Modifier = ChatStdPadding,
     onClick: () -> Unit,
 ) {
+    val participants = users.joinToString(", ") { it.toBestDisplayName() }
     Column(
         modifier =
             Modifier
@@ -124,12 +131,21 @@ fun GroupChatroomHeader(
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     Text(
-                        text = users.joinToString(", ") { it.toBestDisplayName() },
+                        text = subject?.takeIf { it.isNotBlank() } ?: participants,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    if (!subject.isNullOrBlank()) {
+                        Text(
+                            text = participants,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }

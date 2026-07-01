@@ -30,7 +30,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -118,6 +117,7 @@ class NewCalendarEventViewModel : ViewModel() {
                 participants.clear()
                 participants.addAll(existing.participants().map { it.pubKey })
             }
+
             is CalendarDateSlotEvent -> {
                 isAllDay.value = true
                 title.value = existing.title().orEmpty()
@@ -162,7 +162,7 @@ class NewCalendarEventViewModel : ViewModel() {
         if (!::account.isInitialized) return false
         isUploadingImage.value = true
         try {
-            val server = account.settings.defaultFileServer ?: DEFAULT_MEDIA_SERVERS[0]
+            val server = account.settings.defaultFileServer
             val result =
                 UploadOrchestrator().upload(
                     uri = uri,

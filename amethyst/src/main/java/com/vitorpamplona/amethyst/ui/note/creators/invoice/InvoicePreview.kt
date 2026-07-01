@@ -20,14 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.invoice
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -38,29 +33,27 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
 import com.vitorpamplona.amethyst.service.lnurl.CachedLnInvoiceParser
 import com.vitorpamplona.amethyst.service.lnurl.InvoiceAmount
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.components.PaymentCard
+import com.vitorpamplona.amethyst.ui.components.PaymentCardAmount
+import com.vitorpamplona.amethyst.ui.components.PaymentCardDescription
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
-import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -89,7 +82,7 @@ fun MayBeInvoicePreview(
     LoadValueFromInvoice(lnbcWord = lnbcWord) { invoiceAmount ->
         CrossfadeIfEnabled(targetState = invoiceAmount, label = "MayBeInvoicePreview", accountViewModel = accountViewModel) {
             if (it != null) {
-                InvoicePreview(it.invoice, it.amount)
+                InvoicePreview(it.invoice, it.amount, it.description, it.expiresAt, accountViewModel)
             } else {
                 Text(
                     text = lnbcWord,
@@ -104,10 +97,14 @@ fun MayBeInvoicePreview(
 fun InvoicePreview(
     lnInvoice: String,
     amount: String?,
+    description: String?,
+    expiresAt: Long?,
+    accountViewModel: AccountViewModel,
 ) {
     val context = LocalContext.current
 
     var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+    var payingInvoice by remember { mutableStateOf<String?>(null) }
 
     if (showErrorMessageDialog != null) {
         ErrorMessageDialog(
@@ -117,70 +114,60 @@ fun InvoicePreview(
         )
     }
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp)
-                .clip(shape = QuoteBorder)
-                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder),
+    InvoicePaymentDispatcher(
+        bolt11 = payingInvoice,
+        accountViewModel = accountViewModel,
+        onClear = { payingInvoice = null },
+        onError = { showErrorMessageDialog = it },
+    )
+
+    // Snapshot at composition: enough to flag clearly stale invoices without
+    // ticking a clock while the card is on screen.
+    val isExpired = remember(expiresAt) { expiresAt != null && expiresAt < TimeUtils.now() }
+
+    PaymentCard(
+        title = stringRes(R.string.lightning_invoice),
+        icon = {
+            Icon(
+                imageVector = CustomHashTagIcons.Lightning,
+                contentDescription = null,
+                modifier = Size18Modifier,
+                tint = Color.Unspecified,
+            )
+        },
+        copyValue = lnInvoice,
     ) {
-        Column(
+        amount?.let {
+            PaymentCardAmount(amount = it, unit = stringRes(R.string.sats))
+        }
+
+        description?.let {
+            PaymentCardDescription(it)
+        }
+
+        if (isExpired) {
+            Text(
+                text = stringRes(R.string.invoice_expired),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp),
+            )
+        }
+
+        Button(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(top = 12.dp),
+            enabled = !isExpired,
+            onClick = { payingInvoice = lnInvoice },
+            shape = ButtonBorder,
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 10.dp),
-            ) {
-                Icon(
-                    imageVector = CustomHashTagIcons.Lightning,
-                    null,
-                    modifier = Size20Modifier,
-                    tint = Color.Unspecified,
-                )
-
-                Text(
-                    text = stringRes(R.string.lightning_invoice),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.W500,
-                    modifier = Modifier.padding(start = 10.dp),
-                )
-            }
-
-            HorizontalDivider(thickness = DividerThickness)
-
-            amount?.let {
-                Text(
-                    text = "$it ${stringRes(id = R.string.sats)}",
-                    fontSize = 25.sp,
-                    fontWeight = FontWeight.W500,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                )
-            }
-
-            Button(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 10.dp),
-                onClick = { payViaIntent(lnInvoice, context, { }) { showErrorMessageDialog = it } },
-                shape = QuoteBorder,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                    ),
-            ) {
-                Text(text = stringRes(R.string.pay), color = Color.White, fontSize = 20.sp)
-            }
+            Text(text = stringRes(R.string.pay))
         }
     }
 }

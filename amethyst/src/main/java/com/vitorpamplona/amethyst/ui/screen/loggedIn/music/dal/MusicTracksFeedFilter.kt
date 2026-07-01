@@ -26,8 +26,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
+import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 
 /**
@@ -56,10 +56,7 @@ class MusicTracksFeedFilter(
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
-        val notes =
-            LocalCache.addressables.filterIntoSet(MusicTrackEvent.KIND) { _, it ->
-                accept(it, params)
-            }
+        val notes = LocalCache.addressables.filterIntoSet(MusicTrackEvent.KIND) { _, it -> accept(it, params) }
         return sort(notes)
     }
 
@@ -88,5 +85,5 @@ class MusicTracksFeedFilter(
             (params.isHiddenList || account.isAcceptable(note))
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 }

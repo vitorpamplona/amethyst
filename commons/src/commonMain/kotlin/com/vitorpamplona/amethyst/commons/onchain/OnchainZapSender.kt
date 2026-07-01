@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.PsbtFinalizer
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.PsbtSignatureVerifier
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.inputTapKeySig
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.setInputTapKeySig
+import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.SegwitAddress
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import kotlin.coroutines.cancellation.CancellationException
@@ -54,6 +55,43 @@ enum class OnchainZapSendStage {
     PUBLISHING,
 }
 
+/**
+ * Machine-readable reason for an [OnchainZapSendResult.Failure], so front ends
+ * can map the failure to a localized message. The English
+ * [OnchainZapSendResult.Failure.message] stays available for logs, tests, and
+ * the CLI.
+ */
+enum class OnchainZapSendError(
+    /**
+     * Whether [OnchainZapSendResult.Failure.cause] carries a message crafted
+     * for humans (insufficient funds, signer tampering, which share is below
+     * dust) as opposed to low-level exception text. UIs may surface the cause
+     * message as a diagnostic detail when this is true.
+     */
+    val causeIsUserFacing: Boolean,
+) {
+    /** No [OnchainBackend] is configured for the account. */
+    BACKEND_NOT_CONFIGURED(causeIsUserFacing = false),
+
+    /** The chain backend could not return the sender's UTXOs. */
+    LOAD_UTXOS_FAILED(causeIsUserFacing = false),
+
+    /** Coin selection / PSBT assembly failed (e.g. insufficient funds). */
+    BUILD_FAILED(causeIsUserFacing = true),
+
+    /** A recipient's split share is below the dust threshold. */
+    RECIPIENT_BELOW_DUST(causeIsUserFacing = true),
+
+    /** Signing, signature verification, or finalization failed. */
+    SIGN_FAILED(causeIsUserFacing = true),
+
+    /** The signed transaction could not be broadcast. */
+    BROADCAST_FAILED(causeIsUserFacing = false),
+
+    /** The payment broadcast, but a kind:8333 receipt could not be published. */
+    RECEIPT_PUBLISH_FAILED(causeIsUserFacing = false),
+}
+
 /** Outcome of an [OnchainZapSender.send] attempt. */
 sealed interface OnchainZapSendResult {
     /**
@@ -62,7 +100,8 @@ sealed interface OnchainZapSendResult {
      * @property txid The broadcast Bitcoin transaction id.
      * @property receiptEventId The id of the first published kind:8333 event.
      *   For a split zap, additional receipts (one per recipient) are also
-     *   published; see [extraReceiptEventIds].
+     *   published; see [extraReceiptEventIds]. Null for a plain address send
+     *   ([OnchainZapSender.sendToAddress]), which has no receipt to publish.
      * @property feeSats Miner fee paid.
      * @property changeSats Change returned to the sender (0 if none).
      * @property extraReceiptEventIds Receipt ids for the remaining recipients
@@ -70,7 +109,7 @@ sealed interface OnchainZapSendResult {
      */
     data class Success(
         val txid: String,
-        val receiptEventId: HexKey,
+        val receiptEventId: HexKey?,
         val feeSats: Long,
         val changeSats: Long,
         val extraReceiptEventIds: List<HexKey> = emptyList(),
@@ -83,6 +122,9 @@ sealed interface OnchainZapSendResult {
      */
     data class Failure(
         val stage: OnchainZapSendStage,
+        /** Machine-readable reason — map this to a localized message in UIs. */
+        val error: OnchainZapSendError,
+        /** English description for logs, tests, and the CLI. */
         val message: String,
         val cause: Throwable? = null,
         /** Non-null when the payment was broadcast but a later stage failed. */
@@ -93,6 +135,11 @@ sealed interface OnchainZapSendResult {
          * publishes that fail on the first receipt.
          */
         val publishedReceiptEventIds: List<HexKey> = emptyList(),
+        /**
+         * How many receipts a split zap intended to publish. Null when the
+         * failure did not happen while publishing split receipts.
+         */
+        val totalReceipts: Int? = null,
     ) : OnchainZapSendResult
 }
 
@@ -137,7 +184,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.LOADING_UTXOS, "Could not load your Bitcoin balance", e)
+                return fail(OnchainZapSendStage.LOADING_UTXOS, OnchainZapSendError.LOAD_UTXOS_FAILED, "Could not load your Bitcoin balance", e)
             }
 
         // 2. Coin-select and assemble the unsigned PSBT.
@@ -153,54 +200,17 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.BUILDING, e.message ?: "Could not build the transaction", e)
+                return fail(OnchainZapSendStage.BUILDING, OnchainZapSendError.BUILD_FAILED, e.message ?: "Could not build the transaction", e)
             }
 
         // 3. Sign, verify the signer didn't tamper, and finalize.
         val rawTxHex =
             try {
-                val signedHex = signer.signPsbt(built.psbt.toHex())
-                val signedPsbt = Psbt.parse(signedHex)
-
-                // Fund-safety: the signer must ONLY contribute signatures. First
-                // reject anything whose unsigned transaction isn't byte-identical
-                // to ours — that gives a clear error for the substitution attack.
-                val expectedTx = built.psbt.global.get(Psbt.PSBT_GLOBAL_UNSIGNED_TX)
-                val returnedTx = signedPsbt.global.get(Psbt.PSBT_GLOBAL_UNSIGNED_TX)
-                if (expectedTx == null || returnedTx == null || !expectedTx.contentEquals(returnedTx)) {
-                    return fail(
-                        OnchainZapSendStage.SIGNING,
-                        "The signer returned a different transaction than the one it was asked to sign",
-                    )
-                }
-
-                // Copy ONLY the signatures back onto the PSBT we built. Everything
-                // else used downstream (witness UTXOs, tap internal keys) stays the
-                // values WE chose, so a signer can never influence the sighash, the
-                // verified output keys, or where funds go.
-                built.psbt.unsignedTx.inputs.indices.forEach { i ->
-                    val sig =
-                        signedPsbt.inputTapKeySig(i)
-                            ?: return fail(
-                                OnchainZapSendStage.SIGNING,
-                                "The signer did not sign every input",
-                            )
-                    built.psbt.setInputTapKeySig(i, sig)
-                }
-
-                // Verify every signature is actually valid before money moves —
-                // catches a broken signer up front instead of a doomed broadcast.
-                if (!PsbtSignatureVerifier.verifyAllKeyPathInputs(built.psbt)) {
-                    return fail(
-                        OnchainZapSendStage.SIGNING,
-                        "The signed transaction has invalid signatures",
-                    )
-                }
-                PsbtFinalizer.finalizeToHex(built.psbt)
+                signVerifyFinalize(built, signer)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.SIGNING, e.message ?: "Could not sign the transaction", e)
+                return fail(OnchainZapSendStage.SIGNING, OnchainZapSendError.SIGN_FAILED, e.message ?: "Could not sign the transaction", e)
             }
 
         // 4. Broadcast.
@@ -210,7 +220,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.BROADCASTING, "Could not broadcast the transaction", e)
+                return fail(OnchainZapSendStage.BROADCASTING, OnchainZapSendError.BROADCAST_FAILED, "Could not broadcast the transaction", e)
             }
 
         // 5. Publish the kind:8333 receipt. The payment is already on-chain at
@@ -229,6 +239,7 @@ object OnchainZapSender {
             } catch (e: Throwable) {
                 return OnchainZapSendResult.Failure(
                     stage = OnchainZapSendStage.PUBLISHING,
+                    error = OnchainZapSendError.RECEIPT_PUBLISH_FAILED,
                     message = "Payment sent, but the zap receipt could not be published",
                     cause = e,
                     broadcastTxid = txid,
@@ -276,7 +287,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.LOADING_UTXOS, "Could not load your Bitcoin balance", e)
+                return fail(OnchainZapSendStage.LOADING_UTXOS, OnchainZapSendError.LOAD_UTXOS_FAILED, "Could not load your Bitcoin balance", e)
             }
 
         // 2. Coin-select and assemble the multi-output PSBT.
@@ -291,45 +302,17 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.BUILDING, e.message ?: "Could not build the transaction", e)
+                return fail(OnchainZapSendStage.BUILDING, OnchainZapSendError.BUILD_FAILED, e.message ?: "Could not build the transaction", e)
             }
 
         // 3. Sign, verify, and finalize. Same fund-safety contract as [send].
         val rawTxHex =
             try {
-                val signedHex = signer.signPsbt(built.psbt.toHex())
-                val signedPsbt = Psbt.parse(signedHex)
-
-                val expectedTx = built.psbt.global.get(Psbt.PSBT_GLOBAL_UNSIGNED_TX)
-                val returnedTx = signedPsbt.global.get(Psbt.PSBT_GLOBAL_UNSIGNED_TX)
-                if (expectedTx == null || returnedTx == null || !expectedTx.contentEquals(returnedTx)) {
-                    return fail(
-                        OnchainZapSendStage.SIGNING,
-                        "The signer returned a different transaction than the one it was asked to sign",
-                    )
-                }
-
-                built.psbt.unsignedTx.inputs.indices.forEach { i ->
-                    val sig =
-                        signedPsbt.inputTapKeySig(i)
-                            ?: return fail(
-                                OnchainZapSendStage.SIGNING,
-                                "The signer did not sign every input",
-                            )
-                    built.psbt.setInputTapKeySig(i, sig)
-                }
-
-                if (!PsbtSignatureVerifier.verifyAllKeyPathInputs(built.psbt)) {
-                    return fail(
-                        OnchainZapSendStage.SIGNING,
-                        "The signed transaction has invalid signatures",
-                    )
-                }
-                PsbtFinalizer.finalizeToHex(built.psbt)
+                signVerifyFinalize(built, signer)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.SIGNING, e.message ?: "Could not sign the transaction", e)
+                return fail(OnchainZapSendStage.SIGNING, OnchainZapSendError.SIGN_FAILED, e.message ?: "Could not sign the transaction", e)
             }
 
         // 4. Broadcast.
@@ -339,7 +322,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.BROADCASTING, "Could not broadcast the transaction", e)
+                return fail(OnchainZapSendStage.BROADCASTING, OnchainZapSendError.BROADCAST_FAILED, "Could not broadcast the transaction", e)
             }
 
         // 5. Publish one receipt per recipient. If any one fails, surface the
@@ -360,12 +343,14 @@ object OnchainZapSender {
             } catch (e: Throwable) {
                 return OnchainZapSendResult.Failure(
                     stage = OnchainZapSendStage.PUBLISHING,
+                    error = OnchainZapSendError.RECEIPT_PUBLISH_FAILED,
                     message =
                         "Payment sent (${publishedIds.size} of ${recipients.size} receipts published), " +
                             "but the next receipt could not be published",
                     cause = e,
                     broadcastTxid = txid,
                     publishedReceiptEventIds = publishedIds.toList(),
+                    totalReceipts = recipients.size,
                 )
             }
         }
@@ -379,9 +364,118 @@ object OnchainZapSender {
         )
     }
 
+    /**
+     * Pay an explicit Bitcoin address (e.g. a profile's NIP-A3 `bitcoin`
+     * payment target) from the sender's NIP-BC Taproot wallet.
+     *
+     * This is a plain wallet send, not a zap: the destination is not derived
+     * from a Nostr pubkey, so no kind:8333 receipt is possible and none is
+     * published — [OnchainZapSendResult.Success.receiptEventId] is null.
+     * Only native segwit (`bc1…`) mainnet addresses are supported.
+     */
+    suspend fun sendToAddress(
+        backend: OnchainBackend,
+        signer: NostrSigner,
+        senderPubKey: HexKey,
+        recipientAddress: String,
+        amountSats: Long,
+        feeRateSatPerVByte: Double,
+    ): OnchainZapSendResult {
+        // 1. Load the sender's UTXOs.
+        val utxos =
+            try {
+                val address = TaprootAddress.fromPubKey(senderPubKey)
+                backend.getUtxosForAddress(address)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                return fail(OnchainZapSendStage.LOADING_UTXOS, OnchainZapSendError.LOAD_UTXOS_FAILED, "Could not load your Bitcoin balance", e)
+            }
+
+        // 2. Decode the destination address and assemble the unsigned PSBT.
+        val built =
+            try {
+                OnchainZapBuilder.buildToScripts(
+                    senderPubKey = senderPubKey,
+                    recipients = listOf(SegwitAddress.scriptPubKeyFor(recipientAddress) to amountSats),
+                    feeRateSatPerVByte = feeRateSatPerVByte,
+                    availableUtxos = utxos,
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                return fail(OnchainZapSendStage.BUILDING, OnchainZapSendError.BUILD_FAILED, e.message ?: "Could not build the transaction", e)
+            }
+
+        // 3. Sign, verify, and finalize. Same fund-safety contract as [send].
+        val rawTxHex =
+            try {
+                signVerifyFinalize(built, signer)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                return fail(OnchainZapSendStage.SIGNING, OnchainZapSendError.SIGN_FAILED, e.message ?: "Could not sign the transaction", e)
+            }
+
+        // 4. Broadcast. No receipt stage: an address send has nothing to publish.
+        val txid =
+            try {
+                backend.broadcast(rawTxHex)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                return fail(OnchainZapSendStage.BROADCASTING, OnchainZapSendError.BROADCAST_FAILED, "Could not broadcast the transaction", e)
+            }
+
+        return OnchainZapSendResult.Success(
+            txid = txid,
+            receiptEventId = null,
+            feeSats = built.feeSats,
+            changeSats = built.changeSats,
+        )
+    }
+
+    /**
+     * Sign with the fund-safety contract shared by every send path: the signer
+     * may ONLY contribute signatures. The unsigned transaction must come back
+     * byte-identical (rejects substitution attacks), only the tap key sigs are
+     * copied onto the PSBT WE built (witness UTXOs and tap internal keys stay
+     * the values we chose), and every input must verify before money moves.
+     *
+     * @return the finalized raw transaction hex, ready to broadcast.
+     * @throws IllegalStateException with a user-facing message on any violation.
+     */
+    private suspend fun signVerifyFinalize(
+        built: OnchainZapBuilder.Result,
+        signer: NostrSigner,
+    ): String {
+        val signedHex = signer.signPsbt(built.psbt.toHex())
+        val signedPsbt = Psbt.parse(signedHex)
+
+        val expectedTx = built.psbt.global.get(Psbt.PSBT_GLOBAL_UNSIGNED_TX)
+        val returnedTx = signedPsbt.global.get(Psbt.PSBT_GLOBAL_UNSIGNED_TX)
+        check(expectedTx != null && returnedTx != null && expectedTx.contentEquals(returnedTx)) {
+            "The signer returned a different transaction than the one it was asked to sign"
+        }
+
+        built.psbt.unsignedTx.inputs.indices.forEach { i ->
+            val sig =
+                checkNotNull(signedPsbt.inputTapKeySig(i)) {
+                    "The signer did not sign every input"
+                }
+            built.psbt.setInputTapKeySig(i, sig)
+        }
+
+        check(PsbtSignatureVerifier.verifyAllKeyPathInputs(built.psbt)) {
+            "The signed transaction has invalid signatures"
+        }
+        return PsbtFinalizer.finalizeToHex(built.psbt)
+    }
+
     private fun fail(
         stage: OnchainZapSendStage,
+        error: OnchainZapSendError,
         message: String,
         cause: Throwable? = null,
-    ) = OnchainZapSendResult.Failure(stage, message, cause)
+    ) = OnchainZapSendResult.Failure(stage, error, message, cause)
 }

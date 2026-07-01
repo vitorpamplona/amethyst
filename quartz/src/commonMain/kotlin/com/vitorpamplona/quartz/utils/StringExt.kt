@@ -21,3 +21,22 @@
 package com.vitorpamplona.quartz.utils
 
 expect fun String.internIfPossible(): String
+
+/**
+ * Truncates to at most [maxUnits] UTF-16 code units **without splitting a
+ * surrogate pair**.
+ *
+ * A plain [take]/[substring] counts UTF-16 code units, so a cut can land
+ * between the two halves of an astral character (e.g. an emoji) and leave a
+ * lone surrogate. A lone surrogate is unencodable as UTF-8: it survives an
+ * in-memory event-id hash but is replaced by '?' the moment the event is
+ * serialized to a relay, so the relay recomputes a different id and rejects the
+ * event. Any truncation whose result ends up inside a signed event (alt,
+ * summary, description, … tags) must go through here.
+ */
+fun String.takeKeepingSurrogatePairs(maxUnits: Int): String {
+    if (maxUnits <= 0) return ""
+    if (length <= maxUnits) return this
+    val end = if (this[maxUnits - 1].isHighSurrogate()) maxUnits - 1 else maxUnits
+    return substring(0, end)
+}

@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.commons.model.nip25Reactions
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -55,6 +57,12 @@ object ReactionAction {
         if (!signer.isWriteable()) {
             throw IllegalStateException("Cannot react: signer is not writeable")
         }
+        if (eventHint.event.sig.isEmpty()) {
+            // Unsealed private rumor: a public kind-7 would e-tag the private
+            // rumor id onto public relays. Use reactToWithGroupSupport, which
+            // gift-wraps reactions for empty-sig targets.
+            throw IllegalStateException("Cannot react publicly to a private rumor")
+        }
 
         // Handle custom emoji reactions (format: ":emoji_name:")
         val template =
@@ -82,10 +90,14 @@ object ReactionAction {
     ): ReactionEvent = reactTo(event, "+", signer)
 
     /**
-     * Advanced: React to an event with support for NIP-17 private groups.
+     * Advanced: React to an event with support for NIP-17 private groups
+     * and unsealed rumors (private replies/posts in the public feed).
      *
-     * This method handles both public and private group reactions:
+     * This method handles both public and private reactions:
      * - For NIP17Group events: Creates private reactions within the group
+     * - For unsealed rumors (empty signature): Creates gift-wrapped
+     *   reactions fanned out to the rumor's author and every tagged user,
+     *   so the private rumor id never lands on a public relay
      * - For regular events: Creates public reactions
      *
      * @param event The event to react to
@@ -108,10 +120,18 @@ object ReactionAction {
 
         val event = eventHint.event
 
-        // Check if this is a NIP-17 private group event
-        if (event is NIP17Group) {
-            val users = event.groupMembers().toList()
+        // Privacy is inherited from the target: reactions to private group
+        // messages and to unsealed rumors must themselves be gift-wrapped.
+        // createWraps adds the sender's self-copy back, so removing the
+        // signer here only avoids a redundant entry.
+        val privateRecipients: List<HexKey>? =
+            when {
+                event is NIP17Group -> event.groupMembers().toList()
+                event.sig.isEmpty() -> (event.taggedUserIds() + event.pubKey).distinct().minus(signer.pubKey)
+                else -> null
+            }
 
+        if (privateRecipients != null) {
             // Handle custom emoji reactions in groups
             if (reaction.startsWith(":")) {
                 val emojiUrl = EmojiUrlTag.decode(reaction)
@@ -120,7 +140,7 @@ object ReactionAction {
                         NIP17Factory().createReactionWithinGroup(
                             emojiUrl = emojiUrl,
                             originalNote = eventHint,
-                            to = users,
+                            to = privateRecipients,
                             signer = signer,
                         ),
                     )
@@ -133,7 +153,7 @@ object ReactionAction {
                 NIP17Factory().createReactionWithinGroup(
                     content = reaction,
                     originalNote = eventHint,
-                    to = users,
+                    to = privateRecipients,
                     signer = signer,
                 ),
             )

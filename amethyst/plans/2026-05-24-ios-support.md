@@ -1,5 +1,8 @@
 # iOS Support for Amethyst
 
+> **Status:** in-progress — `iosArm64`/`iosSimulatorArm64` targets are configured in `quartz` and `commons` (Phase 1), but no `iosApp` module exists yet — later phases not built.
+> _Audited 2026-06-30._
+
 **Date:** 2026-05-24
 **Status:** Phase 1 complete; Phase 2 in flight
 **Owner:** TBD

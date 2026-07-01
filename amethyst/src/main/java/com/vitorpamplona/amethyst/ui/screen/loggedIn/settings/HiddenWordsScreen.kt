@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.ShowUserButton
 import com.vitorpamplona.amethyst.ui.note.elements.AddButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.HiddenWordsFeedViewModel
@@ -120,6 +121,7 @@ fun HiddenWordsScreen(
             viewModel = viewModel,
             selected = selected,
             onToggle = { selected = if (it in selected) selected - it else selected + it },
+            onShow = { showWordIfWritable(accountViewModel, it) },
         )
     }
 }
@@ -130,6 +132,7 @@ private fun HiddenWordsList(
     viewModel: HiddenWordsFeedViewModel,
     selected: Set<String>,
     onToggle: (String) -> Unit,
+    onShow: (String) -> Unit,
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
@@ -151,6 +154,7 @@ private fun HiddenWordsList(
                                 isSelected = word in selected,
                                 selectionMode = selected.isNotEmpty(),
                                 onToggle = { onToggle(word) },
+                                onShow = { onShow(word) },
                             )
                             HorizontalDivider(thickness = DividerThickness)
                         }
@@ -180,6 +184,7 @@ private fun MutedWordRow(
     isSelected: Boolean,
     selectionMode: Boolean,
     onToggle: () -> Unit,
+    onShow: () -> Unit,
 ) {
     val rowModifier =
         Modifier
@@ -207,6 +212,8 @@ private fun MutedWordRow(
         )
         if (selectionMode) {
             Checkbox(checked = isSelected, onCheckedChange = { onToggle() })
+        } else {
+            ShowUserButton(onShow)
         }
     }
 }
@@ -246,6 +253,20 @@ private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
             }
         },
     )
+}
+
+private fun showWordIfWritable(
+    accountViewModel: AccountViewModel,
+    word: String,
+) {
+    if (!accountViewModel.isWriteable()) {
+        accountViewModel.toastManager.toast(
+            R.string.read_only_user,
+            R.string.login_with_a_private_key_to_be_able_to_show_word,
+        )
+    } else {
+        accountViewModel.showWord(word)
+    }
 }
 
 private fun hideIfWritable(

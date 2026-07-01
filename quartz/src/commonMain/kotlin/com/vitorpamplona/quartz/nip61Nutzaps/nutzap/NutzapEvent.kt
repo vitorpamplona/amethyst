@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -43,7 +43,11 @@ class NutzapEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    // content is the optional nutzap message.
+    override fun indexableContent() = content
+
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
@@ -60,7 +64,6 @@ class NutzapEvent(
 
     companion object {
         const val KIND = 9321
-        const val ALT_DESCRIPTION = "Nutzap"
 
         fun build(
             message: String,
@@ -72,12 +75,31 @@ class NutzapEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NutzapEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, message, createdAt) {
-            alt(ALT_DESCRIPTION)
             proofs(proofs)
             mintUrl(mintUrl)
             unit(unit)
             zappedEvent(zappedEvent)
             zappedEventKind(zappedEvent.event.kind)
+            recipient(recipientPubKey)
+            initializer()
+        }
+
+        /**
+         * Nutzap aimed at a profile rather than a specific event: carries only
+         * the `p` tag (no `e`/`k` tags), mirroring NIP-57's profile zaps.
+         */
+        fun buildToUser(
+            message: String,
+            proofs: List<String>,
+            mintUrl: String,
+            unit: String,
+            recipientPubKey: HexKey,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<NutzapEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, message, createdAt) {
+            proofs(proofs)
+            mintUrl(mintUrl)
+            unit(unit)
             recipient(recipientPubKey)
             initializer()
         }

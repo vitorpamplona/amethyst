@@ -93,7 +93,31 @@ class MediaSessionPool(
             .Builder(appContext)
             .setExecutorService(DataSourceBitmapLoader.DEFAULT_EXECUTOR_SERVICE.get())
             .setDataSourceFactory(dataSourceFactory)
+            // Cap decoded artwork to the platform's own metadata bitmap limit so the legacy
+            // MediaSession path never has to re-scale it. media3 would otherwise size-limit the
+            // bitmap using Resources.getSystem()'s config_mediaMetadataBitmapMaxSize, which on
+            // several OEM ROMs (e.g. LineageOS/peridot) is unresolvable and falls back to the full
+            // screen width. That over-sized bitmap then gets re-scaled by the framework inside
+            // android.media.session.MediaSession.setMetadata(), and some of those ROMs recycle the
+            // *source* bitmap during MediaMetadata.Builder.scaleBitmap(). media3's CacheBitmapLoader
+            // caches that now-recycled bitmap and hands it back on the next metadata update, which
+            // crashes with "cannot use a recycled source in createBitmap". Pre-sizing to the same
+            // limit the framework uses keeps build() from ever calling scaleBitmap().
+            .setMaximumOutputDimension(mediaMetadataBitmapMaxSize())
             .build()
+
+    /**
+     * Mirrors how android.media.session.MediaSession derives its metadata bitmap ceiling: the
+     * framework dimension config_mediaMetadataBitmapMaxSize, resolved from the app context so it
+     * matches the value the platform compares against. Falls back to AOSP's 320dp default when the
+     * (hidden, framework-internal) resource can't be resolved by name.
+     */
+    private fun mediaMetadataBitmapMaxSize(): Int {
+        val resources = appContext.resources
+        val id = resources.getIdentifier("config_mediaMetadataBitmapMaxSize", "dimen", "android")
+        val resolved = if (id != 0) resources.getDimensionPixelSize(id) else 0
+        return if (resolved > 0) resolved else (DEFAULT_METADATA_BITMAP_DP * resources.displayMetrics.density).toInt()
+    }
 
     // protects from LruCache killing playing sessions
     private val playingMap = mutableMapOf<String, SessionListener>()
@@ -271,5 +295,9 @@ class MediaSessionPool(
 
     companion object {
         private val CLEANUP_INTERVAL_NS = TimeUnit.MINUTES.toNanos(1)
+
+        // AOSP default for config_mediaMetadataBitmapMaxSize, used when the framework resource
+        // can't be resolved by name on a given ROM.
+        private const val DEFAULT_METADATA_BITMAP_DP = 320
     }
 }

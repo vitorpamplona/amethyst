@@ -7,19 +7,34 @@
     <string name="scan_qr">Scan QR</string>
     <string name="show_anyway">Show Anyway</string>
     <string name="post_not_found_short">👀</string>
+    <!-- A reply whose target was searched for across all reachable history and never found. -->
+    <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
+    <!-- Napplet sandbox chrome (host top bar + live action notices) -->
+    <!-- Napplet capability names -->
+    <!-- Napplet consent dialog -->
+    <!-- Signer permissions: first-connect dialog -->
+    <!-- Signer trust levels -->
+    <!-- Signer per-op consent dialog -->
+    <!-- Signer op labels -->
+    <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <!-- Permissions management screen -->
+    <!-- Relay Authentication (NIP-42) settings -->
     <!-- Call notifications and UI -->
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
+    <!-- Onchain zap send dialog -->
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
     <!-- LAN cast (Chromecast) feature -->
     <!-- HLS multi-resolution video sharing -->
     <!-- NIP-75 Zap Goals -->
+    <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <!-- NIP-86 Relay Management -->
     <!-- Emoji packs -->
     <!-- NIP-9B community rules composer-side validation. -->
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <!-- Marmot (MLS) group chats -->
 </resources>

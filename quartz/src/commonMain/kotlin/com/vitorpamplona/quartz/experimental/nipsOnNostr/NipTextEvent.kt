@@ -45,7 +45,6 @@ import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -66,7 +65,7 @@ class NipTextEvent(
     AddressHintProvider,
     IForkableEvent,
     SearchableEvent {
-    override fun indexableContent() = "title: " + title() + "\n" + content
+    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
     override fun dTag() = tags.dTag()
 
@@ -139,7 +138,6 @@ class NipTextEvent(
             initializer: TagArrayBuilder<NipTextEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description, createdAt) {
             dTag(dTag)
-            alt("NIP: $title")
 
             title(title)
             kinds(kinds)

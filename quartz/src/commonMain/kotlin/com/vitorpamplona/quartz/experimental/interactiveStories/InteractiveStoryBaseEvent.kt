@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 @Stable
 open class InteractiveStoryBaseEvent(
@@ -37,7 +38,10 @@ open class InteractiveStoryBaseEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)

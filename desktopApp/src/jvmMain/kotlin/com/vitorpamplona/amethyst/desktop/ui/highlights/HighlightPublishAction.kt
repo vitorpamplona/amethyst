@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.desktop.ui.highlights
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip84Highlights.tags.CommentTag
 import com.vitorpamplona.quartz.nip84Highlights.tags.ContextTag
@@ -39,7 +38,6 @@ object HighlightPublishAction {
     ): HighlightEvent {
         val tags = mutableListOf<Array<String>>()
 
-        tags.add(AltTag.assemble(HighlightEvent.ALT))
         tags.add(ATag.assemble(articleAddressTag, null))
 
         // Tag the article author

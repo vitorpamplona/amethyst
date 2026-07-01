@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip05DnsIdentifiers
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.text
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -42,6 +44,33 @@ class Nip05Parser {
             ?.jsonObject[nip05.name]
             ?.jsonPrimitive
             ?.content
+
+    /**
+     * Reads a CLINK Offers pointer (`noffer1…`) from a NIP-05 `.well-known/nostr.json`.
+     *
+     * Two shapes are seen in the wild and both are accepted:
+     *  - the spec/SDK map, keyed by the local name like `names` —
+     *    `{"clink_offer": {"bob": "noffer1…"}}` (queried as `?name=<name>`);
+     *  - bridgelet's flat top-level string — `{"clink_offer": "noffer1…"}` (one alias per file).
+     *
+     * A missing or differently-shaped entry simply yields null.
+     */
+    fun parseClinkOffer(
+        nip05: Nip05Id,
+        json: String,
+    ): String? =
+        try {
+            val element = Json.parseToJsonElement(json).jsonObject["clink_offer"]
+            val raw =
+                when (element) {
+                    is JsonObject -> element[nip05.name]?.jsonPrimitive?.content
+                    is JsonPrimitive -> element.content
+                    else -> null
+                }
+            raw?.takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        }
 
     fun parseHexKeyAndRelays(
         nip05: Nip05Id,

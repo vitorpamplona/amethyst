@@ -39,9 +39,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -95,6 +97,8 @@ import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import kotlinx.coroutines.launch
@@ -188,9 +192,24 @@ fun ChatPane(
     val users = roomKey.users.mapNotNull { cacheProvider.getUserIfExists(it) }
     val isGroup = users.size > 1
 
+    // NIP-14 group subject/name, updated reactively as subject-tagged messages arrive.
+    val subjectFlow = remember(roomKey) { account.chatroomList.getOrCreatePrivateChatroom(roomKey).subject }
+    val subject by subjectFlow.collectAsState()
+    var showSubjectDialog by remember { mutableStateOf(false) }
+
     // Load room into message state
     LaunchedEffect(roomKey) {
         messageState.load(roomKey)
+    }
+
+    if (showSubjectDialog) {
+        GroupSubjectDialog(
+            roomKey = roomKey,
+            currentSubject = subject ?: "",
+            account = account,
+            cacheProvider = cacheProvider,
+            onClose = { showSubjectDialog = false },
+        )
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -230,6 +249,7 @@ fun ChatPane(
                     if (isGroup) {
                         GroupChatroomHeader(
                             users = users,
+                            subject = subject,
                             onClick = { users.firstOrNull()?.let { onNavigateToProfile(it.pubkeyHex) } },
                         )
                     } else {
@@ -246,6 +266,21 @@ fun ChatPane(
                                 modifier = Modifier.padding(10.dp),
                             )
                         }
+                    }
+                }
+
+                // Rename group (set NIP-14 subject) — groups only
+                if (isGroup) {
+                    IconButton(
+                        onClick = { showSubjectDialog = true },
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Icon(
+                            MaterialSymbols.Edit,
+                            contentDescription = "Rename group",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -873,4 +908,73 @@ private suspend fun sendEncryptedFiles(
             )
         account.sendNip17EncryptedFile(template)
     }
+}
+
+/**
+ * Dialog to set or change a group's NIP-14 subject (name). Mirrors Android's
+ * NewChatroomSubjectDialog: it sends a normal NIP-17 message carrying a
+ * `subject` tag (plus an optional accompanying message) to every room member,
+ * so all participants pick up the new name.
+ */
+@Composable
+private fun GroupSubjectDialog(
+    roomKey: ChatroomKey,
+    currentSubject: String,
+    account: IAccount,
+    cacheProvider: ICacheProvider,
+    onClose: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    var groupName by remember { mutableStateOf(currentSubject) }
+    var message by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text("Group name") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = groupName,
+                    onValueChange = { groupName = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Subject") },
+                    placeholder = { Text("A name for this group") },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = message,
+                    onValueChange = { message = it },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp),
+                    label = { Text("Message (optional)") },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = groupName.isNotBlank(),
+                onClick = {
+                    scope.launch {
+                        try {
+                            val pTags = roomKey.users.mapNotNull { cacheProvider.getUserIfExists(it)?.toPTag() }
+                            val template =
+                                ChatMessageEvent.build(message, pTags) {
+                                    groupName.ifBlank { null }?.let { changeSubject(it) }
+                                }
+                            account.sendNip17PrivateMessage(template)
+                        } catch (e: Exception) {
+                            println("Failed to set group subject: ${e.message}")
+                        }
+                    }
+                    onClose()
+                },
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onClose) {
+                Text("Cancel")
+            }
+        },
+    )
 }

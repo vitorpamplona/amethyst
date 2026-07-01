@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -55,7 +54,6 @@ class StallEvent(
 
     companion object {
         const val KIND = 30017
-        const val ALT_DESCRIPTION = "Marketplace stall"
 
         fun build(
             stall: StallData,
@@ -63,7 +61,6 @@ class StallEvent(
             initializer: TagArrayBuilder<StallEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, JsonMapper.toJson(stall), createdAt) {
             dTag(stall.id)
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

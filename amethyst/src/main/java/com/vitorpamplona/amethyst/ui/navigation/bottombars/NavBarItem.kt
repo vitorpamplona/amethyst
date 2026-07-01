@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
+import android.os.Build
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -50,7 +51,13 @@ enum class NavBarItem {
     COMMUNITIES,
     ARTICLES,
     PICTURES,
+    WORKOUTS,
+    GIT_REPOSITORIES,
     SOFTWARE_APPS,
+    NAPPLETS,
+    NSITES,
+    BROWSER,
+    FAVORITE_APPS,
     CALENDARS,
     CALENDAR_COLLECTIONS,
     SHORTS,
@@ -206,12 +213,54 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Photo,
                 resolveRoute = { Route.Pictures },
             ),
+        NavBarItem.WORKOUTS to
+            NavBarItemDef(
+                id = NavBarItem.WORKOUTS,
+                labelRes = R.string.workouts,
+                icon = MaterialSymbols.DirectionsRun,
+                resolveRoute = { Route.Workouts },
+            ),
+        NavBarItem.GIT_REPOSITORIES to
+            NavBarItemDef(
+                id = NavBarItem.GIT_REPOSITORIES,
+                labelRes = R.string.git_repositories,
+                icon = MaterialSymbols.Code,
+                resolveRoute = { Route.GitRepositories },
+            ),
         NavBarItem.SOFTWARE_APPS to
             NavBarItemDef(
                 id = NavBarItem.SOFTWARE_APPS,
                 labelRes = R.string.software_apps,
                 icon = MaterialSymbols.Apps,
                 resolveRoute = { Route.SoftwareApps },
+            ),
+        NavBarItem.NAPPLETS to
+            NavBarItemDef(
+                id = NavBarItem.NAPPLETS,
+                labelRes = R.string.napplets,
+                icon = MaterialSymbols.Apps,
+                resolveRoute = { Route.Napplets },
+            ),
+        NavBarItem.NSITES to
+            NavBarItemDef(
+                id = NavBarItem.NSITES,
+                labelRes = R.string.nsites,
+                icon = MaterialSymbols.Language,
+                resolveRoute = { Route.Nsites },
+            ),
+        NavBarItem.BROWSER to
+            NavBarItemDef(
+                id = NavBarItem.BROWSER,
+                labelRes = R.string.browser,
+                icon = MaterialSymbols.Language,
+                resolveRoute = { Route.Browser },
+            ),
+        NavBarItem.FAVORITE_APPS to
+            NavBarItemDef(
+                id = NavBarItem.FAVORITE_APPS,
+                labelRes = R.string.favorite_apps,
+                icon = MaterialSymbols.Star,
+                resolveRoute = { Route.FavoriteApps },
             ),
         NavBarItem.CALENDARS to
             NavBarItemDef(
@@ -338,11 +387,13 @@ val DefaultBottomBarItems: List<NavBarItem> =
     listOf(
         NavBarItem.HOME,
         NavBarItem.MESSAGES,
-        NavBarItem.VIDEO,
-        NavBarItem.DISCOVER,
-        NavBarItem.FAVORITE_ALGO_FEEDS,
+        NavBarItem.WALLET,
+        NavBarItem.BROWSER,
         NavBarItem.NOTIFICATIONS,
     )
+
+/** The default bottom bar as unified entries (all built-in; favorites are added by the user). */
+val DefaultBottomBarEntries: List<BottomBarEntry> = DefaultBottomBarItems.map { BottomBarEntry.BuiltIn(it) }
 
 // Ordered membership lists for each drawer section. The drawer renders these by looking up
 // each id in NavBarCatalog, so adding a new screen only requires editing the catalog + the
@@ -352,6 +403,7 @@ val DrawerNavigateItems: List<NavBarItem> =
         NavBarItem.HOME,
         NavBarItem.MESSAGES,
         NavBarItem.VIDEO,
+        NavBarItem.BROWSER,
         NavBarItem.DISCOVER,
         NavBarItem.NOTIFICATIONS,
     )
@@ -371,24 +423,31 @@ val DrawerYouItems: List<NavBarItem> =
 
 val DrawerFeedsItems: List<NavBarItem> =
     listOfNotNull(
-        NavBarItem.COMMUNITIES,
         NavBarItem.ARTICLES,
         NavBarItem.PICTURES,
-        NavBarItem.SOFTWARE_APPS,
-        NavBarItem.CALENDARS,
-        NavBarItem.CALENDAR_COLLECTIONS,
         NavBarItem.SHORTS,
-        NavBarItem.MUSIC_TRACKS,
-        NavBarItem.MUSIC_PLAYLISTS,
+        NavBarItem.LONGS,
         NavBarItem.PODCAST_EPISODES,
         NavBarItem.PODCASTS,
-        NavBarItem.PUBLIC_CHATS,
-        NavBarItem.FOLLOW_PACKS,
+        NavBarItem.MUSIC_TRACKS,
+        NavBarItem.MUSIC_PLAYLISTS,
+        NavBarItem.POLLS,
+        NavBarItem.PRODUCTS,
+        NavBarItem.WORKOUTS,
+        NavBarItem.GIT_REPOSITORIES,
         NavBarItem.LIVE_STREAMS,
         NavBarItem.NESTS,
-        NavBarItem.LONGS,
-        NavBarItem.POLLS,
+        NavBarItem.COMMUNITIES,
+        NavBarItem.PUBLIC_CHATS,
+        NavBarItem.CALENDARS,
+        NavBarItem.CALENDAR_COLLECTIONS,
+        NavBarItem.SOFTWARE_APPS,
+        // Favorites can be pinned as inline tabs that render on a cross-process surface
+        // (SurfaceControlViewHost), which needs API 30+. Gate the whole grid on R+ for that reason.
+        NavBarItem.FAVORITE_APPS.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
+        NavBarItem.NAPPLETS,
+        NavBarItem.NSITES,
+        NavBarItem.FOLLOW_PACKS,
         NavBarItem.BADGES,
-        NavBarItem.PRODUCTS,
         NavBarItem.EMOJI_SETS,
     )

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -38,6 +39,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
@@ -52,6 +54,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.TopGradie
 import com.vitorpamplona.amethyst.service.playback.composable.controls.fullscreenSwipeControls
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.AudioPlayingAnimation
+import com.vitorpamplona.amethyst.service.playback.composable.wavefront.rememberIsAudioTrack
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.ui.components.getDialogWindow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -129,9 +132,22 @@ fun RenderVideoPlayer(
 
     WatchPlaybackErrors(controllerState)
 
+    // Audio files have no video dimensions, so without this the player collapses to a thin strip and
+    // the controls get crammed. Size it square (capped) so the visualizer and controls get room.
+    // Voice notes keep their seek-bar strip; the full-screen dialog fills the screen.
+    val tracksAreAudio by rememberIsAudioTrack(controllerState.controller)
+    val squarePlayer =
+        shouldSquareAudioPlayer(
+            isFullscreen = isFullscreen,
+            isVoiceNote = mediaItem.src.waveformData != null,
+            isAudioMime = mediaItem.src.mimeType?.startsWith("audio/") == true,
+            tracksAreAudio = tracksAreAudio,
+        )
+    val playerModifier = if (squarePlayer) borderModifier.audioSquare() else borderModifier
+
     Box(
         modifier =
-            borderModifier
+            playerModifier
                 .onSizeChanged { containerWidth[0] = it.width }
                 .pointerInput(isLive, controllerState) {
                     detectTapGestures(
@@ -180,10 +196,14 @@ fun RenderVideoPlayer(
             modifier = Modifier.align(Alignment.Center),
         )
 
+        val visualizerStyle by accountViewModel.audioVisualizerFlow().collectAsStateWithLifecycle()
         AudioPlayingAnimation(
-            controllerState,
-            mediaItem.src.waveformData,
-            Modifier.fillMaxSize().align(Alignment.Center),
+            controllerState = controllerState,
+            waveform = mediaItem.src.waveformData,
+            mediaId = mediaItem.src.videoUri,
+            style = visualizerStyle,
+            isAudio = tracksAreAudio,
+            modifier = Modifier.fillMaxSize().align(Alignment.Center),
             hasBlurhash = hasBlurhash,
         )
 

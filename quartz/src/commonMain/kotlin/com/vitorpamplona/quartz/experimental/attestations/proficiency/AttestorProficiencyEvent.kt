@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -37,14 +37,16 @@ class AttestorProficiencyEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(description()).joinToString("\n")
+
     fun kinds() = tags.kinds()
 
     fun description() = content.ifBlank { null }
 
     companion object {
         const val KIND = 11871
-        const val ALT_DESCRIPTION = "Attestor Proficiency Declaration"
 
         fun build(
             kinds: List<Kind>,
@@ -52,7 +54,6 @@ class AttestorProficiencyEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<AttestorProficiencyEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description ?: "", createdAt) {
-            alt(ALT_DESCRIPTION)
             kinds(kinds)
             initializer()
         }

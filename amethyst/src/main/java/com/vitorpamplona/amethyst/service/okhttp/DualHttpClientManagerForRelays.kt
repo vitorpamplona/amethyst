@@ -36,8 +36,9 @@ class DualHttpClientManagerForRelays(
     isMobileDataProvider: StateFlow<Boolean?>,
     scope: CoroutineScope,
     dns: SurgeDns,
+    onionCache: OnionLocationCache,
 ) : IHttpClientManager {
-    val factory = OkHttpClientFactoryForRelays(userAgent, dns)
+    val factory = OkHttpClientFactoryForRelays(userAgent, dns, onionCache)
 
     val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->

@@ -137,7 +137,7 @@ class KtorRelayTest {
             assertEquals(200, it.code)
             val body = it.body.string()
             val info = Nip11RelayInformation.fromJson(body)
-            assertEquals("geode", info.name)
+            assertEquals("Geode", info.name)
             assertTrue(info.supported_nips!!.contains("11"), "NIP-11 must be advertised")
             assertTrue(info.supported_nips!!.contains("1"), "NIP-01 must be advertised")
         }
@@ -246,7 +246,7 @@ class KtorRelayTest {
                     com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator(
                         client = client,
                         scope = scope,
-                    ) { template ->
+                    ) { _, template ->
                         listOf(signer.sign(template))
                     }
                 try {

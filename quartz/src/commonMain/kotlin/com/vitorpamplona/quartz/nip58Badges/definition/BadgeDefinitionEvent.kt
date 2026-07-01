@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.tags.ImageTag
 import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -40,7 +40,10 @@ class BadgeDefinitionEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(name(), description(), content).joinToString("\n")
+
     fun name() = tags.badgeName()
 
     fun image() = tags.badgeImageUrl()
@@ -55,7 +58,6 @@ class BadgeDefinitionEvent(
 
     companion object {
         const val KIND = 30009
-        const val ALT_DESCRIPTION = "Badge definition"
 
         fun build(
             badgeId: String,
@@ -67,7 +69,6 @@ class BadgeDefinitionEvent(
             initializer: TagArrayBuilder<BadgeDefinitionEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             dTag(badgeId)
-            alt(ALT_DESCRIPTION)
             name?.let { name(it) }
             image?.let { image(it.url, it.dimensions) }
             description?.let { description(it) }
@@ -88,7 +89,6 @@ class BadgeDefinitionEvent(
             initializer: TagArrayBuilder<BadgeDefinitionEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             dTag(badgeId)
-            alt(ALT_DESCRIPTION)
             name?.let { name(it) }
             imageUrl?.let { image(it, imageDimensions) }
             description?.let { description(it) }

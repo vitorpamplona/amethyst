@@ -171,12 +171,14 @@ fun TagArray.isAnyLowercaseTagged(
 ) = this.fastAny { it.size > 1 && it[0] == tagName && it[1].lowercase() in tagValues }
 
 /**
- * Returns `true` if at least one tag has value that contains [text]
+ * Returns `true` if at least one tag has value that contains [text].
+ * Tags whose name is in [exceptNames] are skipped.
  */
 fun TagArray.tagValueContains(
     text: String,
     ignoreCase: Boolean = false,
-) = this.fastAny { it.size > 1 && it[1].contains(text, ignoreCase) }
+    exceptNames: Set<String> = emptySet(),
+) = this.fastAny { it.size > 1 && it[0] !in exceptNames && it[1].contains(text, ignoreCase) }
 
 fun TagArray.containsAllTagNamesWithValues(names: Set<String>): Boolean {
     val remaining = names.toMutableSet()

@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -114,6 +115,11 @@ open class NewProductViewModel :
     IExpiration {
     val draftTag = DraftTagState()
 
+    // Strong reference to the live cache note for the current draft tag (derived from the
+    // versions flow below), so LocalCache cannot weakly collect it before a deletion needs it.
+    var draftNote: AddressableNote? = null
+        private set
+
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
@@ -122,6 +128,7 @@ open class NewProductViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
+                    draftNote = account.getOrCreateDraftNote(draftTag.current)
                     accountViewModel.launchSigner {
                         sendDraftSync()
                     }
@@ -218,6 +225,7 @@ open class NewProductViewModel :
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
                     if (oldTag != null) {
                         draftTag.set(oldTag)
+                        draftNote = account.getOrCreateDraftNote(oldTag)
                     }
                     loadFromDraft(innerNote)
                 }
@@ -315,18 +323,18 @@ open class NewProductViewModel :
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
 
-        val version = draftTag.current
+        val draftToDelete = draftNote
         cancel()
 
         accountViewModel.account.signAndSendPrivatelyOrBroadcast(template, relayList = { relayList })
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel.account.deleteDraftIgnoreErrors(version)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val template = createTemplate() ?: return
             accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)

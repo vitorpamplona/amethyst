@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.net.URLEncoder
 import kotlin.reflect.KClass
 
 private const val NOSTR_URI_PREFIX = "nostr:"
@@ -142,6 +143,10 @@ class BouncingIntentNav(
 
             is Route.Hashtag -> {
                 NOSTR_URI_PREFIX + "hashtag?id=" + route.hashtag
+            }
+
+            is Route.Url -> {
+                NOSTR_URI_PREFIX + "url?id=" + URLEncoder.encode(route.url, Charsets.UTF_8.name())
             }
 
             is Route.LiveActivityChannel -> {

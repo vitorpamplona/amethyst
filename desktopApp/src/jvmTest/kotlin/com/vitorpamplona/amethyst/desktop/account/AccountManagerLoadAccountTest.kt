@@ -34,6 +34,7 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -148,6 +149,84 @@ class AccountManagerLoadAccountTest {
             assertTrue(result.isSuccess)
             val state = result.getOrThrow()
             assertIs<SignerType.Remote>(state.signerType)
+        }
+
+    @Test
+    fun loadSavedAccountInternalNoPrivkeySignalsKeychainUnavailable() =
+        runTest {
+            val keyPair = KeyPair()
+            val npub = keyPair.pubKey.toNpub()
+
+            manager.accountStorage.saveAccount(AccountInfo(npub = npub, signerType = SignerType.Internal))
+            manager.accountStorage.setCurrentAccount(npub)
+            coEvery { storage.getPrivateKey(npub) } returns null
+
+            assertFalse(manager.keychainUnavailable.value, "precondition: signal starts cleared")
+            manager.loadSavedAccount()
+            assertTrue(
+                manager.keychainUnavailable.value,
+                "accounts.json.enc had an Internal account but the keychain returned null — must signal",
+            )
+        }
+
+    @Test
+    fun loadSavedAccountBunkerNoEphemeralSignalsKeychainUnavailable() =
+        runTest {
+            val validHex = "a".repeat(64)
+            val keyPair = KeyPair()
+            val npub = keyPair.pubKey.toNpub()
+
+            manager.accountStorage.saveAccount(
+                AccountInfo(npub = npub, signerType = SignerType.Remote("bunker://$validHex?relay=wss://r.com")),
+            )
+            manager.accountStorage.setCurrentAccount(npub)
+            coEvery {
+                storage.getPrivateKey(AccountManager.bunkerEphemeralKeyAlias(npub))
+            } returns null
+            coEvery {
+                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
+            } returns null
+
+            assertFalse(manager.keychainUnavailable.value, "precondition: signal starts cleared")
+            manager.loadSavedAccount()
+            assertTrue(
+                manager.keychainUnavailable.value,
+                "accounts.json.enc had a Remote bunker account but the ephemeral key was missing — must signal",
+            )
+        }
+
+    @Test
+    fun clearKeychainUnavailableResetsSignal() =
+        runTest {
+            val keyPair = KeyPair()
+            val npub = keyPair.pubKey.toNpub()
+
+            manager.accountStorage.saveAccount(AccountInfo(npub = npub, signerType = SignerType.Internal))
+            manager.accountStorage.setCurrentAccount(npub)
+            coEvery { storage.getPrivateKey(npub) } returns null
+
+            manager.loadSavedAccount()
+            assertTrue(manager.keychainUnavailable.value)
+            manager.clearKeychainUnavailable()
+            assertFalse(manager.keychainUnavailable.value)
+        }
+
+    @Test
+    fun loadSavedAccountInternalWithPrivkeyDoesNotSignalKeychainUnavailable() =
+        runTest {
+            val keyPair = KeyPair()
+            val npub = keyPair.pubKey.toNpub()
+            val privKeyHex = keyPair.privKey!!.toHexKey()
+
+            manager.accountStorage.saveAccount(AccountInfo(npub = npub, signerType = SignerType.Internal))
+            manager.accountStorage.setCurrentAccount(npub)
+            coEvery { storage.getPrivateKey(npub) } returns privKeyHex
+
+            manager.loadSavedAccount()
+            assertFalse(
+                manager.keychainUnavailable.value,
+                "happy path must not raise the keychain-unavailable signal",
+            )
         }
 
     @Test

@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.tags.FreeBusyTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -68,7 +67,6 @@ class CalendarRSVPEvent(
 
     companion object {
         const val KIND = 31925
-        const val ALT = "Calendar event's invitation response"
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
@@ -88,7 +86,6 @@ class CalendarRSVPEvent(
             calendarEventId?.let { add(it.toTagArray()) }
             calendarEventAuthor?.let { add(it.toTagArray()) }
             freebusy?.let { freebusy(it) }
-            alt(ALT)
             initializer()
         }
     }

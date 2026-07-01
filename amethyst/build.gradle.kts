@@ -76,9 +76,12 @@ android {
             libs.versions.android.targetSdk
                 .get()
                 .toInt()
-        versionCode = 447
+        versionCode =
+            libs.versions.appCode
+                .get()
+                .toInt()
         versionName = generateVersionName(libs.versions.app.get(), rootDir)
-        buildConfigField("String", "RELEASE_NOTES_ID", "\"8ec0d94550b5538115226c6858159b1115713c9c6ed942173bd4fd5d292d8ba6\"")
+        buildConfigField("String", "RELEASE_NOTES_ID", "\"40e817712e397c07ba31784a92fa474aa095896a828c0e2dea0d09c60d49ee1e\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -261,6 +264,23 @@ android {
         resValues = true
     }
 
+    // Reproducible builds: keep AGP from embedding the dependency-metadata blob
+    // in the APK/AAB. That blob is a protobuf of the resolved dependency tree
+    // encrypted with a Google public key; the ciphertext is non-deterministic,
+    // so its presence makes every release artifact impossible to reproduce
+    // bit-for-bit. Dropping it (F-Droid's documented recommendation) lets
+    // F-Droid / Zapstore independently rebuild and verify our developer-signed
+    // APKs.
+    //
+    // Play-channel trade-off: with includeInBundle = false the uploaded .aab no
+    // longer carries this metadata, so Play Console's app-dependency insights /
+    // known-vulnerability SDK alerts go unpopulated. Uploads still succeed; only
+    // that advisory feature is lost.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     packaging {
         resources {
             excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "**/libscrypt.dylib")
@@ -282,7 +302,7 @@ android {
         unitTests.all { test ->
             test.systemProperty(
                 "java.library.path",
-                "${projectDir}/src/test/native-libs/x86_64-linux",
+                "$projectDir/src/test/native-libs/x86_64-linux",
             )
             project
                 .findProperty("amethyst.arti.integration")
@@ -328,11 +348,30 @@ composeCompiler {
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
 
+    // Compose composition tracing — DEBUG ONLY, profiling aid (not shipped). Makes each
+    // recomposition show up as a NAMED slice in Perfetto system traces so we can see which
+    // composable recomposes (e.g. during the cold-start feed first-paint). All Apache-2.0.
+    // Usage: runtime-enable, then capture a Perfetto trace with the `track_event` data source:
+    //   adb shell am broadcast -a androidx.tracing.perfetto.action.ENABLE_TRACING \
+    //     -n com.vitorpamplona.amethyst.debug/androidx.tracing.perfetto.TracingReceiver
+    debugImplementation("androidx.compose.runtime:runtime-tracing")
+    debugImplementation("androidx.tracing:tracing-perfetto:1.0.0")
+    debugImplementation("androidx.tracing:tracing-perfetto-binary:1.0.0")
+
     implementation(project(":quartz"))
     implementation(project(":commons"))
     implementation(project(":nestsClient"))
+    implementation(project(":nappletHost"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // Hardened WebView host for sandboxed napplet/nsite rendering (origin-restricted message bridge).
+    implementation(libs.androidx.webkit)
+
+    // Client side of the cross-process UI embedding: renders the sandboxed browser surface (hosted in
+    // the keyless `:napplet` process) inside a Compose component in the main app.
+    implementation(libs.androidx.privacysandbox.ui.core)
+    implementation(libs.androidx.privacysandbox.ui.client)
 
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -364,6 +403,9 @@ dependencies {
 
     // Background Work
     implementation(libs.androidx.work.runtime.ktx)
+
+    // Reads workouts from Android Health Connect (Samsung Health, Google Fit, Fitbit, Garmin, …)
+    implementation(libs.androidx.health.connect.client)
 
     // Websockets API
     implementation(libs.okhttp)
@@ -402,6 +444,9 @@ dependencies {
     implementation(libs.zxing)
     implementation(libs.zxing.embedded)
 
+    // OpenStreetMap tiles for road event location maps (kind 1315/1316)
+    implementation(libs.osmdroid.android)
+
     // Markdown
     // implementation "com.halilibo.compose-richtext:richtext-ui:0.16.0"
     // implementation "com.halilibo.compose-richtext:richtext-ui-material:0.16.0"
@@ -411,6 +456,14 @@ dependencies {
     implementation(libs.markdown.ui)
     implementation(libs.markdown.ui.material3)
     implementation(libs.markdown.commonmark)
+
+    // Syntax highlighting for the git repository code browser (Apache-2.0)
+    implementation(libs.highlights)
+
+    // LaTeX math rendering ($...$ and $$...$$ inline equations)
+    implementation(libs.jlatexmath.android)
+    implementation(libs.jlatexmath.font.greek)
+    implementation(libs.jlatexmath.font.cyrillic)
 
     // Language picker and Theme chooser
     implementation(libs.androidx.appcompat)
@@ -468,9 +521,6 @@ dependencies {
 
     // EXIF metadata stripping
     implementation(libs.androidx.exifinterface)
-
-    // Voice anonymization DSP
-    implementation(libs.tarsosdsp)
 
     // WebRTC for voice/video calls
     implementation(libs.stream.webrtc.android)

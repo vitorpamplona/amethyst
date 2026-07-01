@@ -1,11 +1,12 @@
 [versions]
 # Amethyst app version — single source of truth consumed by both Android (amethyst/)
-# and Desktop (desktopApp/). Android versionCode is bumped independently in
-# amethyst/build.gradle because it must be a monotonic integer.
-app = "1.11.0"
+# and Desktop (desktopApp/). `appCode` is the Android versionCode: a monotonic
+# integer that must increment on every release, even when `app` is unchanged.
+app = "1.12.6"
+appCode = "454"
 accompanistAdaptive = "0.37.3"
 cachemapVersion = "0.2.4"
-composeMultiplatform = "1.11.0"
+composeMultiplatform = "1.11.1"
 activityCompose = "1.13.0"
 agp = "9.2.1"
 android-compileSdk = "37"
@@ -16,24 +17,25 @@ appcompat = "1.7.1"
 audiowaveform = "1.1.2"
 benchmark = "1.5.0-alpha06"
 biometricKtx = "1.2.0-alpha05"
-coil = "3.4.0"
-composeBom = "2026.05.01"
-composeRuntimeAnnotation = "1.11.2"
-coreKtx = "1.18.0"
+coil = "3.5.0"
+composeBom = "2026.06.00"
+composeRuntimeAnnotation = "1.11.3"
+coreKtx = "1.19.0"
 datastore = "1.2.1"
 devWhyolegCryptography = "0.6.0"
 espressoCore = "3.7.0"
-firebaseBom = "34.14.0"
+firebaseBom = "34.15.0"
 fragmentKtx = "1.8.9"
-gms = "4.4.4"
-jacksonModuleKotlin = "2.21.4"
+gms = "4.5.0"
+healthConnect = "1.1.0"
+jacksonModuleKotlin = "2.22.0"
 javaKeyring = "1.0.4"
 kmpTorRuntime = "2.6.0"
 kmpTorResource = "409.5.0"
 junit = "4.13.2"
 kchesslib = "1.0.5"
-kotlin = "2.3.21"
-kotlinxCollectionsImmutable = "0.4.0"
+kotlin = "2.4.0"
+kotlinxCollectionsImmutable = "0.5.0"
 kotlinxCoroutinesCore = "1.11.0"
 kotlinxSerialization = "1.11.0"
 genaiProofreading = "1.0.0-beta1"
@@ -41,9 +43,11 @@ genaiPrompt = "1.0.0-beta2"
 genaiRewriting = "1.0.0-beta1"
 genaiImageDescription = "1.0.0-beta1"
 languageId = "17.0.6"
-lifecycleRuntimeKtx = "2.10.0"
+lifecycleRuntimeKtx = "2.11.0"
 lightcompressor-enhanced = "2.2.1"
+jlatexmath = "1.4"
 markdown = "f92ef49c9d"
+highlights = "1.1.0"
 material3 = "1.9.0"
 media3 = "1.10.1"
 mockk = "1.14.11"
@@ -51,48 +55,54 @@ kotlinx-coroutines-test = "1.11.0"
 negentropyKmp = "v1.0.2"
 netUrlencoderLibVersion = "1.6.0"
 navigationCompose = "2.9.8"
-okhttp = "5.3.2"
+okhttp = "5.4.0"
+osmdroid = "6.1.20"
 runner = "1.7.0"
 secp256k1KmpJniAndroid = "0.23.0"
 schnorr256k1Kmp = "1.0.5"
 securityCryptoKtx = "1.1.0"
 slf4j = "2.0.18"
-spotless = "8.6.0"
+spotless = "8.8.0"
 streamWebrtcAndroid = "1.3.10"
-tarsosdsp = "2.5"
 translate = "17.0.3"
-jetbrainsCompose = "1.11.0"
+jetbrainsCompose = "1.11.1"
 unifiedpush = "3.0.10"
 playServicesCast = "22.3.1"
-vico-charts-compose = "3.1.0"
+vico-charts-compose = "3.2.3"
 zelory = "3.0.1"
 zoomable = "2.12.0"
-vlcj = "4.8.3"
+composemediaplayer = "0.10.0"
+jcodec = "0.2.5"
 commonsImaging = "1.0.0-alpha6"
+thumbnailator = "0.4.21"
 zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
+webkit = "1.16.0"
+# Cross-process UI embedding (SurfaceControlViewHost wrapper) for the in-app browser surface. Apache-2.0.
+privacysandboxUi = "1.0.0-alpha17"
 windowCoreAndroid = "1.5.1"
 workRuntime = "2.11.2"
 androidxCamera = "1.6.1"
 androidxCollection = "1.6.0"
 androidxExifinterface = "1.4.2"
-kotlinTest = "2.3.21"
+kotlinTest = "2.4.0"
 core = "1.7.0"
-mavenPublish = "0.36.0"
+mavenPublish = "0.37.0"
 sqlite = "2.6.2"
-ktor = "3.5.0"
+ktor = "3.5.1"
 fourkoma = "1.2.0"
 
 # Phase 2 (Gemini App Functions) — both still pre-stable as of May 2026.
 # Scoped to the play flavor only (see amethyst/build.gradle.kts) so the
 # fdroid channel doesn't pull in Google alpha dependencies.
 appfunctions = "1.0.0-alpha09"
-ksp = "2.3.8"
+ksp = "2.3.9"
 
 [libraries]
 abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor-enhanced" }
 accompanist-adaptive = { group = "com.google.accompanist", name = "accompanist-adaptive", version.ref = "accompanistAdaptive" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistAdaptive" }
+androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activityCompose" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-appfunctions = { group = "androidx.appfunctions", name = "appfunctions", version.ref = "appfunctions" }
@@ -144,8 +154,11 @@ coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil"
 coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
 commons-imaging = { group = "org.apache.commons", name = "commons-imaging", version.ref = "commonsImaging" }
+thumbnailator = { group = "net.coobird", name = "thumbnailator", version.ref = "thumbnailator" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
-vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
+composemediaplayer = { group = "io.github.kdroidfilter", name = "composemediaplayer", version.ref = "composemediaplayer" }
+jcodec = { group = "org.jcodec", name = "jcodec", version.ref = "jcodec" }
+jcodec-javase = { group = "org.jcodec", name = "jcodec-javase", version.ref = "jcodec" }
 dev-whyoleg-cryptography-provider-apple-optimal = { module = "dev.whyoleg.cryptography:cryptography-provider-optimal", version.ref = "devWhyolegCryptography" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
@@ -173,9 +186,13 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinxSerialization" }
+jlatexmath-android = { module = "com.github.rikkahub.jlatexmath-android:jlatexmath", version.ref = "jlatexmath" }
+jlatexmath-font-greek = { module = "com.github.rikkahub.jlatexmath-android:jlatexmath-font-greek", version.ref = "jlatexmath" }
+jlatexmath-font-cyrillic = { module = "com.github.rikkahub.jlatexmath-android:jlatexmath-font-cyrillic", version.ref = "jlatexmath" }
 markdown-commonmark = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-commonmark", version.ref = "markdown" }
 markdown-ui = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui", version.ref = "markdown" }
 markdown-ui-material3 = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui-material3", version.ref = "markdown" }
+highlights = { group = "dev.snipme", name = "highlights", version.ref = "highlights" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}
@@ -183,6 +200,7 @@ negentropy-kmp = { module = "com.vitorpamplona.negentropy:kmp-negentropy", versi
 net-thauvin-erik-urlencoder-lib = { module = "net.thauvin.erik.urlencoder:urlencoder-lib", version.ref = "netUrlencoderLibVersion" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }
+osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktor" }
 ktor-server-cio = { group = "io.ktor", name = "ktor-server-cio", version.ref = "ktor" }
 ktor-server-websockets = { group = "io.ktor", name = "ktor-server-websockets", version.ref = "ktor" }
@@ -192,10 +210,13 @@ secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-km
 secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm", version.ref = "secp256k1KmpJniAndroid" }
 schnorr256k1-kmp = { group = "com.vitorpamplona.schnorr256k1", name = "schnorr256k1-kmp", version.ref = "schnorr256k1Kmp" }
 stream-webrtc-android = { group = "io.getstream", name = "stream-webrtc-android", version.ref = "streamWebrtcAndroid" }
-tarsosdsp = { group = "be.tarsos.dsp", name = "core", version.ref = "tarsosdsp" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }
 play-services-cast-framework = { group = "com.google.android.gms", name = "play-services-cast-framework", version.ref = "playServicesCast" }
 vico-charts-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico-charts-compose" }
+androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
+androidx-privacysandbox-ui-core = { group = "androidx.privacysandbox.ui", name = "ui-core", version.ref = "privacysandboxUi" }
+androidx-privacysandbox-ui-client = { group = "androidx.privacysandbox.ui", name = "ui-client", version.ref = "privacysandboxUi" }
+androidx-privacysandbox-ui-provider = { group = "androidx.privacysandbox.ui", name = "ui-provider", version.ref = "privacysandboxUi" }
 vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico-charts-compose" }
 zelory-image-compressor = { group = "id.zelory", name = "compressor", version.ref = "zelory" }
 zoomable = { group = "net.engawapg.lib", name = "zoomable", version.ref = "zoomable" }
@@ -209,6 +230,7 @@ androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version.ref = "s
 androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 androidx-sqlite-bundled-jvm = { module = "androidx.sqlite:sqlite-bundled-jvm", version.ref = "sqlite" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntime" }
+androidx-health-connect-client = { group = "androidx.health.connect", name = "connect-client", version.ref = "healthConnect" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

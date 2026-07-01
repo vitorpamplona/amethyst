@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcConfig
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class NamecoinSettingsTest {
     // ── Server string parsing ──────────────────────────────────────────
@@ -37,7 +37,7 @@ class NamecoinSettingsTest {
     fun `parses host colon port as TLS`() {
         val s = NamecoinSettings.parseServerString("example.com:50006")
         assertNotNull(s)
-        assertEquals("example.com", s!!.host)
+        assertEquals("example.com", s.host)
         assertEquals(50006, s.port)
         assertTrue(s.useSsl)
     }
@@ -46,7 +46,7 @@ class NamecoinSettingsTest {
     fun `parses host colon port colon tcp as plaintext`() {
         val s = NamecoinSettings.parseServerString("example.com:50001:tcp")
         assertNotNull(s)
-        assertEquals("example.com", s!!.host)
+        assertEquals("example.com", s.host)
         assertEquals(50001, s.port)
         assertFalse(s.useSsl)
     }
@@ -55,7 +55,7 @@ class NamecoinSettingsTest {
     fun `parses onion address`() {
         val s = NamecoinSettings.parseServerString("abc123def.onion:50001:tcp")
         assertNotNull(s)
-        assertEquals("abc123def.onion", s!!.host)
+        assertEquals("abc123def.onion", s.host)
         assertEquals(50001, s.port)
         assertFalse(s.useSsl)
         assertTrue(s.usePinnedTrustStore)
@@ -65,7 +65,7 @@ class NamecoinSettingsTest {
     fun `trims whitespace`() {
         val s = NamecoinSettings.parseServerString("  example.com : 50006  ")
         assertNotNull(s)
-        assertEquals("example.com", s!!.host)
+        assertEquals("example.com", s.host)
         assertEquals(50006, s.port)
     }
 
@@ -128,7 +128,7 @@ class NamecoinSettingsTest {
             )
         val servers = settings.toElectrumxServers()
         assertNotNull(servers)
-        assertEquals(2, servers!!.size)
+        assertEquals(2, servers.size)
         assertEquals("server1.com", servers[0].host)
         assertTrue(servers[0].useSsl)
         assertEquals("server2.onion", servers[1].host)
@@ -149,7 +149,7 @@ class NamecoinSettingsTest {
             )
         val servers = settings.toElectrumxServers()
         assertNotNull(servers)
-        assertEquals(1, servers!!.size)
+        assertEquals(1, servers.size)
         assertEquals("valid.com", servers[0].host)
     }
 

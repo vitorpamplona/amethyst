@@ -37,6 +37,58 @@ import kotlin.time.measureTimedValue
 @Suppress("SENSELESS_COMPARISON")
 val isDebug = BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark"
 
+data class MemorySnapshot(
+    val heapUsedMb: Long,
+    val heapMaxMb: Long,
+    val nativeHeapUsedMb: Long,
+    val imageCacheUsedMb: Long,
+    val imageCacheMaxMb: Long,
+    val imageDiskUsedMb: Long,
+    val imageDiskMaxMb: Long,
+    val noteCount: Int,
+    val userCount: Int,
+    val addressableCount: Int,
+    val chatroomCount: Int,
+    val memoryClassMb: Int,
+) {
+    val heapFraction: Float get() = heapUsedMb.toFloat() / heapMaxMb.coerceAtLeast(1L).toFloat()
+}
+
+fun collectMemorySnapshot(context: Context): MemorySnapshot {
+    val rt = Runtime.getRuntime()
+    val heapUsedMb = (rt.totalMemory() - rt.freeMemory()) / 1_048_576L
+    val heapMaxMb = rt.maxMemory() / 1_048_576L
+    val nativeHeapUsedMb = Debug.getNativeHeapAllocatedSize() / 1_048_576L
+
+    val app = Amethyst.instance
+    val imageCacheUsedMb = app.memoryCache.size / 1_048_576L
+    val imageCacheMaxMb = app.memoryCache.maxSize / 1_048_576L
+    val imageDiskUsedMb = app.diskCache.size / 1_048_576L
+    val imageDiskMaxMb = app.diskCache.maxSize / 1_048_576L
+
+    val activityManager: ActivityManager? = context.getSystemService()
+    val isLargeHeap = (context.applicationInfo.flags and ApplicationInfo.FLAG_LARGE_HEAP) != 0
+    val memoryClassMb =
+        activityManager?.let {
+            if (isLargeHeap) it.largeMemoryClass else it.memoryClass
+        } ?: 0
+
+    return MemorySnapshot(
+        heapUsedMb = heapUsedMb,
+        heapMaxMb = heapMaxMb,
+        nativeHeapUsedMb = nativeHeapUsedMb,
+        imageCacheUsedMb = imageCacheUsedMb,
+        imageCacheMaxMb = imageCacheMaxMb,
+        imageDiskUsedMb = imageDiskUsedMb,
+        imageDiskMaxMb = imageDiskMaxMb,
+        noteCount = LocalCache.notes.size(),
+        userCount = LocalCache.users.size(),
+        addressableCount = LocalCache.addressables.size(),
+        chatroomCount = LocalCache.chatroomList.size(),
+        memoryClassMb = memoryClassMb,
+    )
+}
+
 private const val STATE_DUMP_TAG = "STATE DUMP"
 
 fun debugState(context: Context) {

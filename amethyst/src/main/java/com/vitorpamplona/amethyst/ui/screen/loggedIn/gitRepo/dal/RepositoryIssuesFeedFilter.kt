@@ -22,19 +22,21 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.GitStatusIndex
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 
 class RepositoryIssuesFeedFilter(
     val repositoryNote: AddressableNote,
     val account: Account,
+    val showClosed: Boolean,
 ) : AdditiveFeedFilter<Note>() {
     private val repositoryAddressId = repositoryNote.address.toValue()
 
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-issues-" + repositoryNote.idHex
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-issues-" + (if (showClosed) "closed-" else "open-") + repositoryNote.idHex
 
     override fun feed(): List<Note> {
         val result =
@@ -48,8 +50,9 @@ class RepositoryIssuesFeedFilter(
 
     private fun matches(note: Note): Boolean {
         val event = note.event as? GitIssueEvent ?: return false
-        return event.repositoryHex() == repositoryAddressId
+        if (event.repositoryHex() != repositoryAddressId) return false
+        return GitStatusIndex.isClosedOrResolved(note.idHex) == showClosed
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 }

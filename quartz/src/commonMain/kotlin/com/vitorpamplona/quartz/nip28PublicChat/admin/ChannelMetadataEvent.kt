@@ -34,7 +34,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.BasePublicChatEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelDataNorm
 import com.vitorpamplona.quartz.nip28PublicChat.base.channel
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -48,7 +48,10 @@ class ChannelMetadataEvent(
     content: String,
     sig: HexKey,
 ) : BasePublicChatEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    EventHintProvider {
+    EventHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = channelInfo().let { listOfNotNull(it.name, it.about, it.picture).joinToString(" ") }
+
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
     var cache: ChannelDataNorm? = null
@@ -112,7 +115,6 @@ class ChannelMetadataEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChannelMetadataEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, data.toContent(), createdAt) {
-            alt("Public chat update to ${data.name}")
             channel(channel)
             initializer()
         }
@@ -123,7 +125,6 @@ class ChannelMetadataEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChannelMetadataEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, data.toContent(), createdAt) {
-            alt("Public chat update to ${data.name}")
             channel(channel)
             initializer()
         }

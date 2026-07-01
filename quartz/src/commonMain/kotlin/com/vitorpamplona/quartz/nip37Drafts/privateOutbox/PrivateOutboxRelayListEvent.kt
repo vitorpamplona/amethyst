@@ -30,8 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
@@ -58,9 +56,6 @@ class PrivateOutboxRelayListEvent(
     companion object {
         const val KIND = 10013
         const val FIXED_D_TAG = ""
-
-        val ALT = "Relay list to store private content from this author"
-        val TAGS = arrayOf(AltTag.assemble(ALT))
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
@@ -89,7 +84,7 @@ class PrivateOutboxRelayListEvent(
             createdAt: Long = TimeUtils.now(),
         ): PrivateOutboxRelayListEvent {
             val privateTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
-            return signer.signNip51List(createdAt, KIND, TAGS, privateTagArray)
+            return signer.signNip51List(createdAt, KIND, emptyArray(), privateTagArray)
         }
 
         suspend fun create(
@@ -98,7 +93,7 @@ class PrivateOutboxRelayListEvent(
             createdAt: Long = TimeUtils.now(),
         ): PrivateOutboxRelayListEvent {
             val privateTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
-            return signer.signNip51List(createdAt, KIND, TAGS, privateTagArray)
+            return signer.signNip51List(createdAt, KIND, emptyArray(), privateTagArray)
         }
 
         suspend fun build(
@@ -112,7 +107,6 @@ class PrivateOutboxRelayListEvent(
             description = PrivateTagsInContent.encryptNip44(privateRelays.map { RelayTag.assemble(it) }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
-            alt(ALT)
             privateRelays(publicRelays)
 
             initializer()

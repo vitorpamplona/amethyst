@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
@@ -52,7 +52,12 @@ class ProfileGalleryEntryEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // Only the optional summary caption is indexed; this event is otherwise a
+    // url/hash pointer with no natural-language body (content is empty).
+    override fun indexableContent() = listOfNotNull(summary()).joinToString("\n")
+
     fun url() = tags.firstNotNullOfOrNull(UrlTag::parse)
 
     fun urls() = tags.mapNotNull(UrlTag::parse)
@@ -93,7 +98,6 @@ class ProfileGalleryEntryEvent(
 
     companion object {
         const val KIND = 1163
-        const val ALT_DESCRIPTION = "Profile Gallery Entry"
 
         fun build(
             url: String,
@@ -101,7 +105,6 @@ class ProfileGalleryEntryEvent(
             initializer: TagArrayBuilder<ProfileGalleryEntryEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             url(url)
-            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

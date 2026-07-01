@@ -90,6 +90,7 @@ private const val MEMPOOL_TX_URL = "https://mempool.space/tx/"
 @Composable
 fun RenderOnchainZap(
     note: Note,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -97,11 +98,18 @@ fun RenderOnchainZap(
     val event = note.event as? OnchainZapEvent ?: return
     val sender = note.author?.pubkeyHex ?: event.pubKey
     val recipient = event.recipient() ?: return
+
     val sats = event.claimedAmountInSats() ?: 0L
     val txid = event.txid()
     val message = event.content.takeIf { it.isNotBlank() }
 
     val orange = MaterialTheme.colorScheme.bitcoinColor
+
+    // The embedded note sits on the orange wash, so it must draw transparent and
+    // let that show through. Handing it the parent feed / MultiSetCard background
+    // instead would paint it black (the app background) or flash it with the
+    // new-note highlight, breaking the card's solid tint.
+    val cardBackground = remember { mutableStateOf<Color>(Color.Transparent) }
 
     // Async chain lookup so we can show a real "Confirmed at block N" or
     // "In mempool…" pill rather than a sender-claimed status. Null = backend
@@ -140,6 +148,8 @@ fun RenderOnchainZap(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
+
+            RenderZappedPost(note, quotesLeft, cardBackground, accountViewModel, nav)
 
             AmountRow(sats = sats, orange = orange)
 

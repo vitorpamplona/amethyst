@@ -20,43 +20,30 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.music
 
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Composable
-fun NewMusicPlaylistFab(accountViewModel: AccountViewModel) {
-    var dialogOpen by rememberSaveable { mutableStateOf(false) }
-
+fun NewMusicPlaylistFab(nav: INav) {
     FloatingActionButton(
-        onClick = { dialogOpen = true },
+        // Opens the full-screen playlist composer in create mode (no d-tag). The composer
+        // owns title, cover-image upload, description, notes, visibility and the collaborative
+        // flag — the old name-only dialog couldn't surface any of those.
+        onClick = { nav.nav(Route.NewMusicPlaylist()) },
         modifier = Size55Modifier,
         shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
@@ -68,69 +55,12 @@ fun NewMusicPlaylistFab(accountViewModel: AccountViewModel) {
             tint = Color.White,
         )
     }
-
-    if (dialogOpen) {
-        NewEmptyPlaylistDialog(
-            onDismiss = { dialogOpen = false },
-            onCreate = { name ->
-                // Empty playlist: user adds tracks later via the "Add to playlist" sheet on
-                // any music-track note. `name` is already trimmed by the dialog's confirm
-                // button, no need to .trim() again here.
-                accountViewModel.launchSigner {
-                    accountViewModel.account.signAndComputeBroadcast(
-                        MusicPlaylistEvent.build(title = name),
-                    )
-                    // Compose state writes belong on the main dispatcher — launchSigner is
-                    // Dispatchers.IO, so we hop back before flipping the dialog flag.
-                    withContext(Dispatchers.Main.immediate) {
-                        dialogOpen = false
-                    }
-                }
-            },
-        )
-    }
-}
-
-@Composable
-private fun NewEmptyPlaylistDialog(
-    onDismiss: () -> Unit,
-    onCreate: (String) -> Unit,
-) {
-    var name by rememberSaveable { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.music_playlist_new_dialog_title)) },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                placeholder = { Text(stringRes(R.string.music_playlist_new_title_placeholder)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onCreate(name.trim()) },
-                enabled = name.trim().isNotBlank(),
-            ) {
-                Text(stringRes(R.string.music_playlist_create_action))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
-            }
-        },
-    )
 }
 
 @Preview
 @Composable
 private fun NewMusicPlaylistFabPreview() {
     ThemeComparisonRow {
-        NewMusicPlaylistFab(accountViewModel = mockAccountViewModel())
+        NewMusicPlaylistFab(nav = EmptyNav())
     }
 }

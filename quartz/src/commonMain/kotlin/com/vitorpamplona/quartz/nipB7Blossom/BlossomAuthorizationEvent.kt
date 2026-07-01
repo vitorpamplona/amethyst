@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.io.encoding.Base64
 
 @Immutable
 class BlossomAuthorizationEvent(
@@ -35,8 +36,22 @@ class BlossomAuthorizationEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    /** Base64 of this event's JSON, as carried in the `Authorization` header value. */
+    fun rawToken() = Base64.encode(toJson().encodeToByteArray())
+
+    /**
+     * The full `Authorization` header value for a BUD-01/BUD-02 request:
+     * `Nostr <base64-event>`. Mirrors NIP-98's
+     * [com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent.toAuthToken],
+     * which Blossom auth reuses.
+     */
+    fun toAuthorizationHeader() = "$AUTH_HEADER_SCHEME${rawToken()}"
+
     companion object {
         const val KIND = 24242
+
+        /** Scheme prefix for the `Authorization` header value (BUD-01). */
+        const val AUTH_HEADER_SCHEME = "Nostr "
 
         suspend fun createGetAuth(
             hash: HexKey,

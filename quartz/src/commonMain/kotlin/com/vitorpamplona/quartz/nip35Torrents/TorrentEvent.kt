@@ -32,12 +32,12 @@ import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip35Torrents.tags.BtihTag
 import com.vitorpamplona.quartz.nip35Torrents.tags.FileTag
 import com.vitorpamplona.quartz.nip35Torrents.tags.InfoHashTag
 import com.vitorpamplona.quartz.nip35Torrents.tags.TrackerTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.UrlEncoder
 
@@ -49,7 +49,10 @@ class TorrentEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun btih() = tags.firstNotNullOfOrNull(BtihTag::parse)
@@ -94,7 +97,6 @@ class TorrentEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<TorrentEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description ?: "", createdAt) {
-            alt(ALT_DESCRIPTION)
             initializer()
         }
 
@@ -105,11 +107,9 @@ class TorrentEvent(
             description: String? = null,
             x: String? = null,
             trackers: List<String>? = null,
-            alt: String? = null,
             contentWarningReason: String? = null,
             createdAt: Long = TimeUtils.now(),
         ) = eventTemplate(KIND, description ?: "", createdAt) {
-            alt(alt ?: ALT_DESCRIPTION)
             title(title)
             btih(btih)
             files(files)

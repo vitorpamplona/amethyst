@@ -48,27 +48,6 @@ fun makeBadgesFilter(
         else -> emptyList()
     }
 
-fun filterBadgesMine(
-    pubkey: HexKey,
-    relays: Set<NormalizedRelayUrl>,
-    since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    if (relays.isEmpty() || pubkey.isEmpty()) return emptyList()
-    val authors = listOf(pubkey)
-    return relays.map { relay ->
-        RelayBasedFilter(
-            relay = relay,
-            filter =
-                Filter(
-                    kinds = listOf(BadgeDefinitionEvent.KIND),
-                    authors = authors,
-                    limit = BADGE_FEED_LIMIT,
-                    since = since?.get(relay)?.time,
-                ),
-        )
-    }
-}
-
 private fun filterBadgesByAuthorsOnRelay(
     relay: NormalizedRelayUrl,
     authors: Set<HexKey>,

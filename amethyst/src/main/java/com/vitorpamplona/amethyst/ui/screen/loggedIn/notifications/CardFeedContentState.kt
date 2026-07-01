@@ -63,7 +63,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 @Stable
 class CardFeedContentState(
@@ -266,7 +265,19 @@ class CardFeedContentState(
                 }
             }
 
-        val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
+        // Notifications are bucketed per calendar day. Computing the day key as a
+        // raw epoch-day Long (instead of formatting a "yyyy-MM-dd" String per event)
+        // gives identical buckets and chronological ordering while avoiding a
+        // DateTimeFormatter + ZonedDateTime + String allocation for every single
+        // reaction/zap/repost — a meaningful GC saving on full feed conversions.
+        val zone = ZoneId.systemDefault()
+
+        fun epochDay(createdAt: Long?): Long =
+            Instant
+                .ofEpochSecond(createdAt ?: 0L)
+                .atZone(zone)
+                .toLocalDate()
+                .toEpochDay()
 
         val allBaseNotes = zapsPerEvent.keys + boostsPerEvent.keys + reactionsPerEvent.keys + nutzapsPerEvent.keys
         val multiCards =
@@ -278,21 +289,16 @@ class CardFeedContentState(
 
                 val singleList =
                     (boostsInCard + zapsInCard.map { it.response } + reactionsInCard + nutzapsInCard).groupBy {
-                        sdf.format(
-                            Instant
-                                .ofEpochSecond(it.createdAt() ?: 0L)
-                                .atZone(ZoneId.systemDefault())
-                                .toLocalDateTime(),
-                        )
+                        epochDay(it.createdAt())
                     }
 
                 val days = singleList.keys.sortedBy { it }
 
                 days
-                    .mapNotNull { string ->
+                    .mapNotNull { day ->
                         val sortedList =
                             singleList
-                                .get(string)
+                                .get(day)
                                 ?.sortedWith(compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex })
 
                         sortedList?.chunked(30)?.map { chunk ->
@@ -312,12 +318,7 @@ class CardFeedContentState(
                 .map { user ->
                     val byDay =
                         user.value.groupBy {
-                            sdf.format(
-                                Instant
-                                    .ofEpochSecond(it.createdAt() ?: 0L)
-                                    .atZone(ZoneId.systemDefault())
-                                    .toLocalDateTime(),
-                            )
+                            epochDay(it.createdAt())
                         }
 
                     byDay.values.map { zaps ->
@@ -338,12 +339,7 @@ class CardFeedContentState(
                 .map { user ->
                     val byDay =
                         user.value.groupBy {
-                            sdf.format(
-                                Instant
-                                    .ofEpochSecond(it.createdAt() ?: 0L)
-                                    .atZone(ZoneId.systemDefault())
-                                    .toLocalDateTime(),
-                            )
+                            epochDay(it.createdAt())
                         }
 
                     byDay.values.map { nutzaps ->
@@ -362,7 +358,13 @@ class CardFeedContentState(
                     it.event !is ReactionEvent &&
                         it.event !is RepostEvent &&
                         it.event !is GenericRepostEvent &&
-                        it.event !is LnZapEvent
+                        it.event !is LnZapEvent &&
+                        // Nutzaps are already grouped into nutzapsPerEvent (MultiSetCard)
+                        // or nutzapsPerUser (NutzapUserSetCard) above, exactly like lightning
+                        // zaps. Without this exclusion a nutzap would ALSO fall through to a
+                        // standalone NoteCard and render a second time as a big RenderNutzap
+                        // card — a duplicate of the grouped one.
+                        it.event !is NutzapEvent
                 }.map {
                     if (it.event is PrivateDmEvent || it.event is NIP17Group || it.isInMarmotGroup()) {
                         MessageSetCard(it)
@@ -407,6 +409,24 @@ class CardFeedContentState(
 
     fun deleteFromFeed(deletedNotes: Set<Note>) {
         // TODO: Implement deletion of notes from the notification feed
+    }
+
+    fun trimToSize(maxItems: Int) {
+        val current = _feedContent.value
+        if (current is CardFeedState.Loaded) {
+            val loaded = current.feed.value
+            if (loaded.list.size > maxItems) {
+                current.feed.tryEmit(LoadedFeedState(loaded.list.take(maxItems).toImmutableList(), loaded.showHidden))
+                // lastNotes is intentionally kept intact. Clearing it would cause the next
+                // additive update to fall through to refreshSuspended(), reloading up to
+                // limit() notes from LocalCache and undoing the trim immediately. With
+                // lastNotes intact, the fast additive path stays active: only genuinely
+                // new notifications are appended, so the card list stays near maxItems.
+                // The Note refs in lastNotes are the same objects already held by LocalCache;
+                // they are freed when pruneRepliesAndReactions() prunes LocalCache and the
+                // next full refreshSuspended() replaces lastNotes with the pruned set.
+            }
+        }
     }
 
     private fun refreshFromOldState(newItems: Set<Note>) {

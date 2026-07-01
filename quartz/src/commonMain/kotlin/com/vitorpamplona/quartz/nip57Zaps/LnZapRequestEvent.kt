@@ -36,7 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -50,7 +50,12 @@ class LnZapRequestEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    // content is the public zap comment. Private-zap messages live encrypted in
+    // the `anon` tag, not in content, so they are naturally excluded.
+    override fun indexableContent() = content
+
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
@@ -69,6 +74,13 @@ class LnZapRequestEvent(
 
     fun isPrivateZap() = tags.any { t -> t.size >= 2 && t[0] == "anon" && t[1].isNotBlank() }
 
+    /**
+     * True when the request carries an `anon` tag — a private zap (encrypted payload)
+     * or an anonymous zap (blank value). In both cases [pubKey] is an ephemeral
+     * throwaway key, not the sender's real identity.
+     */
+    fun hasAnonTag() = tags.any { t -> t.isNotEmpty() && t[0] == "anon" }
+
     fun getAnonTag(): String {
         val anonTag = tags.firstOrNull { t -> t.size >= 2 && t[0] == "anon" }
         if (anonTag != null) {
@@ -85,7 +97,6 @@ class LnZapRequestEvent(
 
     companion object {
         const val KIND = 9734
-        const val ALT = "Zap request"
 
         suspend fun create(
             zappedEvent: Event,
@@ -105,7 +116,6 @@ class LnZapRequestEvent(
                     arrayOf("p", toUserPubHex ?: zappedEvent.pubKey),
                     arrayOf("relays") + relays.map { it.url },
                     KindTag.assemble(zappedEvent.kind),
-                    AltTag.assemble(ALT),
                 )
             if (zappedEvent is AddressableEvent) {
                 tags = tags + listOf(ATag.assemble(zappedEvent.address(), null))
@@ -169,7 +179,10 @@ class LnZapRequestEvent(
                 }
 
                 LnZapEvent.ZapType.ANONYMOUS -> {
-                    tags += arrayOf(arrayOf("anon", ""))
+                    // Valueless `anon` tag: a blank-valued one (`["anon", ""]`) is the
+                    // marker for an *unsigned private* zap and would make the throwaway
+                    // signer encrypt the message instead of keeping it public.
+                    tags += arrayOf(arrayOf("anon"))
                     NostrSignerInternal(KeyPair()).sign(createdAt, KIND, tags, message)
                 }
 

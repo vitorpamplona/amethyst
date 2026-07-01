@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -105,6 +106,14 @@ class AccountManager internal constructor(
         internal const val LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS = "bunker_ephemeral"
         internal const val NIP46_RELAY_CONNECT_TIMEOUT_MS = 15_000L
         internal val NIP46_RELAYS = listOf("wss://relay.nsec.app")
+
+        // Advertised on the NIP-46 `connect` request so a bunker:// signer can
+        // show who is asking to connect (NIP-46 client metadata).
+        internal val NIP46_CLIENT_METADATA =
+            BunkerClientMetadata(
+                name = "Amethyst Desktop",
+                url = "https://amethyst.social",
+            )
     }
 
     private val amethystDir: File by lazy {
@@ -139,6 +148,18 @@ class AccountManager internal constructor(
 
     private val _forceLogoutReason = MutableStateFlow<String?>(null)
     val forceLogoutReason: StateFlow<String?> = _forceLogoutReason.asStateFlow()
+
+    // Set to true when accounts.json.enc points at an account whose key cannot
+    // be recovered from the OS keychain on cold boot — i.e. the user is forced
+    // back to the login screen because the keychain read returned nothing for
+    // a key we previously persisted. Mirrors [storageCorruption] / [forceLogoutReason]
+    // (a separate diagnostic channel, not embedded in [AccountState]).
+    private val _keychainUnavailable = MutableStateFlow(false)
+    val keychainUnavailable: StateFlow<Boolean> = _keychainUnavailable.asStateFlow()
+
+    fun clearKeychainUnavailable() {
+        _keychainUnavailable.value = false
+    }
 
     private val _loginProgress = MutableStateFlow<LoginProgress?>(null)
     val loginProgress: StateFlow<LoginProgress?> = _loginProgress.asStateFlow()
@@ -284,7 +305,12 @@ class AccountManager internal constructor(
             return Result.success(state)
         }
 
-        // No private key — fall back to read-only
+        // accounts.json.enc said this is an Internal (nsec) account but the
+        // keychain returned no key. Hardening (46caa4d79) ensures legitimate
+        // logout removes the AccountInfo too, so reaching here means the read
+        // side of the keychain is broken (e.g. ProGuard-stripped backend in
+        // the macOS release DMG). Flag it so the login screen can explain.
+        _keychainUnavailable.value = true
         return loadReadOnlyAccount(npub)
     }
 
@@ -297,13 +323,17 @@ class AccountManager internal constructor(
         val ephemeralPrivKeyHex =
             perAccountKey?.takeIf { it.isNotEmpty() }
                 ?: secureStorage.getPrivateKey(LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)?.takeIf { it.isNotEmpty() }
-                ?: return Result.failure(Exception("Ephemeral key not found"))
+                ?: run {
+                    // See [loadInternalAccount] for why we flag this here too.
+                    _keychainUnavailable.value = true
+                    return Result.failure(Exception("Ephemeral key not found"))
+                }
 
         val ephemeralKeyPair = KeyPair(privKey = ephemeralPrivKeyHex.hexToByteArray())
         val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
 
         val nip46Client = getOrCreateNip46Client()
-        val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, ephemeralSigner, nip46Client)
+        val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, ephemeralSigner, nip46Client, clientMetadata = NIP46_CLIENT_METADATA)
         remoteSigner.openSubscription()
 
         val pubKeyHex =
@@ -356,7 +386,7 @@ class AccountManager internal constructor(
                     relayStatuses = _loginProgress.value?.relayStatuses.orEmpty(),
                 )
 
-            val result = BunkerLoginUseCase.execute(bunkerUri, ephemeralSigner, nip46Client)
+            val result = BunkerLoginUseCase.execute(bunkerUri, ephemeralSigner, nip46Client, clientMetadata = NIP46_CLIENT_METADATA)
 
             val state =
                 AccountState.LoggedIn(
@@ -477,6 +507,18 @@ class AccountManager internal constructor(
 
     suspend fun saveCurrentAccount(): Result<Unit> {
         val current = currentAccount() ?: return Result.failure(Exception("No account logged in"))
+
+        // Downgrade guard (mirrors Android LocalPreferences.setDefaultAccount): never persist a
+        // read-only account over an existing SIGNING account for the same pubkey. Accounts key by
+        // npub, so this would overwrite signerType to ViewOnly and orphan the stored key, routing
+        // every later switch through read-only. A signing account already subsumes a read-only one,
+        // so keep it and switch to it instead of degrading it.
+        if (current.isReadOnly) {
+            val existing = accountStorage.loadAccounts().firstOrNull { it.npub == current.npub }
+            if (existing != null && existing.signerType !is SignerType.ViewOnly) {
+                return switchAccount(current.npub).map { }
+            }
+        }
 
         // Bunker accounts: private key saved during loginWithBunker
         if (current.signerType is SignerType.Remote) {

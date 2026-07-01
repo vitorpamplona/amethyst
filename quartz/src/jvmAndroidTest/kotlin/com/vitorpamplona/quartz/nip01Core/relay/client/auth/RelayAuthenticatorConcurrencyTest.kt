@@ -90,7 +90,7 @@ class RelayAuthenticatorConcurrencyTest {
                 val authenticator =
                     RelayAuthenticator(
                         client = client,
-                        signWithAllLoggedInUsers = { emptyList() },
+                        signWithAllLoggedInUsers = { _, _ -> emptyList() },
                     )
                 val listener =
                     client.captured

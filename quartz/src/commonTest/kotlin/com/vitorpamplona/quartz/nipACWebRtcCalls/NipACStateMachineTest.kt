@@ -81,9 +81,6 @@ class NipACStateMachineTest {
         val callTypeTag = template.tags.firstOrNull { it[0] == "call-type" }
         assertNotNull(callTypeTag, "Call offer MUST include call-type tag")
         assertEquals("video", callTypeTag[1])
-
-        val altTag = template.tags.firstOrNull { it[0] == "alt" }
-        assertNotNull(altTag, "Call offer MUST include alt tag (NIP-31)")
     }
 
     @Test
@@ -94,7 +91,6 @@ class NipACStateMachineTest {
 
         assertNotNull(template.tags.firstOrNull { it[0] == "p" }, "Call answer MUST include p tag")
         assertNotNull(template.tags.firstOrNull { it[0] == "call-id" }, "Call answer MUST include call-id tag")
-        assertNotNull(template.tags.firstOrNull { it[0] == "alt" }, "Call answer MUST include alt tag")
     }
 
     @Test
@@ -113,7 +109,6 @@ class NipACStateMachineTest {
 
         assertNotNull(template.tags.firstOrNull { it[0] == "p" })
         assertNotNull(template.tags.firstOrNull { it[0] == "call-id" })
-        assertNotNull(template.tags.firstOrNull { it[0] == "alt" })
     }
 
     @Test

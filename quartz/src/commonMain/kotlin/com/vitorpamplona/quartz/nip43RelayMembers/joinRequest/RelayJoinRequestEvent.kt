@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -41,14 +40,12 @@ class RelayJoinRequestEvent(
 
     companion object {
         const val KIND = 28934
-        const val ALT_DESCRIPTION = "Relay join request"
 
         fun build(
             claim: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RelayJoinRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             claim?.let { claim(it) }
             initializer()
         }

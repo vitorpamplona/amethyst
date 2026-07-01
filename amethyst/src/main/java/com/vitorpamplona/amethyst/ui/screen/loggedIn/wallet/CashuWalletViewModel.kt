@@ -21,32 +21,35 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
+import com.vitorpamplona.amethyst.commons.cashu.ops.MintQuoteStarted
+import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
+import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletOps
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
-import com.vitorpamplona.amethyst.model.nip60Cashu.MintQuoteStarted
-import com.vitorpamplona.amethyst.model.nip60Cashu.TokenEntry
-import com.vitorpamplona.amethyst.model.nip60Cashu.describeMintError
-import com.vitorpamplona.amethyst.service.cashu.v3.V3Parser
-import com.vitorpamplona.amethyst.service.cashu.v4.V4Parser
-import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
-import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenB64Parser
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.startsWith
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 sealed class CashuWalletCreateState {
     data object Idle : CashuWalletCreateState()
 
     data object Saving : CashuWalletCreateState()
-
-    data object Success : CashuWalletCreateState()
 
     data class Error(
         val message: String,
@@ -62,6 +65,14 @@ sealed class CashuMintFlowState {
         val flow: MintQuoteStarted,
         val mintUrl: String,
         val amountSats: Long,
+        /**
+         * True while a background poll is asking the mint whether the
+         * invoice has been paid. The receive dialog keeps the invoice on
+         * screen and shows a small inline indicator instead of swapping to
+         * the [Completing] body, so the routine 3s check no longer flickers
+         * the whole dialog.
+         */
+        val checking: Boolean = false,
     ) : CashuMintFlowState()
 
     data object Completing : CashuMintFlowState()
@@ -115,6 +126,24 @@ sealed class CashuSendTokenFlowState {
     ) : CashuSendTokenFlowState()
 }
 
+sealed class CashuRebalanceFlowState {
+    data object Idle : CashuRebalanceFlowState()
+
+    /** Funds are moving — progress in [0f, 1f] from CashuWalletState.rebalance. */
+    data class Working(
+        val progress: Float,
+    ) : CashuRebalanceFlowState()
+
+    data class Completed(
+        val movedSats: Long,
+        val targetMintUrl: String,
+    ) : CashuRebalanceFlowState()
+
+    data class Error(
+        val message: String,
+    ) : CashuRebalanceFlowState()
+}
+
 sealed class CashuRedeemFlowState {
     data object Idle : CashuRedeemFlowState()
 
@@ -145,6 +174,8 @@ class CashuWalletViewModel : ViewModel() {
 
     val walletEvent get() = state.walletEvent
     val mints get() = state.mints
+    val displayMints get() = state.displayMints
+    val unconfiguredMintBalances get() = state.unconfiguredMintBalances
     val balanceSats get() = state.balanceSats
     val mintBalances get() = state.mintBalances
     val tokenEntries: StateFlow<List<TokenEntry>> get() = state.tokenEntries
@@ -165,6 +196,9 @@ class CashuWalletViewModel : ViewModel() {
     private val _sendTokenState = MutableStateFlow<CashuSendTokenFlowState>(CashuSendTokenFlowState.Idle)
     val sendTokenState = _sendTokenState.asStateFlow()
 
+    private val _rebalanceState = MutableStateFlow<CashuRebalanceFlowState>(CashuRebalanceFlowState.Idle)
+    val rebalanceState = _rebalanceState.asStateFlow()
+
     private val _redeemState = MutableStateFlow<CashuRedeemFlowState>(CashuRedeemFlowState.Idle)
     val redeemState = _redeemState.asStateFlow()
 
@@ -176,6 +210,25 @@ class CashuWalletViewModel : ViewModel() {
         this.account = accountViewModel.account
         // No subscription / observer / refresh here — CashuWalletState owns
         // that lifecycle and is alive for the whole login session.
+    }
+
+    /**
+     * Reconcile every mint we hold tokens at against its NUT-07 `/checkstate`
+     * — not just the mint a spend targets. Wired to the wallet screen opening
+     * so a balance auto-redeemed from a mint we never configured (e.g. a
+     * nutzap on a mint not in our kind:10019) still gets its stale proofs
+     * swept. Safe to call repeatedly; no-ops when nothing is stale or the
+     * wallet hasn't started yet.
+     */
+    fun refresh() {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            try {
+                state.syncAllMints()
+            } catch (e: Exception) {
+                Log.w("CashuWallet", "wallet refresh sync failed", e)
+            }
+        }
     }
 
     /** Verify a mint URL is reachable + speaks Cashu v1. */
@@ -198,18 +251,77 @@ class CashuWalletViewModel : ViewModel() {
     }
 
     /**
+     * Per-mint reachability results for mints already in the wallet's list,
+     * keyed by normalized URL. Distinct from [mintPingState] (which backs the
+     * single "verify the URL I'm typing" button) so a user can re-check any
+     * already-added mint without clobbering the input-field result, and each
+     * row reflects its own status independently.
+     */
+    private val _mintVerifications = MutableStateFlow<Map<String, MintPingState>>(emptyMap())
+    val mintVerifications: StateFlow<Map<String, MintPingState>> = _mintVerifications.asStateFlow()
+
+    /** Ping an already-added mint and record the result under its normalized URL. */
+    fun verifyMint(url: String) {
+        val vm = accountViewModel ?: return
+        val key = url.trim().trimEnd('/')
+        if (key.isBlank()) return
+        _mintVerifications.update { it + (key to MintPingState.Pinging) }
+        vm.launchSigner {
+            val result =
+                try {
+                    MintPingState.Ok(ops.pingMint(key))
+                } catch (e: Exception) {
+                    MintPingState.Failed(describeMintError(e))
+                }
+            _mintVerifications.update { it + (key to result) }
+        }
+    }
+
+    /**
      * Reference to the account-scoped NIP-87 mint directory state. The picker
      * UI calls .open()/.close() on entry/exit and observes .entries directly.
      */
     val directory get() = account!!.cashuMintDirectoryState
 
-    /** Open the NIP-87 mint directory subscription against the account's outbox relays. */
+    /** Re-subscribes the directory as the account's relay flows settle. */
+    private var directoryRelayJob: Job? = null
+
+    /**
+     * Open the NIP-87 mint directory subscription.
+     *
+     * Subscribes **reactively** to the account's relay flows rather than to a
+     * one-shot snapshot. A freshly-restored account (notably the find-or-create
+     * wizard's "create a new wallet" path) may still be loading its relay lists
+     * when the picker opens; a snapshot would capture an empty set, hit
+     * [CashuMintDirectoryState]'s empty-relay early-out, and never retry —
+     * leaving the mint suggestions blank even though the edit-mints screen shows
+     * them later. Collecting the flow re-subscribes the moment relays arrive.
+     *
+     * Relay set = the union of the user's OUTBOX relays (where they'd publish
+     * their own recommendations) and their INDEXER relays, which aggregate the
+     * broad NIP-87 mint announcements/recommendations and fall back to a curated
+     * default set — so the picker is populated even for a brand-new user who has
+     * no wallet and no recommendations of their own yet.
+     */
     fun openMintDirectory() {
         val acc = account ?: return
-        directory.open(this, acc.outboxRelays.flow.value)
+        directoryRelayJob?.cancel()
+        directoryRelayJob =
+            viewModelScope.launch {
+                combine(acc.outboxRelays.flow, acc.indexerRelayList.flow) { outbox, indexer ->
+                    outbox + indexer
+                }.collect { relays ->
+                    // open() is idempotent per opener (a Set add), so repeated
+                    // calls just re-point the shared subscription at the new
+                    // relay set; a single close() still tears it down.
+                    directory.open(this@CashuWalletViewModel, relays)
+                }
+            }
     }
 
     fun closeMintDirectory() {
+        directoryRelayJob?.cancel()
+        directoryRelayJob = null
         directory.close(this)
     }
 
@@ -247,6 +359,58 @@ class CashuWalletViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Stop receiving NIP-61 nutzaps — replaces kind:10019 with an empty event
+     * and NIP-09 deletes it. The wallet itself stays put. [onDone] fires after
+     * the publish attempt (success or logged failure) so the UI can dismiss.
+     */
+    fun stopNutzaps(onDone: () -> Unit = {}) {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            runCatching { state.stopNutzaps() }
+                .onFailure { Log.w("CashuWallet", "stopNutzaps failed: ${describeMintError(it)}", it) }
+            onDone()
+        }
+    }
+
+    /**
+     * Delete the whole Cashu wallet (kind:17375) and stop nutzaps in one go.
+     * Destructive — the caller must confirm with the user first. [onDone] fires
+     * after the publish attempt so the screen can navigate away.
+     */
+    fun deleteWallet(onDone: () -> Unit = {}) {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            runCatching { state.deleteWallet() }
+                .onFailure { Log.w("CashuWallet", "deleteWallet failed: ${describeMintError(it)}", it) }
+            onDone()
+        }
+    }
+
+    /**
+     * Rotate the wallet's NIP-61 P2PK key (Danger Zone). [manualPrivkey] null
+     * generates a fresh key; a non-blank hex string imports it. [onResult]
+     * reports null on success or an error message on failure so the dialog can
+     * surface a bad key paste instead of silently dismissing.
+     */
+    fun recreateNutzapKey(
+        manualPrivkey: String? = null,
+        onResult: (String?) -> Unit = {},
+    ) {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            val error =
+                try {
+                    state.recreateNutzapKey(manualPrivkey)
+                    null
+                } catch (e: Exception) {
+                    Log.w("CashuWallet", "recreateNutzapKey failed: ${describeMintError(e)}", e)
+                    describeMintError(e)
+                }
+            onResult(error)
+        }
+    }
+
     // -------- NUT-09 restore --------
 
     sealed class RestoreFlowState {
@@ -269,10 +433,16 @@ class CashuWalletViewModel : ViewModel() {
     val restoreState = _restoreState.asStateFlow()
 
     /**
-     * NUT-09 wallet restore — scans every mint in the wallet's mint list
-     * for proofs the user previously minted but whose kind:7375 events
-     * have been lost. Recovered unspent proofs are republished as fresh
-     * kind:7375 + kind:7376 IN history rows.
+     * NUT-09 wallet restore — scans every mint we know of for proofs the
+     * user previously minted but whose kind:7375 events have been lost.
+     * Recovered unspent proofs are republished as fresh kind:7375 + kind:7376
+     * IN history rows.
+     *
+     * Scans [CashuWalletState.displayMints] (configured kind:17375 mints plus
+     * any mint we currently hold tokens at), not just the configured list —
+     * so a mint dropped from the wallet config while it still holds tokens,
+     * or one a nutzap was auto-redeemed on, is still recovered rather than
+     * silently skipped.
      *
      * Best-effort across mints: a failure on one mint logs and moves to
      * the next. The total reported in [RestoreFlowState.Completed]
@@ -284,7 +454,7 @@ class CashuWalletViewModel : ViewModel() {
         _restoreState.value = RestoreFlowState.Running
         vm.launchSigner {
             try {
-                val mintsToScan = state.mints.value
+                val mintsToScan = state.displayMints.value
                 var totalSats = 0L
                 var totalProofs = 0
                 for (mint in mintsToScan) {
@@ -314,65 +484,70 @@ class CashuWalletViewModel : ViewModel() {
         _restoreState.value = RestoreFlowState.Idle
     }
 
-    /** What to do with the wallet's P2PK key during a save. */
-    enum class P2pkKeyMode {
-        /** Keep the existing key from the on-cache wallet (edit only). */
-        KeepCurrent,
+    /**
+     * Serialises [publishMints] so two near-simultaneous mint adds can't both
+     * reach [CashuWalletOps.publishWalletEvents] before the first has cached
+     * its key. Without it, the second add — firing before the freshly created
+     * kind:17375 round-trips back into `_walletEvent` — would read a null key
+     * and generate a *second* one, rotating the P2PK key and orphaning any
+     * inbound nutzaps locked to the first.
+     */
+    private val publishMutex = Mutex()
 
-        /** Generate a fresh random key — invalidates inbound nutzaps locked to the old one. */
-        AutoGenerate,
+    /**
+     * The P2PK key in use for the wallet currently being edited on screen.
+     * Set on the first successful publish (inside [publishMutex]); reused by
+     * every later add/remove so the nutzap key stays put across changes.
+     */
+    private var sessionPrivkeyHex: String? = null
 
-        /** Use a user-pasted hex key. */
-        Manual,
-    }
-
-    fun saveWallet(
-        mints: List<String>,
-        keyMode: P2pkKeyMode,
-        manualPrivkey: String? = null,
-    ) {
+    /**
+     * Publish (or re-publish) the wallet's kind:17375 + kind:10019 with the
+     * given mint list. The Add/Edit screen has no Save button — the wallet is
+     * created the instant the first mint is added and kept in sync on every
+     * subsequent add/remove, so this runs on each list change.
+     *
+     * Key handling, in priority order:
+     *   1. [sessionPrivkeyHex] — the key from a publish we already did this
+     *      session (covers rapid successive adds before the event round-trips).
+     *   2. [CashuWalletState.exportP2pkPrivkeyHex] — the existing wallet's key
+     *      when editing a wallet that was already on cache when the screen
+     *      opened.
+     *   3. null → [CashuWalletOps.publishWalletEvents] generates a fresh key
+     *      (a genuinely new wallet).
+     *
+     * An empty list is a no-op: a NIP-60 wallet must advertise at least one
+     * mint, so removing the last mint leaves the previously published config
+     * untouched rather than publishing an empty, unusable wallet.
+     */
+    fun publishMints(mints: List<String>) {
         val vm = accountViewModel ?: return
         val acc = account ?: return
-
-        if (mints.isEmpty()) {
-            _createState.value = CashuWalletCreateState.Error("Add at least one mint")
-            return
-        }
-        if (keyMode == P2pkKeyMode.Manual && manualPrivkey.isNullOrBlank()) {
-            _createState.value = CashuWalletCreateState.Error("Paste a P2PK private key")
-            return
-        }
+        if (mints.isEmpty()) return
 
         _createState.value = CashuWalletCreateState.Saving
         vm.launchSigner {
-            try {
-                val privkey: String? =
-                    when (keyMode) {
-                        P2pkKeyMode.KeepCurrent -> {
-                            val existing = state.exportP2pkPrivkeyHex()
-                            if (existing == null) {
-                                _createState.value =
-                                    CashuWalletCreateState.Error(
-                                        "Could not read the existing wallet key. " +
-                                            "Use auto-generate or paste a key instead.",
-                                    )
-                                return@launchSigner
-                            }
-                            existing
-                        }
-                        P2pkKeyMode.AutoGenerate -> null // ops generates one
-                        P2pkKeyMode.Manual -> manualPrivkey?.trim()
-                    }
-                ops.publishWalletEvents(
-                    mints = mints,
-                    p2pkPrivkeyHex = privkey,
-                    nutzapRelays =
-                        acc.outboxRelays.flow.value
-                            .toList(),
-                )
-                _createState.value = CashuWalletCreateState.Success
-            } catch (e: Exception) {
-                _createState.value = CashuWalletCreateState.Error(describeMintError(e))
+            publishMutex.withLock {
+                try {
+                    val privkey = sessionPrivkeyHex ?: state.exportP2pkPrivkeyHex()
+                    val created =
+                        ops.publishWalletEvents(
+                            mints = mints,
+                            p2pkPrivkeyHex = privkey,
+                            // Advertise our NIP-65 inbox relays as the nutzap relays,
+                            // so senders publish kind:9321 where we read incoming
+                            // events (NIP-65 outbox model). The kind:10019 default
+                            // copies the inbox relay list, not outbox; the wallet
+                            // still subscribes to a wider inbox + DM + tags set.
+                            nutzapRelays =
+                                acc.notificationRelays.flow.value
+                                    .toList(),
+                        )
+                    sessionPrivkeyHex = created.p2pkPrivkeyHex
+                    _createState.value = CashuWalletCreateState.Idle
+                } catch (e: Exception) {
+                    _createState.value = CashuWalletCreateState.Error(describeMintError(e))
+                }
             }
         }
     }
@@ -419,21 +594,29 @@ class CashuWalletViewModel : ViewModel() {
     fun checkAndCompleteMint() {
         val vm = accountViewModel ?: return
         val current = _mintState.value as? CashuMintFlowState.AwaitingPayment ?: return
-        // Atomic flip to Completing so a concurrent poll (the receive
+        // Already polling — don't stack a second request.
+        if (current.checking) return
+        // Atomic flip to checking=true so a concurrent poll (the receive
         // dialog fires this every 3s) can't both reach
         // completeMintFromLightning. Without the gate, poll 1 consumed
-        // the mint quote and poll 2 hit "outputs already signed".
-        if (!_mintState.compareAndSet(current, CashuMintFlowState.Completing)) return
+        // the mint quote and poll 2 hit "outputs already signed". We stay
+        // in AwaitingPayment so the invoice keeps showing — the dialog
+        // renders an inline "checking the mint" indicator off `checking`
+        // instead of swapping its whole body, which used to flicker.
+        if (!_mintState.compareAndSet(current, current.copy(checking = true))) return
         vm.launchSigner {
             try {
                 val status = ops.checkMintQuote(current.mintUrl, current.flow.mintQuote.quote)
                 val paid = status.isSettled()
                 if (!paid) {
-                    // Roll back to AwaitingPayment so the polling
-                    // LaunchedEffect picks up again on the next tick.
+                    // Clear the checking flag so the polling LaunchedEffect
+                    // picks up again on the next tick, invoice still on screen.
                     _mintState.value = current
                     return@launchSigner
                 }
+                // Payment confirmed — now it's worth showing the full
+                // "issuing proofs" body while we finalize the mint.
+                _mintState.value = CashuMintFlowState.Completing
                 ops.completeMintFromLightning(current.mintUrl, current.flow.quoteEvent, current.amountSats)
                 _mintState.value = CashuMintFlowState.Completed(current.amountSats)
             } catch (e: Exception) {
@@ -642,6 +825,51 @@ class CashuWalletViewModel : ViewModel() {
         _sendTokenState.value = CashuSendTokenFlowState.Idle
     }
 
+    // -------- Move coins between mints (rebalance) --------
+
+    /**
+     * Move [sats] from [sourceMintUrl] to [targetMintUrl] with no new
+     * Lightning sats entering the wallet — the evacuation path for coins
+     * sitting at a mint the user doesn't trust. Backed by the tested
+     * [CashuWalletState.rebalance], which fetches its own melt quote and
+     * refuses to spend if the source can't cover amount + fees.
+     */
+    fun rebalanceOut(
+        sourceMintUrl: String,
+        targetMintUrl: String,
+        sats: Long,
+    ) {
+        val vm = accountViewModel ?: return
+        if (sats <= 0) {
+            _rebalanceState.value = CashuRebalanceFlowState.Error("Amount must be positive")
+            return
+        }
+        if (sourceMintUrl == targetMintUrl) {
+            _rebalanceState.value = CashuRebalanceFlowState.Error("Pick a different destination mint")
+            return
+        }
+        _rebalanceState.value = CashuRebalanceFlowState.Working(0f)
+        vm.launchSigner {
+            try {
+                val result =
+                    state.rebalance(
+                        sourceMintUrl = sourceMintUrl,
+                        targetMintUrl = targetMintUrl,
+                        sats = sats,
+                        onProgress = { p -> _rebalanceState.value = CashuRebalanceFlowState.Working(p) },
+                    )
+                _rebalanceState.value =
+                    CashuRebalanceFlowState.Completed(result.movedSats, targetMintUrl)
+            } catch (e: Exception) {
+                _rebalanceState.value = CashuRebalanceFlowState.Error(describeMintError(e))
+            }
+        }
+    }
+
+    fun resetRebalanceState() {
+        _rebalanceState.value = CashuRebalanceFlowState.Idle
+    }
+
     // -------- Redeem inbound cashuB / cashuA --------
 
     fun redeemToken(rawToken: String) {
@@ -652,66 +880,33 @@ class CashuWalletViewModel : ViewModel() {
             return
         }
 
-        val (mintUrl, proofs) =
-            when {
-                trimmed.startsWith("cashuB") -> {
-                    when (val parsed = V4Parser.parseCashuB(trimmed)) {
-                        is GenericLoadable.Loaded -> {
-                            val tok = parsed.loaded.firstOrNull()
-                            if (tok == null) {
-                                _redeemState.value = CashuRedeemFlowState.Error("Token has no proofs")
-                                return
-                            }
-                            tok.mint to tok.proofs.map { CashuProof(it.id, it.amount.toLong(), it.secret, it.C) }
-                        }
-                        is GenericLoadable.Error -> {
-                            _redeemState.value = CashuRedeemFlowState.Error(parsed.errorMessage)
-                            return
-                        }
-                        else -> {
-                            _redeemState.value = CashuRedeemFlowState.Error("Could not parse token")
-                            return
-                        }
-                    }
-                }
-                trimmed.startsWith("cashuA") -> {
-                    when (val parsed = V3Parser.parseCashuA(trimmed)) {
-                        is GenericLoadable.Loaded -> {
-                            val tok = parsed.loaded.firstOrNull()
-                            if (tok == null) {
-                                _redeemState.value = CashuRedeemFlowState.Error("Token has no proofs")
-                                return
-                            }
-                            tok.mint to tok.proofs.map { CashuProof(it.id, it.amount.toLong(), it.secret, it.C) }
-                        }
-                        is GenericLoadable.Error -> {
-                            _redeemState.value = CashuRedeemFlowState.Error(parsed.errorMessage)
-                            return
-                        }
-                        else -> {
-                            _redeemState.value = CashuRedeemFlowState.Error("Could not parse token")
-                            return
-                        }
-                    }
-                }
-                else -> {
-                    _redeemState.value =
-                        CashuRedeemFlowState.Error("Not a Cashu token (must start with cashuA or cashuB)")
+        if (!trimmed.startsWith(CashuTokenB64Parser.CashuAPrefix) && !trimmed.startsWith(CashuTokenB64Parser.CashuBPrefix)) {
+            _redeemState.value =
+                CashuRedeemFlowState.Error("Not a Cashu token (must start with cashuA or cashuB)")
+            return
+        }
+
+        // A single token string can carry proofs from more than one mint;
+        // redeem every group rather than just the first.
+        val parsedTokens =
+            CashuTokenB64Parser.parse(trimmed)?.takeIf { it.isNotEmpty() }
+                ?: run {
+                    _redeemState.value = CashuRedeemFlowState.Error("Could not parse token")
                     return
                 }
-            }
 
-        if (mintUrl !in mints.value) {
+        val unknownMint = parsedTokens.firstOrNull { it.mint !in mints.value }?.mint
+        if (unknownMint != null) {
             _redeemState.value =
-                CashuRedeemFlowState.Error("Token mint ($mintUrl) is not in your wallet. Add it first.")
+                CashuRedeemFlowState.Error("Token mint ($unknownMint) is not in your wallet. Add it first.")
             return
         }
 
         _redeemState.value = CashuRedeemFlowState.Redeeming
         vm.launchSigner {
             try {
-                val result = ops.redeemToken(trimmed, proofs, mintUrl)
-                _redeemState.value = CashuRedeemFlowState.Completed(result.amount)
+                val total = parsedTokens.sumOf { ops.redeemToken(trimmed, it.proofs, it.mint).amount }
+                _redeemState.value = CashuRedeemFlowState.Completed(total)
             } catch (e: Exception) {
                 _redeemState.value = CashuRedeemFlowState.Error(describeMintError(e))
             }

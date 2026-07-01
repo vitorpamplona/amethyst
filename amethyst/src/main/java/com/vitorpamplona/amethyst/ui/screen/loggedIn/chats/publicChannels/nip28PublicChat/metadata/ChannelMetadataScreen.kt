@@ -136,12 +136,15 @@ private fun ChannelMetadataScaffold(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val channelRelays by postViewModel.channelRelays.collectAsStateWithLifecycle()
+    val canPost = postViewModel.canPost && channelRelays.isNotEmpty()
+
     Scaffold(
         topBar = {
             if (postViewModel.isNewChannel()) {
                 CreatingTopBar(
                     titleRes = R.string.public_chat,
-                    isActive = postViewModel::canPost,
+                    isActive = { canPost },
                     onCancel = {
                         postViewModel.clear()
                         nav.popBack()
@@ -163,7 +166,7 @@ private fun ChannelMetadataScaffold(
             } else {
                 SavingTopBar(
                     titleRes = R.string.public_chat,
-                    isActive = postViewModel::canPost,
+                    isActive = { canPost },
                     onCancel = {
                         postViewModel.clear()
                         nav.popBack()
@@ -183,8 +186,6 @@ private fun ChannelMetadataScaffold(
             }
         },
     ) { pad ->
-        val feedState by postViewModel.channelRelays.collectAsStateWithLifecycle()
-
         LazyColumn(
             Modifier
                 .fillMaxSize()
@@ -220,7 +221,7 @@ private fun ChannelMetadataScaffold(
                 )
             }
 
-            itemsIndexed(feedState, key = { _, item -> "ChatRelays" + item.relay }) { _, item ->
+            itemsIndexed(channelRelays, key = { _, item -> "ChatRelays" + item.relay }) { _, item ->
                 BasicRelaySetupInfoDialog(
                     item,
                     onDelete = { postViewModel.deleteHomeRelay(item) },

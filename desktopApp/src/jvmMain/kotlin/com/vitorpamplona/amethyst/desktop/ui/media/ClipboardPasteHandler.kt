@@ -20,14 +20,19 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.media
 
+import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
 import java.awt.Image
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.image.BufferedImage
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
 import javax.imageio.ImageIO
 
 object ClipboardPasteHandler {
+    private val PASTE_TIMESTAMP = SimpleDateFormat("yyyyMMdd-HHmmss")
+
     fun getClipboardFiles(): List<File> {
         val clipboard = Toolkit.getDefaultToolkit().systemClipboard
         return try {
@@ -40,8 +45,15 @@ object ClipboardPasteHandler {
                 clipboard.isDataFlavorAvailable(DataFlavor.imageFlavor) -> {
                     val image = clipboard.getData(DataFlavor.imageFlavor) as? Image ?: return emptyList()
                     val buffered = toBufferedImage(image)
-                    val tempFile = File.createTempFile("clipboard_", ".png")
-                    tempFile.deleteOnExit()
+                    // Temp lives under AmethystTempDir so the boot-time orphan
+                    // sweep recovers it if the JVM crashes before the upload
+                    // pipeline gets a chance to consume it. The intermediate
+                    // PNG is paid for by clipboard semantics — Java's
+                    // clipboard image flavor only exposes BufferedImage, so
+                    // PNG is the lossless container we materialize before
+                    // the orchestrator decides to re-encode.
+                    val timestamp = synchronized(PASTE_TIMESTAMP) { PASTE_TIMESTAMP.format(Date()) }
+                    val tempFile = AmethystTempDir.createTempFile("amethyst_paste_${timestamp}_", ".png")
                     ImageIO.write(buffered, "png", tempFile)
                     listOf(tempFile)
                 }

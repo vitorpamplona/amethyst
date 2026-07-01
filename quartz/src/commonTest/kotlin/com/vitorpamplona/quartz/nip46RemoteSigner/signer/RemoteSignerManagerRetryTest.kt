@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePong
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.utils.Hex
@@ -71,6 +72,62 @@ class RemoteSignerManagerRetryTest {
             remoteKey = signer.pubKey,
             signer = bunkerSigner,
         )
+
+    private suspend fun bunkerAuthUrlFor(
+        requestId: String,
+        url: String,
+    ): NostrConnectEvent =
+        NostrConnectEvent.create(
+            message = BunkerResponse(requestId, BunkerResponse.RESULT_AUTH_URL, url),
+            remoteKey = signer.pubKey,
+            signer = bunkerSigner,
+        )
+
+    @Test
+    fun authUrlResponseKeepsBothResultAndError() {
+        val json = """{"id":"abc","result":"auth_url","error":"https://signer.example/auth?x=1"}"""
+        val resp = OptimizedJsonMapper.fromJsonTo<BunkerResponse>(json)
+        // Must NOT be flattened into a plain error — the auth_url marker has to survive.
+        assertEquals(BunkerResponse.RESULT_AUTH_URL, resp.result)
+        assertEquals("https://signer.example/auth?x=1", resp.error)
+    }
+
+    @Test
+    fun authUrlChallengeIsSurfacedThenRealResponseResumes() =
+        runTest {
+            val capturing = CapturingNostrClient()
+            val seenUrls = mutableListOf<String>()
+            val manager =
+                RemoteSignerManager(
+                    timeout = 5_000,
+                    client = capturing,
+                    signer = signer,
+                    remoteKey = remoteKey,
+                    relayList = setOf(relay),
+                    maxRetries = 0,
+                    onAuthUrl = { seenUrls.add(it) },
+                )
+
+            val deferred =
+                async {
+                    manager.launchWaitAndParse(
+                        bunkerRequestBuilder = { BunkerRequestPing() },
+                        parser = PingResponse::parse,
+                    )
+                }
+            runCurrent()
+
+            val requestId = decodeRequestId(capturing.publishedEvents.single())
+            // The bunker first asks for web authorization, then (after the user
+            // authorizes) sends the real response under the same id.
+            manager.newResponse(bunkerAuthUrlFor(requestId, "https://signer.example/auth"))
+            manager.newResponse(bunkerPongFor(requestId))
+            advanceUntilIdle()
+
+            val result = deferred.await()
+            assertIs<SignerResult.RequestAddressed.Successful<PingResult>>(result)
+            assertEquals(listOf("https://signer.example/auth"), seenUrls)
+        }
 
     @Test
     fun timeoutReturnsTimedOutAfterMaxRetries() =

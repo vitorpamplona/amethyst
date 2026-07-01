@@ -68,7 +68,8 @@ class TrustedRelayListState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                emptySet(),
+                // Synchronously seed public tags from the backup; private tags may be absent on first boot.
+                settings.backupTrustedRelayList?.let { decryptionCache.cachedRelays(it) } ?: emptySet(),
             )
 
     suspend fun saveRelayList(trustedRelays: List<NormalizedRelayUrl>): TrustedRelayListEvent {

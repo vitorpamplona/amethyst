@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -66,6 +67,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -82,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import androidx.compose.material3.Icon as Material3Icon
@@ -214,6 +217,9 @@ private fun MultiWalletHomeContent(
     cashuMintCount: Int,
 ) {
     val walletInfoList by walletViewModel.walletInfoList.collectAsState()
+    val context = LocalContext.current
+    val budgetApprovedMsg = stringRes(R.string.clink_budget_approved)
+    val debitNoResponseMsg = stringRes(R.string.clink_debit_no_response)
 
     LaunchedEffect(Unit) {
         walletViewModel.fetchAllBalances()
@@ -234,8 +240,11 @@ private fun MultiWalletHomeContent(
             WalletCard(
                 walletInfo = walletInfo,
                 onSelect = {
-                    walletViewModel.selectWallet(walletInfo.walletId)
-                    nav.nav(Route.WalletDetail(walletInfo.walletId))
+                    // The detail screen is NWC-only (balance/transactions); debits have neither.
+                    if (walletInfo.canShowBalance) {
+                        walletViewModel.selectWallet(walletInfo.walletId)
+                        nav.nav(Route.WalletDetail(walletInfo.walletId))
+                    }
                 },
                 onSetDefault = {
                     walletViewModel.setDefaultWallet(walletInfo.walletId)
@@ -246,6 +255,24 @@ private fun MultiWalletHomeContent(
                 onRemove = {
                     walletViewModel.removeWallet(walletInfo.walletId)
                 },
+                // Spending-budget authorization is a CLINK-debit-only capability.
+                onSetBudget =
+                    if (!walletInfo.canShowBalance) {
+                        { amount, frequency ->
+                            walletViewModel.requestDebitBudget(walletInfo.walletId, amount, frequency) { response ->
+                                val error = response?.failureDetail()
+                                val msg =
+                                    when {
+                                        response?.isOk() == true -> budgetApprovedMsg
+                                        !error.isNullOrBlank() -> error
+                                        else -> debitNoResponseMsg
+                                    }
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } else {
+                        null
+                    },
             )
         }
 
@@ -285,9 +312,21 @@ private fun WalletCard(
     onSetDefault: () -> Unit,
     onRename: (String) -> Unit,
     onRemove: () -> Unit,
+    onSetBudget: ((Long, DebitFrequency?) -> Unit)? = null,
 ) {
     var showRemoveDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
+    var showBudgetDialog by remember { mutableStateOf(false) }
+
+    if (showBudgetDialog && onSetBudget != null) {
+        ClinkBudgetDialog(
+            onConfirm = { amount, frequency ->
+                showBudgetDialog = false
+                onSetBudget(amount, frequency)
+            },
+            onDismiss = { showBudgetDialog = false },
+        )
+    }
 
     if (showRemoveDialog) {
         AlertDialog(
@@ -325,7 +364,7 @@ private fun WalletCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onSelect),
+                .clickable(enabled = walletInfo.canShowBalance, onClick = onSelect),
         shape = RoundedCornerShape(16.dp),
         border =
             if (walletInfo.isDefault) {
@@ -377,8 +416,14 @@ private fun WalletCard(
                     }
                 }
 
-                // Balance
-                if (walletInfo.isLoading && walletInfo.balanceSats == null) {
+                // Balance — debits are spend-only, so show a capability badge instead.
+                if (!walletInfo.canShowBalance) {
+                    Text(
+                        text = stringRes(R.string.clink_debit_pay_only),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else if (walletInfo.isLoading && walletInfo.balanceSats == null) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {
                     Column(horizontalAlignment = Alignment.End) {
@@ -438,6 +483,16 @@ private fun WalletCard(
                     Icon(MaterialSymbols.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(stringRes(R.string.wallet_rename), style = MaterialTheme.typography.bodySmall)
+                }
+
+                if (onSetBudget != null) {
+                    OutlinedButton(
+                        onClick = { showBudgetDialog = true },
+                        modifier = Modifier.height(36.dp),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Text(stringRes(R.string.clink_budget_set), style = MaterialTheme.typography.bodySmall)
+                    }
                 }
 
                 Spacer(modifier = Modifier.weight(1f))

@@ -20,7 +20,54 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.vitorpamplona.amethyst.cli.commands.Commands
+import com.vitorpamplona.amethyst.cli.commands.AdminCommand
+import com.vitorpamplona.amethyst.cli.commands.AwaitCommands
+import com.vitorpamplona.amethyst.cli.commands.BlossomCommands
+import com.vitorpamplona.amethyst.cli.commands.BunkerCommand
+import com.vitorpamplona.amethyst.cli.commands.CountCommand
+import com.vitorpamplona.amethyst.cli.commands.CreateCommand
+import com.vitorpamplona.amethyst.cli.commands.DebitCommands
+import com.vitorpamplona.amethyst.cli.commands.DecodeCommand
+import com.vitorpamplona.amethyst.cli.commands.DecryptCommand
+import com.vitorpamplona.amethyst.cli.commands.DmCommands
+import com.vitorpamplona.amethyst.cli.commands.EncodeCommand
+import com.vitorpamplona.amethyst.cli.commands.EncryptCommand
+import com.vitorpamplona.amethyst.cli.commands.EventCommand
+import com.vitorpamplona.amethyst.cli.commands.FetchCommand
+import com.vitorpamplona.amethyst.cli.commands.FilterCommand
+import com.vitorpamplona.amethyst.cli.commands.FollowCommand
+import com.vitorpamplona.amethyst.cli.commands.GiftCommands
+import com.vitorpamplona.amethyst.cli.commands.GitCommands
+import com.vitorpamplona.amethyst.cli.commands.GroupCommands
+import com.vitorpamplona.amethyst.cli.commands.InitCommands
+import com.vitorpamplona.amethyst.cli.commands.KeyCommands
+import com.vitorpamplona.amethyst.cli.commands.KeyPackageCommands
+import com.vitorpamplona.amethyst.cli.commands.KindCommand
+import com.vitorpamplona.amethyst.cli.commands.LoginCommand
+import com.vitorpamplona.amethyst.cli.commands.MarmotResetCommand
+import com.vitorpamplona.amethyst.cli.commands.MessageCommands
+import com.vitorpamplona.amethyst.cli.commands.NamecoinCommand
+import com.vitorpamplona.amethyst.cli.commands.NappletCommands
+import com.vitorpamplona.amethyst.cli.commands.NipCommand
+import com.vitorpamplona.amethyst.cli.commands.NotesCommands
+import com.vitorpamplona.amethyst.cli.commands.NsiteCommands
+import com.vitorpamplona.amethyst.cli.commands.OfferCommands
+import com.vitorpamplona.amethyst.cli.commands.OutboxCommand
+import com.vitorpamplona.amethyst.cli.commands.PodcastCommands
+import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
+import com.vitorpamplona.amethyst.cli.commands.PublishCommand
+import com.vitorpamplona.amethyst.cli.commands.RelayCommands
+import com.vitorpamplona.amethyst.cli.commands.SearchCommand
+import com.vitorpamplona.amethyst.cli.commands.ServeCommand
+import com.vitorpamplona.amethyst.cli.commands.StoreCommands
+import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
+import com.vitorpamplona.amethyst.cli.commands.SyncCommand
+import com.vitorpamplona.amethyst.cli.commands.UseCommand
+import com.vitorpamplona.amethyst.cli.commands.VerifyCommand
+import com.vitorpamplona.amethyst.cli.commands.ZapCommand
+import com.vitorpamplona.amethyst.cli.commands.cashu.CashuCommands
+import com.vitorpamplona.amethyst.cli.commands.cashu.CashuMintCommands
+import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
 import kotlinx.coroutines.runBlocking
 import kotlin.system.exitProcess
@@ -28,10 +75,10 @@ import kotlin.system.exitProcess
 /**
  * amy — non-interactive command-line interface to Amethyst.
  *
- * Today this covers the Marmot/MLS surface (`amy marmot …`) plus identity
- * and relay configuration at the root level. The layout is intentionally
- * extensible — future verbs (`amy dm`, `amy feed`, `amy profile`) slot in
- * as new top-level subcommands.
+ * Covers Amethyst's account/social/Marmot surface plus a set of
+ * nak-style army-knife primitives (`decode`, `encode`, `event`, `fetch`,
+ * `subscribe`, …). The layout is intentionally extensible — new verbs
+ * slot in as top-level subcommands.
  *
  * Usage: amy --data-dir PATH SUBCOMMAND ARGS
  *
@@ -48,6 +95,13 @@ import kotlin.system.exitProcess
  * shape is not. Diagnostic logs always go to stderr.
  */
 fun main(argv: Array<String>) {
+    // Force AWT headless before any class load that might touch ImageIO,
+    // Toolkit, or Graphics2D (image upload pulls in BufferedImage via
+    // commons MediaMetadataReader / ImageReencoder). The Gradle launcher
+    // also sets this via applicationDefaultJvmArgs; this is a belt-and-
+    // braces guard for invocations that bypass the launcher scripts.
+    System.setProperty("java.awt.headless", "true")
+
     // Set output mode before dispatch so even argument-parsing errors
     // honour --json.
     if (argv.any { it == "--json" || it == "--json=true" }) {
@@ -111,70 +165,75 @@ private suspend fun dispatch(argv: Array<String>): Int {
     // resolve "multiple accounts, ambiguous" cases) — so it skips
     // DataDir.resolve. Other commands fall through to the normal path.
     if (head == "use") {
-        return com.vitorpamplona.amethyst.cli.commands.UseCommand
-            .run(tail)
+        return UseCommand.run(tail)
+    }
+
+    // Stateless local primitives (nak-style army-knife verbs). They operate
+    // purely on their arguments — no identity, no relays, no `~/.amy/` — so
+    // they dispatch before account resolution and work with zero state.
+    when (head) {
+        "decode" -> return DecodeCommand.run(tail)
+        "encode" -> return EncodeCommand.run(tail)
+        "verify" -> return VerifyCommand.run(tail)
+        "key" -> return KeyCommands.dispatch(tail)
+        "filter" -> return FilterCommand.run(tail)
+        "nip" -> return NipCommand.run(tail)
+        "kind" -> return KindCommand.run(tail)
+        "namecoin" -> return NamecoinCommand.dispatch(tail)
+    }
+
+    // `relay info URL` is a stateless NIP-11 fetch — no account needed. The
+    // rest of `relay …` (add/list/publish-lists) operates on the account and
+    // falls through to the normal path below.
+    if (head == "relay" && tail.firstOrNull() == "info") {
+        return RelayCommands.info(tail.drop(1).toTypedArray())
+    }
+
+    // `cashu mint ping|info URL` is a stateless NIP-60 /v1/info probe — no
+    // account, no relays. The rest of `cashu …` operates on the account.
+    if (head == "cashu" && tail.firstOrNull() == "mint") {
+        return CashuMintCommands.dispatch(tail.drop(1).toTypedArray())
     }
 
     val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
     val dataDir = DataDir.resolve(accountFlag = accountFlag, secrets = secrets)
 
     return when (head) {
-        "init" -> {
-            Commands.init(dataDir, Args(tail))
-        }
-
-        "create" -> {
-            Commands.create(dataDir, tail)
-        }
-
-        "login" -> {
-            Commands.login(dataDir, tail)
-        }
-
-        "whoami" -> {
-            Commands.whoami(dataDir)
-        }
-
-        "relay" -> {
-            Commands.relay(dataDir, tail)
-        }
-
-        "marmot" -> {
-            marmotDispatch(dataDir, tail)
-        }
-
-        "dm" -> {
-            Commands.dm(dataDir, tail)
-        }
-
-        "profile" -> {
-            Commands.profile(dataDir, tail)
-        }
-
-        "notes" -> {
-            Commands.notes(dataDir, tail)
-        }
-
-        "store" -> {
-            Commands.store(dataDir, tail)
-        }
-
-        "follow" -> {
-            Commands.follow(dataDir, tail)
-        }
-
-        "unfollow" -> {
-            Commands.unfollow(dataDir, tail)
-        }
-
-        "search" -> {
-            Commands.search(dataDir, tail)
-        }
-
-        "zap" -> {
-            Commands.zap(dataDir, tail)
-        }
-
+        "init" -> InitCommands.init(dataDir, Args(tail))
+        "create" -> CreateCommand.run(dataDir, tail)
+        "login" -> LoginCommand.run(dataDir, tail)
+        "whoami" -> InitCommands.whoami(dataDir)
+        "relay" -> RelayCommands.dispatch(dataDir, tail)
+        "marmot" -> marmotDispatch(dataDir, tail)
+        "dm" -> DmCommands.dispatch(dataDir, tail)
+        "profile" -> ProfileCommands.dispatch(dataDir, tail)
+        "notes" -> NotesCommands.dispatch(dataDir, tail)
+        "nsite" -> NsiteCommands.dispatch(dataDir, tail)
+        "napplet" -> NappletCommands.dispatch(dataDir, tail)
+        "store" -> StoreCommands.dispatch(dataDir, tail)
+        "follow" -> FollowCommand.follow(dataDir, tail)
+        "unfollow" -> FollowCommand.unfollow(dataDir, tail)
+        "search" -> SearchCommand.dispatch(dataDir, tail)
+        "zap" -> ZapCommand.dispatch(dataDir, tail)
+        "offer" -> OfferCommands.dispatch(dataDir, tail)
+        "debit" -> DebitCommands.dispatch(dataDir, tail)
+        "event" -> EventCommand.run(dataDir, tail)
+        "publish" -> PublishCommand.run(dataDir, tail)
+        "fetch" -> FetchCommand.run(dataDir, tail)
+        "subscribe" -> SubscribeCommand.run(dataDir, tail)
+        "count" -> CountCommand.run(dataDir, tail)
+        "encrypt" -> EncryptCommand.run(dataDir, tail)
+        "decrypt" -> DecryptCommand.run(dataDir, tail)
+        "gift" -> GiftCommands.dispatch(dataDir, tail)
+        "outbox" -> OutboxCommand.run(dataDir, tail)
+        "blossom" -> BlossomCommands.dispatch(dataDir, tail)
+        "sync" -> SyncCommand.run(dataDir, tail)
+        "git" -> GitCommands.dispatch(dataDir, tail)
+        "admin" -> AdminCommand.run(dataDir, tail)
+        "serve" -> ServeCommand.run(dataDir, tail)
+        "cashu" -> CashuCommands.dispatch(dataDir, tail)
+        "podcast" -> PodcastCommands.dispatch(dataDir, tail)
+        "bunker" -> BunkerCommand.run(dataDir, tail)
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -186,41 +245,20 @@ private suspend fun dispatch(argv: Array<String>): Int {
 private suspend fun marmotDispatch(
     dataDir: DataDir,
     tail: Array<String>,
-): Int {
-    if (tail.isEmpty()) {
-        printUsage()
-        return 2
-    }
-    val head = tail[0]
-    val rest = tail.drop(1).toTypedArray()
-    return when (head) {
-        "key-package" -> {
-            Commands.keyPackage(dataDir, rest)
-        }
-
-        "group" -> {
-            Commands.group(dataDir, rest)
-        }
-
-        "message" -> {
-            Commands.message(dataDir, rest)
-        }
-
-        "await" -> {
-            Commands.await(dataDir, rest)
-        }
-
-        "reset" -> {
-            Commands.reset(dataDir, rest)
-        }
-
-        else -> {
-            System.err.println("unknown marmot subcommand: $head")
-            printUsage()
-            2
-        }
-    }
-}
+): Int =
+    route(
+        name = "marmot",
+        tail = tail,
+        usage = "marmot <key-package|group|message|await|reset>",
+        routes =
+            mapOf(
+                "key-package" to { rest -> KeyPackageCommands.dispatch(dataDir, rest) },
+                "group" to { rest -> GroupCommands.dispatch(dataDir, rest) },
+                "message" to { rest -> MessageCommands.dispatch(dataDir, rest) },
+                "await" to { rest -> AwaitCommands.dispatch(dataDir, rest) },
+                "reset" to { rest -> MarmotResetCommand.run(dataDir, rest) },
+            ),
+    )
 
 private enum class GlobalFlag(
     val long: String,
@@ -310,16 +348,54 @@ private fun printUsage() {
         |  then ${'$'}AMY_PASSPHRASE, then a TTY prompt. `plaintext` writes the
         |  private key directly into identity.json (still 0600) — dev only.
         |
+        |Primitives (stateless — no account or network needed):
+        |  decode ENTITY                decode a NIP-19/21 entity (npub|nsec|note|nevent|
+        |                                nprofile|naddr|nrelay|nembed) to JSON
+        |  encode npub HEX              encode raw parts into a NIP-19 entity:
+        |  encode nsec HEX                 nevent/nprofile/naddr accept --relay URL[,URL…];
+        |  encode note ID                  nevent accepts --author HEX --kind N;
+        |  encode nevent ID [...]          naddr needs --kind N --pubkey HEX --identifier D
+        |  encode nprofile HEX [...]
+        |  encode naddr --kind N --pubkey HEX --identifier D [--relay URL[,URL…]]
+        |  verify [EVENT-JSON]          check an event's id hash + signature
+        |                                (reads stdin when the arg is omitted or `-`)
+        |  key generate                 mint a fresh keypair (nsec + npub + hex)
+        |  key public NSEC|HEX          derive the public key from a secret key
+        |  key encrypt NSEC|HEX --password X    NIP-49 encrypt to ncryptsec1…
+        |  key decrypt NCRYPTSEC --password X   NIP-49 decrypt back to a secret key
+        |  filter [--kind …] [--author …]   assemble + print a NIP-01 filter JSON from the
+        |         [--id …] [--tag …] …        same flags fetch/subscribe use (no query sent)
+        |  nip N                        show a NIP (repo first, then a Nostr wiki/long-form fallback)
+        |  nip list                     fetch the NIP index (README) from the repo
+        |  kind N|NAME                  look up an event kind's label + NIP (number, or search by name)
+        |  namecoin resolve IDENT       resolve a Namecoin identifier (.bit, d/, id/, alice@x.bit)
+        |    [--server URL[,URL]]         to a Nostr pubkey + relays via the Namecoin blockchain
+        |    [--timeout SECS]             (no account, talks to ElectrumX over TLS)
+        |  namecoin servers             print the default ElectrumX server list
+        |
         |Identity:
         |  init [--nsec NSEC]           create or import a bare identity (no defaults published)
         |  create [--name NAME]            provision a full Amethyst-style account + publish bootstrap events
-        |  login KEY [--password X]     import (nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05)
+        |  login KEY [--password X]     import (nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05|bunker://)
         |  whoami                       print current identity
+        |
+        |Remote signing (NIP-46):
+        |  bunker [--relay URL[,URL…]]  run a remote signer for this (local-key) account; prints a
+        |    [--secret S] [--timeout SECS]  bunker:// uri and signs requests until interrupt/timeout
+        |  bunker connect NOSTRCONNECT-URI             act as signer for a client's nostrconnect://
+        |    [--timeout SECS]                            offer (acks + services its requests)
+        |  login bunker://PUBKEY?relay=…&secret=…       sign through a remote bunker (mints a local
+        |                                                transport key; the account acts as PUBKEY)
+        |  login --nostrconnect [--relay URL[,URL…]]   client-initiated: print a nostrconnect:// offer,
+        |    [--name N] [--timeout SECS]                 wait for a signer to connect, then persist it
         |
         |Relays:
         |  relay add URL [--type T]      T=nip65|inbox|key_package|all (default all)
         |  relay list                    print configured relays
         |  relay publish-lists           publish kind:10002 + kind:10050
+        |  relay info URL                fetch + print a relay's NIP-11 info document
+        |  outbox USER [--refresh]       show USER's NIP-65 read/write relays (outbox model)
+        |        [--timeout SECS]         (USER: npub|nprofile|hex|name@domain)
         |
         |Profile (NIP-01 kind:0):
         |  profile show [USER] [--timeout SECS]       fetch latest kind:0 metadata
@@ -343,6 +419,80 @@ private fun printUsage() {
         |             [--since TS] [--until TS]
         |             [--timeout SECS]
         |
+        |Raw events (build / sign / broadcast):
+        |  event --kind N [--content TEXT]             build + sign an arbitrary event with the active
+        |        [--tags JSON] [--created-at TS]        account. Prints the signed event; add --publish
+        |        [--publish] [--relay URL[,URL…]]       (or --relay) to broadcast. --tags takes a JSON
+        |                                                array-of-arrays, e.g. '[["t","nostr"]]'.
+        |  publish [EVENT-JSON] [--relay URL[,URL…]]   broadcast a pre-made signed event (verified
+        |                                                first; reads stdin when the arg is omitted/`-`)
+        |
+        |Queries (filter flags shared by fetch/subscribe):
+        |  fetch  [--kind K[,K]] [--author U[,U]]      one-shot query: collect until EOSE, print, exit.
+        |         [--id ID[,ID]] [--tag e=ID,p=PK,…]    --author/--id accept npub/nevent/note/hex.
+        |         [--since TS] [--until TS] [--limit N]  default --limit 100, --timeout 8s.
+        |         [--search TEXT] [--relay URL[,URL…]]
+        |         [--timeout SECS]
+        |  subscribe [<same filter flags as fetch>]    live stream: print each event as it arrives
+        |         [--relay URL[,URL…]] [--timeout SECS]  (NDJSON). Runs until --timeout or interrupt.
+        |  count  [<same filter flags as fetch>]        NIP-45 COUNT: per-relay match counts, no
+        |         [--relay URL[,URL…]] [--timeout SECS]  event download.
+        |  sync   --relay URL [<filter flags>]          NIP-77 Negentropy reconcile with the local
+        |         [--down] [--up] [--timeout SECS]       store (--down default; --up to push ours;
+        |                                                both for bidirectional).
+        |
+        |Encryption (active account's key):
+        |  encrypt --to USER [TEXT] [--nip04]           NIP-44 (default) or NIP-04 encrypt. Reads
+        |                                                stdin when TEXT is omitted or `-`.
+        |  decrypt --from USER [CIPHERTEXT] [--nip04]   inverse of encrypt.
+        |  gift wrap --to USER [EVENT-JSON]             NIP-59: seal + wrap a signed inner event for
+        |         [--relay URL[,URL…]]                   USER (add --relay to broadcast the wrap).
+        |  gift unwrap [GIFTWRAP-JSON]                  decrypt + unseal a kind:1059 wrap addressed
+        |                                                to the active account.
+        |
+        |Blossom blobs (NIP-B7 / BUD-01/02/04):
+        |  blossom upload --server URL FILE             upload a file (authed); prints the blob URL.
+        |          [--mime-type M]
+        |  blossom download URL [--out FILE]            download a blob (public). Accepts a full URL,
+        |  blossom download HASH --server URL            or a HASH plus --server.
+        |  blossom list --server URL [USER]             list a user's blobs (defaults to self)
+        |  blossom delete HASH --server URL             delete a blob you own
+        |  blossom check --server URL HASH[,HASH]       HEAD-check blobs exist (fails if any missing)
+        |  blossom mirror --server URL SOURCE-URL       ask the server to mirror a blob (BUD-04)
+        |
+        |Git (NIP-34):
+        |  git announce --name N [--description D]      publish a kind:30617 repo announcement
+        |      [--clone URL[,URL]] [--web URL[,URL]]     (--d sets the identifier; defaults to name)
+        |      [--relay URL[,URL]] [--maintainer HEX[,]]
+        |      [--hashtag T[,T]] [--earliest-commit C] [--d ID]
+        |  git list [USER]                              list a user's repo announcements (default self)
+        |  git show NADDR|kind:pubkey:id                print one repo announcement
+        |  git issue NADDR|coords --subject S [BODY]    publish a kind:1621 issue against a repo
+        |      [--hashtag T[,T]] [--relay URL[,URL]]     (BODY from arg or stdin)
+        |
+        |Podcasts (NIP-F4):
+        |  podcast metadata --title T --image URL        publish kind:10154 show metadata
+        |      --description D [--website URL[,URL]]
+        |  podcast publish --title T --description D     publish a kind:54 episode
+        |      --audio URL[,URL] [--audio-type MIME]
+        |      [--image URL] [--content MARKDOWN]
+        |  podcast list [USER] [--limit N]              list a user's metadata + episodes
+        |
+        |Static websites (NIP-5A kind:15128/35128):
+        |  nsite fetch AUTHOR [--d ID] [--path P]      resolve one path over Nostr + Blossom and
+        |        [--server URL[,URL]] [--relay URL[,URL]]  VERIFY it against the manifest's sha256 pin
+        |        [--out FILE] [--timeout SECS]          (AUTHOR: npub|nprofile|hex|name@domain;
+        |        [--max-inline-bytes N]                 --d selects a kind:35128 named site, else the
+        |                                                kind:15128 root site; --path defaults to /)
+        |
+        |Napplets (NIP-5D kind:5129/15129/35129):
+        |  napplet fetch AUTHOR [--d ID] [--path P]    like `nsite fetch`, plus NIP-5D verification:
+        |        [--server URL[,URL]] [--relay URL[,URL]]  recompute + check the `x` aggregate hash and
+        |        [--out FILE] [--timeout SECS]          report the napplet's `requires` capabilities
+        |        [--max-inline-bytes N]                 (--d selects a kind:35129 named napplet, else
+        |  napplet fetch --snapshot EVENT-ID            the kind:15129 root; --snapshot pins a kind:5129
+        |        [--path P] …                            immutable snapshot by event id)
+        |
         |Contacts (NIP-02 kind:3):
         |  follow USER [--timeout SECS]               add USER to your contact list
         |  unfollow USER [--timeout SECS]             remove USER from your contact list
@@ -355,6 +505,19 @@ private fun printUsage() {
         |  zap event EVENT-ID SATS           same, but attribute the zap to a specific
         |    [--comment X] [--anon|--private]  event (must be in local store)
         |    [--timeout SECS]
+        |
+        |CLINK Offers:
+        |  offer info NOFFER                          decode a noffer1… pointer (local, no network)
+        |  offer request NOFFER [--amount SATS]       kind:21001 round-trip: ask the service for a
+        |    [--timeout MS]                            fresh BOLT11 (amount required for spontaneous
+        |                                              offers; defaults to the pointer's fixed price)
+        |
+        |CLINK Debits:
+        |  debit info NDEBIT                          decode an ndebit1… pointer (local, no network)
+        |  debit pay NDEBIT BOLT11 [--amount SATS]    kind:21002 round-trip: ask the wallet to pay the
+        |    [--timeout MS]                            invoice; prints the preimage or a GFY error
+        |  debit budget NDEBIT --amount SATS          authorize a spending budget; omit --frequency
+        |    [--frequency day|week|month] [--timeout MS] for a one-time budget
         |
         |Search (NIP-50):
         |  search user QUERY [--limit N]              search kind:0 profiles
@@ -414,6 +577,7 @@ private fun printUsage() {
         |  store sweep-expired                        delete events past their NIP-40 expiration
         |  store scrub                                rebuild idx/ from canonical events (after edits / crashes)
         |  store compact                              drop dangling idx entries (canonical gone)
+        |  store reindex-fts                          rebuild the NIP-50 search index (after a searchable-kinds change)
         """.trimMargin(),
     )
 }

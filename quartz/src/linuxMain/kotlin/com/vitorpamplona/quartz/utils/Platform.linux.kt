@@ -38,3 +38,12 @@ actual fun currentTimeSeconds(): Long {
         return ts.tv_sec
     }
 }
+
+@OptIn(ExperimentalForeignApi::class)
+actual fun currentTimeMillis(): Long {
+    memScoped {
+        val ts = alloc<timespec>()
+        clock_gettime(CLOCK_REALTIME, ts.ptr)
+        return ts.tv_sec * 1000 + ts.tv_nsec / 1_000_000
+    }
+}

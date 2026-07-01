@@ -53,12 +53,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
@@ -68,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.DisplayUserSetAsSubject
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,17 +113,17 @@ fun MarmotGroupListScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringRes(R.string.back),
                         )
                     }
                 },
-                title = { Text("Marmot Groups") },
+                title = { Text(stringRes(R.string.marmot_groups_title)) },
             )
         },
         floatingActionButton = {
             FabBottomBarPadded(nav) {
                 FloatingActionButton(onClick = { nav.nav(Route.CreateMarmotGroup) }, shape = CircleShape) {
-                    Icon(MaterialSymbols.Add, contentDescription = "Create Group")
+                    Icon(MaterialSymbols.Add, contentDescription = stringRes(R.string.marmot_create_group))
                 }
             }
         },
@@ -132,7 +135,12 @@ fun MarmotGroupListScreen(
                     onClick = { selectedTab = 0 },
                     text = {
                         Text(
-                            text = if (knownGroups.isEmpty()) "Known" else "Known (${knownGroups.size})",
+                            text =
+                                if (knownGroups.isEmpty()) {
+                                    stringRes(R.string.marmot_tab_known)
+                                } else {
+                                    stringRes(R.string.marmot_tab_known_count, knownGroups.size)
+                                },
                         )
                     },
                 )
@@ -141,7 +149,12 @@ fun MarmotGroupListScreen(
                     onClick = { selectedTab = 1 },
                     text = {
                         Text(
-                            text = if (newRequestGroups.isEmpty()) "New Requests" else "New Requests (${newRequestGroups.size})",
+                            text =
+                                if (newRequestGroups.isEmpty()) {
+                                    stringRes(R.string.marmot_tab_new_requests)
+                                } else {
+                                    stringRes(R.string.marmot_tab_new_requests_count, newRequestGroups.size)
+                                },
                         )
                     },
                 )
@@ -157,16 +170,21 @@ fun MarmotGroupListScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = if (selectedTab == 0) "No groups yet" else "No invitations",
+                            text =
+                                if (selectedTab == 0) {
+                                    stringRes(R.string.marmot_no_groups)
+                                } else {
+                                    stringRes(R.string.marmot_no_invitations)
+                                },
                             style = MaterialTheme.typography.titleMedium,
                             textAlign = TextAlign.Center,
                         )
                         Text(
                             text =
                                 if (selectedTab == 0) {
-                                    "Create a group or accept an invitation."
+                                    stringRes(R.string.marmot_no_groups_desc)
                                 } else {
-                                    "When someone adds you to a group it will show up here until you reply."
+                                    stringRes(R.string.marmot_no_invitations_desc)
                                 },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -222,10 +240,16 @@ fun MarmotGroupListItem(
     onClick: () -> Unit,
 ) {
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
-    val unread by chatroom.unreadCount.collectAsStateWithLifecycle()
     val members by chatroom.members.collectAsStateWithLifecycle()
     val memberPubkeys = remember(members) { members.map { it.pubkey } }
     val newestMessage = chatroom.newestMessage
+
+    val lastReadTime by accountViewModel.account.loadLastReadFlow(marmotGroupLastReadRoute(groupId)).collectAsStateWithLifecycle()
+    // Not remembered: chatroom.messages can shrink without newestMessage or
+    // lastReadTime changing (pruning, kind:5 deletion of an older message),
+    // so caching on those keys would serve a stale count. The set is pruned
+    // to ~100 entries, so counting per recomposition is cheap.
+    val unread = chatroom.messages.count { (it.createdAt() ?: Long.MIN_VALUE) > lastReadTime }
 
     Row(
         modifier =
@@ -260,7 +284,7 @@ fun MarmotGroupListItem(
                 )
             } else {
                 Text(
-                    text = "Group ${groupId.take(8)}...",
+                    text = stringRes(R.string.marmot_group_fallback_name, groupId.take(8)),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = if (unread > 0) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1,
@@ -278,7 +302,7 @@ fun MarmotGroupListItem(
                 )
             } else {
                 Text(
-                    text = "No messages yet",
+                    text = stringRes(R.string.marmot_no_messages_yet),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp),
@@ -305,7 +329,7 @@ fun MarmotGroupListItem(
                 }
             } else {
                 Text(
-                    text = "${chatroom.messages.size} msgs",
+                    text = pluralStringResource(R.plurals.marmot_message_count, chatroom.messages.size, chatroom.messages.size),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

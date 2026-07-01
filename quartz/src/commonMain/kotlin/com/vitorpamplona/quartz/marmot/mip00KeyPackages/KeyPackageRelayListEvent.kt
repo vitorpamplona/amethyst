@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -53,7 +52,6 @@ class KeyPackageRelayListEvent(
 
     companion object {
         const val KIND = 10051
-        const val ALT_DESCRIPTION = "MLS KeyPackage relay list"
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
@@ -62,7 +60,6 @@ class KeyPackageRelayListEvent(
         private fun createTagArray(relays: List<NormalizedRelayUrl>): Array<Array<String>> =
             relays
                 .map { RelayTag.assemble(it) }
-                .plusElement(AltTag.assemble(ALT_DESCRIPTION))
                 .toTypedArray()
 
         suspend fun create(

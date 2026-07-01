@@ -102,6 +102,11 @@ fun SinglePaneLayout(
                 hasLocalData = hasLocalData,
             )
 
+            // Unhealthy relays banner — flags relays unresponsive >7d, opens review popup
+            com.vitorpamplona.amethyst.desktop.ui.relay.health.UnhealthyRelayBannerHost(
+                onOpenDashboard = { singlePaneState.navigate(DeckColumnType.Relays) },
+            )
+
             // Content extends to the window edges; individual screens add their
             // own internal padding where appropriate (Messages uses full-bleed
             // panes to match native two-column chat apps).
@@ -129,6 +134,8 @@ fun SinglePaneLayout(
                     onNavigateToEditor = { navState.push(DesktopScreen.Editor(it)) },
                     onNavigateToRelays = { singlePaneState.navigate(DeckColumnType.Relays) },
                     onOpenFeedsDrawer = onOpenFeedsDrawer,
+                    onNavigateToPack = { navState.push(DesktopScreen.FollowPackDetail(it)) },
+                    onNavigateToPackBrowseAll = { navState.push(DesktopScreen.FollowPackBrowseAll) },
                 )
                 AnimatedContent(
                     targetState = currentOverlay,
@@ -154,6 +161,7 @@ fun SinglePaneLayout(
                                 relayManager = relayManager,
                                 localCache = localCache,
                                 account = account,
+                                iAccount = iAccount,
                                 nwcConnection = nwcConnection,
                                 subscriptionsCoordinator = subscriptionsCoordinator,
                                 highlightStore = highlightStore,
@@ -164,6 +172,7 @@ fun SinglePaneLayout(
                                 onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
                                 onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
                                 onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
+                                onNavigateToPack = { navState.push(DesktopScreen.FollowPackDetail(it)) },
                                 onBack = { navState.pop() },
                             )
                         }

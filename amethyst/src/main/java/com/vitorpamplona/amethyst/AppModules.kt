@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst
 
+import android.content.ComponentCallbacks2
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
@@ -43,6 +44,9 @@ import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
+import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
+import com.vitorpamplona.amethyst.napplet.DataStoreNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
@@ -60,6 +64,7 @@ import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
+import com.vitorpamplona.amethyst.service.okhttp.OnionLocationCache
 import com.vitorpamplona.amethyst.service.okhttp.SurgeDns
 import com.vitorpamplona.amethyst.service.okhttp.SurgeDnsStore
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
@@ -68,7 +73,9 @@ import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
+import com.vitorpamplona.amethyst.service.relayClient.TorCircuitHealthTracker
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
@@ -109,6 +116,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
@@ -119,8 +127,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -146,6 +157,9 @@ class AppModules(
         }
 
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
+
+    private val _trimLevelEvents = MutableSharedFlow<Int>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val trimLevelEvents = _trimLevelEvents.asSharedFlow()
 
     // Pre-load both preference DataStores in parallel on IO threads.
     // Both constructors use runBlocking internally, so starting them concurrently
@@ -231,6 +245,11 @@ class AppModules(
     // path on first lookup. Stored in cacheDir — pure perf data, OK if the OS evicts it.
     val dnsStore = SurgeDnsStore(File(appContext.safeCacheDir(), SurgeDnsStore.FILE_NAME), surgeDns)
 
+    // Shared cache populated by OnionLocationInterceptor from any HTTP/WebSocket
+    // response carrying an Onion-Location header. Consulted by OnionUrlRewriteInterceptor
+    // on Tor-enabled clients to transparently redirect to .onion addresses.
+    val onionLocationCache = OnionLocationCache()
+
     // manages all the other connections separately from relays.
     val okHttpClients: DualHttpClientManager =
         DualHttpClientManager(
@@ -249,6 +268,7 @@ class AppModules(
                 val profileOnly = settings?.localBlossomCacheProfilePicturesOnly?.value ?: false
                 master && !profileOnly && localBlossomCacheProbe.available.value
             },
+            onionCache = onionLocationCache,
         )
 
     // Offers easy methods to know when connections are happening through Tor or not
@@ -339,6 +359,7 @@ class AppModules(
                     isPrimaryCoreRpc = true,
                 )
             }
+
             NamecoinBackend.ELECTRUMX -> {
                 // Custom servers first (if any). If the user only has the public
                 // defaults configured, primary == defaultElectrumx and the
@@ -422,14 +443,24 @@ class AppModules(
             isMobileDataProvider = connManager.isMobileOrNull,
             scope = applicationIOScope,
             dns = surgeDns,
+            onionCache = onionLocationCache,
         )
 
     // Connects the INostrClient class with okHttp
     val websocketBuilder =
-        OkHttpWebSocket.Builder { url ->
-            val useTor = torEvaluatorFlow.flow.value.useTor(url)
-            okHttpClientForRelays.getHttpClient(useTor)
-        }
+        OkHttpWebSocket.Builder(
+            httpClient = { url ->
+                val useTor = torEvaluatorFlow.shouldUseTorForRelay(url)
+                okHttpClientForRelays.getHttpClient(useTor)
+            },
+            // Don't dial Tor-routed relays until Tor's SOCKS port is up. Otherwise the
+            // whole Tor-routed relay set is hammered with doomed dials against the dead
+            // proxy during bootstrap. RelayProxyClientConnector reconnects them (with
+            // ignoreRetryDelays=true) the instant Tor flips to Active.
+            canDial = { url ->
+                !torEvaluatorFlow.shouldUseTorForRelay(url) || torManager.isSocksReady()
+            },
+        )
 
     // Caches all events in Memory
     val cache: LocalCache = LocalCache
@@ -471,6 +502,18 @@ class AppModules(
     // Provides a relay pool
     val client: INostrClient = NostrClient(websocketBuilder, applicationIOScope)
 
+    // Self-heals the "Tor Active but every circuit dead" state the lifecycle watchdogs can't
+    // see (they only arm while Connecting). Watches Tor-routed relay outcomes and, when enough
+    // fail with zero successes in the window, pokes TorManager to drop + re-init Arti.
+    val torCircuitHealthTracker =
+        TorCircuitHealthTracker(
+            client = client,
+            isTorRouted = { torEvaluatorFlow.shouldUseTorForRelay(it) },
+            isTorActive = { torManager.isSocksReady() },
+            isConnectivityActive = { connManager.status.value is ConnectivityStatus.Active },
+            onCircuitsDead = { torManager.onTorCircuitsDead() },
+        ).also { it.register() }
+
     // Watches for changes on Tor and Relay List Settings
     val relayProxyClientConnector =
         RelayProxyClientConnector(
@@ -488,6 +531,15 @@ class AppModules(
 
     // Show messages from the Relay and controls their dismissal
     val notifyCoordinator = NotifyCoordinator(client)
+
+    // Persists per-relay NIP-42 ALLOW/DENY overrides across app restarts.
+    val relayAuthPermissionStore by lazy {
+        DataStoreRelayAuthPermissionStore(appContext)
+    }
+
+    // Singleton stores for napplet permissions — DataStore v1 enforces one instance per file.
+    val nappletPermissionStore by lazy { DataStoreNappletPermissionStore(appContext) }
+    val signerPermissionStore by lazy { DataStoreNostrSignerPermissionStore(appContext) }
 
     // Authenticates with relays.
     val authCoordinator = AuthCoordinator(client, applicationIOScope)
@@ -510,6 +562,9 @@ class AppModules(
     val detailedLogger = if (isDebug) RelayLogger(client, debugSending = false, debugReceiving = false) else null
     val relayReqStats = if (isDebug) RelayReqStats(client) else null
     val logger = if (isDebug) RelaySpeedLogger(client) else null
+
+    // Focused timeline for the DM / gift-wrap loading path (tag: DMPagination).
+    // val dmDiagnostics = if (isDebug) DmRelayDiagnosticsLogger(client) else null
 
     // Coordinates all subscriptions for the Nostr Client
     val sources: RelaySubscriptionsCoordinator =
@@ -718,6 +773,18 @@ class AppModules(
             sessionManager.loginWithDefaultAccountIfLoggedOff()
         }
 
+        // One-time hygiene: remove per-account directories (MLS/Marmot stores) left behind
+        // by accounts that are no longer saved — account deletion historically didn't clean
+        // them up, so they leaked disk across every add/remove.
+        applicationIOScope.launch {
+            val keep =
+                LocalPreferences
+                    .allSavedAccounts()
+                    .mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }
+                    .toSet()
+            accountsCache.pruneOrphanAccountDirs(keep)
+        }
+
         // forces initialization of uiPrefs in the main thread to avoid blinking themes
         uiPrefs
 
@@ -737,6 +804,13 @@ class AppModules(
         applicationIOScope.launch {
             CachedRobohash
             resourceCacheInit()
+        }
+
+        // Initialize napplet permission stores on an IO thread to avoid StrictMode violations
+        // when ConnectedAppsScreen first accesses them on the main thread.
+        applicationIOScope.launch {
+            nappletPermissionStore
+            signerPermissionStore
         }
 
         // registers to receive events
@@ -826,12 +900,71 @@ class AppModules(
         accountsCache.clear()
     }
 
-    fun trim() {
+    fun trim(level: Int) {
+        _trimLevelEvents.tryEmit(level)
         applicationIOScope.launch {
             // Backgrounding is a natural moment to flush the DNS cache.
             dnsStore.save()
             val loggedIn = accountsCache.accounts.value.values
-            trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts())
+            trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts(), level)
+            // Trim in-process caches proportional to OS memory pressure.
+            //
+            // Background levels (app not visible, ordered highest-first so the when
+            // chain short-circuits at the right tier):
+            //   COMPLETE  (80) — at the bottom of the LRU list, kill imminent
+            //   MODERATE  (60) — system is hurting, neighbouring apps being killed
+            //   BACKGROUND(40) — backgrounded, mild system pressure
+            //   UI_HIDDEN (20) — just backgrounded, no pressure yet
+            //
+            // Foreground levels (app is active but system is low):
+            //   RUNNING_CRITICAL (15), RUNNING_LOW (10)
+            //
+            // UI_HIDDEN fires on EVERY app switch. Don't clear CPU-heavy caches
+            // (Robohash SVG assembly, rich-text parsing) there — clearing them
+            // forces a full rebuild on every resume and causes visible jank.
+            when {
+                level >= ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> {
+                    // Kill imminent: free everything.
+                    memoryCache.trimToSize(0)
+                    CachedRichTextParser.trimToSize(0)
+                    CachedRobohash.trimToSize(0)
+                    nip11Cache.trimToSize(0)
+                }
+                level >= ComponentCallbacks2.TRIM_MEMORY_MODERATE -> {
+                    // System under real pressure: clear images and most parsed state.
+                    memoryCache.trimToSize(0)
+                    CachedRichTextParser.trimToSize(50)
+                    CachedRobohash.trimToSize(10)
+                    nip11Cache.trimToSize(100)
+                }
+                level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> {
+                    // Backgrounded with mild pressure: trim significantly.
+                    memoryCache.trimToSize(memoryCache.maxSize / 4)
+                    CachedRichTextParser.trimToSize(100)
+                    CachedRobohash.trimToSize(20)
+                    nip11Cache.trimToSize(200)
+                }
+                level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> {
+                    // Just backgrounded, no pressure yet: trim images (bitmaps are the
+                    // largest allocations) but keep parsed-text and avatar caches warm
+                    // so resuming is instant.
+                    memoryCache.trimToSize(memoryCache.maxSize / 2)
+                }
+                level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> {
+                    // Foreground, critically low memory.
+                    memoryCache.trimToSize(memoryCache.maxSize / 4)
+                    CachedRichTextParser.trimToSize(100)
+                    CachedRobohash.trimToSize(20)
+                    nip11Cache.trimToSize(200)
+                }
+                level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
+                    // Foreground, low memory.
+                    memoryCache.trimToSize(memoryCache.maxSize / 2)
+                    CachedRichTextParser.trimToSize(250)
+                    CachedRobohash.trimToSize(50)
+                    nip11Cache.trimToSize(500)
+                }
+            }
         }
     }
 }

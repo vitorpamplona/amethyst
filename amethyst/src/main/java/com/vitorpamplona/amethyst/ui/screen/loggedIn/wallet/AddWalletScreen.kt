@@ -103,7 +103,17 @@ fun AddWalletScreen(
                 icon = MaterialSymbols.AccountBalanceWallet,
                 title = stringRes(R.string.wallet_add_cashu_title),
                 description = stringRes(R.string.wallet_add_cashu_description),
-                onClick = { nav.popUpTo(Route.WalletAddCashu, Route.WalletAdd::class) },
+                // Route through the find-or-create wizard, not straight to the
+                // mint manager: a portable NIP-60 wallet may already exist on
+                // relays, and creating one here would clobber it (kind:17375 is
+                // replaceable). The wizard offers "create new" when none is found.
+                onClick = { nav.popUpTo(Route.CashuWalletWizard, Route.WalletAdd::class) },
+            )
+            WalletTypeCard(
+                icon = MaterialSymbols.Bolt,
+                title = stringRes(R.string.wallet_add_clink_title),
+                description = stringRes(R.string.wallet_add_clink_description),
+                onClick = { nav.popUpTo(Route.WalletAddClinkDebit(), Route.WalletAdd::class) },
             )
         }
     }
@@ -124,41 +134,50 @@ private fun WalletTypeCard(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                symbol = icon,
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary,
+        WalletTypeCardContent(icon = icon, title = title, description = description)
+    }
+}
+
+@Composable
+private fun WalletTypeCardContent(
+    icon: MaterialSymbol,
+    title: String,
+    description: String,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            symbol = icon,
+            contentDescription = null,
+            modifier = Modifier.size(32.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
             )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                symbol = MaterialSymbols.AutoMirrored.ArrowForward,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Icon(
+            symbol = MaterialSymbols.AutoMirrored.ArrowForward,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
+    Spacer(modifier = Modifier.height(4.dp))
 }

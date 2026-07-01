@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
+import com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayHealthStore
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -64,6 +65,20 @@ fun RelayMetricsTab(
     }.collectAsState(emptyList())
 
     val metrics by relayManager.relayMetrics.collectAsState()
+
+    // Latency snapshots + slow classification — collected ONCE at tab scope. Rows take per-relay
+    // value snapshots (not the whole map) so strong-skipping skips unchanged rows on 60 s ticks.
+    val relayHealthStore = LocalRelayHealthStore.current
+    val latencySnapshots by
+        (
+            relayHealthStore?.latencySnapshots
+                ?: kotlinx.coroutines.flow.MutableStateFlow(kotlinx.collections.immutable.persistentMapOf())
+        ).collectAsState()
+    val slowRelays by
+        (
+            relayHealthStore?.slowRelays
+                ?: kotlinx.coroutines.flow.MutableStateFlow(kotlinx.collections.immutable.persistentMapOf())
+        ).collectAsState()
 
     val connectedCount = statuses.count { it.connected }
 
@@ -99,6 +114,8 @@ fun RelayMetricsTab(
                 RelayMetricCard(
                     status = status,
                     metrics = metrics[status.url],
+                    latency = latencySnapshots[status.url],
+                    slowReason = slowRelays[status.url],
                     isExpanded = expandedUrl == status.url,
                     onToggleExpand = {
                         expandedUrl = if (expandedUrl == status.url) null else status.url

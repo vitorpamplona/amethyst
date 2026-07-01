@@ -34,7 +34,9 @@ class PlatformLinkTag(
 
     companion object {
         fun match(tag: Tag): Boolean =
-            if (tag.has(2)) {
+            // Needs at least the platform code and the uri (2 elements). The entity
+            // type (index 2) is optional per NIP-89, so a 2-element link still matches.
+            if (tag.has(1)) {
                 tag[0] == PlatformType.IOS.code || tag[0] == PlatformType.WEB.code || tag[0] == PlatformType.ANDROID.code
             } else {
                 false

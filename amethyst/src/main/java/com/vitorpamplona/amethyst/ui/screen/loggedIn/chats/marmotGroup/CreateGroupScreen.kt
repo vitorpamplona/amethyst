@@ -41,10 +41,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.Dispatchers
@@ -87,7 +89,7 @@ fun CreateGroupScreen(
                     Toast
                         .makeText(
                             context,
-                            "Failed to create group: ${e.message}",
+                            stringRes(context, R.string.marmot_failed_to_create_group, e.message),
                             Toast.LENGTH_LONG,
                         ).show()
                 }
@@ -119,7 +121,7 @@ fun CreateGroupScreen(
                     .padding(horizontal = 16.dp),
         ) {
             Text(
-                text = "Create Marmot Group",
+                text = stringRes(R.string.marmot_create_group_title),
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
             )
@@ -127,13 +129,13 @@ fun CreateGroupScreen(
             OutlinedTextField(
                 value = groupName,
                 onValueChange = { groupName = it },
-                label = { Text("Group Name") },
+                label = { Text(stringRes(R.string.marmot_group_name)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
 
             Text(
-                "A new MLS group will be created. You can add members after.",
+                stringRes(R.string.marmot_create_group_footer),
                 modifier = Modifier.padding(top = 12.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -169,23 +171,18 @@ private fun MissingKeyPackageRelayListDialog(
 ) {
     AlertDialog(
         onDismissRequest = onCancel,
-        title = { Text("KeyPackage Relays not set") },
+        title = { Text(stringRes(R.string.marmot_keypackage_relays_not_set_title)) },
         text = {
-            Text(
-                "You don't have a KeyPackage Relay List yet (MIP-00). " +
-                    "This list tells other people where your KeyPackage is " +
-                    "published so they can invite you to group chats.\n\n" +
-                    "Use your current outbox relays for this?",
-            )
+            Text(stringRes(R.string.marmot_keypackage_relays_not_set_message))
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Use outbox relays")
+                Text(stringRes(R.string.marmot_use_outbox_relays))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Skip for now")
+                Text(stringRes(R.string.marmot_skip_for_now))
             }
         },
     )

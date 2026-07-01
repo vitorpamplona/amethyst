@@ -83,6 +83,11 @@
 #     so `BundledSQLiteDriver.threadingMode` threw NoSuchMethodError on the
 #     first relay-store query (LocalRelayStore.refreshStats).
 #   - pt.davidafsilva.apple (jkeychain): macOS Keychain JNI for nsec storage.
+#     Note: this lives in the dependency graph as a transitive runtime dep of
+#     `com.github.javakeyring:java-keyring` — `ModernOsxKeychainBackend` holds
+#     a `private pt.davidafsilva.apple.OSXKeychain` field. Keep both the
+#     class and its private native methods (loadSharedObject / the
+#     _addGenericPassword / _findGenericPassword bridge).
 #
 # secp256k1-kmp is already covered by the `-keep class fr.acinq.secp256k1.**`
 # rule mirrored from mobile above.

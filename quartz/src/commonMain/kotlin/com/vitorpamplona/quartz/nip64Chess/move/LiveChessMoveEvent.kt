@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.opponent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
@@ -66,7 +65,6 @@ class LiveChessMoveEvent(
 
     companion object {
         const val KIND = 30066
-        const val ALT_DESCRIPTION = "Chess move"
 
         fun build(
             gameId: String,
@@ -84,7 +82,6 @@ class LiveChessMoveEvent(
             san(san)
             fen(fen)
             opponent(opponent)
-            alt("$ALT_DESCRIPTION: $san")
             initializer()
         }
     }

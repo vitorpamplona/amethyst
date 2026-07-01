@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedAddressTag
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedEventTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -76,6 +75,7 @@ class CommunityPostApprovalEvent(
             Log.w(
                 "CommunityPostEvent",
                 "Failed to Parse Community Approval Contained Post of $id with $content",
+                e,
             )
             null
         }
@@ -94,7 +94,6 @@ class CommunityPostApprovalEvent(
 
     companion object {
         const val KIND = 4550
-        const val ALT_DESCRIPTION = "Community post approval"
         val KIND_LIST = listOf(CommunityPostApprovalEvent.KIND)
 
         fun build(
@@ -103,8 +102,6 @@ class CommunityPostApprovalEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CommunityPostApprovalEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
-
             community(community)
             approved(approvedPost)
             notifyAuthor(approvedPost)

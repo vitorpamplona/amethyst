@@ -20,25 +20,28 @@
  */
 package com.vitorpamplona.amethyst.service.cashu
 
-import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuToken
-import com.vitorpamplona.amethyst.service.cashu.v3.V3Parser
-import com.vitorpamplona.amethyst.service.cashu.v4.V4Parser
+import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.components.GenericLoadable
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenB64Parser
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 
+/**
+ * Thin Amethyst adapter over the protocol-level [CashuTokenB64Parser] in
+ * Quartz: it adds the off-main-thread guard and wraps the result in the UI's
+ * [GenericLoadable] so composables can render loading/error/loaded states.
+ */
 class CashuParser {
     fun parse(cashuToken: String): GenericLoadable<ImmutableList<CashuToken>> {
         checkNotInMainThread()
 
-        if (cashuToken.startsWith("cashuA")) {
-            return V3Parser.parseCashuA(cashuToken)
-        }
+        val parsed =
+            CashuTokenB64Parser.parse(cashuToken)
+                ?: return GenericLoadable.Error("Could not parse this cashu token")
 
-        if (cashuToken.startsWith("cashuB")) {
-            return V4Parser.parseCashuB(cashuToken)
-        }
+        if (parsed.isEmpty()) return GenericLoadable.Error("No token found")
 
-        return GenericLoadable.Error("Could not parse this cashu token")
+        return GenericLoadable.Loaded(parsed.toImmutableList())
     }
 }

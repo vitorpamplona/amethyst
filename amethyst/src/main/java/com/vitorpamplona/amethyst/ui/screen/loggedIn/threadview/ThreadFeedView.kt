@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -60,10 +61,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -74,18 +77,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
-import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
-import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -94,8 +97,10 @@ import com.vitorpamplona.amethyst.ui.note.CheckAndDisplayEditStatus
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.DisplayDraft
 import com.vitorpamplona.amethyst.ui.note.DisplayOtsIfInOriginal
+import com.vitorpamplona.amethyst.ui.note.ExpandMoreIcon
 import com.vitorpamplona.amethyst.ui.note.Expiration
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -106,6 +111,8 @@ import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.RenderApproveButton
 import com.vitorpamplona.amethyst.ui.note.RenderDraft
 import com.vitorpamplona.amethyst.ui.note.RenderRepost
+import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
@@ -143,6 +150,7 @@ import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
+import com.vitorpamplona.amethyst.ui.note.types.RenderAppRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestationRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorProficiency
@@ -161,6 +169,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
@@ -173,6 +183,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderMintRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderMusicPlaylist
 import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderNutzap
 import com.vitorpamplona.amethyst.ui.note.types.RenderOnchainZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPodcastEpisode
@@ -181,12 +192,15 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayAddMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayDiscovery
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayJoinRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayLeaveRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
+import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventConfirmation
+import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareApplication
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareAsset
@@ -199,6 +213,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.note.types.VoiceHeader
+import com.vitorpamplona.amethyst.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -206,6 +221,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28P
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal.LevelFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutDisplay
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -213,6 +229,8 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.PaddingHorizontal12Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -233,6 +251,7 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
@@ -242,6 +261,8 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.Softw
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
+import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
@@ -253,12 +274,15 @@ import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
@@ -291,6 +315,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -306,6 +331,7 @@ import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
@@ -351,8 +377,45 @@ fun RenderThreadFeed(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val levels by viewModel.levelCacheFlow.collectAsStateWithLifecycle()
 
-    val position = items.list.indexOfFirst { it.idHex == noteId }
+    // Hides every descendant of a collapsed reply and counts how many were hidden. The feed is
+    // ordered depth-first, so a note's descendants are the contiguous items that follow it with a
+    // strictly deeper reply level.
+    val visible by
+        remember(items, levels) {
+            derivedStateOf {
+                val full = items.list
+                if (viewModel.collapsedReplies.isEmpty()) {
+                    VisibleThread(full, emptyMap())
+                } else {
+                    val result = ArrayList<Note>(full.size)
+                    val hiddenCounts = HashMap<String, Int>()
+                    var hideDeeperThan = Int.MAX_VALUE
+                    var collapsedAncestorId: String? = null
+                    full.forEach { note ->
+                        val level = levels[note] ?: 0
+                        if (level > hideDeeperThan) {
+                            collapsedAncestorId?.let { hiddenCounts[it] = (hiddenCounts[it] ?: 0) + 1 }
+                            return@forEach
+                        }
+
+                        hideDeeperThan = Int.MAX_VALUE
+                        collapsedAncestorId = null
+                        result.add(note)
+
+                        if (viewModel.isCollapsed(note.idHex)) {
+                            hideDeeperThan = level
+                            collapsedAncestorId = note.idHex
+                        }
+                    }
+                    VisibleThread(result, hiddenCounts)
+                }
+            }
+        }
+
+    val visibleItems = visible.items
+    val position = visibleItems.indexOfFirst { it.idHex == noteId }
 
     LaunchedEffect(noteId, position) {
         // hack to allow multiple scrolls to Item while posts on the screen load.
@@ -371,7 +434,7 @@ fun RenderThreadFeed(
 
         if (position >= 0 && !viewModel.hasDragged.value) {
             val offset =
-                if (position > items.list.size - 3) {
+                if (position > visibleItems.size - 3) {
                     0
                 } else {
                     -200
@@ -387,9 +450,15 @@ fun RenderThreadFeed(
         state = listState,
     ) {
         itemsIndexed(
-            items.list,
+            visibleItems,
             key = { _, item -> item.idHex },
-            contentType = { index, _ -> if (index == 0) "master" else "reply" },
+            contentType = { index, item ->
+                when {
+                    index == 0 -> "master"
+                    viewModel.isCollapsed(item.idHex) -> "collapsed"
+                    else -> "reply"
+                }
+            },
         ) { index, item ->
             val level = viewModel.levelFlowForItem(item).collectAsStateWithLifecycle(0)
 
@@ -415,12 +484,23 @@ fun RenderThreadFeed(
                         nav = nav,
                     )
                 }
+            } else if (viewModel.isCollapsed(item.idHex)) {
+                CollapsedNoteCompose(
+                    baseNote = item,
+                    modifier = modifier,
+                    hiddenReplyCount = visible.hiddenCounts[item.idHex] ?: 0,
+                    onExpand = { viewModel.toggleCollapsed(item.idHex) },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             } else {
                 val selectedNoteColor = MaterialTheme.colorScheme.selectedNote
                 val background =
                     remember {
                         if (item.idHex == noteId) mutableStateOf(selectedNoteColor) else null
                     }
+
+                val onCollapse = remember(item) { { viewModel.toggleCollapsed(item.idHex) } }
 
                 NoteCompose(
                     baseNote = item,
@@ -431,12 +511,85 @@ fun RenderThreadFeed(
                     parentBackgroundColor = background,
                     accountViewModel = accountViewModel,
                     nav = nav,
+                    onClick = onCollapse,
                 )
             }
 
             HorizontalDivider(
                 thickness = DividerThickness,
             )
+        }
+    }
+}
+
+/**
+ * Holds the thread items currently visible after collapsing, plus, for each collapsed reply id,
+ * the number of descendant replies that were hidden underneath it.
+ */
+private class VisibleThread(
+    val items: List<Note>,
+    val hiddenCounts: Map<String, Int>,
+)
+
+/**
+ * Compact rendering of a thread reply the user has collapsed: avatar, author name, and the
+ * first two lines of its content. The right side shows how many replies are hidden underneath it
+ * and an ExpandMore indicator. Tapping anywhere on the row expands the note (and reveals its
+ * hidden children) again.
+ */
+@Composable
+private fun CollapsedNoteCompose(
+    baseNote: Note,
+    modifier: Modifier,
+    hiddenReplyCount: Int,
+    onExpand: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    WatchNoteEvent(baseNote, accountViewModel, nav) {
+        Row(
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onExpand)
+                    // Match NoteComposeLayout: 12dp leading/trailing padding, 10dp top.
+                    .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NoteAuthorPicture(baseNote = baseNote, size = Size40dp, accountViewModel = accountViewModel, nav = nav)
+
+            // 10dp gap between the avatar and the name, same as NoteComposeLayout's authorContentGap.
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                NoteUsernameDisplay(baseNote, accountViewModel = accountViewModel)
+
+                LoadDecryptedContent(baseNote, accountViewModel) { body ->
+                    Text(
+                        text = body,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+
+            Spacer(modifier = StdHorzSpacer)
+
+            // The label carries an explicit '\n' so the count and the word always stack on two
+            // lines (e.g. "+1\nreply"), keeping the horizontal footprint small and consistent.
+            // Always shown — even "+0 replies" — so every collapsed card looks the same.
+            Text(
+                text = pluralStringResource(R.plurals.thread_collapsed_reply_count, hiddenReplyCount, hiddenReplyCount),
+                color = MaterialTheme.colorScheme.placeholderText,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelMedium,
+            )
+
+            Spacer(modifier = StdHorzSpacer)
+
+            ExpandMoreIcon(modifier = Modifier.size(Size20dp), contentDescriptor = R.string.expand)
         }
     }
 }
@@ -509,22 +662,44 @@ private fun FullBleedNoteCompose(
     ) {
         val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
 
+        // Zap receipts are signed by the recipient's lightning provider; show the
+        // sender from the embedded zap request instead of the service key.
+        val zapSender =
+            if (noteEvent is LnZapEvent) {
+                observeZapSender(baseNote, accountViewModel).value
+            } else {
+                null
+            }
+
         Row(
             modifier =
                 Modifier
                     .padding(start = 12.dp, end = 12.dp)
-                    .clickable(onClick = { baseNote.author?.let { nav.nav(routeFor(it)) } }),
+                    .clickable(onClick = { (zapSender ?: baseNote.author)?.let { nav.nav(routeFor(it)) } }),
         ) {
-            NoteAuthorPicture(
-                baseNote = baseNote,
-                size = Size55dp,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+            if (zapSender != null) {
+                UserPicture(
+                    user = zapSender,
+                    size = Size55dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            } else {
+                NoteAuthorPicture(
+                    baseNote = baseNote,
+                    size = Size55dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
+                    if (zapSender != null) {
+                        UsernameDisplay(zapSender, Modifier.weight(1f), accountViewModel = accountViewModel)
+                    } else {
+                        NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
+                    }
 
                     if (isDraft) {
                         ObserveDraftEvent(baseNote, accountViewModel) { draftNote ->
@@ -633,6 +808,8 @@ private fun FullBleedNoteCompose(
                     VideoDisplay(baseNote, makeItShort = false, canPreview = true, backgroundColor = backgroundColor, ContentScale.FillWidth, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is PictureEvent) {
                     PictureDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, PaddingValues(vertical = Size5dp), backgroundColor, accountViewModel = accountViewModel, nav)
+                } else if (noteEvent is WorkoutRecordEvent) {
+                    WorkoutDisplay(baseNote, backgroundColor, canPreview = true, quotesLeft = 3, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is BaseVoiceEvent) {
                     VoiceHeader(noteEvent, baseNote, accountViewModel, nav)
                 } else if (noteEvent is FileHeaderEvent) {
@@ -710,9 +887,13 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is AdvertisedRelayListEvent) {
                     DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is LnZapEvent) {
-                    RenderLnZap(baseNote, backgroundColor, accountViewModel, nav)
+                    RenderLnZap(baseNote, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
+                } else if (noteEvent is NutzapEvent) {
+                    RenderNutzap(baseNote, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is OnchainZapEvent) {
-                    RenderOnchainZap(baseNote, backgroundColor, accountViewModel, nav)
+                    RenderOnchainZap(baseNote, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
+                } else if (noteEvent is ReactionEvent) {
+                    RenderReaction(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is SearchRelayListEvent) {
                     DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is BlockedRelayListEvent) {
@@ -749,8 +930,14 @@ private fun FullBleedNoteCompose(
                     RenderGitPatchEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is GitIssueEvent) {
                     RenderGitIssueEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
+                } else if (noteEvent is GitPullRequestEvent) {
+                    RenderGitPullRequestEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
+                } else if (noteEvent is GitPullRequestUpdateEvent) {
+                    RenderGitPullRequestUpdateEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is AppDefinitionEvent) {
                     RenderAppDefinition(baseNote, accountViewModel, nav)
+                } else if (noteEvent is AppRecommendationEvent) {
+                    RenderAppRecommendation(baseNote, accountViewModel, nav)
                 } else if (noteEvent is SoftwareApplicationEvent) {
                     RenderSoftwareApplication(baseNote, accountViewModel, nav)
                 } else if (noteEvent is SoftwareAssetEvent) {
@@ -773,6 +960,10 @@ private fun FullBleedNoteCompose(
                     RenderFundraiser(baseNote, makeItShort = false, accountViewModel, nav)
                 } else if (noteEvent is BirdexEvent) {
                     RenderBirdex(baseNote)
+                } else if (noteEvent is RoadEventReportEvent) {
+                    RenderRoadEventReport(baseNote)
+                } else if (noteEvent is RoadEventConfirmationEvent) {
+                    RenderRoadEventConfirmation(baseNote)
                 } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
                     RenderRepost(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is RelayDiscoveryEvent) {

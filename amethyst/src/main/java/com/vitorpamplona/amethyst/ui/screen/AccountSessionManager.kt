@@ -175,9 +175,11 @@ class AccountSessionManager(
                 }
             }
 
-        localPreferences.setDefaultAccount(accountSettings)
+        // setDefaultAccount may keep an existing signing account instead of this one when a
+        // read-only npub is added for a pubkey we already sign for — show whichever became current.
+        val current = localPreferences.setDefaultAccount(accountSettings)
 
-        startUI(accountSettings)
+        startUI(current)
     }
 
     fun startUI(
@@ -386,12 +388,14 @@ class AccountSessionManager(
                 // log off and relogin with the 0 account
                 localPreferences.deleteAccount(accountInfo)
                 accountsCache.removeAccount(hex)
+                accountsCache.deleteAccountFiles(hex)
                 Amethyst.instance.scheduledPostStore.removeForAccount(hex)
                 loginWithDefaultAccount()
             } else {
                 // delete without switching logins
                 localPreferences.deleteAccount(accountInfo)
                 accountsCache.removeAccount(hex)
+                accountsCache.deleteAccountFiles(hex)
                 Amethyst.instance.scheduledPostStore.removeForAccount(hex)
             }
         }

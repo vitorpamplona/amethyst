@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.tags.PollTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -61,7 +60,6 @@ class PollResponseEvent(
 
     companion object {
         const val KIND = 1018
-        const val ALT_DESCRIPTION = "Poll Response"
 
         fun build(
             poll: EventHintBundle<PollEvent>,
@@ -69,7 +67,6 @@ class PollResponseEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<PollResponseEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             poll(poll)
             notifyAuthor(poll)
             responses(responses)

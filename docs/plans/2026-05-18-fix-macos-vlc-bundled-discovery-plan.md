@@ -9,6 +9,10 @@ origin: docs/brainstorms/2026-05-18-fix-macos-vlc-bundling-brainstorm.md
 
 # fix: macOS bundled VLC discovery broken by versioned setenv symbol
 
+> **Status:** abandoned — Superseded — VLC/VLCJ was removed entirely (kdroidFilter migration); MacOsVlcDiscoverer no longer exists, so the setenv fix is moot.
+> _Audited 2026-06-30._
+
+
 ## Enhancement Summary
 
 **Deepened on:** 2026-05-18

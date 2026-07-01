@@ -34,8 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.LiveStreamLike
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.CurrentParticipantsTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.EndsTag
@@ -62,7 +61,10 @@ class LiveActivitiesEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     PubKeyHintProvider,
-    LiveStreamLike {
+    LiveStreamLike,
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
+
     override fun eventHints(): List<EventIdHint> {
         val pinnedEvents = pinned()
         if (pinnedEvents.isEmpty()) return emptyList()
@@ -152,14 +154,13 @@ class LiveActivitiesEvent(
 
     companion object {
         const val KIND = 30311
-        const val ALT = "Live activity event"
         const val GOAL_TAG = "goal"
 
         suspend fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): LiveActivitiesEvent {
-            val tags = arrayOf(AltTag.assemble(ALT))
+            val tags = emptyArray<Array<String>>()
             return signer.sign(createdAt, KIND, tags, "")
         }
 
@@ -170,7 +171,6 @@ class LiveActivitiesEvent(
             initializer: TagArrayBuilder<LiveActivitiesEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             dTag(dTag)
-            alt(ALT)
             initializer()
         }
     }

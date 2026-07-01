@@ -40,6 +40,10 @@ object CachedRobohash {
         return cache[msg]
     }
 
+    fun trimToSize(maxItems: Int) {
+        cache.trimToSize(maxItems)
+    }
+
     fun get(
         msg: String,
         isLightTheme: Boolean,

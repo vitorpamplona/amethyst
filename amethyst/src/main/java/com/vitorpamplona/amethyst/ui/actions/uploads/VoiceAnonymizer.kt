@@ -25,19 +25,14 @@ import android.media.MediaCodecInfo
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
-import be.tarsos.dsp.AudioDispatcher
-import be.tarsos.dsp.AudioEvent
-import be.tarsos.dsp.AudioProcessor
-import be.tarsos.dsp.WaveformSimilarityBasedOverlapAdd
-import be.tarsos.dsp.io.TarsosDSPAudioFloatConverter
-import be.tarsos.dsp.io.TarsosDSPAudioFormat
-import be.tarsos.dsp.resample.RateTransposer
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.abs
 
@@ -57,9 +52,10 @@ data class AnonymizedResult(
 /**
  * Processes audio files to alter voice characteristics for privacy.
  *
- * Uses TarsosDSP's WSOLA (Waveform Similarity Overlap-Add) algorithm combined with
- * rate transposition to shift pitch while preserving duration. Note that in TarsosDSP,
- * pitch factors work inversely: factor < 1 raises pitch, factor > 1 lowers pitch.
+ * Uses the in-house [PitchShifter] (WSOLA time-stretch + resampling) to shift pitch
+ * while preserving duration. Preset pitch factors work inversely: factor < 1 raises
+ * pitch, factor > 1 lowers pitch — so the shifter receives the reciprocal as its
+ * output-to-input frequency ratio.
  */
 class VoiceAnonymizer {
     companion object {
@@ -73,7 +69,7 @@ class VoiceAnonymizer {
      *
      * The process involves three stages:
      * 1. Decode input audio to PCM (0-30% progress)
-     * 2. Apply pitch shifting with TarsosDSP (30-70% progress)
+     * 2. Apply pitch shifting with [PitchShifter] (30-70% progress)
      * 3. Encode processed audio to AAC (70-100% progress)
      *
      * @param inputFile Source audio file (supports formats decodable by MediaCodec)
@@ -101,10 +97,8 @@ class VoiceAnonymizer {
                         onProgress(progress * 0.3f)
                     }
 
-                val processedPcm =
-                    processPcmWithTarsos(pcmData, preset, sampleRate) { progress ->
-                        onProgress(0.3f + progress * 0.4f)
-                    }
+                val processedPcm = applyPitchShift(pcmData, preset)
+                onProgress(0.7f)
 
                 val waveform = extractWaveform(processedPcm, sampleRate)
 
@@ -114,6 +108,10 @@ class VoiceAnonymizer {
 
                 onProgress(1f)
                 Result.success(AnonymizedResult(outputFile, waveform, duration))
+            } catch (e: CancellationException) {
+                // Let cancellation propagate so structured concurrency works (e.g. the
+                // upload screen being dismissed cancels this job).
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to anonymize audio", e)
                 Result.failure(e)
@@ -176,7 +174,10 @@ class VoiceAnonymizer {
             val inputBufferIndex = decoder.dequeueInputBuffer(10000)
             if (inputBufferIndex < 0) return
 
-            val inputBuffer = decoder.getInputBuffer(inputBufferIndex)!!
+            val inputBuffer =
+                requireNotNull(decoder.getInputBuffer(inputBufferIndex)) {
+                    "Decoder input buffer $inputBufferIndex was null (codec in async mode?)"
+                }
             val sampleSize = extractor.readSampleData(inputBuffer, 0)
 
             if (sampleSize < 0) {
@@ -232,7 +233,10 @@ class VoiceAnonymizer {
         }
 
         private fun extractPcmSamples(outputBufferIndex: Int) {
-            val outputBuffer = decoder.getOutputBuffer(outputBufferIndex)!!
+            val outputBuffer =
+                requireNotNull(decoder.getOutputBuffer(outputBufferIndex)) {
+                    "Decoder output buffer $outputBufferIndex was null (codec in async mode?)"
+                }
             val shortBuffer = outputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
             while (shortBuffer.hasRemaining()) {
                 pcmSamples.add(shortBuffer.get() / 32768f)
@@ -292,11 +296,9 @@ class VoiceAnonymizer {
         release()
     }
 
-    private fun processPcmWithTarsos(
+    private fun applyPitchShift(
         pcmData: FloatArray,
         preset: VoicePreset,
-        sampleRate: Int,
-        onProgress: (Float) -> Unit,
     ): FloatArray {
         val baseFactor = preset.pitchFactor
         val factor =
@@ -311,75 +313,11 @@ class VoiceAnonymizer {
                     baseFactor
                 }
             }
-        val totalSamples = pcmData.size
-        val processedSamples = ArrayList<Float>(totalSamples)
 
-        val wsola =
-            WaveformSimilarityBasedOverlapAdd(
-                WaveformSimilarityBasedOverlapAdd.Parameters.musicDefaults(
-                    factor,
-                    sampleRate.toDouble(),
-                ),
-            )
-        val rateTransposer = RateTransposer(factor)
-
-        val bufferSize = wsola.inputBufferSize
-        val overlap = wsola.overlap
-
-        val tarsosDspFormat =
-            TarsosDSPAudioFormat(
-                sampleRate.toFloat(),
-                16,
-                1,
-                true,
-                false,
-            )
-
-        val collector =
-            object : AudioProcessor {
-                override fun process(audioEvent: AudioEvent): Boolean {
-                    val buffer = audioEvent.floatBuffer
-                    for (i in 0 until audioEvent.bufferSize) {
-                        processedSamples.add(buffer[i])
-                    }
-                    return true
-                }
-
-                override fun processingFinished() {
-                    // No-op: no cleanup needed
-                }
-            }
-
-        val dispatcher =
-            AudioDispatcher(
-                FloatArrayAudioInputStream(pcmData, tarsosDspFormat, pcmData.size.toLong()),
-                bufferSize,
-                overlap,
-            )
-
-        wsola.setDispatcher(dispatcher)
-        dispatcher.addAudioProcessor(wsola)
-        dispatcher.addAudioProcessor(rateTransposer)
-        dispatcher.addAudioProcessor(collector)
-
-        var samplesProcessed = 0
-        val progressProcessor =
-            object : AudioProcessor {
-                override fun process(audioEvent: AudioEvent): Boolean {
-                    samplesProcessed += audioEvent.bufferSize
-                    onProgress((samplesProcessed.toFloat() / totalSamples).coerceIn(0f, 1f))
-                    return true
-                }
-
-                override fun processingFinished() {
-                    // No-op: no cleanup needed
-                }
-            }
-        dispatcher.addAudioProcessor(progressProcessor)
-
-        dispatcher.run()
-
-        return processedSamples.toFloatArray()
+        // Presets express factor inversely (factor > 1 lowers pitch), so the
+        // output-to-input frequency ratio is the reciprocal.
+        val frequencyRatio = 1.0 / factor
+        return PitchShifter().shift(pcmData, frequencyRatio)
     }
 
     private fun extractWaveform(
@@ -421,7 +359,10 @@ class VoiceAnonymizer {
             val inputBufferIndex = encoder.dequeueInputBuffer(10000)
             if (inputBufferIndex < 0) return
 
-            val inputBuffer = encoder.getInputBuffer(inputBufferIndex)!!
+            val inputBuffer =
+                requireNotNull(encoder.getInputBuffer(inputBufferIndex)) {
+                    "Encoder input buffer $inputBufferIndex was null (codec in async mode?)"
+                }
             inputBuffer.clear()
 
             val samplesToWrite = minOf((inputBuffer.capacity() / 2), pcmData.size - inputOffset)
@@ -445,7 +386,7 @@ class VoiceAnonymizer {
 
         private fun queueSampleData(
             inputBufferIndex: Int,
-            inputBuffer: java.nio.ByteBuffer,
+            inputBuffer: ByteBuffer,
             samplesToWrite: Int,
         ) {
             writePcmSamplesToBuffer(inputBuffer, samplesToWrite)
@@ -456,7 +397,7 @@ class VoiceAnonymizer {
         }
 
         private fun writePcmSamplesToBuffer(
-            inputBuffer: java.nio.ByteBuffer,
+            inputBuffer: ByteBuffer,
             samplesToWrite: Int,
         ) {
             for (i in 0 until samplesToWrite) {
@@ -497,13 +438,16 @@ class VoiceAnonymizer {
         }
 
         private fun processOutputBuffer(outputBufferIndex: Int) {
-            val outputBuffer = encoder.getOutputBuffer(outputBufferIndex)!!
+            val outputBuffer =
+                requireNotNull(encoder.getOutputBuffer(outputBufferIndex)) {
+                    "Encoder output buffer $outputBufferIndex was null (codec in async mode?)"
+                }
             writeToMuxerIfReady(outputBuffer)
             encoder.releaseOutputBuffer(outputBufferIndex, false)
             checkForEndOfStream()
         }
 
-        private fun writeToMuxerIfReady(outputBuffer: java.nio.ByteBuffer) {
+        private fun writeToMuxerIfReady(outputBuffer: ByteBuffer) {
             if (isMuxerStarted && bufferInfo.size > 0) {
                 outputBuffer.position(bufferInfo.offset)
                 outputBuffer.limit(bufferInfo.offset + bufferInfo.size)
@@ -524,7 +468,7 @@ class VoiceAnonymizer {
             setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE)
         }
 
-    private fun encodePcmToAac(
+    private suspend fun encodePcmToAac(
         pcmData: FloatArray,
         sampleRate: Int,
         outputFile: File,
@@ -541,7 +485,7 @@ class VoiceAnonymizer {
             val inputFeeder = EncoderInputFeeder(encoder, pcmData, sampleRate, onProgress)
             val outputDrainer = EncoderOutputDrainer(encoder, muxer)
 
-            while (!outputDrainer.isDone) {
+            while (!outputDrainer.isDone && currentCoroutineContext().isActive) {
                 inputFeeder.feedInput()
                 outputDrainer.drainOutput()
             }
@@ -557,46 +501,5 @@ class VoiceAnonymizer {
             stop()
         }
         release()
-    }
-}
-
-private class FloatArrayAudioInputStream(
-    private val floatArray: FloatArray,
-    private val format: TarsosDSPAudioFormat,
-    private val frameLength: Long,
-) : be.tarsos.dsp.io.TarsosDSPAudioInputStream {
-    private var position = 0
-
-    override fun getFormat(): TarsosDSPAudioFormat = format
-
-    override fun getFrameLength(): Long = frameLength
-
-    override fun read(
-        buffer: ByteArray,
-        offset: Int,
-        length: Int,
-    ): Int {
-        val converter = TarsosDSPAudioFloatConverter.getConverter(format)
-        val floatBuffer = FloatArray(length / 2)
-        val samplesToRead = minOf(floatBuffer.size, floatArray.size - position)
-
-        if (samplesToRead <= 0) return -1
-
-        System.arraycopy(floatArray, position, floatBuffer, 0, samplesToRead)
-        position += samplesToRead
-
-        converter.toByteArray(floatBuffer, samplesToRead, buffer, offset)
-        return samplesToRead * 2
-    }
-
-    override fun skip(bytesToSkip: Long): Long {
-        val samplesToSkip = (bytesToSkip / 2).toInt()
-        val actualSkip = minOf(samplesToSkip, floatArray.size - position)
-        position += actualSkip
-        return actualSkip.toLong() * 2
-    }
-
-    override fun close() {
-        // No-op: no cleanup needed
     }
 }

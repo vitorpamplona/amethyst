@@ -27,7 +27,11 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 
 object CachedRichTextParser {
-    private val richTextCache = LruCache<Int, RichTextViewerState>(50)
+    // Global across every feed. Sized to hold the active feed's visible + prefetched
+    // (see PrefetchFeedMedia) working set plus a few other feeds' recent entries, so
+    // pre-parsed bodies survive until the render reads them and feed switches don't
+    // thrash. Each entry is one note's parsed segments — typically single-digit KB.
+    private val richTextCache = LruCache<Int, RichTextViewerState>(500)
     private val isMarkdownCache = LruCache<Int, Boolean>(200)
 
     private fun hashCodeCache(
@@ -37,7 +41,14 @@ object CachedRichTextParser {
         authorPubKey: String?,
     ): Int {
         var result = content.hashCode()
-        result = 31 * result + tags.lists.hashCode()
+        // Content-addressed (memoized contentHash), not identity — `lists` is an
+        // Array<Array<String>>, so a fresh instance with the same tag content must
+        // map to the same entry. This lets an off-thread pre-parse (the feed media
+        // prefetcher) populate the exact entry the renderer later looks up, turning
+        // the scroll-time parse into a cache hit. The parse is a pure function of
+        // tag content, so equal content sharing one entry is correct. The hash is
+        // cached on the instance so this stays O(1)-amortized per tag list.
+        result = 31 * result + tags.contentHash()
         if (callbackUri != null) {
             result = 31 * result + callbackUri.hashCode()
         }
@@ -45,6 +56,12 @@ object CachedRichTextParser {
             result = 31 * result + authorPubKey.hashCode()
         }
         return result
+    }
+
+    fun trimToSize(maxItems: Int) {
+        richTextCache.trimToSize(maxItems)
+        // isMarkdownCache is sized at 40% of richTextCache; preserve the ratio
+        isMarkdownCache.trimToSize(maxItems * 2 / 5)
     }
 
     fun cachedText(
@@ -196,7 +213,14 @@ object CachedRichTextParser {
             // checks that need to know "how much non-space text has
             // appeared on the current line".
             if (isNewLine) {
-                if (c != ' ' && c != '\t') {
+                // A blank line is still "at line start": skipping '\n'/'\r'
+                // here keeps isNewLine true so a heading/blockquote/list
+                // marker on the next line (the standard `\n\n#` spacing) is
+                // still recognized as line-leading. Without the newline
+                // exclusion, the second '\n' of a blank line flipped
+                // isNewLine to false and ATX headings after a blank line
+                // went undetected.
+                if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
                     isNewLine = false
                     nonSpaceCharCountOnLine = 1
                     lastNonSpaceChar = c

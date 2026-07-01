@@ -58,13 +58,16 @@ class ThreadDualAxisChartAssemblerTest {
 
         val client =
             NostrClient(
-                OkHttpWebSocket.Builder {
-                    OkHttpClient
-                        .Builder()
-                        .followRedirects(true)
-                        .followSslRedirects(true)
-                        .build()
-                },
+                OkHttpWebSocket.Builder(
+                    httpClient = {
+                        OkHttpClient
+                            .Builder()
+                            .followRedirects(true)
+                            .followSslRedirects(true)
+                            .build()
+                    },
+                    canDial = { true },
+                ),
                 scope,
             )
 

@@ -30,9 +30,14 @@ import com.vitorpamplona.quartz.experimental.attestations.request.AttestationReq
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
+import com.vitorpamplona.quartz.experimental.clink.manage.ManageEvent
+import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
@@ -49,6 +54,8 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
+import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
@@ -191,6 +198,9 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -462,6 +472,9 @@ class EventFactory {
                 LnZapEvent.KIND -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
                 LnZapPaymentRequestEvent.KIND -> LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 LnZapPaymentResponseEvent.KIND -> LnZapPaymentResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                OfferEvent.KIND -> OfferEvent(id, pubKey, createdAt, tags, content, sig)
+                DebitEvent.KIND -> DebitEvent(id, pubKey, createdAt, tags, content, sig)
+                ManageEvent.KIND -> ManageEvent(id, pubKey, createdAt, tags, content, sig)
                 NwcInfoEvent.KIND -> NwcInfoEvent(id, pubKey, createdAt, tags, content, sig)
                 NwcNotificationEvent.KIND -> NwcNotificationEvent(id, pubKey, createdAt, tags, content, sig)
                 NwcNotificationEvent.LEGACY_KIND -> NwcNotificationEvent(id, pubKey, createdAt, tags, content, sig)
@@ -489,6 +502,9 @@ class EventFactory {
                 TokenListEvent.KIND -> TokenListEvent(id, pubKey, createdAt, tags, content, sig)
                 TokenRemovalEvent.KIND -> TokenRemovalEvent(id, pubKey, createdAt, tags, content, sig)
                 NamedSiteEvent.KIND -> NamedSiteEvent(id, pubKey, createdAt, tags, content, sig)
+                NappletSnapshotEvent.KIND -> NappletSnapshotEvent(id, pubKey, createdAt, tags, content, sig)
+                RootNappletEvent.KIND -> RootNappletEvent(id, pubKey, createdAt, tags, content, sig)
+                NamedNappletEvent.KIND -> NamedNappletEvent(id, pubKey, createdAt, tags, content, sig)
                 NNSEvent.KIND -> NNSEvent(id, pubKey, createdAt, tags, content, sig)
                 NipTextEvent.KIND -> NipTextEvent(id, pubKey, createdAt, tags, content, sig)
                 NutzapEvent.KIND -> NutzapEvent(id, pubKey, createdAt, tags, content, sig)
@@ -572,6 +588,8 @@ class EventFactory {
                 ReleaseArtifactSetEvent.KIND -> ReleaseArtifactSetEvent(id, pubKey, createdAt, tags, content, sig)
                 RelaySetEvent.KIND -> RelaySetEvent(id, pubKey, createdAt, tags, content, sig)
                 ReportEvent.KIND -> ReportEvent(id, pubKey, createdAt, tags, content, sig)
+                RoadEventConfirmationEvent.KIND -> RoadEventConfirmationEvent(id, pubKey, createdAt, tags, content, sig)
+                RoadEventReportEvent.KIND -> RoadEventReportEvent(id, pubKey, createdAt, tags, content, sig)
                 RootSiteEvent.KIND -> RootSiteEvent(id, pubKey, createdAt, tags, content, sig)
                 RepostEvent.KIND -> RepostEvent(id, pubKey, createdAt, tags, content, sig)
                 RequestToVanishEvent.KIND -> RequestToVanishEvent(id, pubKey, createdAt, tags, content, sig)
@@ -600,6 +618,8 @@ class EventFactory {
                 WakeUpEvent.KIND -> WakeUpEvent(id, pubKey, createdAt, tags, content, sig)
                 WebBookmarkEvent.KIND -> WebBookmarkEvent(id, pubKey, createdAt, tags, content, sig)
                 WikiNoteEvent.KIND -> WikiNoteEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkoutRecordEvent.KIND -> WorkoutRecordEvent(id, pubKey, createdAt, tags, content, sig)
+                ExerciseTemplateEvent.KIND -> ExerciseTemplateEvent(id, pubKey, createdAt, tags, content, sig)
                 else -> factories[kind]?.build(id, pubKey, createdAt, tags, content, sig) ?: Event(id, pubKey, createdAt, kind, tags, content, sig)
             } as T
 

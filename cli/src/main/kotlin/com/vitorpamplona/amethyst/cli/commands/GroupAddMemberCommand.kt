@@ -46,8 +46,7 @@ object GroupAddMemberCommand {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Output.error("bad_args", "group add <group_id> <npub> [<npub> ...]")
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
@@ -168,8 +167,6 @@ object GroupAddMemberCommand {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

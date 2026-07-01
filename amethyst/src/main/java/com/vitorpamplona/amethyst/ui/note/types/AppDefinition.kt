@@ -24,25 +24,42 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,35 +70,55 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.KindChip
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.kinds.KindNames
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.tags.SupportedNipTag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun RenderAppDefinition(
     note: Note,
@@ -200,11 +237,14 @@ fun RenderAppDefinition(
                     Spacer(Modifier.weight(1f))
 
                     Row(
-                        modifier =
-                            Modifier
-                                .height(Size35dp)
-                                .padding(bottom = 3.dp),
-                    ) {}
+                        // Cancels the surrounding Column's horizontal padding so
+                        // the button's right edge lines up with the banner's.
+                        modifier = Modifier.padding(bottom = 3.dp).offset(x = 10.dp),
+                    ) {
+                        if (accountViewModel.account.isWriteable()) {
+                            RecommendAppButton(noteEvent, note, accountViewModel)
+                        }
+                    }
                 }
 
                 val name = remember(theAppMetadata) { theAppMetadata.anyName() }
@@ -221,6 +261,23 @@ fun RenderAppDefinition(
                                 },
                             fontWeight = FontWeight.Bold,
                             fontSize = 25.sp,
+                        )
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
+                    ByAuthorChip(noteEvent.pubKey, accountViewModel, nav)
+
+                    val client = remember(noteEvent) { noteEvent.client()?.name }
+                    if (!client.isNullOrBlank()) {
+                        Text(
+                            text = stringRes(R.string.app_definition_via, client),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                            modifier = Modifier.padding(start = 8.dp),
                         )
                     }
                 }
@@ -261,7 +318,464 @@ fun RenderAppDefinition(
                         )
                     }
                 }
+
+                val categories = remember(noteEvent) { noteEvent.categories().distinct() }
+                if (categories.isNotEmpty()) {
+                    SectionLabel(stringRes(R.string.app_definition_categories))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(top = 6.dp),
+                    ) {
+                        categories.forEach { CategoryChip(it) }
+                    }
+                }
+
+                val relatedAddresses = remember(noteEvent) { noteEvent.relatedAddresses() }
+                if (relatedAddresses.isNotEmpty()) {
+                    SectionLabel(stringRes(R.string.app_definition_related))
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(top = 6.dp),
+                    ) {
+                        relatedAddresses.forEach { aTag ->
+                            RelatedEventRow(aTag, accountViewModel, nav)
+                        }
+                    }
+                }
+
+                val platforms = remember(noteEvent) { noteEvent.platformLinks().map { it.platform }.distinct() }
+                if (platforms.isNotEmpty()) {
+                    SectionLabel(stringRes(R.string.app_definition_available_on))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(top = 6.dp),
+                    ) {
+                        platforms.forEach { PlatformChip(it) }
+                    }
+                }
+
+                val supportedKinds = remember(noteEvent) { noteEvent.supportedKinds() }
+                if (supportedKinds.isNotEmpty()) {
+                    SupportedKindsSection(supportedKinds)
+                }
+
+                val supportedNips = remember(noteEvent) { noteEvent.supportedNips() }
+                if (supportedNips.isNotEmpty()) {
+                    SupportedNipsSection(supportedNips)
+                }
             }
+        }
+    }
+}
+
+private const val VISIBLE_SUPPORTED_NIP_LIMIT = 8
+
+/** A section header matching the metrics used by the platforms/handles rows. */
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 8.dp),
+    )
+}
+
+/**
+ * NIPs the app declares it supports (NostrHub-style `i` tags). Shows a handful of
+ * chips inline with a "+N" overflow that opens a bottom sheet listing every NIP,
+ * each one opening its spec.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SupportedNipsSection(nips: List<SupportedNipTag>) {
+    var showAllSheet by rememberSaveable { mutableStateOf(false) }
+    val visible = remember(nips) { nips.take(VISIBLE_SUPPORTED_NIP_LIMIT) }
+    val overflow = (nips.size - VISIBLE_SUPPORTED_NIP_LIMIT).coerceAtLeast(0)
+    val uri = LocalUriHandler.current
+
+    SectionLabel(stringRes(R.string.app_definition_implements))
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.padding(top = 6.dp, bottom = 5.dp),
+    ) {
+        visible.forEach { nip ->
+            NipChip(nip.nip) { runCatching { uri.openUri(nip.url) } }
+        }
+        if (overflow > 0) {
+            OverflowChip(overflow) { showAllSheet = true }
+        }
+    }
+
+    if (showAllSheet) {
+        AllNipsSheet(nips = nips, onDismiss = { showAllSheet = false })
+    }
+}
+
+/**
+ * Kinds the app handles. Mirrors [SupportedNipsSection]: a few chips inline with a
+ * "+N" overflow that opens a bottom sheet listing every handled kind.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SupportedKindsSection(kinds: List<Int>) {
+    var showAllSheet by rememberSaveable { mutableStateOf(false) }
+    val visible = remember(kinds) { kinds.take(VISIBLE_SUPPORTED_KIND_LIMIT) }
+    val overflow = (kinds.size - VISIBLE_SUPPORTED_KIND_LIMIT).coerceAtLeast(0)
+
+    SectionLabel(stringRes(R.string.app_definition_handles))
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.padding(top = 6.dp, bottom = 5.dp),
+    ) {
+        visible.forEach { KindChip(it) }
+        if (overflow > 0) {
+            OverflowChip(overflow) { showAllSheet = true }
+        }
+    }
+
+    if (showAllSheet) {
+        AllKindsSheet(kinds = kinds, onDismiss = { showAllSheet = false })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun AllKindsSheet(
+    kinds: List<Int>,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Text(
+            text = stringRes(R.string.app_definition_handles),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+        ) {
+            kinds.forEach { KindChip(it) }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun AllNipsSheet(
+    nips: List<SupportedNipTag>,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    val uri = LocalUriHandler.current
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Text(
+            text = stringRes(R.string.app_definition_supported_nips),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+        ) {
+            nips.forEach { nip ->
+                NipChip(nip.nip) {
+                    val target = nip.url
+                    scope.launch {
+                        sheetState.hide()
+                        onDismiss()
+                        runCatching { uri.openUri(target) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NipChip(
+    nip: String,
+    onClick: (() -> Unit)? = null,
+) {
+    val shape = RoundedCornerShape(50)
+    Surface(
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = if (onClick != null) Modifier.clip(shape).clickable(onClick = onClick) else Modifier,
+    ) {
+        Text(
+            text = stringRes(R.string.app_definition_nip, nip),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun CategoryChip(category: String) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
+        Text(
+            text = category,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}
+
+/**
+ * Tappable row for an `a`-tag reference (source repo, store listing, NIP, ...).
+ * These are vouched for by the handler's author, so we show the referenced event's
+ * author avatar plus its real name (the app/repo/NIP title rather than the raw
+ * d-tag), falling back to the d-tag only when the event hasn't loaded yet.
+ */
+@Composable
+private fun RelatedEventRow(
+    aTag: ATag,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val address = remember(aTag) { Address(aTag.kind, aTag.pubKeyHex, aTag.dTag) }
+    val shape = RoundedCornerShape(8.dp)
+
+    LoadAddressableNote(address, accountViewModel) { note ->
+        if (note == null) return@LoadAddressableNote
+
+        val noteState by observeNote(note, accountViewModel)
+        val name =
+            remember(noteState) {
+                relatedEventName(noteState.note.event)?.ifBlank { null } ?: aTag.dTag
+            }
+
+        Surface(
+            shape = shape,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clip(shape)
+                    .clickable { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } },
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            ) {
+                noteState.note.author?.let { author ->
+                    BaseUserPicture(author, 26.dp, accountViewModel)
+                    Spacer(modifier = Modifier.size(10.dp))
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = kindLabel(aTag.kind),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The human title for a related addressable event, by kind, or null if unknown. */
+private fun relatedEventName(event: Event?): String? =
+    when (event) {
+        is SoftwareApplicationEvent -> event.name()
+        is GitRepositoryEvent -> event.name()
+        is NipTextEvent -> event.title()
+        else -> null
+    }
+
+/** Short kind label for a related reference (e.g. "App" for a software application). */
+@Composable
+private fun kindLabel(kind: Int): String =
+    if (kind == SoftwareApplicationEvent.KIND) {
+        stringRes(R.string.app_definition_kind_app)
+    } else {
+        val resId = kindDisplayName(kind)
+        if (resId != -1) stringRes(resId) else (KindNames.nameFor(kind) ?: "k$kind")
+    }
+
+private const val VISIBLE_SUPPORTED_KIND_LIMIT = 12
+
+/** Same shape and metrics as [KindChip] so it lines up with the kind chips. */
+@Composable
+private fun OverflowChip(
+    count: Int,
+    onClick: (() -> Unit)? = null,
+) {
+    val shape = RoundedCornerShape(50)
+    Surface(
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = if (onClick != null) Modifier.clip(shape).clickable(onClick = onClick) else Modifier,
+    ) {
+        Text(
+            text = "+$count",
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun PlatformChip(platform: String) {
+    val name =
+        when (platform) {
+            PlatformType.WEB.code -> stringRes(R.string.platform_web)
+            PlatformType.ANDROID.code -> stringRes(R.string.platform_android)
+            PlatformType.IOS.code -> stringRes(R.string.platform_ios)
+            else -> platform
+        }
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
+        Text(
+            text = name,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}
+
+/**
+ * "by <picture> <name>" pill identifying the pubkey that published the app
+ * definition, so users can tell an app from a friend apart from a spammer
+ * impersonating the real one. The picture carries the following-checkmark
+ * overlay for people the account follows. Tapping opens the author's profile.
+ */
+@Composable
+fun ByAuthorChip(
+    authorHex: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadUser(baseUserHex = authorHex, accountViewModel = accountViewModel) { author ->
+        if (author == null) return@LoadUser
+
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable { nav.nav(routeFor(author)) },
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = 8.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
+            ) {
+                Text(
+                    text = stringRes(R.string.app_definition_by),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.size(5.dp))
+                BaseUserPicture(author, 18.dp, accountViewModel)
+                Spacer(modifier = Modifier.size(5.dp))
+                ProvideTextStyle(MaterialTheme.typography.labelMedium) {
+                    UsernameDisplay(
+                        baseUser = author,
+                        fontWeight = FontWeight.SemiBold,
+                        textColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Shows whether the logged-in user publicly recommends this app (NIP-89,
+ * kind 31989) and toggles the recommendation on tap.
+ */
+@Composable
+private fun RecommendAppButton(
+    noteEvent: AppDefinitionEvent,
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
+    val myRecommendations by accountViewModel.account.appRecommendations.flow
+        .collectAsStateWithLifecycle()
+
+    val isRecommended =
+        remember(myRecommendations, noteEvent) {
+            val address = noteEvent.addressTag()
+            myRecommendations.any { event ->
+                event.recommendationAddresses().any { it == address }
+            }
+        }
+
+    val compactHeight = Modifier.height(32.dp)
+    val compactPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
+
+    if (isRecommended) {
+        OutlinedButton(
+            onClick = {
+                accountViewModel.launchSigner {
+                    val account = accountViewModel.account
+                    account.appRecommendations.unrecommendApp(noteEvent.address(), account)
+                }
+            },
+            modifier = compactHeight,
+            contentPadding = compactPadding,
+        ) {
+            Text(stringRes(R.string.app_definition_recommended), style = MaterialTheme.typography.labelMedium)
+        }
+    } else {
+        Button(
+            enabled = noteEvent.supportedKinds().isNotEmpty(),
+            onClick = {
+                accountViewModel.launchSigner {
+                    val account = accountViewModel.account
+                    account.appRecommendations.recommendApp(noteEvent, note.relayHintUrl(), account)
+                }
+            },
+            modifier = compactHeight,
+            contentPadding = compactPadding,
+        ) {
+            Text(stringRes(R.string.app_definition_recommend), style = MaterialTheme.typography.labelMedium)
         }
     }
 }

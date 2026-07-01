@@ -32,6 +32,22 @@ import java.net.Proxy
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
+/**
+ * Builder for the general-purpose (non-relay) OkHttp client used by image
+ * downloads, NIP-96/Blossom uploads, NIP-05 lookups, LNURL/money, link
+ * previews, push registration, etc. Each [DualHttpClientManager] holds one
+ * of these and rebuilds clients on Tor proxy / mobile-data changes.
+ *
+ * [OnionLocationCache] is **required**: every OkHttp client minted by this
+ * factory installs [OnionLocationInterceptor] on the no-proxy and Tor-proxied
+ * variants so any HTTP/WebSocket response that carries an `Onion-Location`
+ * header (NIP-11 docs, image hosts, blossom servers, NIP-96 endpoints, LNURL
+ * providers, anything) populates the cache. Tor-proxied clients additionally
+ * install [OnionUrlRewriteInterceptor] so subsequent requests are rerouted
+ * to the cached `.onion` and avoid exit nodes entirely. Treating the cache as
+ * required (not nullable) prevents a future call site from silently disabling
+ * onion-routing for an entire HTTP role.
+ */
 class OkHttpClientFactory(
     keyCache: EncryptionKeyCache,
     val userAgent: String,
@@ -43,6 +59,7 @@ class OkHttpClientFactory(
      * useful for tests or pre-configuration call sites.
      */
     val shouldBridgeBlossomCache: (() -> Boolean)? = null,
+    private val onionCache: OnionLocationCache,
 ) {
     // val logging = LoggingInterceptor()
     val keyDecryptor = EncryptedBlobInterceptor(keyCache)
@@ -75,6 +92,14 @@ class OkHttpClientFactory(
             .connectionPool(connectionPool)
             .dns(dns)
             .eventListenerFactory(MediaCallEventListenerFactory(dispatcher, connectionPool, dns))
+            // Some media hosts (e.g. blossom.primal.net) silently drop idle HTTP/2
+            // connections between the bursts of a feed scroll. Without a keepalive
+            // ping, OkHttp can pull such a dead connection from the 5-min pool and
+            // the request stalls until the read timeout (30s wifi / 90s mobile),
+            // which shows up as "the first image after a pause takes forever".
+            // An HTTP/2 ping detects the dead connection in seconds and lets
+            // retryOnConnectionFailure re-issue the request on a fresh one.
+            .pingInterval(Duration.ofSeconds(HTTP2_PING_INTERVAL_SECS))
             .followRedirects(true)
             .followSslRedirects(true)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
@@ -83,6 +108,11 @@ class OkHttpClientFactory(
             }
             // .addNetworkInterceptor(logging)
             .addNetworkInterceptor(keyDecryptor)
+            // Passively populates [onionCache] from any HTTP/WebSocket response
+            // that carries an `Onion-Location` header. Application-scoped so the
+            // cache key is always the original clearnet host (see kdoc on
+            // [OnionLocationInterceptor]).
+            .addInterceptor(OnionLocationInterceptor(onionCache))
             .build()
 
     private var lastProxy: Proxy? = null
@@ -99,6 +129,10 @@ class OkHttpClientFactory(
         return rootClient
             .newBuilder()
             .proxy(proxy)
+            // Only the Tor-routed variant rewrites outbound URLs to known
+            // `.onion`s — clearnet clients must never try to resolve `.onion`
+            // (DNS would fail, and we don't want fingerprintable lookups).
+            .apply { if (proxy != null) addInterceptor(OnionUrlRewriteInterceptor(onionCache)) }
             .connectTimeout(Duration.ofSeconds(seconds.toLong()))
             .readTimeout(Duration.ofSeconds(seconds.toLong() * 3))
             .writeTimeout(Duration.ofSeconds(seconds.toLong() * 3))
@@ -128,4 +162,11 @@ class OkHttpClientFactory(
         }
 
     fun buildLocalSocksProxy(port: Int?) = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port ?: DEFAULT_SOCKS_PORT))
+
+    companion object {
+        // HTTP/2 keepalive ping for pooled media connections. Short enough to
+        // evict a silently-dropped connection well before the read timeout would
+        // otherwise stall a request for the full 30s/90s.
+        const val HTTP2_PING_INTERVAL_SECS: Long = 10
+    }
 }

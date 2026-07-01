@@ -117,8 +117,20 @@ class ExoPlayerPool(
         if (preferredMediaId != null) {
             val warm = takeWarm(preferredMediaId)
             if (warm != null) {
-                Log.d("PlaybackService") { "ExoPlayerPool warm hit: $preferredMediaId" }
-                return warm
+                // A warm player can error *after* it was pooled clean — its decoder dies
+                // asynchronously while paused (emulator surface reclaim, codec loss). releasePlayer
+                // can't catch that (the error appears post-release), so it's caught here at acquire:
+                // never hand a stale PlaybackException to a controller. Release the dead player and
+                // fall through to a clean cold/fresh one — a guaranteed setMediaItem+prepare ahead.
+                val error = warm.playerError
+                if (error != null) {
+                    Log.d("PlaybackService") { "ExoPlayerPool discarding errored warm player: $preferredMediaId (${error.errorCodeName})" }
+                    PcmTapRegistry.unregisterPlayer(warm)
+                    warm.release()
+                } else {
+                    Log.d("PlaybackService") { "ExoPlayerPool warm hit: $preferredMediaId" }
+                    return warm
+                }
             }
         }
         return coldPool.poll() ?: builder.build(context)
@@ -147,6 +159,19 @@ class ExoPlayerPool(
     suspend fun releasePlayer(player: ExoPlayer) {
         mutex.withLock {
             if (player.isReleased) return@withLock
+
+            // A player that errored out (decoder-init failure, decode error) must never be
+            // returned to either pool. Kept warm, it hands the stale PlaybackException straight
+            // back to the next acquire of the same URI — the "Can't play this video" flash traced
+            // to warm-pool reuse. Its failed MediaCodec instance is also suspect. Drop it so the
+            // pool builds a clean replacement on the next miss.
+            val error = player.playerError
+            if (error != null) {
+                Log.d("PlaybackService") { "ExoPlayerPool dropping errored player: ${player.currentMediaItem?.mediaId} (${error.errorCodeName})" }
+                PcmTapRegistry.unregisterPlayer(player)
+                player.release()
+                return@withLock
+            }
 
             val mediaId = player.currentMediaItem?.mediaId
             if (mediaId != null && warmSlotsCap > 0) {
@@ -209,7 +234,28 @@ class ExoPlayerPool(
                 coldPool.add(player)
             }
         } else {
+            PcmTapRegistry.unregisterPlayer(player)
             player.release() // Release if pool is full.
+        }
+    }
+
+    /**
+     * Evicts all warm (paused-with-buffer) players back to the cold pool without touching active
+     * players. Safe to call under memory pressure: warm players are idle; active players are
+     * checked out via [acquirePlayer] and are not held in either pool.
+     */
+    fun releaseWarmPool() {
+        val evicted =
+            synchronized(warmPoolLock) {
+                val copy = warmPool.toList()
+                warmPool.clear()
+                copy
+            }
+        if (evicted.isEmpty()) return
+        scope.launch {
+            mutex.withLock {
+                evicted.forEach { demoteToCold(it.player) }
+            }
         }
     }
 
@@ -223,8 +269,14 @@ class ExoPlayerPool(
                             warmPool.clear()
                             copy
                         }
-                    warmSnapshot.forEach { it.player.release() }
-                    coldPool.forEach { it.release() }
+                    warmSnapshot.forEach {
+                        PcmTapRegistry.unregisterPlayer(it.player)
+                        it.player.release()
+                    }
+                    coldPool.forEach {
+                        PcmTapRegistry.unregisterPlayer(it)
+                        it.release()
+                    }
                     coldPool.clear()
                 }
             }.invokeOnCompletion {

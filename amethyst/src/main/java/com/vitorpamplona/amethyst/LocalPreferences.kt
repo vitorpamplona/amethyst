@@ -25,8 +25,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
+import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.UiSettings
@@ -104,6 +106,10 @@ private object PrefKeys {
     const val DEFAULT_DISCOVERY_FOLLOW_LIST = "defaultDiscoveryFollowList"
     const val DEFAULT_POLLS_FOLLOW_LIST = "defaultPollsFollowList"
     const val DEFAULT_PICTURES_FOLLOW_LIST = "defaultPicturesFollowList"
+    const val DEFAULT_NAPPLETS_FOLLOW_LIST = "defaultNappletsFollowList"
+    const val DEFAULT_NSITES_FOLLOW_LIST = "defaultNsitesFollowList"
+    const val DEFAULT_WORKOUTS_FOLLOW_LIST = "defaultWorkoutsFollowList"
+    const val DEFAULT_GIT_REPOSITORIES_FOLLOW_LIST = "defaultGitRepositoriesFollowList"
     const val DEFAULT_CALENDARS_FOLLOW_LIST = "defaultCalendarsFollowList"
     const val DEFAULT_PRODUCTS_FOLLOW_LIST = "defaultProductsFollowList"
     const val DEFAULT_SHORTS_FOLLOW_LIST = "defaultShortsFollowList"
@@ -121,9 +127,12 @@ private object PrefKeys {
     const val DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST = "defaultBrowseEmojiSetsFollowList"
     const val DEFAULT_COMMUNITIES_FOLLOW_LIST = "defaultCommunitiesFollowList"
     const val DEFAULT_FOLLOW_PACKS_FOLLOW_LIST = "defaultFollowPacksFollowList"
+    const val DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST = "defaultAppRecommendationsFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer" // legacy, kept for migration
     const val NWC_WALLETS = "nwcWallets"
-    const val DEFAULT_NWC_WALLET_ID = "defaultNwcWalletId"
+    const val DEFAULT_NWC_WALLET_ID = "defaultNwcWalletId" // legacy, migrated into DEFAULT_PAYMENT_SOURCE_ID
+    const val CLINK_DEBIT_WALLETS = "clinkDebitWallets"
+    const val DEFAULT_PAYMENT_SOURCE_ID = "defaultPaymentSourceId"
     const val LATEST_USER_METADATA = "latestUserMetadata"
     const val LATEST_CONTACT_LIST = "latestContactList"
     const val LATEST_DM_RELAY_LIST = "latestDMRelayList"
@@ -147,7 +156,13 @@ private object PrefKeys {
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
     const val ALWAYS_ON_NOTIFICATION_SERVICE = "always_on_notification_service"
+    const val DEFAULT_RELAY_AUTH_POLICY = "default_relay_auth_policy"
     const val SPLIT_NOTIFICATIONS_ENABLED = "split_notifications_enabled"
+    const val SHOW_MESSAGES_IN_NOTIFICATIONS = "show_messages_in_notifications"
+
+    // One-shot stamp: set once an account has gone through the notifications
+    // Global -> Selected (Curated) migration (or was created after it shipped).
+    const val NOTIF_GLOBAL_TO_CURATED_MIGRATED = "notif_global_to_curated_migrated"
     const val TOR_SETTINGS = "tor_settings"
     const val USE_PROXY = "use_proxy"
     const val PROXY_PORT = "proxy_port"
@@ -171,6 +186,12 @@ object LocalPreferences {
 
     private var currentAccount: String? = null
     private val savedAccounts: MutableStateFlow<List<AccountInfo>?> = MutableStateFlow(null)
+
+    // Guards the one-time lazy population of [savedAccounts]. Without it, concurrent callers
+    // of savedAccounts() (e.g. the account-load path, the always-on notification service, and
+    // the orphan-dir sweep, all launched at startup) would each see a null value, run the IO
+    // read in parallel, and the migration branch could double-write ALL_ACCOUNT_INFO.
+    private val savedAccountsMutex = Mutex()
     private val cachedAccounts: MutableMap<String, AccountSettings?> = mutableMapOf()
 
     suspend fun currentAccount(): String? {
@@ -200,41 +221,46 @@ object LocalPreferences {
     }
 
     private suspend fun savedAccounts(): List<AccountInfo> {
-        if (savedAccounts.value == null) {
-            withContext(Dispatchers.IO) {
-                with(encryptedPreferences()) {
-                    val newSystemOfAccounts =
-                        getString(PrefKeys.ALL_ACCOUNT_INFO, "[]")?.let {
-                            JsonMapper.fromJson<List<AccountInfo>>(it)
-                        }
+        // Fast path: already populated, no lock needed.
+        savedAccounts.value?.let { return it }
 
-                    if (!newSystemOfAccounts.isNullOrEmpty()) {
-                        savedAccounts.emit(newSystemOfAccounts)
-                    } else {
-                        val oldAccounts = getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(COMMA) ?: listOf()
+        return savedAccountsMutex.withLock {
+            // Re-check under the lock: another coroutine may have populated it while we waited.
+            savedAccounts.value ?: loadSavedAccountsFromStorage().also { savedAccounts.emit(it) }
+        }
+    }
 
-                        val migrated =
-                            oldAccounts.map { npub ->
-                                AccountInfo(
-                                    npub,
-                                    encryptedPreferences(npub).getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false),
-                                    (encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "").isNotBlank(),
-                                    false,
-                                )
-                            }
-
-                        savedAccounts.emit(migrated)
-
-                        edit {
-                            putString(PrefKeys.ALL_ACCOUNT_INFO, JsonMapper.toJson(migrated))
-                        }
+    private suspend fun loadSavedAccountsFromStorage(): List<AccountInfo> =
+        withContext(Dispatchers.IO) {
+            with(encryptedPreferences()) {
+                val newSystemOfAccounts =
+                    getString(PrefKeys.ALL_ACCOUNT_INFO, "[]")?.let {
+                        JsonMapper.fromJson<List<AccountInfo>>(it)
                     }
+
+                if (!newSystemOfAccounts.isNullOrEmpty()) {
+                    newSystemOfAccounts
+                } else {
+                    val oldAccounts = getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(COMMA) ?: listOf()
+
+                    val migrated =
+                        oldAccounts.map { npub ->
+                            AccountInfo(
+                                npub,
+                                encryptedPreferences(npub).getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false),
+                                (encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "").isNotBlank(),
+                                false,
+                            )
+                        }
+
+                    edit {
+                        putString(PrefKeys.ALL_ACCOUNT_INFO, JsonMapper.toJson(migrated))
+                    }
+
+                    migrated
                 }
             }
         }
-        // it's always not null when it gets here.
-        return savedAccounts.value!!
-    }
 
     fun accountsFlow() = savedAccounts
 
@@ -317,6 +343,9 @@ object LocalPreferences {
     suspend fun deleteAccount(accountInfo: AccountInfo) {
         Log.d("LocalPreferences") { "Saving to encrypted storage updatePrefsForLogout ${accountInfo.npub}" }
         withContext(Dispatchers.IO) {
+            // Drop the in-memory copy as well; otherwise re-adding the same account later
+            // would resurrect the deleted settings from this cache.
+            mutex.withLock { cachedAccounts.remove(accountInfo.npub) }
             encryptedPreferences(accountInfo.npub).edit(commit = true) { clear() }
             removeAccount(accountInfo)
             deleteUserPreferenceFile(accountInfo.npub)
@@ -329,7 +358,27 @@ object LocalPreferences {
         }
     }
 
-    suspend fun setDefaultAccount(accountSettings: AccountSettings) {
+    /**
+     * Make [accountSettings] the current account, persisting + caching it. Returns the settings that
+     * actually became current — normally [accountSettings] itself, but see the downgrade guard below.
+     */
+    suspend fun setDefaultAccount(accountSettings: AccountSettings): AccountSettings {
+        val npub = accountSettings.keyPair.pubKey.toNpub()
+
+        // Downgrade guard: adding a read-only npub for a pubkey we already hold a SIGNING account for
+        // must not clobber that account. Accounts dedup by npub, so saving fresh read-only settings
+        // here would overwrite the signing account's per-npub file — wiping its cached follow/relay/
+        // mute lists and flipping hasPrivKey off, which silently disables its push notifications. A
+        // signing account already does everything the read-only one would, so keep it and just make
+        // it current instead of degrading it.
+        if (!accountSettings.isWriteable()) {
+            val existing = loadAccountConfigFromEncryptedStorage(npub)
+            if (existing != null && existing.isWriteable()) {
+                setCurrentAccount(existing)
+                return existing
+            }
+        }
+
         // Save the per-npub file before emitting onto the savedAccounts flow.
         // Otherwise a collector (e.g. AlwaysOnNotificationServiceManager) can race in
         // and call loadAccountConfigFromEncryptedStorage(npub) before NOSTR_PUBKEY is
@@ -337,9 +386,9 @@ object LocalPreferences {
         // rest of the session — making every later switch to this account land on
         // LoggedOff instead of LoggedIn.
         saveToEncryptedStorage(accountSettings)
-        val npub = accountSettings.keyPair.pubKey.toNpub()
         mutex.withLock { cachedAccounts.put(npub, accountSettings) }
         setCurrentAccount(accountSettings)
+        return accountSettings
     }
 
     suspend fun allSavedAccounts(): List<AccountInfo> = savedAccounts()
@@ -377,6 +426,10 @@ object LocalPreferences {
 
                     putString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPollsFollowList.value))
                     putString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPicturesFollowList.value))
+                    putString(PrefKeys.DEFAULT_NAPPLETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNappletsFollowList.value))
+                    putString(PrefKeys.DEFAULT_NSITES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNsitesFollowList.value))
+                    putString(PrefKeys.DEFAULT_WORKOUTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultWorkoutsFollowList.value))
+                    putString(PrefKeys.DEFAULT_GIT_REPOSITORIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultGitRepositoriesFollowList.value))
                     putString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCalendarsFollowList.value))
                     putString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultProductsFollowList.value))
                     putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
@@ -394,6 +447,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBrowseEmojiSetsFollowList.value))
                     putString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCommunitiesFollowList.value))
                     putString(PrefKeys.DEFAULT_FOLLOW_PACKS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultFollowPacksFollowList.value))
+                    putString(PrefKeys.DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultAppRecommendationsFollowList.value))
 
                     val walletEntries = settings.nwcWallets.value.mapNotNull { it.denormalize() }
                     if (walletEntries.isNotEmpty()) {
@@ -401,9 +455,19 @@ object LocalPreferences {
                     } else {
                         remove(PrefKeys.NWC_WALLETS)
                     }
-                    settings.defaultNwcWalletId.value?.let {
-                        putString(PrefKeys.DEFAULT_NWC_WALLET_ID, it)
-                    } ?: remove(PrefKeys.DEFAULT_NWC_WALLET_ID)
+
+                    val debitEntries = settings.clinkDebitWallets.value.map { it.denormalize() }
+                    if (debitEntries.isNotEmpty()) {
+                        putString(PrefKeys.CLINK_DEBIT_WALLETS, JsonMapper.toJson(debitEntries))
+                    } else {
+                        remove(PrefKeys.CLINK_DEBIT_WALLETS)
+                    }
+
+                    settings.defaultPaymentSourceId.value?.let {
+                        putString(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID, it)
+                    } ?: remove(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID)
+                    // Legacy NWC-only default key is superseded by DEFAULT_PAYMENT_SOURCE_ID.
+                    remove(PrefKeys.DEFAULT_NWC_WALLET_ID)
 
                     // Remove legacy key after migration
                     remove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
@@ -444,7 +508,14 @@ object LocalPreferences {
                     putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, settings.hideBlockAlertDialog)
                     putBoolean(PrefKeys.CALLS_ENABLED, settings.callsEnabled.value)
                     putBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, settings.alwaysOnNotificationService.value)
+                    putString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, settings.defaultRelayAuthPolicy.value.name)
                     putBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, settings.splitNotificationsEnabled.value)
+                    putBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, settings.showMessagesInNotifications.value)
+                    // Any account that reaches a save has its notification filter in its
+                    // post-split meaning, so stamp it as migrated. This keeps the one-shot
+                    // Global -> Selected rewrite from ever touching it again and preserves a
+                    // deliberate raw-Global choice (including on brand-new accounts).
+                    putBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, true)
 
                     // migrating from previous design
                     remove(PrefKeys.USE_PROXY)
@@ -554,7 +625,12 @@ object LocalPreferences {
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
                     val callsEnabled = getBoolean(PrefKeys.CALLS_ENABLED, true)
                     val alwaysOnNotificationService = getBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, false)
+                    val defaultRelayAuthPolicy =
+                        getString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, null)
+                            ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
+                            ?: RelayAuthPolicy.IF_IN_MY_LIST
                     val splitNotificationsEnabled = getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)
+                    val showMessagesInNotifications = getBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, true)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
                     val dismissedPollNoteIds = getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null) ?: setOf()
                     val viewedPollResultNoteIdsStr = getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)
@@ -565,6 +641,8 @@ object LocalPreferences {
                     val zapPaymentRequestServerStr = getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)
                     val nwcWalletsStr = getString(PrefKeys.NWC_WALLETS, null)
                     val defaultNwcWalletIdStr = getString(PrefKeys.DEFAULT_NWC_WALLET_ID, null)
+                    val clinkDebitWalletsStr = getString(PrefKeys.CLINK_DEBIT_WALLETS, null)
+                    val defaultPaymentSourceIdStr = getString(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID, null)
                     val defaultFileServerStr = getString(PrefKeys.DEFAULT_FILE_SERVER, null)
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
@@ -619,6 +697,10 @@ object LocalPreferences {
                                 }
                             }
                         }
+                    val clinkDebitsLoaded =
+                        async {
+                            parseOrNull<List<ClinkDebitWalletEntry>>(clinkDebitWalletsStr)?.mapNotNull { it.normalize() } ?: emptyList()
+                        }
                     val defaultFileServer = async { parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0] }
 
                     val viewedPollResultNoteIds = async { parseOrNull<Map<String, Long>>(viewedPollResultNoteIdsStr) ?: mapOf() }
@@ -660,12 +742,50 @@ object LocalPreferences {
 
                     Log.d("LocalPreferences") { "Load account from file $npub - asyncs created" }
 
+                    // Resolve every parallel parse into a local before constructing AccountSettings.
+                    // Awaiting inside the 70-argument constructor expression below would place ~27
+                    // suspension points in the middle of a single huge operand stack, forcing the
+                    // coroutine state machine to spill/restore every partially-evaluated argument at
+                    // each point. That bloats the generated method past the compiler's per-method
+                    // instruction limit ("Method exceeds compiler instruction limit"). Awaiting into
+                    // vals first keeps each suspension point at a statement boundary (near-empty
+                    // operand stack) and leaves the constructor as straight-line, suspension-free code.
+                    val nwcWalletsResolved = nwcWalletsLoaded.await()
+                    val clinkDebitsResolved = clinkDebitsLoaded.await()
+                    val defaultFileServerResolved = defaultFileServer.await()
+                    val viewedPollResultNoteIdsResolved = viewedPollResultNoteIds.await()
+                    val pendingAttestationsResolved = pendingAttestations.await()
+                    val lastReadPerRouteResolved = lastReadPerRoute.await()
+                    val latestUserMetadataResolved = latestUserMetadata.await()
+                    val latestContactListResolved = latestContactList.await()
+                    val latestDmRelayListResolved = latestDmRelayList.await()
+                    val latestNip65RelayListResolved = latestNip65RelayList.await()
+                    val latestSearchRelayListResolved = latestSearchRelayList.await()
+                    val latestIndexRelayListResolved = latestIndexRelayList.await()
+                    val latestRelayFeedsListResolved = latestRelayFeedsList.await()
+                    val latestBlockedRelayListResolved = latestBlockedRelayList.await()
+                    val latestTrustedRelayListResolved = latestTrustedRelayList.await()
+                    val latestMuteListResolved = latestMuteList.await()
+                    val latestPrivateHomeRelayListResolved = latestPrivateHomeRelayList.await()
+                    val latestAppSpecificDataResolved = latestAppSpecificData.await()
+                    val latestChannelListResolved = latestChannelList.await()
+                    val latestCommunityListResolved = latestCommunityList.await()
+                    val latestHashtagListResolved = latestHashtagList.await()
+                    val latestGeohashListResolved = latestGeohashList.await()
+                    val latestEphemeralListResolved = latestEphemeralList.await()
+                    val latestTrustProviderListResolved = latestTrustProviderList.await()
+                    val latestPaymentTargetsResolved = latestPaymentTargets.await()
+                    val latestCashuWalletResolved = latestCashuWallet.await()
+                    val latestNutzapInfoResolved = latestNutzapInfo.await()
+
+                    Log.d("LocalPreferences") { "Load account from file $npub - asyncs resolved" }
+
                     return@with AccountSettings(
                         keyPair = keyPair,
                         transientAccount = false,
                         externalSignerPackageName = externalSignerPackageName,
                         localRelayServers = MutableStateFlow(localRelayServers),
-                        defaultFileServer = defaultFileServer.await(),
+                        defaultFileServer = defaultFileServerResolved,
                         stripLocationOnUpload = stripLocationOnUpload,
                         useLocalBlossomCache = MutableStateFlow(useLocalBlossomCache),
                         localBlossomCacheProfilePicturesOnly = MutableStateFlow(localBlossomCacheProfilePicturesOnly),
@@ -676,6 +796,10 @@ object LocalPreferences {
                         defaultDiscoveryFollowList = MutableStateFlow(followListPrefs.discovery),
                         defaultPollsFollowList = MutableStateFlow(followListPrefs.polls),
                         defaultPicturesFollowList = MutableStateFlow(followListPrefs.pictures),
+                        defaultNappletsFollowList = MutableStateFlow(followListPrefs.napplets),
+                        defaultNsitesFollowList = MutableStateFlow(followListPrefs.nsites),
+                        defaultWorkoutsFollowList = MutableStateFlow(followListPrefs.workouts),
+                        defaultGitRepositoriesFollowList = MutableStateFlow(followListPrefs.gitRepositories),
                         defaultCalendarsFollowList = MutableStateFlow(followListPrefs.calendars),
                         defaultProductsFollowList = MutableStateFlow(followListPrefs.products),
                         defaultShortsFollowList = MutableStateFlow(followListPrefs.shorts),
@@ -693,39 +817,50 @@ object LocalPreferences {
                         defaultBrowseEmojiSetsFollowList = MutableStateFlow(followListPrefs.browseEmojiSets),
                         defaultCommunitiesFollowList = MutableStateFlow(followListPrefs.communities),
                         defaultFollowPacksFollowList = MutableStateFlow(followListPrefs.followPacks),
-                        nwcWallets = MutableStateFlow(nwcWalletsLoaded.await().first),
-                        defaultNwcWalletId = MutableStateFlow(nwcWalletsLoaded.await().second),
+                        defaultAppRecommendationsFollowList = MutableStateFlow(followListPrefs.appRecommendations),
+                        nwcWallets = MutableStateFlow(nwcWalletsResolved.first),
+                        clinkDebitWallets = MutableStateFlow(clinkDebitsResolved),
+                        // Prefer the new unified default; migrate from the legacy NWC default;
+                        // else fall back to the first configured source (NWC before debits).
+                        defaultPaymentSourceId =
+                            MutableStateFlow(
+                                defaultPaymentSourceIdStr
+                                    ?: nwcWalletsResolved.second
+                                    ?: clinkDebitsResolved.firstOrNull()?.id,
+                            ),
                         hideDeleteRequestDialog = hideDeleteRequestDialog,
                         hideBlockAlertDialog = hideBlockAlertDialog,
                         hideNIP17WarningDialog = hideNIP17WarningDialog,
                         alwaysOnNotificationService = MutableStateFlow(alwaysOnNotificationService),
+                        defaultRelayAuthPolicy = MutableStateFlow(defaultRelayAuthPolicy),
                         splitNotificationsEnabled = MutableStateFlow(splitNotificationsEnabled),
-                        backupUserMetadata = latestUserMetadata.await(),
-                        backupContactList = latestContactList.await(),
-                        backupNIP65RelayList = latestNip65RelayList.await(),
-                        backupDMRelayList = latestDmRelayList.await(),
-                        backupSearchRelayList = latestSearchRelayList.await(),
-                        backupIndexRelayList = latestIndexRelayList.await(),
-                        backupRelayFeedsList = latestRelayFeedsList.await(),
-                        backupBlockedRelayList = latestBlockedRelayList.await(),
-                        backupTrustedRelayList = latestTrustedRelayList.await(),
-                        backupPrivateHomeRelayList = latestPrivateHomeRelayList.await(),
-                        backupMuteList = latestMuteList.await(),
-                        backupAppSpecificData = latestAppSpecificData.await(),
-                        backupChannelList = latestChannelList.await(),
-                        backupCommunityList = latestCommunityList.await(),
-                        backupHashtagList = latestHashtagList.await(),
-                        backupGeohashList = latestGeohashList.await(),
-                        backupEphemeralChatList = latestEphemeralList.await(),
-                        backupTrustProviderList = latestTrustProviderList.await(),
-                        lastReadPerRoute = MutableStateFlow(lastReadPerRoute.await()),
+                        showMessagesInNotifications = MutableStateFlow(showMessagesInNotifications),
+                        backupUserMetadata = latestUserMetadataResolved,
+                        backupContactList = latestContactListResolved,
+                        backupNIP65RelayList = latestNip65RelayListResolved,
+                        backupDMRelayList = latestDmRelayListResolved,
+                        backupSearchRelayList = latestSearchRelayListResolved,
+                        backupIndexRelayList = latestIndexRelayListResolved,
+                        backupRelayFeedsList = latestRelayFeedsListResolved,
+                        backupBlockedRelayList = latestBlockedRelayListResolved,
+                        backupTrustedRelayList = latestTrustedRelayListResolved,
+                        backupPrivateHomeRelayList = latestPrivateHomeRelayListResolved,
+                        backupMuteList = latestMuteListResolved,
+                        backupAppSpecificData = latestAppSpecificDataResolved,
+                        backupChannelList = latestChannelListResolved,
+                        backupCommunityList = latestCommunityListResolved,
+                        backupHashtagList = latestHashtagListResolved,
+                        backupGeohashList = latestGeohashListResolved,
+                        backupEphemeralChatList = latestEphemeralListResolved,
+                        backupTrustProviderList = latestTrustProviderListResolved,
+                        lastReadPerRoute = MutableStateFlow(lastReadPerRouteResolved),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
                         dismissedPollNoteIds = MutableStateFlow(dismissedPollNoteIds),
-                        viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIds.await()),
-                        pendingAttestations = MutableStateFlow(pendingAttestations.await()),
-                        backupNipA3PaymentTargets = latestPaymentTargets.await(),
-                        backupCashuWallet = latestCashuWallet.await(),
-                        backupNutzapInfo = latestNutzapInfo.await(),
+                        viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIdsResolved),
+                        pendingAttestations = MutableStateFlow(pendingAttestationsResolved),
+                        backupNipA3PaymentTargets = latestPaymentTargetsResolved,
+                        backupCashuWallet = latestCashuWalletResolved,
+                        backupNutzapInfo = latestNutzapInfoResolved,
                         callsEnabled = MutableStateFlow(callsEnabled),
                     )
                 }
@@ -755,6 +890,10 @@ object LocalPreferences {
         val discovery: TopFilter,
         val polls: TopFilter,
         val pictures: TopFilter,
+        val napplets: TopFilter,
+        val nsites: TopFilter,
+        val workouts: TopFilter,
+        val gitRepositories: TopFilter,
         val calendars: TopFilter,
         val products: TopFilter,
         val shorts: TopFilter,
@@ -772,16 +911,45 @@ object LocalPreferences {
         val browseEmojiSets: TopFilter,
         val communities: TopFilter,
         val followPacks: TopFilter,
+        val appRecommendations: TopFilter,
     )
+
+    /**
+     * One-shot migration of the notifications filter.
+     *
+     * The notifications "Global" mode was split into a raw [TopFilter.Global]
+     * (every event that p-tags the user) and a curated [TopFilter.Selected].
+     * Existing users who had selected the old, curated "Global" keep a value
+     * that now deserializes to the much-more-permissive raw Global. Move them to
+     * [TopFilter.Selected] exactly once, then stamp the account so a later,
+     * deliberate raw-Global choice is never reverted. Accounts created after the
+     * split are stamped at save time, so they are never touched here.
+     */
+    private fun SharedPreferences.migrateNotificationFilter(current: TopFilter): TopFilter {
+        if (getBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, false)) return current
+
+        val migrated = if (current is TopFilter.Global) TopFilter.Selected else current
+        edit {
+            if (migrated !== current) {
+                putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, JsonMapper.toJson(migrated))
+            }
+            putBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, true)
+        }
+        return migrated
+    }
 
     private fun SharedPreferences.loadFollowListPrefs(): FollowListPrefs =
         FollowListPrefs(
             home = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null), TopFilter.AllFollows),
             stories = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null), TopFilter.Global),
-            notification = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null), TopFilter.Global),
+            notification = migrateNotificationFilter(parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null), TopFilter.Selected)),
             discovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null), TopFilter.Global),
             polls = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, null), TopFilter.Global),
             pictures = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null), TopFilter.Global),
+            napplets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NAPPLETS_FOLLOW_LIST, null), TopFilter.Global),
+            nsites = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NSITES_FOLLOW_LIST, null), TopFilter.Global),
+            workouts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_WORKOUTS_FOLLOW_LIST, null), TopFilter.Global),
+            gitRepositories = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_GIT_REPOSITORIES_FOLLOW_LIST, null), TopFilter.Global),
             calendars = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, null), TopFilter.Global),
             products = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, null), TopFilter.AroundMe),
             shorts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null), TopFilter.Global),
@@ -799,6 +967,7 @@ object LocalPreferences {
             browseEmojiSets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, null), TopFilter.Global),
             communities = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, null), TopFilter.AllFollows),
             followPacks = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_FOLLOW_PACKS_FOLLOW_LIST, null), TopFilter.Global),
+            appRecommendations = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST, null), TopFilter.Global),
         )
 
     private inline fun <reified T : Any> parseOrNull(value: String?): T? {

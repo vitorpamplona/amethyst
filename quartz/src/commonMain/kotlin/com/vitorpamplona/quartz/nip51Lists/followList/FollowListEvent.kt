@@ -25,13 +25,12 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
@@ -50,7 +49,10 @@ class FollowListEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
@@ -67,9 +69,10 @@ class FollowListEvent(
 
     fun followIdSet() = tags.followIdSet()
 
+    fun hashtags(): List<String> = tags.mapNotNull(HashtagTag::parse)
+
     companion object {
         const val KIND = 39089
-        const val ALT = "List of people to follow"
 
         fun createAddress(
             pubKey: HexKey,
@@ -136,12 +139,7 @@ class FollowListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): FollowListEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, content)
         }
@@ -171,7 +169,6 @@ class FollowListEvent(
             createdAt = createdAt,
         ) {
             dTag(dTag)
-            alt(ALT)
             title(name)
             people(people)
 

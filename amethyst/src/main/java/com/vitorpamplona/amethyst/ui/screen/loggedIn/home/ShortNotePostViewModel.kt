@@ -41,10 +41,12 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.service.ai.MockWritingAssistant
 import com.vitorpamplona.amethyst.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
@@ -113,6 +115,7 @@ import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
@@ -132,6 +135,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.isClient
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
@@ -167,6 +171,7 @@ enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
     FORWARD_ZAPS,
     TO_USERS,
+    NOTIFY,
 }
 
 @Stable
@@ -179,6 +184,11 @@ open class ShortNotePostViewModel :
     IExpiration {
     val draftTag = DraftTagState()
 
+    // Strong reference to the live cache note for the current draft tag (derived from the
+    // versions flow below), so LocalCache cannot weakly collect it before a deletion needs it.
+    var draftNote: AddressableNote? = null
+        private set
+
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
@@ -187,6 +197,7 @@ open class ShortNotePostViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
+                    draftNote = account.getOrCreateDraftNote(draftTag.current)
                     accountViewModel.launchSigner {
                         sendDraftSync()
                     }
@@ -257,6 +268,8 @@ open class ShortNotePostViewModel :
         get() = voiceAnonymization.processingPreset
 
     // Polls
+    // Both regular polls and zap polls share the same `pollOptions` text fields so that switching
+    // between the two poll types never hides or discards the text the user already typed.
     var canUsePoll by mutableStateOf(false)
     var wantsPoll by mutableStateOf(false)
     var pollOptions: SnapshotStateMap<Int, OptionTag> = newStateMapPollOptions()
@@ -266,7 +279,6 @@ open class ShortNotePostViewModel :
     // ZapPolls
     var canUseZapPoll by mutableStateOf(false)
     var wantsZapPoll by mutableStateOf(false)
-    var zapPollOptions: SnapshotStateMap<Int, String> = newStateMapZapPollOptions()
     var zapPollValueMaximum by mutableStateOf<Long?>(null)
     var zapPollValueMinimum by mutableStateOf<Long?>(null)
     var zapPollConsensusThreshold: Int? = null
@@ -308,6 +320,38 @@ open class ShortNotePostViewModel :
 
     // Anonymous Reply
     var wantsAnonymousPost by mutableStateOf(false)
+
+    // Private (gift-wrapped) note: instead of publishing, the kind-1 is
+    // wrapped to every p-tagged user plus a self-copy and sent to their DM
+    // relays. Locked ON when replying to an unsealed rumor — a public reply
+    // would e-tag the parent's private id onto public relays.
+    var wantsPrivateNote by mutableStateOf(false)
+    var privateNoteLocked by mutableStateOf(false)
+
+    fun togglePrivateNote() {
+        if (privateNoteLocked) return
+        wantsPrivateNote = !wantsPrivateNote
+    }
+
+    // Notify / Visible-to editor: lets the user p-tag people who aren't
+    // cited in the message. For private notes the Notify list IS the
+    // audience, so this is how receivers are picked.
+    var wantsToAddNotifyUser by mutableStateOf(false)
+    val notifyUserSearchText = TextFieldState()
+
+    fun onNotifyUserSearchTextChanged() {
+        if (notifyUserSearchText.selection.collapsed) {
+            val lastWord = notifyUserSearchText.text.toString()
+            userSuggestionsMainMessage = UserSuggestionAnchor.NOTIFY
+            userSuggestions?.processCurrentWord(lastWord)
+        }
+    }
+
+    fun addToReplyList(user: User) {
+        if (pTags?.contains(user) != true) {
+            pTags = (pTags ?: emptyList()).plus(user)
+        }
+    }
 
     // A single ephemeral signer reused for the whole compose session so that media
     // uploads (Blossom/NIP-96 auth events) and the final anonymous post are all signed
@@ -446,12 +490,15 @@ open class ShortNotePostViewModel :
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
                     if (oldTag != null) {
                         draftTag.set(oldTag)
+                        draftNote = account.getOrCreateDraftNote(oldTag)
                     }
                     loadFromDraft(innerNote)
                 }
             }
         } else {
             originalNote = replyingTo
+            privateNoteLocked = replyingTo?.isPrivateRumor() == true
+            wantsPrivateNote = privateNoteLocked
             replyingTo?.let { replyNote ->
                 if (replyNote.event is BaseThreadedEvent) {
                     this.eTags = (replyNote.replyTo ?: emptyList()).plus(replyNote)
@@ -649,6 +696,12 @@ open class ShortNotePostViewModel :
         canUsePoll = originalNote == null
         canUseZapPoll = originalNote == null
 
+        // A drafted private reply must come back locked private: the parent
+        // rumor's id is inside the draft's e-tags, and posting it publicly
+        // would leak that id.
+        privateNoteLocked = originalNote?.isPrivateRumor() == true
+        wantsPrivateNote = privateNoteLocked
+
         if (forwardZapTo.value.items.isNotEmpty()) {
             wantsForwardZapTo = true
         }
@@ -794,7 +847,8 @@ open class ShortNotePostViewModel :
         wantsZapPoll = polls.isNotEmpty()
 
         polls.forEach { tag ->
-            zapPollOptions[tag.index] = tag.descriptor
+            val current = pollOptions[tag.index]
+            pollOptions[tag.index] = OptionTag(current?.code ?: RandomInstance.randomChars(6), tag.descriptor)
         }
 
         zapPollValueMinimum = draftEvent.minAmount()
@@ -843,10 +897,24 @@ open class ShortNotePostViewModel :
             }
         }
 
-        val version = draftTag.current
+        val draftToDelete = draftNote
         val anonymous = wantsAnonymousPost
         val scheduledFor = scheduledForSec
+        val privately = wantsPrivateNote
         cancel()
+
+        if (privately && template.kind == TextNoteEvent.KIND) {
+            // Gift-wrap to the p-tagged users instead of publishing. Private
+            // wins over the anonymous and scheduled modes: a locked private
+            // reply must never fall through to a public publish path (the UI
+            // hides those toggles while private mode is on).
+            @Suppress("UNCHECKED_CAST")
+            accountViewModel.account.sendPrivateNote(template as EventTemplate<TextNoteEvent>)
+            accountViewModel.launchSigner {
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+            }
+            return
+        }
 
         if (scheduledFor != null && !anonymous) {
             // Re-stamp the template with created_at = scheduled time so the post,
@@ -875,7 +943,7 @@ open class ShortNotePostViewModel :
                 ),
             )
             accountViewModel.launchSigner {
-                accountViewModel.account.deleteDraftIgnoreErrors(version)
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
             return
         }
@@ -901,13 +969,13 @@ open class ShortNotePostViewModel :
         }
 
         accountViewModel.launchSigner {
-            accountViewModel.account.deleteDraftIgnoreErrors(version)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
 
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
-            accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {
@@ -1011,7 +1079,7 @@ open class ShortNotePostViewModel :
                 imetas(usedAttachments)
             }
         } else if (wantsZapPoll) {
-            val options = zapPollOptions.map { PollOptionTag(it.key, it.value) }
+            val options = pollOptions.map { PollOptionTag(it.key, it.value.label) }
             if (options.isEmpty()) return null
 
             ZapPollEvent.build(tagger.message, options) {
@@ -1023,6 +1091,38 @@ open class ShortNotePostViewModel :
                 pTags(tagger.directMentionsUsers.map { it.toPTag() })
                 quotes(findNostrUris(tagger.message))
                 hashtags(findHashtags(tagger.message))
+
+                geoHash?.let { geohash(it) }
+                localZapRaiserAmount?.let { zapraiser(it) }
+                zapReceiver?.let { zapSplits(it) }
+                contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
+
+                emojis(emojis)
+                imetas(usedAttachments)
+            }
+        } else if (shouldReplyAsComment()) {
+            // NIP-22: replies to a brand-new Amethyst kind-1 thread root are sent as
+            // kind 1111 Comments instead of kind 1 replies.
+            val eventHint = originalNote?.toEventHint<Event>() ?: return null
+
+            CommentEvent.replyBuilder(tagger.message, eventHint) {
+                tagger.pTags?.let { userList ->
+                    val tags =
+                        userList.map {
+                            val tag = it.toPTag()
+                            if (tag.relayHint == null) {
+                                tag.copy(relayHint = LocalCache.relayHints.hintsForKey(it.pubkeyHex).firstOrNull())
+                            } else {
+                                tag
+                            }
+                        }
+                    notify(tags)
+                }
+
+                hashtags(findHashtags(tagger.message))
+                references(findURLs(tagger.message))
+                quotes(findNostrUris(tagger.message))
 
                 geoHash?.let { geohash(it) }
                 localZapRaiserAmount?.let { zapraiser(it) }
@@ -1090,6 +1190,19 @@ open class ShortNotePostViewModel :
                 imetas(usedAttachments)
             }
         }
+    }
+
+    /**
+     * NIP-22: a reply should be a kind 1111 Comment (instead of a kind 1 reply) when
+     * the note being replied to is a kind 1 [TextNoteEvent], is the root of a new
+     * thread, and was itself posted from Amethyst. Forks keep using kind 1.
+     */
+    private fun shouldReplyAsComment(): Boolean {
+        if (forkedFromNote != null) return false
+        val replyingToEvent = originalNote?.event ?: return false
+        return replyingToEvent is TextNoteEvent &&
+            replyingToEvent.isNewThread() &&
+            replyingToEvent.isClient(AccountCacheState.CLIENT_TAG_NAME)
     }
 
     fun findEmoji(
@@ -1230,7 +1343,6 @@ open class ShortNotePostViewModel :
         closedAt = TimeUtils.oneDayAhead()
 
         wantsZapPoll = false
-        zapPollOptions = newStateMapZapPollOptions()
         zapPollValueMaximum = null
         zapPollValueMinimum = null
         zapPollConsensusThreshold = null
@@ -1249,6 +1361,10 @@ open class ShortNotePostViewModel :
         wantsAnonymousPost = false
         anonymousSignerCache = null
         scheduledForSec = null
+        wantsPrivateNote = false
+        privateNoteLocked = false
+        wantsToAddNotifyUser = false
+        notifyUserSearchText.clearText()
 
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.clearText()
@@ -1313,6 +1429,10 @@ open class ShortNotePostViewModel :
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.clearText()
+            } else if (userSuggestionsMainMessage == UserSuggestionAnchor.NOTIFY) {
+                addToReplyList(item)
+                notifyUserSearchText.clearText()
+                wantsToAddNotifyUser = false
             }
 
             userSuggestionsMainMessage = null
@@ -1356,12 +1476,6 @@ open class ShortNotePostViewModel :
             1 to OptionTag(RandomInstance.randomChars(6), ""),
         )
 
-    private fun newStateMapZapPollOptions(): SnapshotStateMap<Int, String> =
-        mutableStateMapOf(
-            0 to "",
-            1 to "",
-        )
-
     fun canPost(): Boolean {
         // Voice messages can be posted without text (with either uploaded or pending recording)
         if (voiceMetadata != null || voiceRecording != null) {
@@ -1385,7 +1499,8 @@ open class ShortNotePostViewModel :
             (
                 !wantsZapPoll ||
                     (
-                        zapPollOptions.values.all { it.isNotEmpty() } &&
+                        pollOptions.isNotEmpty() &&
+                            pollOptions.all { it.value.label.isNotEmpty() } &&
                             isValidValueMinimum.value &&
                             isValidValueMaximum.value
                     )
@@ -1618,35 +1733,6 @@ open class ShortNotePostViewModel :
             isValidValueMinimum.value = true
             isValidValueMaximum.value = true
         }
-    }
-
-    fun removeZapPollOption(optionIndex: Int) {
-        zapPollOptions.removeOrderedZapPoll(optionIndex)
-        draftTag.newVersion()
-    }
-
-    private fun MutableMap<Int, String>.removeOrderedZapPoll(index: Int) {
-        val keyList = keys
-        val elementList = values.toMutableList()
-        run stop@{
-            for (i in index until elementList.size) {
-                val nextIndex = i + 1
-                if (nextIndex == elementList.size) return@stop
-                elementList[i] = elementList[nextIndex].also { elementList[nextIndex] = "null" }
-            }
-        }
-        elementList.removeAt(elementList.size - 1)
-        val newEntries = keyList.zip(elementList) { key, content -> Pair(key, content) }
-        this.clear()
-        this.putAll(newEntries)
-    }
-
-    fun updateZapPollOption(
-        optionIndex: Int,
-        text: String,
-    ) {
-        zapPollOptions[optionIndex] = text
-        draftTag.newVersion()
     }
 
     fun toggleMarkAsSensitive() {

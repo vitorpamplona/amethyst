@@ -35,8 +35,7 @@ object GroupCreateCommand {
     ): Int {
         val args = Args(rest)
         val name = args.flag("name", "")!!
-        val ctx = Context.open(dataDir)
-        try {
+        Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = RandomInstance.bytes(32).toHexKey()
 
@@ -65,8 +64,6 @@ object GroupCreateCommand {
                 ),
             )
             return 0
-        } finally {
-            ctx.close()
         }
     }
 }

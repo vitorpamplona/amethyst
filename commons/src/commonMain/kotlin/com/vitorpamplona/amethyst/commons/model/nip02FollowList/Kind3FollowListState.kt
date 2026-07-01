@@ -42,6 +42,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class Kind3FollowListState(
     val signer: NostrSigner,
@@ -113,27 +115,47 @@ class Kind3FollowListState(
         )
     }
 
+    // Serializes all kind:3 mutations so concurrent follow/unfollow/follow-all
+    // calls cannot lose writes. The read of getFollowListEvent() inside each
+    // call happens under the lock, so the dedupe baseline is always fresh.
+    private val followMutex = Mutex()
+
     suspend fun follow(users: List<User>): ContactListEvent =
-        FollowActions.buildFollowBatch(
-            signer = signer,
-            pubkeysWithHints = users.map { it.pubkeyHex to it.bestRelayHint() },
-            currentContactList = getFollowListEvent(),
-        )
+        followMutex.withLock {
+            FollowActions.buildFollowBatch(
+                signer = signer,
+                pubkeysWithHints = users.map { it.pubkeyHex to it.bestRelayHint() },
+                currentContactList = getFollowListEvent(),
+            )
+        }
 
     suspend fun follow(user: User): ContactListEvent =
-        FollowActions.buildFollow(
-            signer = signer,
-            pubkeyToFollow = user.pubkeyHex,
-            currentContactList = getFollowListEvent(),
-            relayHint = user.bestRelayHint(),
-        )
+        followMutex.withLock {
+            FollowActions.buildFollow(
+                signer = signer,
+                pubkeyToFollow = user.pubkeyHex,
+                currentContactList = getFollowListEvent(),
+                relayHint = user.bestRelayHint(),
+            )
+        }
 
     suspend fun unfollow(user: User): ContactListEvent? =
-        FollowActions.buildUnfollow(
-            signer = signer,
-            pubkeyToUnfollow = user.pubkeyHex,
-            currentContactList = getFollowListEvent(),
-        )
+        followMutex.withLock {
+            FollowActions.buildUnfollow(
+                signer = signer,
+                pubkeyToUnfollow = user.pubkeyHex,
+                currentContactList = getFollowListEvent(),
+            )
+        }
+
+    suspend fun unfollow(users: List<User>): ContactListEvent? =
+        followMutex.withLock {
+            FollowActions.buildUnfollowBatch(
+                signer = signer,
+                pubkeysToRemove = users.mapTo(mutableSetOf()) { it.pubkeyHex },
+                currentContactList = getFollowListEvent(),
+            )
+        }
 
     init {
         settings.backupContactList?.let {

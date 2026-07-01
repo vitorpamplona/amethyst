@@ -11,7 +11,7 @@ on:
         type: boolean
         default: false
       test_tag:
-        description: 'Synthetic tag name for dry-run (e.g. v1.08.0-dryrun); ignored on tag push'
+        description: 'Synthetic tag name for dry-run (e.g. vX.YY.Z-dryrun); ignored on tag push'
         type: string
         default: 'v0.0.0-dryrun'
 
@@ -23,9 +23,9 @@ env:
   # Single source of truth in scripts/asset-name.sh.
   # appimagetool pinned release — bump via Dependabot, verify SHA256 via env var below.
   # We used to use linuxdeploy here, but it auto-walks the AppDir with ldd to
-  # bundle deps — that fights jpackage's self-contained JRE (libjvm.so RPATH
-  # mismatch) and the UPX-compressed VLC plugins. appimagetool only embeds the
-  # AppDir as-is, which is what we actually want.
+  # bundle deps — that fights jpackage's self-contained JRE (libjvm.so has
+  # $ORIGIN RPATH so ldd can't resolve it standalone). appimagetool only
+  # embeds the AppDir as-is, which is what we actually want.
   APPIMAGETOOL_URL: https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage
   APPIMAGETOOL_SHA256: 46fdd785094c7f6e545b61afcfb0f3d98d8eab243f644b4b17698c01d06083d1
 
@@ -101,8 +101,39 @@ jobs:
           fi
           chmod +x desktopApp/packaging/appimage/appimagetool-x86_64.AppImage
 
+      # macOS only: import the Developer ID Application cert into a throwaway
+      # keychain so jpackage's codesign pass can find it. Soft — if the
+      # MAC_CERTIFICATE_P12 secret isn't set (forks, or before Apple creds are
+      # provisioned) the DMG is built UNSIGNED, exactly as before. notarytool
+      # runs as part of the gradle task when the identity env is exported below.
+      - name: Import Apple Developer ID certificate (macOS leg, if configured)
+        if: matrix.family == 'macos'
+        id: mac_keychain
+        uses: ./.github/actions/import-macos-cert
+        with:
+          certificate-p12-base64: ${{ secrets.MAC_CERTIFICATE_P12 }}
+          certificate-password: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+
       - name: Build desktop artifacts
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
+        env:
+          # Empty on non-macOS legs and on the macOS leg when no cert is
+          # configured — the gradle macOS{} block skips signing when the
+          # identity is blank. Prefer the full common name resolved from the
+          # keychain over the raw secret: Compose's signer maps the identity via
+          # `security find-certificate` and only matches the exact "Developer ID
+          # Application: …" CN, whereas the secret may be a hash or partial name
+          # (which bare codesign accepts but Compose does not). Fall back to the
+          # secret if resolution failed.
+          AMETHYST_MAC_SIGN_IDENTITY: ${{ steps.mac_keychain.outputs.signing == 'true' && (steps.mac_keychain.outputs.identity || secrets.MAC_SIGN_IDENTITY) || '' }}
+          # Explicit keychain for Compose's MacSigner. Its `security
+          # find-certificate` lookup doesn't resolve the imported cert via the
+          # search list on these runners ("Could not find certificate ... in
+          # keychain []"), so point it at the throwaway keychain directly.
+          AMETHYST_MAC_SIGN_KEYCHAIN: ${{ steps.mac_keychain.outputs.signing == 'true' && steps.mac_keychain.outputs.keychain || '' }}
+          AMETHYST_NOTARY_APPLE_ID: ${{ secrets.MAC_NOTARY_APPLE_ID }}
+          AMETHYST_NOTARY_PASSWORD: ${{ secrets.MAC_NOTARY_PASSWORD }}
+          AMETHYST_NOTARY_TEAM_ID: ${{ secrets.MAC_NOTARY_TEAM_ID }}
         with:
           max_attempts: 2
           timeout_minutes: 15
@@ -212,7 +243,7 @@ jobs:
           - { os: macos-14,      arch: arm64, family: macos, tasks: "amyImage" }
           - { os: ubuntu-latest, arch: x64,   family: linux, tasks: "amyImage jpackageDeb jpackageRpm" }
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 45  # macOS leg also codesigns + notarizes the jlink image
     defaults:
       run:
         shell: bash
@@ -261,6 +292,96 @@ jobs:
           timeout_minutes: 15
           command: ./gradlew --no-daemon :cli:${{ matrix.tasks }}
 
+      # amy is headless: the Compose UI render stack (skiko + its native dylibs,
+      # foundation/material/material3/ui/animation) must never reach the CLI
+      # image. cli/build.gradle.kts excludes it from runtimeClasspath; this
+      # guards against a transitive dep silently dragging it back (size + macOS
+      # notarization-surface regression). compose.runtime is CLI-safe and stays.
+      - name: Assert no Compose UI in the amy image
+        run: |
+          set -euo pipefail
+          LIB="cli/build/install/amy/lib"
+          leak="$(ls "$LIB" | grep -iE 'skiko|foundation(-layout)?-desktop|material3?-desktop|material-ripple|ui-desktop|animation(-core)?-desktop' || true)"
+          if [ -n "$leak" ]; then
+            echo "::error::Compose UI render stack leaked into the amy CLI image:"
+            echo "$leak" | sed 's/^/  /'
+            echo "Exclude it in cli/build.gradle.kts (configurations.runtimeClasspath)."
+            exit 1
+          fi
+          echo "OK: no skiko / Compose UI render jars in the amy image ($(du -sh "$LIB" | cut -f1))."
+
+      # macOS only: import the Developer ID cert (no-op without the secret) so
+      # the next step can codesign the jlink image. The jvm bundle for
+      # Homebrew-core is NOT signed here — Homebrew strips quarantine itself.
+      - name: Import Apple Developer ID certificate (macOS leg, if configured)
+        if: matrix.family == 'macos'
+        id: mac_keychain
+        uses: ./.github/actions/import-macos-cert
+        with:
+          certificate-p12-base64: ${{ secrets.MAC_CERTIFICATE_P12 }}
+          certificate-password: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+
+      # Codesign + notarize the macOS jlink image (amy-<ver>-macos-arm64.tar.gz)
+      # for users who download it directly. A loose tarball can't be stapled
+      # (stapler only does .app/.dmg/.pkg), so Gatekeeper verifies notarization
+      # online on first run. Runs before "Collect" so the tarred image is signed.
+      - name: Sign + notarize amy image (macOS leg, if configured)
+        if: matrix.family == 'macos' && steps.mac_keychain.outputs.signing == 'true'
+        env:
+          SIGN_IDENTITY: ${{ secrets.MAC_SIGN_IDENTITY }}
+          NOTARY_APPLE_ID: ${{ secrets.MAC_NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.MAC_NOTARY_PASSWORD }}
+          NOTARY_TEAM_ID: ${{ secrets.MAC_NOTARY_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          IMG="cli/build/amy-image/amy"
+          ENTITLEMENTS="cli/packaging/macos/amy.entitlements"
+          # First sign the macOS Mach-O natives buried INSIDE the bundled jars
+          # (secp256k1/jna/sqlite/skiko/jkeychain/mediaplayer). The loose-file
+          # loop below can't see them, but Apple's notary recurses into jars and
+          # rejects any unsigned Mach-O — so this must run before notarize.
+          SIGN_IDENTITY="$SIGN_IDENTITY" scripts/sign-macos-jar-natives.sh "$IMG"
+          # Sign every loose Mach-O binary in the bundled JRE. Each is signed
+          # independently (no enclosing .app seals them), so order is irrelevant.
+          # Executables get the hardened-runtime entitlements; dylibs don't.
+          while IFS= read -r f; do
+            case "$(file -b "$f")" in
+              *Mach-O*executable*)
+                codesign --force --options runtime --timestamp \
+                  --entitlements "$ENTITLEMENTS" --sign "$SIGN_IDENTITY" "$f" ;;
+              *Mach-O*)
+                codesign --force --options runtime --timestamp \
+                  --sign "$SIGN_IDENTITY" "$f" ;;
+            esac
+          done < <(find "$IMG" -type f)
+          codesign --verify --strict --verbose=2 "$IMG/runtime/bin/java"
+          # Notarize: zip the signed image, submit, wait for Apple's verdict.
+          # The notary service recursively inspects the lib/*.jar files; their
+          # embedded Mach-O natives are signed by sign-macos-jar-natives.sh
+          # above. Surface the per-file log on any non-Accepted verdict so a
+          # regression is diagnostic rather than a bare failure.
+          ZIP="$RUNNER_TEMP/amy-notarize.zip"
+          OUT="$RUNNER_TEMP/notary-submit.json"
+          ditto -c -k --keepParent "$IMG" "$ZIP"
+          if ! xcrun notarytool submit "$ZIP" \
+                --apple-id "$NOTARY_APPLE_ID" --password "$NOTARY_PASSWORD" \
+                --team-id "$NOTARY_TEAM_ID" --wait --output-format json > "$OUT"; then
+            echo "::warning::notarytool submit exited non-zero"
+          fi
+          cat "$OUT"
+          STATUS="$(jq -r '.status // "Unknown"' "$OUT" 2>/dev/null || echo Unknown)"
+          SUBMISSION_ID="$(jq -r '.id // empty' "$OUT" 2>/dev/null || true)"
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "::error::Notarization status: $STATUS"
+            if [ -n "$SUBMISSION_ID" ]; then
+              echo "----- notary log -----"
+              xcrun notarytool log "$SUBMISSION_ID" \
+                --apple-id "$NOTARY_APPLE_ID" --password "$NOTARY_PASSWORD" \
+                --team-id "$NOTARY_TEAM_ID" || true
+            fi
+            exit 1
+          fi
+
       # jpackage pins libicu to the build host's version (libicu74 on
       # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
       - name: Relax libicu dependency in .deb
@@ -276,6 +397,23 @@ jobs:
           # shellcheck source=scripts/asset-name.sh
           source scripts/asset-name.sh
           collect_cli_assets "${{ matrix.family }}" "${{ matrix.arch }}" "${{ steps.ver.outputs.version }}" dist
+
+      # Homebrew-core ships a no-JRE jar bundle and depends_on "openjdk" — it
+      # cannot use the jlink tarball above (bundled runtime) nor build from
+      # source (its sandbox blocks Gradle's Maven downloads). installDist
+      # (bin/amy + lib/*.jar, no runtime/) is exactly that bundle. It is pure
+      # JVM bytecode, so one platform-independent asset serves every OS; we cut
+      # it on the linux leg only. amyImage depends on installDist, so the
+      # cli/build/install/amy tree already exists here.
+      - name: Package no-JRE jvm bundle for Homebrew (linux leg only)
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          VER="${{ steps.ver.outputs.version }}"
+          SRC="cli/build/install/amy"
+          test -x "$SRC/bin/amy"
+          ( cd "$SRC" && tar czf "$OLDPWD/dist/amy-${VER}-jvm.tar.gz" bin lib )
+          echo "Collected: dist/amy-${VER}-jvm.tar.gz"
 
       - name: Enforce CLI size budget (200 MB per asset)
         run: |
@@ -432,6 +570,48 @@ jobs:
              "dist/amethyst-googleplay-${TAG}.aab"
           cp "amethyst/build/outputs/bundle/fdroidRelease/amethyst-fdroid-release.aab" \
              "dist/amethyst-fdroid-${TAG}.aab"
+          ls -la dist
+
+      # Accrescent does not accept AABs or monolithic APKs — it requires a signed
+      # APK set (.apks) of split APKs generated by bundletool from the AAB. We build
+      # it from the F-Droid flavor (no proprietary Google deps) and sign the splits
+      # with the same release keystore used above. Upload is still manual: drop this
+      # .apks into https://console.accrescent.app (no publish API/CLI exists yet).
+      - name: Build Accrescent APK set (F-Droid)
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          BUNDLETOOL_VERSION="1.18.3"  # must be >= 1.11.4 per Accrescent requirements
+          curl -fsSL -o bundletool.jar \
+            "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar"
+
+          # Same base64 keystore secret consumed by the r0adkll signing steps above.
+          echo "$SIGNING_KEY" | base64 -d > release.keystore
+
+          # --mode=default emits the split-APK set Accrescent wants (NOT --mode=universal,
+          # which produces a monolithic APK that Accrescent rejects).
+          java -jar bundletool.jar build-apks \
+            --bundle="dist/amethyst-fdroid-${TAG}.aab" \
+            --output="dist/amethyst-fdroid-${TAG}.apks" \
+            --ks=release.keystore \
+            --ks-key-alias="$KEY_ALIAS" \
+            --ks-pass="pass:$KEY_STORE_PASSWORD" \
+            --key-pass="pass:$KEY_PASSWORD" \
+            --mode=default
+
+          rm -f release.keystore bundletool.jar
+
+          # Accrescent's automated check rejects an APK set larger than 128 MiB.
+          SIZE_BYTES=$(stat -c%s "dist/amethyst-fdroid-${TAG}.apks")
+          echo "Accrescent APK set size: $((SIZE_BYTES / 1024 / 1024)) MiB"
+          if [ "$SIZE_BYTES" -gt $((128 * 1024 * 1024)) ]; then
+            echo "::warning::amethyst-fdroid-${TAG}.apks exceeds Accrescent's 128 MiB limit; the console will reject this upload."
+          fi
           ls -la dist
 
       - name: Classify release

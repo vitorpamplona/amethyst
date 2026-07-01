@@ -41,7 +41,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTagIds
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -77,15 +76,12 @@ class DeletionEvent(
 
     companion object {
         const val KIND = 5
-        const val ALT = "Deletion event"
 
         fun build(
             deleteEvents: List<Event>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<DeletionEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
-
             deleteEvents.forEach {
                 eTag(ETag(it.id))
                 if (it is AddressableEvent) {
@@ -104,8 +100,6 @@ class DeletionEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<DeletionEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
-
             deleteEvents.forEach {
                 if (it is AddressableEvent) {
                     aTag(it.address())
@@ -123,8 +117,6 @@ class DeletionEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<DeletionEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
-
             deleteEvents.forEach {
                 pTag(PTag(it.pubKey))
                 eTag(ETag(it.id))

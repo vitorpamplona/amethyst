@@ -1,0 +1,19 @@
+# LaunchBenchmark report — PRE-PHASE-5.2 baseline
+# Captured BEFORE the Main.kt bootstrap-gate removal. The slim benchmark
+# does not drive the App() bootstrap subscription path, so this row is
+# primarily a harness-floor sanity reference for the cold-boot
+# relay→cache pipeline; the gate fix itself is validated by
+# SubscribeBeforeConnectTest rather than by a measurable delta here.
+# date            2026-06-18T07:46:13.631678Z
+# jvm             21.0.9 Homebrew
+# os              Mac OS X 26.5 aarch64
+# cpus            10
+# max-heap-mb     512
+# git-sha         48726ee4df (after Phase 1 pyramid + Phase 5.1 icon fix)
+# iterations      5 (after 2 warmup, discarded)
+# fork-mode       single-JVM (cold-fork driver deferred)
+
+t_account_logged_in            n=5  min=  0.27ms  q1=  0.27ms  median=  0.31ms  q3=  0.34ms  max=  0.47ms
+t_first_event                  n=5  min=  0.79ms  q1=  0.87ms  median=  0.95ms  q3=  1.11ms  max=  1.15ms
+t_n_events                     n=5  min=  1.27ms  q1=  1.35ms  median=  1.36ms  q3=  1.48ms  max=  2.38ms
+# events-consumed per iteration: [11, 12, 12, 12, 13]

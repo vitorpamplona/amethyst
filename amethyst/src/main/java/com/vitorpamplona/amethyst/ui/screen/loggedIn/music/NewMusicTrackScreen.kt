@@ -23,18 +23,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.music
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -44,7 +41,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -61,23 +57,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SendingTopBar
@@ -173,13 +165,17 @@ fun NewMusicTrackScreen(
             // their tiles for the whole operation (so the user doesn't think one phase is
             // done while the other is still running), and the banner gives clear
             // top-of-screen feedback that something IS happening.
-            if (isBusy) UploadInProgressBanner()
+            if (isBusy) UploadInProgressBanner(R.string.music_track_uploading_banner)
 
             CoverImagePicker(
-                vm = vm,
-                accountViewModel = accountViewModel,
+                cover = vm.coverMedia.value,
+                existingUrl = vm.coverUrl.value,
                 onPick = { wantsToPickCover = true },
+                onDelete = { vm.clearPickedCover() },
+                accountViewModel = accountViewModel,
                 enabled = !isBusy,
+                ctaRes = R.string.music_track_cover_upload_cta,
+                hintRes = R.string.music_track_cover_upload_hint,
             )
 
             AudioFilePicker(
@@ -255,37 +251,6 @@ fun NewMusicTrackScreen(
 }
 
 @Composable
-private fun CoverImagePicker(
-    vm: NewMusicTrackViewModel,
-    accountViewModel: AccountViewModel,
-    onPick: () -> Unit,
-    enabled: Boolean,
-) {
-    val picked = vm.coverMedia.value
-    if (picked != null) {
-        // Tap the preview to swap to a different image — same gesture as the Badge composer.
-        // While the upload is in flight (enabled = false) we drop the tap handler so the
-        // user can't trigger a re-pick mid-upload; the picker stays visible so they can
-        // see what's being sent.
-        Box(modifier = if (enabled) Modifier.clickable(onClick = onPick) else Modifier) {
-            ShowImageUploadGallery(
-                list = picked,
-                onDelete = { if (enabled) vm.clearPickedCover() },
-                accountViewModel = accountViewModel,
-            )
-        }
-    } else {
-        UploadPlaceholder(
-            iconSymbol = MaterialSymbols.AddPhotoAlternate,
-            ctaRes = R.string.music_track_cover_upload_cta,
-            hintRes = R.string.music_track_cover_upload_hint,
-            onClick = onPick,
-            enabled = enabled,
-        )
-    }
-}
-
-@Composable
 private fun AudioFilePicker(
     vm: NewMusicTrackViewModel,
     onPick: () -> Unit,
@@ -339,94 +304,6 @@ private fun AudioFilePicker(
             aspectRatio = null,
             enabled = enabled,
         )
-    }
-}
-
-/**
- * Banner shown at the top of the form while the send coroutine is in flight. The
- * coroutine runs on `accountViewModel.viewModelScope` so it survives the screen, but
- * this banner is the user's primary feedback that something IS happening — without it
- * the previous flow looked like a no-op after pressing Send while the cover finished
- * uploading and reverted to the picker placeholder mid-flight.
- */
-@Composable
-private fun UploadInProgressBanner() {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(20.dp),
-            strokeWidth = 2.dp,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-        Spacer(modifier = Modifier.size(12.dp))
-        Text(
-            text = stringRes(R.string.music_track_uploading_banner),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-    }
-}
-
-/**
- * Shared upload-placeholder card used by both the cover and the audio pickers. The cover
- * uses a 1:1 aspect ratio (square upload tile, matching the Badge composer); the audio
- * picker leaves [aspectRatio] null so the row hugs the icon + text content.
- */
-@Composable
-private fun UploadPlaceholder(
-    iconSymbol: MaterialSymbol,
-    ctaRes: Int,
-    hintRes: Int,
-    onClick: () -> Unit,
-    aspectRatio: Float? = 1f,
-    enabled: Boolean = true,
-) {
-    val baseModifier =
-        Modifier
-            .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(12.dp),
-            ).let { if (enabled) it.clickable(onClick = onClick) else it }
-            .padding(24.dp)
-
-    val finalModifier =
-        if (aspectRatio != null) baseModifier.aspectRatio(aspectRatio) else baseModifier
-
-    Box(
-        modifier = finalModifier,
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                symbol = iconSymbol,
-                contentDescription = null,
-                modifier = Modifier.size(if (aspectRatio != null) 56.dp else 36.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = stringRes(ctaRes),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = stringRes(hintRes),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        }
     }
 }
 

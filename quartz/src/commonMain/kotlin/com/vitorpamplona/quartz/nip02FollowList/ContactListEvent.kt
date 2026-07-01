@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Stable
@@ -80,7 +79,6 @@ class ContactListEvent(
 
     companion object {
         const val KIND = 3
-        const val ALT = "Follow List"
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey)
 
@@ -177,16 +175,7 @@ class ContactListEvent(
             tags: Array<Array<String>>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): ContactListEvent {
-            val newTags =
-                if (tags.any { it.size > 1 && it[0] == "alt" }) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
-
-            return signer.sign(createdAt, KIND, newTags, content)
-        }
+        ): ContactListEvent = signer.sign(createdAt, KIND, tags, content)
 
         fun createFromScratch(
             followUsers: List<ContactTag> = emptyList(),
@@ -196,9 +185,7 @@ class ContactListEvent(
         ): ContactListEvent {
             val content = relayUse?.let { RelaySet.assemble(it) } ?: ""
 
-            val tags =
-                listOf(AltTag.assemble(ALT)) +
-                    followUsers.map { it.toTagArray() }
+            val tags = followUsers.map { it.toTagArray() }
 
             return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
         }

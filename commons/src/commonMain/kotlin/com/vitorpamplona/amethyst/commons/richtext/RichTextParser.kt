@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.richtext
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.util.isValidUrl
+import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
+import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip31Alts.AltTag
@@ -134,38 +136,66 @@ class RichTextParser {
     ): String {
         if (urlList.isEmpty()) return input
 
-        // Escape and join words: (word1|word2)
-        val wordsPattern = urlList.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }
+        // Walk the text, and wherever one of the detected URLs sits glued to a
+        // non-space/non-newline neighbour, insert a single separating space so the
+        // word-by-word segmenter downstream can recognise it as a standalone URL.
+        //
+        // This used to be a `Regex("([^ \n])?($escapedWords)([^ \n])?")` replace,
+        // but Kotlin/Native's regex engine mishandles the optional capture groups
+        // `([^ \n])?` (it fails to backtrack them to zero width), corrupting every
+        // URL on iOS — e.g. "https://x" came back as "h https://x". A direct scan
+        // sidesteps the engine entirely and is platform-independent.
+        //
+        // This runs on the main thread per rendered note, so it stays linear in the
+        // text length: URLs are bucketed by their first character, and the inner
+        // match attempt only fires at positions whose character can actually start
+        // a URL — every other character costs a single map lookup. Within a bucket
+        // the URLs are kept longest-first so a URL that is a prefix of a longer one
+        // never shadows it.
+        val byFirstChar = HashMap<Char, MutableList<String>>()
+        urlList
+            .asSequence()
+            .filter { it.isNotEmpty() }
+            .sortedByDescending { it.length }
+            .forEach { byFirstChar.getOrPut(it[0]) { ArrayList(1) }.add(it) }
 
-        // Regex breakdown:
-        // ([^ ])?          -> Group 1: Optional character that is NOT a space or new line (Prefix)
-        // ($wordsPattern)  -> Group 2: One of your target words
-        // ([^ ])?          -> Group 3: Optional character that is NOT a space or new line (Suffix)
-        val regex = Regex("([^ \n])?($wordsPattern)([^ \n])?")
-
-        return regex.replace(input) { match ->
-            val prefix = match.groups[1]?.value ?: ""
-            val word = match.groups[2]?.value ?: ""
-            val suffix = match.groups[3]?.value ?: ""
-
-            val result = StringBuilder()
-
-            // Add prefix + space if the prefix exists
-            if (prefix.isNotEmpty()) {
-                result.append(prefix)
-                result.append(" ")
+        val result = StringBuilder(input.length)
+        val length = input.length
+        var i = 0
+        while (i < length) {
+            val candidates = byFirstChar[input[i]]
+            var match: String? = null
+            if (candidates != null) {
+                for (url in candidates) {
+                    if (input.startsWith(url, i)) {
+                        match = url
+                        break
+                    }
+                }
             }
 
-            result.append(word)
+            if (match != null) {
+                // Separate from a glued prefix character.
+                if (result.isNotEmpty()) {
+                    val prev = result[result.length - 1]
+                    if (prev != ' ' && prev != '\n') result.append(' ')
+                }
 
-            // Add space + suffix if the suffix exists
-            if (suffix.isNotEmpty()) {
-                result.append(" ")
-                result.append(suffix)
+                result.append(match)
+                i += match.length
+
+                // Separate from a glued suffix character.
+                if (i < length) {
+                    val next = input[i]
+                    if (next != ' ' && next != '\n') result.append(' ')
+                }
+            } else {
+                result.append(input[i])
+                i++
             }
-
-            result.toString()
         }
+
+        return result.toString()
     }
 
     fun parseText(
@@ -240,12 +270,15 @@ class RichTextParser {
         lines.forEach { paragraph ->
             val isRTL = isArabic(paragraph)
 
-            val wordList = paragraph.trimEnd().split(' ')
-
-            val segments = ArrayList<Segment>(wordList.size)
-            wordList.forEach { word ->
-                segments.add(wordIdentifier(word, images, videos, pdfs, urls, emojis, tags))
-            }
+            // split() behaves like `line.split(' ')`, but keeps math spans
+            // (`$...$`, `$$...$$`) whole instead of tearing them at internal spaces.
+            val segments =
+                MathParser.split(paragraph.trimEnd()).map { token ->
+                    when (token) {
+                        is MathParser.Token.Math -> MathSegment(token.raw, token.latex, token.displayMode, token.leading, token.trailing)
+                        is MathParser.Token.Word -> wordIdentifier(token.text, images, videos, pdfs, urls, emojis, tags)
+                    }
+                }
 
             paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
         }
@@ -357,6 +390,10 @@ class RichTextParser {
         if (word.startsWith("lnurl", true)) return WithdrawSegment(word)
 
         if (word.startsWith("cashuA", true) || word.startsWith("cashuB", true)) return CashuSegment(word)
+
+        if (word.startsWith("noffer1", true)) {
+            (ClinkPointerParser.parse(word) as? NOffer)?.let { return ClinkOfferSegment(word, it) }
+        }
 
         if (word.startsWith('#')) return parseHash(word, tags)
 

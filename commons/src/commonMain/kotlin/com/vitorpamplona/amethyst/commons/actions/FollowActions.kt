@@ -121,4 +121,30 @@ object FollowActions {
         } else {
             null
         }
+
+    /**
+     * Batch-unfollow variant — removes every pubkey in [pubkeysToRemove] from
+     * the follow set in a single kind:3 update.
+     *
+     * Returns the original [currentContactList] if none of the pubkeys were
+     * present (no-op), or `null` when [currentContactList] is empty/null.
+     */
+    suspend fun buildUnfollowBatch(
+        signer: NostrSigner,
+        pubkeysToRemove: Set<HexKey>,
+        currentContactList: ContactListEvent?,
+    ): ContactListEvent? {
+        if (currentContactList == null || currentContactList.tags.isEmpty()) return null
+        if (pubkeysToRemove.isEmpty()) return currentContactList
+        val newTags =
+            currentContactList.tags
+                .filter { tag -> !(tag.size > 1 && tag[0] == "p" && tag[1] in pubkeysToRemove) }
+                .toTypedArray()
+        if (newTags.size == currentContactList.tags.size) return currentContactList
+        return ContactListEvent.create(
+            content = currentContactList.content,
+            tags = newTags,
+            signer = signer,
+        )
+    }
 }

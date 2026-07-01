@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -58,7 +57,6 @@ class LnZapPaymentResponseEvent(
 
     companion object {
         const val KIND = 23195
-        const val ALT = "NWC response"
 
         /**
          * Creates an NWC response event (server-side).
@@ -84,7 +82,6 @@ class LnZapPaymentResponseEvent(
                 arrayOf(
                     arrayOf("p", clientPubkey),
                     arrayOf("e", requestEvent.id),
-                    AltTag.assemble(ALT),
                 )
 
             val encrypted =

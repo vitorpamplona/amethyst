@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.repository.tags.CloneTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.EucTag
@@ -37,6 +36,7 @@ import com.vitorpamplona.quartz.nip34Git.repository.tags.MaintainersTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.NameTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.RelaysTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.WebTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -49,7 +49,10 @@ class GitRepositoryEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(name(), description(), content).joinToString("\n")
+
     fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
 
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
@@ -90,7 +93,6 @@ class GitRepositoryEvent(
 
     companion object {
         const val KIND = 30617
-        const val ALT_DESCRIPTION = "Git Repository"
         const val PERSONAL_FORK = "personal-fork"
 
         @OptIn(ExperimentalUuidApi::class)
@@ -103,7 +105,6 @@ class GitRepositoryEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GitRepositoryEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(dTag)
             name(name)
             description?.let { description(it) }
@@ -127,7 +128,6 @@ class GitRepositoryEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GitRepositoryEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(dTag)
             name(name)
             description?.let { description(it) }

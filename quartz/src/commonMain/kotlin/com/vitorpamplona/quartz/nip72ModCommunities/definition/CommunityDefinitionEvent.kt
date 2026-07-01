@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ImageTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ModeratorTag
@@ -55,7 +55,10 @@ class CommunityDefinitionEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(name(), description(), rules(), content).joinToString("\n")
+
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(ETag::parseId) + tags.mapNotNull(QTag::parseEventId)
@@ -90,7 +93,6 @@ class CommunityDefinitionEvent(
     companion object {
         const val KIND = 34550
         const val KIND_STR = "34550"
-        const val ALT_DESCRIPTION = "Community definition"
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
@@ -104,8 +106,6 @@ class CommunityDefinitionEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CommunityDefinitionEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT_DESCRIPTION)
-
             dTag(dTag)
             name(name)
             description(description)

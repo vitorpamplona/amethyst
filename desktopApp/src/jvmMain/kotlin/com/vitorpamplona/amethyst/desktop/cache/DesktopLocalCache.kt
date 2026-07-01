@@ -42,6 +42,9 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuotes
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -50,6 +53,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEve
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.DualCase
@@ -269,6 +273,10 @@ class DesktopLocalCache : ICacheProvider {
                 consumeOldBookmarkList(event)
             }
 
+            is FollowListEvent -> {
+                consumeFollowList(event)
+            }
+
             is CommentEvent -> {
                 consumeComment(event, relay)
             }
@@ -294,6 +302,7 @@ class DesktopLocalCache : ICacheProvider {
         trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
         repliesTo.forEach { it.addReply(note) }
+        addQuoteBoosts(event, note, repliesTo)
         return true
     }
 
@@ -313,7 +322,33 @@ class DesktopLocalCache : ICacheProvider {
         trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
         repliesTo.forEach { it.addReply(note) }
+        addQuoteBoosts(event, note, repliesTo)
         return true
+    }
+
+    /**
+     * NIP-18 quote reposts: a note carrying a `q` tag is a quote-repost of the quoted
+     * note, so it counts as a boost in the quoted note's repost counter alongside
+     * kind:6/kind:16 reposts. The quoted note is kept out of `replyTo` so the quote
+     * still renders as a root post; targets already replied to are skipped to avoid
+     * double-counting, and self-quotes are ignored.
+     */
+    private fun addQuoteBoosts(
+        event: Event,
+        note: Note,
+        repliesTo: List<Note>,
+    ) {
+        event.taggedQuotes().forEach { qTag ->
+            val quoted =
+                when (qTag) {
+                    is QEventTag -> getOrCreateNote(qTag.eventId)
+                    is QAddressableTag -> getOrCreateAddressableNote(qTag.address)
+                    else -> null
+                }
+            if (quoted != null && quoted != note && quoted !in repliesTo) {
+                quoted.addBoost(note)
+            }
+        }
     }
 
     /**
@@ -450,6 +485,14 @@ class DesktopLocalCache : ICacheProvider {
         lastContactListCreatedAt = event.createdAt
         lastContactListEvent = event
         _followedUsers.value = event.verifiedFollowKeySet()
+
+        // Store in addressableNotes too — Kind3FollowListState.getFollowListEvent
+        // reads from getOrCreateAddressableNote(...) and would otherwise see a
+        // null event, causing buildFollowBatch to start a fresh kind-3 (wiping
+        // existing follows).
+        val addressableNote = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+        addressableNote.loadEvent(event, author, emptyList())
         return true
     }
 
@@ -498,6 +541,40 @@ class DesktopLocalCache : ICacheProvider {
 
         addressableNote.loadEvent(event, author, emptyList())
         return true
+    }
+
+    /**
+     * Consumes a kind 39089 follow pack event (NIP-51).
+     * Addressable replaceable event — keyed by (kind, pubkey, dTag).
+     * Bumps [followPackVersion] so observers can refresh their snapshot.
+     */
+    private val _followPackVersion = MutableStateFlow(0L)
+    val followPackVersion: StateFlow<Long> = _followPackVersion.asStateFlow()
+
+    private fun consumeFollowList(event: FollowListEvent): Boolean {
+        val address = event.address()
+        val addressableNote = getOrCreateAddressableNote(address)
+        val author = getOrCreateUser(event.pubKey)
+
+        val existingEvent = addressableNote.event
+        if (existingEvent != null && existingEvent.createdAt >= event.createdAt) return false
+
+        addressableNote.loadEvent(event, author, emptyList())
+        _followPackVersion.value++
+        return true
+    }
+
+    /**
+     * Snapshot all 39089 (FollowListEvent) addressable notes currently in cache.
+     * Use [followPackVersion] to drive reactive recomputation.
+     */
+    fun snapshotFollowPacks(): List<FollowListEvent> {
+        val out = mutableListOf<FollowListEvent>()
+        addressableNotes.forEach { _, note ->
+            val ev = note.event
+            if (ev is FollowListEvent) out.add(ev)
+        }
+        return out
     }
 
     // ----- NWC Payment operations -----

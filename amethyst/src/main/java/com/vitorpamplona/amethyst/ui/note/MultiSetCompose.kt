@@ -40,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -68,19 +69,21 @@ import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsScore
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
-import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.CoreSecretMessage
 import com.vitorpamplona.amethyst.ui.components.ExpandableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.authorRouteFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
@@ -88,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.MultiSetCard
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
@@ -128,6 +132,39 @@ fun MultiSetCompose(
 
     val scope = rememberCoroutineScope()
 
+    // A MultiSetCard that carries a single zap or nutzap — the common case for a
+    // freshly-arrived notification appended at the top of the feed — is rendered
+    // as a large activity card, the same big display used for onchain zaps and the
+    // thread view, instead of a one-icon gallery. Once a full rebuild groups
+    // several reactions/zaps on the same post into one card (size > 1), it falls
+    // back to the compact gallery below. This is purely a rendering decision: the
+    // card-building logic is unchanged, so the additive path naturally produces the
+    // single-item (large) cards and a rebuild naturally produces the grouped
+    // (gallery) ones.
+    val singleZap =
+        remember(multiSetCard) {
+            multiSetCard.zapEvents
+                .singleOrNull()
+                ?.takeIf {
+                    multiSetCard.nutzapEvents.isEmpty() &&
+                        multiSetCard.likeEvents.isEmpty() &&
+                        multiSetCard.boostEvents.isEmpty()
+                }
+        }
+
+    val singleNutzap =
+        remember(multiSetCard) {
+            multiSetCard.nutzapEvents
+                .singleOrNull()
+                ?.takeIf {
+                    multiSetCard.zapEvents.isEmpty() &&
+                        multiSetCard.likeEvents.isEmpty() &&
+                        multiSetCard.boostEvents.isEmpty()
+                }
+        }
+
+    val isLargeCard = singleZap != null || singleNutzap != null
+
     val backgroundColor =
         calculateBackgroundColor(
             createdAt = multiSetCard.maxCreatedAt,
@@ -136,7 +173,7 @@ fun MultiSetCompose(
         )
 
     val columnModifier =
-        remember(backgroundColor.value) {
+        remember(backgroundColor.value, isLargeCard) {
             Modifier
                 .fillMaxWidth()
                 .background(backgroundColor.value)
@@ -146,33 +183,66 @@ fun MultiSetCompose(
                     },
                     onLongClick = { popupExpanded.value = true },
                 ).padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp,
+                    // The large-card branch renders through NoteCompose, which applies
+                    // its own 12dp/10dp note padding; let it own the inset there so we
+                    // don't double it up. The gallery branch keeps the card's padding.
+                    start = if (isLargeCard) 0.dp else 12.dp,
+                    end = if (isLargeCard) 0.dp else 12.dp,
+                    top = if (isLargeCard) 0.dp else 10.dp,
+                    bottom = 0.dp,
                 )
         }
 
     Column(modifier = columnModifier) {
-        Galeries(multiSetCard, backgroundColor, accountViewModel, nav)
+        when {
+            // Render the lone zap/nutzap as a full note (author picture on the left,
+            // the zap card as its body) by reusing NoteCompose on the receipt note,
+            // instead of dropping the bare activity card into the feed.
+            singleZap != null ->
+                NoteCompose(
+                    baseNote = singleZap.response,
+                    routeForLastRead = null,
+                    isHiddenFeed = showHidden,
+                    quotesLeft = 1,
+                    parentBackgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
 
-        Row(Modifier.fillMaxWidth()) {
-            Spacer(modifier = WidthAuthorPictureModifierWithPadding)
+            singleNutzap != null ->
+                NoteCompose(
+                    baseNote = singleNutzap,
+                    routeForLastRead = null,
+                    isHiddenFeed = showHidden,
+                    quotesLeft = 1,
+                    parentBackgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
 
-            NoteCompose(
-                baseNote = baseNote,
-                modifier = HalfTopPadding,
-                routeForLastRead = null,
-                isBoostedNote = true,
-                isHiddenFeed = showHidden,
-                quotesLeft = 1,
-                parentBackgroundColor = backgroundColor,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+            else -> {
+                Galeries(multiSetCard, backgroundColor, accountViewModel, nav)
 
-            if (popupExpanded.value) {
-                NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
+                Row(Modifier.fillMaxWidth()) {
+                    Spacer(modifier = WidthAuthorPictureModifierWithPadding)
+
+                    NoteCompose(
+                        baseNote = baseNote,
+                        modifier = HalfTopPadding,
+                        routeForLastRead = null,
+                        isBoostedNote = true,
+                        isHiddenFeed = showHidden,
+                        quotesLeft = 1,
+                        parentBackgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             }
+        }
+
+        if (popupExpanded.value) {
+            NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
         }
     }
 }
@@ -256,7 +326,9 @@ fun RenderLikeGallery(
                 }
             }
 
-            AuthorGallery(likeEvents, nav, accountViewModel)
+            // Opens the reaction's own thread (where it can be replied to,
+            // boosted, or zapped) instead of the reactor's profile.
+            AuthorGallery(likeEvents, nav, accountViewModel) { Route.Note(it.idHex) }
         }
     }
 }
@@ -372,18 +444,25 @@ fun RenderNutzapGallery(
                         user = note.author,
                         comment = event?.content?.ifBlank { null },
                         amount = showAmount(java.math.BigDecimal(sats)),
+                        zapNote = note,
                     )
                 }.toImmutableList()
         }
 
     Row(Modifier.fillMaxWidth()) {
         Box(
-            modifier = WidthAuthorPictureModifier,
+            // Reuse the reaction galleries' icon column (55dp wide with a 5dp end
+            // inset) so the cashu glyph lines up with the like/boost icons above
+            // it, instead of sitting flush-right like the lightning ZappedIcon.
+            modifier = NotificationIconModifier,
         ) {
             Icon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(R.string.nutzap),
                 modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
+                // Tint the monochrome cashu outline brand orange so the nutzap
+                // gallery matches the lightning ZappedIcon in RenderZapGallery.
+                tint = BitcoinOrange,
             )
         }
 
@@ -459,8 +538,12 @@ fun AuthorGalleryZaps(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    Column(modifier = StdStartPadding) {
-        FlowRow { authorNotes.forEach { RenderState(it, backgroundColor, accountViewModel, nav) } }
+    CompositionLocalProvider(
+        LocalAuthorGalleryRenderContext provides rememberAuthorGalleryRenderContext(accountViewModel),
+    ) {
+        Column(modifier = StdStartPadding) {
+            FlowRow { authorNotes.forEach { RenderState(it, backgroundColor, accountViewModel, nav) } }
+        }
     }
 }
 
@@ -469,6 +552,9 @@ data class ZapAmountCommentNotification(
     val user: User?,
     val comment: String?,
     val amount: String?,
+    // The zap receipt (kind 9735) note, when available, so the chip can offer
+    // actions that target the zap itself (e.g. replying to it).
+    val zapNote: Note? = null,
 )
 
 @Composable
@@ -485,6 +571,7 @@ private fun ParseAuthorCommentAndAmount(
                     user = zapRequest.author,
                     comment = null,
                     amount = null,
+                    zapNote = zapEvent,
                 ),
             )
         }
@@ -504,7 +591,14 @@ fun click(
     content: ZapAmountCommentNotification,
     nav: INav,
 ) {
-    content.user?.let { nav.nav(routeFor(it)) }
+    val zapNote = content.zapNote
+    if (zapNote != null) {
+        // Opens the zap's own thread, where anyone can reply, boost,
+        // zap, or share it. The sender's profile is one tap away there.
+        nav.nav(Route.Note(zapNote.idHex))
+    } else {
+        content.user?.let { nav.nav(routeFor(it)) }
+    }
 }
 
 @Composable
@@ -614,9 +708,14 @@ fun AuthorGallery(
     authorNotes: ImmutableList<Note>,
     nav: INav,
     accountViewModel: AccountViewModel,
+    clickRoute: (Note) -> Route? = ::authorRouteFor,
 ) {
-    Column(modifier = StdStartPadding) {
-        FlowRow { authorNotes.forEach { note -> BoxedAuthor(note, nav, accountViewModel) } }
+    CompositionLocalProvider(
+        LocalAuthorGalleryRenderContext provides rememberAuthorGalleryRenderContext(accountViewModel),
+    ) {
+        Column(modifier = StdStartPadding) {
+            FlowRow { authorNotes.forEach { note -> BoxedAuthor(note, nav, accountViewModel, clickRoute) } }
+        }
     }
 }
 
@@ -627,9 +726,13 @@ fun AuthorGallery(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    Column(modifier = StdStartPadding) {
-        FlowRow {
-            noteToGetBoostEvents.note.boosts.forEach { note -> BoxedAuthor(note, nav, accountViewModel) }
+    CompositionLocalProvider(
+        LocalAuthorGalleryRenderContext provides rememberAuthorGalleryRenderContext(accountViewModel),
+    ) {
+        Column(modifier = StdStartPadding) {
+            FlowRow {
+                noteToGetBoostEvents.note.boosts.forEach { note -> BoxedAuthor(note, nav, accountViewModel) }
+            }
         }
     }
 }
@@ -639,8 +742,9 @@ private fun BoxedAuthor(
     note: Note,
     nav: INav,
     accountViewModel: AccountViewModel,
+    clickRoute: (Note) -> Route? = ::authorRouteFor,
 ) {
-    Box(modifier = Size35Modifier.clickable(onClick = { authorRouteFor(note)?.let { nav.nav(it) } })) {
+    Box(modifier = Size35Modifier.clickable(onClick = { clickRoute(note)?.let { nav.nav(it) } })) {
         WatchAuthorWithBlank(note, Size35Modifier, accountViewModel) { author ->
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 author,
@@ -667,7 +771,27 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
     author: User,
     accountViewModel: AccountViewModel,
 ) {
-    WatchUserMetadata(author, accountViewModel) { baseUserPicture ->
+    // When rendered inside a gallery, the account-global auto-play and follow-set
+    // reads are hoisted to a single collection for the whole gallery (see
+    // [rememberAuthorGalleryRenderContext]). Falls back to per-author collection
+    // for callers that don't provide a context.
+    val galleryContext = LocalAuthorGalleryRenderContext.current
+
+    // One shared relay subscription per author. The profile picture and the
+    // contact-card score below both fetch the same kind-0 metadata, so we
+    // subscribe once here and let them skip their own (formerly duplicate) one.
+    UserFinderFilterAssemblerSubscription(author, accountViewModel)
+
+    WatchUserMetadata(author, accountViewModel, subscribe = false) { baseUserPicture ->
+        val autoPlayGif =
+            if (galleryContext != null) {
+                galleryContext.autoPlayGif
+            } else {
+                accountViewModel.settings.autoPlayVideosFlow
+                    .collectAsStateWithLifecycle()
+                    .value
+            }
+
         RobohashFallbackAsyncImage(
             robot = author.pubkeyHex,
             model = baseUserPicture,
@@ -676,30 +800,39 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-            autoPlayGif =
-                accountViewModel.settings.autoPlayVideosFlow
-                    .collectAsStateWithLifecycle()
-                    .value,
+            autoPlayGif = autoPlayGif,
         )
     }
 
-    WatchUserFollows(author.pubkeyHex, accountViewModel) { isFollowing ->
+    if (galleryContext != null) {
+        val isFollowing =
+            accountViewModel.isLoggedUser(author.pubkeyHex) ||
+                author.pubkeyHex in galleryContext.follows
         if (isFollowing) {
             Box(modifier = Size35Modifier, contentAlignment = Alignment.TopEnd) {
                 FollowingIcon(Size10Modifier)
             }
         }
+    } else {
+        WatchUserFollows(author.pubkeyHex, accountViewModel) { isFollowing ->
+            if (isFollowing) {
+                Box(modifier = Size35Modifier, contentAlignment = Alignment.TopEnd) {
+                    FollowingIcon(Size10Modifier)
+                }
+            }
+        }
     }
 
-    ObserveAndRenderBoxedUserCards(author, accountViewModel)
+    ObserveAndRenderBoxedUserCards(author, accountViewModel, subscribe = false)
 }
 
 @Composable
 fun ObserveAndRenderBoxedUserCards(
     user: User,
     accountViewModel: AccountViewModel,
+    subscribe: Boolean = true,
 ) {
-    val score by observeUserContactCardsScore(user, accountViewModel)
+    val score by observeUserContactCardsScore(user, accountViewModel, subscribe)
 
     score?.let {
         Box(modifier = Size35Modifier, contentAlignment = Alignment.BottomCenter) {
@@ -712,9 +845,10 @@ fun ObserveAndRenderBoxedUserCards(
 private fun WatchUserMetadata(
     author: User,
     accountViewModel: AccountViewModel,
+    subscribe: Boolean = true,
     onNewMetadata: @Composable (String?) -> Unit,
 ) {
-    val userProfile by observeUserPicture(author, accountViewModel)
+    val userProfile by observeUserPicture(author, accountViewModel, subscribe)
 
     onNewMetadata(userProfile)
 }

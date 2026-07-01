@@ -129,10 +129,12 @@ via `Output.emit`. The template is in `references/command-template.md`;
 copy it rather than re-deriving it.
 
 Wire-up checklist:
-1. New file in `cli/commands/` with the `object` pattern.
-2. Add a branch in `Commands.kt`.
-3. Add a branch in `Main.kt`'s `dispatch` (or under `marmotDispatch`
-   / a new group dispatcher).
+1. New file in `cli/commands/` with the `object` pattern. Sub-verb
+   `dispatch` functions use the shared `route(...)` helper in
+   `Router.kt` rather than a hand-rolled `when (tail[0])`.
+2. Add a branch in `Main.kt`'s `dispatch` (top-level verbs call the
+   command object directly, e.g. `"relay" -> RelayCommands.dispatch(…)`;
+   `marmot` sub-verbs go through `marmotDispatch`'s `route` map).
 4. Extend `printUsage()` in `Main.kt`.
 5. Add the row to `cli/README.md`'s command table.
 6. Update `cli/ROADMAP.md` — move the row from 🆕 / 📦 to ✅.
@@ -173,6 +175,7 @@ cli/
     ├── secrets/           # SecretStore backends (keychain / ncryptsec / plaintext)
     └── commands/          # one file (or group) per top-level verb
         ├── UseCommand.kt          # `amy use NAME`
+        ├── Router.kt              # `route(...)` shared sub-verb dispatcher
         ├── InitCommands.kt        # init, whoami
         ├── CreateCommand.kt + LoginCommand.kt
         ├── RelayCommands.kt
@@ -186,14 +189,29 @@ cli/
         ├── MessageCommands.kt
         ├── MarmotResetCommand.kt
         ├── AwaitCommands.kt
-        └── StoreCommands.kt
+        ├── StoreCommands.kt
+        ├── AdminCommand.kt        # `amy admin RELAY METHOD` (NIP-86)
+        ├── ServeCommand.kt        # `amy serve` (embeds :geode)
+        └── cashu/                 # `amy cashu …` (NIP-60/61) — thin wrappers
+            ├── CashuCommands.kt   #   over commons CashuWalletOps / CashuWalletReader
+            ├── CashuWalletCommands.kt + CashuBalanceCommand.kt + CashuMintCommands.kt
+            └── CashuReceiveCommands.kt + CashuSendCommands.kt
+                + CashuMaintenanceCommands.kt + CashuMintRecCommands.kt
 ```
 
 Shared logic consumed by Amy lives in `commons/`:
 - `commons/account/` — account bootstrap
 - `commons/marmot/` — MLS / group state
+- `commons/cashu/` — `ops/CashuWalletOps` (jvmAndroid) + `CashuWalletReader`
+  + `CashuKeysetCounterStore`; the NIP-60/61 wallet, shared with Android.
+- `commons/relayManagement/Nip86Retriever` — NIP-86 HTTP client, shared with
+  the Android relay-management screen.
 - `commons/defaults/` — default relays, kinds
 - Consult `commons/plans/` for cross-cutting design work in flight.
+
+A few amy verbs lean on modules beyond `quartz`/`commons`: `amy serve`
+depends on `:geode` (the standalone relay) — the one allowed extra module
+dependency. `:amethyst` / `:desktopApp` remain forbidden (Rule 5).
 
 ## Common mistakes to refuse
 

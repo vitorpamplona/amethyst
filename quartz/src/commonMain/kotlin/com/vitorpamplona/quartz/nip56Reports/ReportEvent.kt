@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip56Reports.tags.DefaultReportTag
 import com.vitorpamplona.quartz.nip56Reports.tags.ReportedAddressTag
 import com.vitorpamplona.quartz.nip56Reports.tags.ReportedAuthorTag
@@ -74,7 +73,6 @@ class ReportEvent(
 
     companion object {
         const val KIND = 1984
-        const val ALT_PREFIX = "Report for "
 
         fun build(
             reportedPost: Event,
@@ -82,7 +80,6 @@ class ReportEvent(
             comment: String = "",
             createdAt: Long = TimeUtils.now(),
         ) = eventTemplate(KIND, comment, createdAt) {
-            alt(ALT_PREFIX + type.code)
             event(reportedPost.id, type)
             user(reportedPost.pubKey, type)
 
@@ -97,7 +94,6 @@ class ReportEvent(
             comment: String = "",
             createdAt: Long = TimeUtils.now(),
         ) = eventTemplate(KIND, comment, createdAt) {
-            alt(ALT_PREFIX + type.code)
             user(reportedUser, type)
         }
     }

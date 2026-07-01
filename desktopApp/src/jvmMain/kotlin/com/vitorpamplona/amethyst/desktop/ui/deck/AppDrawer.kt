@@ -124,6 +124,8 @@ fun DeckColumnType.category(): ScreenCategory =
         DeckColumnType.Search,
         is DeckColumnType.Hashtag,
         DeckColumnType.Bookmarks,
+        DeckColumnType.Discover,
+        DeckColumnType.FollowPacks,
         -> ScreenCategory.DISCOVERY
 
         DeckColumnType.MyProfile,
@@ -166,6 +168,8 @@ val LAUNCHABLE_SCREENS: List<DeckColumnType> =
         DeckColumnType.Notifications,
         DeckColumnType.Messages,
         DeckColumnType.GlobalFeed,
+        DeckColumnType.Discover,
+        DeckColumnType.FollowPacks,
         DeckColumnType.Reads,
         DeckColumnType.Drafts,
         DeckColumnType.Editor(),

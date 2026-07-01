@@ -59,6 +59,8 @@ import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
@@ -74,6 +76,8 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
+import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
@@ -105,6 +109,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
@@ -115,12 +120,14 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
@@ -145,6 +152,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -209,11 +217,12 @@ import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -250,6 +259,7 @@ import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
@@ -784,11 +794,37 @@ object LocalCache : ILocalCache, ICacheProvider {
             // Counts the replies
             replyTo.forEach { it.addReply(note) }
 
+            // NIP-18 quote reposts: a note carrying a `q` tag is a quote-repost of the
+            // quoted note. Count it as a boost so it shows in the quoted note's repost
+            // counter alongside kind:6/kind:16 reposts. The quoted note is deliberately
+            // kept out of `replyTo` so the quote still renders as a root post in the home
+            // feed (see Note.isNewThread); deletion cleanup lives in unlinkAndRemove.
+            addQuoteBoosts(event, note, replyTo)
+
             refreshNewNoteObservers(note)
 
             true
         } else {
             false
+        }
+    }
+
+    /**
+     * Adds [note] as a boost of every event/address referenced by a NIP-18 `q` tag
+     * (a quote-repost). Targets already in [replyTo] are skipped so a note that both
+     * replies to and quotes the same note isn't counted twice, and self-quotes are
+     * ignored.
+     */
+    private fun addQuoteBoosts(
+        event: Event,
+        note: Note,
+        replyTo: List<Note>,
+    ) {
+        event.taggedQuoteIds().forEach { quotedId ->
+            val quoted = checkGetOrCreateNote(quotedId)
+            if (quoted != null && quoted != note && quoted !in replyTo) {
+                quoted.addBoost(note)
+            }
         }
     }
 
@@ -1352,30 +1388,39 @@ object LocalCache : ILocalCache, ICacheProvider {
      *    resurrected by `computeReplyTo` as a second Note for the same id.
      *  - prune (see [unlinkAndRemove] callers): the whole child subtree is removed.
      *
-     * Gift-wrapped events additionally drop their decrypted inner host.
+     * Rumors additionally drop the envelope notes that delivered them.
      */
     private fun deleteNote(deleteNote: Note) {
-        (deleteNote.event as? WrappedEvent)?.let { deleteWraps(it) }
+        deleteEnvelopes(deleteNote)
 
         deleteNote.detachFromChildren()
 
         unlinkAndRemove(deleteNote)
     }
 
-    fun deleteWraps(event: WrappedEvent) {
-        event.host?.let { hostStub ->
-            // seal
-            getNoteIfExists(hostStub.id)?.let { hostNote ->
-                val noteEvent = hostNote.event
-                if (noteEvent is WrappedEvent) {
-                    deleteWraps(noteEvent)
-                }
-                hostNote.clearFlow()
-                refreshDeletedNoteObservers(hostNote)
-            }
+    /**
+     * Removes the envelope notes that delivered [rumorNote]'s rumor: its
+     * host (normally the kind-1059 wrap; a bare kind-13 seal otherwise)
+     * and, when the host is a wrap, the seal layer it carried. Public
+     * events have no envelopes and are ignored.
+     */
+    fun deleteEnvelopes(rumorNote: Note) {
+        val host = rumorNote.rumorHost ?: return
 
-            notes.remove(hostStub.id)
+        getNoteIfExists(host.id)?.let { hostNote ->
+            (hostNote.event as? GiftWrapEvent)?.innerEventId?.let { sealId ->
+                getNoteIfExists(sealId)?.let { sealNote ->
+                    sealNote.clearFlow()
+                    refreshDeletedNoteObservers(sealNote)
+                }
+                notes.remove(sealId)
+            }
+            hostNote.clearFlow()
+            refreshDeletedNoteObservers(hostNote)
         }
+
+        notes.remove(host.id)
+        rumorNote.rumorHost = null
     }
 
     fun consume(
@@ -2236,20 +2281,18 @@ object LocalCache : ILocalCache, ICacheProvider {
                     // the wallet service we sent the request to. The pending
                     // entry is left in place so the real response can still
                     // resolve it; we silently drop this one.
-                    Log.w(
-                        "LocalCache",
+                    Log.w("LocalCache") {
                         "Rejecting NWC response ${event.id}: expected author ${match.expected} but event was signed by ${match.actual}. " +
-                            "This may be a spoofed reply — keeping the request pending for the legitimate wallet response.",
-                    )
+                            "This may be a spoofed reply — keeping the request pending for the legitimate wallet response."
+                    }
                     return false
                 }
 
                 NwcPaymentTracker.MatchResult.NoMatch -> {
-                    Log.w(
-                        "LocalCache",
+                    Log.w("LocalCache") {
                         "NWC response ${event.id} from ${event.pubKey} references request e=$requestId but no pending request is registered. " +
-                            "The response was either delivered after timeout, the user holds a stale subscription, or the wallet service set the wrong e tag.",
-                    )
+                            "The response was either delivered after timeout, the user holds a stale subscription, or the wallet service set the wrong e tag."
+                    }
                     return false
                 }
             }
@@ -2352,6 +2395,21 @@ object LocalCache : ILocalCache, ICacheProvider {
                 note.event is AppSpecificDataEvent
         )
 
+    /**
+     * Tag names whose values should not match text searches: the `client` tag
+     * names the app that published the event (searching for "Amethyst" would
+     * otherwise return every event posted through Amethyst), and `p`/`e`/`a`/`alt`
+     * values are ids or descriptions of other events, not content of this one.
+     */
+    private val excludedTagNamesFromSearch =
+        setOf(
+            ClientTag.TAG_NAME,
+            PTag.TAG_NAME,
+            ETag.TAG_NAME,
+            ATag.TAG_NAME,
+            AltTag.TAG_NAME,
+        )
+
     fun findNotesStartingWith(
         text: String,
         hiddenUsers: HiddenUsersState,
@@ -2391,7 +2449,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 return@filter false
             }
 
-            if (note.event?.tags?.tagValueContains(text, true) == true ||
+            if (note.event?.tags?.tagValueContains(text, true, excludedTagNamesFromSearch) == true ||
                 note.idHex.startsWith(text, true)
             ) {
                 return@filter !note.isHiddenFor(hiddenUsers.flow.value)
@@ -2412,7 +2470,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                     return@filter false
                 }
 
-                if (addressable.event?.tags?.tagValueContains(text, true) == true ||
+                if (addressable.event?.tags?.tagValueContains(text, true, excludedTagNamesFromSearch) == true ||
                     addressable.idHex.startsWith(text, true)
                 ) {
                     return@filter !addressable.isHiddenFor(hiddenUsers.flow.value)
@@ -2645,19 +2703,66 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
         chatroomList.forEach { userHex, room ->
+            // History floors are pinned per scope on first advance; null means that window never paged
+            // history, so its cursors hold no position to misalign and nothing needs rewinding. Only the
+            // bands strictly BELOW a floor are this window's responsibility — a pruned message newer than
+            // the floor is the always-on live tail's concern, and rewinding history for it would needlessly
+            // re-page (and, for a busy room straddling the floor, mis-set the boundary). Hence the per-floor
+            // filter when accumulating below.
+            val giftWrapFloor = room.giftWrapHistory.floor
+            val accountNip04Floor = room.nip04History.floor
+
             room.rooms.map { key, chatroom ->
                 val toBeRemoved = chatroom.pruneMessagesToTheLatestOnly()
 
                 val childrenToBeRemoved = mutableListOf<Note>()
 
-                toBeRemoved.forEach {
-                    childrenToBeRemoved.addAll(removeIfWrap(it))
-                    unlinkAndRemove(it)
+                // Newest pruned `created_at` per relay, in each window's cursor space, capped at < floor.
+                // Gift wraps page by the OUTER wrap time (from the rumor-host index); NIP-04 by the event's
+                // own time, and a kind:4 belongs to BOTH the account (rooms-list) and per-conversation cursor.
+                val giftWrapPruned = HashMap<NormalizedRelayUrl, Long>()
+                val accountNip04Pruned = HashMap<NormalizedRelayUrl, Long>()
+                val roomNip04Pruned = HashMap<NormalizedRelayUrl, Long>()
+                // chatroom.nip04History is lazy — only touch (allocate) it when this room actually drops a
+                // kind:4 message, so rooms that never paged conversation history pay nothing.
+                val roomNip04Floor = if (toBeRemoved.any { it.event is PrivateDmEvent }) chatroom.nip04History.floor else null
 
-                    childrenToBeRemoved.addAll(it.clearChildLinks())
+                toBeRemoved.forEach { note ->
+                    when (val ev = note.event) {
+                        is BaseDMGroupEvent ->
+                            if (giftWrapFloor != null) {
+                                val outerUntil = note.rumorHost?.createdAt ?: ev.createdAt
+                                if (outerUntil < giftWrapFloor) note.relays.forEach { giftWrapPruned.merge(it, outerUntil, ::maxOf) }
+                            }
+                        is PrivateDmEvent -> {
+                            val until = ev.createdAt
+                            if (accountNip04Floor != null && until < accountNip04Floor) note.relays.forEach { accountNip04Pruned.merge(it, until, ::maxOf) }
+                            if (roomNip04Floor != null && until < roomNip04Floor) note.relays.forEach { roomNip04Pruned.merge(it, until, ::maxOf) }
+                        }
+                    }
+
+                    childrenToBeRemoved.addAll(removeIfWrap(note))
+                    unlinkAndRemove(note)
+
+                    childrenToBeRemoved.addAll(note.clearChildLinks())
                 }
 
                 unlinkAndRemove(childrenToBeRemoved)
+
+                // Realign the windows so a relay that already paged past (or `done` below) the dropped band
+                // re-requests it on the next demand-advance instead of skipping the hole.
+                if (giftWrapPruned.isNotEmpty()) {
+                    room.giftWrapHistory.rewindTo(giftWrapPruned)
+                    Log.d("DMPagination") { "[giftwrap] window rewound after prune: ${giftWrapPruned.size} relay(s), newest pruned wrap @${giftWrapPruned.values.max()}" }
+                }
+                if (accountNip04Pruned.isNotEmpty()) {
+                    room.nip04History.rewindTo(accountNip04Pruned)
+                    Log.d("DMPagination") { "[rooms.nip04] window rewound after prune: ${accountNip04Pruned.size} relay(s), newest pruned @${accountNip04Pruned.values.max()}" }
+                }
+                if (roomNip04Pruned.isNotEmpty()) {
+                    chatroom.nip04History.rewindTo(roomNip04Pruned)
+                    Log.d("DMPagination") { "[convo.nip04] window rewound after prune of ${key.users.joinToString()}: ${roomNip04Pruned.size} relay(s), newest pruned @${roomNip04Pruned.values.max()}" }
+                }
 
                 if (toBeRemoved.size > 1) {
                     println(
@@ -2669,21 +2774,21 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     fun removeIfWrap(note: Note): List<Note> {
-        val noteEvent = note.event
+        val host = note.rumorHost ?: return emptyList()
 
-        val children =
-            if (noteEvent is WrappedEvent) {
-                noteEvent.host?.id?.let {
-                    getNoteIfExists(it)?.let { it2 ->
-                        unlinkAndRemove(it2)
-                        it2.clearChildLinks()
-                    }
+        val children = mutableListOf<Note>()
+        getNoteIfExists(host.id)?.let { hostNote ->
+            (hostNote.event as? GiftWrapEvent)?.innerEventId?.let { sealId ->
+                getNoteIfExists(sealId)?.let { sealNote ->
+                    unlinkAndRemove(sealNote)
+                    children.addAll(sealNote.clearChildLinks())
                 }
-            } else {
-                null
             }
-
-        return children ?: emptyList()
+            unlinkAndRemove(hostNote)
+            children.addAll(hostNote.clearChildLinks())
+        }
+        note.rumorHost = null
+        return children
     }
 
     fun prunePastVersionsOfReplaceables() {
@@ -2786,6 +2891,12 @@ object LocalCache : ILocalCache, ICacheProvider {
         getAnyChannel(note)?.removeNote(note)
 
         val noteEvent = note.event
+
+        // Quote-repost boosts are tracked outside `replyTo` (see addQuoteBoosts), so
+        // detach this note from every quoted note's boosts here.
+        noteEvent?.taggedQuoteIds()?.forEach { quotedId ->
+            getNoteIfExists(quotedId)?.removeBoost(note)
+        }
 
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().forEach {
@@ -3516,6 +3627,14 @@ object LocalCache : ILocalCache, ICacheProvider {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 
+                is RootNappletEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is NamedNappletEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
                 is ChessGameEvent -> {
                     consumeRegularEvent(event, relay, wasVerified)
                 }
@@ -3764,6 +3883,14 @@ object LocalCache : ILocalCache, ICacheProvider {
                     consume(event, relay, wasVerified)
                 }
 
+                is RoadEventReportEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is RoadEventConfirmationEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
                 is RelayDiscoveryEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
@@ -3882,6 +4009,14 @@ object LocalCache : ILocalCache, ICacheProvider {
 
                 is WikiNoteEvent -> {
                     consume(event, relay, wasVerified)
+                }
+
+                is WorkoutRecordEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is ExerciseTemplateEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
                 }
 
                 is PaymentTargetsEvent -> {

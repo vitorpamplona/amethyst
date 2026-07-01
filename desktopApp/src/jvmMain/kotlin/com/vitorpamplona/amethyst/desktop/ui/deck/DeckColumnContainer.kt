@@ -197,6 +197,11 @@ fun DeckColumnContainer(
             hasLocalData = hasLocalData,
         )
 
+        // Unhealthy relays banner — flags relays unresponsive >7d, opens review popup
+        com.vitorpamplona.amethyst.desktop.ui.relay.health.UnhealthyRelayBannerHost(
+            onOpenDashboard = onNavigateToRelays,
+        )
+
         // Content runs edge-to-edge; each screen adds its own header padding
         Box(modifier = Modifier.fillMaxSize()) {
             // Always keep RootContent composed so state survives navigation
@@ -222,6 +227,8 @@ fun DeckColumnContainer(
                 onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
                 onNavigateToEditor = { navState.push(DesktopScreen.Editor(it)) },
                 onNavigateToRelays = onNavigateToRelays,
+                onNavigateToPack = { navState.push(DesktopScreen.FollowPackDetail(it)) },
+                onNavigateToPackBrowseAll = { navState.push(DesktopScreen.FollowPackBrowseAll) },
             )
 
             // Overlay with slide animation
@@ -279,6 +286,7 @@ fun DeckColumnContainer(
                             relayManager = relayManager,
                             localCache = localCache,
                             account = account,
+                            iAccount = iAccount,
                             nwcConnection = nwcConnection,
                             subscriptionsCoordinator = subscriptionsCoordinator,
                             highlightStore = highlightStore,
@@ -289,6 +297,7 @@ fun DeckColumnContainer(
                             onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
                             onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
                             onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
+                            onNavigateToPack = { navState.push(DesktopScreen.FollowPackDetail(it)) },
                             onBack = { navState.pop() },
                         )
                     }
@@ -322,6 +331,8 @@ internal fun RootContent(
     onNavigateToEditor: (String?) -> Unit = {},
     onNavigateToRelays: () -> Unit = {},
     onOpenFeedsDrawer: () -> Unit = {},
+    onNavigateToPack: (String) -> Unit = {},
+    onNavigateToPackBrowseAll: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
 
@@ -570,6 +581,37 @@ internal fun RootContent(
                 onZapFeedback = onZapFeedback,
             )
         }
+
+        DeckColumnType.Discover -> {
+            val followPacks = LocalFollowPacksState.current
+            if (followPacks != null) {
+                com.vitorpamplona.amethyst.desktop.followpacks.ui
+                    .DiscoverScreen(
+                        state = followPacks,
+                        cache = localCache,
+                        iAccount = iAccount,
+                        relayManager = relayManager,
+                        onOpenPack = { aTag -> onNavigateToPack(aTag) },
+                        onOpenBrowseAll = { onNavigateToPackBrowseAll() },
+                        onNavigateToProfile = onNavigateToProfile,
+                        onNavigateToThread = onNavigateToThread,
+                        onZapFeedback = onZapFeedback,
+                    )
+            }
+        }
+
+        DeckColumnType.FollowPacks -> {
+            val followPacks = LocalFollowPacksState.current
+            if (followPacks != null) {
+                com.vitorpamplona.amethyst.desktop.followpacks.ui
+                    .FollowPackBrowseAllScreen(
+                        state = followPacks,
+                        cache = localCache,
+                        onOpenPack = { aTag -> onNavigateToPack(aTag) },
+                        onBack = null,
+                    )
+            }
+        }
     }
 }
 
@@ -579,6 +621,7 @@ internal fun OverlayContent(
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
     account: AccountState.LoggedIn,
+    iAccount: DesktopIAccount? = null,
     nwcConnection: Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     highlightStore: DesktopHighlightStore? = null,
@@ -589,6 +632,7 @@ internal fun OverlayContent(
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
     onNavigateToArticle: (String) -> Unit = {},
+    onNavigateToPack: (String) -> Unit = {},
     onBack: () -> Unit,
 ) {
     when (screen) {
@@ -649,6 +693,35 @@ internal fun OverlayContent(
                 onBack = onBack,
                 onPublished = onBack,
             )
+        }
+
+        is DesktopScreen.FollowPackDetail -> {
+            val followPacks = LocalFollowPacksState.current
+            if (followPacks != null && iAccount != null) {
+                com.vitorpamplona.amethyst.desktop.followpacks.ui
+                    .FollowPackDetailScreen(
+                        addressTag = screen.addressTag,
+                        state = followPacks,
+                        cache = localCache,
+                        iAccount = iAccount,
+                        relayManager = relayManager,
+                        onBack = onBack,
+                        onNavigateToProfile = onNavigateToProfile,
+                    )
+            }
+        }
+
+        is DesktopScreen.FollowPackBrowseAll -> {
+            val followPacks = LocalFollowPacksState.current
+            if (followPacks != null) {
+                com.vitorpamplona.amethyst.desktop.followpacks.ui
+                    .FollowPackBrowseAllScreen(
+                        state = followPacks,
+                        cache = localCache,
+                        onOpenPack = { aTag -> onNavigateToPack(aTag) },
+                        onBack = onBack,
+                    )
+            }
         }
 
         else -> {

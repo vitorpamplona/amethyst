@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -42,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
@@ -55,6 +57,7 @@ import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayStat
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.marmot.KeyPackageRelayListState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountHomeRelayState
+import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountMineRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountOutboxRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.NotificationInboxRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.UserMetadataState
@@ -70,6 +73,7 @@ import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPacksState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.model.nip51Lists.GitRepositoryListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
@@ -101,6 +105,7 @@ import com.vitorpamplona.amethyst.model.nip62Vanish.VanishRequestsState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
+import com.vitorpamplona.amethyst.model.nip89AppHandlers.AppRecommendationsState
 import com.vitorpamplona.amethyst.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
@@ -177,6 +182,8 @@ import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
+import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -221,8 +228,8 @@ import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
@@ -284,6 +291,8 @@ import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
 import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thumbhash
 import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
+
+private const val ONCHAIN_BACKEND_NOT_CONFIGURED = "Bitcoin chain backend is not configured"
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -387,8 +396,10 @@ class Account(
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
     val interestSets = InterestSetsState(signer, cache, scope)
+    val appRecommendations = AppRecommendationsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
+    val gitRepositoryListState = GitRepositoryListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
     val ownedEmojiPacks = OwnedEmojiPacksState(signer, cache, scope)
@@ -406,6 +417,7 @@ class Account(
     // Relay settings
     val homeRelays = AccountHomeRelayState(nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val outboxRelays = AccountOutboxRelayState(nip65RelayList, privateStorageRelayList, localRelayList, broadcastRelayList, scope)
+    val mineRelays = AccountMineRelayState(nip65RelayList, privateStorageRelayList, localRelayList, proxyRelayList, scope)
     val dmRelays = DmInboxRelayState(dmRelayList, nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val notificationRelays = NotificationInboxRelayState(nip65RelayList, localRelayList, scope)
 
@@ -417,6 +429,8 @@ class Account(
             scope = scope,
             assembler = cashuWalletFilterAssembler(),
             outboxRelaysFlow = outboxRelays.flow,
+            inboxRelaysFlow = notificationRelays.flow,
+            dmRelaysFlow = dmRelays.flow,
             settings = settings,
             okHttpClient = okHttpClientForMoney,
         )
@@ -496,6 +510,7 @@ class Account(
             followsRelays = defaultGlobalRelays.flow,
             blockedRelays = blockedRelayList.flow,
             proxyRelays = proxyRelayList.flow,
+            mineRelays = mineRelays.flow,
             relayFeeds = relayFeedsList.flow,
             caches = feedDecryptionCaches,
             signer = signer,
@@ -523,6 +538,18 @@ class Account(
 
     val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPicturesFollowList)
     val livePicturesFollowListsPerRelay = OutboxLoaderState(livePicturesFollowLists, cache, scope).flow
+
+    val liveNappletsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNappletsFollowList)
+    val liveNappletsFollowListsPerRelay = OutboxLoaderState(liveNappletsFollowLists, cache, scope).flow
+
+    val liveNsitesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNsitesFollowList)
+    val liveNsitesFollowListsPerRelay = OutboxLoaderState(liveNsitesFollowLists, cache, scope).flow
+
+    val liveWorkoutsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultWorkoutsFollowList)
+    val liveWorkoutsFollowListsPerRelay = OutboxLoaderState(liveWorkoutsFollowLists, cache, scope).flow
+
+    val liveGitRepositoriesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultGitRepositoriesFollowList)
+    val liveGitRepositoriesFollowListsPerRelay = OutboxLoaderState(liveGitRepositoriesFollowLists, cache, scope).flow
 
     val liveCalendarsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultCalendarsFollowList)
     val liveCalendarsFollowListsPerRelay = OutboxLoaderState(liveCalendarsFollowLists, cache, scope).flow
@@ -574,6 +601,11 @@ class Account(
 
     val liveFollowPacksFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultFollowPacksFollowList)
     val liveFollowPacksFollowListsPerRelay = OutboxLoaderState(liveFollowPacksFollowLists, cache, scope).flow
+
+    // App recommendations are read straight from LocalCache (no relay feed of its
+    // own), so only the in-memory author/tag matcher is needed here, not a
+    // per-relay outbox loader.
+    val liveAppRecommendationsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultAppRecommendationsFollowList)
 
     override fun isWriteable(): Boolean = settings.isWriteable()
 
@@ -651,6 +683,17 @@ class Account(
         }
     }
 
+    suspend fun changeAudioVisualizer(style: VisualizerStyle) {
+        if (settings.changeAudioVisualizer(style)) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    suspend fun toggleChatroomPin(room: ChatroomKey) {
+        settings.toggleChatroomPin(room)
+        sendNewAppSpecificData()
+    }
+
     suspend fun updateZapAmounts(
         amountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,
@@ -725,8 +768,10 @@ class Account(
 
         val eventHint = note.toEventHint<Event>() ?: return null
 
-        // For NIP-17 private groups, we don't support tracked mode (too complex)
-        if (eventHint.event is NIP17Group) return null
+        // For NIP-17 private groups, we don't support tracked mode (too complex).
+        // Unsealed rumors (empty sig) must never get a public reaction —
+        // the e-tag would leak the private rumor id to public relays.
+        if (eventHint.event is NIP17Group || eventHint.event.sig.isEmpty()) return null
 
         val event = ReactionAction.reactTo(eventHint, reaction, signer)
         val relays = computeRelayListToBroadcast(event)
@@ -873,6 +918,13 @@ class Account(
         return zapRequest
     }
 
+    private fun onchainBackendNotConfigured() =
+        OnchainZapSendResult.Failure(
+            OnchainZapSendStage.LOADING_UTXOS,
+            OnchainZapSendError.BACKEND_NOT_CONFIGURED,
+            ONCHAIN_BACKEND_NOT_CONFIGURED,
+        )
+
     /**
      * Send a NIP-BC onchain zap: build a Bitcoin transaction paying the recipient's
      * derived Taproot address, sign it, broadcast it, and publish the kind:8333
@@ -888,10 +940,7 @@ class Account(
     ): OnchainZapSendResult {
         val backend =
             cache.onchainBackend
-                ?: return OnchainZapSendResult.Failure(
-                    OnchainZapSendStage.LOADING_UTXOS,
-                    "Bitcoin chain backend is not configured",
-                )
+                ?: return onchainBackendNotConfigured()
         return OnchainZapSender.send(
             backend = backend,
             signer = signer,
@@ -902,6 +951,29 @@ class Account(
             comment = comment,
             zappedEvent = zappedEvent,
         ) { template -> signAndComputeBroadcast(template) }
+    }
+
+    /**
+     * Pay an explicit Bitcoin address (e.g. a profile's NIP-A3 `bitcoin`
+     * payment target) from the NIP-BC Taproot wallet. A plain wallet send —
+     * no kind:8333 receipt is published. See [OnchainZapSender.sendToAddress].
+     */
+    suspend fun sendOnchainToAddress(
+        recipientAddress: String,
+        amountSats: Long,
+        feeRateSatPerVByte: Double,
+    ): OnchainZapSendResult {
+        val backend =
+            cache.onchainBackend
+                ?: return onchainBackendNotConfigured()
+        return OnchainZapSender.sendToAddress(
+            backend = backend,
+            signer = signer,
+            senderPubKey = signer.pubKey,
+            recipientAddress = recipientAddress,
+            amountSats = amountSats,
+            feeRateSatPerVByte = feeRateSatPerVByte,
+        )
     }
 
     /**
@@ -917,10 +989,7 @@ class Account(
     ): OnchainZapSendResult {
         val backend =
             cache.onchainBackend
-                ?: return OnchainZapSendResult.Failure(
-                    OnchainZapSendStage.LOADING_UTXOS,
-                    "Bitcoin chain backend is not configured",
-                )
+                ?: return onchainBackendNotConfigured()
         return OnchainZapSender.sendSplit(
             backend = backend,
             signer = signer,
@@ -936,7 +1005,15 @@ class Account(
         note: Note,
         type: ReportType,
         content: String = "",
-    ) = sendMyPublicAndPrivateOutbox(ReportAction.report(note, type, content, userProfile(), signer))
+    ) {
+        if (note.isPrivateRumor()) {
+            // A kind-1984 e-tagging the rumor would leak the private id onto
+            // public relays. Report the author instead (p-tag only).
+            note.author?.let { report(it, type, content) }
+        } else {
+            sendMyPublicAndPrivateOutbox(ReportAction.report(note, type, content, userProfile(), signer))
+        }
+    }
 
     suspend fun report(
         user: User,
@@ -964,6 +1041,28 @@ class Account(
                 cache.justConsumeMyOwnEvent(deletionEvent)
             }
         }
+    }
+
+    /**
+     * Retracts rumor-only events (private reactions/replies) with a
+     * gift-wrapped NIP-09 deletion delivered to the same participants as
+     * the [target] rumor they referenced. A public deletion would e-tag
+     * the private rumor ids onto public relays.
+     */
+    suspend fun deletePrivately(
+        notes: List<Note>,
+        target: Note,
+    ) {
+        if (!isWriteable()) return
+        val targetEvent = target.event ?: return
+
+        val myRumors = notes.filter { it.author == userProfile() }.mapNotNull { it.event }
+        if (myRumors.isEmpty()) return
+
+        val recipients = (targetEvent.taggedUserIds() + targetEvent.pubKey).distinct().minus(signer.pubKey)
+        broadcastPrivately(
+            NIP17Factory().createDeletionNIP17(DeletionEvent.build(myRumors), recipients, signer),
+        )
     }
 
     suspend fun delete(
@@ -1166,7 +1265,9 @@ class Account(
                 emptySet()
             }
         }
-        if (event is WrappedEvent) {
+        // Seals, inner DM messages, and unsigned rumors never get broadcast
+        // relays: they only travel inside gift wraps.
+        if (event is SealedRumorEvent || event is BaseDMGroupEvent || event.sig.isEmpty()) {
             return emptySet()
         }
 
@@ -1289,26 +1390,39 @@ class Account(
 
     suspend fun broadcast(note: Note) {
         note.event?.let { noteEvent ->
-            if (noteEvent is WrappedEvent && noteEvent.host != null) {
-                // download the event and send it.
-                noteEvent.host?.let { host ->
-                    client
-                        .fetchFirst(
-                            filters =
-                                note.relays.associateWith { _ ->
-                                    listOf(
-                                        Filter(
-                                            kinds = listOf(host.kind),
-                                            tags = mapOf("p" to listOf(pubKey)),
-                                            ids = listOf(host.id),
-                                        ),
-                                    )
-                                },
-                        )?.let { downloadedEvent ->
-                            val toRelays = computeRelayListToBroadcast(downloadedEvent)
-                            client.publish(downloadedEvent, toRelays)
-                        }
-                }
+            val host = note.rumorHost
+            if (host != null) {
+                // Rumors are rebroadcast as their delivering envelope: the
+                // cached copy is content-stripped, so download it and send it.
+                // A just-sent note has no relays until its self-wrap echoes
+                // back — fall back to our own DM inbox relays. Bare seals
+                // (kind 13) carry no p tag, so that filter is wrap-only.
+                val relays = note.relays.ifEmpty { dmRelays.flow.value.toList() }
+                val filter =
+                    if (host.kind == SealedRumorEvent.KIND) {
+                        Filter(
+                            kinds = listOf(host.kind),
+                            ids = listOf(host.id),
+                        )
+                    } else {
+                        Filter(
+                            kinds = listOf(host.kind),
+                            tags = mapOf("p" to listOf(pubKey)),
+                            ids = listOf(host.id),
+                        )
+                    }
+                client
+                    .fetchFirst(
+                        filters = relays.associateWith { _ -> listOf(filter) },
+                    )?.let { downloadedEvent ->
+                        val toRelays = computeRelayListToBroadcast(downloadedEvent)
+                        client.publish(downloadedEvent, toRelays)
+                    }
+            } else if (noteEvent.sig.isEmpty()) {
+                // Rumor with no known wrap: publishing it would disclose the
+                // private content to relays even though they reject the
+                // missing signature.
+                return
             } else {
                 client.publish(noteEvent, computeRelayListToBroadcast(note))
             }
@@ -1939,6 +2053,14 @@ class Account(
         extraNotesToBroadcast.forEach { client.publish(it, relays) }
     }
 
+    /**
+     * The live [AddressableNote] backing a draft tag for this account. It is the same cached
+     * note that draft events are consumed into, so its `event` tracks the draft over time. The
+     * composer holds onto it (via DraftTagState) so [LocalCache]'s weak reference can't collect
+     * it before a deletion needs it, which would otherwise orphan the draft on the relays.
+     */
+    fun getOrCreateDraftNote(draftTag: String): AddressableNote = cache.getOrCreateAddressableNote(DraftWrapEvent.createAddress(signer.pubKey, draftTag))
+
     suspend fun createAndSendDraftIgnoreErrors(
         draftTag: String,
         template: EventTemplate<out Event>,
@@ -1975,18 +2097,25 @@ class Account(
         }
     }
 
-    suspend fun deleteDraftIgnoreErrors(draftTag: String) {
+    suspend fun deleteDraftIgnoreErrors(draftNote: AddressableNote?) {
         try {
-            deleteDraftInner(draftTag)
+            deleteDraftInner(draftNote)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
         }
     }
 
-    suspend fun deleteDraftInner(draftTag: String) {
+    suspend fun deleteDraftInner(draftNote: AddressableNote?) {
         if (!isWriteable()) return
 
-        val extraRelays = cache.getAddressableNoteIfExists(DraftWrapEvent.createAddressTag(signer.pubKey, draftTag))?.relays ?: emptyList()
+        // Only a real, still-present draft needs a deletion signed. The note's event is null when
+        // no draft was ever saved (e.g. auto-drafts disabled) and already empty once it has been
+        // deleted — in both cases there is nothing to delete, so we avoid prompting the signer.
+        val draftEvent = draftNote?.event as? DraftWrapEvent
+        if (draftEvent == null || draftEvent.isDeleted()) return
+
+        val draftTag = draftNote.dTag()
+        val extraRelays = draftNote.relays
 
         val deletedDraft = DraftWrapEvent.createDeletedEvent(draftTag, signer)
         val deletionEvent = signer.sign(DeletionEvent.build(listOf(deletedDraft)))
@@ -2236,6 +2365,18 @@ class Account(
     override suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) {
         val events = NIP17Factory().createMessageNIP17(template, signer)
         broadcastPrivately(events)
+    }
+
+    /**
+     * Publishes a kind-1 note privately: signs the template, then gift-wraps
+     * the rumor to every p-tagged user plus a self-copy and sends each wrap
+     * to the recipient's DM relays. Used for private replies (the parent's
+     * author and participants are already p-tagged) and for private posts
+     * (the Notify list is the audience). Nothing reaches public relays.
+     */
+    suspend fun sendPrivateNote(template: EventTemplate<TextNoteEvent>) {
+        if (!isWriteable()) return
+        broadcastPrivately(NIP17Factory().createNoteNIP17(template, signer))
     }
 
     override suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>) {
@@ -2872,6 +3013,16 @@ class Account(
 
     suspend fun removeFromGallery(note: Note) {
         delete(note)
+    }
+
+    suspend fun addGitRepositoryBookmark(note: AddressableNote) {
+        if (!isWriteable()) return
+        sendMyPublicAndPrivateOutbox(gitRepositoryListState.addRepository(note))
+    }
+
+    suspend fun removeGitRepositoryBookmark(note: AddressableNote) {
+        if (!isWriteable()) return
+        gitRepositoryListState.removeRepository(note)?.let { sendMyPublicAndPrivateOutbox(it) }
     }
 
     suspend fun addBookmark(
@@ -3542,11 +3693,12 @@ class Account(
                                 if (isNew) {
                                     innerNote.event = innerEvent
                                 }
-                                marmotGroupList.restoreMessage(groupId, innerNote)
+                                marmotGroupList.addMessage(groupId, innerNote)
                             } catch (e: Exception) {
                                 Log.w(
                                     "Account",
-                                    "Failed to restore persisted Marmot message for $groupId: ${e.message}",
+                                    "Failed to restore persisted Marmot message for $groupId",
+                                    e,
                                 )
                             }
                         }

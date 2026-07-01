@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource.BadgesFilterAssemblerSubscription
@@ -33,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.datasource
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.datasource.BrowseEmojiSetsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.datasource.FollowPacksFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.datasource.GitRepositoriesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.datasource.LiveStreamsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource.LongsFilterAssemblerSubscription
@@ -47,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.datasource.Publ
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.ShortsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.SoftwareAppsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.datasource.WorkoutsFilterAssemblerSubscription
 
 /**
  * Activates the relay subscription for each feed the user has pinned to the bottom
@@ -63,7 +66,9 @@ fun BottomBarFeedPreloaders(accountViewModel: AccountViewModel) {
     val items by accountViewModel.settings.uiSettingsFlow.bottomBarItems
         .collectAsStateWithLifecycle()
 
-    items.forEach { item ->
+    // Only built-in destinations have feeds to preload; favorite-app entries embed their own content.
+    items.forEach { entry ->
+        val item = (entry as? BottomBarEntry.BuiltIn)?.item ?: return@forEach
         key(item) {
             PreloadFor(item, accountViewModel)
         }
@@ -90,7 +95,23 @@ private fun PreloadFor(
 
         NavBarItem.PICTURES -> PicturesFilterAssemblerSubscription(accountViewModel)
 
+        NavBarItem.WORKOUTS -> WorkoutsFilterAssemblerSubscription(accountViewModel)
+
+        NavBarItem.GIT_REPOSITORIES -> GitRepositoriesFilterAssemblerSubscription(accountViewModel)
+
         NavBarItem.SOFTWARE_APPS -> SoftwareAppsFilterAssemblerSubscription(accountViewModel)
+
+        // Napplets & nSites read directly from the local cache; their screens open the discovery
+        // subscription themselves, so there's nothing to preload here.
+        NavBarItem.NAPPLETS -> {}
+
+        NavBarItem.NSITES -> {}
+
+        // The browser is a "new tab" launcher with no feed to preload.
+        NavBarItem.BROWSER -> {}
+
+        // Favorite apps is a device-local launcher grid — nothing to preload from relays.
+        NavBarItem.FAVORITE_APPS -> {}
 
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,

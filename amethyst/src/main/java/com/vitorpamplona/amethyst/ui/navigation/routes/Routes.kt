@@ -67,6 +67,8 @@ sealed class Route {
 
     @Serializable object ProfileBadges : Route()
 
+    @Serializable object ProfileAppRecommendations : Route()
+
     @Serializable data class AwardBadge(
         val kind: Int,
         val pubKeyHex: HexKey,
@@ -81,7 +83,35 @@ sealed class Route {
 
     @Serializable object Pictures : Route()
 
+    @Serializable object Workouts : Route()
+
+    @Serializable object GitRepositories : Route()
+
     @Serializable object SoftwareApps : Route()
+
+    @Serializable object Napplets : Route()
+
+    @Serializable object Nsites : Route()
+
+    @Serializable object Browser : Route()
+
+    @Serializable object FavoriteApps : Route()
+
+    @Serializable data class WebApp(
+        val url: String,
+    ) : Route()
+
+    @Serializable data class NostrApp(
+        val coordinate: String,
+    ) : Route()
+
+    @Serializable object ConnectedApps : Route()
+
+    @Serializable object RelayAuthSettings : Route()
+
+    @Serializable data class ConnectedAppDetail(
+        val coordinate: String,
+    ) : Route()
 
     @Serializable data class SoftwareAppDetail(
         val kind: Int,
@@ -172,6 +202,11 @@ sealed class Route {
     ) : Route()
 
     @Serializable
+    data class NewMusicPlaylist(
+        val dTag: String? = null,
+    ) : Route()
+
+    @Serializable
     data class AddToMusicPlaylist(
         val trackAddress: String,
     ) : Route()
@@ -208,11 +243,40 @@ sealed class Route {
         val nip47: String? = null,
     ) : Route()
 
-    @Serializable object WalletAddCashu : Route()
+    @Serializable object CashuWalletMints : Route()
+
+    @Serializable data class WalletAddClinkDebit(
+        val ndebit: String? = null,
+    ) : Route()
 
     @Serializable object CashuWallet : Route()
 
+    /** Find-or-create wizard, shown when no NIP-60 wallet is loaded. */
+    @Serializable object CashuWalletWizard : Route()
+
+    /** Celebratory interstitial after choosing to create a new wallet. */
+    @Serializable object CashuWalletCreated : Route()
+
     @Serializable object CashuWalletSettings : Route()
+
+    @Serializable object CashuMintRecommendations : Route()
+
+    /**
+     * Unified profile payment screen: collects amount/message/zap type and pays
+     * through whichever rail (Lightning, CLINK offer, on-chain, Cashu) the
+     * profile supports. [method] preselects a rail (see ProfilePaymentMethod
+     * route keys); [lnAddressOverride] pays a specific lightning target instead
+     * of the profile's kind:0 lud16; [btcAddressOverride] makes the on-chain
+     * rail pay that announced address directly (plain send, no NIP-BC receipt)
+     * instead of the recipient's pubkey-derived Taproot address.
+     */
+    @Serializable
+    data class SendPayment(
+        val userHex: String,
+        val method: String? = null,
+        val lnAddressOverride: String? = null,
+        val btcAddressOverride: String? = null,
+    ) : Route()
 
     @Serializable object Search : Route()
 
@@ -237,6 +301,8 @@ sealed class Route {
     @Serializable object OldBookmarks : Route()
 
     @Serializable object PinnedNotes : Route()
+
+    @Serializable object BookmarkedRepositories : Route()
 
     @Serializable object BookmarkGroups : Route()
 
@@ -325,6 +391,8 @@ sealed class Route {
 
     @Serializable object ReactionsSettings : Route()
 
+    @Serializable object AudioVisualizerSettings : Route()
+
     @Serializable object BottomBarSettings : Route()
 
     @Serializable object HomeTabsSettings : Route()
@@ -405,6 +473,14 @@ sealed class Route {
         val id: String,
     ) : Route()
 
+    @Serializable data class ShareNoteAsImage(
+        val id: String,
+    ) : Route()
+
+    @Serializable data class ShareNoteAsImageFile(
+        val id: String,
+    ) : Route()
+
     @Serializable data class ContactListUsers(
         val noteId: String,
     ) : Route()
@@ -415,6 +491,10 @@ sealed class Route {
 
     @Serializable data class Geohash(
         val geohash: String,
+    ) : Route()
+
+    @Serializable data class Url(
+        val url: String,
     ) : Route()
 
     @Serializable data class ChessGame(
@@ -434,6 +514,54 @@ sealed class Route {
     }
 
     @Serializable data class GitRepository(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
+    @Serializable data class GitRepositoryCode(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
+    @Serializable data class GitRepositoryIssues(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
+    @Serializable data class GitRepositoryPulls(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
+    @Serializable data class GitRepositoryNewIssue(
         val kind: Int,
         val pubKeyHex: HexKey,
         val dTag: String,
@@ -585,6 +713,26 @@ sealed class Route {
 
     @Serializable data object NewGoal : Route()
 
+    /**
+     * Manual workout composer. All fields are optional pre-fill, used when a
+     * workout is detected from Health Connect and the user accepts the
+     * suggestion; a blank [NewWorkout] opens the empty manual form.
+     */
+    @Serializable
+    data class NewWorkout(
+        val exercise: String? = null,
+        val title: String? = null,
+        val durationSeconds: Long = 0,
+        val distanceMeters: Double = 0.0,
+        val calories: Int = 0,
+        val avgHeartRate: Int = 0,
+        val maxHeartRate: Int = 0,
+        val steps: Int = 0,
+        val elevationGainMeters: Double = 0.0,
+        val startTime: Long = 0,
+        val source: String? = null,
+    ) : Route()
+
     @Serializable
     data class NewLongFormPost(
         val draft: String? = null,
@@ -604,6 +752,16 @@ sealed class Route {
     @Serializable
     data class HashtagPost(
         val hashtag: String? = null,
+        val message: String? = null,
+        val attachment: String? = null,
+        val replyTo: String? = null,
+        val quote: String? = null,
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable
+    data class UrlPost(
+        val url: String? = null,
         val message: String? = null,
         val attachment: String? = null,
         val replyTo: String? = null,

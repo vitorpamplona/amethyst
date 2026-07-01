@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputPrompt
@@ -62,7 +61,6 @@ class NIP90TextGenerationRequestEvent(
 
     companion object {
         const val KIND = 5050
-        const val ALT = "NIP90 Text Generation request"
 
         fun build(
             prompt: String,
@@ -76,7 +74,6 @@ class NIP90TextGenerationRequestEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90TextGenerationRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
             inputPrompt(prompt)
             model?.let { param("model", it) }
             maxTokens?.let { param("max_tokens", it.toString()) }

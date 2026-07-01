@@ -20,16 +20,26 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.DisplayBlankAuthor
+import com.vitorpamplona.amethyst.ui.note.LikedIcon
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.ui.note.RenderReaction as RenderReactionEmoji
 
+/**
+ * Renders a kind 7 reaction as an activity card, like the zap kinds, tinted
+ * with the Liked heart color: badge + reactor → author on the first line and
+ * the reacted-to post quoted inside the card.
+ */
 @Composable
 fun RenderReaction(
     note: Note,
@@ -38,24 +48,35 @@ fun RenderReaction(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    note.replyTo?.lastOrNull()?.let {
-        NoteCompose(
-            it,
-            modifier = Modifier,
-            isBoostedNote = true,
-            unPackReply = ReplyRenderType.NONE,
-            quotesLeft = quotesLeft - 1,
-            parentBackgroundColor = backgroundColor,
-            accountViewModel = accountViewModel,
-            nav = nav,
+    val reactionType = note.event?.content ?: ""
+
+    ActivityCardFrame(LikeTint) { cardBackground ->
+        ActivityHeaderRow(
+            tint = LikeTint,
+            pillLabel = "REACTION",
+            badge = {
+                if (reactionType == "+" || reactionType.isBlank()) {
+                    ActivityBadge(LikeTint) {
+                        LikedIcon(Modifier.size(16.dp), Color.White)
+                    }
+                } else {
+                    RenderReactionEmoji(reactionType)
+                }
+            },
+            senderAvatar = {
+                val sender = note.author
+                if (sender != null) {
+                    UserPicture(sender, Size25dp, Modifier, accountViewModel, nav)
+                } else {
+                    DisplayBlankAuthor(Size25dp, accountViewModel = accountViewModel)
+                }
+            },
+            recipientAvatar =
+                note.replyTo?.lastOrNull()?.author?.let {
+                    { UserPicture(it, Size25dp, Modifier, accountViewModel, nav) }
+                },
         )
+
+        RenderZappedPost(note, quotesLeft, cardBackground, accountViewModel, nav)
     }
-
-    // Reposts have trash in their contents.
-    val refactorReactionText = if (note.event?.content == "+") "❤" else note.event?.content ?: ""
-
-    Text(
-        text = refactorReactionText,
-        maxLines = 1,
-    )
 }

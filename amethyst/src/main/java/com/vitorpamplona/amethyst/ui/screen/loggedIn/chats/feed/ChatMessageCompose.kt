@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -81,9 +83,11 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -106,8 +110,19 @@ fun ChatroomMessageCompose(
     onScrollToNote: ((Note) -> Unit)? = null,
     shouldHighlight: Boolean = false,
     onHighlightFinished: (() -> Unit)? = null,
+    // Replaces the generic "post not found" blank while baseNote's event hasn't loaded. Used for
+    // reply quotes inside a DM, where the target is simply older than the loaded window (see
+    // LoadingReplyNote). Null keeps the default blank for every other caller.
+    onBlank: (@Composable () -> Unit)? = null,
 ) {
-    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav) {
+    // Re-skin inline `nostr:...` quotes for everything inside this bubble: a quoted
+    // chat message renders with the chat reply design instead of the quoted-note card.
+    val inlineQuoteRenderer =
+        remember(onWantsToReply, onWantsToEditDraft, onScrollToNote) {
+            chatInlineQuoteRenderer(onWantsToReply, onWantsToEditDraft, onScrollToNote)
+        }
+
+    val onFound: @Composable () -> Unit = {
         WatchBlockAndReport(
             note = baseNote,
             showHiddenWarning = false,
@@ -140,6 +155,14 @@ fun ChatroomMessageCompose(
             }
         }
     }
+
+    CompositionLocalProvider(LocalInlineQuoteRenderer provides inlineQuoteRenderer) {
+        if (onBlank != null) {
+            WatchNoteEvent(baseNote = baseNote, onNoteEventFound = onFound, onBlank = onBlank, accountViewModel = accountViewModel)
+        } else {
+            WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav, onNoteEventFound = onFound)
+        }
+    }
 }
 
 @Composable
@@ -164,7 +187,7 @@ fun NormalChatNote(
 
     if (routeForLastRead != null) {
         LaunchedEffect(key1 = routeForLastRead) {
-            accountViewModel.loadAndMarkAsRead(routeForLastRead, note.createdAt())
+            accountViewModel.loadAndMarkAsRead(routeForLastRead, note.createdAt(), dismissNotificationId = note.idHex)
         }
     }
 
@@ -372,10 +395,27 @@ fun RenderReplyRow(
     onWantsToEditDraft: (Note) -> Unit,
     onScrollToNote: ((Note) -> Unit)? = null,
 ) {
-    if (!innerQuote && note.replyTo?.lastOrNull() != null) {
+    val replyTo = note.replyTo?.lastOrNull()
+    if (!innerQuote && replyTo != null && !isCitedInContent(note, replyTo)) {
         RenderReply(note, bgColor, accountViewModel, nav, onWantsToReply, onWantsToEditDraft, onScrollToNote)
     }
 }
+
+/**
+ * Whether the reply target is already mentioned (`nostr:...` citation) in the middle of
+ * the message text. If it is, the inline quote renderer draws it at that spot, so the
+ * reply row would show the same message twice. Happens in MLS kind-9 chats, where the
+ * `q`-tagged parent of a quote is also cited inline — `Note.replyTo` keeps both replies
+ * and quotes for that kind.
+ */
+@Composable
+private fun isCitedInContent(
+    note: Note,
+    replyTo: Note,
+): Boolean =
+    remember(note.event, replyTo) {
+        (note.event as? BaseNoteEvent)?.findCitations()?.contains(replyTo.idHex) == true
+    }
 
 @Composable
 private fun RenderReply(
@@ -396,9 +436,23 @@ private fun RenderReply(
                 }
             }
 
-        replyTo.value?.let { note ->
+        replyTo.value?.let { replyNote ->
+            // For a DM, a reply target that hasn't arrived isn't lost — it's older than the loaded
+            // window (and for gift wraps can't be fetched by id). Swap the generic blank for one that
+            // walks history backward until it surfaces. Pick the pager by the PARENT's protocol; leave
+            // public chats / marmot groups (not a DM event here) on the default blank.
+            val replyBlank: (@Composable () -> Unit)? =
+                when (note.event) {
+                    is ChatMessageEvent, is ChatMessageEncryptedFileHeaderEvent -> {
+                        { LoadingReplyNote(DmReplyProtocol.NIP17, accountViewModel) }
+                    }
+                    is PrivateDmEvent -> {
+                        { LoadingReplyNote(DmReplyProtocol.NIP04, accountViewModel) }
+                    }
+                    else -> null
+                }
             ChatroomMessageCompose(
-                baseNote = note,
+                baseNote = replyNote,
                 routeForLastRead = null,
                 innerQuote = true,
                 parentBackgroundColor = bgColor,
@@ -407,6 +461,7 @@ private fun RenderReply(
                 onWantsToReply = onWantsToReply,
                 onWantsToEditDraft = onWantsToEditDraft,
                 onScrollToNote = onScrollToNote,
+                onBlank = replyBlank,
             )
         }
     }

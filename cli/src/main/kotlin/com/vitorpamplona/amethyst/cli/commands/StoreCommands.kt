@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import java.io.IOException
 import java.nio.file.Files
@@ -45,22 +46,27 @@ import kotlin.io.path.exists
  *                    external edits.
  * - `compact`        drop dangling `idx/` entries whose canonical is
  *                    gone. Cheaper than scrub.
+ * - `reindex-fts`    wipe and rebuild only the NIP-50 full-text search
+ *                    index from the stored events. Run after a quartz
+ *                    upgrade that changes which kinds are searchable.
  */
 object StoreCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "store <stat|sweep-expired|scrub|compact>")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "stat" -> stat(dataDir)
-            "sweep-expired" -> sweepExpired(dataDir)
-            "scrub" -> scrub(dataDir)
-            "compact" -> compact(dataDir)
-            else -> Output.error("bad_args", "store ${tail[0]}")
-        }
-    }
+    ): Int =
+        route(
+            "store",
+            tail,
+            "store <stat|sweep-expired|scrub|compact|reindex-fts>",
+            mapOf(
+                "stat" to { _ -> stat(dataDir) },
+                "sweep-expired" to { _ -> sweepExpired(dataDir) },
+                "scrub" to { _ -> scrub(dataDir) },
+                "compact" to { _ -> compact(dataDir) },
+                "reindex-fts" to { _ -> reindexFts(dataDir) },
+            ),
+        )
 
     private fun stat(dataDir: DataDir): Int {
         val storeRoot = dataDir.eventsDir.toPath()
@@ -158,6 +164,36 @@ object StoreCommands {
         withStore(dataDir) { store ->
             store.compact()
             Output.emit(mapOf("ok" to true))
+            0
+        }
+
+    private suspend fun reindexFts(dataDir: DataDir): Int =
+        withStore(dataDir) { store ->
+            val ftsDir = dataDir.eventsDir.toPath().resolve("idx/fts")
+            val before = countEntries(ftsDir)
+            // Drive the resumable, batched path to completion so a huge
+            // store is processed without holding the writer lock for the
+            // whole pass. A real long-running caller would persist the
+            // cursor between calls; here we just loop until done.
+            var cursor: String? = null
+            var processed = 0L
+            var batches = 0
+            do {
+                val progress = store.reindexFullTextSearch(cursor, IEventStore.DEFAULT_FTS_REINDEX_BATCH)
+                cursor = progress.cursor
+                processed += progress.processedThisBatch
+                batches++
+            } while (!progress.done)
+            val after = countEntries(ftsDir)
+            Output.emit(
+                mapOf(
+                    "ok" to true,
+                    "processed" to processed,
+                    "batches" to batches,
+                    "tokens_before" to before,
+                    "tokens_after" to after,
+                ),
+            )
             0
         }
 

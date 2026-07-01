@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.service.upload
 
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -40,17 +41,17 @@ import java.io.File
  * The default constructor uses a fresh OkHttpClient — fine for one-shot
  * uses such as the CLI.
  */
-class BlossomClient(
+open class BlossomClient(
     private val okHttpClient: OkHttpClient = OkHttpClient(),
 ) {
-    suspend fun upload(
+    open suspend fun upload(
         file: File,
         contentType: String,
         serverBaseUrl: String,
         authHeader: String?,
     ): BlossomUploadResult =
         withContext(Dispatchers.IO) {
-            val apiUrl = serverBaseUrl.removeSuffix("/") + "/upload"
+            val apiUrl = BlossomServerUrl.upload(serverBaseUrl)
             val requestBody =
                 object : RequestBody() {
                     override fun contentType() = contentType.toMediaType()
@@ -73,25 +74,49 @@ class BlossomClient(
             val response = okHttpClient.newCall(requestBuilder.build()).execute()
             response.use {
                 if (!it.isSuccessful) {
-                    val reason = it.headers["X-Reason"] ?: it.code.toString()
+                    val reason = it.headers[BlossomServerUrl.REASON_HEADER] ?: it.code.toString()
                     throw RuntimeException("Upload failed ($serverBaseUrl): $reason")
                 }
-                val body = it.body ?: throw RuntimeException("Upload to $serverBaseUrl returned no body")
-                JsonMapper.fromJson<BlossomUploadResult>(body.string())
+                val body = it.body.string().ifBlank { throw RuntimeException("Upload to $serverBaseUrl returned no body") }
+                JsonMapper.fromJson<BlossomUploadResult>(body)
+            }
+        }
+
+    /**
+     * Download a blob from an absolute URL — typically a Blossom GET endpoint
+     * `<server>/<sha256>`. Returns the raw bytes, or `null` when the server
+     * responds with a non-2xx status. Connection-level failures (DNS, refused,
+     * timeout) propagate as [java.io.IOException] so the caller can try the next
+     * server.
+     *
+     * This does NOT verify the blob's hash — content-addressed verification is
+     * the caller's responsibility (see quartz `StaticSiteResolver.verify`), since
+     * a Blossom server is untrusted and may return a substituted blob.
+     */
+    open suspend fun download(url: String): ByteArray? =
+        withContext(Dispatchers.IO) {
+            val request =
+                Request
+                    .Builder()
+                    .url(url)
+                    .get()
+                    .build()
+            okHttpClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) response.body.bytes() else null
             }
         }
 
     /**
      * Upload raw bytes (e.g. encrypted blobs) to a Blossom server.
      */
-    suspend fun upload(
+    open suspend fun upload(
         bytes: ByteArray,
         contentType: String,
         serverBaseUrl: String,
         authHeader: String?,
     ): BlossomUploadResult =
         withContext(Dispatchers.IO) {
-            val apiUrl = serverBaseUrl.removeSuffix("/") + "/upload"
+            val apiUrl = BlossomServerUrl.upload(serverBaseUrl)
             val requestBody = bytes.toRequestBody(contentType.toMediaType())
 
             val requestBuilder =
@@ -105,11 +130,11 @@ class BlossomClient(
             val response = okHttpClient.newCall(requestBuilder.build()).execute()
             response.use {
                 if (!it.isSuccessful) {
-                    val reason = it.headers["X-Reason"] ?: it.code.toString()
+                    val reason = it.headers[BlossomServerUrl.REASON_HEADER] ?: it.code.toString()
                     throw RuntimeException("Upload failed ($serverBaseUrl): $reason")
                 }
-                val body = it.body ?: throw RuntimeException("Upload to $serverBaseUrl returned no body")
-                JsonMapper.fromJson<BlossomUploadResult>(body.string())
+                val body = it.body.string().ifBlank { throw RuntimeException("Upload to $serverBaseUrl returned no body") }
+                JsonMapper.fromJson<BlossomUploadResult>(body)
             }
         }
 }

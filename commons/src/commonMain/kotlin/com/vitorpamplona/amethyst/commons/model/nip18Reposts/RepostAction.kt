@@ -47,6 +47,11 @@ object RepostAction {
         if (!signer.isWriteable()) {
             throw IllegalStateException("Cannot repost: signer is not writeable")
         }
+        if (eventHint.event.sig.isEmpty()) {
+            // Unsealed private rumor: a public kind-6/16 would e-tag the
+            // private rumor id onto public relays.
+            throw IllegalStateException("Cannot repost a private rumor")
+        }
 
         // Use NIP-18 RepostEvent (kind 6) for text notes (kind 1)
         // Use GenericRepostEvent (kind 16) for all other kinds
@@ -76,6 +81,7 @@ object RepostAction {
     ): Event? {
         // All validation in commons
         if (!signer.isWriteable()) return null
+        if (note.isPrivateRumor()) return null
         if (note.hasBoostedInTheLast5Minutes(signer.pubKey)) return null
 
         val hint = note.toEventHint<Event>() ?: return null

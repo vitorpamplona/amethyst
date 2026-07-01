@@ -22,5 +22,8 @@ package com.vitorpamplona.quartz.nip89AppHandlers.definition
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.tags.PlatformLinkTag
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.tags.SupportedNipTag
 
 fun TagArray.platformLinks() = this.mapNotNull(PlatformLinkTag::parse)
+
+fun TagArray.supportedNips() = this.mapNotNull(SupportedNipTag::parse)

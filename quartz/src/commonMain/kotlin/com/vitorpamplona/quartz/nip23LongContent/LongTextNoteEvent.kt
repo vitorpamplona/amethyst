@@ -49,7 +49,6 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -71,7 +70,7 @@ class LongTextNoteEvent(
     PublishedAtProvider,
     RootScope,
     SearchableEvent {
-    override fun indexableContent() = "title: " + title() + "\nsummary: " + summary() + "\n" + content
+    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
     override fun eventHints(): List<EventIdHint> {
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)
@@ -157,7 +156,6 @@ class LongTextNoteEvent(
             initializer: TagArrayBuilder<LongTextNoteEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description, createdAt) {
             dTag(dTag)
-            alt("Blog post: $title")
 
             title(title)
             summary?.let { summary(it) }

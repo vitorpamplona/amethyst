@@ -36,8 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.LiveStreamLike
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.MeetingSpaceTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.CurrentParticipantsTag
@@ -66,7 +65,10 @@ class MeetingRoomEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
-    LiveStreamLike {
+    LiveStreamLike,
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), summary()).joinToString("\n")
+
     override fun eventHints(): List<EventIdHint> {
         val pinnedEvents = pinned()
         if (pinnedEvents.isEmpty()) return emptyList()
@@ -156,13 +158,12 @@ class MeetingRoomEvent(
 
     companion object {
         const val KIND = 30313
-        const val ALT = "Meeting room event"
 
         suspend fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): MeetingRoomEvent {
-            val tags = arrayOf(AltTag.assemble(ALT))
+            val tags = emptyArray<Array<String>>()
             return signer.sign(createdAt, KIND, tags, "")
         }
 
@@ -181,7 +182,6 @@ class MeetingRoomEvent(
             title(title)
             starts(starts)
             status(status)
-            alt(ALT)
             initializer()
         }
     }

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
@@ -51,4 +52,25 @@ fun ThreadFilterAssemblerSubscription(
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, filterAssembler)
+}
+
+/**
+ * Eagerly pre-loads the whole thread of a reply that is visible in a feed.
+ *
+ * When a reply shows up in `NoteCompose`, this opens the same root subscription the
+ * thread screen uses: `ThreadFilterSubAssembler` resolves the thread root from this
+ * id and subscribes to the root's `e`/`a` tag (covering NIP-10 and NIP-22 event /
+ * addressable roots), so tapping into the conversation finds it already loaded.
+ *
+ * Only replies are pre-loaded — a root post (empty `replyTo`) has no ancestor thread
+ * to pull, and pure quotes are excluded because citations don't populate `replyTo`.
+ */
+@Composable
+fun PreloadThreadForReply(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
+    if (note.replyTo?.isNotEmpty() == true) {
+        ThreadFilterAssemblerSubscription(note.idHex, accountViewModel)
+    }
 }

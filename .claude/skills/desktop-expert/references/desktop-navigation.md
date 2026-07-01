@@ -11,11 +11,11 @@ Comparison of mobile vs desktop navigation patterns in AmethystMultiplatform.
 
 ---
 
-## Desktop: NavigationRail
+## Desktop: Left Sidebar
 
 ### Current Implementation
 
-**File:** `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/ui/deck/SinglePaneLayout.kt` (NavigationRail begins at L97; `NavigationRailItem`s at L103 and L127+).
+**File:** `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/ui/deck/DeckSidebar.kt` — the custom `MainSidebar` composable, instantiated from `Main.kt` and shared by both `SinglePaneLayout` and the multi-pane `DeckLayout`. Amethyst Desktop does **not** use Material's `NavigationRail`; the snippet below shows the generic Compose pattern for reference, useful for simpler new surfaces.
 
 ```kotlin
 @Composable

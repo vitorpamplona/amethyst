@@ -35,10 +35,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayExternalId
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.PreloadThreadForReply
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -57,6 +58,7 @@ import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.scope
 
@@ -77,10 +79,15 @@ fun RenderTextEvent(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    isBoostedNote: Boolean = false,
 ) {
     val noteEvent = note.event ?: return
 
     if (unPackReply != ReplyRenderType.NONE) {
+        // Eagerly pull the rest of this reply's thread while it's on screen, so opening
+        // the conversation finds it already loaded. No-op when the note is a root itself.
+        PreloadThreadForReply(note, accountViewModel)
+
         val canShowReply by
             remember(note) {
                 derivedStateOf {
@@ -115,7 +122,15 @@ fun RenderTextEvent(
                 }
 
                 ReplyRenderType.LINE -> {
-                    val parentAuthor = replyingDirectlyTo.author
+                    // Zap receipts are signed by the recipient's lightning provider;
+                    // label the reply with the zap sender instead of the service key.
+                    val zapSender =
+                        if (replyingDirectlyTo.event is LnZapEvent) {
+                            observeZapSender(replyingDirectlyTo, accountViewModel).value
+                        } else {
+                            null
+                        }
+                    val parentAuthor = zapSender ?: replyingDirectlyTo.author
                     if (parentAuthor != null) {
                         ReplyToLabel(
                             parentAuthorDisplay = parentAuthor.toBestDisplayName(),
@@ -169,7 +184,10 @@ fun RenderTextEvent(
                 }
             }
 
-        if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
+        // A boosted note inside a zap/nutzap/onchain activity card is always shown as a
+        // compact 2-line preview, even when the logged-in user is only a zap-split
+        // beneficiary (and thus not the author) of the post being zapped.
+        if (makeItShort && (isBoostedNote || accountViewModel.isLoggedUser(note.author))) {
             Text(
                 text = eventContent,
                 color = MaterialTheme.colorScheme.placeholderText,

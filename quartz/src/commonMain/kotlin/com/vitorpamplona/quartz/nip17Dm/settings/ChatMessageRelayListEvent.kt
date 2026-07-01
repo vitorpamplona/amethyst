@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip17Dm.settings.tags.RelayTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -55,9 +54,7 @@ class ChatMessageRelayListEvent(
         fun createTagArray(relays: List<NormalizedRelayUrl>): Array<Array<String>> =
             relays
                 .map { RelayTag.assemble(it) }
-                .plusElement(
-                    AltTag.assemble("Relay list to receive private messages"),
-                ).toTypedArray()
+                .toTypedArray()
 
         suspend fun updateRelayList(
             earlierVersion: ChatMessageRelayListEvent,

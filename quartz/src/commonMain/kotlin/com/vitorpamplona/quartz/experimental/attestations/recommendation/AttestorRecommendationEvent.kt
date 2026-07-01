@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -38,14 +38,16 @@ class AttestorRecommendationEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(description()).joinToString("\n")
+
     fun kinds() = tags.kinds()
 
     fun description() = content.ifBlank { null }
 
     companion object {
         const val KIND = 31873
-        const val ALT_DESCRIPTION = "Attestor Recommendation"
 
         fun build(
             attestorPubKey: HexKey,
@@ -54,7 +56,6 @@ class AttestorRecommendationEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<AttestorRecommendationEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description ?: "", createdAt) {
-            alt(ALT_DESCRIPTION)
             dTag(attestorPubKey)
             kinds(kinds)
             initializer()

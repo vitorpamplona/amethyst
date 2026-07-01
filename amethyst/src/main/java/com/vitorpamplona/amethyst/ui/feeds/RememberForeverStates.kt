@@ -65,6 +65,8 @@ object ScrollStateKeys {
     const val BROWSE_EMOJI_SETS_SCREEN = "BrowseEmojiSetsFeed"
     const val COMMUNITIES_LIST = "CommunitiesListFeed"
     const val PICTURES_SCREEN = "PicturesFeed"
+    const val WORKOUTS_SCREEN = "WorkoutsFeed"
+    const val GIT_REPOSITORIES_SCREEN = "GitRepositoriesFeed"
     const val CALENDARS_SCREEN = "CalendarsFeed"
     const val CALENDAR_COLLECTIONS_SCREEN = "CalendarCollectionsFeed"
     const val PRODUCTS_SCREEN = "ProductsFeed"

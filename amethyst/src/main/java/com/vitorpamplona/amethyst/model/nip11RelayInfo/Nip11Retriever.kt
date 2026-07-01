@@ -47,14 +47,21 @@ class Nip11Retriever(
         onError: (NormalizedRelayUrl, ErrorCode, String?) -> Unit,
     ) = withContext(Dispatchers.IO) {
         val url = relay.toHttp()
-        try {
-            val request: Request =
+        val request =
+            try {
                 Request
                     .Builder()
                     .header("Accept", "application/nostr+json")
                     .url(url)
                     .build()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("RelayInfoFail", "Invalid URL ${relay.url}", e)
+                onError(relay, ErrorCode.FAIL_TO_ASSEMBLE_URL, e.message)
+                return@withContext
+            }
 
+        try {
             val client = okHttpClient(relay)
 
             client.newCall(request).executeAsync().use { response ->
@@ -81,8 +88,8 @@ class Nip11Retriever(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("RelayInfoFail", "Invalid URL ${relay.url}", e)
-            onError(relay, ErrorCode.FAIL_TO_ASSEMBLE_URL, e.message)
+            Log.e("RelayInfoFail", "Failed to fetch NIP-11 from ${relay.url}", e)
+            onError(relay, ErrorCode.FAIL_TO_REACH_SERVER, e.message ?: e::class.simpleName)
         }
     }
 }

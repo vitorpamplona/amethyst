@@ -25,14 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
@@ -57,7 +54,6 @@ class GeohashListEvent(
 
     companion object {
         const val KIND = 10081
-        const val ALT = "Geohash List"
         const val FIXED_D_TAG = ""
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
@@ -169,12 +165,7 @@ class GeohashListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): GeohashListEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, content)
         }
@@ -196,7 +187,7 @@ class GeohashListEvent(
             createdAt: Long = TimeUtils.now(),
         ): GeohashListEvent {
             val privateTagArray = publicGeohashes.map { GeoHashTag.assembleSingle(it) }.toTypedArray()
-            val publicTagArray = privateGeohashes.map { GeoHashTag.assembleSingle(it) }.toTypedArray() + AltTag.assemble(ALT)
+            val publicTagArray = privateGeohashes.map { GeoHashTag.assembleSingle(it) }.toTypedArray()
             return signer.signNip51List(createdAt, KIND, publicTagArray, privateTagArray)
         }
 
@@ -211,7 +202,6 @@ class GeohashListEvent(
             description = PrivateTagsInContent.encryptNip44(privateGeohashes.map { GeoHashTag.assembleSingle(it) }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
-            alt(ALT)
             geohashes(publicGeohashes)
 
             initializer()

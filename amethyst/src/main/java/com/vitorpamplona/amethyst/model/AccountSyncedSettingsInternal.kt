@@ -155,6 +155,8 @@ class AccountSyncedSettingsInternal(
     val languages: AccountLanguagePreferencesInternal = AccountLanguagePreferencesInternal(),
     val security: AccountSecurityPreferencesInternal = AccountSecurityPreferencesInternal(),
     val videoPlayer: AccountVideoPlayerPreferencesInternal = AccountVideoPlayerPreferencesInternal(),
+    val media: AccountMediaPreferencesInternal = AccountMediaPreferencesInternal(),
+    val chats: AccountChatPreferencesInternal = AccountChatPreferencesInternal(),
 )
 
 @Serializable
@@ -196,4 +198,18 @@ class AccountSecurityPreferencesInternal(
     val maxHashtagLimit: Int = 8,
     var sendKind0EventsToLocalRelay: Boolean = false,
     var addClientTag: Boolean = true,
+)
+
+@Serializable
+class AccountMediaPreferencesInternal(
+    // Stored as VisualizerStyle.name; defaults to CLASSIC (the app's classic audio animation).
+    var audioVisualizer: String = "CLASSIC",
+)
+
+@Serializable
+class AccountChatPreferencesInternal(
+    // Rooms pinned to the top of the chat list. Each room is its member
+    // pubkeys (hex) sorted ascending, so the serialized form is deterministic
+    // regardless of set iteration order.
+    var pinnedRooms: List<List<String>> = emptyList(),
 )

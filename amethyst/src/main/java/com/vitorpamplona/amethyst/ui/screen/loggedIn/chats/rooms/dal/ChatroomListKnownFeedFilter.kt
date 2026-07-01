@@ -25,9 +25,10 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -63,7 +64,7 @@ class ChatroomListKnownFeedFilter(
                         .getOrCreatePublicChatChannel(channelId)
                         .notes
                         .filter { _, it -> account.isAcceptable(it) && it.event != null }
-                        .sortedWith(DefaultFeedOrder)
+                        .sortedByDefaultFeedOrder()
                         .firstOrNull()
                 }
 
@@ -75,7 +76,7 @@ class ChatroomListKnownFeedFilter(
                         .getOrCreateEphemeralChannel(it)
                         .notes
                         .filter { _, it -> account.isAcceptable(it) && it.event != null }
-                        .sortedWith(DefaultFeedOrder)
+                        .sortedByDefaultFeedOrder()
                         .firstOrNull()
                 }
 
@@ -88,7 +89,7 @@ class ChatroomListKnownFeedFilter(
                 }
             }
 
-        return (privateMessages + publicChannels + ephemeralChats + marmotGroups).sortedWith(DefaultFeedOrder)
+        return sort((privateMessages + publicChannels + ephemeralChats + marmotGroups).toSet())
     }
 
     override fun updateListWith(
@@ -261,7 +262,31 @@ class ChatroomListKnownFeedFilter(
         return newRelevantPrivateMessages
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> {
+        val pinned = account.settings.syncedSettings.chats.pinnedChatrooms.value
+        if (pinned.isEmpty()) return items.sortedByDefaultFeedOrder()
+
+        val me = account.userProfile().pubkeyHex
+        // Snapshots isPinned + createdAt once per note so the comparator stays consistent
+        // even if another thread swaps a Note's event mid-sort. Avoids TimSort's
+        // "Comparison method violates its general contract!" IllegalArgumentException.
+        return items
+            .map { Triple(it, isPinned(it, me, pinned), it.createdAt() ?: 0L) }
+            .sortedWith(
+                compareByDescending<Triple<Note, Boolean, Long>> { it.second }
+                    .thenByDescending { it.third }
+                    .thenBy { it.first.idHex },
+            ).map { it.first }
+    }
+
+    private fun isPinned(
+        note: Note,
+        myPubKey: HexKey,
+        pinned: Set<ChatroomKey>,
+    ): Boolean {
+        val room = (note.event as? ChatroomKeyable)?.chatroomKey(myPubKey) ?: return false
+        return room in pinned
+    }
 
     // Maps a note that represents a public chat row to its channel id. The
     // representative note for a channel may be the channel's create event

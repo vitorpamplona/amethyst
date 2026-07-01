@@ -20,12 +20,16 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.drawable.BitmapDrawable
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
@@ -40,6 +44,7 @@ import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -221,6 +226,7 @@ object NotificationUtils {
         pictureUrl: String?,
         uri: String,
         applicationContext: Context,
+        emojiUrl: String? = null,
     ) {
         getOrCreateReactionChannel(applicationContext)
         val channelId = stringRes(applicationContext, R.string.app_notification_reactions_channel_id)
@@ -231,6 +237,7 @@ object NotificationUtils {
             messageTitle = messageTitle,
             time = time,
             pictureUrl = pictureUrl,
+            badgeUrl = emojiUrl,
             uri = uri,
             channelId = channelId,
             notificationGroupKey = REACTION_GROUP_KEY,
@@ -422,6 +429,36 @@ object NotificationUtils {
                 null
             }
         }
+
+    /**
+     * Draws the badge image (e.g. a NIP-30 custom-emoji reaction) onto the bottom-right corner
+     * of the base avatar. Returns the base unchanged if the badge can't be loaded, or the badge
+     * alone if there is no base avatar.
+     */
+    private suspend fun overlayBadge(
+        base: Bitmap?,
+        badgeUrl: String,
+        applicationContext: Context,
+    ): Bitmap? {
+        val badge = loadBitmap(badgeUrl, applicationContext) ?: return base
+        if (base == null) return badge
+
+        return withContext(Dispatchers.Default) {
+            val result = base.copy(base.config ?: Bitmap.Config.ARGB_8888, true)
+            val canvas = Canvas(result)
+            val badgeSize = minOf(result.width, result.height) * 0.45f
+            val dest =
+                RectF(
+                    result.width - badgeSize,
+                    result.height - badgeSize,
+                    result.width.toFloat(),
+                    result.height.toFloat(),
+                )
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { isFilterBitmap = true }
+            canvas.drawBitmap(badge, null, dest, paint)
+            result
+        }
+    }
 
     private suspend fun NotificationManager.sendDMNotificationStyled(
         id: String,
@@ -625,12 +662,17 @@ object NotificationUtils {
         summaryText: String,
         applicationContext: Context,
         inlineReply: InlineReplyTarget? = null,
+        badgeUrl: String? = null,
     ) {
         val notId = id.hashCode()
 
         if (isDuplicate(notId)) return
 
         val bitmap = pictureUrl?.let { loadBitmap(it, applicationContext) }
+
+        // For custom-emoji (NIP-30) reactions, the emoji is an image URL that can't render
+        // as text in the notification, so overlay it as a badge on the author's avatar.
+        val largeIcon = badgeUrl?.let { overlayBadge(bitmap, it, applicationContext) } ?: bitmap
 
         val contentIntent =
             Intent(applicationContext, MainActivity::class.java).apply { data = uri.toUri() }
@@ -662,7 +704,7 @@ object NotificationUtils {
                 .setContentTitle(messageTitle)
                 .setContentText(messageBody)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(messageBody))
-                .setLargeIcon(bitmap)
+                .setLargeIcon(largeIcon)
                 .setContentIntent(contentPendingIntent)
                 .setPublicVersion(builderPublic.build())
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -750,5 +792,36 @@ object NotificationUtils {
     /** Cancels all notifications. */
     fun NotificationManager.cancelNotifications() {
         cancelAll()
+    }
+
+    /**
+     * Dismisses the tray notification posted for [eventId] — used to auto-clear a
+     * notification once the user reads the underlying event in-app.
+     *
+     * Per-event notifications are keyed by `id.hashCode()` (see [sendNotification]
+     * and [sendDMNotificationStyled]), so hashing the same event id targets exactly
+     * the notification posted for it. Cancelling an id that isn't currently shown is
+     * a harmless no-op. After removing the child, any group summary left without
+     * children is cancelled too so the tray doesn't keep an empty summary around.
+     */
+    fun NotificationManager.dismissNotificationForEvent(eventId: HexKey) {
+        val notId = eventId.hashCode()
+
+        // Most events the user reads never had a tray notification (regular feed
+        // items), so bail out before touching anything when nothing is posted for it.
+        if (activeNotifications.none { it.id == notId }) return
+
+        cancel(notId)
+        cancelChildlessGroupSummaries()
+    }
+
+    private fun NotificationManager.cancelChildlessGroupSummaries() {
+        val active = activeNotifications
+        for (summary in active) {
+            if (summary.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0) continue
+            val group = summary.notification.group ?: continue
+            val hasChildren = active.any { it.id != summary.id && it.notification.group == group }
+            if (!hasChildren) cancel(summary.id)
+        }
     }
 }

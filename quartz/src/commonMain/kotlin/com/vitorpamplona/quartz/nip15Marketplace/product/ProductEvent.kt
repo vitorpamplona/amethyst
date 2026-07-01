@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -58,7 +57,6 @@ class ProductEvent(
 
     companion object {
         const val KIND = 30018
-        const val ALT_DESCRIPTION = "Marketplace product"
 
         fun build(
             product: ProductData,
@@ -67,7 +65,6 @@ class ProductEvent(
             initializer: TagArrayBuilder<ProductEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, JsonMapper.toJson(product), createdAt) {
             dTag(product.id)
-            alt(ALT_DESCRIPTION)
             categories?.let { hashtags(it) }
             initializer()
         }

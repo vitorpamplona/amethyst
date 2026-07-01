@@ -58,8 +58,23 @@ fun RefreshingChatroomFeedView(
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
     scrollStateKey: String? = null,
+    // Opt-in hook handed the feed's scroll state, so a specific screen (e.g. private DMs) can
+    // attach scroll-driven loading. No-op for the public-chat / channel callers that don't paginate.
+    listStateObserver: @Composable (LazyListState) -> Unit = {},
+    // Optional footer rendered at the oldest end of the thread (a "load more" / spinner affordance).
+    // Null for callers that load their whole history at once (public chats / channels).
+    olderBoundary: (@Composable () -> Unit)? = null,
+    // Optional per-gap hook: invoked between each message and its next-older neighbour with their
+    // createdAt bounds, so a caller (private DMs) can draw per-relay paging markers at the depth each
+    // relay has reached. No-op for callers without per-relay progress.
+    markersInGap: (@Composable (newerCreatedAt: Long?, olderCreatedAt: Long?) -> Unit)? = null,
+    // Optional hoisted load driver: handed the loaded message list and its scroll state once (above the
+    // LazyColumn), so a caller (private DMs) can drive demand-driven paging off viewport visibility
+    // rather than per-row composition. No-op for callers that don't paginate.
+    sentinels: (@Composable (items: List<Note>, listState: LazyListState) -> Unit)? = null,
 ) {
     SaveableFeedState(feedContentState, scrollStateKey) { listState ->
+        listStateObserver(listState)
         RenderChatFeedView(
             feedContentState,
             accountViewModel,
@@ -69,6 +84,9 @@ fun RefreshingChatroomFeedView(
             onWantsToReply,
             onWantsToEditDraft,
             avoidDraft,
+            olderBoundary,
+            markersInGap,
+            sentinels,
         )
     }
 }
@@ -83,6 +101,9 @@ fun RenderChatFeedView(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
+    olderBoundary: (@Composable () -> Unit)? = null,
+    markersInGap: (@Composable (newerCreatedAt: Long?, olderCreatedAt: Long?) -> Unit)? = null,
+    sentinels: (@Composable (items: List<Note>, listState: LazyListState) -> Unit)? = null,
 ) {
     val feedState by feed.feedContent.collectAsStateWithLifecycle()
 
@@ -110,6 +131,9 @@ fun RenderChatFeedView(
                     onWantsToReply,
                     onWantsToEditDraft,
                     avoidDraft,
+                    olderBoundary,
+                    markersInGap,
+                    sentinels,
                 )
             }
         }
@@ -126,8 +150,15 @@ fun ChatFeedLoaded(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
+    olderBoundary: (@Composable () -> Unit)? = null,
+    markersInGap: (@Composable (newerCreatedAt: Long?, olderCreatedAt: Long?) -> Unit)? = null,
+    sentinels: (@Composable (items: List<Note>, listState: LazyListState) -> Unit)? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+
+    // Hoisted load driver (above the LazyColumn): pages each relay off viewport visibility, so feed
+    // reorders no longer re-fire paging. The per-gap markers below are pure UI.
+    sentinels?.invoke(items.list, listState)
 
     LaunchedEffect(items.list.firstOrNull()) {
         if (listState.firstVisibleItemIndex <= 1) {
@@ -169,7 +200,24 @@ fun ChatFeedLoaded(
                 )
 
                 NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)
+
+                // Per-relay paging markers belonging in the gap toward the next-older message. With the
+                // reverse layout this draws just above the message (the older side), so a relay's marker
+                // appears right below the oldest message it has reached and slides down as it pages.
+                markersInGap?.invoke(
+                    item.event?.createdAt,
+                    items.list
+                        .getOrNull(index + 1)
+                        ?.event
+                        ?.createdAt,
+                )
             }
+        }
+
+        // Reverse layout: a trailing item sits at the highest index, i.e. the visual TOP (oldest end).
+        // That's where the caller's "load more" affordance / spinner lives.
+        if (olderBoundary != null) {
+            item(key = "olderBoundary") { olderBoundary() }
         }
     }
 }

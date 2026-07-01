@@ -127,6 +127,9 @@ kotlin {
                 // Kotlin serialization for the times where we need the Json tree and performance is not that important.
                 implementation(libs.kotlinx.serialization.json)
 
+                // CBOR serialization for the NUT-00 v4 (cashuB) token wire format.
+                implementation(libs.kotlinx.serialization.cbor)
+
                 // immutable collections to avoid recomposition
                 implementation(libs.kotlinx.collections.immutable)
 
@@ -372,16 +375,26 @@ val verifyKmpPurity by tasks.registering {
     description = "Fails if iOS-targeted source sets import JVM-only deps."
     val checkedDirs =
         listOf(
-            "src/commonMain", "src/commonTest",
-            "src/appleMain", "src/appleTest",
-            "src/nativeMain", "src/nativeTest",
-            "src/iosMain", "src/iosTest",
-            "src/iosArm64Main", "src/iosArm64Test",
-            "src/iosSimulatorArm64Main", "src/iosSimulatorArm64Test",
-            "src/linuxMain", "src/linuxTest",
-            "src/linuxX64Main", "src/linuxX64Test",
-            "src/macosMain", "src/macosTest",
-            "src/macosArm64Main", "src/macosArm64Test",
+            "src/commonMain",
+            "src/commonTest",
+            "src/appleMain",
+            "src/appleTest",
+            "src/nativeMain",
+            "src/nativeTest",
+            "src/iosMain",
+            "src/iosTest",
+            "src/iosArm64Main",
+            "src/iosArm64Test",
+            "src/iosSimulatorArm64Main",
+            "src/iosSimulatorArm64Test",
+            "src/linuxMain",
+            "src/linuxTest",
+            "src/linuxX64Main",
+            "src/linuxX64Test",
+            "src/macosMain",
+            "src/macosTest",
+            "src/macosArm64Main",
+            "src/macosArm64Test",
         ).map { layout.projectDirectory.dir(it).asFile }
             .filter { it.exists() }
     inputs.files(checkedDirs)
@@ -400,7 +413,8 @@ val verifyKmpPurity by tasks.registering {
             )
         val offenders =
             checkedDirs.flatMap { dir ->
-                dir.walkTopDown()
+                dir
+                    .walkTopDown()
                     .filter { it.isFile && it.extension == "kt" }
                     .flatMap { file ->
                         file.readLines().withIndex().mapNotNull { (idx, line) ->
@@ -438,7 +452,9 @@ mavenPublishing {
     coordinates(
         groupId = "com.vitorpamplona.quartz",
         artifactId = "quartz",
-        version = "1.11.0",
+        // Library version tracks the app version in gradle/libs.versions.toml,
+        // bumped in lockstep with each release.
+        version = libs.versions.app.get(),
     )
 
     // Configure publishing to Maven Central

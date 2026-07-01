@@ -105,4 +105,42 @@ class AccountsTorStateConnector(
                 SharingStarted.Eagerly,
                 emptySet(),
             )
+
+    // Persistent money-operation relays across all accounts: NIP-47 wallet relays and saved CLINK
+    // Debits service relays. Feeds TorRelayState.moneyOpRelays so these connections honor the
+    // money-operations Tor preference instead of being classified as generic "new" relays.
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    val allMoneyOpRelaysFlow: Flow<Set<NormalizedRelayUrl>> =
+        accountsCache.accounts
+            .debounce(200)
+            .transformLatest { snapshot ->
+                val perAccountFlows =
+                    snapshot.map { (_, account) ->
+                        combine(
+                            account.settings.nwcWallets,
+                            account.settings.clinkDebitWallets,
+                        ) { nwcWallets, clinkDebitWallets ->
+                            val relays = mutableSetOf<NormalizedRelayUrl>()
+                            nwcWallets.forEach { relays.add(it.uri.relayUri) }
+                            clinkDebitWallets.forEach { relays.addAll(it.pointer.relays) }
+                            relays.toSet()
+                        }
+                    }
+
+                val ready = perAccountFlows.ifEmpty { listOf(MutableStateFlow(emptySet())) }
+
+                emitAll(
+                    combine(ready) { perAccount ->
+                        val moneyOpRelays = mutableSetOf<NormalizedRelayUrl>()
+                        perAccount.forEach { moneyOpRelays.addAll(it) }
+                        moneyOpRelays.toSet()
+                    },
+                )
+            }.onEach {
+                torEvaluatorFlow.moneyOpRelays.tryEmit(it)
+            }.stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                emptySet(),
+            )
 }

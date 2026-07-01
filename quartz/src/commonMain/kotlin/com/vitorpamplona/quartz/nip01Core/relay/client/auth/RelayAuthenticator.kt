@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
@@ -37,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 interface IAuthStatus {
     fun hasFinishedAuthentication(relay: NormalizedRelayUrl): Boolean
@@ -49,7 +51,12 @@ object EmptyIAuthStatus : IAuthStatus {
 class RelayAuthenticator(
     val client: INostrClient,
     val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-    val signWithAllLoggedInUsers: suspend (EventTemplate<RelayAuthEvent>) -> List<RelayAuthEvent>,
+    /**
+     * Signs the auth template for every currently-logged-in account and returns the signed events.
+     * The [relay] parameter allows callers to check per-relay auth policy before signing.
+     * Returns an empty list to skip authentication for this relay.
+     */
+    val signWithAllLoggedInUsers: suspend (relay: NormalizedRelayUrl, EventTemplate<RelayAuthEvent>) -> List<RelayAuthEvent>,
 ) : IAuthStatus {
     // Connection callbacks fire on the per-relay OkHttp dispatcher thread, so
     // this state is mutated concurrently — LargeCache wraps a platform-tuned
@@ -83,12 +90,26 @@ class RelayAuthenticator(
         msg: AuthMessage,
     ) {
         scope.launch {
-            val ev = RelayAuthEvent.build(relay.url, msg.challenge)
-            signWithAllLoggedInUsers(ev).forEach { authEvent ->
-                // only send replies to new challenges to avoid infinite loop:
-                if (authStatus.get(relay.url)?.saveAuthSubmission(authEvent) == true) {
-                    relay.sendIfConnected(AuthCmd(authEvent))
+            // Relay auth is automatic and not user-initiated. Signing can fail in
+            // benign, expected ways — e.g. an external NIP-55 signer prompt that the
+            // user ignores surfaces as SignerExceptions.TimedOutException. Those must
+            // never escape this fire-and-forget launch: the host's scope may not carry
+            // a CoroutineExceptionHandler (viewModelScope, rememberCoroutineScope, …),
+            // so an uncaught throwable here crashes the whole app. Swallow + log them.
+            try {
+                val ev = RelayAuthEvent.build(relay.url, msg.challenge)
+                signWithAllLoggedInUsers(relay.url, ev).forEach { authEvent ->
+                    // only send replies to new challenges to avoid infinite loop:
+                    if (authStatus.get(relay.url)?.saveAuthSubmission(authEvent) == true) {
+                        relay.sendIfConnected(AuthCmd(authEvent))
+                    }
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: SignerExceptions) {
+                Log.d("RelayAuthenticator") { "Could not sign auth for ${relay.url}: ${e.message}" }
+            } catch (e: Exception) {
+                Log.w("RelayAuthenticator", "Failed to authenticate with ${relay.url}", e)
             }
         }
     }

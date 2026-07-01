@@ -25,13 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.followIdSet
 import com.vitorpamplona.quartz.nip51Lists.followList.followIds
 import com.vitorpamplona.quartz.nip51Lists.followList.follows
@@ -53,7 +51,10 @@ class MediaStarterPackEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
@@ -72,7 +73,6 @@ class MediaStarterPackEvent(
 
     companion object {
         const val KIND = 39092
-        const val ALT = "Media Starter Pack"
 
         fun createAddress(
             pubKey: HexKey,
@@ -130,12 +130,7 @@ class MediaStarterPackEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): MediaStarterPackEvent {
-            val newTags =
-                if (tags.fastAny(AltTag::match)) {
-                    tags
-                } else {
-                    tags + AltTag.assemble(ALT)
-                }
+            val newTags = tags
 
             return signer.sign(createdAt, KIND, newTags, content)
         }
@@ -153,7 +148,6 @@ class MediaStarterPackEvent(
             createdAt = createdAt,
         ) {
             dTag(dTag)
-            alt(ALT)
             title(name)
             people(people)
 

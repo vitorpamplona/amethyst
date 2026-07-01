@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
-import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -46,7 +46,10 @@ class SoftwareApplicationEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(name(), summary(), content).joinToString("\n")
+
     fun appId() = dTag()
 
     fun name() = tags.name()
@@ -71,7 +74,6 @@ class SoftwareApplicationEvent(
 
     companion object {
         const val KIND = 32267
-        const val ALT_DESCRIPTION = "Software application"
 
         fun build(
             appId: String,
@@ -81,7 +83,6 @@ class SoftwareApplicationEvent(
             initializer: TagArrayBuilder<SoftwareApplicationEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description, createdAt) {
             dTag(appId)
-            alt(ALT_DESCRIPTION)
             name(name)
             initializer()
         }

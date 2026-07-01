@@ -22,9 +22,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
+import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
+import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
@@ -94,6 +100,8 @@ data class WalletInfo(
     val isDefault: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
+    // CLINK debits are spend-only: no balance/transactions to fetch or show.
+    val canShowBalance: Boolean = true,
 )
 
 private const val NWC_TIMEOUT_MS = 30_000L
@@ -111,23 +119,43 @@ class WalletViewModel : ViewModel() {
     private val _wallets = MutableStateFlow<List<NwcWalletEntryNorm>>(emptyList())
     val wallets = _wallets.asStateFlow()
 
+    private val _debitWallets = MutableStateFlow<List<ClinkDebitWalletEntryNorm>>(emptyList())
+    val debitWallets = _debitWallets.asStateFlow()
+
     private val _defaultWalletId = MutableStateFlow<String?>(null)
     val defaultWalletId = _defaultWalletId.asStateFlow()
 
     val walletInfoList =
-        combine(_wallets, _defaultWalletId, walletInfoMap) { wallets, defaultId, infoMap ->
-            wallets.map { wallet ->
-                val info = infoMap[wallet.id]
-                WalletInfo(
-                    walletId = wallet.id,
-                    name = wallet.name,
-                    alias = info?.alias,
-                    balanceSats = info?.balanceSats,
-                    isDefault = wallet.id == defaultId || (defaultId == null && wallet == wallets.firstOrNull()),
-                    isLoading = info?.isLoading == true,
-                    error = info?.error,
-                )
-            }
+        combine(_wallets, _debitWallets, _defaultWalletId, walletInfoMap) { wallets, debits, defaultId, infoMap ->
+            // The unified default falls back to the first source overall (NWC before debits).
+            val effectiveDefault = defaultId ?: wallets.firstOrNull()?.id ?: debits.firstOrNull()?.id
+
+            val nwcRows =
+                wallets.map { wallet ->
+                    val info = infoMap[wallet.id]
+                    WalletInfo(
+                        walletId = wallet.id,
+                        name = wallet.name,
+                        alias = info?.alias,
+                        balanceSats = info?.balanceSats,
+                        isDefault = wallet.id == effectiveDefault,
+                        isLoading = info?.isLoading == true,
+                        error = info?.error,
+                        canShowBalance = true,
+                    )
+                }
+
+            val debitRows =
+                debits.map { debit ->
+                    WalletInfo(
+                        walletId = debit.id,
+                        name = debit.name,
+                        isDefault = debit.id == effectiveDefault,
+                        canShowBalance = false,
+                    )
+                }
+
+            nwcRows + debitRows
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Selected wallet for detail view
@@ -218,8 +246,9 @@ class WalletViewModel : ViewModel() {
     fun refreshWalletList() {
         val acc = account ?: return
         _wallets.value = acc.settings.nwcWallets.value
-        _defaultWalletId.value = acc.settings.defaultNwcWalletId.value
-        _hasWalletSetup.value = _wallets.value.isNotEmpty()
+        _debitWallets.value = acc.settings.clinkDebitWallets.value
+        _defaultWalletId.value = acc.settings.defaultPaymentSourceId.value
+        _hasWalletSetup.value = _wallets.value.isNotEmpty() || _debitWallets.value.isNotEmpty()
     }
 
     fun refreshWalletSetup() {
@@ -258,14 +287,68 @@ class WalletViewModel : ViewModel() {
 
     fun setDefaultWallet(walletId: String) {
         val acc = account ?: return
-        acc.settings.setDefaultNwcWallet(walletId)
-        _defaultWalletId.value = walletId
+        // Only reflect the change locally if it actually persisted (the id must exist
+        // in one of the lists); otherwise the star and the stored default would diverge.
+        if (acc.settings.setDefaultPaymentSource(walletId)) {
+            _defaultWalletId.value = walletId
+        }
     }
 
     fun removeWallet(walletId: String) {
         val acc = account ?: return
-        acc.settings.removeNwcWallet(walletId)
+        if (_debitWallets.value.any { it.id == walletId }) {
+            acc.settings.removeClinkDebitWallet(walletId)
+        } else {
+            acc.settings.removeNwcWallet(walletId)
+        }
         refreshWalletList()
+    }
+
+    /** Adds a CLINK debit pointer (`ndebit1…`) as a spend-only payment source. */
+    fun addClinkDebitWallet(
+        name: String,
+        ndebit: String,
+    ): Boolean {
+        val acc = account ?: return false
+        val pointer = ClinkPointerParser.parse(ndebit.trim()) as? NDebit ?: return false
+        val entry =
+            ClinkDebitWalletEntryNorm(
+                id =
+                    java.util.UUID
+                        .randomUUID()
+                        .toString(),
+                name = name.ifBlank { "Debit" },
+                pointer = pointer,
+            )
+        acc.settings.addClinkDebitWallet(entry)
+        refreshWalletList()
+        return true
+    }
+
+    /**
+     * Asks a CLINK debit wallet to authorize a spending budget (kind-21002). Omit
+     * [frequency] for a one-time budget; otherwise it recurs every day/week/month.
+     * [onResult] reports the wallet's decision (ok, GFY error text, or null on timeout).
+     */
+    fun requestDebitBudget(
+        walletId: String,
+        amountSats: Long,
+        frequency: DebitFrequency?,
+        onResult: (DebitResponse?) -> Unit,
+    ) {
+        val acc = account ?: return
+        val pointer = _debitWallets.value.firstOrNull { it.id == walletId }?.pointer ?: return
+        viewModelScope.launch {
+            // A malformed budget (e.g. an out-of-spec frequency unit) makes requestBudget throw;
+            // treat it as "no response" so the dialog dismisses instead of hanging on a spinner.
+            val response =
+                try {
+                    ClinkDebitPayer.requestBudget(acc, pointer, amountSats, frequency)
+                } catch (_: IllegalArgumentException) {
+                    null
+                }
+            onResult(response)
+        }
     }
 
     fun addWallet(
@@ -292,7 +375,11 @@ class WalletViewModel : ViewModel() {
         newName: String,
     ) {
         val acc = account ?: return
-        acc.settings.renameNwcWallet(walletId, newName)
+        if (_debitWallets.value.any { it.id == walletId }) {
+            acc.settings.renameClinkDebitWallet(walletId, newName)
+        } else {
+            acc.settings.renameNwcWallet(walletId, newName)
+        }
         refreshWalletList()
     }
 

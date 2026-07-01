@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedStateAsync
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -69,7 +70,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteModifications
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
-import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.ui.layouts.NoteComposeLayout
@@ -110,6 +110,7 @@ import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
+import com.vitorpamplona.amethyst.ui.note.types.RenderAppRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestationRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorProficiency
@@ -137,6 +138,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
@@ -154,8 +157,10 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderMusicPlaylist
 import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryResponse
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
+import com.vitorpamplona.amethyst.ui.note.types.RenderNamedNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNipContent
+import com.vitorpamplona.amethyst.ui.note.types.RenderNutzap
 import com.vitorpamplona.amethyst.ui.note.types.RenderOnchainZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPodcastEpisode
@@ -172,6 +177,9 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderRelayLeaveRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderReport
+import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventConfirmation
+import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventReport
+import com.vitorpamplona.amethyst.ui.note.types.RenderRootNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareApplication
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareAsset
@@ -186,9 +194,12 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
+import com.vitorpamplona.amethyst.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.ExerciseTemplateDisplay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutDisplay
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
@@ -220,6 +231,8 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
@@ -230,7 +243,10 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAss
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
+import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -250,6 +266,8 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
@@ -289,6 +307,9 @@ import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
@@ -311,6 +332,7 @@ import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -341,6 +363,7 @@ fun NoteCompose(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onClick: (() -> Unit)? = null,
     moreOptions: (@Composable () -> Unit)? = null,
 ) {
     WatchNoteEvent(
@@ -371,6 +394,7 @@ fun NoteCompose(
                 parentBackgroundColor = parentBackgroundColor,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                onClick = onClick,
                 moreOptions = moreOptions,
             )
         }
@@ -392,6 +416,7 @@ fun AcceptableNote(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onClick: (() -> Unit)? = null,
     moreOptions: (@Composable () -> Unit)?,
 ) {
     if (isQuotedNote || isBoostedNote) {
@@ -444,6 +469,7 @@ fun AcceptableNote(
                         accountViewModel = accountViewModel,
                         showPopup = showPopup,
                         nav = nav,
+                        onClick = onClick,
                         moreOptions = moreOptions,
                     )
                 }
@@ -498,6 +524,7 @@ fun AcceptableNote(
                         accountViewModel = accountViewModel,
                         showPopup = showPopup,
                         nav = nav,
+                        onClick = onClick,
                         moreOptions = moreOptions,
                     )
                 }
@@ -512,6 +539,7 @@ fun calculateBackgroundColor(
     routeForLastRead: String? = null,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    dismissNotificationId: HexKey? = null,
 ): MutableState<Color> {
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
@@ -524,7 +552,7 @@ fun calculateBackgroundColor(
 
     val isNew =
         remember(createdAt, routeForLastRead) {
-            routeForLastRead != null && accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
+            routeForLastRead != null && accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt, dismissNotificationId)
         }
 
     val bgColor =
@@ -564,6 +592,7 @@ private fun CheckNewAndRenderNote(
     accountViewModel: AccountViewModel,
     showPopup: () -> Unit,
     nav: INav,
+    onClick: (() -> Unit)? = null,
     moreOptions: (@Composable () -> Unit)? = null,
 ) {
     val backgroundColor =
@@ -572,12 +601,13 @@ private fun CheckNewAndRenderNote(
             routeForLastRead,
             parentBackgroundColor,
             accountViewModel,
+            dismissNotificationId = baseNote.idHex,
         )
 
     InnerNoteWithReactions(
         baseNote = baseNote,
         backgroundColor = backgroundColor,
-        clickModifier = clickableNoteModifier(baseNote, modifier, accountViewModel, showPopup, nav),
+        clickModifier = clickableNoteModifier(baseNote, modifier, accountViewModel, showPopup, nav, onClick),
         isBoostedNote = isBoostedNote,
         isQuotedNote = isQuotedNote,
         unPackReply = unPackReply,
@@ -607,25 +637,30 @@ fun clickableNoteModifier(
     accountViewModel: AccountViewModel,
     showPopup: () -> Unit,
     nav: INav,
+    onClick: (() -> Unit)? = null,
 ): Modifier =
-    remember(baseNote, modifier) {
+    remember(baseNote, modifier, onClick) {
         modifier
             .combinedClickable(
                 onClick = {
-                    val redirectToNote =
-                        if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
-                            baseNote.replyTo?.lastOrNull() ?: baseNote
-                        } else {
-                            baseNote
-                        }
-
-                    nav.nav {
-                        if (redirectToNote.event is DraftWrapEvent) {
-                            withContext(Dispatchers.IO) {
-                                routeEditDraftTo(redirectToNote, accountViewModel.account)
+                    if (onClick != null) {
+                        onClick()
+                    } else {
+                        val redirectToNote =
+                            if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+                                baseNote.replyTo?.lastOrNull() ?: baseNote
+                            } else {
+                                baseNote
                             }
-                        } else {
-                            routeFor(redirectToNote, accountViewModel.account)
+
+                        nav.nav {
+                            if (redirectToNote.event is DraftWrapEvent) {
+                                withContext(Dispatchers.IO) {
+                                    routeEditDraftTo(redirectToNote, accountViewModel.account)
+                                }
+                            } else {
+                                routeFor(redirectToNote, accountViewModel.account)
+                            }
                         }
                     }
                 },
@@ -734,6 +769,7 @@ fun InnerNoteWithReactions(
                 unPackReply = unPackReply,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                isBoostedNote = isBoostedNote,
             )
 
             if (!makeItShort) {
@@ -882,10 +918,15 @@ private fun RenderNoteRow(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    isBoostedNote: Boolean = false,
 ) {
     when (val noteEvent = baseNote.event) {
         is AppDefinitionEvent -> {
             RenderAppDefinition(baseNote, accountViewModel, nav)
+        }
+
+        is AppRecommendationEvent -> {
+            RenderAppRecommendation(baseNote, accountViewModel, nav)
         }
 
         is SoftwareApplicationEvent -> {
@@ -1004,11 +1045,15 @@ private fun RenderNoteRow(
         }
 
         is LnZapEvent -> {
-            RenderLnZap(baseNote, backgroundColor, accountViewModel, nav)
+            RenderLnZap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is NutzapEvent -> {
+            RenderNutzap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is OnchainZapEvent -> {
-            RenderOnchainZap(baseNote, backgroundColor, accountViewModel, nav)
+            RenderOnchainZap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is LiveActivitiesClipEvent -> {
@@ -1132,6 +1177,14 @@ private fun RenderNoteRow(
             RenderNamedSiteEvent(baseNote, accountViewModel, nav)
         }
 
+        is RootNappletEvent -> {
+            RenderRootNappletEvent(baseNote, accountViewModel, nav)
+        }
+
+        is NamedNappletEvent -> {
+            RenderNamedNappletEvent(baseNote, accountViewModel, nav)
+        }
+
         is GitPatchEvent -> {
             RenderGitPatchEvent(
                 baseNote,
@@ -1146,6 +1199,30 @@ private fun RenderNoteRow(
 
         is GitIssueEvent -> {
             RenderGitIssueEvent(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is GitPullRequestEvent -> {
+            RenderGitPullRequestEvent(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is GitPullRequestUpdateEvent -> {
+            RenderGitPullRequestUpdateEvent(
                 baseNote,
                 makeItShort,
                 canPreview,
@@ -1270,6 +1347,14 @@ private fun RenderNoteRow(
             RenderBirdex(baseNote)
         }
 
+        is RoadEventReportEvent -> {
+            RenderRoadEventReport(baseNote)
+        }
+
+        is RoadEventConfirmationEvent -> {
+            RenderRoadEventConfirmation(baseNote)
+        }
+
         is HighlightEvent -> {
             RenderHighlight(
                 baseNote,
@@ -1312,6 +1397,7 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
 
@@ -1324,6 +1410,7 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
 
@@ -1336,6 +1423,7 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
 
@@ -1361,6 +1449,14 @@ private fun RenderNoteRow(
 
         is PictureEvent -> {
             PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
+        }
+
+        is WorkoutRecordEvent -> {
+            WorkoutDisplay(baseNote, backgroundColor, canPreview, quotesLeft, accountViewModel, nav)
+        }
+
+        is ExerciseTemplateEvent -> {
+            ExerciseTemplateDisplay(baseNote, backgroundColor, canPreview, quotesLeft, accountViewModel, nav)
         }
 
         is BaseVoiceEvent -> {
@@ -1463,6 +1559,7 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
 
@@ -1477,6 +1574,7 @@ private fun RenderNoteRow(
                 editState,
                 accountViewModel,
                 nav,
+                isBoostedNote = isBoostedNote,
             )
         }
     }
@@ -1708,7 +1806,22 @@ fun FirstUserInfoRow(
         val isDraft = baseNote.isDraft()
         val textColor = if (isRepost) MaterialTheme.colorScheme.grayText else Color.Unspecified
 
-        if (showAuthorPicture) {
+        // Zap receipts are signed by the recipient's lightning provider; show the
+        // sender from the embedded zap request instead of the service key.
+        val zapSender =
+            if (baseNote.event is LnZapEvent) {
+                observeZapSender(baseNote, accountViewModel).value
+            } else {
+                null
+            }
+
+        if (zapSender != null) {
+            if (showAuthorPicture) {
+                UserPicture(zapSender, Size25dp, accountViewModel = accountViewModel, nav = nav)
+                Spacer(HalfPadding)
+            }
+            UsernameDisplay(zapSender, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
+        } else if (showAuthorPicture) {
             NoteAuthorPicture(baseNote, Size25dp, accountViewModel = accountViewModel, nav = nav)
             Spacer(HalfPadding)
             NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
@@ -1752,6 +1865,10 @@ fun FirstUserInfoRow(
             DisplayDraft()
         }
 
+        if (baseNote.isPrivateRumor()) {
+            PrivateRumorMark()
+        }
+
         if (isPinned) {
             PinnedMark()
         }
@@ -1775,6 +1892,16 @@ fun PinnedMark() {
     Icon(
         symbol = MaterialSymbols.PushPin,
         contentDescription = stringRes(R.string.pinned_notes),
+        modifier = Modifier.padding(start = 5.dp).size(16.dp),
+        tint = MaterialTheme.colorScheme.placeholderText,
+    )
+}
+
+@Composable
+fun PrivateRumorMark() {
+    Icon(
+        symbol = MaterialSymbols.Lock,
+        contentDescription = stringRes(R.string.private_rumor_mark),
         modifier = Modifier.padding(start = 5.dp).size(16.dp),
         tint = MaterialTheme.colorScheme.placeholderText,
     )
@@ -1915,6 +2042,16 @@ fun RenderAuthorImages(
         val baseRepost = baseNote.replyTo?.lastOrNull()
         if (baseRepost != null) {
             RepostNoteAuthorPicture(baseNote, baseRepost, accountViewModel, nav)
+        } else {
+            NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
+        }
+    } else if (noteEvent is LnZapEvent) {
+        // Zap receipts are signed by the recipient's lightning provider; show the
+        // sender from the embedded zap request instead of the service key, matching
+        // how the thread's master note resolves the author.
+        val zapSender = observeZapSender(baseNote, accountViewModel).value
+        if (zapSender != null) {
+            UserPicture(zapSender, Size55dp, accountViewModel = accountViewModel, nav = nav)
         } else {
             NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
         }

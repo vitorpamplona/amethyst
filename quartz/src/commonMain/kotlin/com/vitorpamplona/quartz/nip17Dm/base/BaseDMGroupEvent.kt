@@ -21,11 +21,11 @@
 package com.vitorpamplona.quartz.nip17Dm.base
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import kotlinx.collections.immutable.toImmutableSet
 
 @Immutable
@@ -37,7 +37,7 @@ open class BaseDMGroupEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : WrappedEvent(id, pubKey, createdAt, kind, tags, content, sig),
+) : Event(id, pubKey, createdAt, kind, tags, content, sig),
     ChatroomKeyable,
     NIP17Group,
     PubKeyHintProvider {

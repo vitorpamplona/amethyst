@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.layouts
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.unit.Velocity
+import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingBarNestedScroll
+import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingBarState
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -85,6 +87,7 @@ class DisappearingBarNestedScrollTest {
         state.bottomHeightOffset = -50f
         val connection = nsc(state)
 
+        // Reveal tracks the finger 1:1, so a 30px drag reveals 30px.
         connection.onPostScroll(Offset(0f, 30f), Offset(0f, 0f), NestedScrollSource.UserInput)
 
         assertEquals(-70f, state.topHeightOffset)
@@ -104,6 +107,22 @@ class DisappearingBarNestedScrollTest {
 
         assertEquals(-10f, state.topHeightOffset)
         assertEquals(-10f, state.bottomHeightOffset)
+    }
+
+    @Test
+    fun `revealing tracks the finger 1 to 1, matching the hide rate so the bar stays glued to content`() {
+        // Hiding a 40px drag moves the bars the full 40px...
+        val hiding = state(topLimit = 100f, bottomLimit = 100f)
+        nsc(hiding).onPostScroll(Offset(0f, -40f), Offset(0f, 0f), NestedScrollSource.UserInput)
+        assertEquals(-40f, hiding.topHeightOffset)
+
+        // ...and revealing the same 40px from fully hidden brings back the full 40px, so when the
+        // list returns to the top the bar is fully revealed with no blank band beneath it.
+        val revealing = state(topLimit = 100f, bottomLimit = 100f)
+        revealing.topHeightOffset = -100f
+        revealing.bottomHeightOffset = -100f
+        nsc(revealing).onPostScroll(Offset(0f, 40f), Offset(0f, 0f), NestedScrollSource.UserInput)
+        assertEquals(-60f, revealing.topHeightOffset)
     }
 
     @Test

@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
+import com.vitorpamplona.amethyst.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -128,6 +129,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.persistentListOf
@@ -306,9 +308,40 @@ private fun NewPostScreenBody(
                 }
 
                 Row {
-                    Notifying(postViewModel.pTags?.toImmutableList(), accountViewModel) {
+                    Notifying(
+                        baseMentions = postViewModel.pTags?.toImmutableList(),
+                        accountViewModel = accountViewModel,
+                        label = if (postViewModel.wantsPrivateNote) stringRes(R.string.private_note_visible_to) else null,
+                        showWhenEmpty = postViewModel.wantsPrivateNote,
+                        onAddUser = { postViewModel.wantsToAddNotifyUser = !postViewModel.wantsToAddNotifyUser },
+                    ) {
                         postViewModel.removeFromReplyList(it)
                     }
+                }
+
+                if (postViewModel.wantsToAddNotifyUser) {
+                    Spacer(modifier = StdVertSpacer)
+                    OutlinedThinPaddingTextField(
+                        state = postViewModel.notifyUserSearchText,
+                        onTextChanged = postViewModel::onNotifyUserSearchTextChanged,
+                        label = { Text(text = stringRes(R.string.notify_search_and_add_user)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = {
+                            Text(
+                                text = stringRes(R.string.zap_split_search_and_add_user_placeholder),
+                                color = MaterialTheme.colorScheme.placeholderText,
+                            )
+                        },
+                        singleLine = true,
+                    )
+                }
+
+                if (postViewModel.wantsPrivateNote && postViewModel.pTags.isNullOrEmpty()) {
+                    Text(
+                        text = stringRes(R.string.private_note_no_receivers),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
                 }
 
                 // Only show text input if no voice message is being posted
@@ -332,7 +365,11 @@ private fun NewPostScreenBody(
                             Box(
                                 modifier =
                                     Modifier.clickable {
-                                        postViewModel.wantsAnonymousPost = true
+                                        // Private notes are wrapped with the real key — the
+                                        // recipients must know who is talking to them.
+                                        if (!postViewModel.wantsPrivateNote) {
+                                            postViewModel.wantsAnonymousPost = true
+                                        }
                                     },
                             ) {
                                 BaseUserPicture(
@@ -708,7 +745,18 @@ private fun BottomRowActions(
             maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
         )
 
-        if (postViewModel.canUsePoll || postViewModel.canUseZapPoll) {
+        // Polls publish kinds that can't travel inside a private wrap, so the
+        // two toggles are mutually exclusive.
+        if (!postViewModel.wantsPoll && !postViewModel.wantsZapPoll) {
+            AddPrivateNoteButton(
+                isActive = postViewModel.wantsPrivateNote,
+                isLocked = postViewModel.privateNoteLocked,
+            ) {
+                postViewModel.togglePrivateNote()
+            }
+        }
+
+        if ((postViewModel.canUsePoll || postViewModel.canUseZapPoll) && !postViewModel.wantsPrivateNote) {
             AddPollButton(postViewModel.wantsPoll || postViewModel.wantsZapPoll) {
                 val isActive = postViewModel.wantsPoll || postViewModel.wantsZapPoll
                 if (isActive) {
@@ -738,7 +786,11 @@ private fun BottomRowActions(
             postViewModel.toggleExpirationDate()
         }
 
-        ScheduleAtButton(postViewModel.scheduledForSec != null, onScheduleClicked)
+        // Private wraps are built and sent immediately; scheduling them would
+        // require wrapping at publish time, so the option is hidden for now.
+        if (!postViewModel.wantsPrivateNote) {
+            ScheduleAtButton(postViewModel.scheduledForSec != null, onScheduleClicked)
+        }
 
         AddGeoHashButton(postViewModel.wantsToAddGeoHash) {
             postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
@@ -764,6 +816,33 @@ private fun BottomRowActionsPreview() {
     model.canUsePoll = true
     ThemeComparisonColumn {
         BottomRowActions(model)
+    }
+}
+
+@Composable
+private fun AddPrivateNoteButton(
+    isActive: Boolean,
+    isLocked: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = { onClick() },
+        enabled = !isLocked,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Lock,
+            contentDescription =
+                stringRes(
+                    id =
+                        when {
+                            isLocked -> R.string.private_note_locked
+                            isActive -> R.string.disable_private_note
+                            else -> R.string.private_note
+                        },
+                ),
+            modifier = Modifier.height(22.dp),
+            tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+        )
     }
 }
 

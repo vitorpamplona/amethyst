@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.io.encoding.Base64
 
@@ -45,7 +44,6 @@ class FileStorageEvent(
 
     companion object {
         const val KIND = 1064
-        const val ALT = "Binary data"
 
         fun decode(content: String): ByteArray? = runCatching { Base64.decode(content) }.getOrNull()
 
@@ -58,7 +56,6 @@ class FileStorageEvent(
             initializer: TagArrayBuilder<FileStorageEvent>.() -> Unit = {},
         ): EventTemplate<FileStorageEvent> =
             eventTemplate(KIND, encode(data), createdAt) {
-                alt(ALT)
                 mimeType?.let { mimeType(it) }
                 initializer()
             }

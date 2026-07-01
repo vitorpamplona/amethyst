@@ -22,9 +22,12 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -34,9 +37,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.IntentCompat
 import androidx.core.util.Consumer
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
@@ -50,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -59,9 +65,12 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.isSameRoute
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentScreen
 import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.ReplyCommentPostScreen
+import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageFileScreen
+import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.ProfileAppRecommendationsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.ArticlesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.BadgesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.award.AwardBadgeScreen
@@ -73,6 +82,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.metadat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.ArticleBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.PostBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.OldBookmarkListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.repositories.BookmarkedRepositoriesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.BrowserScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsScreen
@@ -107,17 +119,28 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.N
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.favorites.FavoriteAlgoFeedsListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabThemeWatcher
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FavoriteAppManifestPreloader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.BrowseEmojiSetsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.display.EmojiPackScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.ListOfEmojiPacksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.metadata.EmojiPackMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.membershipManagement.EmojiPackSelectionScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.membershipManagement.MyEmojiListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteAppsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.NostrAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.FollowPackFeedScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.FollowPacksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitNewIssueScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryCodeScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryIssuesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryPullsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.GitRepositoriesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
@@ -139,13 +162,18 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.LongsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.AddToMusicPlaylistSheet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.MusicPlaylistsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.MusicTracksScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.NewMusicPlaylistScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.NewMusicTrackScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppDetailScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.NappletsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby.NestLobbyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListPickFollowsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListSelectUserScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.NsitesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.PicturesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pinnednotes.PinnedNotesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastEpisodesScreen
@@ -156,10 +184,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.ProductsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.SendPaymentScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.PublicChatsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.RelayFeedScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relayauth.RelayAuthSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSyncScreen
@@ -170,6 +200,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish.VanishEventsS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts.ScheduledPostsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AllSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AudioVisualizerSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BlockedUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BottomBarSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.CallSettingsScreen
@@ -193,11 +224,15 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.ShortsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.SoftwareAppDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.SoftwareAppsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.UrlPostScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.UrlScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddCashuWalletScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddClinkDebitWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddNwcWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddWalletScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuMintRecommendationsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuMintsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuWalletSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainTransactionsScreen
@@ -208,7 +243,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletReceiveScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletSendScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletTransactionsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.wizard.CashuWalletCreatedScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.wizard.CashuWalletWizardScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.WebBookmarksScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.NewWorkoutScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -225,7 +264,27 @@ fun AppNavigation(
     val nav = rememberNav()
 
     AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
-        BuildNavigation(accountViewModel, nav)
+        Box(Modifier.fillMaxSize()) {
+            BuildNavigation(accountViewModel, nav)
+            // Pull each pinned nsite/napplet's manifest into LocalCache (and keep a device-local copy)
+            // so its favorite resolves as reliably as a pinned web app's URL — the data the embedded
+            // preloader below and the full-screen launcher both need. Not API-gated: every device's
+            // launcher benefits, and it's the only preload step that runs below API 30.
+            FavoriteAppManifestPreloader(accountViewModel)
+            // Persistent layer that keeps pinned embedded tabs (browser / nsite / napplet) warm by
+            // holding their surfaces attached. Below the drawer (drawn by the layout above) and below
+            // dialogs (separate windows). API 30+ only, matching the embedded-surface feature.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val bottomBarItems by accountViewModel.settings.uiSettingsFlow.bottomBarItems
+                    .collectAsStateWithLifecycle()
+                EmbeddedTabLayer(bottomBarItems.favoriteIds())
+                // Warm every pinned tab at startup so the first tap is instant (content already local).
+                EmbeddedTabPreloader(accountViewModel)
+                // Rebuild the warm surfaces in the new theme when the app's DARK/LIGHT preference flips
+                // (an embed WebView's theme is fixed at construction, so it can't follow a live switch).
+                EmbeddedTabThemeWatcher()
+            }
+        }
     }
 
     NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)
@@ -273,9 +332,21 @@ fun BuildNavigation(
         composableFromEndArgs<Route.EditCommunity> { EditCommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Badges> { BadgesScreen(accountViewModel, nav) }
         composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.ProfileAppRecommendations> { ProfileAppRecommendationsScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.GitRepositories> { GitRepositoriesScreen(accountViewModel, nav) }
         composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Nsites> { NsitesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Browser> { BrowserScreen(accountViewModel, nav) }
+        composableFromEnd<Route.FavoriteApps> { FavoriteAppsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.WebApp> { WebAppScreen(it.url, accountViewModel, nav) }
+        composableFromEndArgs<Route.NostrApp> { NostrAppScreen(it.coordinate, accountViewModel, nav) }
+        composableFromEnd<Route.ConnectedApps> { ConnectedAppsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.ConnectedAppDetail> { ConnectedAppDetailScreen(it.coordinate, accountViewModel, nav) }
+        composableFromEnd<Route.RelayAuthSettings> { RelayAuthSettingsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.SoftwareAppDetail> { SoftwareAppDetailScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Calendars> { CalendarsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CalendarCollections> { CalendarCollectionsScreen(accountViewModel, nav) }
@@ -303,6 +374,7 @@ fun BuildNavigation(
         composableFromEnd<Route.Podcasts> { PodcastsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.Podcast> { PodcastScreen(it.pubkey, accountViewModel, nav) }
         composableFromEndArgs<Route.NewMusicTrack> { NewMusicTrackScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
+        composableFromEndArgs<Route.NewMusicPlaylist> { NewMusicPlaylistScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
         composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
         composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
         composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
@@ -315,9 +387,14 @@ fun BuildNavigation(
         composableFromEndArgs<Route.WalletDetail> { WalletDetailScreen(it.walletId, accountViewModel, nav) }
         composableFromEnd<Route.WalletAdd> { AddWalletScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.WalletAddNwc> { AddNwcWalletScreen(accountViewModel, nav, it.nip47) }
-        composableFromEnd<Route.WalletAddCashu> { AddCashuWalletScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CashuWalletMints> { CashuMintsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.WalletAddClinkDebit> { AddClinkDebitWalletScreen(accountViewModel, nav, it.ndebit) }
         composableFromEnd<Route.CashuWallet> { CashuWalletScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CashuWalletWizard> { CashuWalletWizardScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CashuWalletCreated> { CashuWalletCreatedScreen(nav) }
         composableFromEnd<Route.CashuWalletSettings> { CashuWalletSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CashuMintRecommendations> { CashuMintRecommendationsScreen(accountViewModel, nav) }
+        composableFromBottomArgs<Route.SendPayment> { SendPaymentScreen(it.userHex, it.method, it.lnAddressOverride, it.btcAddressOverride, accountViewModel, nav) }
 
         composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
@@ -368,6 +445,7 @@ fun BuildNavigation(
         composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
         composableFromEnd<Route.OldBookmarks> { OldBookmarkListScreen(accountViewModel, nav) }
         composableFromEnd<Route.PinnedNotes> { PinnedNotesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.BookmarkedRepositories> { BookmarkedRepositoriesScreen(accountViewModel, nav) }
         composableFromEnd<Route.WebBookmarks> { WebBookmarksScreen(accountViewModel, nav) }
         composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
         composableFromEnd<Route.ScheduledPosts> { ScheduledPostsScreen(accountViewModel, nav) }
@@ -375,6 +453,7 @@ fun BuildNavigation(
         composableFromEnd<Route.ComposeSettings> { ComposeSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.AudioVisualizerSettings> { AudioVisualizerSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.BottomBarSettings> { BottomBarSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.HomeTabsSettings> { HomeTabsSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ProfileUiSettings> { ProfileUiSettingsScreen(accountViewModel, nav) }
@@ -404,9 +483,12 @@ fun BuildNavigation(
         composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
         composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
         composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
+        composableFromEndArgs<Route.ShareNoteAsImage> { ShareNoteAsImageScreen(it.id, accountViewModel, nav) }
+        composableFromEndArgs<Route.ShareNoteAsImageFile> { ShareNoteAsImageFileScreen(it.id, accountViewModel, nav) }
         composableFromEndArgs<Route.ContactListUsers> { ContactListUsersScreen(it.noteId, accountViewModel, nav) }
         composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
+        composableFromEndArgs<Route.Url> { UrlScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.RelayFeed> { RelayFeedScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.ChessGame> { ChessGameScreen(it.gameId, accountViewModel, nav) }
         composableFromEndArgs<Route.RelayInfo> { RelayInformationScreen(it.url, accountViewModel, nav) }
@@ -414,6 +496,10 @@ fun BuildNavigation(
         composableFromEndArgs<Route.RelayMembers> { RelayMembersScreen(it.url, accountViewModel, nav) }
         composableFromEndArgs<Route.Community> { CommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEndArgs<Route.GitRepository> { GitRepositoryScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+        composableFromEndArgs<Route.GitRepositoryCode> { GitRepositoryCodeScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+        composableFromEndArgs<Route.GitRepositoryIssues> { GitRepositoryIssuesScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+        composableFromEndArgs<Route.GitRepositoryPulls> { GitRepositoryPullsScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+        composableFromEndArgs<Route.GitRepositoryNewIssue> { GitNewIssueScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEndArgs<Route.FollowPack> { FollowPackFeedScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
 
         composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.attachment, it.replyId, it.draftId, it.expiresDays, accountViewModel, nav) }
@@ -496,9 +582,30 @@ fun BuildNavigation(
             )
         }
 
+        composableFromBottomArgs<Route.NewWorkout> {
+            NewWorkoutScreen(
+                prefill = it,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
         composableFromBottomArgs<Route.HashtagPost> {
             HashtagPostScreen(
                 hashtag = it.hashtag,
+                message = it.message,
+                attachment = it.attachment,
+                replyId = it.replyTo,
+                quoteId = it.quote,
+                draftId = it.draft,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.UrlPost> {
+            UrlPostScreen(
+                url = it.url,
                 message = it.message,
                 attachment = it.attachment,
                 replyId = it.replyTo,

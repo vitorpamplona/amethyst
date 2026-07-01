@@ -14,7 +14,8 @@ Join the social network you control.
 [![PlayStore downloads](https://img.shields.io/endpoint?color=green&logo=google-play&logoColor=green&url=https%3A%2F%2Fplay.cuzi.workers.dev%2Fplay%3Fi%3Dcom.vitorpamplona.amethyst%26gl%3DUS%26hl%3Den%26l%3DPlayStore%26m%3D%24shortinstalls)](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
 
 [![Last Version](https://img.shields.io/github/release/vitorpamplona/amethyst.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://github.com/vitorpamplona/amethyst)
-[![JitPack version](https://jitpack.io/v/vitorpamplona/amethyst.svg)](https://jitpack.io/#vitorpamplona/amethyst)
+[![Maven Central](https://img.shields.io/maven-central/v/com.vitorpamplona.quartz/quartz?label=Quartz%20%28Maven%20Central%29&labelColor=27303D&color=0877d2)](https://central.sonatype.com/artifact/com.vitorpamplona.quartz/quartz)
+[![JitPack snapshots](https://img.shields.io/badge/Quartz%20snapshots-JitPack-27303D?labelColor=27303D&color=0877d2)](https://jitpack.io/#vitorpamplona/amethyst)
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/amethyst/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/amethyst/actions/workflows/build.yml)
 [![License: Apache-2.0](https://img.shields.io/github/license/vitorpamplona/amethyst?labelColor=27303D&color=0877d2)](/LICENSE)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/vitorpamplona/amethyst)
@@ -269,18 +270,16 @@ For the Play build:
 
 ## Deploying
 
-Full release + bootstrap runbooks (Android AAB upload, desktop packaging,
-Homebrew cask, Winget manifest, Apple Developer signing budget time-box) live
-in [BUILDING.md § Release runbook](BUILDING.md#release-runbook) and
-[BUILDING.md § Bootstrap runbook (one-time)](BUILDING.md#bootstrap-runbook-one-time).
+A release is one tag push. Bump `app` and `appCode` in
+`gradle/libs.versions.toml`, then `git tag -s vX.Y.Z && git push --tags` — the
+`Create Release Assets` workflow builds and signs every Android, desktop, CLI,
+and Maven artifact, and Homebrew + Winget auto-bump on stable tags.
 
-TL;DR for cutting a release:
-
-1. Bump `app` in `gradle/libs.versions.toml` (e.g. `"1.08.1"`)
-2. Bump `versionCode` in `amethyst/build.gradle`
-3. `git commit -am "chore(release): 1.08.1" && git tag -s v1.08.1 && git push --tags`
-4. Wait for `Create Release Assets` workflow — 20 Android assets + 8 desktop assets go live on GH Release; Homebrew + Winget auto-bump on stable tags
-5. Upload AAB to Play Store manually (existing step)
+- **[BUILDING.md](BUILDING.md)** — everything any fork needs: build commands,
+  the CI pipeline, the secrets it requires, and the distribution channels.
+- **[RELEASE_OPS.md](RELEASE_OPS.md)** — the Amethyst maintainers'
+  ship checklist: the manual Play Store upload, Zapstore `zsp publish`, F-Droid
+  pull, and release-notes publishing.
 
 ## Using the Quartz library
 
@@ -298,19 +297,42 @@ repositories {
 Add the following line to your `commonMain` dependencies:
 
 ```gradle
-implementation('com.vitorpamplona.quartz:quartz:1:05.0')
+implementation('com.vitorpamplona.quartz:quartz:1.12.6')
 ```
 
 Variations to each platform are also available:
 
 ```gradle
-implementation('com.vitorpamplona.quartz:quartz-android:1:05.0')
-implementation('com.vitorpamplona.quartz:quartz-jvm:1:05.0')
-implementation('com.vitorpamplona.quartz:quartz-iosarm64:1:05.0')
-implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:1:05.0')
+implementation('com.vitorpamplona.quartz:quartz-android:1.12.6')
+implementation('com.vitorpamplona.quartz:quartz-jvm:1.12.6')
+implementation('com.vitorpamplona.quartz:quartz-iosarm64:1.12.6')
+implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:1.12.6')
 ```
 
 Check versions on [MavenCentral](https://central.sonatype.com/search?q=com.vitorpamplona.quartz)
+
+#### Snapshots (JitPack)
+
+Tagged releases go to Maven Central. For **pre-release / snapshot** builds —
+e.g. to test an unreleased fix straight from `main` or a feature branch — use
+[JitPack](https://jitpack.io/#vitorpamplona/amethyst), which builds the module
+on demand from any git ref:
+
+```gradle
+repositories {
+    maven { url = uri("https://jitpack.io") }
+}
+
+dependencies {
+    // version can be a tag, a commit hash, or "<branch>-SNAPSHOT"
+    implementation("com.github.vitorpamplona.amethyst:quartz:main-SNAPSHOT")
+}
+```
+
+The resolvable refs and the exact module coordinates are listed on the
+[JitPack page](https://jitpack.io/#vitorpamplona/amethyst). Prefer a Maven
+Central release for anything shipping to production — JitPack snapshots are not
+guaranteed stable.
 
 ### How to use
 

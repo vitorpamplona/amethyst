@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli
 
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.amethyst.cli.secrets.BunkerFile
 import com.vitorpamplona.amethyst.cli.secrets.IdentityFile
 import com.vitorpamplona.amethyst.cli.secrets.IdentitySecret
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
@@ -48,9 +49,14 @@ data class Identity(
     val pubKeyHex: String,
     val nsec: String?,
     val npub: String,
+    val bunker: Bunker? = null,
 ) {
     @get:com.fasterxml.jackson.annotation.JsonIgnore
     val hasPrivateKey: Boolean get() = privKeyHex != null
+
+    /** Whether this identity can sign — directly (local key) or via a bunker. */
+    @get:com.fasterxml.jackson.annotation.JsonIgnore
+    val canSign: Boolean get() = privKeyHex != null || bunker != null
 
     fun keyPair(): KeyPair =
         if (privKeyHex != null) {
@@ -59,10 +65,64 @@ data class Identity(
             KeyPair(pubKey = pubKeyHex.hexToByteArray())
         }
 
+    /** The local transport keypair for a NIP-46 bunker account. */
+    fun clientKeyPair(): KeyPair = KeyPair(privKey = bunker!!.clientPrivKeyHex.hexToByteArray())
+
     companion object {
         fun create(): Identity = fromPrivateKey(KeyPair().privKey!!)
 
         fun fromNsec(nsec: String): Identity = fromPrivateKey(nsec.bechToBytes())
+
+        /**
+         * Parse a `bunker://<remote-pubkey>?relay=…&secret=…` URI into a
+         * remote-signer identity. The account acts as `remote-pubkey` (the
+         * key the bunker signs with); a fresh local keypair is minted for the
+         * NIP-46 transport. Mirrors the parsing in Quartz's
+         * `NostrSignerRemote.fromBunkerUri`.
+         */
+        fun fromBunkerUri(uri: String): Identity {
+            require(uri.startsWith("bunker://")) { "not a bunker:// uri" }
+            val parts = uri.removePrefix("bunker://").split("?", limit = 2)
+            val remotePubkey = parts[0].lowercase()
+            require(remotePubkey.length == 64 && remotePubkey.all { it in "0123456789abcdef" }) {
+                "bunker uri must carry a 64-hex remote pubkey"
+            }
+            val relays = mutableListOf<String>()
+            var secret: String? = null
+            parts.getOrNull(1)?.split("&")?.forEach { param ->
+                val kv = param.split("=", limit = 2)
+                if (kv.size < 2) return@forEach
+                // Relay/secret params are percent-encoded by spec-compliant
+                // emitters (nak does: `relay=wss%3A%2F%2F…`), so decode them.
+                val value = java.net.URLDecoder.decode(kv[1], "UTF-8")
+                when (kv[0]) {
+                    "relay" -> relays.add(value)
+                    "secret" -> secret = value
+                }
+            }
+            require(relays.isNotEmpty()) { "bunker uri must carry at least one relay" }
+            return bunkerIdentity(remotePubkey, relays, secret, KeyPair().privKey!!.toHexKey())
+        }
+
+        /**
+         * Build a remote-signer identity from already-resolved parts (used by
+         * the NostrConnect flow once the signer pubkey is discovered). The
+         * account acts as [signerPubkey]; [clientPrivKeyHex] is the local
+         * transport key.
+         */
+        fun bunkerIdentity(
+            signerPubkey: String,
+            relays: List<String>,
+            connectSecret: String?,
+            clientPrivKeyHex: String,
+        ): Identity =
+            Identity(
+                privKeyHex = null,
+                pubKeyHex = signerPubkey,
+                nsec = null,
+                npub = signerPubkey.hexToByteArray().toNpub(),
+                bunker = Bunker(signerPubkey, relays, connectSecret, clientPrivKeyHex),
+            )
 
         fun fromPrivateKey(priv: ByteArray): Identity {
             val pub = KeyPair(privKey = priv).pubKey
@@ -93,15 +153,30 @@ data class Identity(
             pubKeyHex: String,
             npub: String,
             privKeyHex: String?,
+            bunker: Bunker? = null,
         ): Identity =
             Identity(
                 privKeyHex = privKeyHex,
                 pubKeyHex = pubKeyHex,
                 nsec = privKeyHex?.hexToByteArray()?.toNsec(),
                 npub = npub,
+                bunker = bunker,
             )
     }
 }
+
+/**
+ * In-memory NIP-46 bunker connection. [clientPrivKeyHex] is the local
+ * transport key (persisted via the [SecretStore], not in the clear);
+ * [remotePubkey] is the user key the bunker signs as.
+ */
+data class Bunker(
+    val remotePubkey: String,
+    val relays: List<String>,
+    val connectSecret: String?,
+    @get:com.fasterxml.jackson.annotation.JsonIgnore
+    val clientPrivKeyHex: String,
+)
 
 /** Opaque per-run state (subscription cursors, etc). Stored alongside identity. */
 data class RunState(
@@ -133,6 +208,7 @@ class DataDir(
     val identityFile = File(root, "identity.json")
     val stateFile = File(root, "state.json")
     val aliasesFile = File(root, "aliases.json")
+    val cashuFile = File(root, "cashu.json")
     val marmotDir = File(root, "marmot")
     val groupsDir = File(marmotDir, "groups")
     val keyPackageBundleFile = File(marmotDir, "keypackages.bundle")
@@ -165,6 +241,18 @@ class DataDir(
      */
     fun loadIdentityOrNull(): Identity? {
         val file = loadIdentityFileOrNull() ?: return null
+        // Bunker (NIP-46) account: `secret` holds the local transport key, and
+        // `bunker` records the remote signer. The account has no user privkey.
+        file.bunker?.let { b ->
+            val clientPriv = file.secret?.let { secrets.resolve(it) } ?: file.privKeyHex
+            requireNotNull(clientPriv) { "bunker identity is missing its transport key" }
+            return Identity.fromDisk(
+                pubKeyHex = file.pubKeyHex,
+                npub = file.npub,
+                privKeyHex = null,
+                bunker = Bunker(b.remotePubkey, b.relays, b.connectSecret, clientPriv),
+            )
+        }
         val privHex: String? =
             when {
                 file.secret != null -> secrets.resolve(file.secret)
@@ -182,6 +270,21 @@ class DataDir(
      * to disk. Read-only identities persist `secret: null`.
      */
     fun saveIdentity(id: Identity) {
+        if (id.bunker != null) {
+            // Persist the local transport key under its own pubkey; record the
+            // remote signer connection alongside it.
+            val clientPub = id.clientKeyPair().pubKey.toHexKey()
+            val secret = secrets.store(clientPub, id.bunker.clientPrivKeyHex)
+            val file =
+                IdentityFile(
+                    pubKeyHex = id.pubKeyHex,
+                    npub = id.npub,
+                    secret = secret,
+                    bunker = BunkerFile(id.bunker.remotePubkey, id.bunker.relays, id.bunker.connectSecret),
+                )
+            SecureFileIO.writeTextAtomic(identityFile, Output.mapper.writeValueAsString(file))
+            return
+        }
         val secret: IdentitySecret? = id.privKeyHex?.let { secrets.store(id.pubKeyHex, it) }
         val file = IdentityFile(pubKeyHex = id.pubKeyHex, npub = id.npub, secret = secret)
         SecureFileIO.writeTextAtomic(identityFile, Output.mapper.writeValueAsString(file))

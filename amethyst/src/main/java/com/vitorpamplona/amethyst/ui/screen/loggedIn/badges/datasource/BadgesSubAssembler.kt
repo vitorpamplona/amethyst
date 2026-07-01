@@ -42,15 +42,11 @@ class BadgesSubAssembler(
         key: BadgesQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        val listName = key.listName()
+        // "Mine" needs no special-case: the shared TopFilter.Mine flow now resolves to an author
+        // filter scoped to the user, so followsPerRelay() already carries authors=[me].
         val defaultSince = key.feedStates.badgesFeed.lastNoteCreatedAtIfFilled()
 
-        return if (listName == TopFilter.Mine) {
-            val outbox = key.account.outboxRelays.flow.value
-            filterBadgesMine(key.account.userProfile().pubkeyHex, outbox, since)
-        } else {
-            makeBadgesFilter(key.followsPerRelay(), since, defaultSince)
-        }
+        return makeBadgesFilter(key.followsPerRelay(), since, defaultSince)
     }
 
     override fun user(key: BadgesQueryState) = key.account.userProfile()

@@ -197,6 +197,170 @@ $ amy relay publish-lists      # broadcast updated kind:10002/10050/10051
 
 ## Commands
 
+### Primitives (stateless — no account or network)
+
+Army-knife verbs that operate purely on their arguments. They never touch
+`~/.amy/`, so they run with zero state — handy for scripting and piping
+(`amy decode … | jq`, `… | amy verify`).
+
+| Command | What it does |
+|---|---|
+| `amy decode ENTITY` | Decode a NIP-19/21 entity (`npub`/`nsec`/`note`/`nevent`/`nprofile`/`naddr`/`nrelay`/`nembed`) to JSON. Accepts an optional `nostr:` prefix. |
+| `amy encode npub HEX` / `nsec HEX` / `note ID` | Encode a single 32-byte hex value into the matching NIP-19 entity. |
+| `amy encode nevent ID [--author HEX] [--kind N] [--relay URL[,URL…]]` | Encode an event pointer with optional author/kind/relay hints. |
+| `amy encode nprofile HEX [--relay URL[,URL…]]` | Encode a profile pointer with optional relay hints. |
+| `amy encode naddr --kind N --pubkey HEX --identifier D [--relay URL[,URL…]]` | Encode an addressable-event (`a` tag) pointer. |
+| `amy verify [EVENT-JSON]` | Check an event's id hash and signature. Reads stdin when the argument is omitted or `-`. Reports `id_ok` + `signature_ok` separately. |
+| `amy key generate` | Mint a fresh keypair (`nsec` + `npub` + hex). Does not persist — use `init`/`login` for that. |
+| `amy key public NSEC\|HEX` | Derive the public key from a secret key. |
+| `amy key encrypt NSEC\|HEX --password X` | NIP-49 encrypt a secret key to an `ncryptsec1…`. |
+| `amy key decrypt NCRYPTSEC --password X` | NIP-49 decrypt back to nsec/hex/npub. |
+| `amy key validate NPUB\|HEX` | Parse-check a public key. Prints `{valid, pubkey, npub}` or `{valid:false}` — never errors, so scripts branch on the field. |
+| `amy filter [filter flags]` | Assemble and print a NIP-01 filter JSON from the same flags `fetch`/`subscribe` use — no query is sent. |
+| `amy nip N` / `amy nip list` | Look up a NIP — the `nostr-protocol/nips` repo first, then a Nostr wiki/long-form fallback. `list` fetches the index. |
+| `amy kind N` / `amy kind NAME` | Look up an event kind's label + defining NIP (number), or search labels by name. Backed by quartz's `KindNames` registry. |
+| `amy namecoin resolve IDENT [--server HOST:PORT[:tcp][,…]] [--timeout SECS]` | Resolve a Namecoin identifier (`.bit`, `d/`, `id/`, `alice@example.bit`) to a Nostr pubkey + relays via the Namecoin blockchain. Stateless: talks directly to one or more ElectrumX servers over TLS (`:tcp` for plaintext), no account needed. Reuses the same NIP-05-Namecoin parser, server set, and pinned trust store as the Android and Desktop apps. |
+| `amy namecoin servers` | Print the default ElectrumX server list (host, port, TLS flag). |
+| `amy relay info URL` | Fetch and print a relay's NIP-11 information document. |
+
+### Remote signing (NIP-46 bunker)
+
+Two amy processes can talk: one **hosts** a bunker with its local key; the other **logs in** through it and signs remotely (events come out authored by the host's key).
+
+| Command | What it does |
+|---|---|
+| `amy bunker [--relay URL[,URL…]] [--secret S] [--timeout SECS]` | Run a NIP-46 remote signer for the active local-key account. Prints a `bunker://…` URI, then services sign / nip04 / nip44 / get_public_key / ping requests until interrupted (or `--timeout`). |
+| `amy login bunker://PUBKEY?relay=…&secret=…` | Log in through a bunker (signer advertises). Mints a local transport keypair; the account then acts as PUBKEY and every signing/encryption call is delegated to the remote signer. Percent-encoded relay params are decoded. |
+| `amy bunker connect nostrconnect://…` | Client-initiated (NostrConnect) flow, signer side: ack a client's offer (echo its secret) and service its requests. |
+| `amy login --nostrconnect [--relay URL[,URL…]] [--name N] [--timeout SECS]` | Client-initiated flow, client side: print a `nostrconnect://` offer, wait for a signer to connect, then persist a bunker account that acts as the signer's key. |
+
+Interop-tested against the real [`nak`](https://github.com/fiatjaf/nak) binary:
+- **bunker:// both directions** — `amy login bunker://` ⇄ `nak bunker`, and `nak event --sec bunker://` ⇄ `amy bunker`.
+- **nostrconnect:// client** — `amy login --nostrconnect` ⇄ `nak bunker connect` (amy signs, event authored by nak's key).
+
+Supports `connect` (secret-checked), `get_public_key`, `get_relays`, `sign_event`, `nip04_encrypt/decrypt`, `nip44_encrypt/decrypt`, `ping`. When a bunker answers with an `auth_url` challenge, amy prints the authorization URL to stderr and keeps waiting for the real response (open the URL in a browser to authorize).
+
+Example (two terminals, shared `$HOME`):
+
+```bash
+# terminal 1 — host alice's key as a bunker
+amy --account alice bunker --relay wss://relay.example --secret s3cret
+#   → bunker://<alice-pubkey>?relay=wss://relay.example/&secret=s3cret
+
+# terminal 2 — bob signs through it
+amy --account bob login 'bunker://<alice-pubkey>?relay=wss://relay.example/&secret=s3cret'
+amy --account bob event --kind 1 --content "signed remotely"   # authored by alice
+```
+
+### Raw events
+
+| Command | What it does |
+|---|---|
+| `amy event --kind N [--content TEXT] [--tags JSON] [--created-at TS]` | Build + sign an arbitrary event with the active account. Prints the signed event. `--tags` is a JSON array-of-arrays, e.g. `'[["t","nostr"],["e","<id>"]]'`. |
+| `amy event … --publish` / `--relay URL[,URL…]` | As above, then broadcast (to the outbox, or to the given relays). |
+| `amy publish [EVENT-JSON] [--relay URL[,URL…]]` | Broadcast a pre-made signed event (verified first). Reads stdin when the argument is omitted or `-`. |
+
+### Queries
+
+Filter flags are shared by `fetch` and `subscribe`: `--kind K[,K]`, `--author U[,U]` (npub/nprofile/hex), `--id ID[,ID]` (note/nevent/naddr/hex), `--tag e=ID,p=PK,t=hashtag`, `--since TS`, `--until TS`, `--limit N`, `--search TEXT`, `--relay URL[,URL…]`. Relays default to your outbox, then the bootstrap set.
+
+| Command | What it does |
+|---|---|
+| `amy fetch [filter flags] [--timeout SECS]` | One-shot query — collect until every relay sends EOSE (or `--timeout`, default 8s), dedupe, sort newest-first, print and exit. `--limit` defaults to 100. |
+| `amy fetch CODE [--timeout SECS]` | Code mode — pass a single `nevent`/`naddr`/`nprofile`/`npub`/`note` or `name@domain`. Resolves relays the outbox way: the hints embedded in the code **plus** the author's NIP-65 write relays (draining their kind:10002 on a cache miss), exactly how the app opens a shared link. |
+| `amy subscribe [filter flags] [--timeout SECS]` | Live stream — print each matching event as it arrives (NDJSON under `--json`). Runs until `--timeout` SECS or until interrupted. |
+| `amy count [filter flags] [--timeout SECS]` | NIP-45 COUNT — per-relay match counts, no event download. |
+| `amy outbox USER [--refresh] [--timeout SECS]` | Show USER's NIP-65 read/write relays (outbox model). Cache-first; `--refresh` forces a relay drain. |
+| `amy sync --relay URL [filter flags] [--down] [--up]` | NIP-77 Negentropy reconcile between the local store and a relay. `--down` (default) pulls events we lack; `--up` pushes events the relay lacks; both for bidirectional. |
+
+### Encryption
+
+| Command | What it does |
+|---|---|
+| `amy encrypt --to USER [TEXT] [--nip04]` | NIP-44 (default) or NIP-04 encrypt with the active account's key. Reads stdin when TEXT is omitted or `-`. USER accepts npub/nprofile/hex/NIP-05. |
+| `amy decrypt --from USER [CIPHERTEXT] [--nip04]` | Inverse of `encrypt`. |
+| `amy gift wrap --to USER [EVENT-JSON] [--relay …]` | NIP-59: seal a signed inner event for USER and wrap it in a kind:1059 gift wrap. Prints the wrap; `--relay` also broadcasts it. |
+| `amy gift unwrap [GIFTWRAP-JSON]` | Decrypt + unseal a kind:1059 wrap addressed to the active account; prints the inner event. |
+
+### Git (NIP-34)
+
+nak's `clone`/`push`/`pull` (git-packfile transport over relays/GRASP) are out of scope — these are the metadata + collaboration events.
+
+| Command | What it does |
+|---|---|
+| `amy git announce --name N [--description D] [--clone URL[,URL]] [--web URL[,URL]] [--relay URL[,URL]] [--maintainer HEX[,HEX]] [--hashtag T[,T]] [--earliest-commit C] [--d ID]` | Publish a kind:30617 repository announcement. |
+| `amy git list [USER]` | List a user's repo announcements (defaults to self). |
+| `amy git show NADDR\|kind:pubkey:id` | Print one repo announcement (cache-first). |
+| `amy git issue NADDR\|coords --subject S [BODY] [--hashtag T[,T]]` | Publish a kind:1621 issue against a repo. BODY from arg or stdin. |
+
+### Podcasts (NIP-F4)
+
+| Command | What it does |
+|---|---|
+| `amy podcast metadata --title T --image URL --description D [--website URL[,URL]]` | Publish kind:10154 show metadata (replaceable). |
+| `amy podcast publish --title T --description D --audio URL[,URL] [--audio-type MIME] [--image URL] [--content MD]` | Publish a kind:54 episode. |
+| `amy podcast list [USER] [--limit N]` | List a user's show metadata + episodes. |
+
+### Blossom blobs (NIP-B7)
+
+| Command | What it does |
+|---|---|
+| `amy blossom upload --server URL FILE [--mime-type M]` | Upload a file (BUD-01, authed). Prints the blob URL + sha256. |
+| `amy blossom download URL [--out FILE]` | Download a blob (public). Accepts a full URL, or a `HASH` plus `--server URL`. |
+| `amy blossom list --server URL [USER]` | List a user's blobs (BUD-04). USER defaults to the active account. |
+| `amy blossom delete HASH --server URL` | Delete a blob you own (BUD-02). |
+| `amy blossom check --server URL HASH[,HASH]` | HEAD-check the server has each blob; exit 1 if any is missing. |
+| `amy blossom mirror --server URL SOURCE-URL` | Ask the server to mirror a blob from SOURCE-URL (BUD-04). |
+
+### Cashu wallet (NIP-60 / NIP-61)
+
+A NIP-60 ecash wallet + NIP-61 nutzaps, driven by the **same** shared
+`commons` `CashuWalletOps` / `CashuWalletReader` the Android wallet runs — so
+amy's on-relay events match the app's. NUT-13 counters persist in
+`~/.amy/<account>/cashu.json`. `mint ping`/`info` are stateless (no account).
+
+| Command | What it does |
+|---|---|
+| `amy cashu wallet create [--mint URL] [--mints a,b] [--privkey HEX] [--relay r1,r2]` | Publish a kind:17375 wallet + kind:10019 nutzap info. Advertises your outbox relays for nutzaps unless `--relay` overrides. |
+| `amy cashu wallet show` | P2PK pubkey, mints, balance, per-mint balances, proof/history/pending counts. |
+| `amy cashu wallet export-key` | Decrypt and print the wallet's P2PK private key. |
+| `amy cashu wallet destroy` | Withdraw the nutzap advertisement and NIP-09 delete the wallet (leaves token events — the ecash still lives at the mint). |
+| `amy cashu balance [--mint URL]` | Spendable balance from the local store (optionally one mint). |
+| `amy cashu mint ping URL` / `info URL` | Stateless `/v1/info` probe (name/pubkey/version) / full DTO. |
+| `amy cashu receive ln SATS [--mint URL]` | Request a mint quote; prints the bolt11 + kind:7374 quote. |
+| `amy cashu receive complete QUOTE_ID` / `resume QUOTE_ID` | Poll the quote; once the invoice is settled, mint proofs (kind:7375 + kind:7376). |
+| `amy cashu receive token TOKEN` | Redeem a `cashuB…` token into the wallet. |
+| `amy cashu receive nutzap-sweep [--mint URL]` | Redeem inbound NIP-61 nutzaps locked to your wallet key. |
+| `amy cashu send ln INVOICE [--mint URL]` | Melt proofs to pay a bolt11 (scrubs stale proofs first). |
+| `amy cashu send token SATS [--mint URL] [--memo S]` | Export a `cashuB…` token of SATS. |
+| `amy cashu send nutzap USER SATS [--zapped EVENT_ID] [--message S]` | Send a P2PK-locked nutzap to USER (resolves their kind:10019). |
+| `amy cashu maintenance scrub [--mint URL]` | NUT-07 + NIP-09 prune of spent proofs. |
+| `amy cashu maintenance restore MINT_URL` | NUT-09 restore unspent proofs from the wallet seed. |
+| `amy cashu maintenance migrate-keysets [--mint URL]` | Consolidate proofs onto each mint's active keyset. |
+| `amy cashu mint-rec show [--author NPUB]` / `add URL [--dtag X] [--review T]` / `remove EVENT_ID` | NIP-87 mint recommendations (kind:38000). |
+
+### Relay management — admin (NIP-86)
+
+Signs a NIP-98 request with the active account and POSTs it to the relay's
+HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
+(the same path Amethyst's relay-management screen runs).
+
+| Command | What it does |
+|---|---|
+| `amy admin RELAY supported-methods` | List the NIP-86 methods the relay implements. |
+| `amy admin RELAY ban-pubkey HEX [--reason R]` / `unban-pubkey HEX` / `list-banned-pubkeys` | Pubkey ban list. |
+| `amy admin RELAY allow-pubkey HEX [--reason R]` / `unallow-pubkey HEX` / `list-allowed-pubkeys` | Pubkey allow list. |
+| `amy admin RELAY ban-event ID [--reason R]` / `allow-event ID` / `list-banned-events` / `list-needing-moderation` | Event moderation. |
+| `amy admin RELAY allow-kind N` / `disallow-kind N` / `list-allowed-kinds` | Kind allow list. |
+| `amy admin RELAY block-ip IP [--reason R]` / `unblock-ip IP` / `list-blocked-ips` | IP block list. |
+| `amy admin RELAY change-name S` / `change-description S` / `change-icon URL` | Relay metadata. |
+
+### Run a relay — serve
+
+| Command | What it does |
+|---|---|
+| `amy serve [--host H] [--port N] [--path P] [--db FILE] [--admin NPUBS]` | Run a Nostr relay by embedding **geode** (the standalone Ktor relay on quartz's relay-server code). In-memory by default; `--db FILE` for SQLite. The active account is always an admin, so `amy admin ws://host:port …` works against it. Blocks until interrupted. |
+
 ### Identity
 
 | Command | What it does |
@@ -243,6 +407,21 @@ $ amy relay publish-lists      # broadcast updated kind:10002/10050/10051
 | `amy marmot message list GID [--limit N]` | Decrypted inner events, oldest first. |
 | `amy marmot message react GID EVENT_ID EMOJI` | Publish a kind:7 reaction. |
 | `amy marmot message delete GID EVENT_ID …` | Publish a kind:5 deletion. |
+
+### CLINK Offers
+
+| Command | What it does |
+|---|---|
+| `amy offer info NOFFER` | Decode a `noffer1…` pointer (pubkey, relays, price type/amount). Local, no network. |
+| `amy offer request NOFFER [--amount SATS] [--timeout MS] [--payer-data K=V,…]` | kind:21001 round-trip: publish the request to the pointer's relays and print the returned BOLT11. `--amount` is required for spontaneous offers; fixed offers default to the pointer's price. `--payer-data` attaches payer fields (e.g. `email=a@b.c`) for offers that require them — Lightning.Pub answers "Invalid Offer" (code 1) when they are missing. |
+
+### CLINK Debits
+
+| Command | What it does |
+|---|---|
+| `amy debit info NDEBIT` | Decode an `ndebit1…` pointer (pubkey, relays, pointer id, session flag). Local, no network. |
+| `amy debit pay NDEBIT BOLT11 [--amount SATS] [--timeout MS]` | kind:21002 round-trip: ask the pointed-to wallet to pay the invoice; print the preimage or the service's GFY error. |
+| `amy debit budget NDEBIT --amount SATS [--frequency day\|week\|month] [--timeout MS]` | Authorize a spending budget; omit `--frequency` for a one-time budget. |
 
 ### Wait-for-condition (`await`)
 

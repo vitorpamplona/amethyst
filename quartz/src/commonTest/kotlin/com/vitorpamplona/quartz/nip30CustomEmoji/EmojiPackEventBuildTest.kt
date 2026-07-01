@@ -25,11 +25,12 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.pack.description
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.image
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class EmojiPackEventBuildTest {
     @Test
-    fun buildIncludesTitleDTagAltAndEmojis() {
+    fun buildIncludesTitleDTagAndEmojis() {
         val template =
             EmojiPackEvent.build(name = "My Pack", dTag = "my-pack") {
                 description("A test pack")
@@ -49,7 +50,7 @@ class EmojiPackEventBuildTest {
         assertEquals("A test pack", tagsByName["description"]!!.first()[1])
         assertTrue(tagsByName.containsKey("image"))
         assertEquals("https://example.com/cover.jpg", tagsByName["image"]!!.first()[1])
-        assertTrue(tagsByName.containsKey("alt"))
+        assertFalse(tagsByName.containsKey("alt"))
         assertTrue(tagsByName.containsKey("emoji"))
         assertEquals("smile", tagsByName["emoji"]!!.first()[1])
         assertEquals("https://example.com/smile.png", tagsByName["emoji"]!!.first()[2])

@@ -195,17 +195,4 @@ class FavoritePodcastsListEventTest {
 
             assertEquals(listOf(podcast2), second.publicFavorites().map { it.pubKey })
         }
-
-    @Test
-    fun `alt tag is always present`() =
-        runTest {
-            val event =
-                FavoritePodcastsListEvent.create(
-                    publicFavorites = listOf(UserTag(podcast1)),
-                    signer = signer,
-                    createdAt = 1_700_000_000,
-                )
-
-            assertTrue(event.tags.any { it[0] == "alt" && it[1] == FavoritePodcastsListEvent.ALT })
-        }
 }

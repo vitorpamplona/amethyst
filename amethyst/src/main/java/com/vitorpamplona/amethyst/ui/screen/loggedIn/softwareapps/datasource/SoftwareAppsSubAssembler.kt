@@ -44,7 +44,12 @@ class SoftwareAppsSubAssembler(
     ): List<RelayBasedFilter> {
         val feedSettings = key.followsPerRelay()
 
-        return makeSoftwareAppsFilter(feedSettings, since, key.feedStates.softwareAppsFeed.lastNoteCreatedAtIfFilled())
+        return makeSoftwareAppsFilter(
+            feedSettings,
+            since,
+            key.feedStates.softwareAppsFeed.lastNoteCreatedAtIfFilled(),
+            key.account.blockedRelayList.flow.value,
+        )
     }
 
     override fun user(key: SoftwareAppsQueryState) = key.account.userProfile()
@@ -74,6 +79,13 @@ class SoftwareAppsSubAssembler(
                 },
                 key.scope.launch(Dispatchers.IO) {
                     key.followsPerRelayFlow().sample(500).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+                key.scope.launch(Dispatchers.IO) {
+                    // Re-evaluate when the user blocks/unblocks zapstore's relay so the
+                    // global Apps feed stops/starts querying it without a restart.
+                    key.account.blockedRelayList.flow.collectLatest {
                         invalidateFilters()
                     }
                 },

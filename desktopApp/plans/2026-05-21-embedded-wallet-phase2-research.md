@@ -1,5 +1,8 @@
 # Phase 2: Embedded Self-Custodial Wallet — Research Summary
 
+> **Status:** queued — research summary explicitly "parked" pending NWC parity; no embedded-wallet (Breez/ldk-node/lightning-kmp) code exists.
+> _Audited 2026-06-30._
+
 **Date:** 2026-05-21
 **Status:** Research complete, parked. Return after NWC parity (Phase 1) ships.
 

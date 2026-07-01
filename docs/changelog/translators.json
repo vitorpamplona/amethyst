@@ -1,0 +1,358 @@
+{
+  "_comment": [
+    "Translator credits source for the changelog, kept by scripts/translators.sh.",
+    "",
+    "mappings: a forever-growing Crowdin-username (or numeric id) -> Nostr npub",
+    "  registry. Entries are never deleted. The --seed run appends new",
+    "  contributors with a blank npub; fill those in as translators share theirs.",
+    "  Keys match case-insensitively against the Crowdin username; a numeric key",
+    "  matches the Crowdin user id.",
+    "",
+    "sinceLastTag: a rolling snapshot of who has translated since the last release",
+    "  tag. Each entry is { user, languages }. Refreshed on every --seed run; do",
+    "  not hand-edit. The changelog '## Translations' block is generated offline",
+    "  from this list and resolved to npubs via mappings (blanks flagged UNMAPPED).",
+    "",
+    "Example mapping (replace with a real Crowdin username):",
+    "  \"vitorpamplona\": \"npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z\""
+  ],
+  "mappings": {
+    "vitorpamplona": "npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z",
+    "greenart7c3": "npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5",
+    "eru-desu": "npub1cpazafytvafazxkjn43zjfwtfzatfz508r54f6z6a3rf2ws8223qc3xxpk",
+    "ZZoltan": "npub1ww8kjxz2akn82qptdpl7glywnchhkx3x04hez3d3rye397turrhssenvtp",
+    "naked": "",
+    "Pgds": "",
+    "REMOVED_USER": "",
+    "sandro.curzi.88": "",
+    "vazw": "npub1tr66yvqghfdgwv9yxhmg7xx6pvgvu5uvdc42tgdhsys8vvzdt8msev06fl",
+    "Bardesss": "npub1w4la29u3zv09r6crx5u8yxax0ffxgekzdm2egzjkjckef7xc83fs0ftxcd",
+    "anthony-robin": "npub106efcyntxc5qwl3w8krrhyt626m59ya2nk9f40px5s968u5xdwhsjsr8fz",
+    "Pextar": "npub19jk45jz45gczwfm22y9z69xhaex3nwg47dz84zw096xl6z62amkqj99rv7",
+    "Holdenjp": "",
+    "ra5pvt1n": "npub1raspu6ag9kfcw9jz0rz4z693qwmqe5sx6jdhhuvkwz5zy8rygztqnwfhd7",
+    "John..doe": "npub13qtw3yu0uc9r4yj5x0rhgy8nj5q0uyeq0pavkgt9ly69uuzxgkfqwvx23t",
+    "petrikaj": "npub1ust7u0v3qffejwhqee45r49zgcyewrcn99vdwkednd356c9resyqtnn3mj",
+    "Turiz": "",
+    "xgabrirossx": "",
+    "adhrasreoshiathoi": "",
+    "davotoula": "npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef",
+    "crackadoo": "",
+    "BitByBit21": "npub1luhyzgce7qtcs6r6v00ryjxza8av8u4dzh3avg0zks38tjktnmxspxq903",
+    "csavastel": "npub1wujmwnq0we8qs44fhxsducavekk3r2y3ln3kplhstk99n4spaqpqpzamjm",
+    "vietnamstr": "",
+    "Luxvitae": "",
+    "Yonle": "npub1x3azxuysp5vmfer4vgs4jn5tmfcx4ew8sh0qnev7gczljxsr7jwqa3g4el",
+    "thetranslator8": "npub1cdy4mhznq7dex8u8ylnlws5vj0ckzgnxyyxq4h87pyk8m6s0pf3ssspdkl",
+    "ismailsudirman83": "",
+    "Stella2023": "",
+    "6x": "",
+    "LeonusDH": "",
+    "liizzzz": "",
+    "munich4182": "npub1vm0kq43djwdd4psjgdjgn9z6fm836c35dv7eg7x74z3n3ueq83jqhkxp8e",
+    "rodrigohenrik": "",
+    "flobstr": "",
+    "rajs19420616": "npub1ww6huwu3xye6r05n3qkjeq62wds5pq0jswhl7uc59lchc0n0ns4sdtw5e6",
+    "Maxblake": "npub16gjyljum0ksrrm28zzvejydgxwfm7xse98zwc4hlgq8epxeuggushqwyrm",
+    "cxplay": "npub1gd8e0xfkylc7v8c5a6hkpj4gelwwcy99jt90lqjseqjj2t253s2s6ch58h",
+    "VASHvic": "npub10ug9xs24ay5339agakaqk556t6zvq9qn5vm0vlhc4pu25cx0l32qxhrm9e",
+    "hlcbump": "",
+    "StellarStoic": "npub1qqqqqqz7nhdqz3uuwmzlflxt46lyu7zkuqhcapddhgz66c4ddynswreecw",
+    "D4rkFIow": "",
+    "summoner001": "npub1dnvslq0vvrs8d603suykc4harv94yglcxwna9sl2xu8grt2afm3qgfh0tp",
+    "fiddleway": "",
+    "Awiteb": "",
+    "hypnotichemionus3": "",
+    "Coool": "npub1l60stxkwwmkts76kv02vdjppka9uy6y3paztck7paau7g64l687saaw6av",
+    "hypnotichemionus4": "",
+    "maxblake2015": "npub16gjyljum0ksrrm28zzvejydgxwfm7xse98zwc4hlgq8epxeuggushqwyrm",
+    "eiie7": "",
+    "SeriousREC": "",
+    "markkks": "",
+    "helokuntzer": "",
+    "Kevin_1": ""
+  },
+  "sinceLastTag": {
+    "tag": "v1.12.6",
+    "since": "2026-06-19T19:01:59-04:00",
+    "translators": [
+      {
+        "user": "vitorpamplona",
+        "languages": [
+          "Arabic, Saudi Arabia",
+          "Bengali",
+          "Chinese Simplified",
+          "Chinese Simplified, Singapore",
+          "Chinese Traditional",
+          "Chinese Traditional, Hong Kong",
+          "Czech",
+          "Dutch",
+          "Esperanto",
+          "Finnish",
+          "French",
+          "French, Canada",
+          "German",
+          "Greek",
+          "Hindi",
+          "Hungarian",
+          "Indonesian",
+          "Italian",
+          "Japanese",
+          "Korean",
+          "Latvian",
+          "Persian",
+          "Polish",
+          "Portuguese",
+          "Portuguese, Brazilian",
+          "Russian",
+          "Rսssian, Սkraine",
+          "Serbian (Cyrillic)",
+          "Slovenian",
+          "Spanish",
+          "Spanish, Mexico",
+          "Spanish, United States",
+          "Swahili, Kenya",
+          "Swedish",
+          "Tamil",
+          "Thai",
+          "Turkish",
+          "Ukrainian",
+          "Uzbek",
+          "Vietnamese"
+        ]
+      },
+      {
+        "user": "rajs19420616",
+        "languages": [
+          "Hindi"
+        ]
+      },
+      {
+        "user": "maxblake2015",
+        "languages": [
+          "Polish"
+        ]
+      },
+      {
+        "user": "hypnotichemionus4",
+        "languages": [
+          "Chinese Simplified"
+        ]
+      },
+      {
+        "user": "anthony-robin",
+        "languages": [
+          "French"
+        ]
+      },
+      {
+        "user": "BitByBit21",
+        "languages": [
+          "Spanish",
+          "Spanish, Mexico",
+          "Spanish, United States"
+        ]
+      },
+      {
+        "user": "StellarStoic",
+        "languages": [
+          "Slovenian"
+        ]
+      },
+      {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
+        ]
+      },
+      {
+        "user": "greenart7c3",
+        "languages": []
+      },
+      {
+        "user": "eru-desu",
+        "languages": []
+      },
+      {
+        "user": "ZZoltan",
+        "languages": []
+      },
+      {
+        "user": "naked",
+        "languages": []
+      },
+      {
+        "user": "Pgds",
+        "languages": []
+      },
+      {
+        "user": "REMOVED_USER",
+        "languages": []
+      },
+      {
+        "user": "sandro.curzi.88",
+        "languages": []
+      },
+      {
+        "user": "vazw",
+        "languages": []
+      },
+      {
+        "user": "Bardesss",
+        "languages": []
+      },
+      {
+        "user": "Pextar",
+        "languages": []
+      },
+      {
+        "user": "Holdenjp",
+        "languages": []
+      },
+      {
+        "user": "ra5pvt1n",
+        "languages": []
+      },
+      {
+        "user": "John..doe",
+        "languages": []
+      },
+      {
+        "user": "petrikaj",
+        "languages": []
+      },
+      {
+        "user": "Turiz",
+        "languages": []
+      },
+      {
+        "user": "xgabrirossx",
+        "languages": []
+      },
+      {
+        "user": "adhrasreoshiathoi",
+        "languages": []
+      },
+      {
+        "user": "davotoula",
+        "languages": []
+      },
+      {
+        "user": "crackadoo",
+        "languages": []
+      },
+      {
+        "user": "csavastel",
+        "languages": []
+      },
+      {
+        "user": "vietnamstr",
+        "languages": []
+      },
+      {
+        "user": "Luxvitae",
+        "languages": []
+      },
+      {
+        "user": "Yonle",
+        "languages": []
+      },
+      {
+        "user": "thetranslator8",
+        "languages": []
+      },
+      {
+        "user": "ismailsudirman83",
+        "languages": []
+      },
+      {
+        "user": "Stella2023",
+        "languages": []
+      },
+      {
+        "user": "6x",
+        "languages": []
+      },
+      {
+        "user": "LeonusDH",
+        "languages": []
+      },
+      {
+        "user": "liizzzz",
+        "languages": []
+      },
+      {
+        "user": "munich4182",
+        "languages": []
+      },
+      {
+        "user": "REMOVED_USER",
+        "languages": []
+      },
+      {
+        "user": "rodrigohenrik",
+        "languages": []
+      },
+      {
+        "user": "flobstr",
+        "languages": []
+      },
+      {
+        "user": "Maxblake",
+        "languages": []
+      },
+      {
+        "user": "cxplay",
+        "languages": []
+      },
+      {
+        "user": "VASHvic",
+        "languages": []
+      },
+      {
+        "user": "hlcbump",
+        "languages": []
+      },
+      {
+        "user": "D4rkFIow",
+        "languages": []
+      },
+      {
+        "user": "fiddleway",
+        "languages": []
+      },
+      {
+        "user": "Awiteb",
+        "languages": []
+      },
+      {
+        "user": "hypnotichemionus3",
+        "languages": []
+      },
+      {
+        "user": "Coool",
+        "languages": []
+      },
+      {
+        "user": "eiie7",
+        "languages": []
+      },
+      {
+        "user": "SeriousREC",
+        "languages": []
+      },
+      {
+        "user": "markkks",
+        "languages": []
+      },
+      {
+        "user": "helokuntzer",
+        "languages": []
+      },
+      {
+        "user": "Kevin_1",
+        "languages": []
+      }
+    ]
+  }
+}

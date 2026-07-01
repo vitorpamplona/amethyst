@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -44,7 +44,7 @@ class UiSettingsFlow(
     val automaticallyProposeAiImprovements: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val useTrackedBroadcasts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val automaticallyCreateDrafts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
-    val bottomBarItems: MutableStateFlow<List<NavBarItem>> = MutableStateFlow(DefaultBottomBarItems),
+    val bottomBarItems: MutableStateFlow<List<BottomBarEntry>> = MutableStateFlow(DefaultBottomBarEntries),
     val showHomeNewThreadsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showHomeConversationsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showHomeEverythingTab: MutableStateFlow<Boolean> = MutableStateFlow(false),
@@ -53,6 +53,10 @@ class UiSettingsFlow(
     val showProfileZapReceivedFeed: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showProfileFollowersFeed: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val dontShowOnchainPublicWarning: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val suggestWorkoutsFromHealthConnect: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
+    val accentColor: MutableStateFlow<AccentColorType> = MutableStateFlow(AccentColorType.PURPLE),
+    val fontFamily: MutableStateFlow<FontFamilyType> = MutableStateFlow(FontFamilyType.SYSTEM),
+    val fontSize: MutableStateFlow<FontSizeType> = MutableStateFlow(FontSizeType.NORMAL),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -80,6 +84,10 @@ class UiSettingsFlow(
             showProfileZapReceivedFeed,
             showProfileFollowersFeed,
             dontShowOnchainPublicWarning,
+            suggestWorkoutsFromHealthConnect,
+            accentColor,
+            fontFamily,
+            fontSize,
         )
 
     // emits at every change in any of the propertyes.
@@ -102,7 +110,7 @@ class UiSettingsFlow(
                 flows[12] as BooleanType,
                 flows[13] as BooleanType,
                 flows[14] as BooleanType,
-                flows[15] as List<NavBarItem>,
+                flows[15] as List<BottomBarEntry>,
                 flows[16] as Boolean,
                 flows[17] as Boolean,
                 flows[18] as Boolean,
@@ -111,6 +119,10 @@ class UiSettingsFlow(
                 flows[21] as Boolean,
                 flows[22] as Boolean,
                 flows[23] as Boolean,
+                flows[24] as BooleanType,
+                flows[25] as AccentColorType,
+                flows[26] as FontFamilyType,
+                flows[27] as FontSizeType,
             )
         }
 
@@ -140,6 +152,10 @@ class UiSettingsFlow(
             showProfileZapReceivedFeed.value,
             showProfileFollowersFeed.value,
             dontShowOnchainPublicWarning.value,
+            suggestWorkoutsFromHealthConnect.value,
+            accentColor.value,
+            fontFamily.value,
+            fontSize.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -241,6 +257,22 @@ class UiSettingsFlow(
             dontShowOnchainPublicWarning.tryEmit(torSettings.dontShowOnchainPublicWarning)
             any = true
         }
+        if (suggestWorkoutsFromHealthConnect.value != torSettings.suggestWorkoutsFromHealthConnect) {
+            suggestWorkoutsFromHealthConnect.tryEmit(torSettings.suggestWorkoutsFromHealthConnect)
+            any = true
+        }
+        if (accentColor.value != torSettings.accentColor) {
+            accentColor.tryEmit(torSettings.accentColor)
+            any = true
+        }
+        if (fontFamily.value != torSettings.fontFamily) {
+            fontFamily.tryEmit(torSettings.fontFamily)
+            any = true
+        }
+        if (fontSize.value != torSettings.fontSize) {
+            fontSize.tryEmit(torSettings.fontSize)
+            any = true
+        }
 
         return any
     }
@@ -290,6 +322,10 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.showProfileZapReceivedFeed),
                 MutableStateFlow(uiSettings.showProfileFollowersFeed),
                 MutableStateFlow(uiSettings.dontShowOnchainPublicWarning),
+                MutableStateFlow(uiSettings.suggestWorkoutsFromHealthConnect),
+                MutableStateFlow(uiSettings.accentColor),
+                MutableStateFlow(uiSettings.fontFamily),
+                MutableStateFlow(uiSettings.fontSize),
             )
     }
 }

@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NutzapUserSetCard
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
@@ -84,6 +85,7 @@ fun NutzapUserSetCompose(
                         user = note.author,
                         comment = event?.content?.ifBlank { null },
                         amount = showAmount(java.math.BigDecimal(sats)),
+                        zapNote = note,
                     )
                 }.toImmutableList()
         }
@@ -112,6 +114,9 @@ fun NutzapUserSetCompose(
                         imageVector = CustomHashTagIcons.Cashu,
                         contentDescription = stringRes(R.string.nutzap),
                         modifier = Modifier.size(Size25dp).align(Alignment.TopEnd),
+                        // Tint the monochrome cashu outline brand orange so it
+                        // matches the lightning ZappedIcon in the zap set card.
+                        tint = BitcoinOrange,
                     )
                 }
             }

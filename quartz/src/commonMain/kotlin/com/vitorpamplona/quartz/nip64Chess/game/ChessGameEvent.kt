@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -57,24 +56,20 @@ class ChessGameEvent(
 
     companion object {
         const val KIND = 64
-        const val ALT_DESCRIPTION = "Chess Game"
 
         /**
          * Create a chess game event from PGN content
          * Per NIP-64, clients should publish in strict "export format"
          *
          * @param pgnContent Valid PGN format string
-         * @param altDescription Alt text for non-supporting clients (NIP-31)
          * @param createdAt Event timestamp
          * @param initializer Additional tag builder operations
          */
         fun build(
             pgnContent: String,
-            altDescription: String = ALT_DESCRIPTION,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChessGameEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, pgnContent, createdAt) {
-            alt(altDescription)
             initializer()
         }
     }

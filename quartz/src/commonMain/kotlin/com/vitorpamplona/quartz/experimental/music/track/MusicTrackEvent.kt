@@ -43,7 +43,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -59,13 +58,7 @@ class MusicTrackEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
-    override fun indexableContent(): String =
-        buildString {
-            append("title: ").append(title().orEmpty()).append('\n')
-            append("artist: ").append(artist().orEmpty()).append('\n')
-            album()?.let { append("album: ").append(it).append('\n') }
-            append(content)
-        }
+    override fun indexableContent(): String = listOfNotNull(title(), artist(), album(), content).joinToString("\n")
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
@@ -97,7 +90,6 @@ class MusicTrackEvent(
 
     companion object {
         const val KIND = 36787
-        const val ALT_DESCRIPTION_PREFIX = "Music track"
         const val GENRE_TAG = "music"
 
         @OptIn(ExperimentalUuidApi::class)
@@ -122,7 +114,6 @@ class MusicTrackEvent(
             initializer: TagArrayBuilder<MusicTrackEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description, createdAt) {
             dTag(dTag)
-            alt("$ALT_DESCRIPTION_PREFIX: $title by $artist")
 
             title(title)
             artist(artist)
@@ -172,7 +163,6 @@ class MusicTrackEvent(
                     title(title)
                     artist(artist)
                     url(url)
-                    alt("$ALT_DESCRIPTION_PREFIX: $title by $artist")
                     setOrRemove(image, ImageTag.TAG_NAME, ::image)
                     setOrRemove(album, AlbumTag.TAG_NAME, ::album)
                     if (duration != null) duration(duration) else remove(DurationTag.TAG_NAME)

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
-import android.content.Intent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
@@ -44,6 +43,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -59,8 +59,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -116,6 +114,8 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
+import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ReactionRowAction
@@ -141,14 +141,13 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.uploads.FloatingRecordingIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
-import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
-import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
+import com.vitorpamplona.amethyst.ui.note.elements.ShareOptionsBottomSheet
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
@@ -259,6 +258,13 @@ private fun InnerReactionRow(
         },
         reactions = reactionRowItems,
         renderReaction = { item ->
+            // Unsealed rumors (private replies/posts) must not receive public
+            // reposts or quotes: each would e-tag the private rumor id onto
+            // public relays. Replies, reactions, and zaps stay enabled because
+            // the composer locks private mode for rumor parents, ReactionAction
+            // gift-wraps reactions to empty-sig targets, and zaps are forced to
+            // the PRIVATE type with public rails suppressed.
+            val isPrivateRumor = baseNote.isPrivateRumor()
             when (item.action) {
                 ReactionRowAction.Reply -> {
                     ReplyReactionWithDialog(
@@ -273,7 +279,7 @@ private fun InnerReactionRow(
 
                 ReactionRowAction.Boost -> {
                     val isDM = baseNote.event is ChatroomKeyable
-                    if (!isDM) {
+                    if (!isDM && !isPrivateRumor) {
                         BoostWithDialog(
                             baseNote,
                             editState,
@@ -296,6 +302,9 @@ private fun InnerReactionRow(
                 }
 
                 ReactionRowAction.Zap -> {
+                    // Zaps stay enabled on private rumors: AccountViewModel.zap
+                    // forces the PRIVATE zap type, and the public nutzap/onchain
+                    // rails are suppressed for them.
                     ZapReaction(
                         baseNote,
                         MaterialTheme.colorScheme.placeholderText,
@@ -306,10 +315,13 @@ private fun InnerReactionRow(
                 }
 
                 ReactionRowAction.Share -> {
-                    ShareReaction(
-                        note = baseNote,
-                        grayTint = MaterialTheme.colorScheme.placeholderText,
-                    )
+                    if (!isPrivateRumor) {
+                        ShareReaction(
+                            note = baseNote,
+                            nav = nav,
+                            grayTint = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    }
                 }
 
                 ReactionRowAction.Pay -> {
@@ -327,37 +339,25 @@ private fun InnerReactionRow(
 @Composable
 fun ShareReaction(
     note: Note,
+    nav: INav,
     grayTint: Color,
     barChartModifier: Modifier = Size19Modifier,
 ) {
-    val context = LocalContext.current
+    var showShareSheet by remember { mutableStateOf(false) }
 
     ClickableBox(
         modifier = barChartModifier,
-        onClick = {
-            val sendIntent =
-                Intent().apply {
-                    action = Intent.ACTION_SEND
-                    type = "text/plain"
-                    putExtra(
-                        Intent.EXTRA_TEXT,
-                        externalLinkForNote(note),
-                    )
-                    putExtra(
-                        Intent.EXTRA_TITLE,
-                        stringRes(context, R.string.quick_action_share_browser_link),
-                    )
-                }
-
-            val shareIntent =
-                Intent.createChooser(
-                    sendIntent,
-                    stringRes(context, R.string.quick_action_share),
-                )
-            context.startActivity(shareIntent)
-        },
+        onClick = { showShareSheet = true },
     ) {
         ShareIcon(barChartModifier, grayTint)
+    }
+
+    if (showShareSheet) {
+        ShareOptionsBottomSheet(
+            note = note,
+            nav = nav,
+            onDismiss = { showShareSheet = false },
+        )
     }
 }
 
@@ -1242,10 +1242,16 @@ fun ZapReaction(
                         nav.nav(Route.UpdateZapAmount())
                     }
                 },
-                onOnchainAmount = { amount ->
-                    wantsToZap = false
-                    onchainZapRequest = OnchainZapRequest(amount)
-                },
+                onOnchainAmount =
+                    if (baseNote.isPrivateRumor()) {
+                        // Onchain zap events are public and would e-tag the rumor id.
+                        null
+                    } else {
+                        { amount ->
+                            wantsToZap = false
+                            onchainZapRequest = OnchainZapRequest(amount)
+                        }
+                    },
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
@@ -1600,7 +1606,6 @@ private fun BoostTypeChoicePopup(
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BoostTypeChoicePopup(
     baseNote: Note,
@@ -1624,55 +1629,145 @@ private fun BoostTypeChoicePopup(
             enter = popupAnimationEnter,
             exit = popupAnimationExit,
         ) {
-            FlowRow {
-                Button(
-                    modifier = Modifier.padding(horizontal = 3.dp),
-                    onClick = {
-                        if (accountViewModel.isWriteable()) {
-                            accountViewModel.boost(baseNote)
-                            visibilityState.targetState = false
-                        } else {
-                            onRepost()
-                            visibilityState.targetState = false
-                        }
-                    },
-                    shape = ButtonBorder,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                ) {
-                    Text(stringRes(R.string.boost), color = Color.White, textAlign = TextAlign.Center)
-                }
-
-                Button(
-                    modifier = Modifier.padding(horizontal = 3.dp),
-                    onClick = onQuote,
-                    shape = ButtonBorder,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                ) {
-                    Text(stringRes(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
-                }
-
+            BoostTypeChoicePopupContent(
                 // removes the option to fork for now because we do not have screens for
                 // LongForm, Wiki and NIP posting.
-                if (baseNote.event is TextNoteEvent) {
-                    Button(
-                        modifier = Modifier.padding(horizontal = 3.dp),
+                showFork = baseNote.event is TextNoteEvent,
+                onBoost = {
+                    if (accountViewModel.isWriteable()) {
+                        accountViewModel.boost(baseNote)
+                    } else {
+                        onRepost()
+                    }
+                    visibilityState.targetState = false
+                },
+                onQuote = {
+                    onQuote()
+                    visibilityState.targetState = false
+                },
+                onFork = {
+                    onFork()
+                    visibilityState.targetState = false
+                },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun BoostTypeChoicePopupContent(
+    showFork: Boolean,
+    onBoost: () -> Unit,
+    onQuote: () -> Unit,
+    onFork: () -> Unit,
+) {
+    Box(HalfPadding, contentAlignment = Center) {
+        ElevatedCard(
+            shape = SmallBorder,
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            FlowRow(
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.Center,
+                itemVerticalAlignment = CenterVertically,
+            ) {
+                BoostActionChip(
+                    label = stringRes(R.string.boost),
+                    onClick = onBoost,
+                ) { tint ->
+                    RepostedIcon(Size18Modifier, tint)
+                }
+
+                BoostActionChip(
+                    label = stringRes(R.string.quote),
+                    onClick = onQuote,
+                ) { tint ->
+                    Icon(
+                        symbol = MaterialSymbols.FormatQuote,
+                        contentDescription = null,
+                        modifier = Size18Modifier,
+                        tint = tint,
+                    )
+                }
+
+                if (showFork) {
+                    BoostActionChip(
+                        label = stringRes(R.string.fork),
                         onClick = onFork,
-                        shape = ButtonBorder,
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                            ),
-                    ) {
-                        Text(stringRes(R.string.fork), color = Color.White, textAlign = TextAlign.Center)
+                    ) { tint ->
+                        Icon(
+                            symbol = MaterialSymbols.EditNote,
+                            contentDescription = null,
+                            modifier = Size18Modifier,
+                            tint = tint,
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * A single quote/repost action rendered as a pill: a coloured leading icon next
+ * to its label, wrapped in the same soft-outlined surface the zap rails use so
+ * the popups read as one family.
+ */
+@Composable
+private fun BoostActionChip(
+    label: String,
+    onClick: () -> Unit,
+    icon: @Composable (Color) -> Unit,
+) {
+    Surface(
+        shape = ButtonBorder,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .clip(ButtonBorder)
+                    .clickable(onClick = onClick)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = CenterVertically,
+        ) {
+            icon(MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = label,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun BoostTypeChoicePopupPreview() {
+    ThemeComparisonColumn {
+        Column {
+            // With the fork action (e.g. a plain text note).
+            BoostTypeChoicePopupContent(
+                showFork = true,
+                onBoost = {},
+                onQuote = {},
+                onFork = {},
+            )
+
+            // Without the fork action (e.g. long-form, wiki, …).
+            BoostTypeChoicePopupContent(
+                showFork = false,
+                onBoost = {},
+                onQuote = {},
+                onFork = {},
+            )
         }
     }
 }
