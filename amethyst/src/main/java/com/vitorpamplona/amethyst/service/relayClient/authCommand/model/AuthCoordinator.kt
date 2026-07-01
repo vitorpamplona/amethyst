@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthContext
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
@@ -39,6 +40,7 @@ class ScreenAuthAccount(
 class AuthCoordinator(
     client: INostrClient,
     scope: CoroutineScope,
+    val promptBus: RelayAuthPromptBus = RelayAuthPromptBus(),
 ) {
     private val authWithAccounts = ListWithUniqueSetCache<ScreenAuthAccount, Account> { it.account }
     private val tempAccount by lazy {
@@ -76,9 +78,27 @@ class AuthCoordinator(
                     if (currentLedgers.isEmpty()) {
                         true
                     } else {
-                        // Auth if ANY logged-in account approves. ASK is not auto-approved yet —
-                        // the interactive prompt is a follow-up; until then it means "don't auth".
-                        currentLedgers.any { it.decide(context) == RelayAuthVerdict.ALLOW }
+                        val verdicts = currentLedgers.map { it.decide(context) }
+                        when {
+                            // Auth if ANY logged-in account already approves.
+                            verdicts.any { it == RelayAuthVerdict.ALLOW } -> true
+                            // Otherwise, if at least one account wants to ask, prompt the user with
+                            // the reason and act on their choice (remembering Always/Block).
+                            verdicts.any { it == RelayAuthVerdict.ASK } ->
+                                when (promptBus.requestDecision(relayUrl, context.purposes)) {
+                                    UserAuthChoice.ALLOW_ONCE -> true
+                                    UserAuthChoice.ALWAYS_ALLOW -> {
+                                        currentLedgers.first().setDecision(relayUrl.url, RelayAuthDecision.ALLOW)
+                                        true
+                                    }
+                                    UserAuthChoice.BLOCK -> {
+                                        currentLedgers.first().setDecision(relayUrl.url, RelayAuthDecision.DENY)
+                                        false
+                                    }
+                                    UserAuthChoice.DISMISS -> false
+                                }
+                            else -> false
+                        }
                     }
 
                 if (shouldAuth) {
