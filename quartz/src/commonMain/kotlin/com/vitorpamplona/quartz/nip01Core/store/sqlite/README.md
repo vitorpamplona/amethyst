@@ -189,6 +189,36 @@ val result = eventStore.query(Filter(search = "bitcoin", limit = 20))
 
 This will match any event whose content contains "bitcoin", returning the most recent 20 results.
 
+#### Disabling full-text search
+
+FTS indexing has a write-time cost: every inserted `SearchableEvent` is
+tokenized into the `event_fts` virtual table, and an `AFTER DELETE`
+trigger keeps that table in sync on every deletion. If you never serve
+NIP-50 search from this store — e.g. a relay that offloads search to an
+external engine like Vespa — pass `enableFullTextSearch = false`:
+
+```kotlin
+val eventStore = EventStore("dbname.db", relayUrlIdentifier, enableFullTextSearch = false)
+```
+
+With FTS off:
+
+- The `event_fts` table and its `fts_foreign_key` delete trigger are
+  never created (no schema dependency on FTS3/4/5 being compiled in).
+- Inserts skip the per-event `indexableContent()` + tokenization work,
+  and deletes skip the trigger.
+- Any query/count/delete filter carrying a non-empty `search` term
+  returns **no matches** (an empty-string search imposes no constraint
+  and behaves like a normal query). Everything else — replaceable and
+  addressable handling, deletions, expirations, right-to-vanish,
+  negentropy — is unchanged.
+
+The flag is chosen at store-construction time and only governs whether
+new writes maintain the index; it does not migrate an existing database
+(it won't drop an `event_fts` table left over from a store previously
+opened with FTS enabled). Pick the mode when the database is first
+created.
+
 ### Periodic cleanup of expired events.
 
 The store exposes a `deleteExpiredEvents` to be used in a periodic clean up procedure. Users

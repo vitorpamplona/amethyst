@@ -38,8 +38,16 @@ class EventStore(
     dbName: String? = "events.db",
     override val relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
+    /**
+     * When `false`, NIP-50 full-text search indexing is turned off: no
+     * `event_fts` table or delete trigger is created, inserts skip the
+     * FTS tokenization cost, and `search` filters return no matches.
+     * Use for stores that never serve search from SQLite (e.g. a relay
+     * that offloads NIP-50 to an external engine like Vespa).
+     */
+    val enableFullTextSearch: Boolean = true,
 ) : IEventStore {
-    val store = SQLiteEventStore(BundledSQLiteDriver(), dbName, relay, indexStrategy)
+    val store = SQLiteEventStore(BundledSQLiteDriver(), dbName, relay, indexStrategy, enableFullTextSearch = enableFullTextSearch)
 
     override suspend fun insert(event: Event) = store.insertEvent(event)
 
