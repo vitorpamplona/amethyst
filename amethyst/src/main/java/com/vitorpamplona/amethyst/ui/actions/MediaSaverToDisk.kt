@@ -44,6 +44,7 @@ import okio.buffer
 import okio.sink
 import okio.source
 import java.io.File
+import java.io.IOException
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -53,6 +54,7 @@ object MediaSaverToDisk {
         okHttpClient: (String) -> OkHttpClient,
         mimeType: String?,
         localContext: Context,
+        resolveBlossom: suspend (String) -> String? = { null },
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) = withContext(Dispatchers.IO) {
@@ -77,6 +79,7 @@ object MediaSaverToDisk {
                     mimeType = mimeType,
                     okHttpClient = okHttpClient,
                     context = localContext,
+                    resolveBlossom = resolveBlossom,
                     onSuccess = onSuccess,
                     onError = onError,
                 )
@@ -87,6 +90,11 @@ object MediaSaverToDisk {
     /**
      * Saves the image to the gallery. May require a storage permission.
      *
+     * `blossom:` (BUD-10) URIs are resolved to a concrete `http(s)` server URL
+     * via [resolveBlossom] before downloading, since OkHttp only speaks
+     * http/https. When resolution fails the save reports an error instead of
+     * crashing with "expected scheme http or https but was blossom".
+     *
      * @see AMETHYST_SUBDIRECTORY
      */
     suspend fun downloadAndSave(
@@ -94,26 +102,35 @@ object MediaSaverToDisk {
         mimeType: String?,
         okHttpClient: (String) -> OkHttpClient,
         context: Context,
+        resolveBlossom: suspend (String) -> String? = { null },
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) {
         try {
-            val client = okHttpClient(url)
+            val downloadUrl =
+                if (url.startsWith(BLOSSOM_SCHEME, ignoreCase = true)) {
+                    resolveBlossom(url)
+                        ?: throw IOException("Could not find a Blossom server that hosts $url")
+                } else {
+                    url
+                }
+
+            val client = okHttpClient(downloadUrl)
 
             val request =
                 Request
                     .Builder()
                     .get()
-                    .url(url)
+                    .url(downloadUrl)
                     .build()
 
             client.newCall(request).executeAsync().use { response ->
                 withContext(Dispatchers.IO) {
                     check(response.isSuccessful) {
-                        "Failed to download $url: HTTP ${response.code} ${response.message}"
+                        "Failed to download $downloadUrl: HTTP ${response.code} ${response.message}"
                     }
 
-                    val trimmedUrl = trimInlineMetaData(url)
+                    val trimmedUrl = trimInlineMetaData(downloadUrl)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         val headerType =
                             response
@@ -292,4 +309,5 @@ object MediaSaverToDisk {
 
     private const val AMETHYST_SUBDIRECTORY = "Amethyst"
     private const val PDF_MIME_TYPE = "application/pdf"
+    private const val BLOSSOM_SCHEME = "blossom:"
 }
