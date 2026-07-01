@@ -42,8 +42,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.concurrent.atomics.AtomicReference
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.Volatile
 import kotlin.coroutines.coroutineContext
 import kotlin.math.min
 import kotlin.time.TimeSource
@@ -680,18 +679,26 @@ private const val DEFAULT_DOWNLOAD_IDLE_MS = 60_000L
 
 /**
  * Monotonic "last activity" marker for the idle watchdog. [bump] on every sign of
- * life from the relay; [elapsedMs] reports the silence since the last bump. Thread
- * safe: bumped from relay reader threads, read from the driver coroutine.
+ * life from the relay; [elapsedMs] reports the silence since the last bump.
+ *
+ * [bump] is on the per-event hot path (the connection listener bumps for every
+ * message the relay sends — millions during a large download), so it must not
+ * allocate: a single [start] mark is taken once (unboxed field) and each bump only
+ * writes a `Long` of nanos-since-start into a `@Volatile` field. Reader threads
+ * write, the driver coroutine reads — visibility is all we need, so a plain volatile
+ * Long beats boxing a `ValueTimeMark` into an `AtomicReference` on every event.
  */
-@OptIn(ExperimentalAtomicApi::class)
 private class IdleClock {
-    private val last = AtomicReference(TimeSource.Monotonic.markNow())
+    private val start = TimeSource.Monotonic.markNow()
+
+    @Volatile
+    private var lastNanos = 0L
 
     fun bump() {
-        last.store(TimeSource.Monotonic.markNow())
+        lastNanos = start.elapsedNow().inWholeNanoseconds
     }
 
-    fun elapsedMs(): Long = last.load().elapsedNow().inWholeMilliseconds
+    fun elapsedMs(): Long = (start.elapsedNow().inWholeNanoseconds - lastNanos) / 1_000_000
 }
 
 /**
