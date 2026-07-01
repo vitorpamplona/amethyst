@@ -92,14 +92,31 @@ class DataStoreRelayAuthPermissionStore(
         additions: Map<AuthPurposeKind, Set<String>>,
     ) {
         if (additions.isEmpty()) return
-        store.edit { prefs ->
-            prefs[urlKey(relayUrl)] = relayUrl
-            prefs[lastUsedKey(relayUrl)] = TimeUtils.now().toString()
+
+        // Auth is granted again on every reconnect, so avoid a disk write when nothing changed:
+        // only persist if a purpose gained a counterparty we haven't stored, or the last-used
+        // timestamp is stale enough to be worth refreshing.
+        val prefs = store.data.first()
+        val now = TimeUtils.now()
+        val lastUsed = prefs[lastUsedKey(relayUrl)]?.toLongOrNull() ?: 0L
+        val hasNewCounterparty =
+            additions.any { (kind, pubkeys) ->
+                val existing = prefs[rationaleKey(relayUrl, kind)].toPubkeySet()
+                !existing.containsAll(pubkeys) && existing.size < MAX_COUNTERPARTIES_STORED
+            }
+        if (!hasNewCounterparty && now - lastUsed < LAST_USED_REFRESH_SECS) return
+
+        store.edit { edit ->
+            edit[urlKey(relayUrl)] = relayUrl
+            edit[lastUsedKey(relayUrl)] = now.toString()
             for ((kind, pubkeys) in additions) {
                 if (pubkeys.isEmpty()) continue
                 val key = rationaleKey(relayUrl, kind)
-                val existing = prefs[key].toPubkeySet()
-                prefs[key] = (existing + pubkeys).joinToString(SEPARATOR)
+                val existing = edit[key].toPubkeySet()
+                if (existing.size >= MAX_COUNTERPARTIES_STORED || existing.containsAll(pubkeys)) continue
+                // Cap the stored set: an outbox relay can serve a large slice of the follow list and
+                // we only need a representative sample to explain the grant in settings.
+                edit[key] = (existing + pubkeys).take(MAX_COUNTERPARTIES_STORED).joinToString(SEPARATOR)
             }
         }
     }
@@ -186,6 +203,13 @@ class DataStoreRelayAuthPermissionStore(
         private const val RATIONALE_PREFIX = "rat:"
         private const val LAST_USED_PREFIX = "used:"
         private const val SEPARATOR = ","
+
+        /** Cap on counterparties remembered per relay+purpose, so a large outbox author set can't
+         *  bloat the DataStore file or the settings screen. */
+        private const val MAX_COUNTERPARTIES_STORED = 64
+
+        /** Minimum seconds between last-used refreshes when no new counterparty appears. */
+        private const val LAST_USED_REFRESH_SECS = 300L
 
         private fun hash(relayUrl: String): String {
             val digest = MessageDigest.getInstance("SHA-256").digest(relayUrl.toByteArray())
