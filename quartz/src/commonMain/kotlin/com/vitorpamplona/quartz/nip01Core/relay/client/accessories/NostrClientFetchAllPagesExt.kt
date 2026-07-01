@@ -64,10 +64,16 @@ suspend fun INostrClient.fetchAllPages(
     // Track how many matching events each filter has received so far.
     val matchCountPerFilter = IntArray(filters.size)
 
-    val subId = newSubId()
-
     while (true) {
         coroutineContext.ensureActive()
+
+        // A fresh subscription id per page. Reusing one id across pages
+        // (unsubscribe + immediately re-subscribe the same id) races on the wire:
+        // in-flight events from the previous page's REQ bleed into the next page's
+        // listener. Those stale events carry a `created_at` above the new `until`,
+        // so `match()` rejects them, the page ends with `pageCount == 0`, and the
+        // whole download terminates early — silently truncating large results.
+        val subId = newSubId()
 
         val pagedFilters =
             if (until == null) {
