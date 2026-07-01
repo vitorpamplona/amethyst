@@ -509,13 +509,18 @@ fun QuotedNoteEmbed(
         authorMetaValue
         val displayData = event.toNoteDisplayData(localCache)
 
-        NoteCard(
-            note = displayData,
+        SpamCheckedNoteRender(
+            note = note,
             localCache = localCache,
-            onClick = onNavigateToThread?.let { nav -> { nav(event.id) } },
-            onAuthorClick = onMentionClick,
-            onMentionClick = onMentionClick,
-        )
+        ) {
+            NoteCard(
+                note = displayData,
+                localCache = localCache,
+                onClick = onNavigateToThread?.let { nav -> { nav(event.id) } },
+                onAuthorClick = onMentionClick,
+                onMentionClick = onMentionClick,
+            )
+        }
     } else {
         Card(
             modifier = Modifier.fillMaxWidth(),

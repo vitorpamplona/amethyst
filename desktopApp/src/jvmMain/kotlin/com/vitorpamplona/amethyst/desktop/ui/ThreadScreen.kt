@@ -318,6 +318,8 @@ fun ThreadScreen(
                                             com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
                                                 .toggleFullscreen()
                                         },
+                                        // Root of an explicitly-opened thread — user opted in, skip spam collapse.
+                                        forceReveal = true,
                                     )
                                 }
                                 HorizontalDivider(thickness = 1.dp)

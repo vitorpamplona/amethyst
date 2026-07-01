@@ -132,6 +132,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
+import com.vitorpamplona.amethyst.desktop.ui.note.SpamCheckedNoteRender
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.Nip65RelayEditor
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
@@ -194,8 +195,54 @@ fun FeedNoteCard(
     followedUsers: Set<String> = emptySet(),
     myPubKeyHex: String? = null,
     onFollow: ((String) -> Unit)? = null,
+    forceReveal: Boolean = false,
 ) {
     val event = note.event ?: return
+    SpamCheckedNoteRender(
+        note = note,
+        localCache = localCache,
+        forceReveal = forceReveal,
+    ) {
+        FeedNoteCardBody(
+            note = note,
+            event = event,
+            relayManager = relayManager,
+            localCache = localCache,
+            account = account,
+            nwcConnection = nwcConnection,
+            onReply = onReply,
+            onZapFeedback = onZapFeedback,
+            onNavigateToProfile = onNavigateToProfile,
+            onNavigateToThread = onNavigateToThread,
+            onImageClick = onImageClick,
+            onMediaClick = onMediaClick,
+            onHashtagClick = onHashtagClick,
+            followedUsers = followedUsers,
+            myPubKeyHex = myPubKeyHex,
+            onFollow = onFollow,
+        )
+    }
+}
+
+@Composable
+private fun FeedNoteCardBody(
+    note: Note,
+    event: com.vitorpamplona.quartz.nip01Core.core.Event,
+    relayManager: DesktopRelayConnectionManager,
+    localCache: DesktopLocalCache,
+    account: AccountState.LoggedIn?,
+    nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
+    onReply: () -> Unit,
+    onZapFeedback: (ZapFeedback) -> Unit,
+    onNavigateToProfile: (String) -> Unit = {},
+    onNavigateToThread: (String) -> Unit = {},
+    onImageClick: ((List<String>, Int) -> Unit)? = null,
+    onMediaClick: ((List<String>, Int, Float) -> Unit)? = null,
+    onHashtagClick: ((String) -> Unit)? = null,
+    followedUsers: Set<String> = emptySet(),
+    myPubKeyHex: String? = null,
+    onFollow: ((String) -> Unit)? = null,
+) {
     val isRepost = event is RepostEvent || event is GenericRepostEvent
 
     if (isRepost) {

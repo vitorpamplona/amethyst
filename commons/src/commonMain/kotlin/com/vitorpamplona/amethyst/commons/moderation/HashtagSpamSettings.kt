@@ -18,36 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.search
+package com.vitorpamplona.amethyst.commons.moderation
+
+import androidx.compose.runtime.Stable
+import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Represents a parsed search result from Bech32/hex input.
- * Shared between Android and Desktop for consistent search behavior.
+ * User-tunable settings for the hashtag-spam content filter.
+ *
+ * Implementations are platform-specific (Desktop uses java.util.prefs;
+ * Android can use DataStore). Both observables emit on change so Compose
+ * reads via [collectAsState] re-render automatically.
  */
-sealed class SearchResult {
-    /**
-     * Direct user lookup from npub, nprofile, nsec, or hex pubkey.
-     */
-    data class UserResult(
-        val pubKeyHex: String,
-        val displayId: String,
-    ) : SearchResult()
+@Stable
+interface HashtagSpamSettings {
+    val enabled: StateFlow<Boolean>
+    val threshold: StateFlow<Int>
 
-    /**
-     * Note lookup from note1 or nevent.
-     */
-    data class NoteResult(
-        val noteIdHex: String,
-        val displayId: String,
-    ) : SearchResult()
+    fun setEnabled(enabled: Boolean)
 
-    /**
-     * Addressable event lookup from naddr.
-     */
-    data class AddressResult(
-        val kind: Int,
-        val pubKeyHex: String,
-        val dTag: String,
-        val displayId: String,
-    ) : SearchResult()
+    fun setThreshold(threshold: Int)
+
+    companion object {
+        const val MIN_THRESHOLD = 1
+        const val MAX_THRESHOLD = 20
+        const val DEFAULT_THRESHOLD = 5
+        const val DEFAULT_ENABLED = true
+    }
 }
