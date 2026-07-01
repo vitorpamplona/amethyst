@@ -1,0 +1,4 @@
+# Gzip-compressed test corpora (e.g. nostr_vitor_startup_data.json.gz): treat as
+# binary so git never applies CRLF/text normalization or textual diff/merge, which
+# would corrupt the compressed stream (important on Windows checkouts).
+*.gz binary
