@@ -21,7 +21,8 @@
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthContext
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -59,19 +60,25 @@ class AuthCoordinator(
             client,
             scope,
             signWithAllLoggedInUsers = { relayUrl, authTemplate ->
+                // Reconstruct *why* this relay wants auth from what we're doing with it, so each
+                // account's ledger can apply follow-based trust and (later) explain the prompt.
+                val context =
+                    RelayAuthContext(
+                        relayUrl = relayUrl.url,
+                        purposes =
+                            RelayAuthPurposeDeriver.derive(
+                                pendingEvents = client.activeOutboxEvents(relayUrl),
+                                activeFilters = client.activeRequests(relayUrl),
+                            ),
+                    )
                 val currentLedgers = relayLedgers
                 val shouldAuth =
                     if (currentLedgers.isEmpty()) {
                         true
                     } else {
-                        var allow = false
-                        for (ledger in currentLedgers) {
-                            if (ledger.decide(relayUrl.url) == RelayAuthDecision.ALLOW) {
-                                allow = true
-                                break
-                            }
-                        }
-                        allow
+                        // Auth if ANY logged-in account approves. ASK is not auto-approved yet —
+                        // the interactive prompt is a follow-up; until then it means "don't auth".
+                        currentLedgers.any { it.decide(context) == RelayAuthVerdict.ALLOW }
                     }
 
                 if (shouldAuth) {
