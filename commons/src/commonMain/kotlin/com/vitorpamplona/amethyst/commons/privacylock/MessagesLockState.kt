@@ -98,6 +98,9 @@ class MessagesLockState(
             mutableState.value = LockState.Unlocked
             restartIdleTimer()
         }
+        // Always clear failed-attempt state on any authenticated flow — even
+        // when transitioning from Disabled (banner "enable" path).
+        onUnlockAttemptResetToZero()
     }
 
     /**
@@ -108,6 +111,37 @@ class MessagesLockState(
         cancelIdleTimer()
         settings.setLockEnabled(false)
         mutableState.value = LockState.Disabled
+    }
+
+    /**
+     * Record a failed unlock attempt. Applies exponential backoff after
+     * [PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES] failures: base 30 s,
+     * doubling each further failure, capped at 5 min.
+     *
+     * @param nowMs current epoch millis (injected for testability).
+     * @return the new [PrivacyLockSettings.lockedUntilEpochMs] value, or
+     *   null when no lockout yet applies.
+     */
+    fun onFailedUnlockAttempt(nowMs: Long): Long? {
+        val next = settings.failedUnlockAttempts.value + 1
+        settings.setFailedUnlockAttempts(next)
+        val overshoot = next - PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES
+        if (overshoot < 0) {
+            settings.setLockedUntilEpochMs(null)
+            return null
+        }
+        val duration =
+            (PrivacyLockSettings.LOCKOUT_BASE_MS shl overshoot)
+                .coerceAtMost(PrivacyLockSettings.LOCKOUT_MAX_MS)
+        val until = nowMs + duration
+        settings.setLockedUntilEpochMs(until)
+        return until
+    }
+
+    /** Clear the failed-attempt counter and any active lockout. */
+    fun onUnlockAttemptResetToZero() {
+        settings.setFailedUnlockAttempts(0)
+        settings.setLockedUntilEpochMs(null)
     }
 
     private fun restartIdleTimer() {

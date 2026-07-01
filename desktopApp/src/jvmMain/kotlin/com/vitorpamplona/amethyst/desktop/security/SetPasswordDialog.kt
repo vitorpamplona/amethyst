@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,6 +62,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState
+import kotlinx.coroutines.delay
 
 /** Enforced minimum length for a new/rotated password. */
 const val PRIVACY_LOCK_MIN_PASSWORD_LENGTH = 6
@@ -229,16 +232,34 @@ fun RemovePasswordDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
+    val lockState = LocalMessagesLockState.current
+    val settings = LocalPrivacyLockSettings.current
+    val lockedUntil by settings.lockedUntilEpochMs.collectAsState()
+
     var current by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    var remainingMs by remember { mutableStateOf(lockoutRemainingMs(lockedUntil)) }
 
     val firstFieldFocus = remember { FocusRequester() }
 
+    LaunchedEffect(lockedUntil) {
+        while (true) {
+            val r = lockoutRemainingMs(lockedUntil)
+            remainingMs = r
+            if (r <= 0) break
+            delay(500)
+        }
+    }
+
     val submit: () -> Unit = {
-        if (PasswordHasher.verify(current.toCharArray(), existingHash)) {
-            onConfirm()
-        } else {
-            error = "Wrong password"
+        if (remainingMs <= 0) {
+            if (PasswordHasher.verify(current.toCharArray(), existingHash)) {
+                lockState.onUnlockSuccess() // clears failed-attempt state
+                onConfirm()
+            } else {
+                error = "Wrong password"
+                lockState.onFailedUnlockAttempt(System.currentTimeMillis())
+            }
         }
     }
 
@@ -270,6 +291,11 @@ fun RemovePasswordDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
+                val effectiveError =
+                    when {
+                        remainingMs > 0 -> "Too many attempts. Try again in ${formatCountdownMs(remainingMs)}."
+                        else -> error
+                    }
                 PasswordField(
                     value = current,
                     onValueChange = {
@@ -277,7 +303,7 @@ fun RemovePasswordDialog(
                         error = null
                     },
                     label = "Current password",
-                    errorMessage = error,
+                    errorMessage = effectiveError,
                     modifier = Modifier.focusRequester(firstFieldFocus),
                     imeAction = ImeAction.Done,
                     onImeAction = { submit() },
@@ -290,7 +316,7 @@ fun RemovePasswordDialog(
                     TextButton(onClick = onDismiss) { Text("Cancel") }
                     Button(
                         onClick = submit,
-                        enabled = current.isNotEmpty(),
+                        enabled = current.isNotEmpty() && remainingMs <= 0,
                         colors =
                             ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error,
@@ -303,6 +329,19 @@ fun RemovePasswordDialog(
             }
         }
     }
+}
+
+private fun lockoutRemainingMs(untilEpochMs: Long?): Long {
+    val until = untilEpochMs ?: return 0
+    val diff = until - System.currentTimeMillis()
+    return if (diff > 0) diff else 0
+}
+
+private fun formatCountdownMs(millis: Long): String {
+    val totalSeconds = (millis + 999) / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s"
 }
 
 @Composable

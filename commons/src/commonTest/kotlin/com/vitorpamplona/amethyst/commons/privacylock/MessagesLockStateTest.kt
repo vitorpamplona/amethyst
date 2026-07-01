@@ -42,12 +42,16 @@ class MessagesLockStateTest {
         private val mutableRedaction = MutableStateFlow(DmRedactionLevel.DEFAULT)
         private val mutableFirstRunSeen = MutableStateFlow(false)
         private val mutablePasswordHashed = MutableStateFlow<String?>(null)
+        private val mutableFailedAttempts = MutableStateFlow(0)
+        private val mutableLockedUntil = MutableStateFlow<Long?>(null)
 
         override val lockEnabled: StateFlow<Boolean> = mutableLockEnabled.asStateFlow()
         override val inactivityTimer: StateFlow<InactivityTimer> = mutableTimer.asStateFlow()
         override val redactionLevel: StateFlow<DmRedactionLevel> = mutableRedaction.asStateFlow()
         override val firstRunCardSeen: StateFlow<Boolean> = mutableFirstRunSeen.asStateFlow()
         override val passwordHashed: StateFlow<String?> = mutablePasswordHashed.asStateFlow()
+        override val failedUnlockAttempts: StateFlow<Int> = mutableFailedAttempts.asStateFlow()
+        override val lockedUntilEpochMs: StateFlow<Long?> = mutableLockedUntil.asStateFlow()
 
         override fun setLockEnabled(enabled: Boolean) {
             mutableLockEnabled.value = enabled
@@ -67,6 +71,14 @@ class MessagesLockStateTest {
 
         override fun setPasswordHashed(saltAndHash: String?) {
             mutablePasswordHashed.value = saltAndHash
+        }
+
+        override fun setFailedUnlockAttempts(count: Int) {
+            mutableFailedAttempts.value = count
+        }
+
+        override fun setLockedUntilEpochMs(millis: Long?) {
+            mutableLockedUntil.value = millis
         }
     }
 
@@ -165,5 +177,66 @@ class MessagesLockStateTest {
             assertEquals(LockState.Disabled, state.state.value)
             state.onUnlockSuccess()
             assertEquals(LockState.Unlocked, state.state.value)
+        }
+
+    @Test
+    fun failed_attempts_below_threshold_do_not_trip_lockout() =
+        runTest {
+            val settings = FakeSettings(lockEnabled = true)
+            val state = MessagesLockState(settings, backgroundScope)
+            val now = 1_000_000L
+            repeat(PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES - 1) {
+                assertEquals(null, state.onFailedUnlockAttempt(now))
+            }
+            assertEquals(null, settings.lockedUntilEpochMs.value)
+            assertEquals(
+                PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES - 1,
+                settings.failedUnlockAttempts.value,
+            )
+        }
+
+    @Test
+    fun fifth_failure_trips_base_lockout() =
+        runTest {
+            val settings = FakeSettings(lockEnabled = true)
+            val state = MessagesLockState(settings, backgroundScope)
+            val now = 1_000_000L
+            repeat(PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES) {
+                state.onFailedUnlockAttempt(now)
+            }
+            val expected = now + PrivacyLockSettings.LOCKOUT_BASE_MS
+            assertEquals(expected, settings.lockedUntilEpochMs.value)
+        }
+
+    @Test
+    fun lockout_doubles_and_caps_at_maximum() =
+        runTest {
+            val settings = FakeSettings(lockEnabled = true)
+            val state = MessagesLockState(settings, backgroundScope)
+            val now = 1_000_000L
+            // 5th failure → base (30s)
+            repeat(PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES) { state.onFailedUnlockAttempt(now) }
+            val base = settings.lockedUntilEpochMs.value!! - now
+            assertEquals(PrivacyLockSettings.LOCKOUT_BASE_MS, base)
+            // 6th → doubles to 60s
+            state.onFailedUnlockAttempt(now)
+            assertEquals(PrivacyLockSettings.LOCKOUT_BASE_MS * 2, settings.lockedUntilEpochMs.value!! - now)
+            // Enough further failures to hit the cap
+            repeat(20) { state.onFailedUnlockAttempt(now) }
+            assertEquals(PrivacyLockSettings.LOCKOUT_MAX_MS, settings.lockedUntilEpochMs.value!! - now)
+        }
+
+    @Test
+    fun unlock_success_clears_backoff_state() =
+        runTest {
+            val settings = FakeSettings(lockEnabled = true)
+            val state = MessagesLockState(settings, backgroundScope)
+            val now = 1_000_000L
+            repeat(PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES) { state.onFailedUnlockAttempt(now) }
+            assertTrue(settings.lockedUntilEpochMs.value != null)
+            assertTrue(settings.failedUnlockAttempts.value > 0)
+            state.onUnlockSuccess()
+            assertEquals(null, settings.lockedUntilEpochMs.value)
+            assertEquals(0, settings.failedUnlockAttempts.value)
         }
 }

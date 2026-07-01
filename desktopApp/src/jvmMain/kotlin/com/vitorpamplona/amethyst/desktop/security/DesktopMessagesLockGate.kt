@@ -36,6 +36,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState
 import com.vitorpamplona.amethyst.commons.privacylock.LockState
+import kotlinx.coroutines.delay
 
 /**
  * Desktop equivalent of `MessagesLockGate`. Uses password verification
@@ -64,6 +66,9 @@ import com.vitorpamplona.amethyst.commons.privacylock.LockState
  *
  * Branch selection is SYNCHRONOUS in composition — no LaunchedEffect
  * guard — closing the deep-link race (plan §Security Hardening H1).
+ *
+ * Enforces exponential backoff after repeated failed attempts (5 fails →
+ * 30 s, doubling, capped at 5 min). Backoff state persists across restarts.
  */
 @Composable
 fun DesktopMessagesLockGate(content: @Composable () -> Unit) {
@@ -83,20 +88,34 @@ fun DesktopMessagesLockGate(content: @Composable () -> Unit) {
 @Composable
 private fun DesktopLockScreen() {
     val lockState = LocalMessagesLockState.current
-    val settings = com.vitorpamplona.amethyst.desktop.security.LocalPrivacyLockSettings.current
+    val settings = LocalPrivacyLockSettings.current
     val stored by settings.passwordHashed.collectAsState()
+    val lockedUntil by settings.lockedUntilEpochMs.collectAsState()
 
     var input by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
+    var remainingMs by remember { mutableStateOf(lockoutRemaining(lockedUntil)) }
+
+    LaunchedEffect(lockedUntil) {
+        while (true) {
+            val r = lockoutRemaining(lockedUntil)
+            remainingMs = r
+            if (r <= 0) break
+            delay(500)
+        }
+    }
 
     val submit: () -> Unit = {
-        val ok = stored?.let { PasswordHasher.verify(input.toCharArray(), it) } == true
-        if (ok) {
-            input = ""
-            showError = false
-            lockState.onUnlockSuccess()
-        } else {
-            showError = true
+        if (remainingMs <= 0) {
+            val ok = stored?.let { PasswordHasher.verify(input.toCharArray(), it) } == true
+            if (ok) {
+                input = ""
+                showError = false
+                lockState.onUnlockSuccess()
+            } else {
+                showError = true
+                lockState.onFailedUnlockAttempt(System.currentTimeMillis())
+            }
         }
     }
 
@@ -152,6 +171,7 @@ private fun DesktopLockScreen() {
                     label = { Text("Password") },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
+                    enabled = remainingMs <= 0,
                     keyboardOptions =
                         KeyboardOptions(
                             keyboardType = KeyboardType.Password,
@@ -160,18 +180,38 @@ private fun DesktopLockScreen() {
                     keyboardActions = KeyboardActions(onDone = { submit() }),
                     isError = showError,
                     supportingText =
-                        if (showError) {
-                            { Text("Wrong password") }
-                        } else {
-                            null
+                        when {
+                            remainingMs > 0 -> {
+                                { Text("Too many attempts. Try again in ${formatCountdown(remainingMs)}.") }
+                            }
+                            showError -> {
+                                { Text("Wrong password") }
+                            }
+                            else -> null
                         },
                     modifier = Modifier.widthIn(max = 320.dp),
                 )
                 Box(modifier = Modifier.size(16.dp))
-                Button(onClick = submit, enabled = input.isNotEmpty()) {
+                Button(
+                    onClick = submit,
+                    enabled = input.isNotEmpty() && remainingMs <= 0,
+                ) {
                     Text("Unlock")
                 }
             }
         }
     }
+}
+
+private fun lockoutRemaining(untilEpochMs: Long?): Long {
+    val until = untilEpochMs ?: return 0
+    val diff = until - System.currentTimeMillis()
+    return if (diff > 0) diff else 0
+}
+
+private fun formatCountdown(millis: Long): String {
+    val totalSeconds = (millis + 999) / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s"
 }

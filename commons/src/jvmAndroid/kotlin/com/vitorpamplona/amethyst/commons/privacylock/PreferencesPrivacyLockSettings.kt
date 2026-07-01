@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.commons.privacylock
 
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.DEFAULT_LOCK_ENABLED
+import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.KEY_FAILED_UNLOCK_ATTEMPTS
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.KEY_FIRST_RUN_CARD_SEEN
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.KEY_INACTIVITY_TIMER
+import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.KEY_LOCKED_UNTIL_EPOCH_MS
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.KEY_LOCK_ENABLED
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.KEY_PASSWORD_HASHED
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings.Companion.KEY_REDACTION_LEVEL
@@ -53,12 +55,19 @@ class PreferencesPrivacyLockSettings(
         MutableStateFlow(DmRedactionLevel.fromOrdinal(prefs.getInt(KEY_REDACTION_LEVEL, DmRedactionLevel.DEFAULT.ordinal)))
     private val mutableFirstRunSeen = MutableStateFlow(prefs.getBoolean(KEY_FIRST_RUN_CARD_SEEN, false))
     private val mutablePasswordHashed = MutableStateFlow<String?>(prefs.get(KEY_PASSWORD_HASHED, null))
+    private val mutableFailedAttempts = MutableStateFlow(prefs.getInt(KEY_FAILED_UNLOCK_ATTEMPTS, 0))
+    private val mutableLockedUntil =
+        MutableStateFlow<Long?>(
+            prefs.getLong(KEY_LOCKED_UNTIL_EPOCH_MS, -1L).takeIf { it > 0 },
+        )
 
     override val lockEnabled: StateFlow<Boolean> = mutableEnabled.asStateFlow()
     override val inactivityTimer: StateFlow<InactivityTimer> = mutableTimer.asStateFlow()
     override val redactionLevel: StateFlow<DmRedactionLevel> = mutableRedaction.asStateFlow()
     override val firstRunCardSeen: StateFlow<Boolean> = mutableFirstRunSeen.asStateFlow()
     override val passwordHashed: StateFlow<String?> = mutablePasswordHashed.asStateFlow()
+    override val failedUnlockAttempts: StateFlow<Int> = mutableFailedAttempts.asStateFlow()
+    override val lockedUntilEpochMs: StateFlow<Long?> = mutableLockedUntil.asStateFlow()
 
     override fun setLockEnabled(enabled: Boolean) {
         mutableEnabled.value = enabled
@@ -91,5 +100,15 @@ class PreferencesPrivacyLockSettings(
     override fun setPasswordHashed(saltAndHash: String?) {
         mutablePasswordHashed.value = saltAndHash
         if (saltAndHash == null) prefs.remove(KEY_PASSWORD_HASHED) else prefs.put(KEY_PASSWORD_HASHED, saltAndHash)
+    }
+
+    override fun setFailedUnlockAttempts(count: Int) {
+        mutableFailedAttempts.value = count
+        prefs.putInt(KEY_FAILED_UNLOCK_ATTEMPTS, count)
+    }
+
+    override fun setLockedUntilEpochMs(millis: Long?) {
+        mutableLockedUntil.value = millis
+        if (millis == null) prefs.remove(KEY_LOCKED_UNTIL_EPOCH_MS) else prefs.putLong(KEY_LOCKED_UNTIL_EPOCH_MS, millis)
     }
 }
