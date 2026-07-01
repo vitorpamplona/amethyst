@@ -133,16 +133,19 @@ class PoolEventOutbox {
         return eventOutbox[event.id]?.remainingRelays() ?: emptySet()
     }
 
+    /** Records a send attempt. Returns the event if this attempt exhausted its retry budget for
+     *  [url] (i.e. we gave up delivering it there), or null otherwise. */
     fun newTry(
         id: HexKey,
         url: NormalizedRelayUrl,
-    ) {
-        val waiting = eventOutbox[id]
-        waiting?.newTry(url)
-        if (waiting?.isDone() == true) {
+    ): Event? {
+        val waiting = eventOutbox[id] ?: return null
+        val gaveUp = waiting.newTry(url)
+        if (waiting.isDone()) {
             eventOutbox = eventOutbox - waiting.event.id
             updateRelays()
         }
+        return if (gaveUp) waiting.event else null
     }
 
     fun newResponse(
@@ -184,14 +187,11 @@ class PoolEventOutbox {
         }
     }
 
+    /** Returns the event if this send attempt made us give up delivering it to [relay]. */
     fun onSent(
         relay: NormalizedRelayUrl,
         cmd: Command,
-    ) {
-        if (cmd is EventCmd) {
-            newTry(cmd.event.id, relay)
-        }
-    }
+    ): Event? = if (cmd is EventCmd) newTry(cmd.event.id, relay) else null
 
     fun sendToRelayIfChanged(
         event: Event,
