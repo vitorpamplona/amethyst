@@ -361,14 +361,16 @@ internal fun RootContent(
         }
 
         DeckColumnType.Messages -> {
-            DesktopMessagesScreen(
-                account = iAccount,
-                cacheProvider = localCache,
-                relayManager = relayManager,
-                localCache = localCache,
-                compactMode = compactMode,
-                onNavigateToProfile = onNavigateToProfile,
-            )
+            com.vitorpamplona.amethyst.desktop.security.DesktopMessagesLockGate {
+                DesktopMessagesScreen(
+                    account = iAccount,
+                    cacheProvider = localCache,
+                    relayManager = relayManager,
+                    localCache = localCache,
+                    compactMode = compactMode,
+                    onNavigateToProfile = onNavigateToProfile,
+                )
+            }
         }
 
         DeckColumnType.Search -> {
