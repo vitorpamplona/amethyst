@@ -153,7 +153,7 @@ class NappletBrowserService : Service() {
                     BrowserTab(
                         sessionId = sessionId,
                         clientMessenger = msg.replyTo,
-                        url = data.getString(NappletBrowserContract.KEY_URL)?.ifBlank { "about:blank" } ?: "about:blank",
+                        url = data.getString(NappletBrowserContract.KEY_URL)?.ifBlank { ABOUT_BLANK } ?: ABOUT_BLANK,
                         proxyPort = data.getInt(NappletBrowserContract.KEY_PROXY_PORT, -1),
                         useTor = data.getBoolean(NappletBrowserContract.KEY_USE_TOR, false),
                         bgColor = data.getInt(NappletBrowserContract.KEY_BG_COLOR, android.graphics.Color.WHITE),
@@ -590,9 +590,10 @@ class NappletBrowserService : Service() {
     private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
 
     /** Address-bar text → URL via the shared [OmniboxInput] rules (bare domain → https, else search). */
-    private fun normalizeUrl(input: String): String = OmniboxInput.resolve(input)?.url ?: "about:blank"
+    private fun normalizeUrl(input: String): String = OmniboxInput.resolve(input)?.url ?: ABOUT_BLANK
 
     private companion object {
         private const val TAG = "NappletBrowserService"
+        private const val ABOUT_BLANK = "about:blank"
     }
 }
