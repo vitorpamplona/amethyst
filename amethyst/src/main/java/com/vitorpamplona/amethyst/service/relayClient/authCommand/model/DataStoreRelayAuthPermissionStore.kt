@@ -26,6 +26,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
 import kotlinx.coroutines.flow.first
@@ -84,13 +85,66 @@ class DataStoreRelayAuthPermissionStore(
         return result
     }
 
+    override suspend fun recordUse(
+        relayUrl: String,
+        additions: Map<AuthPurposeKind, Set<String>>,
+    ) {
+        if (additions.isEmpty()) return
+        store.edit { prefs ->
+            prefs[urlKey(relayUrl)] = relayUrl
+            for ((kind, pubkeys) in additions) {
+                if (pubkeys.isEmpty()) continue
+                val key = rationaleKey(relayUrl, kind)
+                val existing = prefs[key].toPubkeySet()
+                prefs[key] = (existing + pubkeys).joinToString(SEPARATOR)
+            }
+        }
+    }
+
+    override suspend fun loadRationale(relayUrl: String): Map<AuthPurposeKind, Set<String>> {
+        val prefs = store.data.first()
+        return buildMap {
+            for (kind in AuthPurposeKind.entries) {
+                val pubkeys = prefs[rationaleKey(relayUrl, kind)].toPubkeySet()
+                if (pubkeys.isNotEmpty()) put(kind, pubkeys)
+            }
+        }
+    }
+
+    override suspend fun allRationales(): Map<String, Map<AuthPurposeKind, Set<String>>> {
+        val prefs = store.data.first()
+        val result = mutableMapOf<String, MutableMap<AuthPurposeKind, Set<String>>>()
+        for ((key, value) in prefs.asMap()) {
+            val name = key.name
+            if (!name.startsWith(RATIONALE_PREFIX)) continue
+            val rest = name.removePrefix(RATIONALE_PREFIX) // "<hash>:<KIND>"
+            val hash = rest.substringBefore(':')
+            val kind = runCatching { AuthPurposeKind.valueOf(rest.substringAfter(':')) }.getOrNull() ?: continue
+            val url = prefs[stringPreferencesKey("$URL_PREFIX$hash")] ?: continue
+            val pubkeys = (value as? String).toPubkeySet()
+            if (pubkeys.isNotEmpty()) {
+                result.getOrPut(url) { mutableMapOf() }[kind] = pubkeys
+            }
+        }
+        return result
+    }
+
+    private fun String?.toPubkeySet(): Set<String> = this?.split(SEPARATOR)?.filterTo(mutableSetOf()) { it.isNotEmpty() } ?: emptySet()
+
     private fun decisionKey(relayUrl: String) = stringPreferencesKey("$DECISION_PREFIX${hash(relayUrl)}")
 
     private fun urlKey(relayUrl: String) = stringPreferencesKey("$URL_PREFIX${hash(relayUrl)}")
 
+    private fun rationaleKey(
+        relayUrl: String,
+        kind: AuthPurposeKind,
+    ) = stringPreferencesKey("$RATIONALE_PREFIX${hash(relayUrl)}:${kind.name}")
+
     companion object {
         private const val DECISION_PREFIX = "allow:"
         private const val URL_PREFIX = "url:"
+        private const val RATIONALE_PREFIX = "rat:"
+        private const val SEPARATOR = ","
 
         private fun hash(relayUrl: String): String {
             val digest = MessageDigest.getInstance("SHA-256").digest(relayUrl.toByteArray())
