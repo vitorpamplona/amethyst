@@ -24,11 +24,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -39,6 +41,10 @@ import com.vitorpamplona.amethyst.ui.stringRes
  * recommendation the dedicated favorites list (10054) was meant for, and the note then appears in
  * the standard Bookmarks screen. Works for both regular events (e-tag) and addressable shows/
  * episodes (a-tag) because [AccountViewModel.addPublicBookmark] branches on the note type.
+ *
+ * Bookmarked state is read from the public bookmark id/address **sets** (not `List<Note>`
+ * containment) so it reflects reliably for addressable notes and updates the moment the list
+ * changes; a toast confirms each add/remove so the action is never silent.
  */
 @Composable
 fun PodcastBookmarkButton(
@@ -46,27 +52,39 @@ fun PodcastBookmarkButton(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val bookmarks by accountViewModel.account.bookmarkState.bookmarks
-        .collectAsStateWithLifecycle()
-    val isBookmarked = note in bookmarks.public
+    val bookmarkState = accountViewModel.account.bookmarkState
+
+    val publicAddresses by bookmarkState.publicBookmarkAddressIdSet.collectAsStateWithLifecycle()
+    val publicEvents by bookmarkState.publicBookmarkEventIdSet.collectAsStateWithLifecycle()
+
+    val isBookmarked =
+        remember(note, publicAddresses, publicEvents) {
+            if (note is AddressableNote) {
+                note.address in publicAddresses
+            } else {
+                note.idHex in publicEvents
+            }
+        }
 
     IconButton(
         onClick = {
             if (isBookmarked) {
                 accountViewModel.removePublicBookmark(note)
+                accountViewModel.toastManager.toast(R.string.bookmarks_title, R.string.podcast_bookmark_removed)
             } else {
                 accountViewModel.addPublicBookmark(note)
+                accountViewModel.toastManager.toast(R.string.bookmarks_title, R.string.podcast_bookmark_added)
             }
         },
         modifier = modifier,
     ) {
         Icon(
-            symbol = if (isBookmarked) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkBorder,
+            symbol = if (isBookmarked) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkAdd,
             contentDescription =
                 stringRes(
                     if (isBookmarked) R.string.remove_from_public_bookmarks else R.string.add_to_public_bookmarks,
                 ),
-            tint = MaterialTheme.colorScheme.primary,
+            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
