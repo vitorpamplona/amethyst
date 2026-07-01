@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -29,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
@@ -54,11 +54,8 @@ import okhttp3.Request
 object NipCommand {
     private const val RAW_BASE = "https://raw.githubusercontent.com/nostr-protocol/nips/master"
 
-    // NIP-50-capable relays for the Nostr fallback (search isn't universal).
-    private val SEARCH_RELAYS =
-        listOf("wss://relay.nostr.band", "wss://nostr.wine")
-            .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
-            .toSet()
+    // Amethyst's default NIP-50-capable search relays (search isn't universal).
+    private val SEARCH_RELAYS = DefaultSearchRelayList
 
     // Quartz's canonical "NIP published on Nostr" kind (NipTextEvent), plus the
     // wiki + long-form kinds clients also use to mirror NIP text.

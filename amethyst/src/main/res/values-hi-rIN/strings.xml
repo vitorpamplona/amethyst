@@ -2315,7 +2315,7 @@
     <string name="search_relays_not_found">आपके खोज पुनःप्रसारकों की स्थापना करें</string>
     <string name="search_relays_not_found_description">खोज तथा उपयोगकर्ता सूचक जोडने के लिए स्पष्टतः रूपांकित पुनःप्रसारक सूची बनाने से इन परिणामों में शोधन होगा।</string>
     <string name="search_relays_not_found_editing">विषयवस्तु खोजने के लिए अथवा उपयोगकर्ता सूचक जोडने में उपयोग करनें के लिए १ - ३ पुनःप्रसारकों को जोडें। सुनिश्चित करें कि आपके चयनित पुनःप्रसारक निप॰-५० को कार्यान्वित किये हैं।</string>
-    <string name="search_relays_not_found_examples">ये अच्छे विकल्प हैं :\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">ये अच्छे विकल्प हैं :\n - nostr.wine\n - relay.noswhere.com</string>
     <string name="outbox_relays_title">निर्गतपेटिका पुनःप्रसारक सूची</string>
     <string name="outbox_relays_not_found">अपने सार्वजनिक निर्गतपेटिका पुनःप्रसारकों की स्थापना करें पत्र प्रकाशन के लिए</string>
     <string name="outbox_relays_not_found_description">आपके विषयवस्तु प्राप्त करने के लिए पुनःप्रसारक सूची की विशिष्ट रचना आवश्यक है नोस्टर में। तथा आपके अनुचरों के लिए आपको ढूँढने की एकमात्र विधि। </string>

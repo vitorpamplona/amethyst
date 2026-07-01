@@ -2184,7 +2184,7 @@
     <string name="search_relays_not_found">Ställ in dina sökreläer</string>
     <string name="search_relays_not_found_description">Att skapa en relälista speciellt utformad för sökning och användartaggning kommer att förbättra dessa resultat.</string>
     <string name="search_relays_not_found_editing">Sätt in mellan 1–3 reläer att använda när du söker efter innehåll eller taggar användare. Se till att dina valda reläer implementerar NIP-50</string>
-    <string name="search_relays_not_found_examples">Bra alternativ är:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Bra alternativ är:\n - nostr.wine\n - relay.noswhere.com</string>
     <string name="outbox_relays_title">Utgående reläer</string>
     <string name="outbox_relays_not_found">Ställ in dina offentliga utgående reläer för att kunna posta</string>
     <string name="outbox_relays_not_found_description">Att skapa en relälista specifikt för att ta emot ditt innehåll är avgörande för din Nostr-upplevelse och det enda sättet dina följare kan hitta dig.</string>

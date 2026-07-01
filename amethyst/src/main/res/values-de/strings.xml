@@ -655,7 +655,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="search_relays_not_found">Richten Sie Ihre Suchrelais ein</string>
     <string name="search_relays_not_found_description">Das Erstellen einer Relaisliste, die speziell für die Suche und Benutzerkennzeichnung entwickelt wurde, wird diese Ergebnisse verbessern.</string>
     <string name="search_relays_not_found_editing">Fügen Sie 1–3 Relais ein, die beim Suchen nach Inhalten oder beim Taggen von Benutzern verwendet werden sollen. Stellen Sie sicher, dass Ihre ausgewählten Relais NIP-50 implementieren</string>
-    <string name="search_relays_not_found_examples">Gute Optionen sind:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Gute Optionen sind:\n - nostr.wine\n - relay.noswhere.com</string>
     <string name="relay_settings">Relaiseinstellungen</string>
     <string name="public_home_section">Öffentliche Heimrelais</string>
     <string name="public_home_section_explainer">Dieser Relais-Typ speichert alle Ihre Inhalte. Amethyst sendet Ihre Beiträge hierher und andere werden diese Relais verwenden, um Ihre Inhalte zu finden. Fügen Sie 1–3 Relais ein. Sie können persönliche Relais, bezahlte Relais oder öffentliche Relais sein.</string>

@@ -40,7 +40,6 @@ data class RelayStatus(
 object DefaultRelays {
     val RELAYS =
         listOf(
-            "wss://relay.nostr.band",
             "wss://nos.lol",
             "wss://nostr.wine",
             "wss://relay.noswhere.com",

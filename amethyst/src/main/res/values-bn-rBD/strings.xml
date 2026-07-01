@@ -2147,7 +2147,7 @@
     <string name="search_relays_not_found">আপনার সার্চ relay সেট আপ করুন</string>
     <string name="search_relays_not_found_description">বিশেষভাবে সার্চ এবং ব্যবহারকারী ট্যাগিংয়ের জন্য ডিজাইন করা একটি relay তালিকা তৈরি করলে ফলাফল উন্নত হবে।</string>
     <string name="search_relays_not_found_editing">কন্টেন্ট বা ব্যবহারকারী সার্চ করতে এবং ট্যাগিংয়ের জন্য ১–৩টি relay ঢোকান। নিশ্চিত করুন যে আপনার বেছে নেওয়া relay গুলো NIP-50 সমর্থন করে</string>
-    <string name="search_relays_not_found_examples">ভালো বিকল্পগুলো হলো:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">ভালো বিকল্পগুলো হলো:\n - nostr.wine\n - relay.noswhere.com</string>
     <string name="outbox_relays_title">আউটবক্স Relay</string>
     <string name="outbox_relays_not_found">পোস্ট করতে আপনার পাবলিক আউটবক্স relay সেট আপ করুন</string>
     <string name="outbox_relays_not_found_description">আপনার কন্টেন্ট গ্রহণের জন্য বিশেষভাবে ডিজাইন করা একটি relay তালিকা তৈরি করা আপনার Nostr অভিজ্ঞতার জন্য অত্যন্ত গুরুত্বপূর্ণ এবং আপনার অনুসরণকারীরা আপনাকে খুঁজে পাওয়ার একমাত্র উপায়। </string>

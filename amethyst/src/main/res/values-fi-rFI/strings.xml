@@ -2133,7 +2133,7 @@
     <string name="search_relays_not_found">Määritä hakurelayit</string>
     <string name="search_relays_not_found_description">Hakuun ja käyttäjien merkitsemiseen tarkoitetun relay-listan luominen parantaa näitä tuloksia.</string>
     <string name="search_relays_not_found_editing">Lisää 1–3 relayia käytettäväksi sisällön haussa tai käyttäjien merkitsemisessä. Varmista, että valitsemasi relayit toteuttavat NIP-50:n</string>
-    <string name="search_relays_not_found_examples">Hyviä vaihtoehtoja ovat:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Hyviä vaihtoehtoja ovat:\n - nostr.wine\n - relay.noswhere.com</string>
     <string name="outbox_relays_title">Lähtevien relayit</string>
     <string name="outbox_relays_not_found">Määritä julkiset lähtevien relayit julkaistaksesi</string>
     <string name="outbox_relays_not_found_description">Sisällön vastaanottamiseen suunnitellun relay-listan luominen on keskeistä Nostr-kokemuksellesi ja ainoa tapa, jolla seuraajasi voivat löytää sinut. </string>

@@ -2159,7 +2159,7 @@
     <string name="search_relays_not_found">Iestatiet savus meklēšanas relay</string>
     <string name="search_relays_not_found_description">Speciāla relay saraksta izveide meklēšanai un lietotāju atzīmēšanai uzlabos šos rezultātus.</string>
     <string name="search_relays_not_found_editing">Ievietojiet 1–3 relay, ko izmantot, meklējot saturu vai atzīmējot lietotājus. Pārliecinieties, ka izvēlētie relay ievieš NIP-50</string>
-    <string name="search_relays_not_found_examples">Labas iespējas ir:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Labas iespējas ir:\n - nostr.wine\n - relay.noswhere.com</string>
     <string name="outbox_relays_title">Izejošo ziņojumu Relay</string>
     <string name="outbox_relays_not_found">Iestatiet savus publiskos izejošo ziņojumu relay, lai publicētu</string>
     <string name="outbox_relays_not_found_description">Speciāla relay saraksta izveide jūsu satura saņemšanai ir ļoti svarīga jūsu Nostr pieredzei un vienīgais veids, kā jūsu sekotāji var jūs atrast.</string>

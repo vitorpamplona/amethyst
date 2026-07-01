@@ -74,7 +74,7 @@ fun SearchRelayEditor(
 
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            "Add relays that support NIP-50 full-text search (e.g., relay.nostr.band).",
+            "Add relays that support NIP-50 full-text search (e.g., nostr.wine).",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 4.dp),

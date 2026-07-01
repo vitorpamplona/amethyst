@@ -2127,7 +2127,7 @@
     <string name="search_relays_not_found">Ρυθμίστε τα relay αναζήτησής σας</string>
     <string name="search_relays_not_found_description">Η δημιουργία λίστας relay ειδικά σχεδιασμένης για αναζήτηση και επισήμανση χρηστών θα βελτιώσει αυτά τα αποτελέσματα.</string>
     <string name="search_relays_not_found_editing">Εισάγετε από 1 έως 3 relay για χρήση κατά την αναζήτηση περιεχομένου ή επισήμανση χρηστών. Βεβαιωθείτε ότι τα επιλεγμένα relay υλοποιούν NIP-50</string>
-    <string name="search_relays_not_found_examples">Καλές επιλογές είναι:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Καλές επιλογές είναι:\n - nostr.wine\n - relay.noswhere.com</string>
     <string name="outbox_relays_title">Relay Εξερχόμενων</string>
     <string name="outbox_relays_not_found">Ρυθμίστε τα δημόσια relay εξερχόμενων για ανάρτηση</string>
     <string name="outbox_relays_not_found_description">Η δημιουργία λίστας relay ειδικά σχεδιασμένης για τη λήψη του περιεχομένου σας είναι κρίσιμη για την εμπειρία σας στο Nostr και ο μόνος τρόπος για να σας βρουν οι ακόλουθοί σας. </string>

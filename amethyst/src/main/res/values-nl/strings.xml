@@ -644,7 +644,7 @@
     <string name="search_relays_not_found">Stel uw zoek relays in</string>
     <string name="search_relays_not_found_description">Het maken van een relay lijst speciaal ontworpen voor zoekopdracht en gebruikers-tagging zal deze resultaten verbeteren.</string>
     <string name="search_relays_not_found_editing">Voeg tussen de 1 en 3 relays toe om te gebruiken bij het zoeken naar content of bij het taggen van gebruikers. Zorg ervoor dat uw gekozen relays implementatie van NIP-50</string>
-    <string name="search_relays_not_found_examples">Goede opties zijn:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Goede opties zijn:\n - nostr.wine\n - relay.noswhere.com</string>
     <string name="relay_settings">Relay-instellingen</string>
     <string name="public_home_section">Openbare thuis relays</string>
     <string name="public_home_section_explainer">Dit relay type slaat al je inhoud op. Amethyst stuurt je berichten hierheen en anderen gebruiken deze relays om je inhoud te vinden. Voeg tussen de 1 en 3 relays toe. Het gaat om persoonlijke relays, betaalde relays of openbare relays.</string>
