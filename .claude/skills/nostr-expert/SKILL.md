@@ -1,6 +1,6 @@
 ---
 name: nostr-expert
-description: Nostr protocol implementation patterns in Quartz (AmethystMultiplatform's KMP Nostr library). Use when working with: (1) Nostr events (creating, parsing, signing), (2) Event kinds and tags, (3) NIP implementations (80+ NIP packages in quartz/), (4) Event builders and TagArrayBuilder DSL, (5) Nostr cryptography (secp256k1, NIP-44 encryption), (6) Relay communication patterns, (7) Bech32 encoding (npub, nsec, note, nevent). Complements nostr-protocol agent (NIP specs) - this skill provides Quartz codebase patterns and implementation details.
+description: Nostr protocol implementation patterns in Quartz (AmethystMultiplatform's KMP Nostr library). Use when working with: (1) Nostr events (creating, parsing, signing), (2) Event kinds and tags, (3) NIP implementations (80+ NIP packages in quartz/), (4) Event builders and TagArrayBuilder DSL, (5) Nostr cryptography (secp256k1, NIP-44 encryption), (6) Relay communication patterns, (7) Bech32 encoding (npub, nsec, note, nevent), (8) Resolving user input (hex, npub, nprofile, or NIP-05 `name@domain` internet identifiers) to a pubkey. Complements nostr-protocol agent (NIP specs) - this skill provides Quartz codebase patterns and implementation details.
 ---
 
 # Nostr Protocol Expert (Quartz Implementation)
@@ -15,6 +15,7 @@ Practical patterns for working with Nostr in Quartz, AmethystMultiplatform's KMP
 - Finding NIP implementations in quartz/ codebase
 - Nostr cryptography (secp256k1 signing, NIP-44 encryption)
 - Bech32 encoding/decoding (npub, nsec, note formats)
+- Resolving user input (hex / npub / nprofile / NIP-05 `name@domain`) to a pubkey
 - Event validation and verification
 
 **For NIP specifications** → Use `nostr-protocol` agent
@@ -424,6 +425,25 @@ when (val entity = Nip19Parser.uriToRoute(input)?.entity) {
 }
 ```
 
+## Resolving User Input to a Pubkey (NIP-05 + NIP-19)
+
+**Before writing any `if (isHex) … else if (npub) … else if ("@" in s) fetchWellKnown()` logic, stop — it already exists.** `resolveUserHexOrNull` in `quartz/nip05DnsIdentifiers/` accepts every identifier form a user might type and returns a 64-hex pubkey.
+
+```kotlin
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.resolveUserHexOrNull
+
+// hex | npub1… | nprofile1… | nsec1… | name@domain.tld  →  HexKey? (null if unrecognized/lookup fails)
+val pubkey = resolveUserHexOrNull(userInput, nip05Client)
+```
+
+- Tries the **synchronous** hex/bech32 path first (`decodePublicKeyAsHexOrNull`) — only NIP-05-shaped input hits the network.
+- `suspend`; re-throws only `CancellationException`. Pass `nip05Client = null` for offline contexts.
+- Build the client with `Nip05Client(fetcher = OkHttpNip05Fetcher { _ -> okHttp })` (see `cli/Context.kt`). The OkHttp fetcher already runs on IO and disables redirects per the NIP-05 spec — don't re-implement the `.well-known/nostr.json` fetch or JSON parse.
+- Need only hex/bech32 (no network)? Use `decodePublicKeyAsHexOrNull(input)` directly.
+- Need to *verify* a claimed identifier maps back to a pubkey? `nip05Client.verify(Nip05Id.parse(id)!!, pubkey)`.
+
+See `references/nip05-identifiers.md` for the full API surface (`Nip05Id`, `Nip05Client`, `Nip05Parser`, `KeyInfoSet`, Namecoin `.bit`) and the hand-rolled anti-pattern to avoid.
+
 ## Event Validation
 
 ```kotlin
@@ -552,6 +572,7 @@ Or see `references/nip-catalog.md` for complete catalog.
 - **references/event-hierarchy.md** - Event class hierarchy, kind classifications, common types
 - **references/tag-patterns.md** - Tag structure, TagArrayBuilder DSL, common tag types, parsing patterns
 - **references/nip19-bech32.md** - `Nip19Parser`, `Bech32Util`, `TlvBuilder`, entity types (NPub, NSec, NEvent, NAddress, NProfile, NRelay, NEmbed)
+- **references/nip05-identifiers.md** - Resolving any identifier (hex/npub/nprofile/nsec/`name@domain`) to a pubkey via `resolveUserHexOrNull`; `Nip05Client`, `Nip05Id`, `Nip05Parser`, Namecoin `.bit` — and the hand-rolled anti-pattern to avoid
 - **references/event-factory.md** - `EventFactory` dispatch pattern and how to register a new kind
 - **references/crypto-and-encryption.md** - Event signing/verification, secp256k1 abstraction, NIP-44 encryption, `SharedKeyCache`
 - **references/large-cache.md** - `LargeCache<K,V>` expect/actual + `ICacheOperations` functional API
@@ -567,6 +588,9 @@ Or see `references/nip-catalog.md` for complete catalog.
 | Verify signature | `event.verify()` | nip01Core/core/ |
 | Encrypt (NIP-44) | `Nip44v2.encrypt(...)` | nip44Encryption/ |
 | Bech32 encode | `Nip19.npubEncode(...)` | nip19Bech32/ |
+| Resolve input → pubkey | `resolveUserHexOrNull(input, nip05Client)` | nip05DnsIdentifiers/ |
+| Decode bech32 → pubkey (no net) | `decodePublicKeyAsHexOrNull(input)` | nip19Bech32/ |
+| Verify NIP-05 identifier | `nip05Client.verify(Nip05Id.parse(id)!!, hex)` | nip05DnsIdentifiers/ |
 | Find NIP | `scripts/nip-lookup.sh <number>` | - |
 
 ## Common Event Kinds
