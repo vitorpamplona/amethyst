@@ -78,9 +78,11 @@ sealed interface AuthPurpose {
 ```
 
 The auth path is **reactive** (relay pushes the challenge; the lambda only knows
-the URL), so the send/subscribe side must **register its intent before opening
-the connection**. New main-process component (lives with the coordinator, since
-`LocalCache`/`Account` are main-process only):
+the URL). Most intent is already recoverable from quartz's per-relay pending
+events + active filters (see "Where it lives" below), so the registry below is
+**minimal** — only for hints quartz can't infer (e.g. the human recipient behind
+an encrypted gift wrap). It lives with the coordinator, since `LocalCache`/
+`Account` are main-process only:
 
 ```kotlin
 // amethyst/.../service/relayClient/authCommand/model/RelayAuthIntentRegistry.kt
@@ -195,6 +197,65 @@ recipient pubkeys → display names through `LocalCache`).
   three-state incl. "ask"). No storage-format change if we keep decisions
   per-relay (idea B, recommended default).
 
+## Where it lives: quartz (generic mechanism) vs amethyst (policy + UI)
+
+Goal (per the brief): if the auth+resend mechanism can be made **robust and
+generic**, it belongs in **quartz**; only the *semantics* (why / follow-trust /
+prompt copy / rationale UI) stay in **amethyst**.
+
+### The resend queue already exists in quartz — and is the "intent registry"
+
+`PoolEventOutbox` / `PoolEventOutboxState` already persist outgoing events
+per-relay across reconnects, and `NostrClient.syncFilters(relay)` — called on
+connect **and after an auth OK** (`RelayAuthenticator.checkAuthResults`) —
+already re-sends pending EVENTs, not just REQ subscriptions. So the park-and-
+flush half of idea C is largely built; we just need to make it correct.
+
+It also means we mostly **don't need a separate `RelayAuthIntentRegistry`**:
+quartz already knows, per relay, the *pending outgoing events*
+(`PoolEventOutbox`) and the *active subscription filters* (`activeRequests`).
+That set IS the intent. At AUTH time quartz can hand the injected decision
+callback this context; amethyst derives purpose from it (a pending kind-1059
+gift wrap → `SendDM`; a REQ whose `authors` are followed → `ReadOutbox`). Keep a
+tiny registry only for hints quartz can't infer (e.g. the human recipient behind
+a gift wrap, which is encrypted) — but drive the common cases off quartz state.
+
+### Generic fixes to land in quartz (`nip01Core/relay/client/`)
+
+1. **Treat `auth-required` as a first-class deferred state, not a burned retry.**
+   Today `PoolEventOutboxState.newResponse` sends `auth-required` down the
+   generic-failure path, and `isDone() = responses.size > 2 || tries.size > 3`
+   drops the event after 3 NAKs — which can fire *before* AUTH completes. Port
+   the `StandaloneRelayClient` behavior (`!msg.message.startsWith("auth-required")`)
+   into `PoolEventOutbox`: an `auth-required` NAK marks the event **pending-auth**
+   for that relay, does **not** count toward `isDone()`, and is re-sent by the
+   existing `syncFilters` once auth succeeds.
+2. **Real retry policy instead of a hard count.** Replace the `>2 / >3` cliff
+   with bounded retries + backoff, and a **terminal "gave up" notification**
+   (via `RelayConnectionListener` / a publish-result callback) so events are
+   never *silently* dropped. `NostrClientPublishExt.publishAndConfirmDetailed`
+   and `pendingPublishRelaysFor` already give higher layers a confirmation
+   surface to build on.
+3. **Enrich the injected auth-decision callback with pending context.** The
+   `signWithAllLoggedInUsers = (relayUrl, authTemplate) -> …` hook in
+   `RelayAuthenticator` currently gets only the URL. Pass a generic
+   `RelayAuthChallengeContext` carrying the relay's pending events + active
+   filters, and let it return not just "sign or not" but an outcome that can
+   **suspend for a host decision**. The `AuthPurpose`/`RelayAuthContext` types
+   move to a quartz-neutral shape (opaque to quartz); amethyst supplies the
+   resolver.
+4. **Expose an "event is blocked on auth for relay X" signal** so a host UI can
+   show the prompt and reflect "queued, not lost." A `SharedFlow`/listener on the
+   client, host-agnostic.
+
+### What stays in amethyst
+
+The *policy and meaning*: blocked-list + follow-graph resolver, purpose/
+counterparty derivation (needs `LocalCache`/`Account`, main-process only), the
+`TRUSTED_FOLLOWS` mode, the ASK prompt UI, and the per-relay **grant rationale**
+persistence + settings rows (§1b). These depend on identity/UI and cannot live
+in quartz.
+
 ## A few ideas / open decisions
 
 These are the knobs where more than one answer is defensible. Recommendation
@@ -215,11 +276,14 @@ first.
   — richer but more confusing; the rationale display gives the transparency
   without splitting the gate.
 
-- **C. In-flight send when auth isn't yet granted.** *(Recommended to start:
-  best-effort — show the prompt; current send may fail; user retries after
-  granting, leaning on existing resend.)* Alternative: park the outgoing event
-  and auto-flush on auth success (message never lost) — best UX but a larger
-  change to the send pipeline; good as a fast-follow.
+- **C. In-flight send when auth isn't yet granted.** *(Recommended: fix
+  quartz's existing outbox so park-and-flush is the default.)* The queue already
+  exists (`PoolEventOutbox` + `syncFilters`-after-auth); the work is making
+  `auth-required` a deferred state (not a burned retry) and adding backoff + a
+  terminal give-up signal — see the quartz section above. This is strictly
+  better than the amethyst-only best-effort/retry fallback and is generic, so it
+  belongs in quartz. Best-effort remains the trivial fallback only if we choose
+  not to touch quartz.
 
 - **D. Which purposes auto-trust covers.** DMs and public inbox notifications are
   clear yes. Outbox/feed reads ("maybe" in the brief) could be a sub-toggle
@@ -235,7 +299,22 @@ first.
   `recordUse(relayUrl, purpose)` merge that updates the rationale + `lastUsedAt`.
 - `amethyst/.../authCommand/model/RelayAuthPermissionLedger.kt` — context-aware
   `decide(ctx)`, blocked-list + follow-trust inputs, `ASK` fall-through.
-- `amethyst/.../authCommand/model/RelayAuthIntentRegistry.kt` — **new**.
+- `amethyst/.../authCommand/model/RelayAuthIntentRegistry.kt` — **new, minimal**:
+  only for hints quartz can't infer (e.g. the recipient behind an encrypted gift
+  wrap). Common purposes are derived from quartz's pending events + active
+  filters instead.
+
+**Quartz (generic mechanism — see the quartz section):**
+- `quartz/.../nip01Core/relay/client/pool/PoolEventOutboxState.kt` +
+  `PoolEventOutbox.kt` — `auth-required` as a pending-auth state excluded from
+  `isDone()`; bounded retry + backoff; terminal give-up notification.
+- `quartz/.../nip01Core/relay/client/auth/RelayAuthenticator.kt` — pass a
+  `RelayAuthChallengeContext` (pending events + active filters) to the injected
+  decision hook; allow the hook to suspend for a host decision.
+- `quartz/.../nip01Core/relay/client/listeners/RelayConnectionListener.kt` (or a
+  new client `SharedFlow`) — "event blocked on auth for relay X" + "gave up"
+  signals. Fold the good `StandaloneRelayClient` auth-retry logic into the
+  production path.
 - `amethyst/.../authCommand/model/AuthCoordinator.kt` — build `RelayAuthContext`
   from the registry, emit `RelayAuthRequest` on `ASK`, await the reply.
 - Wire the ledger's new inputs where it's constructed (blocked-list flow,
@@ -255,6 +334,11 @@ first.
   precedence ladder — blocked beats override beats policy; `TRUSTED_FOLLOWS`
   allows a followed-counterparty relay and falls to `ASK` for a stranger;
   `Unknown` purpose → silent `DENY`.
+- **Quartz outbox (JVM unit tests):** an `auth-required` NAK does **not** advance
+  `isDone()` and the event survives; after a simulated auth OK, `syncFilters`
+  re-sends it; a non-auth terminal error still discards; retries honor backoff
+  and emit a give-up signal instead of a silent drop. Include a race test:
+  repeated `auth-required` NAKs before auth completes must not drop the event.
 - **Intent registry:** register/expire, multi-purpose merge on one relay.
 - **Grant rationale:** `recordUse` merges new counterparties into the right
   purpose kind, dedupes, refreshes `lastUsedAt`; `allDecisions()`/settings query
