@@ -76,11 +76,14 @@ val store = EventStore(
         indexTagsByCreatedAtAlone = false,
         indexTagsWithKindAndPubkey = false,
         useAndIndexIdOnOrderBy = false,
+        indexFullTextSearch = true,
     ),
 )
 ```
 
 By default, all single-letter tags with values are indexed. Override `shouldIndex(kind, tag)` for custom behavior. More indexes = faster queries but larger database.
+
+`indexFullTextSearch` defaults to `true` and controls the NIP-50 full-text index (`event_fts`). Set it to `false` when search is served elsewhere (e.g. a Vespa backend, or a `SearchEventSource` as shown below): inserts skip the FTS tokenization cost, no `event_fts` table/trigger is created, and any filter carrying a non-empty `search` term returns no matches.
 
 ## Non-Storage Relays (search, redirector, computed)
 

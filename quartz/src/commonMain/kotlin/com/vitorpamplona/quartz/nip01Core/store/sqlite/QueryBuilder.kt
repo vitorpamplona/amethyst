@@ -114,6 +114,12 @@ class QueryBuilder(
     ): QuerySpec {
         val newFilter = filter.toFilterWithDTags()
 
+        // With FTS off there is no event_fts table to MATCH against, so a
+        // search term can never be satisfied — the filter matches nothing.
+        if (searchDisabledMatchesNothing(newFilter.search)) {
+            return QuerySpec(makeMatchesNothingQuery())
+        }
+
         if (newFilter.isSimpleQuery()) {
             return makeSimpleQuery(
                 project = true,
@@ -214,6 +220,11 @@ class QueryBuilder(
         hasher: TagNameValueHasher,
     ): QuerySpec {
         val newFilter = filter.toFilterWithDTags()
+
+        // With FTS off a search term can never be satisfied — no matches.
+        if (searchDisabledMatchesNothing(newFilter.search)) {
+            return QuerySpec("SELECT id, created_at FROM event_headers WHERE 0")
+        }
 
         // Simple path — no tag joins, no FTS — collapses to a single
         // SELECT against event_headers.
@@ -389,6 +400,18 @@ class QueryBuilder(
             results
         }
 
+    /**
+     * True when full-text search is turned off ([FullTextSearchModule.enabled]
+     * is `false`) and the filter carries a non-empty `search` term. Such a
+     * filter can never be satisfied — there is no `event_fts` table to
+     * MATCH — so callers short-circuit to a "matches nothing" query. An
+     * empty-string search imposes no constraint and is left to the normal
+     * (non-search) query path, matching the FTS-enabled behaviour.
+     */
+    private fun searchDisabledMatchesNothing(search: String?): Boolean = !fts.enabled && search != null && search.isNotEmpty()
+
+    private fun makeMatchesNothingQuery() = "SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers WHERE 0"
+
     private fun makeEverythingQuery() = "SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers ORDER BY created_at DESC${if (indexStrategy.useAndIndexIdOnOrderBy) ", id ASC" else ""}"
 
     private fun makeQueryIn(rowIdQuery: String) =
@@ -479,6 +502,9 @@ class QueryBuilder(
         db: SQLiteConnection,
     ): Int {
         val newFilter = filter.toFilterWithDTags()
+
+        // With FTS off a search term can never be satisfied — count is 0.
+        if (searchDisabledMatchesNothing(newFilter.search)) return 0
 
         if (newFilter.isSimpleQuery()) {
             val sql =
@@ -622,7 +648,15 @@ class QueryBuilder(
     ): QuerySpec? {
         if (filter.isEmpty()) return null
 
-        val mustJoinSearch = (filter.search != null)
+        // With FTS off there is no event_fts table to MATCH/JOIN against.
+        // A non-empty search can never match, so this filter contributes
+        // no row ids (returns an empty branch to any UNION/COUNT/DELETE);
+        // an empty search imposes no constraint and is simply dropped below.
+        if (searchDisabledMatchesNothing(filter.search)) {
+            return QuerySpec("SELECT event_headers.row_id as row_id FROM event_headers WHERE 0")
+        }
+
+        val mustJoinSearch = filter.search != null && fts.enabled
 
         val nonDTagsIn = filter.tags?.filter { it.key != "d" } ?: emptyMap()
 

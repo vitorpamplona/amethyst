@@ -81,6 +81,21 @@ interface IndexingStrategy {
      */
     val useAndIndexIdOnOrderBy: Boolean
 
+    /**
+     * Maintain the NIP-50 full-text search index (`event_fts`).
+     *
+     * Unlike the other flags this defaults to **on**: search is a core
+     * feature and every searchable event is tokenized into an FTS virtual
+     * table on insert, with an `AFTER DELETE` trigger keeping it in sync.
+     *
+     * Turn it **off** when this store never serves search from SQLite —
+     * e.g. a relay that offloads NIP-50 to an external engine like Vespa.
+     * With it off, no `event_fts` table or trigger is created, inserts
+     * skip the tokenization cost, deletes skip the trigger, and any filter
+     * carrying a non-empty `search` term returns no matches.
+     */
+    val indexFullTextSearch: Boolean
+
     fun shouldIndex(
         kind: Int,
         tag: Tag,
@@ -95,6 +110,7 @@ class DefaultIndexingStrategy(
     override val indexTagsByCreatedAtAlone: Boolean = false,
     override val indexTagsWithKindAndPubkey: Boolean = false,
     override val useAndIndexIdOnOrderBy: Boolean = false,
+    override val indexFullTextSearch: Boolean = true,
 ) : IndexingStrategy {
     override fun shouldIndex(
         kind: Int,
