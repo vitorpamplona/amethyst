@@ -64,6 +64,16 @@ class RelayAuthPurposeDeriverTest {
     }
 
     @Test
+    fun notifyExcludesTheEventsOwnAuthor() {
+        val author = "11".repeat(32) // matches event()'s pubKey
+        val purposes = RelayAuthPurposeDeriver.derive(listOf(event(1, listOf(author, alice))), emptyMap())
+
+        assertEquals(1, purposes.size)
+        assertEquals(AuthPurposeKind.NOTIFY_INBOX, purposes[0].kind)
+        assertEquals(setOf(alice), purposes[0].counterparties)
+    }
+
+    @Test
     fun subscriptionAuthorsBecomeReadOutbox() {
         val purposes = RelayAuthPurposeDeriver.derive(emptyList(), mapOf("sub1" to listOf(Filter(authors = listOf(alice, bob)))))
 
