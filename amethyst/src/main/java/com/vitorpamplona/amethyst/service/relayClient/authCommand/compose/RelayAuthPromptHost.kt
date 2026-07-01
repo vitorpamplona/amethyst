@@ -67,10 +67,15 @@ fun RelayAuthPromptHost(accountViewModel: AccountViewModel) {
     val queue = remember { mutableStateListOf<RelayAuthPrompt>() }
 
     LaunchedEffect(bus) {
-        bus.prompts.collect { queue.add(it) }
+        bus.prompts.collect { prompt ->
+            queue.add(prompt)
+            // Drop the prompt whenever it resolves by any path (answered here, answered on another
+            // account's dialog, or timed out in the bus) so we never show a stale one.
+            prompt.onResolved { queue.remove(prompt) }
+        }
     }
 
-    queue.firstOrNull()?.let { prompt ->
+    queue.firstOrNull { !it.isResolved }?.let { prompt ->
         RelayAuthPromptDialog(prompt, accountViewModel) { choice ->
             prompt.respond(choice)
             queue.remove(prompt)

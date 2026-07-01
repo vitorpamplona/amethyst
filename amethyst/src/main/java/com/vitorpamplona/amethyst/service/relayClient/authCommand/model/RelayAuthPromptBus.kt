@@ -54,6 +54,14 @@ class RelayAuthPrompt(
     fun respond(choice: UserAuthChoice) {
         reply.complete(choice)
     }
+
+    /** True once answered by the user or resolved by the bus (e.g. timed out). */
+    val isResolved: Boolean get() = reply.isCompleted
+
+    /** Runs [block] when this prompt is resolved by any path, so the UI can stop showing it. */
+    fun onResolved(block: () -> Unit) {
+        reply.invokeOnCompletion { block() }
+    }
 }
 
 /**
@@ -92,7 +100,14 @@ class RelayAuthPromptBus(
         }
     }
 
-    private suspend fun awaitOrTimeout(deferred: CompletableDeferred<UserAuthChoice>): UserAuthChoice = withTimeoutOrNull(timeoutMs) { deferred.await() } ?: UserAuthChoice.DISMISS
+    private suspend fun awaitOrTimeout(deferred: CompletableDeferred<UserAuthChoice>): UserAuthChoice {
+        withTimeoutOrNull(timeoutMs) { deferred.await() }?.let { return it }
+        // Timed out: resolve the deferred so any UI still showing this prompt can drop it, and so a
+        // concurrent waiter on the same deferred gets an answer too. complete() is a no-op if a late
+        // user response already won the race.
+        deferred.complete(UserAuthChoice.DISMISS)
+        return deferred.await()
+    }
 
     companion object {
         const val DEFAULT_TIMEOUT_MS = 60_000L
