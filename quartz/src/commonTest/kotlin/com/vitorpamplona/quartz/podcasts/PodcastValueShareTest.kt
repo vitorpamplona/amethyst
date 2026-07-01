@@ -45,7 +45,7 @@ class PodcastValueShareTest {
     }
 
     @Test
-    fun `fee recipient takes its split as a percent off the top, remainder split by weight`() {
+    fun `fee recipient takes its split as a percent off the top then remainder split by weight`() {
         val value =
             PodcastValue(
                 recipients =

@@ -137,7 +137,7 @@ class PodcastPersonSoundbiteTest {
     }
 
     @Test
-    fun `show metadata without persons is empty, not a crash`() {
+    fun `show metadata without persons is empty rather than a crash`() {
         val event = AppSpecificDataEvent("id", "pk", 0, arrayOf(arrayOf("d", "podcast-metadata")), """{"title":"Bare"}""", "sig")
         val show = Podcasting20PodcastMetadata.parse(event)
         assertTrue(show?.showPersons().orEmpty().isEmpty())
