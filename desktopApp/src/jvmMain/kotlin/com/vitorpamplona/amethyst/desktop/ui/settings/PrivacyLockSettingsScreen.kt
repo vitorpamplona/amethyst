@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.privacylock.DmRedactionLevel
 import com.vitorpamplona.amethyst.commons.privacylock.InactivityTimer
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.desktop.security.LocalPrivacyLockSettings
+import com.vitorpamplona.amethyst.desktop.security.RemovePasswordDialog
 import com.vitorpamplona.amethyst.desktop.security.SetPasswordDialog
 import kotlinx.coroutines.launch
 
@@ -98,6 +99,7 @@ private fun LockToggleCard(
     val enabled by settings.lockEnabled.collectAsState()
     val stored by settings.passwordHashed.collectAsState()
     var showSetPassword by remember { mutableStateOf(false) }
+    var showRemovePassword by remember { mutableStateOf(false) }
     var pendingEnable by remember { mutableStateOf(false) }
 
     SettingsCard(title = "Lock the Messages tab") {
@@ -124,7 +126,14 @@ private fun LockToggleCard(
                             settings.setLockEnabled(true)
                         }
                     } else {
-                        settings.setLockEnabled(false)
+                        // Disabling requires the current password. If none is set
+                        // (corner case — user cleared prefs manually), just
+                        // disable directly.
+                        if (stored != null) {
+                            showRemovePassword = true
+                        } else {
+                            settings.setLockEnabled(false)
+                        }
                     }
                 },
             )
@@ -154,6 +163,21 @@ private fun LockToggleCard(
                 onSaved(if (wasFirstSet) "Privacy lock enabled" else "Password updated")
             },
         )
+    }
+
+    stored?.let { hash ->
+        if (showRemovePassword) {
+            RemovePasswordDialog(
+                existingHash = hash,
+                onDismiss = { showRemovePassword = false },
+                onConfirm = {
+                    settings.setLockEnabled(false)
+                    settings.setPasswordHashed(null)
+                    showRemovePassword = false
+                    onSaved("Privacy lock removed")
+                },
+            )
+        }
     }
 }
 

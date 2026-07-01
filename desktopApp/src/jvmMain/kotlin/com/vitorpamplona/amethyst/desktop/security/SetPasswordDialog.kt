@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -133,7 +134,7 @@ fun SetPasswordDialog(
                 modifier = Modifier.padding(24.dp).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                DialogHeader(isChange = isChange)
+                DialogHeader(title = if (isChange) "Change password" else "Set a password")
 
                 if (!isChange) {
                     Text(
@@ -192,7 +193,7 @@ fun SetPasswordDialog(
 }
 
 @Composable
-private fun DialogHeader(isChange: Boolean) {
+private fun DialogHeader(title: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -204,9 +205,103 @@ private fun DialogHeader(isChange: Boolean) {
             tint = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = if (isChange) "Change password" else "Set a password",
+            text = title,
             style = MaterialTheme.typography.titleLarge,
         )
+    }
+}
+
+/**
+ * Verify the user's current password before removing the privacy lock.
+ *
+ * On successful verification, [onConfirm] is invoked with no arguments.
+ * The caller is responsible for clearing `passwordHashed` and disabling
+ * `lockEnabled` — this dialog only proves possession of the current
+ * password.
+ *
+ * Deliberate design choice: users cannot disable the lock without
+ * demonstrating they know the password, matching the security posture
+ * of Signal PIN, WhatsApp Chat Lock, and macOS FileVault disable.
+ */
+@Composable
+fun RemovePasswordDialog(
+    existingHash: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    var current by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    val firstFieldFocus = remember { FocusRequester() }
+
+    val submit: () -> Unit = {
+        if (PasswordHasher.verify(current.toCharArray(), existingHash)) {
+            onConfirm()
+        } else {
+            error = "Wrong password"
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        firstFieldFocus.requestFocus()
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false),
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+            modifier = Modifier.width(440.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                DialogHeader(title = "Remove password")
+
+                Text(
+                    text =
+                        "Enter your current password to remove the lock. " +
+                            "You'll need to set a new password if you turn the lock back on later.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                PasswordField(
+                    value = current,
+                    onValueChange = {
+                        current = it
+                        error = null
+                    },
+                    label = "Current password",
+                    errorMessage = error,
+                    modifier = Modifier.focusRequester(firstFieldFocus),
+                    imeAction = ImeAction.Done,
+                    onImeAction = { submit() },
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    Button(
+                        onClick = submit,
+                        enabled = current.isNotEmpty(),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError,
+                            ),
+                    ) {
+                        Text("Remove")
+                    }
+                }
+            }
+        }
     }
 }
 
