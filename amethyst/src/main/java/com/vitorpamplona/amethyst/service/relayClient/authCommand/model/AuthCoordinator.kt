@@ -64,15 +64,18 @@ class AuthCoordinator(
             signWithAllLoggedInUsers = { relayUrl, authTemplate ->
                 // Reconstruct *why* this relay wants auth from what we're doing with it, so each
                 // account's ledger can apply follow-based trust and (later) explain the prompt.
-                val context =
-                    RelayAuthContext(
-                        relayUrl = relayUrl.url,
-                        purposes =
-                            RelayAuthPurposeDeriver.derive(
-                                pendingEvents = client.activeOutboxEvents(relayUrl),
-                                activeFilters = client.activeRequests(relayUrl),
-                            ),
-                    )
+                // Built lazily so the no-ledgers auto-allow path below doesn't pay for it.
+                val context by
+                    lazy(LazyThreadSafetyMode.NONE) {
+                        RelayAuthContext(
+                            relayUrl = relayUrl.url,
+                            purposes =
+                                RelayAuthPurposeDeriver.derive(
+                                    pendingEvents = client.activeOutboxEvents(relayUrl),
+                                    activeFilters = client.activeRequests(relayUrl),
+                                ),
+                        )
+                    }
                 val currentLedgers = relayLedgers
                 val shouldAuth =
                     if (currentLedgers.isEmpty()) {
