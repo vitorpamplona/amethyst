@@ -62,7 +62,7 @@ import com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState
  * content, so this composable never composes in that case).
  */
 @Composable
-fun MessagesFirstRunBanner() {
+fun MessagesFirstRunBanner(onSaved: (String) -> Unit = {}) {
     val settings = LocalPrivacyLockSettings.current
     val lockState = LocalMessagesLockState.current
     val enabled by settings.lockEnabled.collectAsState()
@@ -123,6 +123,7 @@ fun MessagesFirstRunBanner() {
                 // right after they just entered the password.
                 lockState.onUnlockSuccess()
                 showDialog = false
+                onSaved("Privacy lock enabled")
             },
         )
     }

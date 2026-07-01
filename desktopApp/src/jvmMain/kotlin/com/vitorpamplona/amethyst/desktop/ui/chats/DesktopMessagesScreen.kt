@@ -29,9 +29,12 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -67,6 +70,7 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.security.MessagesFirstRunBanner
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import java.awt.Cursor
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
@@ -128,37 +132,48 @@ fun DesktopMessagesScreen(
             }
         }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        MessagesFirstRunBanner()
-        Box(modifier = Modifier.weight(1f)) {
-            if (compactMode) {
-                CompactMessagesContent(
-                    selectedRoom = selectedRoom,
-                    listState = listState,
-                    account = account,
-                    cacheProvider = cacheProvider,
-                    scope = scope,
-                    onNavigateToProfile = onNavigateToProfile,
-                    listFocusRequester = listFocusRequester,
-                    onShowNewDm = { showNewDmDialog = true },
-                    onShowRelayPicker = { showDmRelayPicker = true },
-                    keyHandler = keyHandler,
-                )
-            } else {
-                SplitMessagesContent(
-                    selectedRoom = selectedRoom,
-                    listState = listState,
-                    account = account,
-                    cacheProvider = cacheProvider,
-                    scope = scope,
-                    onNavigateToProfile = onNavigateToProfile,
-                    listFocusRequester = listFocusRequester,
-                    onShowNewDm = { showNewDmDialog = true },
-                    onShowRelayPicker = { showDmRelayPicker = true },
-                    keyHandler = keyHandler,
-                )
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            MessagesFirstRunBanner(onSaved = { msg ->
+                snackbarScope.launch { snackbarHostState.showSnackbar(msg) }
+            })
+            Box(modifier = Modifier.weight(1f)) {
+                if (compactMode) {
+                    CompactMessagesContent(
+                        selectedRoom = selectedRoom,
+                        listState = listState,
+                        account = account,
+                        cacheProvider = cacheProvider,
+                        scope = scope,
+                        onNavigateToProfile = onNavigateToProfile,
+                        listFocusRequester = listFocusRequester,
+                        onShowNewDm = { showNewDmDialog = true },
+                        onShowRelayPicker = { showDmRelayPicker = true },
+                        keyHandler = keyHandler,
+                    )
+                } else {
+                    SplitMessagesContent(
+                        selectedRoom = selectedRoom,
+                        listState = listState,
+                        account = account,
+                        cacheProvider = cacheProvider,
+                        scope = scope,
+                        onNavigateToProfile = onNavigateToProfile,
+                        listFocusRequester = listFocusRequester,
+                        onShowNewDm = { showNewDmDialog = true },
+                        onShowRelayPicker = { showDmRelayPicker = true },
+                        keyHandler = keyHandler,
+                    )
+                }
             }
         }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+        )
     }
 
     if (showNewDmDialog) {

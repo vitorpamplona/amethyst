@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,6 +34,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,6 +43,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.privacylock.InactivityTimer
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.desktop.security.LocalPrivacyLockSettings
 import com.vitorpamplona.amethyst.desktop.security.SetPasswordDialog
+import kotlinx.coroutines.launch
 
 /**
  * Desktop privacy-lock settings pane. Column + Card layout (no Scaffold) —
@@ -57,22 +62,39 @@ import com.vitorpamplona.amethyst.desktop.security.SetPasswordDialog
 @Composable
 fun PrivacyLockSettingsScreen() {
     val settings = LocalPrivacyLockSettings.current
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        LockToggleCard(settings)
-        InactivityCard(settings)
-        RedactionCard(settings)
-        LimitationsCard()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            LockToggleCard(
+                settings = settings,
+                onSaved = { message ->
+                    scope.launch { snackbarHostState.showSnackbar(message) }
+                },
+            )
+            InactivityCard(settings)
+            RedactionCard(settings)
+            LimitationsCard()
+        }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+        )
     }
 }
 
 @Composable
-private fun LockToggleCard(settings: PrivacyLockSettings) {
+private fun LockToggleCard(
+    settings: PrivacyLockSettings,
+    onSaved: (String) -> Unit,
+) {
     val enabled by settings.lockEnabled.collectAsState()
     val stored by settings.passwordHashed.collectAsState()
     var showSetPassword by remember { mutableStateOf(false) }
@@ -117,6 +139,7 @@ private fun LockToggleCard(settings: PrivacyLockSettings) {
     }
 
     if (showSetPassword) {
+        val wasFirstSet = stored == null
         SetPasswordDialog(
             existingHash = stored,
             onDismiss = {
@@ -128,6 +151,7 @@ private fun LockToggleCard(settings: PrivacyLockSettings) {
                 if (pendingEnable) settings.setLockEnabled(true)
                 showSetPassword = false
                 pendingEnable = false
+                onSaved(if (wasFirstSet) "Privacy lock enabled" else "Password updated")
             },
         )
     }
