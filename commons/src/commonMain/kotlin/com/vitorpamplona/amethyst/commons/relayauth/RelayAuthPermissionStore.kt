@@ -57,4 +57,10 @@ interface RelayAuthPermissionStore {
 
     /** All per-relay rationales — for the relay auth settings screen. */
     suspend fun allRationales(): Map<String, Map<AuthPurposeKind, Set<String>>> = emptyMap()
+
+    /** Forgets the accumulated grant rationale for [relayUrl] (does not touch the ALLOW/DENY override). */
+    suspend fun clearRationale(relayUrl: String) {}
+
+    /** Epoch-second timestamp of the last time each relay was authenticated with (for display). */
+    suspend fun allLastUsed(): Map<String, Long> = emptyMap()
 }

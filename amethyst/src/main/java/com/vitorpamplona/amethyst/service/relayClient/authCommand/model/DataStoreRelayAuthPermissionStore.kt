@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -29,6 +30,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.first
 import java.io.File
 import java.security.MessageDigest
@@ -65,9 +67,9 @@ class DataStoreRelayAuthPermissionStore(
     }
 
     override suspend fun clearDecision(relayUrl: String) {
-        store.edit {
-            it.remove(decisionKey(relayUrl))
-            it.remove(urlKey(relayUrl))
+        store.edit { prefs ->
+            prefs.remove(decisionKey(relayUrl))
+            pruneUrlIfEmpty(prefs, relayUrl)
         }
     }
 
@@ -92,12 +94,48 @@ class DataStoreRelayAuthPermissionStore(
         if (additions.isEmpty()) return
         store.edit { prefs ->
             prefs[urlKey(relayUrl)] = relayUrl
+            prefs[lastUsedKey(relayUrl)] = TimeUtils.now().toString()
             for ((kind, pubkeys) in additions) {
                 if (pubkeys.isEmpty()) continue
                 val key = rationaleKey(relayUrl, kind)
                 val existing = prefs[key].toPubkeySet()
                 prefs[key] = (existing + pubkeys).joinToString(SEPARATOR)
             }
+        }
+    }
+
+    override suspend fun clearRationale(relayUrl: String) {
+        store.edit { prefs ->
+            AuthPurposeKind.entries.forEach { prefs.remove(rationaleKey(relayUrl, it)) }
+            pruneUrlIfEmpty(prefs, relayUrl)
+        }
+    }
+
+    override suspend fun allLastUsed(): Map<String, Long> {
+        val prefs = store.data.first()
+        val result = mutableMapOf<String, Long>()
+        for ((key, value) in prefs.asMap()) {
+            val name = key.name
+            if (!name.startsWith(LAST_USED_PREFIX)) continue
+            val hash = name.removePrefix(LAST_USED_PREFIX)
+            val url = prefs[stringPreferencesKey("$URL_PREFIX$hash")] ?: continue
+            val ts = (value as? String)?.toLongOrNull() ?: continue
+            result[url] = ts
+        }
+        return result
+    }
+
+    /** Removes the shared url + last-used keys once a relay has neither an override nor rationale,
+     *  so a partial clear never orphans the reverse-lookup other queries depend on. */
+    private fun pruneUrlIfEmpty(
+        prefs: MutablePreferences,
+        relayUrl: String,
+    ) {
+        val hasDecision = prefs[decisionKey(relayUrl)] != null
+        val hasRationale = AuthPurposeKind.entries.any { prefs[rationaleKey(relayUrl, it)] != null }
+        if (!hasDecision && !hasRationale) {
+            prefs.remove(urlKey(relayUrl))
+            prefs.remove(lastUsedKey(relayUrl))
         }
     }
 
@@ -140,10 +178,13 @@ class DataStoreRelayAuthPermissionStore(
         kind: AuthPurposeKind,
     ) = stringPreferencesKey("$RATIONALE_PREFIX${hash(relayUrl)}:${kind.name}")
 
+    private fun lastUsedKey(relayUrl: String) = stringPreferencesKey("$LAST_USED_PREFIX${hash(relayUrl)}")
+
     companion object {
         private const val DECISION_PREFIX = "allow:"
         private const val URL_PREFIX = "url:"
         private const val RATIONALE_PREFIX = "rat:"
+        private const val LAST_USED_PREFIX = "used:"
         private const val SEPARATOR = ","
 
         private fun hash(relayUrl: String): String {

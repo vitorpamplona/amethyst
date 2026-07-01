@@ -40,6 +40,7 @@ import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,6 +52,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -68,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.PolicyCard
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -89,12 +92,14 @@ fun RelayAuthSettingsScreen(
 
     var perRelayOverrides by remember { mutableStateOf<Map<String, RelayAuthDecision>>(emptyMap()) }
     var rationales by remember { mutableStateOf<Map<String, Map<AuthPurposeKind, Set<HexKey>>>>(emptyMap()) }
+    var lastUsed by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var reloadKey by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(reloadKey) {
         withContext(Dispatchers.IO) {
             perRelayOverrides = store.allDecisions()
             rationales = store.allRationales()
+            lastUsed = store.allLastUsed()
         }
     }
 
@@ -242,7 +247,19 @@ fun RelayAuthSettingsScreen(
                 Spacer(Modifier.height(4.dp))
 
                 rationales.entries.sortedBy { it.key }.forEach { (url, rationale) ->
-                    RelayRationaleCard(url, rationale, accountViewModel)
+                    RelayRationaleCard(
+                        url = url,
+                        rationale = rationale,
+                        lastUsedSecs = lastUsed[url],
+                        accountViewModel = accountViewModel,
+                        onForget = {
+                            scope.launch {
+                                ledger.clearDecision(url)
+                                store.clearRationale(url)
+                                reloadKey++
+                            }
+                        },
+                    )
                     Spacer(Modifier.height(8.dp))
                 }
             }
@@ -254,8 +271,11 @@ fun RelayAuthSettingsScreen(
 private fun RelayRationaleCard(
     url: String,
     rationale: Map<AuthPurposeKind, Set<HexKey>>,
+    lastUsedSecs: Long?,
     accountViewModel: AccountViewModel,
+    onForget: () -> Unit,
 ) {
+    val context = LocalContext.current
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.medium,
@@ -265,7 +285,25 @@ private fun RelayRationaleCard(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(text = url, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = url,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.MiddleEllipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onForget) {
+                    Text(stringResource(R.string.relay_auth_forget))
+                }
+            }
+            if (lastUsedSecs != null && lastUsedSecs > 0L) {
+                Text(
+                    text = stringResource(R.string.relay_auth_last_used, timeAgo(lastUsedSecs, context, prefix = "")),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             rationale.forEach { (kind, pubkeys) ->
                 Text(
                     text = stringResource(reasonRes(kind)),
