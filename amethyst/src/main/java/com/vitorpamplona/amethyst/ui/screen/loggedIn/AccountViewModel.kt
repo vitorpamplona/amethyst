@@ -2254,6 +2254,11 @@ class AccountViewModel(
                 okHttpClient = httpClientBuilder::okHttpClientForVideo,
                 mimeType = mimeType,
                 localContext = localContext,
+                resolveBlossom = {
+                    Amethyst.instance.blossomResolver
+                        .findServers(it)
+                        ?.serverUrl
+                },
                 onSuccess = {
                     Handler(Looper.getMainLooper()).post {
                         Toast

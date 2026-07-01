@@ -60,7 +60,6 @@ object Hex {
      * emoji in `p` tags) instead of throwing. ~47ns in debug on the Emulator;
      * use [isHex64] when the length is known to be 64.
      */
-    // 47ns in debug on the Emulator
     fun isHex(hex: String?): Boolean {
         if (hex == null) return false
         if (hex.length and 1 != 0) return false
@@ -93,7 +92,6 @@ object Hex {
      * the length is fixed and the checks are unrolled. Assumes [hex] is at least
      * 64 chars long; it does not verify the total length.
      */
-    // 30% faster than isHex
     fun isHex64(hex: String): Boolean =
         try {
             hexToByte[hex[0].code] >= 0 &&
