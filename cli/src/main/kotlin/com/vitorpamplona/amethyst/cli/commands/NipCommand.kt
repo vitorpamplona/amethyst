@@ -56,7 +56,7 @@ object NipCommand {
 
     // NIP-50-capable relays for the Nostr fallback (search isn't universal).
     private val SEARCH_RELAYS =
-        listOf("wss://relay.nostr.band", "wss://relay.damus.io")
+        listOf("wss://relay.nostr.band", "wss://nostr.wine")
             .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
             .toSet()
 

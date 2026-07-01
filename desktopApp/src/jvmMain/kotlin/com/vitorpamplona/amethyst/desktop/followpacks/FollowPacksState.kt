@@ -75,7 +75,6 @@ class FollowPacksState(
         // it uses these popular relays. Verified empirically.
         val DISCOVERY_RELAYS: Set<NormalizedRelayUrl> =
             listOfNotNull(
-                RelayUrlNormalizer.normalizeOrNull("wss://relay.damus.io"),
                 RelayUrlNormalizer.normalizeOrNull("wss://relay.nostr.band"),
                 RelayUrlNormalizer.normalizeOrNull("wss://relay.primal.net"),
                 RelayUrlNormalizer.normalizeOrNull("wss://nos.lol"),

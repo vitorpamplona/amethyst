@@ -31,7 +31,6 @@ object Constants {
     val nos = RelayUrlNormalizer.normalize("wss://nos.lol")
     val mom = RelayUrlNormalizer.normalize("wss://nostr.mom")
     val primal = RelayUrlNormalizer.normalize("wss://relay.primal.net")
-    val damus = RelayUrlNormalizer.normalize("wss://relay.damus.io")
     val wine = RelayUrlNormalizer.normalize("wss://nostr.wine")
 
     val where = RelayUrlNormalizer.normalize("wss://relay.noswhere.com")
@@ -55,6 +54,6 @@ object Constants {
     val yabu = RelayUrlNormalizer.normalize("wss://directory.yabu.me")
     val nostr1 = RelayUrlNormalizer.normalize("wss://profiles.nostr1.com")
 
-    val bootstrapInbox = setOf(damus, primal, mom, nos, bitcoiner, oxtr, yabu)
-    val eventFinderRelays = setOf(wine, damus, primal, mom, nos, bitcoiner, oxtr)
+    val bootstrapInbox = setOf(primal, mom, nos, bitcoiner, oxtr, yabu)
+    val eventFinderRelays = setOf(wine, primal, mom, nos, bitcoiner, oxtr)
 }
