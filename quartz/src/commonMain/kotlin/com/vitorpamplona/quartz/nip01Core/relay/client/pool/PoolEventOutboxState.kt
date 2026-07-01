@@ -72,7 +72,10 @@ class PoolEventOutboxState(
         } else if (message.isAuthRequired()) {
             // NIP-42 AUTH challenge in flight — don't count toward the try cap.
             // RelayAuthenticator signs + relay re-issues OK; syncFilters() then
-            // re-pumps this outbox so the original publish is retried.
+            // re-pumps this outbox so the original publish is retried. Leave
+            // relaysRemaining and failures untouched, otherwise a relay that NAKs
+            // every unauthed EVENT would exhaust the retry budget and drop the
+            // event before AUTH lands.
         } else {
             val currentTries = failures[url]
             if (currentTries != null) {
@@ -95,7 +98,12 @@ class PoolEventOutboxState(
             this.startsWith("deleted:") ||
             this.startsWith("invalid:")
 
-    fun String.isAuthRequired() = this.startsWith("auth-required:")
+    /**
+     * NIP-42 machine-readable prefix a relay uses to tell us an event was held
+     * back pending authentication. The event should be re-sent after AUTH, not
+     * retried-then-discarded like an ordinary failure.
+     */
+    fun String.isAuthRequired() = this.startsWith("auth-required:") || this == "auth-required"
 
     // Tries 3 times
     class Tries(
