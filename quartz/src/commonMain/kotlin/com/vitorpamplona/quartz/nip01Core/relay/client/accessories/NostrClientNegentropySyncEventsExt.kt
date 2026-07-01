@@ -52,7 +52,7 @@ fun INostrClient.negentropySyncEvents(
     maxEvents: Int = 0,
     maxConcurrentReqs: Int = 8,
     fetchBatch: Int = 500,
-    timeoutMs: Long = 30_000L,
+    idleTimeoutMs: Long = 120_000L,
 ): Flow<Event> =
     callbackFlow {
         negentropySync(
@@ -61,7 +61,7 @@ fun INostrClient.negentropySyncEvents(
             maxEvents = maxEvents,
             maxConcurrentReqs = maxConcurrentReqs,
             fetchBatch = fetchBatch,
-            timeoutMs = timeoutMs,
+            idleTimeoutMs = idleTimeoutMs,
         ) { event ->
             trySend(event)
         }
@@ -77,7 +77,7 @@ fun INostrClient.negentropySyncEvents(
     maxEvents: Int = 0,
     maxConcurrentReqs: Int = 8,
     fetchBatch: Int = 500,
-    timeoutMs: Long = 30_000L,
+    idleTimeoutMs: Long = 120_000L,
 ): Flow<Event> =
     negentropySyncEvents(
         relay = RelayUrlNormalizer.normalize(relay),
@@ -85,7 +85,7 @@ fun INostrClient.negentropySyncEvents(
         maxEvents = maxEvents,
         maxConcurrentReqs = maxConcurrentReqs,
         fetchBatch = fetchBatch,
-        timeoutMs = timeoutMs,
+        idleTimeoutMs = idleTimeoutMs,
     )
 
 /**
@@ -104,7 +104,7 @@ fun INostrClient.negentropySyncOrFetchEvents(
     maxEvents: Int = 0,
     maxConcurrentReqs: Int = 8,
     fetchBatch: Int = 500,
-    timeoutMs: Long = 30_000L,
+    idleTimeoutMs: Long = 120_000L,
 ): Flow<Event> =
     callbackFlow {
         negentropySyncOrFetch(
@@ -113,7 +113,7 @@ fun INostrClient.negentropySyncOrFetchEvents(
             maxEvents = maxEvents,
             maxConcurrentReqs = maxConcurrentReqs,
             fetchBatch = fetchBatch,
-            timeoutMs = timeoutMs,
+            idleTimeoutMs = idleTimeoutMs,
         ) { event ->
             trySend(event)
         }
@@ -129,7 +129,7 @@ fun INostrClient.negentropySyncOrFetchEvents(
     maxEvents: Int = 0,
     maxConcurrentReqs: Int = 8,
     fetchBatch: Int = 500,
-    timeoutMs: Long = 30_000L,
+    idleTimeoutMs: Long = 120_000L,
 ): Flow<Event> =
     negentropySyncOrFetchEvents(
         relay = RelayUrlNormalizer.normalize(relay),
@@ -137,5 +137,5 @@ fun INostrClient.negentropySyncOrFetchEvents(
         maxEvents = maxEvents,
         maxConcurrentReqs = maxConcurrentReqs,
         fetchBatch = fetchBatch,
-        timeoutMs = timeoutMs,
+        idleTimeoutMs = idleTimeoutMs,
     )
