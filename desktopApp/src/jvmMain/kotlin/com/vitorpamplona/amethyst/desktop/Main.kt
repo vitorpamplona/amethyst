@@ -291,20 +291,9 @@ fun main() {
         // Callback set by App() for single pane navigation from MenuBar
         var navigateToScreen by remember { mutableStateOf<((DeckColumnType) -> Unit)?>(null) }
 
-        // Messages privacy lock: app-global settings + state holder. Initial
-        // LockState is seeded synchronously inside MessagesLockState from
-        // the java.util.prefs value so the first composition sees the correct
-        // state (deep-link race fix, plan §Security Hardening H1).
-        val privacyLockSettings =
-            remember {
-                com.vitorpamplona.amethyst.commons.privacylock
-                    .PreferencesPrivacyLockSettings()
-            }
-        val messagesLockState =
-            remember {
-                com.vitorpamplona.amethyst.commons.privacylock
-                    .MessagesLockState(privacyLockSettings, windowScope)
-            }
+        // Messages privacy lock CompositionLocals are provided inside App()
+        // itself (see App() around line ~700) so tests that call App()
+        // directly — bypassing this Main.kt Window shell — still get them.
 
         // Window title-bar / taskbar thumbnail icon. On macOS the source logo
         // is wrapped in a squircle so it matches every other dock icon; on
@@ -617,8 +606,6 @@ fun main() {
                 LocalWindowState provides windowState,
                 LocalAwtWindow provides window,
                 LocalIsImmersiveFullscreen provides immersiveFullscreenState,
-                com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState provides messagesLockState,
-                com.vitorpamplona.amethyst.desktop.security.LocalPrivacyLockSettings provides privacyLockSettings,
             ) {
                 key(appRestartKey) {
                     CompositionLocalProvider(
@@ -696,6 +683,85 @@ fun App(
     val singlePaneState = remember { SinglePaneState() }
     val pinnedNavBarState = remember { PinnedNavBarState(workspaceManager).also { it.loadFromWorkspace() } }
 
+    // Messages privacy lock — app-global settings + state holder, scoped to
+    // App() so they survive appRestartKey rebuilds but rebuild on genuine app
+    // restart. Provided as CompositionLocals right here so both production
+    // (called from application { Window { App() } }) and tests (which call
+    // App() directly, bypassing outer providers) see them.
+    val appScope = rememberCoroutineScope()
+    val privacyLockSettings =
+        remember {
+            com.vitorpamplona.amethyst.commons.privacylock
+                .PreferencesPrivacyLockSettings()
+        }
+    val messagesLockState =
+        remember(privacyLockSettings) {
+            com.vitorpamplona.amethyst.commons.privacylock
+                .MessagesLockState(privacyLockSettings, appScope)
+        }
+
+    CompositionLocalProvider(
+        com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState provides messagesLockState,
+        com.vitorpamplona.amethyst.desktop.security.LocalPrivacyLockSettings provides privacyLockSettings,
+    ) {
+        AppInner(
+            layoutMode = layoutMode,
+            onLayoutModeChange = onLayoutModeChange,
+            deckState = deckState,
+            workspaceManager = workspaceManager,
+            accountManager = accountManager,
+            showComposeDialog = showComposeDialog,
+            showAppDrawer = showAppDrawer,
+            onShowComposeDialog = onShowComposeDialog,
+            onShowReplyDialog = onShowReplyDialog,
+            onDismissComposeDialog = onDismissComposeDialog,
+            onDismissAppDrawer = onDismissAppDrawer,
+            onShowAppDrawer = onShowAppDrawer,
+            replyToNote = replyToNote,
+            showImportFollowListDialog = showImportFollowListDialog,
+            onShowImportFollowListDialog = onShowImportFollowListDialog,
+            onDismissImportFollowListDialog = onDismissImportFollowListDialog,
+            onRestartApp = onRestartApp,
+            torManager = torManager,
+            torTypeFlow = torTypeFlow,
+            externalPortFlow = externalPortFlow,
+            initialTorSettings = initialTorSettings,
+            onNavigateToScreen = onNavigateToScreen,
+            testOverrides = testOverrides,
+            singlePaneState = singlePaneState,
+            pinnedNavBarState = pinnedNavBarState,
+        )
+    }
+}
+
+@Composable
+private fun AppInner(
+    layoutMode: LayoutMode,
+    onLayoutModeChange: (LayoutMode) -> Unit,
+    deckState: DeckState,
+    workspaceManager: WorkspaceManager,
+    accountManager: AccountManager,
+    showComposeDialog: Boolean,
+    showAppDrawer: Boolean,
+    onShowComposeDialog: () -> Unit,
+    onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
+    onDismissComposeDialog: () -> Unit,
+    onDismissAppDrawer: () -> Unit,
+    onShowAppDrawer: () -> Unit,
+    replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
+    showImportFollowListDialog: Boolean,
+    onShowImportFollowListDialog: () -> Unit,
+    onDismissImportFollowListDialog: () -> Unit,
+    onRestartApp: () -> Unit,
+    torManager: com.vitorpamplona.amethyst.commons.tor.ITorManager,
+    torTypeFlow: kotlinx.coroutines.flow.MutableStateFlow<com.vitorpamplona.amethyst.commons.tor.TorType>,
+    externalPortFlow: kotlinx.coroutines.flow.MutableStateFlow<Int>,
+    initialTorSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings,
+    onNavigateToScreen: ((DeckColumnType) -> Unit) -> Unit,
+    testOverrides: LaunchTestOverrides?,
+    singlePaneState: SinglePaneState,
+    pinnedNavBarState: PinnedNavBarState,
+) {
     // Register single pane navigation callback for MenuBar shortcuts
     LaunchedEffect(singlePaneState) {
         onNavigateToScreen { screen -> singlePaneState.navigate(screen) }

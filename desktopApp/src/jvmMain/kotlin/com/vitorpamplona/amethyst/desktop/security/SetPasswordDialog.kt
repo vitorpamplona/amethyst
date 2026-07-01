@@ -103,7 +103,7 @@ fun SetPasswordDialog(
     val submit: () -> Unit = {
         val currentOk =
             !isChange ||
-                PasswordHasher.verify(current.toCharArray(), existingHash!!)
+                (existingHash != null && PasswordHasher.verify(current.toCharArray(), existingHash))
         when {
             !currentOk -> {
                 currentError = "Wrong password"
