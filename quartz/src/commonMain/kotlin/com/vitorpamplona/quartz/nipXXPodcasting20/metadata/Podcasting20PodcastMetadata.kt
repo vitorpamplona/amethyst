@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.podcasts.PodcastPerson
 import com.vitorpamplona.quartz.podcasts.PodcastShow
 import com.vitorpamplona.quartz.podcasts.PodcastValue
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -66,6 +67,8 @@ class Podcasting20PodcastMetadata(
 
     override fun showValue() = content.value
 
+    override fun showPersons() = content.persons.filter { it.isValid() }
+
     fun language() = content.language
 
     /** Contact email for the show, if provided. */
@@ -103,6 +106,7 @@ class Podcasting20PodcastMetadata(
         val complete: Boolean? = null,
         val guid: String? = null,
         val value: PodcastValue? = null,
+        val persons: List<PodcastPerson> = emptyList(),
     )
 
     companion object {

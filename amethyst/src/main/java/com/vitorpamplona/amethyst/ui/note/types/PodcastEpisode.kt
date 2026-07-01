@@ -198,6 +198,11 @@ fun RenderPodcastEpisode(
                 PodcastValueSplits(value = it)
             }
 
+            if (!makeItShort) {
+                val persons = remember(noteEvent) { episode.episodePersons() }
+                PodcastPeople(persons, accountViewModel)
+            }
+
             markdown?.takeIf { !makeItShort }?.let {
                 Spacer(Modifier.padding(top = 4.dp))
                 val tags = remember(noteEvent) { noteEvent.tags.toImmutableListOfLists() }

@@ -38,14 +38,18 @@ import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.DurationTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.EditTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.EpisodeNumberTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.ImageTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.PersonTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.PubDateTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.SeasonTag
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.SoundbiteTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.TitleTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.TranscriptTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.ValueTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.VideoTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
+import com.vitorpamplona.quartz.podcasts.PodcastPerson
+import com.vitorpamplona.quartz.podcasts.PodcastSoundbite
 import com.vitorpamplona.quartz.podcasts.PodcastValue
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -92,6 +96,10 @@ class Podcasting20EpisodeEvent(
 
     fun value() = tags.firstNotNullOfOrNull(ValueTag::parse)
 
+    fun persons() = tags.mapNotNull(PersonTag::parse)
+
+    fun soundbites() = tags.mapNotNull(SoundbiteTag::parse)
+
     fun durationInSeconds() = tags.firstNotNullOfOrNull(DurationTag::parse)
 
     /** RFC2822 publication date string, kept verbatim for RSS generation. */
@@ -128,6 +136,10 @@ class Podcasting20EpisodeEvent(
 
     override fun episodeValue() = value()
 
+    override fun episodePersons() = persons()
+
+    override fun episodeSoundbites() = soundbites()
+
     companion object {
         const val KIND = 30054
 
@@ -146,6 +158,8 @@ class Podcasting20EpisodeEvent(
             transcriptUrl: String? = null,
             chaptersUrl: String? = null,
             value: PodcastValue? = null,
+            persons: List<PodcastPerson> = emptyList(),
+            soundbites: List<PodcastSoundbite> = emptyList(),
             topics: List<String> = emptyList(),
             markdownContent: String = "",
             createdAt: Long = TimeUtils.now(),
@@ -166,6 +180,8 @@ class Podcasting20EpisodeEvent(
             transcriptUrl?.let { transcript(it) }
             chaptersUrl?.let { chapters(it) }
             value?.let { value(it) }
+            persons.filter { it.isValid() }.forEach { person(it) }
+            soundbites.forEach { soundbite(it) }
             if (topics.isNotEmpty()) hashtags(topics)
 
             initializer()

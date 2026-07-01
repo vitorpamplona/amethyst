@@ -84,4 +84,16 @@ interface PodcastEpisode {
      * V4V and returns null.
      */
     fun episodeValue(): PodcastValue? = null
+
+    /**
+     * Hosts/guests credited on this specific episode (Podcasting-2.0 `podcast:person`). Empty when
+     * the publisher lists no per-episode people (NIP-F4 has no person tag and returns empty).
+     */
+    fun episodePersons(): List<PodcastPerson> = emptyList()
+
+    /**
+     * Highlight clips of the episode (Podcasting-2.0 `podcast:soundbite`), each a start offset +
+     * duration into the audio. Empty when none are declared.
+     */
+    fun episodeSoundbites(): List<PodcastSoundbite> = emptyList()
 }

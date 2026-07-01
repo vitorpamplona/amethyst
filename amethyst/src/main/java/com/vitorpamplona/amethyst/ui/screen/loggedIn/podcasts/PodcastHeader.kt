@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.types.PodcastCoverCard
+import com.vitorpamplona.amethyst.ui.note.types.PodcastPeople
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -136,6 +137,9 @@ fun PodcastHeader(
             if (claimedAuthors.isNotEmpty() && podcastPubkey != null) {
                 PodcastAuthors(podcastPubkey, claimedAuthors, accountViewModel, nav)
             }
+
+            val persons = remember(show) { show?.showPersons() ?: emptyList() }
+            PodcastPeople(persons, accountViewModel)
         }
 
         // Standard engagement row for the show itself (comment / zap / react), like any other

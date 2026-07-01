@@ -76,6 +76,10 @@ fun PodcastEpisodeAudioPlayer(
     // the player. Pulled through the spec-neutral PodcastEpisode interface so both kinds work.
     val value = remember(note) { (note.event as? PodcastEpisode)?.episodeValue() }
 
+    // Highlight clips (Podcasting-2.0 soundbites) — rendered under the player so a tap can seek the
+    // live controller to the clip's start.
+    val soundbites = remember(note) { (note.event as? PodcastEpisode)?.episodeSoundbites().orEmpty() }
+
     Column(Modifier.fillMaxWidth()) {
         GetMediaItem(
             videoUri = audio.url,
@@ -116,6 +120,11 @@ fun PodcastEpisodeAudioPlayer(
                         controllerState = controller,
                         accountViewModel = accountViewModel,
                     )
+                }
+
+                PodcastSoundbites(soundbites) { startMillis ->
+                    controller.controller.seekTo(startMillis)
+                    controller.controller.play()
                 }
             }
         }

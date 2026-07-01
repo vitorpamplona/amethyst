@@ -1012,6 +1012,8 @@
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_zap_split_hint">Zaps to this are split between:</string>
     <string name="podcast_comment_action">Comment</string>
+    <string name="podcast_hosts_and_guests">Hosts &amp; Guests</string>
+    <string name="podcast_play_soundbite">Play highlight</string>
     <plurals name="podcast_comment_count">
         <item quantity="one">%1$d comment</item>
         <item quantity="other">%1$d comments</item>

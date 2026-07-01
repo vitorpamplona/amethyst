@@ -71,4 +71,10 @@ interface PodcastShow {
 
     /** The show's default value-for-value split block, if any. NIP-F4 has no V4V and returns null. */
     fun showValue(): PodcastValue? = null
+
+    /**
+     * Show-level hosts/guests (Podcasting-2.0 `podcast:person`) — the recurring cast credited across
+     * the podcast. Empty when none are declared (NIP-F4 uses author p-tags instead and returns empty).
+     */
+    fun showPersons(): List<PodcastPerson> = emptyList()
 }
