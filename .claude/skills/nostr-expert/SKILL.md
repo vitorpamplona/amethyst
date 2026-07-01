@@ -345,6 +345,55 @@ object Nip04 {
 
 **Note**: Use NIP-44 (`Nip44`) for new implementations. NIP-04 has security issues.
 
+## Hex Encoding (HexKey ↔ ByteArray)
+
+Pubkeys, event ids and signatures are lower-case hex. Quartz uses the `HexKey`
+typealias (`= String`) plus extensions in `nip01Core/core/HexKey.kt`, backed by
+the `Hex` object in `utils/Hex.kt`. **Use these — never hand-roll a byte loop or
+import a third-party hex codec.**
+
+```kotlin
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
+import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.utils.Hex
+
+val hex: HexKey = bytes.toHexKey()            // ByteArray -> lower-case hex
+val back: ByteArray = hex.hexToByteArray()    // hex -> ByteArray (throws on odd length)
+val safe: ByteArray? = input.hexToByteArrayOrNull()  // null on invalid hex
+
+Hex.isHex(input)     // valid hex, any length
+Hex.isHex64(input)   // ~30% faster fast-path for a 32-byte key/id
+hex.isValid()        // 64 chars + valid hex (pubkey / event-id shape)
+Hex.isEqual(hex, bytes)  // compare hex to bytes without decoding
+```
+
+Constants `PUBKEY_LENGTH` / `EVENT_ID_LENGTH` (both 64) live in `nip01Core.core`.
+
+## Core Utilities (time, random, event id)
+
+Reuse these instead of hand-rolling — each avoids a common mistake:
+
+```kotlin
+import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.sha256.sha256
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
+
+TimeUtils.now()            // Unix SECONDS for created_at — not currentTimeMillis()/1000
+TimeUtils.oneHourAgo()     // relative filter bounds (…Ago / …FromNow); all in seconds
+RandomInstance.bytes(32)   // secure random (SecureRandom) — for nonces/keys, not kotlin.random.Random
+RandomInstance.randomChars()   // 16-char subscription id
+
+sha256(bytes)              // raw hash primitive
+EventHasher.hashId(pubKey, createdAt, kind, tags, content)   // canonical event id
+EventHasher.hashIdCheck(id, pubKey, createdAt, kind, tags, content)  // verify untrusted events
+```
+
+`EventHasher` serializes `[0, pubkey, created_at, kind, tags, content]` in the
+exact form NIP-01 requires — prefer it over calling `sha256` on your own JSON.
+
 ## Bech32 Encoding (NIP-19)
 
 Encoding uses extension functions on `ByteArray` (`nip19Bech32/ByteArrayExt.kt`);

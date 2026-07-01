@@ -20,6 +20,15 @@
  */
 package com.vitorpamplona.quartz.utils.sha256
 
+/**
+ * SHA-256 of [data], returning a fresh 32-byte digest.
+ *
+ * This is the raw primitive. To compute or verify a Nostr **event id** don't hash
+ * by hand — use `EventHasher.hashId(...)` / `hashIdCheck(...)`, which serialize the
+ * `[0, pubkey, created_at, kind, tags, content]` array in the canonical form the
+ * protocol requires before hashing. Use [sha256Into] on hot paths to avoid
+ * allocating a new array per call.
+ */
 expect fun sha256(data: ByteArray): ByteArray
 
 /**
