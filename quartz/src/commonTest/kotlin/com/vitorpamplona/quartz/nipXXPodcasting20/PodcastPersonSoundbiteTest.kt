@@ -76,6 +76,20 @@ class PodcastPersonSoundbiteTest {
     }
 
     @Test
+    fun `person href resolves an npub to a pubkey`() {
+        val npub = "npub1hv7k2s755n697sptva8vkh9jz40lzfzklnwj6ekewfmxp5crwdjs27007y"
+        val hex = "bb3d6543d4a4f45f402b674ecb5cb2155ff12456fcdd2d66d9727660d3037365"
+        assertEquals(hex, PodcastPerson(name = "Alice", href = npub).nostrPubKey())
+        assertEquals(hex, PodcastPerson(name = "Alice", href = "nostr:$npub").nostrPubKey())
+    }
+
+    @Test
+    fun `person href that is a plain web link has no pubkey`() {
+        assertNull(PodcastPerson(name = "Alice", href = "https://alice.example").nostrPubKey())
+        assertNull(PodcastPerson(name = "Alice", href = null).nostrPubKey())
+    }
+
+    @Test
     fun `soundbite tag parses times and optional title`() {
         val soundbite = SoundbiteTag.parse(arrayOf("soundbite", "73.5", "60.0", "Best moment"))
         assertEquals(73.5, soundbite?.startTimeSeconds)

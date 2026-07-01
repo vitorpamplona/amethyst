@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,8 +42,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
@@ -50,14 +57,18 @@ import com.vitorpamplona.quartz.podcasts.PodcastPerson
 
 /**
  * A "Hosts & Guests" strip: the Podcasting-2.0 `podcast:person` credits for a show or episode,
- * rendered as a horizontally scrollable row of avatar + name + role. A person is free-text (not a
- * Nostr user), so we load their [PodcastPerson.img] with a robohash fallback seeded by their name,
- * and tapping one opens their [PodcastPerson.href] link when present.
+ * rendered as a horizontally scrollable row of avatar + name + role.
+ *
+ * A person is usually a free-text credit (name + image URL + web link), not a Nostr user, so it's
+ * drawn with the app's default profile-image loader and its link opens externally. But when the
+ * publisher's `href` points at an `npub`/`nprofile`, we upgrade the card to a real Nostr profile —
+ * the standard [ClickableUserPicture] + [UsernameDisplay], tappable through to the profile.
  */
 @Composable
 fun PodcastPeople(
     persons: List<PodcastPerson>,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val people = persons.filter { it.isValid() }
     if (people.isEmpty()) return
@@ -76,7 +87,7 @@ fun PodcastPeople(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(people) { person ->
-                PersonItem(person, accountViewModel)
+                PersonItem(person, accountViewModel, nav)
             }
         }
     }
@@ -86,43 +97,101 @@ fun PodcastPeople(
 private fun PersonItem(
     person: PodcastPerson,
     accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val pubKey = remember(person) { person.nostrPubKey() }
+
+    if (pubKey != null) {
+        LoadUser(pubKey, accountViewModel) { user ->
+            if (user != null) {
+                NostrPersonCard(user, person.role, accountViewModel, nav)
+            } else {
+                FreeTextPersonCard(person, accountViewModel)
+            }
+        }
+    } else {
+        FreeTextPersonCard(person, accountViewModel)
+    }
+}
+
+/** A person that resolved to a real Nostr identity — the standard profile treatment. */
+@Composable
+private fun NostrPersonCard(
+    user: User,
+    role: String?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    PersonCardScaffold(
+        onClick = { nav.nav(routeFor(user)) },
+        role = role,
+        avatar = { ClickableUserPicture(user, 56.dp, accountViewModel) },
+        name = {
+            UsernameDisplay(
+                user,
+                Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                accountViewModel = accountViewModel,
+            )
+        },
+    )
+}
+
+/** A free-text `podcast:person` credit — default image loader, external link. */
+@Composable
+private fun FreeTextPersonCard(
+    person: PodcastPerson,
+    accountViewModel: AccountViewModel,
 ) {
     val uriHandler = LocalUriHandler.current
     val href = person.href
 
+    PersonCardScaffold(
+        onClick = href?.let { { runCatching { uriHandler.openUri(it) } } },
+        role = person.role,
+        avatar = {
+            RobohashFallbackAsyncImage(
+                robot = person.name,
+                model = person.img,
+                contentDescription = person.name,
+                modifier = Modifier.size(56.dp).clip(CircleShape),
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            )
+        },
+        name = {
+            Text(
+                text = person.name,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+    )
+}
+
+/** Shared 72dp centered card layout: avatar, name, and an optional role line. */
+@Composable
+private fun PersonCardScaffold(
+    onClick: (() -> Unit)?,
+    role: String?,
+    avatar: @Composable () -> Unit,
+    name: @Composable () -> Unit,
+) {
     Column(
         modifier =
             Modifier
                 .width(72.dp)
-                .then(
-                    if (href != null) {
-                        Modifier.clickable { runCatching { uriHandler.openUri(href) } }
-                    } else {
-                        Modifier
-                    },
-                ).padding(vertical = 4.dp),
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        RobohashFallbackAsyncImage(
-            robot = person.name,
-            model = person.img,
-            contentDescription = person.name,
-            modifier = Modifier.size(56.dp).clip(CircleShape),
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-        )
-
-        Text(
-            text = person.name,
-            style = MaterialTheme.typography.labelMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        person.role?.takeIf { it.isNotEmpty() }?.let {
+        avatar()
+        name()
+        role?.takeIf { it.isNotEmpty() }?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.labelSmall,

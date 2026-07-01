@@ -139,7 +139,7 @@ fun PodcastHeader(
             }
 
             val persons = remember(show) { show?.showPersons() ?: emptyList() }
-            PodcastPeople(persons, accountViewModel)
+            PodcastPeople(persons, accountViewModel, nav)
         }
 
         // Standard engagement row for the show itself (comment / zap / react), like any other

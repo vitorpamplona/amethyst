@@ -21,6 +21,10 @@
 package com.vitorpamplona.quartz.podcasts
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import kotlinx.serialization.Serializable
 
 /**
@@ -46,4 +50,18 @@ class PodcastPerson(
     val href: String? = null,
 ) {
     fun isValid() = name.isNotBlank()
+
+    /**
+     * The Nostr pubkey (hex) this person points at, when [href] is (or embeds) an `npub`/`nprofile`
+     * — including `nostr:` URIs and `njump.me`-style links. Null for a plain web link or no href.
+     * Lets a client upgrade a free-text credit to a real Nostr profile when the publisher linked one.
+     */
+    fun nostrPubKey(): HexKey? =
+        href?.let {
+            when (val entity = Nip19Parser.uriToRoute(it)?.entity) {
+                is NPub -> entity.hex
+                is NProfile -> entity.hex
+                else -> null
+            }
+        }
 }

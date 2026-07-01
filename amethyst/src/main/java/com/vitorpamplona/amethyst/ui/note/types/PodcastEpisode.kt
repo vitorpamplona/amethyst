@@ -200,7 +200,7 @@ fun RenderPodcastEpisode(
 
             if (!makeItShort) {
                 val persons = remember(noteEvent) { episode.episodePersons() }
-                PodcastPeople(persons, accountViewModel)
+                PodcastPeople(persons, accountViewModel, nav)
             }
 
             markdown?.takeIf { !makeItShort }?.let {
