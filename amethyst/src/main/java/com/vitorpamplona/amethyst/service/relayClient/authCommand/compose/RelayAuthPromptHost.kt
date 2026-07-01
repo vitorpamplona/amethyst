@@ -20,14 +20,21 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.compose
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,9 +47,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPrompt
@@ -53,7 +63,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
-private const val MAX_COUNTERPARTIES_SHOWN = 8
+/** Above this many counterparties for a purpose, collapse the named rows into an avatar facepile. */
+private const val NAMED_ROWS_MAX = 2
+
+/** Avatars shown in the facepile before the "+N" overflow badge. */
+private const val FACEPILE_MAX = 5
 
 /**
  * App-wide host for NIP-42 auth prompts. Collects [RelayAuthPromptBus.prompts] and shows one
@@ -91,22 +105,35 @@ private fun RelayAuthPromptDialog(
 ) {
     AlertDialog(
         onDismissRequest = { onChoice(UserAuthChoice.DISMISS) },
+        icon = {
+            Icon(
+                symbol = MaterialSymbols.Shield,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
         title = { Text(stringRes(R.string.relay_auth_prompt_title)) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(stringRes(R.string.relay_auth_prompt_message))
-                Text(prompt.relayUrl.url, fontWeight = FontWeight.Bold)
+                RelayChip(prompt.relayUrl.url)
 
                 prompt.purposes.forEach { purpose ->
-                    Text(stringRes(reasonRes(purpose.kind)), fontWeight = FontWeight.SemiBold)
-                    purpose.counterparties.take(MAX_COUNTERPARTIES_SHOWN).forEach { pubkey ->
-                        CounterpartyRow(pubkey, accountViewModel)
-                    }
-                    if (purpose.counterparties.size > MAX_COUNTERPARTIES_SHOWN) {
-                        Text(stringRes(R.string.relay_auth_and_others))
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = stringRes(reasonRes(purpose.kind)),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        val people = purpose.counterparties.toList()
+                        if (people.size <= NAMED_ROWS_MAX) {
+                            people.forEach { CounterpartyRow(it, accountViewModel) }
+                        } else {
+                            CounterpartyFacepile(people, accountViewModel)
+                        }
                     }
                 }
             }
@@ -120,17 +147,35 @@ private fun RelayAuthPromptDialog(
                     onClick = { onChoice(UserAuthChoice.ALLOW_ONCE) },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringRes(R.string.relay_auth_allow_once)) }
-                TextButton(
+                FilledTonalButton(
                     onClick = { onChoice(UserAuthChoice.ALWAYS_ALLOW) },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringRes(R.string.relay_auth_always_allow)) }
                 TextButton(
                     onClick = { onChoice(UserAuthChoice.BLOCK) },
                     modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) { Text(stringRes(R.string.relay_auth_block)) }
             }
         },
     )
+}
+
+@Composable
+private fun RelayChip(url: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.small,
+    ) {
+        Text(
+            text = url,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.MiddleEllipsis,
+        )
+    }
 }
 
 @Composable
@@ -147,6 +192,39 @@ private fun CounterpartyRow(
                 ClickableUserPicture(user, 32.dp, accountViewModel)
                 UsernameDisplay(user, accountViewModel = accountViewModel)
             }
+        }
+    }
+}
+
+@Composable
+private fun CounterpartyFacepile(
+    pubkeys: List<HexKey>,
+    accountViewModel: AccountViewModel,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy((-8).dp),
+    ) {
+        pubkeys.take(FACEPILE_MAX).forEach { pubkey ->
+            LoadUser(pubkey, accountViewModel) { user ->
+                if (user != null) {
+                    ClickableUserPicture(
+                        baseUser = user,
+                        size = 30.dp,
+                        accountViewModel = accountViewModel,
+                        modifier = Modifier.border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                    )
+                }
+            }
+        }
+        val extra = pubkeys.size - FACEPILE_MAX
+        if (extra > 0) {
+            Text(
+                text = "+$extra",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 14.dp),
+            )
         }
     }
 }
