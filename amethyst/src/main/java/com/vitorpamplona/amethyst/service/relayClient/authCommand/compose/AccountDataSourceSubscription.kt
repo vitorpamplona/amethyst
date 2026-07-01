@@ -52,9 +52,15 @@ fun RelayAuthSubscription(
                 globalPolicy = { account.settings.defaultRelayAuthPolicy.value },
                 isInMyRelayList = { relayUrl ->
                     val normalized = relayUrl.normalizeRelayUrlOrNull() ?: return@RelayAuthPermissionLedger false
-                    normalized !in account.blockedRelayList.flow.value &&
-                        normalized in account.trustedRelays.flow.value
+                    normalized in account.trustedRelays.flow.value
                 },
+                isBlocked = { relayUrl ->
+                    val normalized = relayUrl.normalizeRelayUrlOrNull() ?: return@RelayAuthPermissionLedger false
+                    normalized in account.blockedRelayList.flow.value
+                },
+                // Any follow list (kind 3, follow sets, etc.) counts as trusting the counterparty
+                // enough to reveal our identity to a relay that serves them.
+                isFollowed = { pubkey -> pubkey in account.allFollows.flow.value.authors },
             )
         }
 
