@@ -35,7 +35,7 @@ class LargeDBTests {
     companion object {
         fun getEventDB(): List<Event> =
             OptimizedJsonMapper.fromJsonToEventList(
-                TestResourceLoader().loadDecompressString("nostr_vitor_startup_data.json"),
+                TestResourceLoader().loadDecompressString("nostr_vitor_startup_data.json.gz"),
             )
 
         val events by

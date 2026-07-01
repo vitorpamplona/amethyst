@@ -33,7 +33,7 @@ open class BaseLargeCacheBenchmark {
     companion object {
         fun getEventDB(): List<Event> {
             // This file includes duplicates
-            val fullDBInputStream = javaClass.classLoader!!.getResourceAsStream("nostr_vitor_startup_data.json")
+            val fullDBInputStream = javaClass.classLoader!!.getResourceAsStream("nostr_vitor_startup_data.json.gz")
 
             return JacksonMapper.mapper.readValue<ArrayList<Event>>(
                 GZIPInputStream(fullDBInputStream),
