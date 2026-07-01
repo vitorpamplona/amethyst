@@ -70,6 +70,14 @@ class PoolEventOutboxState(
         if (success || message.shouldDiscard()) {
             relaysRemaining = relaysRemaining - url
             failures = failures - url
+        } else if (message.isAuthRequired()) {
+            // NIP-42: the relay wants us to authenticate before it will accept
+            // this event. This is NOT a real rejection — once RelayAuthenticator
+            // completes the AUTH handshake, syncFilters re-sends the event. So we
+            // keep it pending and must NOT record this as a failure response,
+            // otherwise a relay that NAKs every unauthed EVENT would exhaust the
+            // retry budget (Tries.isDone) and drop the event before AUTH lands.
+            // Leave relaysRemaining and failures untouched.
         } else {
             if (currentTries != null) {
                 currentTries.addResponse(message)
@@ -90,6 +98,13 @@ class PoolEventOutboxState(
             this.startsWith("pow:") ||
             this.startsWith("deleted:") ||
             this.startsWith("invalid:")
+
+    /**
+     * NIP-42 machine-readable prefix a relay uses to tell us an event was held
+     * back pending authentication. The event should be re-sent after AUTH, not
+     * retried-then-discarded like an ordinary failure.
+     */
+    fun String.isAuthRequired() = this.startsWith("auth-required:") || this == "auth-required"
 
     // Tries 3 times
     class Tries(
