@@ -20,12 +20,37 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteDisplayData
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+
+/**
+ * Compose-friendly wrapper around [toNoteDisplayData] that observes the
+ * event author's user-metadata flow and re-derives the display data
+ * whenever it updates. Use at note-card call sites so display names and
+ * avatars populate when the kind-0 event arrives from relays after the
+ * note itself.
+ */
+@Composable
+fun Event.rememberDisplayData(cache: ICacheProvider?): NoteDisplayData {
+    val author = remember(pubKey, cache) { cache?.getUserIfExists(pubKey) }
+    val authorMetaValue by produceState<Any?>(initialValue = null, key1 = author) {
+        val a = author
+        if (a == null) {
+            value = null
+        } else {
+            a.metadata().flow.collect { value = it }
+        }
+    }
+    return remember(this, authorMetaValue) { toNoteDisplayData(cache) }
+}
 
 /**
  * Extension to convert Event to NoteDisplayData for the shared NoteCard.

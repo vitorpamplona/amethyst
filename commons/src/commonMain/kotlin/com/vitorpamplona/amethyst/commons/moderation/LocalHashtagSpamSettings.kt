@@ -18,36 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.search
+package com.vitorpamplona.amethyst.commons.moderation
+
+import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.compositionLocalOf
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
- * Represents a parsed search result from Bech32/hex input.
- * Shared between Android and Desktop for consistent search behavior.
+ * Settings for the hashtag-spam filter, provided at App() root by each
+ * front end (Desktop, Android). Defaults to an error so missing provision
+ * fails loudly during development; production binaries always wire this.
  */
-sealed class SearchResult {
-    /**
-     * Direct user lookup from npub, nprofile, nsec, or hex pubkey.
-     */
-    data class UserResult(
-        val pubKeyHex: String,
-        val displayId: String,
-    ) : SearchResult()
+val LocalHashtagSpamSettings: ProvidableCompositionLocal<HashtagSpamSettings> =
+    compositionLocalOf { error("LocalHashtagSpamSettings not provided. Wire it at App() root.") }
 
-    /**
-     * Note lookup from note1 or nevent.
-     */
-    data class NoteResult(
-        val noteIdHex: String,
-        val displayId: String,
-    ) : SearchResult()
-
-    /**
-     * Addressable event lookup from naddr.
-     */
-    data class AddressResult(
-        val kind: Int,
-        val pubKeyHex: String,
-        val dTag: String,
-        val displayId: String,
-    ) : SearchResult()
-}
+/**
+ * Pubkeys exempted from the hashtag-spam check — the active account's
+ * follow set union the active account's own pubkey. Updated by the App()
+ * root whenever the active account changes. Defaults to empty (strict
+ * filter applies to everyone) so leaf composables can read it without a
+ * null check.
+ */
+val LocalSpamExemptKeys: ProvidableCompositionLocal<Set<HexKey>> =
+    compositionLocalOf { emptySet() }

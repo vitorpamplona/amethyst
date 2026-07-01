@@ -316,12 +316,18 @@ fun BookmarksScreen(
                                     onNavigateToThread(event.id)
                                 },
                         ) {
-                            NoteCard(
-                                note = event.toNoteDisplayData(localCache),
+                            com.vitorpamplona.amethyst.desktop.ui.note.SpamCheckedNoteRender(
+                                displayedEvent = event,
+                                noteIdHex = event.id,
                                 localCache = localCache,
-                                onAuthorClick = onNavigateToProfile,
-                                onMentionClick = onNavigateToProfile,
-                            )
+                            ) {
+                                NoteCard(
+                                    note = event.rememberDisplayData(localCache),
+                                    localCache = localCache,
+                                    onAuthorClick = onNavigateToProfile,
+                                    onMentionClick = onNavigateToProfile,
+                                )
+                            }
                             NoteActionsRow(
                                 event = event,
                                 relayManager = relayManager,
