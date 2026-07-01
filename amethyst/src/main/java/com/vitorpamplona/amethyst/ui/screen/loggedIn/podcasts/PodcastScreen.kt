@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -53,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.types.PodcastBookmarkButton
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -61,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.OnePodc
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
@@ -131,10 +135,14 @@ fun PodcastScreen(
                     )
                 },
                 actions = {
-                    // Only offer bookmarking once the show metadata has loaded — there must be a
-                    // resolved event to add to the NIP-51 list. The button reflects bookmarked state.
+                    // Only offer these once the show metadata has loaded — there must be a resolved
+                    // event to bookmark / act on. The bookmark button reflects bookmarked state; the
+                    // 3-dot button is the standard NoteCompose options menu, sitting to its right.
                     if (show != null) {
                         PodcastBookmarkButton(metadataNote, accountViewModel)
+                        Spacer(Modifier.width(Size10dp))
+                        MoreOptionsButton(metadataNote, accountViewModel = accountViewModel, nav = nav)
+                        Spacer(Modifier.width(Size10dp))
                     }
                 },
                 popBack = nav::popBack,
