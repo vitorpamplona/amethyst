@@ -127,6 +127,8 @@ class CoordinatorPipelineTest {
         override fun activeCounts(url: NormalizedRelayUrl): Map<String, List<Filter>> = emptyMap()
 
         override fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey> = emptySet()
+
+        override fun activeOutboxEvents(url: NormalizedRelayUrl): List<Event> = emptyList()
     }
 
     private fun createCoordinator(

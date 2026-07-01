@@ -104,6 +104,8 @@ private class TrackingNostrClient : INostrClient {
 
     override fun activeOutboxCache(url: NormalizedRelayUrl): Set<String> = emptySet()
 
+    override fun activeOutboxEvents(url: NormalizedRelayUrl): List<Event> = emptyList()
+
     override fun close() {}
 }
 
