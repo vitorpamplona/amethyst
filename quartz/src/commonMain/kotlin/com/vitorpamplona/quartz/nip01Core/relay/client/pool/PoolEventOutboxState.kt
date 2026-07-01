@@ -48,17 +48,21 @@ class PoolEventOutboxState(
 
     fun remainingRelays() = relaysRemaining
 
-    fun newTry(url: NormalizedRelayUrl) {
+    /** Records a send attempt to [url]. Returns true if the retry budget is now exhausted and the
+     *  relay was dropped (i.e. we gave up delivering this event to [url]). */
+    fun newTry(url: NormalizedRelayUrl): Boolean {
         val currentTries = failures[url]
         if (currentTries != null) {
             currentTries.addTriedTime(TimeUtils.now())
             if (currentTries.isDone()) {
                 relaysRemaining = relaysRemaining - url
                 failures = failures - url
+                return true
             }
         } else {
             failures = failures + (url to Tries(listOf(TimeUtils.now())))
         }
+        return false
     }
 
     fun newResponse(

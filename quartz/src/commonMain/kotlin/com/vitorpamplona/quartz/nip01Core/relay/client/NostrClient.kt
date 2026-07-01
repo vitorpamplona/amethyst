@@ -303,7 +303,9 @@ class NostrClient(
         if (success) {
             activeRequests.onSent(relay.url, cmd)
             activeCounts.onSent(relay.url, cmd)
-            eventOutbox.onSent(relay.url, cmd)
+            eventOutbox.onSent(relay.url, cmd)?.let { gaveUp ->
+                listeners.forEach { it.onEventGaveUp(relay, gaveUp) }
+            }
         }
         listeners.forEach { it.onSent(relay, cmdStr, cmd, success) }
     }

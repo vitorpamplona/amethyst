@@ -115,6 +115,21 @@ class PoolEventOutboxAuthTest {
     }
 
     @Test
+    fun givesUpAndSignalsAfterExhaustingTryBudget() {
+        val outbox = PoolEventOutbox()
+        val ev = event("ee".repeat(32))
+
+        // markAsSending + first onSent (1 try). Tries budget is >3 tries.
+        outbox.publish(ev, setOf(relay))
+        // attempts 2, 3 stay under budget and signal nothing.
+        assertNull(outbox.onSent(relay, EventCmd(ev)))
+        assertNull(outbox.onSent(relay, EventCmd(ev)))
+        // the 4th attempt exhausts the budget -> event is returned (gave up) and dropped.
+        assertEquals(ev.id, outbox.onSent(relay, EventCmd(ev))?.id)
+        assertNull(outbox.pendingRelaysFor(ev.id))
+    }
+
+    @Test
     fun ordinaryTransientFailureStillBounded() {
         val outbox = PoolEventOutbox()
         val ev = event("dd".repeat(32))

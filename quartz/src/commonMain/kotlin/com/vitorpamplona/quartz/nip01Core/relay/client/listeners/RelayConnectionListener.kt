@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.listeners
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -69,6 +70,16 @@ interface RelayConnectionListener {
     fun onCannotConnect(
         relay: IRelayClient,
         errorMessage: String,
+    ) {}
+
+    /**
+     * The client exhausted its retry budget for [event] on [relay] and dropped it without a
+     * confirmation. Use this to surface a failed delivery instead of losing it silently; the
+     * event may still be pending on other relays.
+     */
+    fun onEventGaveUp(
+        relay: IRelayClient,
+        event: Event,
     ) {}
 }
 
