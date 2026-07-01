@@ -155,6 +155,8 @@ fun PodcastHeader(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
+
+            PodcastTopSupporters(metadataNote, accountViewModel, nav)
         }
 
         // Only render once episodes have actually loaded — avoids flashing "0 episodes"

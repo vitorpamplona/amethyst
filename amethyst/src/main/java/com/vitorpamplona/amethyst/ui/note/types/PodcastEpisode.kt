@@ -201,6 +201,9 @@ fun RenderPodcastEpisode(
             if (!makeItShort) {
                 val persons = remember(noteEvent) { episode.episodePersons() }
                 PodcastPeople(persons, accountViewModel, nav)
+
+                val transcriptUrl = remember(noteEvent) { episode.episodeTranscriptUrl() }
+                transcriptUrl?.let { PodcastTranscriptView(it, accountViewModel) }
             }
 
             markdown?.takeIf { !makeItShort }?.let {

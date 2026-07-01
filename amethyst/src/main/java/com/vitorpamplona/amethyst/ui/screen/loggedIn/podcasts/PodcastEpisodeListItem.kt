@@ -23,34 +23,27 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplyCount
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.note.CommentIcon
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
@@ -139,44 +132,5 @@ fun PodcastEpisodeListItem(
                 accountViewModel = accountViewModel,
             )
         }
-
-        EpisodeCommentsChip(note, accountViewModel, nav)
-    }
-}
-
-/**
- * A "comments" affordance for an episode list row: the NIP-22 (kind 1111) reply count plus a comment
- * glyph, opening the episode's thread where the discussion lives and new comments are composed.
- * Everything downstream — fetching `#a`/`#A` comments, the reply composer, the count — already works
- * through the standard thread; this just surfaces it on the podcast-specific list.
- */
-@Composable
-private fun EpisodeCommentsChip(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val commentCount by observeNoteReplyCount(note, accountViewModel)
-
-    Row(
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .clickable { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } }
-                .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        CommentIcon(Size18Modifier, MaterialTheme.colorScheme.grayText)
-        Text(
-            text =
-                if (commentCount == 0) {
-                    stringRes(R.string.podcast_comment_action)
-                } else {
-                    pluralStringResource(R.plurals.podcast_comment_count, commentCount, commentCount)
-                },
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.grayText,
-        )
     }
 }

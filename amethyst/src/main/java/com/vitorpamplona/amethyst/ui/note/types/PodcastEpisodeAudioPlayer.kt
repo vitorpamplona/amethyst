@@ -80,6 +80,9 @@ fun PodcastEpisodeAudioPlayer(
     // live controller to the clip's start.
     val soundbites = remember(note) { (note.event as? PodcastEpisode)?.episodeSoundbites().orEmpty() }
 
+    // Off-event chapters document URL, if any — the list seeks the live controller too.
+    val chaptersUrl = remember(note) { (note.event as? PodcastEpisode)?.episodeChaptersUrl() }
+
     Column(Modifier.fillMaxWidth()) {
         GetMediaItem(
             videoUri = audio.url,
@@ -125,6 +128,17 @@ fun PodcastEpisodeAudioPlayer(
                 PodcastSoundbites(soundbites) { startMillis ->
                     controller.controller.seekTo(startMillis)
                     controller.controller.play()
+                }
+
+                chaptersUrl?.let { url ->
+                    PodcastChaptersView(
+                        chaptersUrl = url,
+                        onSeek = { startMillis ->
+                            controller.controller.seekTo(startMillis)
+                            controller.controller.play()
+                        },
+                        accountViewModel = accountViewModel,
+                    )
                 }
             }
         }
