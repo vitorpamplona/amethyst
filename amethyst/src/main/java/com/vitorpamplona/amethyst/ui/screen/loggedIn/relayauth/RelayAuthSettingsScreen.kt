@@ -78,6 +78,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private const val MAX_RATIONALE_ROWS = 8
+
 @Composable
 fun RelayAuthSettingsScreen(
     accountViewModel: AccountViewModel,
@@ -310,8 +312,17 @@ private fun RelayRationaleCard(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                pubkeys.forEach { pubkey ->
+                // Bounded, non-lazy list: an outbox relay's rationale can name many people, so cap
+                // the rows shown here (the full set is already bounded in the store too).
+                pubkeys.take(MAX_RATIONALE_ROWS).forEach { pubkey ->
                     RationaleUserRow(pubkey, accountViewModel)
+                }
+                if (pubkeys.size > MAX_RATIONALE_ROWS) {
+                    Text(
+                        text = stringResource(R.string.relay_auth_and_others),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
