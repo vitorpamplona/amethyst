@@ -64,16 +64,23 @@ suspend fun INostrClient.fetchAllPages(
     // Track how many matching events each filter has received so far.
     val matchCountPerFilter = IntArray(filters.size)
 
+    // One subscription id reused for every page. Each page opens it (with the
+    // page's `until`), waits for EOSE, then closes it before the next page opens
+    // it again — so at most one subscription is ever live and the whole download
+    // occupies a single subscription slot on the connection (relays cap the
+    // number of concurrent subscriptions per connection, so churning through a
+    // fresh id per page is wasteful).
+    //
+    // Reusing the id is safe because the pool serializes the "send a REQ"
+    // decision: after each page's EOSE, the pool's auto-resend and this loop's
+    // unsubscribe+resubscribe can no longer both fire a REQ for the same id (see
+    // PoolRequests.decideCommandLocked / PoolRequestsConcurrencyTest). Without
+    // that fix the two raced and produced a duplicate REQ — two EOSEs, or an
+    // empty page that silently truncated large results.
+    val subId = newSubId()
+
     while (true) {
         coroutineContext.ensureActive()
-
-        // A fresh subscription id per page. Reusing one id across pages
-        // (unsubscribe + immediately re-subscribe the same id) races on the wire:
-        // in-flight events from the previous page's REQ bleed into the next page's
-        // listener. Those stale events carry a `created_at` above the new `until`,
-        // so `match()` rejects them, the page ends with `pageCount == 0`, and the
-        // whole download terminates early — silently truncating large results.
-        val subId = newSubId()
 
         val pagedFilters =
             if (until == null) {
