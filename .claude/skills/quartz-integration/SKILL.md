@@ -134,19 +134,69 @@ val privKeyHex: String? = keyPair.privKey?.toHexKey()
 
 ```kotlin
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 
 // ByteArray → hex
 val hex = byteArray.toHexKey()
 
 // hex → ByteArray
-val bytes = HexKey.decodeHex(hex)
+val bytes = hex.hexToByteArray()
 
 // Bech32 import (npub, nsec)
 val parsed = Nip19Parser.uriToRoute("npub1abc...")
 // or
 val parsed = Nip19Parser.uriToRoute("nsec1abc...")
 ```
+
+> Hex ↔ ByteArray is a first-class utility in Quartz — see **§3.1 Hex utilities** below.
+
+---
+
+### 3.1 Hex utilities (HexKey ↔ ByteArray)
+
+Nostr keys, event ids and signatures travel as lower-case hex strings. Quartz
+models this with the `HexKey` typealias (just a `String`) plus extension
+functions — **do not** write your own byte loop or pull in a third-party codec.
+
+**Packages:** `com.vitorpamplona.quartz.nip01Core.core` (the extensions) and
+`com.vitorpamplona.quartz.utils` (the underlying `Hex` object).
+
+```kotlin
+import com.vitorpamplona.quartz.nip01Core.core.HexKey            // typealias = String
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey          // ByteArray → hex
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray    // hex → ByteArray
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
+import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.utils.Hex
+
+// Encode / decode
+val hex: HexKey = pubKeyBytes.toHexKey()      // lower-case, 2 chars per byte
+val bytes: ByteArray = hex.hexToByteArray()   // throws on odd length
+
+// Untrusted input → decode safely
+val maybe: ByteArray? = userInput.hexToByteArrayOrNull()  // null if not valid hex
+
+// Validate without decoding (no allocation)
+Hex.isHex(userInput)        // even-length, all hex digits (any length)
+Hex.isHex64(userInput)      // fast path for a 32-byte key/id (checks first 64 chars)
+hex.isValid()               // 64 chars AND valid hex (pubkey / event-id shape)
+
+// Compare a hex string to raw bytes without decoding
+Hex.isEqual(incomingHexId, myIdBytes)
+```
+
+| Need | Call | Notes |
+|------|------|-------|
+| ByteArray → hex | `bytes.toHexKey()` | lower-case output |
+| hex → ByteArray (strict) | `hex.hexToByteArray()` | throws on odd length |
+| hex → ByteArray (safe) | `hex.hexToByteArrayOrNull()` | `null` on invalid hex |
+| is this valid hex? | `Hex.isHex(s)` / `Hex.isHex64(s)` | `isHex64` ~30% faster for keys/ids |
+| is this a pubkey/id shape? | `hex.isValid()` | 64 chars + valid hex |
+| hex == bytes? | `Hex.isEqual(hex, bytes)` | no decode allocation |
+
+Constants `PUBKEY_LENGTH` and `EVENT_ID_LENGTH` (both `64`) live in the same
+`nip01Core.core` package.
 
 ---
 
@@ -644,6 +694,9 @@ val results = store.query<Event>(Filter(search = "bitcoin"))
 | Sign event | `signer.sign(template)` | `nip01Core.signers` |
 | Serialize | `event.toJson()` | `nip01Core.core` |
 | Parse | `Event.fromJson(json)` | `nip01Core.core` |
+| ByteArray → hex | `bytes.toHexKey()` | `nip01Core.core` |
+| hex → ByteArray | `hex.hexToByteArray()` / `hex.hexToByteArrayOrNull()` | `nip01Core.core` |
+| Validate hex | `Hex.isHex(s)` / `Hex.isHex64(s)` / `hex.isValid()` | `utils`, `nip01Core.core` |
 | Normalize relay URL | `RelayUrlNormalizer.normalize("wss://...")` | `nip01Core.relay.normalizer` |
 | Setup relay client | `NostrClient(BasicOkHttpWebSocket.Builder { okhttp })` | `nip01Core.relay.client` |
 | Subscribe | `client.openReqSubscription(subId, mapOf(relay to filters), listener)` | `nip01Core.relay.client` |

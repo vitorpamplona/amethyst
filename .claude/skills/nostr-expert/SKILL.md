@@ -345,6 +345,32 @@ object Nip04 {
 
 **Note**: Use NIP-44 (`Nip44`) for new implementations. NIP-04 has security issues.
 
+## Hex Encoding (HexKey ↔ ByteArray)
+
+Pubkeys, event ids and signatures are lower-case hex. Quartz uses the `HexKey`
+typealias (`= String`) plus extensions in `nip01Core/core/HexKey.kt`, backed by
+the `Hex` object in `utils/Hex.kt`. **Use these — never hand-roll a byte loop or
+import a third-party hex codec.**
+
+```kotlin
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
+import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.utils.Hex
+
+val hex: HexKey = bytes.toHexKey()            // ByteArray -> lower-case hex
+val back: ByteArray = hex.hexToByteArray()    // hex -> ByteArray (throws on odd length)
+val safe: ByteArray? = input.hexToByteArrayOrNull()  // null on invalid hex
+
+Hex.isHex(input)     // valid hex, any length
+Hex.isHex64(input)   // ~30% faster fast-path for a 32-byte key/id
+hex.isValid()        // 64 chars + valid hex (pubkey / event-id shape)
+Hex.isEqual(hex, bytes)  // compare hex to bytes without decoding
+```
+
+Constants `PUBKEY_LENGTH` / `EVENT_ID_LENGTH` (both 64) live in `nip01Core.core`.
+
 ## Bech32 Encoding (NIP-19)
 
 Encoding uses extension functions on `ByteArray` (`nip19Bech32/ByteArrayExt.kt`);
