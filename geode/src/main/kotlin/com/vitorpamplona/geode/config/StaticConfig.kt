@@ -108,6 +108,13 @@ data class StaticConfig(
         val reject_future_seconds: Int? = null,
         val require_auth: Boolean = false,
         /**
+         * Advertise NIP-42 AUTH without requiring it: the relay sends the
+         * challenge and records clients that authenticate, but EVENT/REQ/COUNT
+         * still work for clients that never do. Ignored when [require_auth] is
+         * true (mandatory AUTH already sends the challenge).
+         */
+        val optional_auth: Boolean = false,
+        /**
          * Defaults to `true`: any relay accepting real traffic should
          * verify Schnorr signatures, and verifying-by-default closes
          * the footgun of forgetting the flag. Set false only for

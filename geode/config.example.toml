@@ -62,6 +62,12 @@ verify_signatures = true
 # Require clients to NIP-42 AUTH before REQ/EVENT/COUNT.
 require_auth = false
 
+# Advertise NIP-42 AUTH without requiring it: the relay sends the
+# challenge and records clients that authenticate (so downstream
+# policies can gate on identity), but REQ/EVENT/COUNT still work for
+# clients that never AUTH. Ignored when require_auth = true.
+# optional_auth = false
+
 # Reject events whose `created_at` is more than this many seconds in
 # the future. Enforced by RejectFutureEventsPolicy.
 # reject_future_seconds = 1800
