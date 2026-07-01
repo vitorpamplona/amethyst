@@ -152,4 +152,18 @@ class MessagesLockStateTest {
             assertEquals(LockState.Disabled, state.state.value)
             assertEquals(false, settings.lockEnabled.value)
         }
+
+    @Test
+    fun unlock_success_from_disabled_transitions_to_unlocked() =
+        runTest {
+            // First-run banner path: user enables lock + sets password while
+            // already viewing Messages. State is Disabled at that moment, and
+            // we want to stay Unlocked so the user isn't kicked to the lock
+            // screen right after enabling.
+            val settings = FakeSettings(lockEnabled = false)
+            val state = MessagesLockState(settings, backgroundScope)
+            assertEquals(LockState.Disabled, state.state.value)
+            state.onUnlockSuccess()
+            assertEquals(LockState.Unlocked, state.state.value)
+        }
 }

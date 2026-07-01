@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,10 +33,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -46,13 +43,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.privacylock.DmRedactionLevel
 import com.vitorpamplona.amethyst.commons.privacylock.InactivityTimer
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.desktop.security.LocalPrivacyLockSettings
-import com.vitorpamplona.amethyst.desktop.security.PasswordHasher
+import com.vitorpamplona.amethyst.desktop.security.SetPasswordDialog
 
 /**
  * Desktop privacy-lock settings pane. Column + Card layout (no Scaffold) —
@@ -264,84 +260,6 @@ private fun SettingsCard(
             content(this)
         }
     }
-}
-
-@Composable
-private fun SetPasswordDialog(
-    existingHash: String?,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit,
-) {
-    var current by remember { mutableStateOf("") }
-    var new1 by remember { mutableStateOf("") }
-    var new2 by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-
-    val submit: () -> Unit = {
-        val currentOk =
-            existingHash == null ||
-                PasswordHasher.verify(current.toCharArray(), existingHash)
-        when {
-            !currentOk -> error = "Current password is wrong"
-            new1.length < 4 -> error = "New password must be at least 4 characters"
-            new1 != new2 -> error = "Passwords don't match"
-            else -> onConfirm(PasswordHasher.hash(new1.toCharArray()))
-        }
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (existingHash == null) "Set a password" else "Change password") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (existingHash != null) {
-                    OutlinedTextField(
-                        value = current,
-                        onValueChange = {
-                            current = it
-                            error = null
-                        },
-                        label = { Text("Current password") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                    )
-                }
-                OutlinedTextField(
-                    value = new1,
-                    onValueChange = {
-                        new1 = it
-                        error = null
-                    },
-                    label = { Text("New password") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                )
-                OutlinedTextField(
-                    value = new2,
-                    onValueChange = {
-                        new2 = it
-                        error = null
-                    },
-                    label = { Text("Confirm new password") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                )
-                error?.let {
-                    Text(
-                        text = it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = submit) { Text("Save") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-    )
 }
 
 private fun InactivityTimer.label(): String =

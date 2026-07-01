@@ -86,9 +86,15 @@ class MessagesLockState(
         }
     }
 
-    /** Transition Locked → Unlocked. Idempotent. Starts the idle timer. */
+    /**
+     * Mark the session as authenticated. Transitions from either
+     * [LockState.Locked] (normal unlock path) or [LockState.Disabled]
+     * (first-run banner path — enabling the lock while the user is
+     * actively in Messages should NOT flash the lock screen).
+     * No-op if already [LockState.Unlocked]. Starts the idle timer.
+     */
     fun onUnlockSuccess() {
-        if (mutableState.value is LockState.Locked) {
+        if (mutableState.value !is LockState.Unlocked) {
             mutableState.value = LockState.Unlocked
             restartIdleTimer()
         }

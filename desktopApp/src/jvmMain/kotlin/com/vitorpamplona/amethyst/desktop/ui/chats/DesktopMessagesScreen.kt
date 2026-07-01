@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.ui.chats
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.security.MessagesFirstRunBanner
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.CoroutineScope
 import java.awt.Cursor
@@ -126,32 +128,37 @@ fun DesktopMessagesScreen(
             }
         }
 
-    if (compactMode) {
-        CompactMessagesContent(
-            selectedRoom = selectedRoom,
-            listState = listState,
-            account = account,
-            cacheProvider = cacheProvider,
-            scope = scope,
-            onNavigateToProfile = onNavigateToProfile,
-            listFocusRequester = listFocusRequester,
-            onShowNewDm = { showNewDmDialog = true },
-            onShowRelayPicker = { showDmRelayPicker = true },
-            keyHandler = keyHandler,
-        )
-    } else {
-        SplitMessagesContent(
-            selectedRoom = selectedRoom,
-            listState = listState,
-            account = account,
-            cacheProvider = cacheProvider,
-            scope = scope,
-            onNavigateToProfile = onNavigateToProfile,
-            listFocusRequester = listFocusRequester,
-            onShowNewDm = { showNewDmDialog = true },
-            onShowRelayPicker = { showDmRelayPicker = true },
-            keyHandler = keyHandler,
-        )
+    Column(modifier = Modifier.fillMaxSize()) {
+        MessagesFirstRunBanner()
+        Box(modifier = Modifier.weight(1f)) {
+            if (compactMode) {
+                CompactMessagesContent(
+                    selectedRoom = selectedRoom,
+                    listState = listState,
+                    account = account,
+                    cacheProvider = cacheProvider,
+                    scope = scope,
+                    onNavigateToProfile = onNavigateToProfile,
+                    listFocusRequester = listFocusRequester,
+                    onShowNewDm = { showNewDmDialog = true },
+                    onShowRelayPicker = { showDmRelayPicker = true },
+                    keyHandler = keyHandler,
+                )
+            } else {
+                SplitMessagesContent(
+                    selectedRoom = selectedRoom,
+                    listState = listState,
+                    account = account,
+                    cacheProvider = cacheProvider,
+                    scope = scope,
+                    onNavigateToProfile = onNavigateToProfile,
+                    listFocusRequester = listFocusRequester,
+                    onShowNewDm = { showNewDmDialog = true },
+                    onShowRelayPicker = { showDmRelayPicker = true },
+                    keyHandler = keyHandler,
+                )
+            }
+        }
     }
 
     if (showNewDmDialog) {
