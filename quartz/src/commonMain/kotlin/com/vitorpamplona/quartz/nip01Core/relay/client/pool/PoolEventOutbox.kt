@@ -97,6 +97,21 @@ class PoolEventOutbox {
     }
 
     /**
+     * The events still pending delivery to [url]. Unlike [activeOutboxCacheFor] (ids only), this
+     * returns the full events so callers can inspect kind/tags — e.g. to explain *why* a relay is
+     * being authenticated with (a pending gift wrap => sending a DM to its recipient).
+     */
+    fun activeOutboxEventsFor(url: NormalizedRelayUrl): List<Event> {
+        val myEvents = mutableListOf<Event>()
+        eventOutbox.forEach { (_, outboxCache) ->
+            if (url in outboxCache.relaysRemaining) {
+                myEvents.add(outboxCache.event)
+            }
+        }
+        return myEvents
+    }
+
+    /**
      * Returns the relays that have NOT yet acknowledged [eventId] with an OK, or
      * null if the event is not currently tracked (never sent or already fully done).
      * Callers can poll this after publish to detect when relays ack: the set shrinks
