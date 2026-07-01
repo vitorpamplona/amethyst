@@ -35,6 +35,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Manages relay subscriptions for the entire pool in a way that only
@@ -43,6 +45,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * This code also awaits a subscription to come to EOSE since many relays
  * have through switching subs while they are processing the past.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class PoolRequests {
     /**
      * Desired subs and listeners
@@ -63,6 +66,42 @@ class PoolRequests {
     private val relayState = LargeCache<String, RequestSubscriptionState<NormalizedRelayUrl>>()
 
     fun subState(subId: String): RequestSubscriptionState<NormalizedRelayUrl> = relayState.getOrCreate(subId) { RequestSubscriptionState() }
+
+    /**
+     * Serializes every access to the subscription state machine
+     * ([RequestSubscriptionState]) and the "should I send a REQ?" decision.
+     *
+     * A single subscription can span many relays, and each relay's
+     * socket-reader thread delivers messages into this class concurrently while
+     * the app thread adds/removes subscriptions — so the plain maps inside
+     * [RequestSubscriptionState] are written from several threads at once. That
+     * is both a memory hazard (concurrent map mutation) and, more importantly,
+     * a logic hazard: the check-then-send in [decideCommandLocked] must be
+     * atomic, otherwise two threads can both observe "no REQ in flight" and both
+     * send a REQ for the same sub id.
+     *
+     * This is a tiny non-reentrant spin lock (the same [AtomicBoolean] primitive
+     * used by BasicRelayClient's connecting mutex): the critical sections are a
+     * handful of map operations, never any I/O. Listener callbacks and the
+     * actual socket sends are ALWAYS performed outside the lock — they re-enter
+     * this class through [onSent], so holding the lock across them would
+     * self-deadlock.
+     */
+    private val stateLock = AtomicBoolean(false)
+
+    private inline fun <R> withStateLock(block: () -> R): R {
+        while (stateLock.exchange(true)) {
+            // Another thread holds the lock. Spin-read until it looks free
+            // (test-and-test-and-set: cheaper on the cache line than hammering
+            // exchange) then retry the acquisition above.
+            while (stateLock.load()) { }
+        }
+        try {
+            return block()
+        } finally {
+            stateLock.store(false)
+        }
+    }
 
     /**
      * This is called when a sub is added or removed from this class and
@@ -150,8 +189,10 @@ class PoolRequests {
      */
     fun onConnecting(url: NormalizedRelayUrl) {
         // Change states to connecting.
-        relayState.forEach { subId, state ->
-            state.connecting(url)
+        withStateLock {
+            relayState.forEach { subId, state ->
+                state.connecting(url)
+            }
         }
     }
 
@@ -164,7 +205,9 @@ class PoolRequests {
     ) {
         when (cmd) {
             is ReqCmd -> {
-                subState(cmd.subId).onOpenReq(relay, cmd.filters)
+                withStateLock {
+                    subState(cmd.subId).onOpenReq(relay, cmd.filters)
+                }
                 desiredSubListeners.get(cmd.subId)?.onSubscriptionStarted(
                     relay = relay.url,
                     forFilters = cmd.filters,
@@ -172,7 +215,9 @@ class PoolRequests {
             }
 
             is CloseCmd -> {
-                subState(cmd.subId).onSubscriptionClosed(relay)
+                withStateLock {
+                    subState(cmd.subId).onSubscriptionClosed(relay)
+                }
                 desiredSubListeners.get(cmd.subId)?.onSubscriptionClosed(
                     relay = relay.url,
                 )
@@ -189,46 +234,63 @@ class PoolRequests {
     ) {
         when (msg) {
             is EventMessage -> {
-                val state = relayState.get(msg.subId)
-                state?.onNewEvent(relay.url)
+                var isLive = false
+                var forFilters: List<Filter>? = null
+                withStateLock {
+                    val state = relayState.get(msg.subId)
+                    state?.onNewEvent(relay.url)
+                    isLive = state?.currentState(relay.url) == ReqSubStatus.LIVE
+                    forFilters = state?.lastKnownFilterStates(relay.url)
+                }
                 desiredSubListeners.get(msg.subId)?.onEvent(
                     event = msg.event,
-                    isLive = state?.currentState(relay.url) == ReqSubStatus.LIVE,
+                    isLive = isLive,
                     relay = relay.url,
-                    forFilters = state?.lastKnownFilterStates(relay.url),
+                    forFilters = forFilters,
                 )
             }
 
             is EoseMessage -> {
-                val state = relayState.get(msg.subId)
-                state?.onEose(relay.url)
+                var forFilters: List<Filter>? = null
+                val cmd =
+                    withStateLock {
+                        val state = relayState.get(msg.subId)
+                        state?.onEose(relay.url)
+                        forFilters = state?.lastKnownFilterStates(relay.url)
+                        // Decide (and pre-mark) the resend while still holding the
+                        // lock, so a concurrent subscribe/unsubscribe on the app
+                        // thread can't also decide to send a REQ for this sub.
+                        decideCommandLocked(msg.subId, relay.url)
+                    }
                 desiredSubListeners.get(msg.subId)?.onEose(
                     relay = relay.url,
-                    forFilters = state?.lastKnownFilterStates(relay.url),
+                    forFilters = forFilters,
                 )
 
                 // send a newer version when done
-                sendToRelayIfChanged(msg.subId, relay.url) { cmd ->
+                if (cmd != null) {
                     relay.sendOrConnectAndSync(cmd)
                 }
             }
 
             is ClosedMessage -> {
-                val state = relayState.get(msg.subId)
-                state?.onClosed(relay.url)
-
+                var forFilters: List<Filter>? = null
+                val cmd =
+                    withStateLock {
+                        val state = relayState.get(msg.subId)
+                        state?.onClosed(relay.url)
+                        forFilters = state?.lastKnownFilterStates(relay.url)
+                        decideCommandLocked(msg.subId, relay.url)
+                    }
                 desiredSubListeners.get(msg.subId)?.onClosed(
                     message = msg.message,
                     relay = relay.url,
-                    forFilters = state?.lastKnownFilterStates(relay.url),
+                    forFilters = forFilters,
                 )
 
-                // send a newer version when done
-                sendToRelayIfChanged(msg.subId, relay.url) { cmd ->
-                    // don't send a close if just closed
-                    if (cmd !is CloseCmd) {
-                        relay.sendOrConnectAndSync(cmd)
-                    }
+                // send a newer version when done, but don't send a close if just closed
+                if (cmd != null && cmd !is CloseCmd) {
+                    relay.sendOrConnectAndSync(cmd)
                 }
             }
         }
@@ -238,8 +300,10 @@ class PoolRequests {
      * When the relay disconnects
      */
     fun onDisconnected(url: NormalizedRelayUrl) {
-        relayState.forEach { subId, state ->
-            state.disconnected(url)
+        withStateLock {
+            relayState.forEach { subId, state ->
+                state.disconnected(url)
+            }
         }
     }
 
@@ -262,16 +326,27 @@ class PoolRequests {
         url: NormalizedRelayUrl,
         errorMessage: String,
     ) {
-        relayState.forEach { subId, state ->
-            // These are all my subs.. need to figure out which relays have them
-            val subs = desiredSubs.get(subId)
-            if (subs != null && url in subs.keys) {
-                desiredSubListeners.get(subId)?.onCannotConnect(
-                    relay = url,
-                    message = errorMessage,
-                    forFilters = state.lastKnownFilterStates(url),
-                )
+        // Snapshot the affected subs (and their last-known filters) under the
+        // lock, then notify listeners outside it.
+        val toNotify =
+            withStateLock {
+                val list = mutableListOf<Pair<String, List<Filter>?>>()
+                relayState.forEach { subId, state ->
+                    // These are all my subs.. need to figure out which relays have them
+                    val subs = desiredSubs.get(subId)
+                    if (subs != null && url in subs.keys) {
+                        list.add(subId to state.lastKnownFilterStates(url))
+                    }
+                }
+                list
             }
+
+        toNotify.forEach { (subId, forFilters) ->
+            desiredSubListeners.get(subId)?.onCannotConnect(
+                relay = url,
+                message = errorMessage,
+                forFilters = forFilters,
+            )
         }
     }
 
@@ -281,54 +356,65 @@ class PoolRequests {
         sync: (NormalizedRelayUrl, Command) -> Unit,
     ) {
         relaysToUpdate.forEach { relay ->
-            sendToRelayIfChanged(subId, relay) { cmd ->
-                if (cmd is ReqCmd) {
-                    val currentState = relayState.get(subId)?.currentState(relay)
-
-                    if (currentState == ReqSubStatus.SENT || currentState == ReqSubStatus.QUERYING_PAST) {
-                        // sending multiple REQs triggers multiple EOSEs back and we then don't know which
-                        // one is which.
-                    } else {
-                        sync(relay, cmd)
-                    }
-                } else {
-                    sync(relay, cmd)
-                }
+            // Decide + pre-mark atomically under the lock, then send outside it.
+            val cmd = withStateLock { decideCommandLocked(subId, relay) }
+            if (cmd != null) {
+                sync(relay, cmd)
             }
         }
     }
 
-    fun sendToRelayIfChanged(
+    /**
+     * Decides which command (if any) must be sent to [relay] to bring it in line
+     * with the desired filters for [subId], and — for a REQ — pre-marks the
+     * subscription state as SENT before returning.
+     *
+     * Pre-marking is what makes the check-then-send atomic: a second thread that
+     * runs this method for the same sub sees the SENT state (or the
+     * already-updated filters) and declines to send a duplicate REQ. Two REQs on
+     * one sub id race on the wire and produce duplicate EOSEs/events (or, if a
+     * CLOSE interleaves, an empty result that silently truncates a paged
+     * download) — that is the bug this guards against.
+     *
+     * MUST be called while holding [withStateLock].
+     */
+    private fun decideCommandLocked(
         subId: String,
         relay: NormalizedRelayUrl,
-        sync: (Command) -> Unit,
-    ) {
+    ): Command? {
         val state = relayState.get(subId)
         val oldFilters = state?.currentFilters(relay)
         val newFilters = desiredSubs.get(subId)?.get(relay)
-        sendToRelayIfChanged(subId, oldFilters, newFilters, sync)
-    }
 
-    fun sendToRelayIfChanged(
-        subId: String,
-        oldFilters: List<Filter>?,
-        newFilters: List<Filter>?,
-        sync: (Command) -> Unit,
-    ) {
-        if (newFilters.isNullOrEmpty()) {
-            // some relays are not in this sub anymore. Stop their subscriptions
-            if (!oldFilters.isNullOrEmpty()) {
-                // only update if the old filters are not already closed.
-                sync(CloseCmd(subId))
+        return when {
+            newFilters.isNullOrEmpty() -> {
+                // some relays are not in this sub anymore. Stop their subscriptions
+                // only if the old filters are not already closed.
+                if (!oldFilters.isNullOrEmpty()) CloseCmd(subId) else null
             }
-        } else if (oldFilters.isNullOrEmpty()) {
-            // new relays were added. Start a new sub in them
-            sync(ReqCmd(subId, newFilters))
-        } else if (FiltersChanged.needsToResendRequest(oldFilters, newFilters)) {
-            // filters were changed enough (not only an update in since) to warn a new update
-            sync(ReqCmd(subId, newFilters))
-        } else {
-            // They are the same don't do anything.
+
+            oldFilters.isNullOrEmpty() || FiltersChanged.needsToResendRequest(oldFilters, newFilters) -> {
+                // A REQ is warranted: a brand new sub, or the filters changed
+                // enough (not just a `since` bump) to need a resend. But if a REQ
+                // is already in flight, don't send another — multiple REQs on one
+                // sub id trigger multiple EOSEs and we can no longer tell which
+                // reply belongs to which REQ. The pending change is picked up
+                // later by the EOSE handler, which runs this method again once the
+                // sub reaches LIVE.
+                val current = state?.currentState(relay)
+                if (current == ReqSubStatus.SENT || current == ReqSubStatus.QUERYING_PAST) {
+                    null
+                } else {
+                    // Pre-mark SENT + filters so a concurrent decider skips.
+                    subState(subId).onOpenReq(relay, newFilters)
+                    ReqCmd(subId, newFilters)
+                }
+            }
+
+            else -> {
+                // Filters are effectively the same; nothing to do.
+                null
+            }
         }
     }
 
