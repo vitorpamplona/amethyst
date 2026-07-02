@@ -126,8 +126,14 @@ fun BottomConsoleSheet(
                 Surface(
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
                     contentColor = MaterialTheme.colorScheme.onSurface,
-                    tonalElevation = 3.dp,
-                    shadowElevation = 6.dp,
+                    // No elevation. This panel docks flush against the app's bottom navigation bar, so a
+                    // shadowElevation just casts a shadow onto that bar — a seam that breaks the flush,
+                    // background-matched look. The tonalElevation had no visual effect here anyway (the color
+                    // isn't exactly colorScheme.surface, so Material never applies the surfaceTint); the
+                    // shadow was the only thing clashing with the nav bar. The grabber + divider still
+                    // separate the panel from the page above it.
+                    tonalElevation = 0.dp,
+                    shadowElevation = 0.dp,
                     shape = RoundedCornerShape(bottomStart = 0.dp, bottomEnd = 0.dp),
                 ) {
                     val maxHeight = (LocalConfiguration.current.screenHeightDp * 0.4f).dp
