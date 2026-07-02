@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -116,7 +117,7 @@ class ElectrumXClient(
                     throw e
                 } catch (e: Exception) {
                     // Log but don't crash — callers handle null gracefully.
-                    e.printStackTrace()
+                    Log.w("ElectrumXClient", "Failed to look up $identifier on ${server.host}:${server.port}", e)
                     null
                 }
             }

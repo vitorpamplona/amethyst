@@ -277,7 +277,7 @@ class OpenTimestamps(
                 "Lite-client verification, assuming block $blockHash is valid",
             )
         } catch (e2: Exception) {
-            e2.printStackTrace()
+            // The stack trace propagates with the rethrown exception; the caller reports it.
             throw e2
         }
 
@@ -328,7 +328,7 @@ class OpenTimestamps(
                             subStamp.merge(upgradedStamp)
                         } catch (e: Exception) {
                             if (e is CancellationException) throw e
-                            e.printStackTrace()
+                            Log.w("OpenTimestamps", "Failed to merge upgraded timestamp", e)
                         }
 
                         upgraded = true
