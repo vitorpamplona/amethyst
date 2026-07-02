@@ -32,6 +32,21 @@ fun TextFieldState.setTextAndPlaceCursorAtBeginning(text: String) {
     }
 }
 
+/**
+ * Appends [signature] to the end of the field, separated by a blank line, keeping the
+ * cursor where it was so the user starts typing above it. No-op when the signature is
+ * already present, so re-running a screen's load logic never duplicates it.
+ */
+fun TextFieldState.appendSignature(signature: String) {
+    if (text.contains(signature)) return
+    edit {
+        val cursor = selection
+        append("\n\n")
+        append(signature)
+        selection = cursor
+    }
+}
+
 fun TextFieldState.insertUrlAtCursor(url: String) {
     edit {
         var toInsert = url.trim()

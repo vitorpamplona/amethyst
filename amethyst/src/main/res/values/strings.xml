@@ -1782,7 +1782,7 @@
     <string name="ots_explorer_search_keywords" translatable="false">opentimestamps, timestamp, ots, proof</string>
     <string name="namecoin_search_keywords" translatable="false">namecoin, dns, identity, name</string>
     <string name="calendar_reminder_search_keywords" translatable="false">calendar, events, reminders, rsvp</string>
-    <string name="compose_search_keywords" translatable="false">draft, posting, editor, auto-save</string>
+    <string name="compose_search_keywords" translatable="false">draft, posting, editor, auto-save, signature</string>
     <string name="reactions_settings_search_keywords" translatable="false">emoji, reactions, like</string>
     <string name="bottom_bar_search_keywords" translatable="false">navigation, tabs, nav bar</string>
     <string name="home_tabs_search_keywords" translatable="false">tabs, feeds, threads, conversations</string>
@@ -3622,6 +3622,9 @@
     <string name="compose_settings">Compose Settings</string>
     <string name="auto_create_drafts_setting_title">Automatically create drafts</string>
     <string name="auto_create_drafts_setting_description">Saves a draft event automatically when you type or leave a composer with unsent text and sends to your private outbox relays.</string>
+    <string name="compose_signature_setting_title">Signature</string>
+    <string name="compose_signature_setting_description">Added at the end of the message when opening a new post, reply, quote, or article. Leave empty to disable.</string>
+    <string name="compose_signature_setting_hint">Your signature</string>
     <string name="ai_writing_use_this">Use This</string>
     <string name="ai_writing_dismiss">Dismiss</string>
     <string name="ai_tone_correct">Correct</string>

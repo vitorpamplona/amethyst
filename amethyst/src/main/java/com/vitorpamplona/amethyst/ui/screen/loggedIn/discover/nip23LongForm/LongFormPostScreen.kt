@@ -140,6 +140,9 @@ fun LongFormPostScreen(
         val draft = draftId?.let { accountViewModel.getNoteIfExists(it) }
         val version = versionId?.let { accountViewModel.getNoteIfExists(it) }
         postViewModel.load(draft, version)
+        if (draftId == null && versionId == null) {
+            postViewModel.applySignature()
+        }
     }
 
     WatchAndLoadMyEmojiList(accountViewModel)

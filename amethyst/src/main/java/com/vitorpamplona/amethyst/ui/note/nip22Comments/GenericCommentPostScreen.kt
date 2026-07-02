@@ -136,6 +136,9 @@ fun ReplyCommentPostScreen(
                 postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
             }
         }
+        if (draftId == null) {
+            postViewModel.applySignature()
+        }
     }
 
     GenericCommentPostScreen(postViewModel, accountViewModel, nav)

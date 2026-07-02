@@ -57,6 +57,7 @@ data class UiSettings(
     val accentColor: AccentColorType = AccentColorType.PURPLE,
     val fontFamily: FontFamilyType = FontFamilyType.SYSTEM,
     val fontSize: FontSizeType = FontSizeType.NORMAL,
+    val composeSignature: String = "",
 )
 
 enum class ThemeType(
