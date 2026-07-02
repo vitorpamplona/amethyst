@@ -18,25 +18,46 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.search
+package com.vitorpamplona.amethyst.commons.util
 
-import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
-/**
- * Tracks event ids already seen so duplicate deliveries can be dropped.
- *
- * Fed from relay subscription callbacks, which can arrive on multiple threads
- * concurrently, so this uses a [ConcurrentSet] (lock-striped on JVM/Android)
- * rather than a single lock that would serialize every delivery.
- */
-class EventDeduplicator {
-    private val seenIds = ConcurrentSet<String>()
+class ConcurrentSetTest {
+    @Test
+    fun `add returns true only the first time`() {
+        val set = ConcurrentSet<String>()
+        assertTrue(set.add("a"))
+        assertFalse(set.add("a"))
+        assertEquals(1, set.size)
+    }
 
-    fun tryAdd(id: String): Boolean = seenIds.add(id)
+    @Test
+    fun `contains reflects membership`() {
+        val set = ConcurrentSet<String>()
+        assertFalse(set.contains("a"))
+        set.add("a")
+        assertTrue(set.contains("a"))
+    }
 
-    fun contains(id: String): Boolean = seenIds.contains(id)
+    @Test
+    fun `remove returns true only when present`() {
+        val set = ConcurrentSet<String>()
+        set.add("a")
+        assertTrue(set.remove("a"))
+        assertFalse(set.remove("a"))
+        assertFalse(set.contains("a"))
+    }
 
-    fun clear() = seenIds.clear()
-
-    val size: Int get() = seenIds.size
+    @Test
+    fun `clear empties the set`() {
+        val set = ConcurrentSet<String>()
+        set.add("a")
+        set.add("b")
+        set.clear()
+        assertEquals(0, set.size)
+        assertFalse(set.contains("a"))
+    }
 }
