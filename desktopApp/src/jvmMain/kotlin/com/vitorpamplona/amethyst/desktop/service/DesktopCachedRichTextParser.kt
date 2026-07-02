@@ -23,25 +23,23 @@ package com.vitorpamplona.amethyst.desktop.service
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
+import com.vitorpamplona.quartz.utils.cache.ConcurrentLruCache
 
 object DesktopCachedRichTextParser {
     private const val MAX_CACHE_SIZE = 50
 
-    private val cache =
-        java.util.Collections.synchronizedMap(
-            object : LinkedHashMap<String, RichTextViewerState>(64, 0.75f, true) {
-                override fun removeEldestEntry(eldest: Map.Entry<String, RichTextViewerState>) = size > MAX_CACHE_SIZE
-            },
-        )
+    // Lock-free get on the feed rich-text render path; the previous access-order
+    // synchronizedMap took a monitor even on reads.
+    private val cache = ConcurrentLruCache<String, RichTextViewerState>(MAX_CACHE_SIZE)
 
     fun parseText(
         content: String,
         tags: ImmutableListOfLists<String>,
         callbackUri: String? = null,
     ): RichTextViewerState {
-        cache[content]?.let { return it }
+        cache.get(content)?.let { return it }
         val state = RichTextParser().parseText(content, tags, callbackUri)
-        cache[content] = state
+        cache.put(content, state)
         return state
     }
 
