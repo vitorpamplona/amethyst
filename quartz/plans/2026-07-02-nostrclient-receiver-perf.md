@@ -123,6 +123,52 @@ than a phone.
    ceiling ~3×** with no protocol or API change — the exact pattern
    `IngestQueue.parallelVerify` already uses on the server side.
 
+## Dispatch stage (post-parse, pre-verify) microbenchmark
+
+**Harness:** `quartz/src/jvmTest/.../relay/prodbench/DispatchStageBenchmark.kt`
+(offline, ungated: `./gradlew :quartz:jvmTest --tests "*.DispatchStageBenchmark"`)
+
+Measures everything between the JSON parse and where verification would start:
+`NostrClient.onIncomingMessage` → `PoolRequests` (spin lock + sub state) →
+listeners → id-dedup → handoff to a verify stage. 30k unique synthetic events,
+2 overlapping subs per relay, delivered by 1 feeder thread (one busy relay) and
+by 4 (four relays bursting into the shared client). JVM 21, 4 cores.
+
+| variant | 1 feeder (deliveries/s) | 4 feeders (aggregate deliveries/s) |
+|---|---|---|
+| PoolRequests-only | 11.1M | 3.6M |
+| full dispatch, no-op sink | 10.2M | 4.3M |
+| + dedup (CHM keySet) | 6.8M | 3.5M |
+| + dedup + per-event channel handoff | 3.6M | 3.1M |
+| + dedup + batched handoff (64) | 6.8M | 2.8M |
+| **early dedup + batched handoff** | 7.2M | **11.4M** |
+
+Findings:
+
+1. **Uncontended, the dispatch stage is ~100ns/message** — 300× cheaper than
+   parse (32µs) and 750× cheaper than verify (75µs). One relay can never
+   saturate it; nothing to fix for the single-relay case.
+2. **It scales negatively under concurrency.** Four feeder threads deliver
+   *less* aggregate throughput (3.6–4.3M/s) than one thread alone (10–11M/s):
+   the `PoolRequests` busy-wait spin lock serializes every EVENT frame from
+   every relay and burns the other cores spinning. Isolated `PoolRequests`
+   shows the same collapse, so the lock (not listeners or dedup) is the cause.
+   At production message rates (~3k msg/s/relay) this is not yet the
+   bottleneck, but it wastes cores the verify pool would want, and it is the
+   structural ceiling once verify moves off the receiver.
+3. **Handoff granularity matters:** a per-event `Channel.send` costs ~180ns
+   extra per event (halves single-feeder throughput); a 64-event batch makes
+   the handoff essentially free — same conclusion the server's `IngestQueue`
+   already embodies.
+4. **Early dedup is the biggest lever under multi-relay load:** checking the
+   seen-ids set right after parse — before entering the locked dispatch path —
+   let duplicate frames (75% of deliveries in the 4-relay setup; production
+   showed 14–57% dups) skip the contended section entirely: 2.7–4× the
+   aggregate throughput of every other 4-feeder variant. Semantic caveat: a
+   short-circuited duplicate no longer bumps that sub's per-relay
+   `onNewEvent`/stats counters, so paging/EOSE bookkeeping would need the
+   cheap counters kept ahead of the skip.
+
 ## Recommendations (in order of value/risk)
 
 1. **Move Schnorr verification off the receiver coroutine** in the app's
@@ -135,10 +181,11 @@ than a phone.
    message ordering per subscription), but consider skipping re-serialization
    work for duplicates (57% of metadata-burst traffic never needs more than an
    id lookup).
-3. **Replace the `PoolRequests` spin lock's busy-wait** with a short-critical-
-   section `Mutex`/`synchronized` if profiling on-device shows contention —
-   with dozens of relay consumers on a phone, spinning burns cores the verify
-   pool needs. (Not measurable as a problem in this 4-relay harness.)
+3. **Fix the `PoolRequests` spin lock's negative scaling** — the dispatch
+   microbenchmark shows 4 concurrent relay consumers deliver *less* than one
+   thread through it. Either replace the busy-wait with `synchronized`/a
+   parking lock, or shard the state by subId, and consider the early-dedup
+   short-circuit so duplicate frames never enter the locked path at all.
 4. Re-run this harness on-device (the same class compiles for Android
    instrumentation with minor changes) before/after any fix; the offline
    ceilings section gives the numbers to compare.
