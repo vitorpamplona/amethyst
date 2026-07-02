@@ -22,8 +22,6 @@ package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthContext
-import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
-import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -77,32 +75,16 @@ class AuthCoordinator(
                         )
                     }
                 val currentLedgers = relayLedgers
-                val shouldAuth =
-                    if (currentLedgers.isEmpty()) {
-                        true
-                    } else {
-                        val verdicts = currentLedgers.map { it.decide(context) }
-                        when {
-                            // Auth if ANY logged-in account already approves.
-                            verdicts.any { it == RelayAuthVerdict.ALLOW } -> true
-                            // Otherwise, if at least one account wants to ask, prompt the user with
-                            // the reason and act on their choice (remembering Always/Block).
-                            verdicts.any { it == RelayAuthVerdict.ASK } ->
-                                when (promptBus.requestDecision(relayUrl, context.purposes)) {
-                                    UserAuthChoice.ALLOW_ONCE -> true
-                                    UserAuthChoice.ALWAYS_ALLOW -> {
-                                        currentLedgers.first().setDecision(relayUrl.url, RelayAuthDecision.ALLOW)
-                                        true
-                                    }
-                                    UserAuthChoice.BLOCK -> {
-                                        currentLedgers.first().setDecision(relayUrl.url, RelayAuthDecision.DENY)
-                                        false
-                                    }
-                                    UserAuthChoice.DISMISS -> false
-                                }
-                            else -> false
-                        }
+                // Ask the user (only in the ASK case) and fold every account's verdict into one
+                // decision plus an optional per-relay override to remember.
+                val outcome =
+                    AuthDecisionResolver.resolve(currentLedgers.map { it.decide(context) }) {
+                        promptBus.requestDecision(relayUrl, context.purposes)
                     }
+                outcome.remember?.let { decision ->
+                    currentLedgers.firstOrNull()?.setDecision(relayUrl.url, decision)
+                }
+                val shouldAuth = outcome.shouldAuth
 
                 if (shouldAuth) {
                     // Remember why we granted this relay so the settings screen can explain it.
