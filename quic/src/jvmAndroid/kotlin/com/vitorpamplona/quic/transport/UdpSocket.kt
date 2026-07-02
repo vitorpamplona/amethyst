@@ -21,6 +21,8 @@
 package com.vitorpamplona.quic.transport
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -28,23 +30,50 @@ import java.net.StandardSocketOptions
 import java.nio.ByteBuffer
 import java.nio.channels.ClosedChannelException
 import java.nio.channels.DatagramChannel
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * JVM/Android UDP socket using blocking [DatagramChannel] dispatched onto
- * [Dispatchers.IO]. We don't use NIO selectors because each QUIC connection
- * has exactly one socket and one receive loop — Selector doesn't pay for
- * itself at this scale.
+ * JVM/Android UDP socket using a blocking [DatagramChannel]. We don't use NIO
+ * selectors because each QUIC connection has exactly one socket and one receive
+ * loop — a Selector doesn't pay for itself at this scale.
  *
- * The receive buffer is sized to 64 KiB (max IPv4/IPv6 datagram); QUIC packets
- * cap at MTU (~1500 in practice).
+ * Threading: the blocking `recvfrom` parks its thread for the *entire* life of
+ * the connection (it only returns when a datagram arrives or the socket
+ * closes). If that ran on the shared [Dispatchers.IO] pool it would pin one
+ * pool thread per connection, and past ~64 concurrent connections it would
+ * starve *all* other `Dispatchers.IO` work in the process — this module's and
+ * the host app's alike. So each socket owns two dedicated daemon threads:
+ * [recvDispatcher] for the perpetually-blocked receive, and [sendDispatcher]
+ * for the (rarely-blocking, but still-blocking) send. The receive can't share a
+ * thread with send — it would monopolise it — hence two. Both are shut down in
+ * [close]. QUIC's blocking socket I/O therefore never touches the shared pool.
+ *
+ * [connect] still resolves DNS + binds on [Dispatchers.IO]: that's a one-shot
+ * setup cost, not a lifetime parker, so it doesn't need isolation.
+ *
+ * The receive buffer is sized to typical Ethernet MTU; QUIC packets cap at MTU
+ * (~1500 in practice).
  */
 actual class UdpSocket private constructor(
     private val channel: DatagramChannel,
     private val remote: InetSocketAddress,
 ) {
     private val closed = AtomicBoolean(false)
+
+    // Dedicated single-thread executors so the blocking socket calls never
+    // occupy the shared Dispatchers.IO pool. Daemon threads so a leaked socket
+    // can't keep the JVM alive. Separate recv/send threads because the receive
+    // parks continuously and would otherwise block sends behind it. We keep the
+    // ExecutorService handles (not just the dispatchers) so close() can call
+    // shutdownNow() — an interrupt that breaks the parked recvfrom immediately
+    // (ClosedByInterruptException) rather than the graceful shutdown() that
+    // dispatcher.close() would do.
+    private val recvExecutor = Executors.newSingleThreadExecutor { r -> Thread(r, "quic-udp-recv").apply { isDaemon = true } }
+    private val sendExecutor = Executors.newSingleThreadExecutor { r -> Thread(r, "quic-udp-send").apply { isDaemon = true } }
+    private val recvDispatcher: ExecutorCoroutineDispatcher = recvExecutor.asCoroutineDispatcher()
+    private val sendDispatcher: ExecutorCoroutineDispatcher = sendExecutor.asCoroutineDispatcher()
 
     // Sized to typical Ethernet MTU + a bit; QUIC tops out at ~1500 in practice
     // and any larger inbound frame is dropped as malformed anyway. The previous
@@ -76,15 +105,19 @@ actual class UdpSocket private constructor(
     actual val receiveBufferSizeBytes: Int
         get() = channel.getOption(StandardSocketOptions.SO_RCVBUF)
 
-    actual suspend fun send(payload: ByteArray): Int =
-        withContext(Dispatchers.IO) {
+    actual suspend fun send(payload: ByteArray): Int {
+        // Fail fast without dispatching onto a possibly shut-down executor.
+        if (closed.get()) throw ClosedChannelException()
+        return withContext(sendDispatcher) {
             if (closed.get()) throw ClosedChannelException()
             val buf = ByteBuffer.wrap(payload)
             channel.send(buf, remote)
         }
+    }
 
-    actual suspend fun receive(): ByteArray? =
-        withContext(Dispatchers.IO) {
+    actual suspend fun receive(): ByteArray? {
+        if (closed.get()) return null
+        return withContext(recvDispatcher) {
             if (closed.get()) return@withContext null
             try {
                 // No synchronized — only the read loop touches readBuf, by
@@ -101,6 +134,7 @@ actual class UdpSocket private constructor(
                 null
             }
         }
+    }
 
     actual fun close() {
         if (closed.compareAndSet(false, true)) {
@@ -109,6 +143,15 @@ actual class UdpSocket private constructor(
             } catch (_: Throwable) {
                 // already closed
             }
+            // shutdownNow() interrupts the dedicated workers: a thread parked in
+            // a blocking recvfrom throws ClosedByInterruptException (a
+            // ClosedChannelException, caught below), so receive() returns null
+            // and both threads exit promptly instead of leaking per closed
+            // connection. channel.close() above would also unblock it
+            // (AsynchronousCloseException), but the interrupt is immediate and
+            // guarantees the executor terminates.
+            recvExecutor.shutdownNow()
+            sendExecutor.shutdownNow()
         }
     }
 
