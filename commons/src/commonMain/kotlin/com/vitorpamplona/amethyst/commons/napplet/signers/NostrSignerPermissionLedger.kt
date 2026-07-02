@@ -27,8 +27,11 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -136,18 +139,25 @@ class NostrSignerPermissionLedger(
         /**
          * Event kinds auto-approved under [AppSignerPolicy.REASONABLE].
          *
-         * The rule for membership: an app may sign these on the user's behalf without a prompt only
-         * when doing so **cannot harm the user**. Everything here is *additive, public, and
-         * non-destructive* — creating a new note-like event that the user could delete afterwards, in
-         * the same risk class as the original kind 1/6/7 set. None of them can silently:
-         *  - spend money — signing a **zap request** (9734) moves nothing; it only fetches a Lightning
-         *    invoice, and the payment itself is the separately-gated `value.payInvoice` capability that
-         *    prompts on *every* use regardless of policy. **Nutzaps (9321) are excluded**: publishing
-         *    one *is* the payment (the event carries the spendable ecash proofs), so it stays ASK.
-         *  - overwrite account configuration (profile 0, contacts 3, relay/mute/bookmark lists are
-         *    replaceable — a bad write can wipe settings, so they stay ASK),
-         *  - delete existing content (kind 5), or
-         *  - leak private data (DMs and [NostrSignerOp.Decrypt] stay ASK).
+         * Most of these are *additive, public, non-destructive content* — a new note-like event the
+         * user could delete afterwards, in the same risk class as the original kind 1/6/7 set (notes,
+         * reposts, reactions, pictures, videos, public chat, highlights, comments, status). The set
+         * also includes two harmless non-content signatures:
+         *  - **zap request** (9734) — moves nothing; it only fetches a Lightning invoice. The payment
+         *    itself is the separately-gated `value.payInvoice` capability that prompts on *every* use
+         *    regardless of policy.
+         *  - **relay auth** (22242, NIP-42) — an ephemeral proof-of-key bound to a single relay and
+         *    challenge (it cannot be replayed to another relay). Amethyst's own client auto-signs it
+         *    for every logged-in account, so treating it as background noise matches existing behavior.
+         *
+         * None of the members can silently: spend money, overwrite account configuration (profile 0,
+         * contacts 3, relay/mute/bookmark lists are replaceable — a bad write can wipe settings),
+         * delete content (kind 5), or leak private data. Notable exclusions that stay ASK:
+         *  - **nutzap** (9321) — publishing one *is* the payment (it carries spendable ecash proofs).
+         *  - **NIP-98 HTTP auth** (27235) — authorizes an arbitrary HTTP request as the user, including
+         *    destructive/admin calls (NIP-96 blob deletes, NIP-86 relay management); blast radius is too
+         *    broad to auto-approve.
+         *  - **decryption** ([NostrSignerOp.Decrypt]) and DMs — reveal private content.
          *
          * Deliberately conservative: when a kind's blast radius is unclear, it is left out so the user
          * is asked rather than surprised.
@@ -159,9 +169,12 @@ class NostrSignerPermissionLedger(
                 ReactionEvent.KIND, // 7 — likes / emoji reactions
                 GenericRepostEvent.KIND, // 16 — reposts of non-text content (same risk as kind 6)
                 PictureEvent.KIND, // 20 — picture posts (same risk as kind 1)
+                VideoNormalEvent.KIND, // 21 — video posts (same risk as a picture)
+                VideoShortEvent.KIND, // 22 — short-form video posts (same risk as a picture)
                 ChannelMessageEvent.KIND, // 42 — public chat messages
                 HighlightEvent.KIND, // 9802 — highlighted snippets shared publicly
                 LnZapRequestEvent.KIND, // 9734 — Lightning zap request; the payment itself still prompts
+                RelayAuthEvent.KIND, // 22242 — NIP-42 relay auth; ephemeral, bound to one relay+challenge
                 CommentEvent.KIND, // 1111 — NIP-22 threaded comments (same risk as kind 1)
                 StatusEvent.KIND, // 30315 — ephemeral user status / presence
             )
