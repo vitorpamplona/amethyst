@@ -28,10 +28,11 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoor
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.ScreenAuthAccount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 
 /** The owner pubkey of an addressable venue (`kind:pubkey:dTag`), or null for a bare channel id. */
-private fun venueOwnerPubkey(venueId: String): String? = venueId.split(':').getOrNull(1)?.takeIf { it.length == 64 }
+private fun venueOwnerPubkey(venueId: String): String? = Address.parse(venueId)?.pubKeyHex
 
 @Composable
 fun RelayAuthSubscription(accountViewModel: AccountViewModel) = RelayAuthSubscription(accountViewModel, Amethyst.instance.authCoordinator)

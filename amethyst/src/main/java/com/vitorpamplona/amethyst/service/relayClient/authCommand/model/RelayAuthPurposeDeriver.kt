@@ -22,15 +22,22 @@ package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
-/** `a`-address prefixes of venues whose home relay may require auth: NIP-72 communities (34550) and
- *  NIP-53 live activities (30311). Their addresses are `kind:ownerPubkey:dTag`. */
-private val VENUE_ADDRESS_PREFIXES = listOf("34550:", "30311:")
+/** Addressable venue kinds whose home relay may require auth: NIP-72 communities and NIP-53 live
+ *  activities. Their `a` addresses are `kind:ownerPubkey:dTag`. */
+private val VENUE_KINDS = setOf(CommunityDefinitionEvent.KIND, LiveActivitiesEvent.KIND)
 
 /**
  * Infers *why* a relay wants NIP-42 auth from what Amethyst is currently doing with it — the
@@ -56,13 +63,13 @@ object RelayAuthPurposeDeriver {
         var unattributedWrite = false
 
         pendingEvents.forEach { event ->
-            val pTags = event.tags.mapNotNullTo(mutableSetOf()) { if (it.size > 1 && it[0] == "p") it[1] else null }
-            val venueAddresses = event.tags.venueAddresses()
+            val pubkeys = event.tags.mapNotNull(PTag::parseKey)
+            val venues = event.tags.mapNotNull(ATag::parseAddress).filter { it.kind in VENUE_KINDS }
             when {
-                event.kind == GiftWrapEvent.KIND -> dmRecipients.addAll(pTags)
-                event.kind == ChannelMessageEvent.KIND -> event.channelRootId()?.let { postVenues.add(it) }
-                venueAddresses.isNotEmpty() -> postVenues.addAll(venueAddresses)
-                pTags.isNotEmpty() -> notifyRecipients.addAll(pTags - event.pubKey)
+                event.kind == GiftWrapEvent.KIND -> dmRecipients.addAll(pubkeys)
+                event.kind == ChannelMessageEvent.KIND -> event.tags.channelRootId()?.let(postVenues::add)
+                venues.isNotEmpty() -> venues.forEach { postVenues.add(it.toValue()) }
+                pubkeys.isNotEmpty() -> notifyRecipients.addAll(pubkeys - event.pubKey)
                 else -> unattributedWrite = true
             }
         }
@@ -81,12 +88,15 @@ object RelayAuthPurposeDeriver {
                     readVenues.addAll(it)
                     matched = true
                 }
-                filter.tags?.get("a")?.filter { addr -> VENUE_ADDRESS_PREFIXES.any(addr::startsWith) }?.let {
-                    if (it.isNotEmpty()) {
-                        readVenues.addAll(it)
+                filter.tags
+                    ?.get("a")
+                    ?.mapNotNull { Address.parse(it) }
+                    ?.filter { it.kind in VENUE_KINDS }
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let {
+                        readVenues.addAll(it.map(Address::toValue))
                         matched = true
                     }
-                }
                 if (!matched) unattributedRead = true
             }
         }
@@ -103,10 +113,5 @@ object RelayAuthPurposeDeriver {
     }
 
     /** The venue a channel message posts into: the `e` tag marked "root", else the first `e` tag. */
-    private fun Event.channelRootId(): HexKey? {
-        val eTags = tags.filter { it.size > 1 && it[0] == "e" }
-        return eTags.firstOrNull { it.size > 3 && it[3] == "root" }?.get(1) ?: eTags.firstOrNull()?.get(1)
-    }
-
-    private fun Array<Array<String>>.venueAddresses(): List<String> = mapNotNull { if (it.size > 1 && it[0] == "a" && VENUE_ADDRESS_PREFIXES.any(it[1]::startsWith)) it[1] else null }
+    private fun Array<Array<String>>.channelRootId(): HexKey? = firstNotNullOfOrNull(MarkedETag::parseRoot)?.eventId ?: firstNotNullOfOrNull(ETag::parseId)
 }
