@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /** Above this many counterparties for a purpose, collapse the named rows into an avatar facepile. */
@@ -108,7 +109,14 @@ private fun RelayAuthPromptDialog(
     // The action the user was actually doing drives the title and the "if you don't" consequence,
     // so the out-of-context prompt reconnects to their intent.
     val primary = remember(prompt) { prompt.purposes.primaryNamed() }
-    val who = primary?.let { counterpartyLabel(it.counterparties, accountViewModel) }
+    val who =
+        primary?.let { p ->
+            when (p.kind) {
+                AuthPurposeKind.POST_VENUE, AuthPurposeKind.READ_VENUE ->
+                    p.venues.firstOrNull()?.let { rememberVenueLabel(it, accountViewModel) }
+                else -> counterpartyLabel(p.counterparties, accountViewModel)
+            }
+        }
     val showLabels = prompt.purposes.size > 1
 
     AlertDialog(
@@ -292,8 +300,8 @@ private fun titleFor(
         AuthPurposeKind.SEND_DM -> stringRes(R.string.relay_auth_title_send_dm, who ?: "")
         AuthPurposeKind.NOTIFY_INBOX -> stringRes(R.string.relay_auth_title_notify, who ?: "")
         AuthPurposeKind.READ_OUTBOX -> stringRes(R.string.relay_auth_title_read, who ?: "")
-        AuthPurposeKind.POST_VENUE -> stringRes(R.string.relay_auth_title_post_venue)
-        AuthPurposeKind.READ_VENUE -> stringRes(R.string.relay_auth_title_read_venue)
+        AuthPurposeKind.POST_VENUE -> stringRes(R.string.relay_auth_title_post_venue, who ?: "")
+        AuthPurposeKind.READ_VENUE -> stringRes(R.string.relay_auth_title_read_venue, who ?: "")
         else -> stringRes(R.string.relay_auth_prompt_title)
     }
 
@@ -306,8 +314,8 @@ private fun consequenceFor(
         AuthPurposeKind.SEND_DM -> stringRes(R.string.relay_auth_consequence_send_dm, who ?: "")
         AuthPurposeKind.NOTIFY_INBOX -> stringRes(R.string.relay_auth_consequence_notify, who ?: "")
         AuthPurposeKind.READ_OUTBOX -> stringRes(R.string.relay_auth_consequence_read, who ?: "")
-        AuthPurposeKind.POST_VENUE -> stringRes(R.string.relay_auth_consequence_post_venue)
-        AuthPurposeKind.READ_VENUE -> stringRes(R.string.relay_auth_consequence_read_venue)
+        AuthPurposeKind.POST_VENUE -> stringRes(R.string.relay_auth_consequence_post_venue, who ?: "")
+        AuthPurposeKind.READ_VENUE -> stringRes(R.string.relay_auth_consequence_read_venue, who ?: "")
         else -> null
     }
 
@@ -321,6 +329,27 @@ private fun counterpartyLabel(
     val name = rememberDisplayName(first, accountViewModel)
     return if (pubkeys.size > 1) stringRes(R.string.relay_auth_name_and_others, name) else name
 }
+
+/**
+ * A display name for a venue id — a public chat channel (64-hex event id), a NIP-53 live activity,
+ * or a NIP-72 community. Uses the cached channel title where available (the venue is one we're
+ * actively using, so it's usually loaded), falling back to the address's d-identifier, which is the
+ * community name in NIP-72.
+ */
+@Composable
+private fun rememberVenueLabel(
+    venueId: String,
+    accountViewModel: AccountViewModel,
+): String =
+    remember(venueId) {
+        val resolved =
+            when {
+                venueId.length == 64 -> accountViewModel.getPublicChatChannelIfExists(venueId)?.toBestDisplayName()
+                venueId.startsWith("30311:") -> Address.parse(venueId)?.let { accountViewModel.getLiveActivityChannelIfExists(it)?.toBestDisplayName() }
+                else -> null
+            }
+        resolved ?: venueId.substringAfterLast(':').ifEmpty { venueId.take(8) }
+    }
 
 /** The best display name for [pubkey], reactive to metadata arriving from relays. */
 @Composable
