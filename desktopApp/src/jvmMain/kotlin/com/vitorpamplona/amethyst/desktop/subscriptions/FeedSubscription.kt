@@ -149,7 +149,7 @@ fun createThreadRepliesSubscription(
 
 /**
  * Creates a NIP-50 search subscription for user profiles.
- * Requires NIP-50 compatible relays (e.g., relay.nostr.band, nostr.wine).
+ * Requires NIP-50 compatible relays (e.g., nostr.wine).
  *
  * @param searchQuery Text to search for in user profiles
  * @param limit Maximum results to return

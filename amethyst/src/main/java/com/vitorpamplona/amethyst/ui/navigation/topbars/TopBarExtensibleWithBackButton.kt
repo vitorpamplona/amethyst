@@ -44,13 +44,14 @@ import com.vitorpamplona.amethyst.ui.theme.isLight
 fun TopBarExtensibleWithBackButton(
     title: @Composable RowScope.() -> Unit,
     extendableRow: (@Composable () -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
     popBack: () -> Unit,
 ) {
     MyExtensibleTopAppBar(
         title = title,
         extendableRow = extendableRow,
         navigationIcon = { IconButton(onClick = popBack) { ArrowBackIcon() } },
-        actions = {},
+        actions = actions,
     )
 }
 

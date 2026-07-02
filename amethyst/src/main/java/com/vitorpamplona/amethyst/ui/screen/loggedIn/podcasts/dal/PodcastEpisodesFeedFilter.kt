@@ -28,12 +28,14 @@ import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
-import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 
 /**
- * Episodes are regular events (kind 54), so they live in `LocalCache.notes` — unlike
- * music tracks/playlists which are addressable. Same follow-list + hidden/blocked
- * gate as MusicTracksFeedFilter.
+ * Merges the two podcast-episode kinds into one list. NIP-F4 episodes (kind 54) are regular
+ * events in `LocalCache.notes`; Podcasting-2.0 episodes (kind 30054) are addressable events in
+ * `LocalCache.addressables`. Both implement [PodcastEpisode], so a single accept gate covers
+ * them. Same follow-list + hidden/blocked gate as MusicTracksFeedFilter.
  */
 class PodcastEpisodesFeedFilter(
     val account: Account,
@@ -54,11 +56,15 @@ class PodcastEpisodesFeedFilter(
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
-        val notes =
+        val regular =
             LocalCache.notes.filterIntoSet { _, it ->
                 accept(it, params)
             }
-        return sort(notes)
+        val addressable =
+            LocalCache.addressables.filterIntoSet(Podcasting20EpisodeEvent.KIND) { _, it ->
+                accept(it, params)
+            }
+        return sort(regular + addressable)
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
@@ -78,8 +84,8 @@ class PodcastEpisodesFeedFilter(
         note: Note,
         params: FilterByListParams,
     ): Boolean {
-        val noteEvent = note.event
-        return noteEvent is PodcastEpisodeEvent &&
+        val noteEvent = note.event ?: return false
+        return noteEvent is PodcastEpisode &&
             params.match(noteEvent, note.relays) &&
             (params.isHiddenList || account.isAcceptable(note))
     }

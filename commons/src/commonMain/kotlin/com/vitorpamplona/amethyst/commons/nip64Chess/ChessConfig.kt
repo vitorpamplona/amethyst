@@ -31,12 +31,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 object ChessConfig {
     /**
      * Relays for chess events.
-     * Includes relays used by jester.nyo.dev (relay.damus.io, offchain.pub)
+     * Includes relays used by jester.nyo.dev (offchain.pub)
      * and popular community relays for broader reach.
      */
     val CHESS_RELAYS =
         listOf(
-            "wss://relay.damus.io",
             "wss://nos.lol",
             "wss://relay.primal.net",
             "wss://offchain.pub",
@@ -47,7 +46,6 @@ object ChessConfig {
      */
     val CHESS_RELAY_NAMES =
         listOf(
-            "relay.damus.io".normalizeRelayUrl(),
             "nos.lol".normalizeRelayUrl(),
             "relay.primal.net".normalizeRelayUrl(),
             "offchain.pub".normalizeRelayUrl(),

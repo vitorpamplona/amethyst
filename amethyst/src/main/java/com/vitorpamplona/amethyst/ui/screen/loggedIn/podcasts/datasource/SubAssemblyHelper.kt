@@ -30,8 +30,10 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopN
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies.PODCASTING20_METADATA_KINDS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies.PODCAST_EPISODE_KINDS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies.PODCAST_KINDS
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies.PODCAST_METADATA_D_FILTER
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies.filterPodcastEventsByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies.filterPodcastEventsByAuthors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies.filterPodcastEventsByCommunity
@@ -52,22 +54,28 @@ fun makePodcastsFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
-): List<RelayBasedFilter> = makePodcastFilter(feedSettings, PODCAST_KINDS, since, defaultSince)
+): List<RelayBasedFilter> =
+    // Two REQs: NIP-F4 shows (kind:10154, no tag constraint) plus Podcasting-2.0 shows
+    // (kind:30078, constrained to `#d=["podcast-metadata"]` so the overloaded app-data kind
+    // doesn't flood the feed). Both land in the merged PodcastsFeedFilter.
+    makePodcastFilter(feedSettings, PODCAST_KINDS, since, defaultSince) +
+        makePodcastFilter(feedSettings, PODCASTING20_METADATA_KINDS, since, defaultSince, PODCAST_METADATA_D_FILTER)
 
 private fun makePodcastFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     kinds: List<Int>,
     since: SincePerRelayMap?,
     defaultSince: Long?,
+    additionalTags: Map<String, List<String>>? = null,
 ): List<RelayBasedFilter> =
     when (feedSettings) {
-        is AllCommunitiesTopNavPerRelayFilterSet -> filterPodcastEventsByAllCommunities(feedSettings, kinds, since, defaultSince)
-        is AllFollowsTopNavPerRelayFilterSet -> filterPodcastEventsByFollows(feedSettings, kinds, since, defaultSince)
-        is AuthorsTopNavPerRelayFilterSet -> filterPodcastEventsByAuthors(feedSettings, kinds, since, defaultSince)
-        is GlobalTopNavPerRelayFilterSet -> filterPodcastEventsGlobal(feedSettings, kinds, since, defaultSince)
-        is HashtagTopNavPerRelayFilterSet -> filterPodcastEventsByHashtag(feedSettings, kinds, since, defaultSince)
-        is LocationTopNavPerRelayFilterSet -> filterPodcastEventsByGeohashes(feedSettings, kinds, since, defaultSince)
-        is MutedAuthorsTopNavPerRelayFilterSet -> filterPodcastEventsByMutedAuthors(feedSettings, kinds, since, defaultSince)
-        is SingleCommunityTopNavPerRelayFilterSet -> filterPodcastEventsByCommunity(feedSettings, kinds, since, defaultSince)
+        is AllCommunitiesTopNavPerRelayFilterSet -> filterPodcastEventsByAllCommunities(feedSettings, kinds, since, defaultSince, additionalTags)
+        is AllFollowsTopNavPerRelayFilterSet -> filterPodcastEventsByFollows(feedSettings, kinds, since, defaultSince, additionalTags)
+        is AuthorsTopNavPerRelayFilterSet -> filterPodcastEventsByAuthors(feedSettings, kinds, since, defaultSince, additionalTags)
+        is GlobalTopNavPerRelayFilterSet -> filterPodcastEventsGlobal(feedSettings, kinds, since, defaultSince, additionalTags)
+        is HashtagTopNavPerRelayFilterSet -> filterPodcastEventsByHashtag(feedSettings, kinds, since, defaultSince, additionalTags)
+        is LocationTopNavPerRelayFilterSet -> filterPodcastEventsByGeohashes(feedSettings, kinds, since, defaultSince, additionalTags)
+        is MutedAuthorsTopNavPerRelayFilterSet -> filterPodcastEventsByMutedAuthors(feedSettings, kinds, since, defaultSince, additionalTags)
+        is SingleCommunityTopNavPerRelayFilterSet -> filterPodcastEventsByCommunity(feedSettings, kinds, since, defaultSince, additionalTags)
         else -> emptyList()
     }

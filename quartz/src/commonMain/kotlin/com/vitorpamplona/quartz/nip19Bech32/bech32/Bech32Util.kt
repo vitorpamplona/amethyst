@@ -43,8 +43,21 @@ package com.vitorpamplona.quartz.nip19Bech32.bech32
 private typealias Int5 = Byte
 
 /**
- * Bech32 and Bech32m address formats. See
- * https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki and
+ * Low-level Bech32 / Bech32m codec (BIP-173 / BIP-350).
+ *
+ * For the common Nostr entities (`npub`, `nsec`, `note`, `nevent`, `nprofile`,
+ * `naddr`) you usually **don't** need this directly — prefer the NIP-19 helpers:
+ * the `ByteArray.toNpub()/toNsec()/toNote()` extensions to encode and
+ * `Nip19Parser.uriToRoute(...)` to decode. Reach for `Bech32` when you need a
+ * custom human-readable prefix or raw 5-bit/8-bit access:
+ *
+ * ```kotlin
+ * val addr = Bech32.encodeBytes("npub", pubKeyBytes, Bech32.Encoding.Bech32)
+ * val (hrp, data, _) = Bech32.decodeBytes(addr)   // hrp = "npub", data = 32 bytes
+ * val bytes = "npub1...".bechToBytes("npub")      // decode + assert the prefix
+ * ```
+ *
+ * See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki and
  * https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki.
  */
 object Bech32 {
@@ -284,6 +297,11 @@ object Bech32 {
     }
 }
 
+/**
+ * Decodes this Bech32 string to its raw data bytes. If [hrp] is given, throws
+ * [IllegalArgumentException] when the decoded human-readable prefix doesn't match
+ * (e.g. pass `"npub"` to reject anything that isn't a public key).
+ */
 fun String.bechToBytes(hrp: String? = null): ByteArray {
     val decodedForm = Bech32.decodeBytes(this)
     hrp?.also {

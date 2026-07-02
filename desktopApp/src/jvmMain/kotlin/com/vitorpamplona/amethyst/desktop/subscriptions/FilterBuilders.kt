@@ -386,7 +386,7 @@ object FilterBuilders {
     /**
      * Creates a NIP-50 search filter for user metadata (kind 0).
      * Searches user profiles by name, displayName, about, nip05, etc.
-     * Requires a NIP-50 compatible relay (e.g., relay.nostr.band, nostr.wine).
+     * Requires a NIP-50 compatible relay (e.g., nostr.wine).
      *
      * @param searchQuery The text to search for in user profiles
      * @param limit Maximum number of results to return

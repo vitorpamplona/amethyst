@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuild
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.V4VPaymentHandler
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -83,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
+import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
@@ -158,6 +160,10 @@ import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip92IMeta.imeta
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.podcasts.PodcastBoostagram
+import com.vitorpamplona.quartz.podcasts.PodcastEpisode
+import com.vitorpamplona.quartz.podcasts.PodcastShow
+import com.vitorpamplona.quartz.podcasts.PodcastValue
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -938,6 +944,27 @@ class AccountViewModel(
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
         zapType: LnZapEvent.ZapType? = null,
     ) = launchSigner {
+        // A podcast note (episode or show) can carry a Podcasting-2.0 value-for-value block. When it
+        // does, "zapping" it means paying that split — lnaddress recipients go out as real zaps (with
+        // receipts, which drive this same button's icon/counter), node recipients go out as keysend.
+        // This makes the standard zap button the single payment action for V4V content.
+        val v4v =
+            (note.event as? PodcastEpisode)?.episodeValue()
+                ?: (note.event as? PodcastShow)?.showValue()
+        if (v4v != null && v4v.recipients.any { it.split > 0 && !it.address.isNullOrBlank() }) {
+            executeV4V(
+                value = v4v,
+                totalMilliSats = amountInMillisats,
+                podcastName = (note.event as? PodcastShow)?.showTitle(),
+                episodeName = (note.event as? PodcastEpisode)?.episodeTitle(),
+                zappedNote = note,
+                context = context,
+                streaming = false,
+                onProgress = onProgress,
+            )
+            return@launchSigner
+        }
+
         val requestedType = zapType ?: defaultZapType()
 
         // Zaps on private rumors are forced to PRIVATE so the sender and
@@ -962,6 +989,92 @@ class AccountViewModel(
             onProgress = onProgress,
             onPayViaIntent = onPayViaIntent,
             zapType = effectiveType,
+        )
+    }
+
+    /**
+     * Executes a Podcasting-2.0 value-for-value split for [totalSats] sats: pays every recipient in
+     * the show/episode's [PodcastValue] block their weighted share (lnaddress via LNURL-pay, node via
+     * NWC keysend with the boostagram TLV).
+     *
+     * [streaming] marks this as a per-minute streaming payment rather than a one-off boost: the
+     * boostagram action becomes "stream" and errors are swallowed instead of toasted — a streaming
+     * session fires once a minute and we don't want per-minute toast spam. One-off boosts surface
+     * errors on [toastManager]. The external-wallet intent fallback is skipped while [streaming]
+     * (you can't auto-fire a wallet app every minute); streaming is gated to NWC/CLINK callers.
+     */
+    fun payV4V(
+        value: PodcastValue,
+        totalSats: Long,
+        podcastName: String?,
+        episodeName: String?,
+        zappedNote: Note?,
+        context: Context,
+        streaming: Boolean = false,
+        onProgress: (Float) -> Unit = {},
+    ) = launchSigner {
+        executeV4V(
+            value = value,
+            totalMilliSats = totalSats * 1000,
+            podcastName = podcastName,
+            episodeName = episodeName,
+            zappedNote = zappedNote,
+            context = context,
+            streaming = streaming,
+            onProgress = onProgress,
+        )
+    }
+
+    /**
+     * Shared V4V execution used by both [payV4V] and the V4V reroute inside [zap]. Must be called
+     * from within a [launchSigner] block (it does signing). [streaming] = true marks per-minute
+     * payments: errors are swallowed (no per-minute toast spam), the external-wallet intent fallback
+     * is skipped (can't auto-launch a wallet every minute), and lnaddress shares are paid WITHOUT a
+     * zap request so streaming doesn't publish a receipt every minute. One-off boosts ([streaming] =
+     * false) pay lnaddress shares as real zaps, producing receipts that feed the zap button's UI.
+     */
+    private suspend fun executeV4V(
+        value: PodcastValue,
+        totalMilliSats: Long,
+        podcastName: String?,
+        episodeName: String?,
+        zappedNote: Note?,
+        context: Context,
+        streaming: Boolean,
+        onProgress: (Float) -> Unit,
+    ) {
+        val boostagram =
+            PodcastBoostagram(
+                podcast = podcastName,
+                episode = episodeName,
+                action = if (streaming) PodcastBoostagram.ACTION_STREAM else PodcastBoostagram.ACTION_BOOST,
+                appName = "Amethyst",
+                valueMsatTotal = totalMilliSats,
+                senderName = account.userProfile().toBestDisplayName(),
+            )
+
+        V4VPaymentHandler(account).pay(
+            value = value,
+            totalMilliSats = totalMilliSats,
+            boostagram = boostagram,
+            zappedNote = zappedNote,
+            context = context,
+            asZap = !streaming,
+            zapType = LnZapEvent.ZapType.PUBLIC,
+            okHttpClient = httpClientBuilder::okHttpClientForMoney,
+            onError = { title, message ->
+                if (!streaming) toastManager.toast(title, message)
+            },
+            onProgress = onProgress,
+            onPayInvoicesViaIntent = { invoices ->
+                if (!streaming) {
+                    invoices.forEach { invoice ->
+                        payViaIntent(invoice, context, onPaid = {}, onError = {
+                            toastManager.toast(stringRes(context, R.string.error_dialog_zap_error), it)
+                        })
+                    }
+                }
+            },
         )
     }
 
@@ -2254,6 +2367,11 @@ class AccountViewModel(
                 okHttpClient = httpClientBuilder::okHttpClientForVideo,
                 mimeType = mimeType,
                 localContext = localContext,
+                resolveBlossom = {
+                    Amethyst.instance.blossomResolver
+                        .findServers(it)
+                        ?.serverUrl
+                },
                 onSuccess = {
                     Handler(Looper.getMainLooper()).post {
                         Toast

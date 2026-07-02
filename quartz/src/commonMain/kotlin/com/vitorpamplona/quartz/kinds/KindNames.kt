@@ -300,6 +300,8 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 
 /**
  * Human-readable label and defining NIP for a Nostr event kind.
@@ -337,6 +339,8 @@ object KindNames {
             PodcastMetadataEvent.KIND to KindName("Podcast Show", "F4"),
             AuthoredPodcastsEvent.KIND to KindName("Authored Podcasts", "F4"),
             FavoritePodcastsListEvent.KIND to KindName("Favorite Podcasts", "F4"),
+            Podcasting20EpisodeEvent.KIND to KindName("Podcast Episode (Podcasting 2.0)", null),
+            Podcasting20TrailerEvent.KIND to KindName("Podcast Trailer (Podcasting 2.0)", null),
             AttestationEvent.KIND to KindName("Attestation", null),
             AttestationRequestEvent.KIND to KindName("Attestation Request", null),
             AttestorRecommendationEvent.KIND to KindName("Attestor Recommendation", null),

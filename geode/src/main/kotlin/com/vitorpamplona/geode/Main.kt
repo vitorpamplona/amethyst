@@ -24,10 +24,12 @@ import com.vitorpamplona.geode.config.BannedEntry
 import com.vitorpamplona.geode.config.RuntimeConfig
 import com.vitorpamplona.geode.config.RuntimeConfigData
 import com.vitorpamplona.geode.config.StaticConfig
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.OptionalAuthPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RejectFutureEventsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyAuthOnlyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
@@ -64,6 +66,8 @@ import java.io.File
  *   --info <file>      NIP-11 doc file (overrides [info] section)
  *   --db <file>        sqlite db path (overrides [database].file)
  *   --auth             require NIP-42 AUTH (sets options.require_auth = true)
+ *   --optional-auth    advertise NIP-42 AUTH but don't require it (sets
+ *                      options.optional_auth = true; ignored when --auth is set)
  *   --no-verify        DO NOT verify event signatures (off by default
  *                      verify is on; use only for trusted-input
  *                      scenarios like fixture replay).
@@ -84,6 +88,9 @@ fun main(args: Array<String>) {
     val cliInfoFile = a.opt("--info")?.let { File(it) }
     val dbFile = a.opt("--db") ?: config.database.file?.takeUnless { config.database.in_memory }
     val requireAuth = a.flag("--auth") || config.options.require_auth
+    // Optional AUTH advertises the challenge without gating commands on it.
+    // Mandatory AUTH already sends the challenge, so it wins when both are set.
+    val optionalAuth = !requireAuth && (a.flag("--optional-auth") || config.options.optional_auth)
     // Verify is on by default; only disable when the operator explicitly
     // opts out (CLI `--no-verify` or `[options].verify_signatures = false`
     // in the config).
@@ -109,7 +116,7 @@ fun main(args: Array<String>) {
     val store: IEventStore = EventStore(dbName = dbFile, relay = advertisedUrl)
 
     val policyBuilder: () -> IRelayPolicy = {
-        composePolicy(config, advertisedUrl, requireAuth, verifySigs, parallelVerify)
+        composePolicy(config, advertisedUrl, requireAuth, optionalAuth, verifySigs, parallelVerify)
     }
 
     // Static [authorization] feeds the runtime BanStore only when no
@@ -182,8 +189,9 @@ fun main(args: Array<String>) {
  */
 private fun composePolicy(
     config: StaticConfig,
-    advertisedUrl: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,
+    advertisedUrl: NormalizedRelayUrl,
     requireAuth: Boolean,
+    optionalAuth: Boolean,
     verifySigs: Boolean,
     parallelVerify: Boolean,
 ): IRelayPolicy {
@@ -191,6 +199,8 @@ private fun composePolicy(
 
     if (requireAuth) {
         pieces += FullAuthPolicy(advertisedUrl)
+    } else if (optionalAuth) {
+        pieces += OptionalAuthPolicy(advertisedUrl)
     }
 
     config.options.reject_future_seconds?.let { secs ->

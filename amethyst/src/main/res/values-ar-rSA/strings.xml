@@ -2265,7 +2265,7 @@
     <string name="search_relays_not_found">أعد مرحلات البحث</string>
     <string name="search_relays_not_found_description">إنشاء قائمة مرحلات مخصصة للبحث سوف يحسن من نتائج البحث.</string>
     <string name="search_relays_not_found_editing">أدخل من واحد إلى ثلاث مرحلات لاستخدامهم عند البحث عن محتوى أو اشخاص، تأكد من أن هذا المرحلات تدعم NIP-50</string>
-    <string name="search_relays_not_found_examples">بعض المرحلات الجيدة:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">بعض المرحلات الجيدة:\n%1$s</string>
     <string name="outbox_relays_not_found">أعدّ Public Outbox relays للنشر</string>
     <string name="outbox_relays_not_found_description">إنشاء قائمة relay مخصصة لاستقبال محتواك أمر بالغ الأهمية لتجربتك على Nostr، وهو الطريقة الوحيدة التي يمكن من خلالها لمتابعيك إيجادك.</string>
     <string name="outbox_relays_not_found_editing">أدخل ما بين 1 و3 relays تستقبل منشوراتك. تأكد من أنها لا تتطلب دفعًا إذا لم تكن تدفع للإدراج</string>

@@ -1,0 +1,46 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags
+
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.podcasts.PodcastValue
+import com.vitorpamplona.quartz.utils.ensure
+
+/**
+ * Podcasting-2.0 episode value-for-value tag: `["value", "<json>"]`, where the value is a JSON
+ * [PodcastValue] object (with `enabled` for episode-level overrides). Parses leniently — a malformed
+ * body yields null rather than throwing.
+ */
+class ValueTag {
+    companion object {
+        const val TAG_NAME = "value"
+
+        fun parse(tag: Array<String>): PodcastValue? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return runCatching { JsonMapper.fromJson<PodcastValue>(tag[1]) }.getOrNull()
+        }
+
+        fun assemble(value: PodcastValue) = arrayOf(TAG_NAME, JsonMapper.toJson(value))
+    }
+}

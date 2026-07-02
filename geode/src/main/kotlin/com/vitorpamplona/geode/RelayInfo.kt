@@ -23,6 +23,7 @@ package com.vitorpamplona.geode
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip11RelayInfo.relayInformation
 import java.io.File
 
 /**
@@ -68,13 +69,13 @@ data class RelayInfo(
         /** Pre-built default for `RelayEngine(url = ...)` — advertises the supported NIPs. */
         fun default(url: NormalizedRelayUrl): RelayInfo =
             RelayInfo(
-                Nip11RelayInformation(
-                    name = NAME,
-                    description = DESCRIPTION,
-                    software = SOFTWARE,
-                    version = VERSION,
-                    supported_nips = SUPPORTED_NIPS,
-                ),
+                relayInformation {
+                    name = NAME
+                    description = DESCRIPTION
+                    software = SOFTWARE
+                    version = VERSION
+                    supports(*SUPPORTED_NIPS.toTypedArray())
+                },
             )
 
         /** Loads a NIP-11 doc from a JSON file (e.g. a relay operator's config). */

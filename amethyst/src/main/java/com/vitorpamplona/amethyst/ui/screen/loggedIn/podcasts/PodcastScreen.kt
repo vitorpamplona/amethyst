@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -53,6 +55,8 @@ import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
+import com.vitorpamplona.amethyst.ui.note.types.PodcastBookmarkButton
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.dal.OnePodcastFeedViewModel
@@ -60,8 +64,15 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.OnePodc
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
+import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.resolvePodcastShow
+import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.podcasts.PodcastShow
 
 @Composable
 fun PodcastScreen(
@@ -70,9 +81,17 @@ fun PodcastScreen(
     nav: INav,
 ) {
     val podcast = remember(pubkey) { LocalCache.checkGetOrCreateUser(pubkey) } ?: return
-    val metadataNote =
+    // A show is either NIP-F4 (kind 10154) or Podcasting-2.0 (kind 30078, d=podcast-metadata).
+    // Resolve both addresses; whichever has an event is this podcast's metadata.
+    val f4Note =
         remember(pubkey) {
             LocalCache.getOrCreateAddressableNote(PodcastMetadataEvent.createAddress(pubkey))
+        }
+    val p20Note =
+        remember(pubkey) {
+            LocalCache.getOrCreateAddressableNote(
+                Address(AppSpecificDataEvent.KIND, pubkey, Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG),
+            )
         }
 
     val feedViewModel: OnePodcastFeedViewModel =
@@ -81,23 +100,27 @@ fun PodcastScreen(
             factory = OnePodcastFeedViewModel.Factory(pubkey, accountViewModel.account),
         )
 
-    PodcastScreen(podcast, metadataNote, feedViewModel, accountViewModel, nav)
+    PodcastScreen(podcast, f4Note, p20Note, feedViewModel, accountViewModel, nav)
 }
 
 @Composable
 fun PodcastScreen(
     podcast: User,
-    metadataNote: Note,
+    f4Note: Note,
+    p20Note: Note,
     feedViewModel: OnePodcastFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     WatchLifecycleAndUpdateModel(feedViewModel)
-    // Fetches both the show metadata (kind 10154) and every episode (kind 54) authored by
-    // this podcast's key from its outbox relays.
+    // Fetches the show metadata (NIP-F4 kind 10154 / Podcasting-2.0 kind 30078) and every episode
+    // (kind 54 / kind 30054) + trailer authored by this podcast's key from its outbox relays.
     OnePodcastFilterAssemblerSubscription(podcast, accountViewModel)
 
-    val metadataEvent by observeNoteEvent<PodcastMetadataEvent>(metadataNote, accountViewModel)
+    val f4Event by observeNoteEvent<PodcastMetadataEvent>(f4Note, accountViewModel)
+    val p20Event by observeNoteEvent<AppSpecificDataEvent>(p20Note, accountViewModel)
+    val show: PodcastShow? = remember(f4Event, p20Event) { resolvePodcastShow(f4Event) ?: resolvePodcastShow(p20Event) }
+    val metadataNote = if (f4Event != null) f4Note else p20Note
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -105,11 +128,22 @@ fun PodcastScreen(
             TopBarExtensibleWithBackButton(
                 title = {
                     Text(
-                        text = metadataEvent?.title() ?: stringRes(R.string.route_podcasts),
+                        text = show?.showTitle() ?: stringRes(R.string.route_podcasts),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
+                },
+                actions = {
+                    // Only offer these once the show metadata has loaded — there must be a resolved
+                    // event to bookmark / act on. The bookmark button reflects bookmarked state; the
+                    // 3-dot button is the standard NoteCompose options menu, sitting to its right.
+                    if (show != null) {
+                        PodcastBookmarkButton(metadataNote, accountViewModel)
+                        Spacer(Modifier.width(Size10dp))
+                        MoreOptionsButton(metadataNote, accountViewModel = accountViewModel, nav = nav)
+                        Spacer(Modifier.width(Size10dp))
+                    }
                 },
                 popBack = nav::popBack,
             )
@@ -120,7 +154,7 @@ fun PodcastScreen(
             SaveableFeedState(feedViewModel.feedState, scrollStateKey = null) { listState ->
                 PodcastScreenBody(
                     metadataNote = metadataNote,
-                    metadataEvent = metadataEvent,
+                    show = show,
                     feedViewModel = feedViewModel,
                     listState = listState,
                     accountViewModel = accountViewModel,
@@ -134,7 +168,7 @@ fun PodcastScreen(
 @Composable
 private fun PodcastScreenBody(
     metadataNote: Note,
-    metadataEvent: PodcastMetadataEvent?,
+    show: PodcastShow?,
     feedViewModel: OnePodcastFeedViewModel,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
@@ -144,20 +178,20 @@ private fun PodcastScreenBody(
 
     when (val state = feedState) {
         is FeedState.Loaded ->
-            PodcastEpisodesList(metadataNote, metadataEvent, state, listState, accountViewModel, nav)
+            PodcastEpisodesList(metadataNote, show, state, listState, accountViewModel, nav)
 
         is FeedState.Empty ->
-            PodcastHeaderWithStatus(metadataNote, metadataEvent, listState, accountViewModel, nav) {
+            PodcastHeaderWithStatus(metadataNote, show, listState, accountViewModel, nav) {
                 StatusText(stringRes(R.string.podcast_no_episodes))
             }
 
         is FeedState.FeedError ->
-            PodcastHeaderWithStatus(metadataNote, metadataEvent, listState, accountViewModel, nav) {
+            PodcastHeaderWithStatus(metadataNote, show, listState, accountViewModel, nav) {
                 FeedError(state.errorMessage) { feedViewModel.invalidateData() }
             }
 
         is FeedState.Loading ->
-            PodcastHeaderWithStatus(metadataNote, metadataEvent, listState, accountViewModel, nav) {
+            PodcastHeaderWithStatus(metadataNote, show, listState, accountViewModel, nav) {
                 Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
@@ -168,7 +202,7 @@ private fun PodcastScreenBody(
 @Composable
 private fun PodcastEpisodesList(
     metadataNote: Note,
-    metadataEvent: PodcastMetadataEvent?,
+    show: PodcastShow?,
     loaded: FeedState.Loaded,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
@@ -181,15 +215,21 @@ private fun PodcastEpisodesList(
         contentPadding = rememberFeedContentPadding(FeedPadding),
     ) {
         item("header") {
-            PodcastHeader(metadataNote, metadataEvent, items.list.size, accountViewModel, nav)
+            // The list mixes in trailers; the header count should reflect episodes only.
+            val episodeCount = items.list.count { it.event !is Podcasting20TrailerEvent }
+            PodcastHeader(metadataNote, show, episodeCount, accountViewModel, nav)
         }
 
         itemsIndexed(
             items.list,
             key = { _, item -> item.idHex },
-            contentType = { _, _ -> "episode" },
-        ) { index, episode ->
-            PodcastEpisodeListItem(episode, accountViewModel, nav)
+            contentType = { _, item -> if (item.event is Podcasting20TrailerEvent) "trailer" else "episode" },
+        ) { index, item ->
+            if (item.event is Podcasting20TrailerEvent) {
+                PodcastTrailerListItem(item, accountViewModel, nav)
+            } else {
+                PodcastEpisodeListItem(item, accountViewModel, nav)
+            }
 
             if (index < items.list.lastIndex) {
                 HorizontalDivider(thickness = DividerThickness)
@@ -201,7 +241,7 @@ private fun PodcastEpisodesList(
 @Composable
 private fun PodcastHeaderWithStatus(
     metadataNote: Note,
-    metadataEvent: PodcastMetadataEvent?,
+    show: PodcastShow?,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -212,7 +252,7 @@ private fun PodcastHeaderWithStatus(
         contentPadding = rememberFeedContentPadding(FeedPadding),
     ) {
         item("header") {
-            PodcastHeader(metadataNote, metadataEvent, null, accountViewModel, nav)
+            PodcastHeader(metadataNote, show, null, accountViewModel, nav)
         }
         item("status") { status() }
     }

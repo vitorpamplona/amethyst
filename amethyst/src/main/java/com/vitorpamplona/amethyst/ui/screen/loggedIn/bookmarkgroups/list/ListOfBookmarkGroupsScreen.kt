@@ -66,6 +66,7 @@ fun ListOfBookmarkGroupsScreen(
         openOldBookmarks = { nav.nav(Route.OldBookmarks) },
         openPinnedNotes = { nav.nav(Route.PinnedNotes) },
         openRepositories = { nav.nav(Route.BookmarkedRepositories) },
+        openPodcasts = { nav.nav(Route.BookmarkedPodcasts) },
         addBookmarkGroup = { nav.nav(Route.BookmarkGroupMetadataEdit()) },
         openBookmarkGroup = { identifier, bookmarkType ->
             nav.nav(Route.BookmarkGroupView(identifier, bookmarkType))
@@ -110,6 +111,7 @@ fun ListOfBookmarkGroupsFeed(
     openOldBookmarks: () -> Unit,
     openPinnedNotes: () -> Unit,
     openRepositories: () -> Unit,
+    openPodcasts: () -> Unit,
     addBookmarkGroup: () -> Unit,
     openBookmarkGroup: (identifier: String, bookmarkType: BookmarkType) -> Unit,
     renameBookmarkGroup: (bookmarkGroup: LabeledBookmarkList) -> Unit,
@@ -159,6 +161,7 @@ fun ListOfBookmarkGroupsFeed(
                 openOldBookmarks = openOldBookmarks,
                 openPinnedNotes = openPinnedNotes,
                 openRepositories = openRepositories,
+                openPodcasts = openPodcasts,
                 onOpenItem = openBookmarkGroup,
                 onRenameItem = renameBookmarkGroup,
                 onItemDescriptionChange = changeBookmarkGroupDescription,

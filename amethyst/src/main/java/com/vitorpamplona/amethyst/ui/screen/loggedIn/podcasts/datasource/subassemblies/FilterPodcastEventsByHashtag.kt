@@ -31,6 +31,7 @@ fun filterPodcastEventsByHashtag(
     kinds: List<Int>,
     hashtags: Set<String>,
     since: Long? = null,
+    additionalTags: Map<String, List<String>>? = null,
 ): List<RelayBasedFilter> =
     listOf(
         RelayBasedFilter(
@@ -38,7 +39,7 @@ fun filterPodcastEventsByHashtag(
             filter =
                 Filter(
                     kinds = kinds,
-                    tags = mapOf("t" to hashtags.sorted()),
+                    tags = mergeFilterTags(mapOf("t" to hashtags.sorted()), additionalTags),
                     limit = 200,
                     since = since,
                 ),
@@ -50,6 +51,7 @@ fun filterPodcastEventsByHashtag(
     kinds: List<Int>,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
+    additionalTags: Map<String, List<String>>? = null,
 ): List<RelayBasedFilter> {
     if (hashtagSet.set.isEmpty()) return emptyList()
 
@@ -63,6 +65,7 @@ fun filterPodcastEventsByHashtag(
                     kinds = kinds,
                     hashtags = it.value.hashtags,
                     since = since?.get(it.key)?.time ?: defaultSince,
+                    additionalTags = additionalTags,
                 )
             }
         }.flatten()

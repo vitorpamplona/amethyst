@@ -28,13 +28,28 @@ import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 
-class FullTextSearchModule : IModule {
+/**
+ * NIP-50 full-text search index over event content.
+ *
+ * When [enabled] is `false` the module becomes an inert no-op: no
+ * `event_fts` virtual table and no `fts_foreign_key` delete trigger are
+ * created, inserts skip the per-event tokenization cost, and the reindex
+ * entry points do nothing. This is for deployments that never query the
+ * SQLite store for search — e.g. a relay that offloads NIP-50 to an
+ * external engine such as Vespa — and don't want to pay the write-time
+ * FTS indexing (or the per-delete trigger) overhead. Search filters are
+ * handled by [QueryBuilder], which returns no matches when search is off.
+ */
+class FullTextSearchModule(
+    val enabled: Boolean = true,
+) : IModule {
     val tableName = "event_fts"
     val triggerName = "fts_foreign_key"
     val eventHeaderRowIdName = "event_header_row_id"
     val contentName = "content"
 
     override fun create(db: SQLiteConnection) {
+        if (!enabled) return
         val ftsVersion = versionFinder(db)
         db.execSQL(
             """
@@ -88,6 +103,7 @@ class FullTextSearchModule : IModule {
         headerId: Long,
         db: SQLiteConnection,
     ) {
+        if (!enabled) return
         if (event is SearchableEvent) {
             db.prepare(insertFTS).use { stmt ->
                 stmt.bindLong(1, headerId)
@@ -127,6 +143,7 @@ class FullTextSearchModule : IModule {
     }
 
     override fun deleteAll(db: SQLiteConnection) {
+        if (!enabled) return
         db.execSQL("DELETE FROM event_fts")
     }
 
@@ -144,6 +161,7 @@ class FullTextSearchModule : IModule {
      * Must run inside the caller's write transaction.
      */
     fun reindexAll(db: SQLiteConnection) {
+        if (!enabled) return
         dropTrigger(db)
         drop(db)
         create(db)
@@ -199,6 +217,7 @@ class FullTextSearchModule : IModule {
         afterRowId: Long,
         batchSize: Int,
     ): FtsReindexProgress {
+        if (!enabled) return FtsReindexProgress(cursor = null, processedThisBatch = 0, done = true)
         // A non-positive page would select no rows yet never report done,
         // spinning the caller's loop forever — clamp to at least one.
         val limit = batchSize.coerceAtLeast(1)

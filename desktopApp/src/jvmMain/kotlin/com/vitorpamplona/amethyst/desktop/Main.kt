@@ -74,6 +74,9 @@ import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideMaterialSymbols
+import com.vitorpamplona.amethyst.commons.moderation.LocalHashtagSpamSettings
+import com.vitorpamplona.amethyst.commons.moderation.LocalSpamExemptKeys
+import com.vitorpamplona.amethyst.commons.moderation.PreferencesHashtagSpamSettings
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
@@ -832,6 +835,10 @@ private fun AppInner(
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
+    // Hashtag-spam filter settings, persisted in the shared java.util.prefs
+    // node so the `amy` CLI binary observes the same toggle.
+    val hashtagSpamSettings = remember { PreferencesHashtagSpamSettings() }
+
     // Local relay store — persists events to SQLite per account
     val localRelayStore =
         remember {
@@ -1059,6 +1066,7 @@ private fun AppInner(
                     com.vitorpamplona.amethyst.desktop.ui.deck.LocalDesktopCache provides localCache,
                     com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager provides relayManager,
                     com.vitorpamplona.amethyst.desktop.ui.deck.LocalLocalRelayStore provides localRelayStore,
+                    LocalHashtagSpamSettings provides hashtagSpamSettings,
                 ) {
                     when (accountState) {
                         is AccountState.Loading -> {
@@ -1145,6 +1153,11 @@ private fun AppInner(
                             // NWC loaded during startup in loadSavedAccount flow
 
                             val currentTorStatus = torManager.status.collectAsState().value
+                            val followedUsers by localCache.followedUsers.collectAsState()
+                            val spamExemptKeys =
+                                remember(followedUsers, account.pubKeyHex) {
+                                    followedUsers + account.pubKeyHex
+                                }
                             androidx.compose.runtime.CompositionLocalProvider(
                                 com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState provides
                                     com.vitorpamplona.amethyst.desktop.ui.tor.TorState(
@@ -1162,6 +1175,7 @@ private fun AppInner(
                                     ),
                                 LocalNamecoinPreferences provides namecoinPreferences,
                                 LocalNamecoinService provides namecoinService,
+                                LocalSpamExemptKeys provides spamExemptKeys,
                             ) {
                                 MainContent(
                                     layoutMode = layoutMode,
@@ -2160,6 +2174,21 @@ fun RelaySettingsScreen(
             // Privacy lock section
             com.vitorpamplona.amethyst.desktop.ui.settings
                 .PrivacyLockSettingsScreen()
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+
+            // Content Filters section — hashtag-spam filter and future
+            // content-moderation toggles.
+            Text(
+                text = "Content Filters",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(Modifier.height(8.dp))
+            com.vitorpamplona.amethyst.desktop.ui.settings.HashtagSpamSettingsSection(
+                settings = LocalHashtagSpamSettings.current,
+            )
             Spacer(Modifier.height(16.dp))
             HorizontalDivider()
             Spacer(Modifier.height(16.dp))

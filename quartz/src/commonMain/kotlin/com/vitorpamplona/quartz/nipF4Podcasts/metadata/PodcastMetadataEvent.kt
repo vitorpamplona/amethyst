@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags.DescriptionTag
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags.ImageTag
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags.TitleTag
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags.WebsiteTag
+import com.vitorpamplona.quartz.podcasts.PodcastShow
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -54,6 +55,7 @@ class PodcastMetadataEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PodcastShow,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
 
@@ -65,6 +67,14 @@ class PodcastMetadataEvent(
 
     fun websites() = tags.mapNotNull(WebsiteTag::parse)
 
+    override fun showTitle() = title()
+
+    override fun showImage() = image()
+
+    override fun showDescription() = description()
+
+    override fun showWebsites() = websites()
+
     /**
      * Returns claimed authors and their roles. The spec warns these claims are
      * unverified — a podcast can name anyone as author. Before surfacing an author
@@ -73,8 +83,21 @@ class PodcastMetadataEvent(
      */
     fun claimedAuthors() = tags.mapNotNull(AuthorTag::parse)
 
+    /**
+     * Fingerprint of a known spam flood — thousands of identical headless-test "Mock Podcast"
+     * shows. Their structure is exactly `title="Mock Podcast"`, `description="Headless test feed"`,
+     * `content="Headless test feed"`. Matched so the client can drop them before consuming.
+     */
+    fun isMockSpam(): Boolean =
+        content == MOCK_SPAM_CONTENT &&
+            title() == MOCK_SPAM_TITLE &&
+            description() == MOCK_SPAM_CONTENT
+
     companion object {
         const val KIND = 10154
+
+        private const val MOCK_SPAM_TITLE = "Mock Podcast"
+        private const val MOCK_SPAM_CONTENT = "Headless test feed"
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
 

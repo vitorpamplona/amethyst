@@ -205,7 +205,7 @@ class UiSharedPreferences(
                     preferences[UI_PROPOSE_AI_IMPROVEMENTS] = sharedSettings.automaticallyProposeAiImprovements.name
                     preferences[UI_USE_TRACKED_BROADCASTS] = sharedSettings.useTrackedBroadcasts.name
                     preferences[UI_AUTOMATICALLY_CREATE_DRAFTS] = sharedSettings.automaticallyCreateDrafts.name
-                    preferences[UI_BOTTOM_BAR_ITEMS] = JsonMapper.toJson(sharedSettings.bottomBarItems)
+                    preferences[UI_BOTTOM_BAR_ITEMS] = encodeBottomBarItems(sharedSettings.bottomBarItems)
                     preferences[UI_SHOW_HOME_NEW_THREADS_TAB] = sharedSettings.showHomeNewThreadsTab
                     preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] = sharedSettings.showHomeConversationsTab
                     preferences[UI_SHOW_HOME_EVERYTHING_TAB] = sharedSettings.showHomeEverythingTab
@@ -226,7 +226,19 @@ class UiSharedPreferences(
             }
         }
 
-        private fun decodeBottomBarItems(raw: String): List<BottomBarEntry>? {
+        /**
+         * Persists "follow the defaults" as a blank sentinel instead of the concrete default list.
+         *
+         * A user who resets the bottom bar (or who never customized it) should track whatever
+         * [DefaultBottomBarEntries] is in the *installed* app version. Storing the concrete list would
+         * pin them to today's default, so a future version that changes the default would never reach
+         * them. Storing a blank value instead makes [decodeBottomBarItems] resolve it back to the
+         * current [DefaultBottomBarEntries] on every load — i.e. the user is automatically migrated to
+         * the new default. Any genuinely customized bar is still stored as JSON.
+         */
+        internal fun encodeBottomBarItems(items: List<BottomBarEntry>): String = if (items == DefaultBottomBarEntries) "" else JsonMapper.toJson(items)
+
+        internal fun decodeBottomBarItems(raw: String): List<BottomBarEntry>? {
             if (raw.isBlank()) return DefaultBottomBarEntries
             // Current format: a JSON list of BottomBarEntry (built-ins + favorites).
             runCatching { return JsonMapper.fromJson<List<BottomBarEntry>>(raw) }

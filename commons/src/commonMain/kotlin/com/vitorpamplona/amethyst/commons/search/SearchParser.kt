@@ -30,8 +30,12 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.utils.Hex
 
 /**
- * Parses search input and returns matching results.
- * Supports: npub, nprofile, nsec (extracts pubkey), note, nevent, naddr, hex keys, hashtags
+ * Parses search input for direct-lookup entries: npub, nprofile, nsec
+ * (extracts pubkey), note, nevent, naddr, and 64-char hex keys.
+ *
+ * Hashtags are intentionally NOT returned here — they are handled by
+ * [QueryParser], which extracts `#xxx` tokens into the query's hashtag
+ * filter so the normal results pipeline drives a tag-filtered search.
  *
  * Shared between Android and Desktop for consistent Bech32 parsing.
  */
@@ -40,12 +44,6 @@ fun parseSearchInput(input: String): List<SearchResult> {
 
     val trimmed = input.trim()
     val results = mutableListOf<SearchResult>()
-
-    // Check for hashtag
-    if (trimmed.startsWith("#") && trimmed.length > 1) {
-        results.add(SearchResult.HashtagResult(trimmed.substring(1)))
-        return results
-    }
 
     // Try to parse as Bech32 (npub, nevent, naddr, etc.)
     val parsed = Nip19Parser.uriToRoute(trimmed)?.entity

@@ -50,7 +50,7 @@ class SQLiteEventStore(
 
     val seedModule = SeedModule()
 
-    val fullTextSearchModule = FullTextSearchModule()
+    val fullTextSearchModule = FullTextSearchModule(indexStrategy.indexFullTextSearch)
     val eventIndexModule =
         EventIndexesModule(
             seedModule::hasher,

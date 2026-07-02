@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.model
 
+import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -76,7 +77,7 @@ class DesktopRelayCategories(
             .distinctUntilChanged()
             .stateIn(scope, SharingStarted.Eagerly, defaultRelays)
 
-    /** Search relays: kind 10007 → relay.nostr.band, minus blocked */
+    /** Search relays: kind 10007 → Amethyst's default search relays, minus blocked */
     val searchRelays: StateFlow<Set<NormalizedRelayUrl>> =
         combine(
             accountRelays.searchRelayList,
@@ -99,7 +100,6 @@ class DesktopRelayCategories(
             .stateIn(scope, SharingStarted.Eagerly, defaultRelays)
 
     companion object {
-        val DEFAULT_SEARCH_RELAYS =
-            setOfNotNull(RelayUrlNormalizer.normalizeOrNull("wss://relay.nostr.band"))
+        val DEFAULT_SEARCH_RELAYS = DefaultSearchRelayList
     }
 }

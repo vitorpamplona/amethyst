@@ -25,11 +25,14 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.AudioTag
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.DescriptionTag
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.ImageTag
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.TitleTag
+import com.vitorpamplona.quartz.podcasts.PodcastAudio
+import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -48,6 +51,8 @@ class PodcastEpisodeEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PodcastEpisode,
+    RootScope,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), description(), content).joinToString("\n")
 
@@ -58,6 +63,20 @@ class PodcastEpisodeEvent(
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
 
     fun audios() = tags.mapNotNull(AudioTag::parse)
+
+    override fun episodeTitle() = title()
+
+    override fun episodeImage() = image()
+
+    override fun episodeDescription() = description()
+
+    override fun episodeAudio() = audios().map { PodcastAudio(it.url, it.mediaType) }
+
+    // NIP-F4 episodes carry no duration tag; clients derive it from the audio stream.
+    override fun episodeDurationInSeconds(): Long? = null
+
+    // NIP-F4 episodes are regular events ordered by their publication time.
+    override fun episodePublishedAt() = createdAt
 
     companion object {
         const val KIND = 54

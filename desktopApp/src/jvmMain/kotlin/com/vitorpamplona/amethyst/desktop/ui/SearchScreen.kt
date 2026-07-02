@@ -120,7 +120,6 @@ fun SearchScreen(
     initialQuery: String = "",
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
-    onNavigateToHashtag: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -346,6 +345,20 @@ fun SearchScreen(
                     SearchHistoryStore.addToHistory(query)
                 }
             }
+    }
+
+    // Load author metadata for incoming note results. NIP-50 search relays
+    // typically don't return kind-0 metadata alongside notes, and the
+    // subscription explicitly drops MetadataEvents anyway — so display name
+    // and avatar arrive only after we explicitly fetch them from index
+    // relays via the coordinator.
+    LaunchedEffect(noteResults, subscriptionsCoordinator) {
+        val coordinator = subscriptionsCoordinator ?: return@LaunchedEffect
+        if (noteResults.isEmpty()) return@LaunchedEffect
+        val authors = noteResults.map { it.pubKey }.distinct()
+        if (authors.isNotEmpty()) {
+            coordinator.loadMetadataBatched(authors)
+        }
     }
 
     // History state
@@ -643,7 +656,6 @@ fun SearchScreen(
                                     ),
                                 onNavigateToProfile = onNavigateToProfile,
                                 onNavigateToThread = onNavigateToThread,
-                                onNavigateToHashtag = onNavigateToHashtag,
                             )
                             if (ncState.result.relays.isNotEmpty()) {
                                 Text(
@@ -699,7 +711,6 @@ fun SearchScreen(
                             result = result,
                             onNavigateToProfile = onNavigateToProfile,
                             onNavigateToThread = onNavigateToThread,
-                            onNavigateToHashtag = onNavigateToHashtag,
                         )
                     }
                 }
@@ -897,7 +908,6 @@ private fun SearchResultCard(
     result: SearchResult,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
-    onNavigateToHashtag: (String) -> Unit,
 ) {
     Card(
         modifier =
@@ -908,7 +918,6 @@ private fun SearchResultCard(
                         is SearchResult.UserResult -> onNavigateToProfile(result.pubKeyHex)
                         is SearchResult.NoteResult -> onNavigateToThread(result.noteIdHex)
                         is SearchResult.AddressResult -> onNavigateToThread("${result.kind}:${result.pubKeyHex}:${result.dTag}")
-                        is SearchResult.HashtagResult -> onNavigateToHashtag(result.hashtag)
                     }
                 },
         colors =
@@ -927,7 +936,6 @@ private fun SearchResultCard(
                         is SearchResult.UserResult -> MaterialSymbols.Person
                         is SearchResult.NoteResult -> MaterialSymbols.Description
                         is SearchResult.AddressResult -> MaterialSymbols.Description
-                        is SearchResult.HashtagResult -> MaterialSymbols.Tag
                     },
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
@@ -940,7 +948,6 @@ private fun SearchResultCard(
                         is SearchResult.UserResult -> "User Profile"
                         is SearchResult.NoteResult -> "Note"
                         is SearchResult.AddressResult -> "Event (kind ${result.kind})"
-                        is SearchResult.HashtagResult -> "#${result.hashtag}"
                     },
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -950,10 +957,9 @@ private fun SearchResultCard(
                         is SearchResult.UserResult -> result.displayId
                         is SearchResult.NoteResult -> result.displayId
                         is SearchResult.AddressResult -> result.displayId
-                        is SearchResult.HashtagResult -> "Search posts with this hashtag"
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = if (result is SearchResult.HashtagResult) null else FontFamily.Monospace,
+                    fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

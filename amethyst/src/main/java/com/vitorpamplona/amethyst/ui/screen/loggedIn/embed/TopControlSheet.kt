@@ -90,7 +90,12 @@ fun TopControlSheet(
             Surface(
                 color = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
-                tonalElevation = 3.dp,
+                // No tonal elevation. Material 3 only recolors a Surface whose color is EXACTLY
+                // colorScheme.surface — it swaps in surfaceColorAtElevation(), which blends surfaceTint
+                // (= primary, Amethyst's purple) over the surface. On the light theme that near-white +
+                // purple mix reads as a pink/lilac cast instead of the plain background the sheet should
+                // have. Keep the drop shadow (shadowElevation) to lift the sheet off the page below it.
+                tonalElevation = 0.dp,
                 shadowElevation = 6.dp,
                 shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
             ) {
