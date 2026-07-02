@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.tags.FreeBusyTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -48,7 +49,10 @@ class CalendarRSVPEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = content
+
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)

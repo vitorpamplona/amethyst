@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -53,7 +54,10 @@ class LiveActivitiesRaidEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    AddressHintProvider {
+    AddressHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = content
+
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
 
     override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId)

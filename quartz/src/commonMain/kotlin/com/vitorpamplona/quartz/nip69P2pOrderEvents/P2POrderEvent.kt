@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.FiatAmountTag
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.OrderStatus
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.OrderType
@@ -42,7 +43,10 @@ class P2POrderEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = (listOfNotNull(makerName(), currency()) + paymentMethods().orEmpty()).joinToString(" ")
+
     fun orderType() = tags.orderType()
 
     fun currency() = tags.currency()

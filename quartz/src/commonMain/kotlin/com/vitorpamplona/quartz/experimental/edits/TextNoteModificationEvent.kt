@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -35,10 +36,13 @@ class TextNoteModificationEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
     fun editedNote() = firstTaggedEvent()
 
     fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)
+
+    override fun indexableContent() = listOfNotNull(content, summary()).joinToString("\n")
 
     companion object {
         const val KIND = 1010

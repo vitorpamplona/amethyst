@@ -24,8 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -36,10 +38,17 @@ class EditMetadataEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
     fun groupId() = tags.groupId()
 
+    fun name() = tags.firstTagValue("name")
+
+    fun about() = tags.firstTagValue("about")
+
     fun previousEvents() = tags.previousEvents()
+
+    override fun indexableContent() = listOfNotNull(name(), about()).joinToString("\n")
 
     companion object {
         const val KIND = 9002
