@@ -140,7 +140,7 @@ class LocalRelayStoreHydrationTest {
     @Test
     fun hydratingAnEmptyDatabaseSucceedsAndLeavesCacheEmpty() =
         runTest {
-            val cache = DesktopLocalCache()
+            val cache = DesktopLocalCache().apply { accountPubkey = ownerPubKey }
             val store = newStore()
             try {
                 store.hydrate(cache)
@@ -165,7 +165,7 @@ class LocalRelayStoreHydrationTest {
             // empty when phase 2 ran and the metadata would never load.
             seedDatabase(listOf(followeeMetadata, contactList))
 
-            val cache = DesktopLocalCache()
+            val cache = DesktopLocalCache().apply { accountPubkey = ownerPubKey }
             val store = newStore()
             try {
                 store.hydrate(cache)
@@ -193,7 +193,7 @@ class LocalRelayStoreHydrationTest {
             val recentNote = makeTextNote(author, "recent", createdAt = nowSeconds() - 3600)
             seedDatabase(listOf(recentNote))
 
-            val cache = DesktopLocalCache()
+            val cache = DesktopLocalCache().apply { accountPubkey = ownerPubKey }
             val store = newStore()
             try {
                 store.hydrate(cache)
@@ -213,7 +213,7 @@ class LocalRelayStoreHydrationTest {
             val oldNote = makeTextNote(author, "stale", createdAt = eightDaysAgo)
             seedDatabase(listOf(oldNote))
 
-            val cache = DesktopLocalCache()
+            val cache = DesktopLocalCache().apply { accountPubkey = ownerPubKey }
             val store = newStore()
             try {
                 store.hydrate(cache)
@@ -243,7 +243,7 @@ class LocalRelayStoreHydrationTest {
             val note = makeTextNote(author, "round-trip")
             seedDatabase(listOf(note))
 
-            val cache = DesktopLocalCache()
+            val cache = DesktopLocalCache().apply { accountPubkey = ownerPubKey }
             val store = newStore()
             try {
                 store.hydrate(cache)
