@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip32Labeling.tags.LabelNamespaceTag
 import com.vitorpamplona.quartz.nip32Labeling.tags.LabelTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -61,7 +62,10 @@ class LabelEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     PubKeyHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = (listOf(content) + labels().map { it.label }).filter { it.isNotEmpty() }.joinToString("\n")
+
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)

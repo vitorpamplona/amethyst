@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
  * Common base for NIP-34 status events (kinds 1630/1631/1632/1633). Each
@@ -46,7 +47,10 @@ abstract class GitStatusEvent(
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig),
     PubKeyHintProvider,
     EventHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = content
+
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)

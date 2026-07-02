@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -41,7 +42,8 @@ class AuctionEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
     override fun isContentEncoded() = true
 
     fun auctionData(): AuctionData? =
@@ -52,6 +54,8 @@ class AuctionEvent(
             Log.w("AuctionEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
             null
         }
+
+    override fun indexableContent() = auctionData()?.let { listOfNotNull(it.name, it.description).joinToString("\n") } ?: ""
 
     companion object {
         const val KIND = 30020

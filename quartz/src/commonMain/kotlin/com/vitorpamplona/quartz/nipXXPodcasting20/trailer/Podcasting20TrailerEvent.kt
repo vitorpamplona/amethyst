@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.PubDateTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.TitleTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.tags.LengthTag
@@ -51,7 +52,10 @@ class Podcasting20TrailerEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    RootScope {
+    RootScope,
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun url() = tags.firstNotNullOfOrNull(UrlTag::parse)
