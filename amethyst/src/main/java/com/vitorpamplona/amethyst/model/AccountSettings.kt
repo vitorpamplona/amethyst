@@ -273,7 +273,7 @@ class AccountSettings(
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
     var callMaxBitrateBps: Int = 1_500_000,
     val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
-    val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.IF_IN_MY_LIST),
+    val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.TRUSTED_FOLLOWS),
     val relayGroupViewMode: MutableStateFlow<RelayGroupViewMode> = MutableStateFlow(RelayGroupViewMode.DEFAULT),
     val relayAuthTrustFollowsForReads: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) : EphemeralChatRepository,

@@ -638,7 +638,7 @@ object LocalPreferences {
                     val defaultRelayAuthPolicy =
                         getString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, null)
                             ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
-                            ?: RelayAuthPolicy.IF_IN_MY_LIST
+                            ?: RelayAuthPolicy.TRUSTED_FOLLOWS
                     val relayGroupViewMode = RelayGroupViewMode.fromName(getString(PrefKeys.RELAY_GROUP_VIEW_MODE, null))
                     val relayAuthTrustFollowsForReads = getBoolean(PrefKeys.RELAY_AUTH_TRUST_FOLLOWS_FOR_READS, false)
                     val splitNotificationsEnabled = getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)

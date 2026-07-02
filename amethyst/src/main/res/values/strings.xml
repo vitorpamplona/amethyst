@@ -829,8 +829,17 @@
     <string name="relay_auth_policy_trusted_follows_desc">Also authenticate with relays that serve people you follow, such as sending a message to a friend. You\'ll be asked about anyone else.</string>
     <string name="relay_auth_trust_reads">Also trust when reading their posts</string>
     <string name="relay_auth_trust_reads_desc">Log in automatically to download posts from people you follow, not just to message or notify them.</string>
-    <string name="relay_auth_prompt_title">Log in to this relay?</string>
-    <string name="relay_auth_prompt_message">This relay asks you to log in before it will:</string>
+    <string name="relay_auth_prompt_title">Confirm it\'s you to this relay?</string>
+    <string name="relay_auth_prompt_message">This relay wants to confirm it\'s really you first. Its operator will see which account you are.</string>
+    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
+    <string name="relay_auth_title_send_dm">Send your message to %1$s?</string>
+    <string name="relay_auth_title_notify">Notify %1$s?</string>
+    <string name="relay_auth_title_read">Load posts from %1$s?</string>
+    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
+    <string name="relay_auth_consequence_send_dm">If you don\'t, your message to %1$s won\'t be delivered.</string>
+    <string name="relay_auth_consequence_notify">If you don\'t, %1$s won\'t be notified about this.</string>
+    <string name="relay_auth_consequence_read">If you don\'t, you won\'t see posts from %1$s here.</string>
+    <string name="relay_auth_name_and_others">%1$s and others</string>
     <string name="relay_auth_reason_send_dm">Send your private message to:</string>
     <string name="relay_auth_reason_notify_inbox">Notify:</string>
     <string name="relay_auth_reason_read_outbox">Download posts from:</string>

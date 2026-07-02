@@ -53,10 +53,12 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPrompt
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.UserAuthChoice
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -103,6 +105,12 @@ private fun RelayAuthPromptDialog(
     accountViewModel: AccountViewModel,
     onChoice: (UserAuthChoice) -> Unit,
 ) {
+    // The action the user was actually doing drives the title and the "if you don't" consequence,
+    // so the out-of-context prompt reconnects to their intent.
+    val primary = remember(prompt) { prompt.purposes.primaryNamed() }
+    val who = primary?.let { counterpartyLabel(it.counterparties, accountViewModel) }
+    val showLabels = prompt.purposes.size > 1
+
     AlertDialog(
         onDismissRequest = { onChoice(UserAuthChoice.DISMISS) },
         icon = {
@@ -112,7 +120,7 @@ private fun RelayAuthPromptDialog(
                 tint = MaterialTheme.colorScheme.primary,
             )
         },
-        title = { Text(stringRes(R.string.relay_auth_prompt_title)) },
+        title = { Text(titleFor(primary?.kind, who)) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -123,11 +131,13 @@ private fun RelayAuthPromptDialog(
 
                 prompt.purposes.forEach { purpose ->
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = stringRes(reasonRes(purpose.kind)),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        if (showLabels) {
+                            Text(
+                                text = stringRes(reasonRes(purpose.kind)),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         val people = purpose.counterparties.toList()
                         if (people.size <= NAMED_ROWS_MAX) {
                             people.forEach { CounterpartyRow(it, accountViewModel) }
@@ -135,6 +145,14 @@ private fun RelayAuthPromptDialog(
                             CounterpartyFacepile(people, accountViewModel)
                         }
                     }
+                }
+
+                consequenceFor(primary?.kind, who)?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
                 }
             }
         },
@@ -249,3 +267,59 @@ private fun reasonRes(kind: AuthPurposeKind): Int =
         AuthPurposeKind.READ_OUTBOX -> R.string.relay_auth_reason_read_outbox
         AuthPurposeKind.MY_OWN_RELAY -> R.string.relay_auth_reason_my_own_relay
     }
+
+/** The purpose whose counterparties best describe what the user was doing (most user-facing first). */
+private fun List<AuthPurpose>.primaryNamed(): AuthPurpose? =
+    listOf(AuthPurposeKind.SEND_DM, AuthPurposeKind.NOTIFY_INBOX, AuthPurposeKind.READ_OUTBOX)
+        .firstNotNullOfOrNull { kind -> firstOrNull { it.kind == kind && it.counterparties.isNotEmpty() } }
+
+@Composable
+private fun titleFor(
+    kind: AuthPurposeKind?,
+    who: String?,
+): String =
+    when (kind) {
+        AuthPurposeKind.SEND_DM -> stringRes(R.string.relay_auth_title_send_dm, who ?: "")
+        AuthPurposeKind.NOTIFY_INBOX -> stringRes(R.string.relay_auth_title_notify, who ?: "")
+        AuthPurposeKind.READ_OUTBOX -> stringRes(R.string.relay_auth_title_read, who ?: "")
+        else -> stringRes(R.string.relay_auth_prompt_title)
+    }
+
+@Composable
+private fun consequenceFor(
+    kind: AuthPurposeKind?,
+    who: String?,
+): String? =
+    when (kind) {
+        AuthPurposeKind.SEND_DM -> stringRes(R.string.relay_auth_consequence_send_dm, who ?: "")
+        AuthPurposeKind.NOTIFY_INBOX -> stringRes(R.string.relay_auth_consequence_notify, who ?: "")
+        AuthPurposeKind.READ_OUTBOX -> stringRes(R.string.relay_auth_consequence_read, who ?: "")
+        else -> null
+    }
+
+/** A short label for a set of counterparties: the first person's name, or "Alice and others". */
+@Composable
+private fun counterpartyLabel(
+    pubkeys: Set<HexKey>,
+    accountViewModel: AccountViewModel,
+): String {
+    val first = pubkeys.firstOrNull() ?: return ""
+    val name = rememberDisplayName(first, accountViewModel)
+    return if (pubkeys.size > 1) stringRes(R.string.relay_auth_name_and_others, name) else name
+}
+
+/** The best display name for [pubkey], reactive to metadata arriving from relays. */
+@Composable
+private fun rememberDisplayName(
+    pubkey: HexKey,
+    accountViewModel: AccountViewModel,
+): String {
+    var user by remember(pubkey) { mutableStateOf(accountViewModel.getUserIfExists(pubkey)) }
+    if (user == null) {
+        LaunchedEffect(pubkey) { user = accountViewModel.checkGetOrCreateUser(pubkey) }
+    }
+    val loaded = user ?: return pubkey.take(8)
+    // Reading the observed metadata registers a snapshot read, so the name updates when it arrives.
+    val metadata by observeUserInfo(loaded, accountViewModel)
+    return metadata?.info?.bestName() ?: loaded.toBestDisplayName()
+}
