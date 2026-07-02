@@ -50,10 +50,12 @@ class NostrSignerPermissionLedgerTest {
             val ledger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
             ledger.setPolicy(coordinate, AppSignerPolicy.REASONABLE)
 
-            // Profile (0), contacts (3), deletion (5), relay list (10002), zap request (9734),
-            // and gift-wrapped DM (1059) must never auto-sign — they change config, delete, spend,
-            // or leak. Decryption reveals private content, so it also asks.
-            for (kind in listOf(0, 3, 5, 10002, 9734, 1059)) {
+            // Profile (0), contacts (3), deletion (5), relay list (10002), nutzap (9321), and
+            // gift-wrapped DM (1059) must never auto-sign — they change config, delete, spend ecash,
+            // or leak. A nutzap in particular *is* the payment (it carries the ecash proofs), unlike a
+            // zap request (9734) which only fetches an invoice. Decryption reveals private content, so
+            // it also asks.
+            for (kind in listOf(0, 3, 5, 10002, 9321, 1059)) {
                 assertEquals(
                     NostrOpDecision.ASK,
                     ledger.decide(coordinate, NostrSignerOp.SignKind(kind)),
@@ -61,6 +63,11 @@ class NostrSignerPermissionLedgerTest {
                 )
             }
             assertEquals(NostrOpDecision.ASK, ledger.decide(coordinate, NostrSignerOp.Decrypt))
+
+            // Contrast: a Lightning zap request (9734) auto-signs (the payment prompts separately),
+            // but an ecash nutzap (9321) does not — publishing it spends the tokens.
+            assertEquals(NostrOpDecision.ALLOW, ledger.decide(coordinate, NostrSignerOp.SignKind(9734)))
+            assertEquals(NostrOpDecision.ASK, ledger.decide(coordinate, NostrSignerOp.SignKind(9321)))
         }
 
     @Test
