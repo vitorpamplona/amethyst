@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
 import com.vitorpamplona.amethyst.cli.commands.SyncCommand
 import com.vitorpamplona.amethyst.cli.commands.UseCommand
 import com.vitorpamplona.amethyst.cli.commands.VerifyCommand
+import com.vitorpamplona.amethyst.cli.commands.WotCommand
 import com.vitorpamplona.amethyst.cli.commands.ZapCommand
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuCommands
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuMintCommands
@@ -236,6 +237,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "podcast" -> PodcastCommands.dispatch(dataDir, tail)
         "podcast20" -> Podcast20Commands.dispatch(dataDir, tail)
         "bunker" -> BunkerCommand.run(dataDir, tail)
+        "wot" -> WotCommand.dispatch(dataDir, tail)
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()

@@ -264,6 +264,19 @@ class DesktopRelaySubscriptionsCoordinator(
         feedMetadata.loadMetadataBatched(pubkeys)
     }
 
+    /**
+     * Batched kind-3 (follow list) fetch. Used by the WoT service to
+     * build friends-of-friends counts. Chunks authors into ≤100 per
+     * Filter within one subscription. [onEose] fires once all chunks
+     * finish (or after the 5s internal timeout).
+     */
+    fun loadKind3Batched(
+        pubkeys: Collection<HexKey>,
+        onEose: () -> Unit = {},
+    ) {
+        feedMetadata.loadKind3Batched(pubkeys, onEose = onEose)
+    }
+
     // -- DM Subscription Support --
 
     /** Active DM subscription IDs for cleanup */

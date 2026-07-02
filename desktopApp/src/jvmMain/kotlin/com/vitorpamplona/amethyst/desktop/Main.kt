@@ -78,6 +78,8 @@ import com.vitorpamplona.amethyst.commons.moderation.LocalHashtagSpamSettings
 import com.vitorpamplona.amethyst.commons.moderation.LocalSpamExemptKeys
 import com.vitorpamplona.amethyst.commons.moderation.PreferencesHashtagSpamSettings
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
+import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
+import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -1522,6 +1524,47 @@ fun MainContent(
         relayHealthStore.scanNow()
     }
 
+    // Web-of-Trust: bind the active user's pubkey so the cache guards
+    // active-user state against other users' kind-3 events, then feed all
+    // incoming kind-3 events to the WoT service and fetch the follow lists
+    // of every account the user follows.
+    LaunchedEffect(localCache, account.pubKeyHex) {
+        localCache.accountPubkey = account.pubKeyHex
+    }
+    val wotReady by iAccount.wotService.isReady.collectAsState()
+    LaunchedEffect(
+        iAccount.wotService,
+        localCache,
+        subscriptionsCoordinator,
+        account.pubKeyHex,
+    ) {
+        // Fan-in of every accepted kind-3 event from the local cache.
+        launch {
+            localCache.contactListEvents.collect { evt ->
+                iAccount.wotService.applyKind3(evt.pubKey, evt.verifiedFollowKeySet())
+            }
+        }
+        // React to changes in the active user's follow set.
+        launch {
+            localCache.followedUsers.collect { follows ->
+                iAccount.wotService.onFollowSetChange(follows, account.pubKeyHex)
+                if (follows.isNotEmpty()) {
+                    subscriptionsCoordinator.loadKind3Batched(follows) {
+                        iAccount.wotService.markReadyOnce()
+                    }
+                } else {
+                    iAccount.wotService.markReadyOnce()
+                }
+            }
+        }
+        // Safety net: mark ready after 2s regardless of REQ progress so
+        // avatars stop suppressing badges even if index relays never EOSE.
+        launch {
+            kotlinx.coroutines.delay(2_000)
+            iAccount.wotService.markReadyOnce()
+        }
+    }
+
     CompositionLocalProvider(
         LocalRelayCategories provides relayCategories,
         com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays provides accountRelays,
@@ -1530,6 +1573,8 @@ fun MainContent(
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayHealthStore provides relayHealthStore,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayListMutator provides relayListMutator,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalFollowPacksState provides followPacksState,
+        LocalWoTService provides iAccount.wotService,
+        LocalWoTReady provides wotReady,
     ) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {

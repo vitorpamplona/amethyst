@@ -77,7 +77,6 @@ import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastStatus
 import com.vitorpamplona.amethyst.commons.profile.ui.ProfileBroadcastBanner
 import com.vitorpamplona.amethyst.commons.state.FollowState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
-import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -90,6 +89,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscri
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
+import com.vitorpamplona.amethyst.desktop.ui.note.WoTBadgedAvatar
 import com.vitorpamplona.amethyst.desktop.ui.profile.EditProfileDialog
 import com.vitorpamplona.amethyst.desktop.ui.profile.GalleryTab
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
@@ -682,7 +682,7 @@ fun UserProfileScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     verticalAlignment = Alignment.Top,
                                 ) {
-                                    UserAvatar(
+                                    WoTBadgedAvatar(
                                         userHex = pubKeyHex,
                                         pictureUrl = picture,
                                         size = 56.dp,
@@ -1155,7 +1155,7 @@ fun UserProfileScreen(
                         }
                         Spacer(Modifier.width(4.dp))
                     }
-                    UserAvatar(
+                    WoTBadgedAvatar(
                         userHex = pubKeyHex,
                         pictureUrl = picture,
                         size = 28.dp,

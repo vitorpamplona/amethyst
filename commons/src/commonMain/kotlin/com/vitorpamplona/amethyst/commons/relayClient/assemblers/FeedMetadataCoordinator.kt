@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -73,6 +74,7 @@ class FeedMetadataCoordinator(
     private val queuedPubkeys = mutableSetOf<HexKey>()
     private val queuedNoteIds = mutableSetOf<HexKey>()
     private val queuedBoostedIds = mutableSetOf<HexKey>()
+    private val queuedKind3Pubkeys = mutableSetOf<HexKey>()
 
     /**
      * Start processing the subscription queue.
@@ -301,11 +303,77 @@ class FeedMetadataCoordinator(
     }
 
     /**
+     * Batched kind-3 (follow list) subscription. Used by the WoT service
+     * to fetch the follow lists of every account the active user follows,
+     * so friends-of-friends counts can be computed.
+     *
+     * Chunks authors into ≤100 per Filter within a single subscription
+     * so relays with per-filter author caps (nostr-rs-relay defaults to
+     * ~100) don't silently truncate the batch. Aggregates EOSE across
+     * chunks and calls [onEose] once (or after [timeoutMs]).
+     */
+    fun loadKind3Batched(
+        pubkeys: Collection<HexKey>,
+        timeoutMs: Long = 5_000L,
+        onEose: () -> Unit = {},
+    ) {
+        val newPubkeys = pubkeys.filter { it !in queuedKind3Pubkeys }.distinct()
+        if (newPubkeys.isEmpty()) {
+            onEose()
+            return
+        }
+        queuedKind3Pubkeys.addAll(newPubkeys)
+
+        scope.launch {
+            val filters =
+                newPubkeys.chunked(100).map { chunk ->
+                    Filter(
+                        kinds = listOf(ContactListEvent.KIND),
+                        authors = chunk,
+                        limit = chunk.size,
+                    )
+                }
+            val filterMap = indexRelays.associateWith { filters }
+            val subId = newSubId()
+            val eoseReceived = mutableSetOf<NormalizedRelayUrl>()
+            val allEose = CompletableDeferred<Unit>()
+
+            val listener =
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        this@FeedMetadataCoordinator.onEvent?.invoke(event, relay)
+                    }
+
+                    override fun onEose(
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        eoseReceived.add(relay)
+                        if (eoseReceived.size >= indexRelays.size) {
+                            allEose.complete(Unit)
+                        }
+                    }
+                }
+
+            client.subscribe(subId, filterMap, listener)
+            withTimeoutOrNull(timeoutMs) { allEose.await() }
+            client.unsubscribe(subId)
+            onEose()
+        }
+    }
+
+    /**
      * Clear queued items. Call when switching feeds.
      */
     fun clear() {
         priorityQueue.clear()
         queuedPubkeys.clear()
         queuedNoteIds.clear()
+        queuedKind3Pubkeys.clear()
     }
 }
