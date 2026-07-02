@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.utils.cache
 
 import io.github.charlietap.cachemap.CacheMap
 import io.github.charlietap.cachemap.cacheMapOf
-import kotlinx.coroutines.runBlocking
 
 // An implementation of a Threadsafe map, using CacheMap.
 // Investigating a Swift-based alternative(for now)
@@ -70,17 +69,16 @@ actual class LargeCache<K, V> : ICacheOperations<K, V> {
     actual fun createIfAbsent(
         key: K,
         builder: (key: K) -> V,
-    ): Boolean =
-        runBlocking {
-            val value = concurrentMap.get(key)
-            if (value != null) {
-                false
-            } else {
-                val newObject = builder(key)
-                concurrentMap.put(key, newObject)
-                concurrentMap[key] != null
-            }
+    ): Boolean {
+        val value = concurrentMap.get(key)
+        return if (value != null) {
+            false
+        } else {
+            val newObject = builder(key)
+            concurrentMap.put(key, newObject)
+            concurrentMap[key] != null
         }
+    }
 
     actual override fun size(): Int = concurrentMap.size
 

@@ -35,10 +35,14 @@ import javax.crypto.spec.SecretKeySpec
  * allocations the pure-Kotlin [ChaCha20Poly1305Aead] requires.
  *
  * Single-thread per direction (one PacketProtection per side, one
- * direction per side). Synchronization on a private monitor is
- * defence-in-depth — a future caller (test harness, key-update path)
- * sharing the instance across coroutines would otherwise corrupt
- * the cached `Cipher` state silently.
+ * direction per side). Synchronization is defence-in-depth — a future
+ * caller (test harness, key-update path) sharing the instance across
+ * coroutines would otherwise corrupt the cached `Cipher` state silently.
+ *
+ * Two independent monitors — [encryptLock] guards the encrypt-side state
+ * ([encryptCipher] + [recentEncryptNonces]); [decryptLock] guards
+ * [decryptCipher]. Disjoint state, so seal and open don't serialize
+ * against each other per packet.
  */
 class JcaChaCha20Poly1305Aead(
     key: ByteArray,
@@ -54,6 +58,11 @@ class JcaChaCha20Poly1305Aead(
     private val keySpec = SecretKeySpec(key, "ChaCha20")
     private val encryptCipher: Cipher = Cipher.getInstance("ChaCha20-Poly1305")
     private val decryptCipher: Cipher = Cipher.getInstance("ChaCha20-Poly1305")
+
+    // Disjoint monitors so encrypt and decrypt don't serialize against each
+    // other. seal-family holds encryptLock; open-family holds decryptLock.
+    private val encryptLock = Any()
+    private val decryptLock = Any()
 
     /**
      * Last-N nonces successfully consumed by [seal] / [sealRange] /
@@ -72,7 +81,7 @@ class JcaChaCha20Poly1305Aead(
         aad: ByteArray,
         plaintext: ByteArray,
     ): ByteArray =
-        synchronized(this) {
+        synchronized(encryptLock) {
             sealCommon(nonce, aad, 0, aad.size, plaintext, 0, plaintext.size, output = null, outputOffset = 0)
                 .first
         }
@@ -87,7 +96,7 @@ class JcaChaCha20Poly1305Aead(
         plaintextOffset: Int,
         plaintextLength: Int,
     ): ByteArray =
-        synchronized(this) {
+        synchronized(encryptLock) {
             sealCommon(nonce, aad, aadOffset, aadLength, plaintext, plaintextOffset, plaintextLength, output = null, outputOffset = 0)
                 .first
         }
@@ -104,7 +113,7 @@ class JcaChaCha20Poly1305Aead(
         output: ByteArray,
         outputOffset: Int,
     ): Int =
-        synchronized(this) {
+        synchronized(encryptLock) {
             sealCommon(nonce, aad, aadOffset, aadLength, plaintext, plaintextOffset, plaintextLength, output, outputOffset)
                 .second
         }
@@ -177,7 +186,7 @@ class JcaChaCha20Poly1305Aead(
         aad: ByteArray,
         ciphertext: ByteArray,
     ): ByteArray? =
-        synchronized(this) {
+        synchronized(decryptLock) {
             try {
                 decryptCipher.init(Cipher.DECRYPT_MODE, keySpec, IvParameterSpec(nonce))
                 decryptCipher.updateAAD(aad)
@@ -197,7 +206,7 @@ class JcaChaCha20Poly1305Aead(
         ciphertextOffset: Int,
         ciphertextLength: Int,
     ): ByteArray? =
-        synchronized(this) {
+        synchronized(decryptLock) {
             try {
                 decryptCipher.init(Cipher.DECRYPT_MODE, keySpec, IvParameterSpec(nonce))
                 decryptCipher.updateAAD(aad, aadOffset, aadLength)
