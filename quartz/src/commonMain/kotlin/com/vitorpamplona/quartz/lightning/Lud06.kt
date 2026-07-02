@@ -42,7 +42,6 @@ class Lud06 {
                 null
             }
         } catch (t: Throwable) {
-            t.printStackTrace()
             Log.w("Lud06ToLud16", "Fail to convert LUD06 to LUD16", t)
             null
         }
@@ -52,7 +51,6 @@ class Lud06 {
         try {
             Bech32.decodeBytes(str, false).second.decodeToString()
         } catch (t: Throwable) {
-            t.printStackTrace()
             Log.w("Lud06ToLud16", "Fail to convert LUD06 to LUD16", t)
             null
         }

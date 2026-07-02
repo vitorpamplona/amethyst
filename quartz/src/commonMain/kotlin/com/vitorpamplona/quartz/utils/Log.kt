@@ -21,21 +21,31 @@
 package com.vitorpamplona.quartz.utils
 
 object Log {
+    /** Lines below this severity are dropped before ever reaching the [sink]. */
     var minLevel: LogLevel = LogLevel.DEBUG
+
+    /**
+     * Where every line that passes [minLevel] is delivered. Replace this to hand
+     * logging over to the consuming application (Timber, SLF4J, a file, a test
+     * buffer, /dev/null). Defaults to [PlatformLogSink] — the historical
+     * per-platform native logger — so behavior is unchanged until a consumer
+     * opts in. See [LogSink].
+     */
+    var sink: LogSink = PlatformLogSink
 
     fun d(
         tag: String,
         message: String,
         throwable: Throwable? = null,
     ) {
-        if (minLevel <= LogLevel.DEBUG) PlatformLog.d(tag, message, throwable)
+        if (minLevel <= LogLevel.DEBUG) sink.log(LogLevel.DEBUG, tag, message, throwable)
     }
 
     inline fun d(
         tag: String,
         message: () -> String,
     ) {
-        if (minLevel <= LogLevel.DEBUG) PlatformLog.d(tag, message())
+        if (minLevel <= LogLevel.DEBUG) sink.log(LogLevel.DEBUG, tag, message(), null)
     }
 
     fun i(
@@ -43,14 +53,14 @@ object Log {
         message: String,
         throwable: Throwable? = null,
     ) {
-        if (minLevel <= LogLevel.INFO) PlatformLog.i(tag, message, throwable)
+        if (minLevel <= LogLevel.INFO) sink.log(LogLevel.INFO, tag, message, throwable)
     }
 
     inline fun i(
         tag: String,
         message: () -> String,
     ) {
-        if (minLevel <= LogLevel.INFO) PlatformLog.i(tag, message())
+        if (minLevel <= LogLevel.INFO) sink.log(LogLevel.INFO, tag, message(), null)
     }
 
     fun w(
@@ -58,14 +68,14 @@ object Log {
         message: String,
         throwable: Throwable? = null,
     ) {
-        if (minLevel <= LogLevel.WARN) PlatformLog.w(tag, message, throwable)
+        if (minLevel <= LogLevel.WARN) sink.log(LogLevel.WARN, tag, message, throwable)
     }
 
     inline fun w(
         tag: String,
         message: () -> String,
     ) {
-        if (minLevel <= LogLevel.WARN) PlatformLog.w(tag, message())
+        if (minLevel <= LogLevel.WARN) sink.log(LogLevel.WARN, tag, message(), null)
     }
 
     fun e(
@@ -73,13 +83,13 @@ object Log {
         message: String,
         throwable: Throwable? = null,
     ) {
-        if (minLevel <= LogLevel.ERROR) PlatformLog.e(tag, message, throwable)
+        if (minLevel <= LogLevel.ERROR) sink.log(LogLevel.ERROR, tag, message, throwable)
     }
 
     inline fun e(
         tag: String,
         message: () -> String,
     ) {
-        if (minLevel <= LogLevel.ERROR) PlatformLog.e(tag, message())
+        if (minLevel <= LogLevel.ERROR) sink.log(LogLevel.ERROR, tag, message(), null)
     }
 }
