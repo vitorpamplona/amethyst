@@ -28,11 +28,21 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -141,8 +151,9 @@ class NostrSignerPermissionLedger(
          *
          * Most of these are *additive, public, non-destructive content* — a new note-like event the
          * user could delete afterwards, in the same risk class as the original kind 1/6/7 set (notes,
-         * reposts, reactions, pictures, videos, public chat, highlights, comments, status). The set
-         * also includes two harmless non-content signatures:
+         * reposts, reactions, pictures, videos, voice, public/live/relay chat, threads, polls,
+         * comments, highlights, code snippets, file metadata, status). The set also includes two
+         * harmless non-content signatures:
          *  - **zap request** (9734) — moves nothing; it only fetches a Lightning invoice. The payment
          *    itself is the separately-gated `value.payInvoice` capability that prompts on *every* use
          *    regardless of policy.
@@ -158,6 +169,10 @@ class NostrSignerPermissionLedger(
          *    destructive/admin calls (NIP-96 blob deletes, NIP-86 relay management); blast radius is too
          *    broad to auto-approve.
          *  - **decryption** ([NostrSignerOp.Decrypt]) and DMs — reveal private content.
+         *  - **reports** (1984) and **torrents** (2003/2004) — publicly attributable social/legal acts
+         *    whose reputational weight makes silent signing surprising, even though they are additive.
+         *  - **addressable/replaceable content** (long-form 30023, wiki 30818, etc.) — a re-sign with
+         *    the same `d` tag overwrites a prior version, so they carry an overwrite risk.
          *
          * Deliberately conservative: when a kind's blast radius is unclear, it is left out so the user
          * is asked rather than surprised.
@@ -167,15 +182,25 @@ class NostrSignerPermissionLedger(
                 TextNoteEvent.KIND, // 1 — short text notes & replies
                 RepostEvent.KIND, // 6 — reposts of text notes
                 ReactionEvent.KIND, // 7 — likes / emoji reactions
+                ChatEvent.KIND, // 9 — NIP-C7 relay chat messages (public)
+                ThreadEvent.KIND, // 11 — NIP-7D thread posts (same risk as kind 1)
                 GenericRepostEvent.KIND, // 16 — reposts of non-text content (same risk as kind 6)
                 PictureEvent.KIND, // 20 — picture posts (same risk as kind 1)
                 VideoNormalEvent.KIND, // 21 — video posts (same risk as a picture)
                 VideoShortEvent.KIND, // 22 — short-form video posts (same risk as a picture)
+                PublicMessageEvent.KIND, // 24 — NIP-A4 public messages (plaintext, public)
                 ChannelMessageEvent.KIND, // 42 — public chat messages
+                PollResponseEvent.KIND, // 1018 — voting in a poll (additive, like a reaction)
+                FileHeaderEvent.KIND, // 1063 — NIP-94 file metadata (shares a file reference)
+                PollEvent.KIND, // 1068 — creating a poll (additive public content)
+                CommentEvent.KIND, // 1111 — NIP-22 threaded comments (same risk as kind 1)
+                VoiceEvent.KIND, // 1222 — voice messages (audio post, like a picture/video)
+                VoiceReplyEvent.KIND, // 1244 — voice replies
+                LiveActivitiesChatMessageEvent.KIND, // 1311 — live-stream chat (sibling of kind 42)
+                CodeSnippetEvent.KIND, // 1337 — NIP-C0 code snippets (additive public content)
                 HighlightEvent.KIND, // 9802 — highlighted snippets shared publicly
                 LnZapRequestEvent.KIND, // 9734 — Lightning zap request; the payment itself still prompts
                 RelayAuthEvent.KIND, // 22242 — NIP-42 relay auth; ephemeral, bound to one relay+challenge
-                CommentEvent.KIND, // 1111 — NIP-22 threaded comments (same risk as kind 1)
                 StatusEvent.KIND, // 30315 — ephemeral user status / presence
             )
     }

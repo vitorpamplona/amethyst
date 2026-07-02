@@ -51,13 +51,14 @@ class NostrSignerPermissionLedgerTest {
             ledger.setPolicy(coordinate, AppSignerPolicy.REASONABLE)
 
             // Profile (0), contacts (3), deletion (5), relay list (10002), nutzap (9321), NIP-98 HTTP
-            // auth (27235), and gift-wrapped DM (1059) must never auto-sign — they change config,
-            // delete, spend ecash, authorize arbitrary HTTP calls, or leak. A nutzap in particular *is*
-            // the payment (it carries the ecash proofs), unlike a zap request (9734) which only fetches
-            // an invoice; and NIP-98 authorizes destructive/admin HTTP requests, unlike NIP-42 relay
-            // auth (22242) which is a replay-bound read proof. Decryption reveals private content, so it
-            // also asks.
-            for (kind in listOf(0, 3, 5, 10002, 9321, 27235, 1059)) {
+            // auth (27235), gift-wrapped DM (1059), report (1984), torrent (2003), and long-form
+            // article (30023) must never auto-sign — they change config, delete, spend ecash, authorize
+            // arbitrary HTTP calls, leak, carry reputational/legal weight, or overwrite prior versions.
+            // A nutzap in particular *is* the payment (it carries the ecash proofs), unlike a zap
+            // request (9734) which only fetches an invoice; and NIP-98 authorizes destructive/admin HTTP
+            // requests, unlike NIP-42 relay auth (22242) which is a replay-bound read proof. Decryption
+            // reveals private content, so it also asks.
+            for (kind in listOf(0, 3, 5, 10002, 9321, 27235, 1059, 1984, 2003, 30023)) {
                 assertEquals(
                     NostrOpDecision.ASK,
                     ledger.decide(coordinate, NostrSignerOp.SignKind(kind)),
