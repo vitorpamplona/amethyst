@@ -20,6 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet.signers
 
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -28,7 +37,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  *
  * 1. Per-operation overrides ([NostrSignerPermissionStore.loadOpDecision]) — these always win.
  * 2. The app's [AppSignerPolicy] trust level ([NostrSignerPermissionStore.loadPolicy]).
- * 3. The built-in "reasonable" set (kind 1/6/7 + encrypt are auto-allowed) when policy is [AppSignerPolicy.REASONABLE].
+ * 3. The built-in "reasonable" set ([REASONABLE_SIGN_KINDS] + encrypt are auto-allowed) when policy is [AppSignerPolicy.REASONABLE].
  *
  * When no policy has been set (`null`), [decide] returns [NostrOpDecision.ASK], which triggers the
  * first-connect dialog in the broker.
@@ -117,13 +126,39 @@ class NostrSignerPermissionLedger(
     private fun reasonableDecision(op: NostrSignerOp): NostrOpDecision =
         when (op) {
             is NostrSignerOp.SignKind ->
-                when (op.kind) {
-                    1 -> NostrOpDecision.ALLOW
-                    6 -> NostrOpDecision.ALLOW
-                    7 -> NostrOpDecision.ALLOW
-                    else -> NostrOpDecision.ASK
-                }
+                if (op.kind in REASONABLE_SIGN_KINDS) NostrOpDecision.ALLOW else NostrOpDecision.ASK
             NostrSignerOp.Encrypt -> NostrOpDecision.ALLOW
             NostrSignerOp.Decrypt -> NostrOpDecision.ASK
         }
+
+    companion object {
+        /**
+         * Event kinds auto-approved under [AppSignerPolicy.REASONABLE].
+         *
+         * The rule for membership: an app may sign these on the user's behalf without a prompt only
+         * when doing so **cannot harm the user**. Everything here is *additive, public, and
+         * non-destructive* — creating a new note-like event that the user could delete afterwards, in
+         * the same risk class as the original kind 1/6/7 set. None of them can silently:
+         *  - spend money (zaps/nutzaps are gated separately and always prompt),
+         *  - overwrite account configuration (profile 0, contacts 3, relay/mute/bookmark lists are
+         *    replaceable — a bad write can wipe settings, so they stay ASK),
+         *  - delete existing content (kind 5), or
+         *  - leak private data (DMs and [NostrSignerOp.Decrypt] stay ASK).
+         *
+         * Deliberately conservative: when a kind's blast radius is unclear, it is left out so the user
+         * is asked rather than surprised.
+         */
+        val REASONABLE_SIGN_KINDS: Set<Int> =
+            setOf(
+                TextNoteEvent.KIND, // 1 — short text notes & replies
+                RepostEvent.KIND, // 6 — reposts of text notes
+                ReactionEvent.KIND, // 7 — likes / emoji reactions
+                GenericRepostEvent.KIND, // 16 — reposts of non-text content (same risk as kind 6)
+                PictureEvent.KIND, // 20 — picture posts (same risk as kind 1)
+                ChannelMessageEvent.KIND, // 42 — public chat messages
+                HighlightEvent.KIND, // 9802 — highlighted snippets shared publicly
+                CommentEvent.KIND, // 1111 — NIP-22 threaded comments (same risk as kind 1)
+                StatusEvent.KIND, // 30315 — ephemeral user status / presence
+            )
+    }
 }
