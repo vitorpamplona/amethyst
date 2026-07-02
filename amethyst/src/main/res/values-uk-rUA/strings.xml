@@ -2197,7 +2197,7 @@
     <string name="search_relays_not_found">Налаштуйте свої relay-сервери для пошуку</string>
     <string name="search_relays_not_found_description">Створення списку relay-серверів, спеціально призначених для пошуку та позначення користувачів, покращить ці результати.</string>
     <string name="search_relays_not_found_editing">Введіть від 1 до 3 relay-серверів для пошуку вмісту або позначення користувачів. Переконайтесь, що обрані relay-сервери підтримують NIP-50</string>
-    <string name="search_relays_not_found_examples">Гарні варіанти:\n - nostr.wine\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Гарні варіанти:\n%1$s</string>
     <string name="outbox_relays_title">Relay для вихідних</string>
     <string name="outbox_relays_not_found">Налаштуйте свої публічні relay-сервери для публікацій</string>
     <string name="outbox_relays_not_found_description">Створення списку relay-серверів, спеціально призначених для публікації вашого вмісту, є важливим для вашого досвіду з Nostr і єдиним способом, яким ваші підписники зможуть вас знайти.</string>

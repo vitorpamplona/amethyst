@@ -2111,7 +2111,7 @@
     <string name="search_relays_not_found">검색 relay 설정</string>
     <string name="search_relays_not_found_description">검색 및 사용자 태깅을 위한 relay 목록을 생성하면 결과가 개선됩니다.</string>
     <string name="search_relays_not_found_editing">콘텐츠 검색이나 사용자 태깅 시 사용할 relay를 1~3개 입력하세요. 선택한 relay가 NIP-50을 구현하는지 확인하세요.</string>
-    <string name="search_relays_not_found_examples">좋은 옵션:\n - nostr.wine\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">좋은 옵션:\n%1$s</string>
     <string name="outbox_relays_title">Outbox Relay</string>
     <string name="outbox_relays_not_found">게시를 위한 공개 Outbox relay 설정</string>
     <string name="outbox_relays_not_found_description">콘텐츠 수신을 위한 relay 목록을 생성하는 것은 Nostr 경험에 필수적이며, 팔로워가 나를 찾을 수 있는 유일한 방법입니다.</string>

@@ -2073,7 +2073,7 @@
     <string name="search_relays_not_found">Configurez vos relais de recherche</string>
     <string name="search_relays_not_found_description">La création d\'une liste de relais spécialement conçue pour la recherche et l\'étiquetage utilisateur améliorera ces résultats.</string>
     <string name="search_relays_not_found_editing">Insérez de 1 à 3 relais à utiliser lors de la recherche de contenu ou de l\'étiquetage utilisateur. Assurez-vous que les relais que vous avez choisis implémentent le NIP-50</string>
-    <string name="search_relays_not_found_examples">De bonnes options sont:\n - nostr.wine\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">De bonnes options sont:\n%1$s</string>
     <string name="outbox_relays_title">Relais d\'envoi</string>
     <string name="outbox_relays_not_found">Configurez vos relais d\'envoi pour publier</string>
     <string name="outbox_relays_not_found_description">Créer une liste de relais spécialement conçue pour recevoir votre contenu est crucial pour votre expérience Nostr et la seule façon que vos abonnés puissent vous trouver. </string>

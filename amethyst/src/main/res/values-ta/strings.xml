@@ -2038,7 +2038,7 @@
 <string name="search_relays_not_found">உங்கள் தேடல் relays அமைக்கவும்</string>
 <string name="search_relays_not_found_description">தேடல் மற்றும் பயனர் குறியிடலுக்காக குறிப்பாக வடிவமைக்கப்பட்ட relay பட்டியல் உருவாக்குவது இந்த முடிவுகளை மேம்படுத்தும்.</string>
 <string name="search_relays_not_found_editing">உள்ளடக்கம் தேடுவதற்கு அல்லது பயனர்களை குறியிடுவதற்கு 1–3 relays சேர்க்கவும். தேர்ந்தெடுத்த relays NIP-50 செயல்படுத்துகிறதா என்று உறுதிப்படுத்தவும்</string>
-<string name="search_relays_not_found_examples">நல்ல விருப்பங்கள்:\n - nostr.wine\n - relay.noswhere.com</string>
+<string name="search_relays_not_found_examples">நல்ல விருப்பங்கள்:\n%1$s</string>
 <string name="outbox_relays_title">அவுட்பாக்ஸ் Relays</string>
 <string name="outbox_relays_not_found">இடுகையிட உங்கள் பொது அவுட்பாக்ஸ் relays அமைக்கவும்</string>
 <string name="outbox_relays_not_found_description">உங்கள் உள்ளடக்கத்தை பெறுவதற்காக குறிப்பாக வடிவமைக்கப்பட்ட relay பட்டியல் உருவாக்குவது உங்கள் Nostr அனுபவத்திற்கு முக்கியம், மேலும் உங்கள் பின்தொடர்பவர்கள் உங்களை கண்டுபிடிக்க ஒரே வழி. </string>

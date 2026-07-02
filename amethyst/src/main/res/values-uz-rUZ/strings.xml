@@ -2140,7 +2140,7 @@
     <string name="search_relays_not_found">Qidiruv relaylaringizni sozlang</string>
     <string name="search_relays_not_found_description">Qidiruv va foydalanuvchi teglash uchun maxsus relay ro\'yxati yaratish bu natijalarni yaxshilaydi.</string>
     <string name="search_relays_not_found_editing">Kontent qidirish yoki foydalanuvchilarni teglashda foydalanish uchun 1–3 relay kiriting. Tanlangan relaylaringiz NIP-50 ni qo\'llayotganiga ishonch hosil qiling</string>
-    <string name="search_relays_not_found_examples">Yaxshi variantlar:\n - nostr.wine\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Yaxshi variantlar:\n%1$s</string>
     <string name="outbox_relays_title">Chiqish qutisi Relaylari</string>
     <string name="outbox_relays_not_found">Post qilish uchun Umumiy chiqish qutisi relaylarini sozlang</string>
     <string name="outbox_relays_not_found_description">Kontentingizni qabul qilish uchun maxsus relay ro\'yxati yaratish Nostr tajribangiz uchun juda muhim va kuzatuvchilaringiz sizni topishining yagona yo\'lidir.</string>

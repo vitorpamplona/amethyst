@@ -2164,7 +2164,7 @@
     <string name="search_relays_not_found">تنظیم رله های جستجو</string>
     <string name="search_relays_not_found_description">ساخت لیستی از رله های مخصوص جستجو و تگ کردن کاربر باعث بهبود این نتایج خواهد شد.</string>
     <string name="search_relays_not_found_editing">بین ۱-۳ رله بیافزایید تا هنگام جستجوی محتوا یا تگ کردن کاربران از آنها استفاده شود. حتما رله های انتخابی باید NIP-50 را پیاده‌سازی کرده باشند.</string>
-    <string name="search_relays_not_found_examples">انتخاب های مناسب: \n - nostr.wine\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">انتخاب های مناسب: \n%1$s</string>
     <string name="outbox_relays_title">relay های صادره</string>
     <string name="outbox_relays_not_found">relay های صادره عمومی خود را برای ارسال پست تنظیم کنید</string>
     <string name="outbox_relays_not_found_description">ایجاد یک لیست relay که به طور خاص برای دریافت محتوای شما طراحی شده، برای تجربه Nostr شما حیاتی است و تنها راهی است که دنبال‌کنندگانتان می‌توانند شما را پیدا کنند.</string>

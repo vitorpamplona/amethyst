@@ -3632,7 +3632,7 @@
     
 <string name="search_relays_not_found_editing">Voeg 1 tot 3 relays toe die NIP-50 ondersteunen (zoeken).</string>
     
-<string name="search_relays_not_found_examples">Goede opties zijn:\n - nostr.wine\n - relay.noswhere.com</string>
+<string name="search_relays_not_found_examples">Goede opties zijn:\n%1$s</string>
     
 <string name="outbox_relays_title">Outbox-relays</string>
     

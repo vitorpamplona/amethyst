@@ -2612,7 +2612,7 @@
     
     <string name="search_relays_not_found_editing">Введіть від 1 до 3 relay-серверів для пошуку вмісту або позначення користувачів. Переконайтесь, що обрані relay-сервери підтримують NIP-50</string>
     
-    <string name="search_relays_not_found_examples">Гарні варіанти:\n - nostr.wine\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Гарні варіанти:\n%1$s</string>
     
     <string name="outbox_relays_title">Relay для вихідних</string>
     

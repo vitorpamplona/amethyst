@@ -2528,7 +2528,7 @@
     
 <string name="search_relays_not_found_editing">Inserta entre 1 y 3 relés para usarlos al buscar contenido o etiquetar usuarios. Asegúrate de que los relés que elijas implementen NIP-50.</string>
     
-<string name="search_relays_not_found_examples">Algunas buenas opciones son: \n - nostr.wine\n - relay.noswhere.com</string>
+<string name="search_relays_not_found_examples">Algunas buenas opciones son: \n%1$s</string>
     
 <string name="relay_settings">Configuración de relés</string>
     

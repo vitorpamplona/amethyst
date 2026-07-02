@@ -645,7 +645,7 @@
     <string name="search_relays_not_found">Configurez vos relais de recherche</string>
     <string name="search_relays_not_found_description">La création d\'une liste de relais spécialement conçue pour la recherche et l\'étiquetage utilisateur améliorera ces résultats.</string>
     <string name="search_relays_not_found_editing">Insérez de 1 à 3 relais à utiliser lors de la recherche de contenu ou de l\'étiquetage utilisateur. Assurez-vous que les relais que vous avez choisis implémentent le NIP-50</string>
-    <string name="search_relays_not_found_examples">De bonnes options sont:\n - nostr.wine\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">De bonnes options sont:\n%1$s</string>
     <string name="relay_settings">Paramètres du relais</string>
     <string name="public_home_section">Relais publics d\'accueil</string>
     <string name="public_home_section_explainer">Ce type de relais stocke tout votre contenu. Amethyst enverra vos messages ici et d\'autres utiliseront ces relais pour trouver votre contenu. Insérez entre 1 et 3 relais : il peut s\'agir de relais personnels, de relais payants ou de relais publics.</string>

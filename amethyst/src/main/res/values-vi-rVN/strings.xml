@@ -2100,7 +2100,7 @@
     <string name="search_relays_not_found">Thiết lập relay Tìm kiếm của bạn</string>
     <string name="search_relays_not_found_description">Tạo danh sách relay được thiết kế riêng cho tìm kiếm và gắn thẻ người dùng sẽ cải thiện các kết quả này.</string>
     <string name="search_relays_not_found_editing">Nhập từ 1–3 relay để sử dụng khi tìm kiếm nội dung hoặc gắn thẻ người dùng. Đảm bảo relay bạn chọn hỗ trợ NIP-50</string>
-    <string name="search_relays_not_found_examples">Các tùy chọn tốt là:\n - nostr.wine\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Các tùy chọn tốt là:\n%1$s</string>
     <string name="outbox_relays_title">Relay Outbox</string>
     <string name="outbox_relays_not_found">Thiết lập relay Outbox Công khai của bạn để đăng</string>
     <string name="outbox_relays_not_found_description">Tạo danh sách relay được thiết kế riêng để nhận nội dung của bạn là điều cần thiết cho trải nghiệm Nostr của bạn và là cách duy nhất để người theo dõi tìm thấy bạn. </string>

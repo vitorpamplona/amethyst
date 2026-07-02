@@ -2184,7 +2184,7 @@
     <string name="search_relays_not_found">Настройте свои поисковые relay</string>
     <string name="search_relays_not_found_description">Создание списка relay, специально предназначенного для поиска и упоминания пользователей, улучшит эти результаты.</string>
     <string name="search_relays_not_found_editing">Укажите от 1 до 3 relay для поиска контента или упоминания пользователей. Убедитесь, что выбранные relay реализуют NIP-50</string>
-    <string name="search_relays_not_found_examples">Хорошие варианты:\n - nostr.wine\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Хорошие варианты:\n%1$s</string>
     <string name="outbox_relays_not_found">Настройте свои публичные Outbox relay для публикации</string>
     <string name="outbox_relays_not_found_description">Создание списка relay, специально предназначенного для приёма вашего контента, крайне важно для вашего опыта в Nostr и является единственным способом, которым ваши подписчики могут вас найти.</string>
     <string name="outbox_relays_not_found_editing">Укажите от 1 до 3 relay, принимающих ваши публикации. Убедитесь, что они не требуют оплаты, если вы не платите за размещение</string>

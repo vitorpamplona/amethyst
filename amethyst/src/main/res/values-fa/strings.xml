@@ -637,7 +637,7 @@
     <string name="search_relays_not_found">تنظیم رله های جستجو</string>
     <string name="search_relays_not_found_description">ساخت لیستی از رله های مخصوص جستجو و تگ کردن کاربر باعث بهبود این نتایج خواهد شد.</string>
     <string name="search_relays_not_found_editing">بین ۱-۳ رله بیافزایید تا هنگام جستجوی محتوا یا تگ کردن کاربران از آنها استفاده شود. حتما رله های انتخابی باید NIP-50 را پیاده‌سازی کرده باشند.</string>
-    <string name="search_relays_not_found_examples">انتخاب های مناسب: \n - nostr.wine\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">انتخاب های مناسب: \n%1$s</string>
     <string name="relay_settings">تنظیمات رله</string>
     <string name="public_home_section">رله های خانه/ صندوق خروجی عمومی</string>
     <string name="public_home_section_explainer">این نوع از رله تمام محتوای شما را ذخریه می کند. امتیست پست های شما را اینجا می فرستد و دیگران از این رله ها برای یافتن محتوای شما استفاده می کنند. بین ۱-۳ رله وارد کنید. این رله ها ممکن است رله های شخصی، پولی، یا عمومی باشند.</string>
