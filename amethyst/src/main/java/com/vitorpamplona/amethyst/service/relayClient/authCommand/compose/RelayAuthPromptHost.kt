@@ -53,11 +53,13 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPrompt
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.UserAuthChoice
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -332,24 +334,34 @@ private fun counterpartyLabel(
 
 /**
  * A display name for a venue id — a public chat channel (64-hex event id), a NIP-53 live activity,
- * or a NIP-72 community. Uses the cached channel title where available (the venue is one we're
- * actively using, so it's usually loaded), falling back to the address's d-identifier, which is the
- * community name in NIP-72.
+ * or a NIP-72 community. For channels/live activities it get-or-creates the channel and observes it,
+ * subscribing to relays for the title so it loads and updates like a person's name; a community's
+ * name is its NIP-72 d-identifier, taken straight from the address.
  */
 @Composable
 private fun rememberVenueLabel(
     venueId: String,
     accountViewModel: AccountViewModel,
-): String =
-    remember(venueId) {
-        val resolved =
+): String {
+    val channel: Channel? =
+        remember(venueId) {
             when {
-                venueId.length == 64 -> accountViewModel.getPublicChatChannelIfExists(venueId)?.toBestDisplayName()
-                venueId.startsWith("30311:") -> Address.parse(venueId)?.let { accountViewModel.getLiveActivityChannelIfExists(it)?.toBestDisplayName() }
+                venueId.length == 64 -> accountViewModel.checkGetOrCreatePublicChatChannel(venueId)
+                venueId.startsWith("30311:") -> Address.parse(venueId)?.let { accountViewModel.checkGetOrCreateLiveActivityChannel(it) }
                 else -> null
             }
-        resolved ?: venueId.substringAfterLast(':').ifEmpty { venueId.take(8) }
+        }
+
+    if (channel != null) {
+        // Subscribes for the channel's metadata and recomposes when it arrives.
+        val state by observeChannel(channel, accountViewModel)
+        val name = (state?.channel ?: channel).toBestDisplayName()
+        if (name.isNotBlank()) return name
     }
+
+    // Community: the d-identifier is the name in NIP-72. Also the fallback for an unresolved channel.
+    return venueId.substringAfterLast(':').ifEmpty { venueId.take(8) }
+}
 
 /** The best display name for [pubkey], reactive to metadata arriving from relays. */
 @Composable
