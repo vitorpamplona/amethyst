@@ -126,6 +126,7 @@ class UiSharedPreferences(
         val UI_ACCENT_COLOR = stringPreferencesKey("ui.accent_color")
         val UI_FONT_FAMILY = stringPreferencesKey("ui.font_family")
         val UI_FONT_SIZE = stringPreferencesKey("ui.font_size")
+        val UI_COMPOSE_SIGNATURE = stringPreferencesKey("ui.compose_signature")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
@@ -166,6 +167,7 @@ class UiSharedPreferences(
                     accentColor = preferences[UI_ACCENT_COLOR]?.let { AccentColorType.valueOf(it) } ?: AccentColorType.PURPLE,
                     fontFamily = preferences[UI_FONT_FAMILY]?.let { FontFamilyType.valueOf(it) } ?: FontFamilyType.SYSTEM,
                     fontSize = preferences[UI_FONT_SIZE]?.let { FontSizeType.valueOf(it) } ?: FontSizeType.NORMAL,
+                    composeSignature = preferences[UI_COMPOSE_SIGNATURE] ?: "",
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -218,6 +220,7 @@ class UiSharedPreferences(
                     preferences[UI_ACCENT_COLOR] = sharedSettings.accentColor.name
                     preferences[UI_FONT_FAMILY] = sharedSettings.fontFamily.name
                     preferences[UI_FONT_SIZE] = sharedSettings.fontSize.name
+                    preferences[UI_COMPOSE_SIGNATURE] = sharedSettings.composeSignature
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

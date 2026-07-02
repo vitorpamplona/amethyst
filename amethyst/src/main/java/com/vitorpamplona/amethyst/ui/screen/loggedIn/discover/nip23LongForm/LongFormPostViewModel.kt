@@ -35,6 +35,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
+import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
@@ -150,6 +151,10 @@ class LongFormPostViewModel :
             }
         }
     }
+
+    // The signature pre-filled by applySignature(), so an untouched signature-only
+    // body is treated as blank instead of auto-saved as a junk draft.
+    private var appliedSignature: String? = null
 
     var title by mutableStateOf(TextFieldValue(""))
     var summary by mutableStateOf(TextFieldValue(""))
@@ -271,6 +276,19 @@ class LongFormPostViewModel :
         }
     }
 
+    /**
+     * Pre-fills the signature from Compose Settings at the end of the article body. Skipped
+     * by callers when loading a draft or editing an existing version (the content already
+     * carries — or deliberately omits — a signature).
+     */
+    fun applySignature() {
+        val signature = accountViewModel.settings.composeSignature()
+        if (signature.isEmpty()) return
+
+        appliedSignature = signature
+        message.appendSignature(signature)
+    }
+
     private fun loadFromDraft(draft: Note) {
         val draftEvent = draft.event ?: return
         if (draftEvent is LongTextNoteEvent) {
@@ -355,7 +373,8 @@ class LongFormPostViewModel :
     }
 
     suspend fun sendDraftSync() {
-        if (message.text.toString().isBlank() && title.text.isBlank()) {
+        val text = message.text.toString()
+        if ((text.isBlank() || text.trim() == appliedSignature) && title.text.isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val template = createTemplate() ?: return

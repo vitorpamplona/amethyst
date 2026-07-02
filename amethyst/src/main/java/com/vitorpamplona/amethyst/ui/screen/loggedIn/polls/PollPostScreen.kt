@@ -51,6 +51,9 @@ fun PollPostScreen(
             postViewModel.onMessageChanged()
         }
         postViewModel.wantsPoll = true
+        if (draftId == null) {
+            postViewModel.applySignature()
+        }
     }
 
     NewPostScreenInner(postViewModel, accountViewModel, nav)

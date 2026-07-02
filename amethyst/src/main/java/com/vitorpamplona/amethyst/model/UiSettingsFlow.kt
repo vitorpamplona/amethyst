@@ -57,6 +57,7 @@ class UiSettingsFlow(
     val accentColor: MutableStateFlow<AccentColorType> = MutableStateFlow(AccentColorType.PURPLE),
     val fontFamily: MutableStateFlow<FontFamilyType> = MutableStateFlow(FontFamilyType.SYSTEM),
     val fontSize: MutableStateFlow<FontSizeType> = MutableStateFlow(FontSizeType.NORMAL),
+    val composeSignature: MutableStateFlow<String> = MutableStateFlow(""),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -88,6 +89,7 @@ class UiSettingsFlow(
             accentColor,
             fontFamily,
             fontSize,
+            composeSignature,
         )
 
     // emits at every change in any of the propertyes.
@@ -123,6 +125,7 @@ class UiSettingsFlow(
                 flows[25] as AccentColorType,
                 flows[26] as FontFamilyType,
                 flows[27] as FontSizeType,
+                flows[28] as String,
             )
         }
 
@@ -156,6 +159,7 @@ class UiSettingsFlow(
             accentColor.value,
             fontFamily.value,
             fontSize.value,
+            composeSignature.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -273,6 +277,10 @@ class UiSettingsFlow(
             fontSize.tryEmit(torSettings.fontSize)
             any = true
         }
+        if (composeSignature.value != torSettings.composeSignature) {
+            composeSignature.tryEmit(torSettings.composeSignature)
+            any = true
+        }
 
         return any
     }
@@ -326,6 +334,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.accentColor),
                 MutableStateFlow(uiSettings.fontFamily),
                 MutableStateFlow(uiSettings.fontSize),
+                MutableStateFlow(uiSettings.composeSignature),
             )
     }
 }

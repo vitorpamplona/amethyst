@@ -23,11 +23,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -109,7 +112,27 @@ fun ComposeSettingsContent(
             )
             SettingsDivider()
             AddClientTagTile(accountViewModel)
+            SettingsDivider()
+            SignatureTile(sharedPrefs.composeSignature)
         }
+    }
+}
+
+@Composable
+private fun SignatureTile(flow: MutableStateFlow<String>) {
+    val value by flow.collectAsState()
+
+    SettingsBlockTile(
+        icon = MaterialSymbols.EditNote,
+        title = stringRes(R.string.compose_signature_setting_title),
+        description = stringRes(R.string.compose_signature_setting_description),
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = { flow.tryEmit(it) },
+            placeholder = { Text(stringRes(R.string.compose_signature_setting_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

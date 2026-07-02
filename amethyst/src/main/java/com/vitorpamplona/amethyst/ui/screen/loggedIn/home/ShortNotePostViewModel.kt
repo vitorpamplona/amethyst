@@ -36,6 +36,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
+import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
@@ -208,6 +209,10 @@ open class ShortNotePostViewModel :
 
     var originalNote: Note? by mutableStateOf(null)
     var forkedFromNote: Note? by mutableStateOf(null)
+
+    // The signature pre-filled by applySignature(), so an untouched signature-only
+    // message is treated as blank instead of auto-saved as a junk draft.
+    private var appliedSignature: String? = null
 
     var pTags by mutableStateOf<List<User>?>(null)
     var eTags by mutableStateOf<List<Note>?>(null)
@@ -609,6 +614,20 @@ open class ShortNotePostViewModel :
         urlPreviews.update(message.text.toString())
     }
 
+    /**
+     * Pre-fills the signature from Compose Settings at the end of the message. Skipped by
+     * callers when loading a draft or forking (the existing content already carries — or
+     * deliberately omits — a signature).
+     */
+    fun applySignature() {
+        val signature = accountViewModel.settings.composeSignature()
+        if (signature.isEmpty()) return
+
+        appliedSignature = signature
+        message.appendSignature(signature)
+        urlPreviews.update(message.text.toString())
+    }
+
     private fun loadFromDraft(draft: Note) {
         val draftEvent = draft.event ?: return
         if (draftEvent is TextNoteEvent) {
@@ -974,7 +993,8 @@ open class ShortNotePostViewModel :
     }
 
     suspend fun sendDraftSync() {
-        if (message.text.toString().isBlank()) {
+        val text = message.text.toString()
+        if (text.isBlank() || text.trim() == appliedSignature) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val attachments = mutableSetOf<Event>()

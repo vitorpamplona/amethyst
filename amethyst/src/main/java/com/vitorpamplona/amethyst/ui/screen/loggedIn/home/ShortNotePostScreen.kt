@@ -180,6 +180,9 @@ fun ShortNotePostScreen(
                 postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
             }
         }
+        if (draftId == null && forkId == null) {
+            postViewModel.applySignature()
+        }
     }
 
     DisposableEffect(nav, activity) {

@@ -34,6 +34,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
@@ -159,6 +160,10 @@ open class CommentPostViewModel :
 
     var externalIdentity by mutableStateOf<ExternalId?>(null)
     var replyingTo: Note? by mutableStateOf(null)
+
+    // The signature pre-filled by applySignature(), so an untouched signature-only
+    // message is treated as blank instead of auto-saved as a junk draft.
+    private var appliedSignature: String? = null
 
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(
@@ -407,6 +412,20 @@ open class CommentPostViewModel :
         urlPreviews.update(message.text.toString())
     }
 
+    /**
+     * Pre-fills the signature from Compose Settings at the end of the message. Skipped by
+     * callers when loading a draft (the draft content already carries — or deliberately
+     * omits — a signature).
+     */
+    fun applySignature() {
+        val signature = accountViewModel.settings.composeSignature()
+        if (signature.isEmpty()) return
+
+        appliedSignature = signature
+        message.appendSignature(signature)
+        urlPreviews.update(message.text.toString())
+    }
+
     private fun loadFromDraft(draft: Note) {
         val draftEvent = draft.event ?: return
         if (draftEvent !is CommentEvent) return
@@ -513,7 +532,8 @@ open class CommentPostViewModel :
     }
 
     suspend fun sendDraftSync() {
-        if (message.text.toString().isBlank()) {
+        val text = message.text.toString()
+        if (text.isBlank() || text.trim() == appliedSignature) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val attachments = mutableSetOf<Event>()
