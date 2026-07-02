@@ -85,6 +85,12 @@ kotlin {
     tasks.withType<Test>().configureEach {
         maxHeapSize = "4g"
         environment("TEST_RESOURCES_ROOT", rootDir)
+        // Opt-in gate for ProductionReceiverBenchmark (opens sockets to live
+        // relays). `-PprodRelayBench=1` reaches the daemon even when an env
+        // var would not survive daemon reuse.
+        (project.findProperty("prodRelayBench") as? String)?.let {
+            environment("PROD_RELAY_BENCH", it)
+        }
     }
 
     tasks.withType<KotlinNativeTest>().configureEach {
