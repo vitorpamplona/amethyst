@@ -2422,7 +2422,7 @@
     
     <string name="search_relays_not_found_editing">Укажите от 1 до 3 relay для поиска контента или упоминания пользователей. Убедитесь, что выбранные relay реализуют NIP-50</string>
     
-    <string name="search_relays_not_found_examples">Хорошие варианты:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Хорошие варианты:\n%1$s</string>
     
     <string name="outbox_relays_title">Outbox Relays</string>
     

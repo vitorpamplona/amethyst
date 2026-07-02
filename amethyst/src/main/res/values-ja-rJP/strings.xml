@@ -2121,7 +2121,7 @@
     <string name="search_relays_not_found">検索 relay を設定する</string>
     <string name="search_relays_not_found_description">検索およびユーザータグ付け専用の relay リストを作成すると、検索結果が改善されます。</string>
     <string name="search_relays_not_found_editing">コンテンツ検索やユーザーのタグ付けに使用する relay を 1〜3 つ入力してください。選択した relay が NIP-50 を実装していることを確認してください。</string>
-    <string name="search_relays_not_found_examples">おすすめの選択肢:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">おすすめの選択肢:\n%1$s</string>
     <string name="outbox_relays_title">Outbox Relay</string>
     <string name="outbox_relays_not_found">投稿するためのパブリック Outbox relay を設定する</string>
     <string name="outbox_relays_not_found_description">コンテンツ受信専用の relay リストを作成することは、Nostr エクスペリエンスにとって不可欠であり、フォロワーがあなたを見つけるための唯一の手段です。</string>

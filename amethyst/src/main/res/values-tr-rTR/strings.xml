@@ -2145,7 +2145,7 @@
     <string name="search_relays_not_found">Arama relay\'lerinizi ayarlayın</string>
     <string name="search_relays_not_found_description">Arama ve kullanıcı etiketlemesi için özel olarak tasarlanmış bir relay listesi oluşturmak bu sonuçları iyileştirecektir.</string>
     <string name="search_relays_not_found_editing">İçerik ararken veya kullanıcıları etiketlerken kullanmak için 1–3 relay ekleyin. Seçtiğiniz relay\'lerin NIP-50\'yi uyguladığından emin olun</string>
-    <string name="search_relays_not_found_examples">İyi seçenekler:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">İyi seçenekler:\n%1$s</string>
     <string name="outbox_relays_title">Giden Kutusu Relay\'leri</string>
     <string name="outbox_relays_not_found">Yayınlamak için Genel Giden Kutusu relay\'lerinizi ayarlayın</string>
     <string name="outbox_relays_not_found_description">İçeriğinizi almak için özel olarak tasarlanmış bir relay listesi oluşturmak, Nostr deneyiminiz için çok önemlidir ve takipçilerinizin sizi bulabileceği tek yoldur. </string>

@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayLi
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,7 +115,11 @@ private fun Explanation(postViewModel: SearchRelayListViewModel) {
             Spacer(modifier = StdVertSpacer)
 
             Text(
-                text = stringRes(id = R.string.search_relays_not_found_examples),
+                text =
+                    stringRes(
+                        R.string.search_relays_not_found_examples,
+                        DefaultSearchRelayList.joinToString("\n") { " - ${it.displayUrl()}" },
+                    ),
             )
 
             Spacer(modifier = StdVertSpacer)

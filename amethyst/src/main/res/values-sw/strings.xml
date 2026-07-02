@@ -2136,7 +2136,7 @@
     <string name="search_relays_not_found">Weka relay zako za Utafutaji</string>
     <string name="search_relays_not_found_description">Kuunda orodha ya relay iliyoundwa maalum kwa utafutaji na kuweka alama kwa watumiaji kutaboresha matokeo haya.</string>
     <string name="search_relays_not_found_editing">Ingiza kati ya relay 1–3 za kutumia wakati wa kutafuta maudhui au kuweka alama kwa watumiaji. Hakikisha relay ulizochagua zinatekeleza NIP-50</string>
-    <string name="search_relays_not_found_examples">Chaguo nzuri ni:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Chaguo nzuri ni:\n%1$s</string>
     <string name="outbox_relays_title">Relay za Sanduku la Nje</string>
     <string name="outbox_relays_not_found">Weka relay zako za Sanduku la Nje la Umma ili kuchapisha</string>
     <string name="outbox_relays_not_found_description">Kuunda orodha ya relay iliyoundwa maalum kupokea maudhui yako ni muhimu kwa uzoefu wako wa Nostr na njia pekee ambayo wafuataji wako wanaweza kukupata. </string>

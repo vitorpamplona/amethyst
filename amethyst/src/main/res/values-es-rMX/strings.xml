@@ -2192,7 +2192,7 @@
     <string name="search_relays_not_found">Configura tus relés de búsqueda</string>
     <string name="search_relays_not_found_description">La creación de una lista de relés específicamente diseñada para la búsqueda y el etiquetado de usuarios mejorará estos resultados.</string>
     <string name="search_relays_not_found_editing">Inserta entre 1 y 3 relés para usarlos al buscar contenido o etiquetar usuarios. Asegúrate de que los relés que elijas implementen NIP-50.</string>
-    <string name="search_relays_not_found_examples">Algunas buenas opciones son: \n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="search_relays_not_found_examples">Algunas buenas opciones son: \n%1$s</string>
     <string name="outbox_relays_title">Relays de salida</string>
     <string name="outbox_relays_not_found">Configura tus relays de salida públicos para publicar</string>
     <string name="outbox_relays_not_found_description">Crear una lista de relays diseñada específicamente para recibir tu contenido es fundamental para tu experiencia en Nostr y la única forma en que tus seguidores pueden encontrarte. </string>
