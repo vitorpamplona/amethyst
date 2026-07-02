@@ -103,10 +103,19 @@ fun WatchPlaybackErrors(controllerState: MediaControllerState) {
                 override fun onPlayerErrorChanged(error: PlaybackException?) {
                     if (error != null) {
                         Log.w(ERROR_LOG_TAG) { "Error raised on ${controller.currentMediaItem?.mediaId}: ${error.describe()}" }
+                        errorState.value = error
                     } else if (errorState.value != null) {
-                        Log.d(ERROR_LOG_TAG) { "Error cleared on ${controller.currentMediaItem?.mediaId}" }
+                        // The player cleared its own error — this fires on every prepare(), which a
+                        // Play-button retry, a warm-pool re-acquire, or ExoPlayer's decoder fallback
+                        // all trigger. The very next decoder-init attempt usually fails again, so
+                        // mirroring this null straight into errorState was what made the overlay
+                        // blink on and then vanish, leaving a paused, frameless player with no
+                        // message. Hold the overlay instead: it is cleared only on a genuine
+                        // recovery (STATE_READY, i.e. a frame was produced — see
+                        // onPlaybackStateChanged), a new media item (onMediaItemTransition), or a
+                        // playhead that starts advancing again (watchForDecodeStall).
+                        Log.d(ERROR_LOG_TAG) { "playerError cleared by controller (re-prepare?) on ${controller.currentMediaItem?.mediaId} — holding overlay until STATE_READY" }
                     }
-                    errorState.value = error
                 }
 
                 override fun onMediaItemTransition(
