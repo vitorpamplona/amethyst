@@ -20,6 +20,36 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet.signers
 
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -28,7 +58,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  *
  * 1. Per-operation overrides ([NostrSignerPermissionStore.loadOpDecision]) — these always win.
  * 2. The app's [AppSignerPolicy] trust level ([NostrSignerPermissionStore.loadPolicy]).
- * 3. The built-in "reasonable" set (kind 1/6/7 + encrypt are auto-allowed) when policy is [AppSignerPolicy.REASONABLE].
+ * 3. The built-in "reasonable" set ([REASONABLE_SIGN_KINDS] + encrypt are auto-allowed) when policy is [AppSignerPolicy.REASONABLE].
  *
  * When no policy has been set (`null`), [decide] returns [NostrOpDecision.ASK], which triggers the
  * first-connect dialog in the broker.
@@ -117,13 +147,76 @@ class NostrSignerPermissionLedger(
     private fun reasonableDecision(op: NostrSignerOp): NostrOpDecision =
         when (op) {
             is NostrSignerOp.SignKind ->
-                when (op.kind) {
-                    1 -> NostrOpDecision.ALLOW
-                    6 -> NostrOpDecision.ALLOW
-                    7 -> NostrOpDecision.ALLOW
-                    else -> NostrOpDecision.ASK
-                }
+                if (op.kind in REASONABLE_SIGN_KINDS) NostrOpDecision.ALLOW else NostrOpDecision.ASK
             NostrSignerOp.Encrypt -> NostrOpDecision.ALLOW
             NostrSignerOp.Decrypt -> NostrOpDecision.ASK
         }
+
+    companion object {
+        /**
+         * Event kinds auto-approved under [AppSignerPolicy.REASONABLE].
+         *
+         * Most of these are *public, non-destructive content* — an event the user creates and could
+         * delete afterwards, in the same risk class as the original kind 1/6/7 set (notes, reposts,
+         * reactions, pictures, videos, voice, public/live/relay chat, threads, polls, comments,
+         * highlights, code snippets, file metadata, reports, torrents, long-form articles, wiki, status).
+         * Some are *addressable* (long-form 30023, wiki 30818, legacy video 34235/34236): re-signing
+         * with the same `d` tag replaces the app's own prior version at that address — an accepted
+         * trade-off, since an app that can already post arbitrary notes could do equal reputational harm.
+         * The set also includes two harmless non-content signatures:
+         *  - **zap request** (9734) — moves nothing; it only fetches a Lightning invoice. The payment
+         *    itself is the separately-gated `value.payInvoice` capability that prompts on *every* use
+         *    regardless of policy.
+         *  - **relay auth** (22242, NIP-42) — an ephemeral proof-of-key bound to a single relay and
+         *    challenge (it cannot be replayed to another relay). Amethyst's own client auto-signs it
+         *    for every logged-in account, so treating it as background noise matches existing behavior.
+         *
+         * None of the members can silently: spend money, overwrite account configuration (profile 0,
+         * contacts 3, relay/mute/bookmark lists are replaceable — a bad write can wipe settings),
+         * delete content (kind 5), or leak private data. Notable exclusions that stay ASK:
+         *  - **nutzap** (9321) — publishing one *is* the payment (it carries spendable ecash proofs).
+         *  - **NIP-98 HTTP auth** (27235) — authorizes an arbitrary HTTP request as the user, including
+         *    destructive/admin calls (NIP-96 blob deletes, NIP-86 relay management); blast radius is too
+         *    broad to auto-approve.
+         *  - **decryption** ([NostrSignerOp.Decrypt]) and DMs — reveal private content.
+         *  - **replaceable configuration** (profile 0, contacts 3, and the 10000-range lists above) —
+         *    unlike addressable *content*, these hold account settings a bad write can silently wipe.
+         *
+         * Deliberately conservative: when a kind's blast radius is unclear, it is left out so the user
+         * is asked rather than surprised.
+         */
+        val REASONABLE_SIGN_KINDS: Set<Int> =
+            setOf(
+                TextNoteEvent.KIND, // 1 — short text notes & replies
+                RepostEvent.KIND, // 6 — reposts of text notes
+                ReactionEvent.KIND, // 7 — likes / emoji reactions
+                ChatEvent.KIND, // 9 — NIP-C7 relay chat messages (public)
+                ThreadEvent.KIND, // 11 — NIP-7D thread posts (same risk as kind 1)
+                GenericRepostEvent.KIND, // 16 — reposts of non-text content (same risk as kind 6)
+                PictureEvent.KIND, // 20 — picture posts (same risk as kind 1)
+                VideoNormalEvent.KIND, // 21 — video posts (same risk as a picture)
+                VideoShortEvent.KIND, // 22 — short-form video posts (same risk as a picture)
+                PublicMessageEvent.KIND, // 24 — NIP-A4 public messages (plaintext, public)
+                ChannelMessageEvent.KIND, // 42 — public chat messages
+                PollResponseEvent.KIND, // 1018 — voting in a poll (additive, like a reaction)
+                FileHeaderEvent.KIND, // 1063 — NIP-94 file metadata (shares a file reference)
+                PollEvent.KIND, // 1068 — creating a poll (additive public content)
+                CommentEvent.KIND, // 1111 — NIP-22 threaded comments (same risk as kind 1)
+                VoiceEvent.KIND, // 1222 — voice messages (audio post, like a picture/video)
+                VoiceReplyEvent.KIND, // 1244 — voice replies
+                LiveActivitiesChatMessageEvent.KIND, // 1311 — live-stream chat (sibling of kind 42)
+                CodeSnippetEvent.KIND, // 1337 — NIP-C0 code snippets (additive public content)
+                ReportEvent.KIND, // 1984 — NIP-56 content/spam reports (moderation flag)
+                TorrentEvent.KIND, // 2003 — NIP-35 torrent announcements (additive public content)
+                TorrentCommentEvent.KIND, // 2004 — NIP-35 torrent comments
+                HighlightEvent.KIND, // 9802 — highlighted snippets shared publicly
+                LnZapRequestEvent.KIND, // 9734 — Lightning zap request; the payment itself still prompts
+                RelayAuthEvent.KIND, // 22242 — NIP-42 relay auth; ephemeral, bound to one relay+challenge
+                LongTextNoteEvent.KIND, // 30023 — NIP-23 long-form articles (addressable content)
+                StatusEvent.KIND, // 30315 — ephemeral user status / presence
+                WikiNoteEvent.KIND, // 30818 — NIP-54 wiki articles (addressable content)
+                VideoHorizontalEvent.KIND, // 34235 — legacy addressable horizontal video (NIP-71)
+                VideoVerticalEvent.KIND, // 34236 — legacy addressable vertical video (NIP-71)
+            )
+    }
 }
