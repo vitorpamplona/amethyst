@@ -56,7 +56,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPrompt
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.UserAuthChoice
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -143,7 +142,7 @@ private fun RelayAuthPromptDialog(
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         if (showLabels) {
                             Text(
-                                text = stringRes(reasonRes(purpose.kind)),
+                                text = stringRes(relayAuthReasonRes(purpose.kind)),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -211,7 +210,7 @@ private fun CounterpartyRow(
     pubkey: HexKey,
     accountViewModel: AccountViewModel,
 ) {
-    LoadUser(pubkey, accountViewModel) { user ->
+    LoadRelayAuthUser(pubkey, accountViewModel) { user ->
         if (user != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -234,7 +233,7 @@ private fun CounterpartyFacepile(
         horizontalArrangement = Arrangement.spacedBy((-8).dp),
     ) {
         pubkeys.take(FACEPILE_MAX).forEach { pubkey ->
-            LoadUser(pubkey, accountViewModel) { user ->
+            LoadRelayAuthUser(pubkey, accountViewModel) { user ->
                 if (user != null) {
                     ClickableUserPicture(
                         baseUser = user,
@@ -256,30 +255,6 @@ private fun CounterpartyFacepile(
         }
     }
 }
-
-@Composable
-private fun LoadUser(
-    pubkey: HexKey,
-    accountViewModel: AccountViewModel,
-    content: @Composable (User?) -> Unit,
-) {
-    var user by remember(pubkey) { mutableStateOf(accountViewModel.getUserIfExists(pubkey)) }
-    if (user == null) {
-        LaunchedEffect(pubkey) { user = accountViewModel.checkGetOrCreateUser(pubkey) }
-    }
-    content(user)
-}
-
-private fun reasonRes(kind: AuthPurposeKind): Int =
-    when (kind) {
-        AuthPurposeKind.SEND_DM -> R.string.relay_auth_reason_send_dm
-        AuthPurposeKind.NOTIFY_INBOX -> R.string.relay_auth_reason_notify_inbox
-        AuthPurposeKind.READ_OUTBOX -> R.string.relay_auth_reason_read_outbox
-        AuthPurposeKind.POST_VENUE -> R.string.relay_auth_reason_post_venue
-        AuthPurposeKind.READ_VENUE -> R.string.relay_auth_reason_read_venue
-        AuthPurposeKind.MY_OWN_RELAY -> R.string.relay_auth_reason_my_own_relay
-        AuthPurposeKind.OTHER -> R.string.relay_auth_reason_other
-    }
 
 /** The purpose that best describes what the user was doing (most user-facing first). */
 private fun List<AuthPurpose>.primaryNamed(): AuthPurpose? =

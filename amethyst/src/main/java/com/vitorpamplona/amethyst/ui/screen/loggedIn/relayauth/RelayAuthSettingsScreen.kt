@@ -63,7 +63,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.LoadRelayAuthUser
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.relayAuthReasonRes
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -308,7 +309,7 @@ private fun RelayRationaleCard(
             }
             rationale.forEach { (kind, pubkeys) ->
                 Text(
-                    text = stringResource(reasonRes(kind)),
+                    text = stringResource(relayAuthReasonRes(kind)),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -334,7 +335,7 @@ private fun RationaleUserRow(
     pubkey: HexKey,
     accountViewModel: AccountViewModel,
 ) {
-    LoadUserForRationale(pubkey, accountViewModel) { user ->
+    LoadRelayAuthUser(pubkey, accountViewModel) { user ->
         if (user != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -347,30 +348,6 @@ private fun RationaleUserRow(
         }
     }
 }
-
-@Composable
-private fun LoadUserForRationale(
-    pubkey: HexKey,
-    accountViewModel: AccountViewModel,
-    content: @Composable (User?) -> Unit,
-) {
-    var user by remember(pubkey) { mutableStateOf(accountViewModel.getUserIfExists(pubkey)) }
-    if (user == null) {
-        LaunchedEffect(pubkey) { user = accountViewModel.checkGetOrCreateUser(pubkey) }
-    }
-    content(user)
-}
-
-private fun reasonRes(kind: AuthPurposeKind): Int =
-    when (kind) {
-        AuthPurposeKind.SEND_DM -> R.string.relay_auth_reason_send_dm
-        AuthPurposeKind.NOTIFY_INBOX -> R.string.relay_auth_reason_notify_inbox
-        AuthPurposeKind.READ_OUTBOX -> R.string.relay_auth_reason_read_outbox
-        AuthPurposeKind.POST_VENUE -> R.string.relay_auth_reason_post_venue
-        AuthPurposeKind.READ_VENUE -> R.string.relay_auth_reason_read_venue
-        AuthPurposeKind.MY_OWN_RELAY -> R.string.relay_auth_reason_my_own_relay
-        AuthPurposeKind.OTHER -> R.string.relay_auth_reason_other
-    }
 
 @Composable
 private fun PerRelayOverrideRow(
