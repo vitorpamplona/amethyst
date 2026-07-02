@@ -169,6 +169,83 @@ Findings:
    `onNewEvent`/stats counters, so paging/EOSE bookkeeping would need the
    cheap counters kept ahead of the skip.
 
+## Bulk download: N-million events from one relay (download + parse only)
+
+**Harness:** `quartz/src/jvmTest/.../relay/prodbench/BulkDownloadBenchmark.kt`
+(gated: `./gradlew :quartz:jvmTest --tests "*.BulkDownloadBenchmark" -PprodRelayBench=1`)
+
+### Local ceilings (geode on localhost TCP, 100k seeded events, 4 cores)
+
+| strategy | events/s | wall for 100k |
+|---|---|---|
+| quartz, 1 conn, one giant REQ | 476 | 210s (and 2 events silently missing) |
+| quartz, 4 conns time-sharded, giant REQs | 2,001 | 50s |
+| quartz, 1 conn, paged 1000/page | 12,480 | 8.0s |
+| **quartz, 4 conns time-sharded + paged** | **24,210** | **4.1s** |
+| raw socket (no parse), one giant REQ | ~676 | timed out at 120s (81k/100k) |
+
+- **Giant single REQs are a trap.** The raw (no-parse) variant proves it's
+  server-side: geode streams a 100k-event response at ~700 events/s
+  (per-frame cost in the session pump / query streaming path — needs its own
+  investigation, `WebSocketSessionPump`), and the quartz run came back 2
+  events short. Public relays are worse: they clamp limits and may drop
+  frames or the connection under output backpressure. Paged cursors through
+  the very same server ran 26× faster.
+- **Sharding the `created_at` range across connections stacks with paging:**
+  4 sharded + paged connections ≈ 2× one paged connection locally (24k/s),
+  and each connection gets its own receiver coroutine, so parse parallelizes
+  for free.
+
+### Per-frame strategies, offline (50k frames, ~580B each)
+
+| strategy | events/s | µs/frame |
+|---|---|---|
+| full `fromJsonToMessage`, 1 thread | 276k | 3.6 |
+| full parse, 4 threads | 657k | 1.5 (aggregate) |
+| id-scan only (archive raw, parse lazily) | 2.96M | 0.34 |
+
+Parse of small events is ~3.6µs; the earlier production capture (mixed sizes,
+damus 8.7KB events) measured 32µs. Either way **parse is not the bottleneck
+for bulk download**: one core parses 10M small events in ~36s, and a 4-core
+fan-out does it in ~15s. The wire and the relay's page cadence dominate.
+
+### Production test case: kinds=[30382] on nip85.nosfabrica.com (cap 20k)
+
+| strategy | wall | events/s | notes |
+|---|---|---|---|
+| paged download (until-cursor) | 5.4s | 3,711 | 41 pages ≈ 500/page (relay clamp) |
+| NIP-77 negentropy sync | 12.7s | 1,575 | full set = 31,241 ids, 9 reconcile windows |
+
+Negentropy correctly enumerated the whole 31,241-id set (splitting 9 windows
+around the relay's `max_sync_events` cap) and streamed id-batch REQs — but
+for a **cold** download it was 2.4× slower than plain paging: the reconcile
+rounds and by-id lookups cost more than sequential pages when you need
+*everything anyway*. Negentropy's win is **incremental re-sync**: once the
+10M events are local, the next sync transfers only fingerprints + the diff
+instead of re-paging the world. (kind 30382 events carry empty `content` —
+all data in tags — so the MB/s column reads 0.)
+
+### Answer for "10M events from one relay, fastest"
+
+At nosfabrica's measured page cadence, one connection ≈ 3.7k events/s → 10M
+in ~45 min. To improve, in order:
+
+1. **Page with until-cursors — never one giant REQ** (silent drops, server
+   slow paths, relay clamps).
+2. **Shard the `created_at` range across K connections** to the same relay
+   (each shard pages independently; no cursor dependency between shards).
+   Local: 2× at K=4; WAN, where RTT dominates page turnaround, closer to
+   linear until the relay rate-limits per-IP.
+3. **Don't optimize parse first** — it's 2–5% of the budget. If the goal is
+   archival, id-scan + store raw frames (0.34µs/frame) and parse lazily
+   in parallel later.
+4. **Use negentropy for the second sync onward**, not the first.
+5. **Memory:** the per-connection channel is UNLIMITED — at 10M events a
+   sink slower than the socket accumulates heap without bound. A bulk
+   downloader should bound the channel (blocking the OkHttp reader thread is
+   fine — that's TCP backpressure doing its job) and stream events to disk,
+   never hold the set.
+
 ## Recommendations (in order of value/risk)
 
 1. **Move Schnorr verification off the receiver coroutine** in the app's
