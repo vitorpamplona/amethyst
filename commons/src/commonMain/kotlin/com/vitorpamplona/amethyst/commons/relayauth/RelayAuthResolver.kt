@@ -33,6 +33,8 @@ package com.vitorpamplona.amethyst.commons.relayauth
  *   (send DM / deliver notification) for this relay.
  * @param servesFollowedReadCounterparty a followed user is a counterparty of a *read* purpose
  *   (download their outbox) for this relay.
+ * @param servesTrustedVenue this relay hosts a venue (public chat, community, or live stream) the
+ *   user has joined, or whose owner they follow. Trusts both reading and posting to it.
  * @param readTrustEnabled the "also trust follows' outboxes when reading" sub-toggle.
  * @param hasAttributablePurpose we know *why* this relay wants auth (so a prompt can explain it).
  *   When false, an unresolved challenge is denied silently rather than prompting.
@@ -44,6 +46,7 @@ data class RelayAuthInputs(
     val isInMyRelayList: Boolean,
     val servesFollowedWriteCounterparty: Boolean,
     val servesFollowedReadCounterparty: Boolean,
+    val servesTrustedVenue: Boolean,
     val readTrustEnabled: Boolean,
     val hasAttributablePurpose: Boolean,
 )
@@ -57,9 +60,9 @@ data class RelayAuthInputs(
  *    - [RelayAuthPolicy.NEVER] → DENY
  *    - [RelayAuthPolicy.ALWAYS] → ALLOW
  *    - [RelayAuthPolicy.IF_IN_MY_LIST] → ALLOW if in my list, else fall through
- *    - [RelayAuthPolicy.TRUSTED_FOLLOWS] → ALLOW if in my list, or a followed counterparty is
- *      served for a write purpose (DM/notification), or (when [RelayAuthInputs.readTrustEnabled])
- *      for a read purpose; else fall through
+ *    - [RelayAuthPolicy.TRUSTED_FOLLOWS] → ALLOW if in my list, a venue the user joined/follows is
+ *      served, a followed counterparty is served for a write purpose (DM/notification), or (when
+ *      [RelayAuthInputs.readTrustEnabled]) for a read purpose; else fall through
  * 4. Fall-through → [RelayAuthVerdict.ASK] when the purpose is known, otherwise DENY.
  */
 object RelayAuthResolver {
@@ -80,6 +83,7 @@ object RelayAuthResolver {
                 if (inputs.isInMyRelayList) RelayAuthVerdict.ALLOW else fallThrough(inputs)
             RelayAuthPolicy.TRUSTED_FOLLOWS ->
                 if (inputs.isInMyRelayList ||
+                    inputs.servesTrustedVenue ||
                     inputs.servesFollowedWriteCounterparty ||
                     (inputs.readTrustEnabled && inputs.servesFollowedReadCounterparty)
                 ) {

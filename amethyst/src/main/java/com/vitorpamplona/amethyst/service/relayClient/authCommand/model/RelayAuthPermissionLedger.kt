@@ -43,6 +43,7 @@ class RelayAuthPermissionLedger(
     val isInMyRelayList: (String) -> Boolean = { false },
     val isBlocked: (String) -> Boolean = { false },
     val isFollowed: (String) -> Boolean = { false },
+    val isTrustedVenue: (String) -> Boolean = { false },
     val readTrustEnabled: () -> Boolean = { false },
 ) {
     /** The authorization verdict for [ctx], taking the challenge's purpose into account. */
@@ -62,9 +63,19 @@ class RelayAuthPermissionLedger(
                     ctx.purposes.any { p ->
                         p.kind == AuthPurposeKind.READ_OUTBOX && p.counterparties.any(isFollowed)
                     },
+                servesTrustedVenue =
+                    ctx.purposes.any { p ->
+                        (p.kind == AuthPurposeKind.POST_VENUE || p.kind == AuthPurposeKind.READ_VENUE) &&
+                            p.venues.any(isTrustedVenue)
+                    },
                 readTrustEnabled = readTrustEnabled(),
                 hasAttributablePurpose =
-                    ctx.purposes.any { it.kind == AuthPurposeKind.MY_OWN_RELAY || it.counterparties.isNotEmpty() },
+                    ctx.purposes.any {
+                        it.kind == AuthPurposeKind.MY_OWN_RELAY ||
+                            it.kind == AuthPurposeKind.OTHER ||
+                            it.counterparties.isNotEmpty() ||
+                            it.venues.isNotEmpty()
+                    },
             )
         return RelayAuthResolver.resolve(inputs)
     }

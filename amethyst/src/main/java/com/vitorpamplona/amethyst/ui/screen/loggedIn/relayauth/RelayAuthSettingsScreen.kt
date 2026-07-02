@@ -366,7 +366,10 @@ private fun reasonRes(kind: AuthPurposeKind): Int =
         AuthPurposeKind.SEND_DM -> R.string.relay_auth_reason_send_dm
         AuthPurposeKind.NOTIFY_INBOX -> R.string.relay_auth_reason_notify_inbox
         AuthPurposeKind.READ_OUTBOX -> R.string.relay_auth_reason_read_outbox
+        AuthPurposeKind.POST_VENUE -> R.string.relay_auth_reason_post_venue
+        AuthPurposeKind.READ_VENUE -> R.string.relay_auth_reason_read_venue
         AuthPurposeKind.MY_OWN_RELAY -> R.string.relay_auth_reason_my_own_relay
+        AuthPurposeKind.OTHER -> R.string.relay_auth_reason_other
     }
 
 @Composable

@@ -31,6 +31,7 @@ class RelayAuthResolverTest {
         isInMyRelayList: Boolean = false,
         servesFollowedWriteCounterparty: Boolean = false,
         servesFollowedReadCounterparty: Boolean = false,
+        servesTrustedVenue: Boolean = false,
         readTrustEnabled: Boolean = false,
         hasAttributablePurpose: Boolean = true,
     ) = RelayAuthInputs(
@@ -40,6 +41,7 @@ class RelayAuthResolverTest {
         isInMyRelayList = isInMyRelayList,
         servesFollowedWriteCounterparty = servesFollowedWriteCounterparty,
         servesFollowedReadCounterparty = servesFollowedReadCounterparty,
+        servesTrustedVenue = servesTrustedVenue,
         readTrustEnabled = readTrustEnabled,
         hasAttributablePurpose = hasAttributablePurpose,
     )
@@ -90,6 +92,13 @@ class RelayAuthResolverTest {
         assertEquals(RelayAuthVerdict.ASK, resolve(inputs(servesFollowedReadCounterparty = true, readTrustEnabled = false)))
         // ...auto-auths only when the read sub-toggle is enabled.
         assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesFollowedReadCounterparty = true, readTrustEnabled = true)))
+    }
+
+    @Test
+    fun trustedFollowsAllowsVenueYouJoinedOrFollow() {
+        // A public chat / community / live stream you've joined (or whose owner you follow) —
+        // auto-auth for both reading and posting, regardless of the read sub-toggle.
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesTrustedVenue = true, readTrustEnabled = false)))
     }
 
     @Test

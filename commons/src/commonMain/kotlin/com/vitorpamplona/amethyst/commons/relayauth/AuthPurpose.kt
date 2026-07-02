@@ -38,17 +38,29 @@ enum class AuthPurposeKind {
     /** Reading an author's posts from their NIP-65 outbox (write relays). */
     READ_OUTBOX,
 
+    /** Posting into a venue — a NIP-28 public chat or a NIP-72 community — hosted on this relay. */
+    POST_VENUE,
+
+    /** Reading a venue's content (public chat / community) from this relay. */
+    READ_VENUE,
+
     /** The relay is in the user's own relay list. */
     MY_OWN_RELAY,
+
+    /** We're actively using this relay but couldn't attribute a specific purpose (safety net so we
+     *  prompt instead of silently failing). */
+    OTHER,
 }
 
 /**
- * A single reason a relay connection needs auth, with the counterparties it concerns.
- * [counterparties] is empty for [AuthPurposeKind.MY_OWN_RELAY].
+ * A single reason a relay connection needs auth. [counterparties] holds the people it concerns
+ * (pubkeys, for DM/notify/outbox purposes); [venues] holds venue identifiers (channel event-ids or
+ * community `a`-addresses, for [AuthPurposeKind.POST_VENUE]/[AuthPurposeKind.READ_VENUE]).
  */
 data class AuthPurpose(
     val kind: AuthPurposeKind,
     val counterparties: Set<String> = emptySet(),
+    val venues: Set<String> = emptySet(),
 )
 
 /** The relay plus every live reason we currently have to auth with it. */

@@ -97,9 +97,47 @@ class RelayAuthPurposeDeriverTest {
     }
 
     @Test
-    fun noAttributableWorkYieldsNoPurposes() {
+    fun noActivityYieldsNoPurposes() {
         assertEquals(emptyList<AuthPurpose>(), RelayAuthPurposeDeriver.derive(emptyList(), emptyMap()))
-        // an event with no p tags gives nothing to attribute a notification to
-        assertEquals(emptyList<AuthPurpose>(), RelayAuthPurposeDeriver.derive(listOf(event(1)), emptyMap()))
+    }
+
+    @Test
+    fun unattributableActivityYieldsOtherAsSafetyNet() {
+        // An event we can't attribute (no p tags, not a venue) still prompts rather than fail silently.
+        val purposes = RelayAuthPurposeDeriver.derive(listOf(event(1)), emptyMap())
+        assertEquals(listOf(AuthPurposeKind.OTHER), purposes.map { it.kind })
+    }
+
+    @Test
+    fun channelMessageBecomesPostVenue() {
+        val channelId = "e".repeat(64)
+        val ev =
+            Event(
+                id = "00".repeat(32),
+                pubKey = "11".repeat(32),
+                createdAt = 1_700_000_000L,
+                kind = 42,
+                tags = arrayOf(arrayOf("e", channelId, "", "root")),
+                content = "hi",
+                sig = "22".repeat(64),
+            )
+        val purposes = RelayAuthPurposeDeriver.derive(listOf(ev), emptyMap())
+        assertEquals(1, purposes.size)
+        assertEquals(AuthPurposeKind.POST_VENUE, purposes[0].kind)
+        assertEquals(setOf(channelId), purposes[0].venues)
+    }
+
+    @Test
+    fun communityAndLiveSubscriptionsBecomeReadVenue() {
+        val community = "34550:${"1".repeat(64)}:my-community"
+        val live = "30311:${"2".repeat(64)}:my-stream"
+        val purposes =
+            RelayAuthPurposeDeriver.derive(
+                emptyList(),
+                mapOf("sub" to listOf(Filter(tags = mapOf("a" to listOf(community, live))))),
+            )
+        assertEquals(1, purposes.size)
+        assertEquals(AuthPurposeKind.READ_VENUE, purposes[0].kind)
+        assertEquals(setOf(community, live), purposes[0].venues)
     }
 }

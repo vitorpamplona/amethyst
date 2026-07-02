@@ -30,6 +30,9 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.ScreenAu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 
+/** The owner pubkey of an addressable venue (`kind:pubkey:dTag`), or null for a bare channel id. */
+private fun venueOwnerPubkey(venueId: String): String? = venueId.split(':').getOrNull(1)?.takeIf { it.length == 64 }
+
 @Composable
 fun RelayAuthSubscription(accountViewModel: AccountViewModel) = RelayAuthSubscription(accountViewModel, Amethyst.instance.authCoordinator)
 
@@ -61,6 +64,13 @@ fun RelayAuthSubscription(
                 // Any follow list (kind 3, follow sets, etc.) counts as trusting the counterparty
                 // enough to reveal our identity to a relay that serves them.
                 isFollowed = { pubkey -> pubkey in account.allFollows.flow.value.authors },
+                // A venue (public chat / community / live stream) is trusted if we've joined it, or
+                // its owner — the pubkey in a `kind:pubkey:dTag` address — is someone we follow.
+                isTrustedVenue = { venueId ->
+                    venueId in account.publicChatList.flowSet.value ||
+                        venueId in account.communityList.flowSet.value ||
+                        venueOwnerPubkey(venueId)?.let { it in account.allFollows.flow.value.authors } == true
+                },
                 readTrustEnabled = { account.settings.relayAuthTrustFollowsForReads.value },
             )
         }

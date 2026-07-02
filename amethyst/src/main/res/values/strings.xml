@@ -835,14 +835,21 @@
     <string name="relay_auth_title_send_dm">Send your message to %1$s?</string>
     <string name="relay_auth_title_notify">Notify %1$s?</string>
     <string name="relay_auth_title_read">Load posts from %1$s?</string>
+    <string name="relay_auth_title_post_venue">Post to this room?</string>
+    <string name="relay_auth_title_read_venue">Open this room?</string>
     <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
     <string name="relay_auth_consequence_send_dm">If you don\'t, your message to %1$s won\'t be delivered.</string>
     <string name="relay_auth_consequence_notify">If you don\'t, %1$s won\'t be notified about this.</string>
     <string name="relay_auth_consequence_read">If you don\'t, you won\'t see posts from %1$s here.</string>
+    <string name="relay_auth_consequence_post_venue">If you don\'t, your message won\'t be posted.</string>
+    <string name="relay_auth_consequence_read_venue">If you don\'t, you won\'t see it here.</string>
     <string name="relay_auth_name_and_others">%1$s and others</string>
     <string name="relay_auth_reason_send_dm">Send your private message to:</string>
     <string name="relay_auth_reason_notify_inbox">Notify:</string>
     <string name="relay_auth_reason_read_outbox">Download posts from:</string>
+    <string name="relay_auth_reason_post_venue">Post to this room</string>
+    <string name="relay_auth_reason_read_venue">Open this room</string>
+    <string name="relay_auth_reason_other">Use this relay</string>
     <string name="relay_auth_reason_my_own_relay">Connect to your own relay</string>
     <string name="relay_auth_and_others">…and others</string>
     <string name="relay_auth_allow_once">Allow once</string>
