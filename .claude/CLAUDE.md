@@ -13,7 +13,10 @@ a non-interactive JVM command-line client that drives the same `quartz` + `commo
 humans, agents, and interop tests. `quic` is a from-scratch pure-Kotlin QUIC v1 + HTTP/3 +
 WebTransport client (no JNI, no BouncyCastle), built because no Android-compatible Java QUIC library
 exists. `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
-relay-server code; smaller modules are `benchmark` (Android macrobenchmarks) and
+relay-server code; smaller modules are `benchmark` (Android macrobenchmarks),
+`relayBench` (head-to-head relay benchmark — boots geode, strfry and other
+relay binaries, replays a shared deterministic corpus, measures ingest/query/
+NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`) and
 `quic-interop` (QUIC interop runner, lives at `quic/interop`). `nestsClient` runs
 the audio-room protocol on top of `:quic` for the NIP-53 audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
 `moq/`) and **moq-lite Lite-03** (kixelated's variant, under `moq/lite/`); the
