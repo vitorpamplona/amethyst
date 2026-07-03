@@ -570,6 +570,33 @@ negotiates `permessage-deflate; client_no_context_takeover` out of the box.
 Compression was on the suspect list as a 3–5× bandwidth lever for mobile —
 it's already engaged; nothing to code.
 
+### Geode giant-REQ crawl + wedge: fixed (two masked bugs)
+
+The "giant single REQ streams at ~700 events/s and came back 2 events
+short" finding decomposed into two server bugs hiding each other:
+
+1. **O(n²) replay dedup** (`LiveEventStore.query`): the historical-replay
+   dedup set was an immutable Kotlin `Set` under an `AtomicReference` with
+   copy-on-add — `set + id` copies the whole set per streamed event (100k
+   events ≈ 5 billion hash inserts). Fixed with a spin-lock-guarded mutable
+   `HashSet` (same read/write threads as before; lock sections are a single
+   contains/add).
+2. **Session-pump slow-client policy misfire** (`WebSocketSessionPump`):
+   with the throttle gone, a fast replay instantly overflowed the
+   8192-frame backlog cap — which conflated "client is slow" with "replay
+   outruns the socket writer" (normal for bulk) — and the "drop" only
+   closed the internal queue, leaving the socket half-dead: the client hung
+   with no EOSE/close and silently missed the response tail (the likely
+   story behind the original 99,998/100,000). Now the producer is PACED
+   against a full backlog (bounded blocking wait for the writer, consistent
+   with the documented ingest-fanout behavior) and only a client still
+   behind after 30s is dropped — by actually cancelling the socket.
+
+Validation: `GiantReqStreamTest` (committed regression guard) — 20k-event
+single REQ over a real socket: pre-fix 8.4s (~2.4k events/s; 100k measured
+476–700/s), post-fix **0.7s (~27k events/s)**, all 20k delivered with EOSE.
+96 geode tests + quartz relay/server suites green.
+
 ## Recommendations (in order of value/risk)
 
 1. **Move Schnorr verification off the receiver coroutine** in the app's
