@@ -258,6 +258,31 @@ class LiveEventStore(
         onEachLive: (Event) -> Unit,
         onEose: () -> Unit,
     ) {
+        val handle = queryRawInline(ctx, filters, onEachStored, onEachLive, onEose)
+        try {
+            // Suspend until the caller's coroutine is cancelled (NIP-01
+            // CLOSE or connection drop); the live tail runs meanwhile.
+            awaitCancellation()
+        } finally {
+            handle.close()
+        }
+    }
+
+    /**
+     * The registration + replay + EOSE core of [queryRaw], run entirely
+     * on the calling coroutine. Small bounded REQs take this directly
+     * (see [SessionBackend.queryRawInline]) and skip the per-REQ
+     * coroutine; [queryRaw] wraps it with `awaitCancellation` for the
+     * launched path. Never returns `null` — this backend always
+     * supports the inline path.
+     */
+    override suspend fun queryRawInline(
+        ctx: RequestContext,
+        filters: List<Filter>,
+        onEachStored: (RawEvent) -> Unit,
+        onEachLive: (Event) -> Unit,
+        onEose: () -> Unit,
+    ): SessionBackend.LiveSubscriptionHandle {
         drainFtsIfSearching(filters)
         val seenLock = AtomicBoolean(false)
         var seenIds: HashSet<String>? = HashSet(1024)
@@ -290,11 +315,14 @@ class LiveEventStore(
                 onEachStored(raw)
             }
             onEose()
+            // Drop the dedupe set so the live path stops paying for it.
             seenLocked { seenIds = null }
-            awaitCancellation()
-        } finally {
+        } catch (e: Throwable) {
+            // A failed replay must not leak the registration.
             index.unregister(sub)
+            throw e
         }
+        return SessionBackend.LiveSubscriptionHandle { index.unregister(sub) }
     }
 
     override suspend fun count(
