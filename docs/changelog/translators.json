@@ -70,7 +70,8 @@
     "SeriousREC": "",
     "markkks": "",
     "helokuntzer": "",
-    "Kevin_1": ""
+    "Kevin_1": "",
+    "crowdin.pretended462": ""
   },
   "sinceLastTag": {
     "tag": "v1.12.6",
@@ -128,6 +129,24 @@
         ]
       },
       {
+        "user": "crowdin.pretended462",
+        "languages": [
+          "German"
+        ]
+      },
+      {
+        "user": "anthony-robin",
+        "languages": [
+          "French"
+        ]
+      },
+      {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
+        ]
+      },
+      {
         "user": "hypnotichemionus4",
         "languages": [
           "Chinese Simplified"
@@ -146,23 +165,11 @@
         ]
       },
       {
-        "user": "anthony-robin",
-        "languages": [
-          "French"
-        ]
-      },
-      {
         "user": "BitByBit21",
         "languages": [
           "Spanish",
           "Spanish, Mexico",
           "Spanish, United States"
-        ]
-      },
-      {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
         ]
       },
       {
