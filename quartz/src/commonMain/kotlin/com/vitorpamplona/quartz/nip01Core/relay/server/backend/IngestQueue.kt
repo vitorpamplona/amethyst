@@ -40,11 +40,14 @@ import kotlin.coroutines.CoroutineContext
 /**
  * Group-commit writer for incoming EVENT publishes.
  *
- * Submissions from any number of [RelaySession]s land in [incoming],
- * a single drain coroutine pulls one item to start a batch then
- * greedily drains everything else already queued (up to [maxBatch]),
- * and forwards the whole batch through [IEventStore.batchInsert] —
- * one writer-mutex acquisition + one BEGIN / COMMIT for the lot.
+ * Submissions from any number of [RelaySession]s land in [incoming].
+ * Two pipelined stage coroutines process them: a *verifier* pulls one
+ * item to start a batch, greedily drains everything else already
+ * queued (up to [maxBatch]) and runs the CPU-bound verify hook across
+ * cores; a *writer* forwards each verified batch through
+ * [IEventStore.batchInsert] — one writer-mutex acquisition + one
+ * BEGIN / COMMIT for the lot. The stages overlap: batch N+1 verifies
+ * while batch N commits.
  *
  * Why this lives here: the SQLite event store enforces a single-writer
  * mutex (matching SQLite's own file-level rule), so per-event
@@ -146,36 +149,64 @@ class IngestQueue(
 
     private fun ensureWriterStarted() {
         if (writerStarted.compareAndSet(expectedValue = false, newValue = true)) {
-            scope.launch { drainLoop() }
+            scope.launch { verifierLoop() }
+            scope.launch { writerLoop() }
         }
     }
 
-    private suspend fun drainLoop() {
-        val batch = ArrayList<Submission>(maxBatch)
+    /**
+     * One verified batch handed from the verifier stage to the writer
+     * stage. `results == null` means no verify hook is configured.
+     */
+    private class VerifiedBatch(
+        val batch: List<Submission>,
+        val results: BooleanArray?,
+    )
+
+    /**
+     * Stage handoff. Capacity 1 makes the two loops a genuine pipeline:
+     * the verifier can be checking batch N+1's signatures on the CPU
+     * cores while the writer holds the SQLite mutex for batch N —
+     * previously the two ran strictly back-to-back, so the writer idled
+     * during every verify and the cores idled during every commit.
+     * strfry gets the same overlap from its ingester/writer thread
+     * split; this closes a measured chunk of the ingest gap against it.
+     */
+    private val verified = Channel<VerifiedBatch>(1)
+
+    /**
+     * Stage 1: collect + verify. Blocks for the first submission,
+     * drains greedily up to [maxBatch] so back-to-back publishes
+     * coalesce, verifies across cores, and hands the batch downstream.
+     */
+    private suspend fun verifierLoop() {
         try {
             while (true) {
-                // Block for the first item — anything else would be a
-                // hot loop. Once we have one, drain greedily without
-                // blocking so back-to-back publishes coalesce into a
-                // single transaction.
+                val batch = ArrayList<Submission>(maxBatch)
                 batch.add(incoming.receive())
                 while (batch.size < maxBatch) {
                     val next = incoming.tryReceive().getOrNull() ?: break
                     batch.add(next)
                 }
+                verified.send(VerifiedBatch(batch, verifyBatch(batch)))
+            }
+        } catch (_: ClosedReceiveChannelException) {
+            // Normal shutdown via close().
+            verified.close()
+        }
+    }
 
-                processBatch(batch)
-                batch.clear()
+    /** Stage 2: one SQLite transaction per verified batch, then the OKs. */
+    private suspend fun writerLoop() {
+        try {
+            while (true) {
+                val next = verified.receive()
+                val finalOutcomes = runInsertStage(next.batch, next.results)
+                dispatchOutcomes(next.batch, finalOutcomes)
             }
         } catch (_: ClosedReceiveChannelException) {
             // Normal shutdown via close().
         }
-    }
-
-    private suspend fun processBatch(batch: List<Submission>) {
-        val verifyResults = verifyBatch(batch)
-        val finalOutcomes = runInsertStage(batch, verifyResults)
-        dispatchOutcomes(batch, finalOutcomes)
     }
 
     /**
