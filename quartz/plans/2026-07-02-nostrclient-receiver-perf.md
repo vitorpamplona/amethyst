@@ -478,6 +478,25 @@ Validation (DispatchStageBenchmark, PoolRequests-only, 4 feeder threads vs
 noisy, the scaling direction is consistent across every run). All
 PoolRequests concurrency + NostrClient + negentropy suites pass.
 
+### CachingEventDecoder: duplicates skip the re-parse (done)
+
+`BasicRelayClient`'s per-frame decode step is now a pluggable
+`MessageDecoder` (default: full parse, unchanged). The opt-in
+`CachingEventDecoder` scans an EVENT frame for its id (~0.3µs; the scan is
+JSON-escape-safe, so reposts embedding event JSON in `content` can't confuse
+it, and ANY irregularity falls back to a full parse) and, on a hit in its
+generational id→Event cache, synthesizes the `EventMessage` from the
+already-parsed `Event` with the frame's own subId. Dispatch semantics are
+IDENTICAL — every subscription still gets its delivery, per-relay
+bookkeeping still happens — only the redundant parse is skipped. Wire it via
+`NostrClient(builder, decoder = CachingEventDecoder())`.
+
+Validation (`DedupDecodeBenchmark`, 60k frames, 67% duplicates — the
+production-measured dup share is 14–57%): full parse 10.0µs/frame vs caching
+decoder 1.5µs/frame — **6.5×**, with duplicates costing ~0.3µs instead of
+10µs. 7 scan-safety unit tests (`CachingEventDecoderTest`) cover repost
+embedding, escaped subIds, malformed ids, cache rotation, non-EVENT frames.
+
 ## Recommendations (in order of value/risk)
 
 1. **Move Schnorr verification off the receiver coroutine** in the app's
