@@ -130,7 +130,7 @@ object SyncBenchmark {
         fun elapsedMs() = (System.nanoTime() - start) / 1_000_000.0
 
         try {
-            val session = NegentropySession("bench-sync", Filter(), localEvents, frameSizeLimit = 0)
+            val session = NegentropySession.fromEvents("bench-sync", Filter(), localEvents, frameSizeLimit = 0)
             val open = OptimizedJsonMapper.toJson(session.open())
             bytes += open.length
             check(socket.send(open)) { "send NEG-OPEN failed" }
