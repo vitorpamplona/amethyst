@@ -497,6 +497,19 @@ decoder 1.5µs/frame — **6.5×**, with duplicates costing ~0.3µs instead of
 10µs. 7 scan-safety unit tests (`CachingEventDecoderTest`) cover repost
 embedding, escaped subIds, malformed ids, cache rotation, non-EVENT frames.
 
+### Bounded per-connection receive buffer (done)
+
+`BasicOkHttpWebSocket` (quartz) and `OkHttpWebSocket` (amethyst) now bound
+the reader-thread→consumer channel at 4096 frames (was `UNLIMITED`). A
+consumer slower than the socket blocks OkHttp's reader thread — TCP flow
+control pushes back on the relay instead of accumulating frame Strings on
+our heap (a multi-million-event bulk download could previously queue
+gigabytes). Trade-off documented on the constant: a blocked reader also
+delays PING/PONG, so the bound is generous. Validated by
+`BoundedReceiveBufferTest`: an 8-frame buffer against a deliberately slow
+consumer over a real socket — every EVENT plus EOSE arrives, in order, no
+drops, no deadlock.
+
 ## Recommendations (in order of value/risk)
 
 1. **Move Schnorr verification off the receiver coroutine** in the app's

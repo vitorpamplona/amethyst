@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket.Companion.exceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -76,7 +77,11 @@ class OkHttpWebSocket(
         val out: WebSocketListener,
     ) : okhttp3.WebSocketListener() {
         val scope = CoroutineScope(Dispatchers.IO + exceptionHandler)
-        val incomingMessages: Channel<String> = Channel(Channel.UNLIMITED)
+
+        // Bounded: a consumer slower than the socket blocks OkHttp's reader
+        // thread (TCP backpressure) instead of accumulating unbounded heap.
+        // See BasicOkHttpWebSocket.RECEIVE_BUFFER_FRAMES for the rationale.
+        val incomingMessages: Channel<String> = Channel(BasicOkHttpWebSocket.RECEIVE_BUFFER_FRAMES)
         val job = // Launch a coroutine to process messages from the channel.
             scope.launch {
                 for (message in incomingMessages) {
