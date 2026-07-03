@@ -158,7 +158,7 @@ class Nip77NegentropyTest {
             val client = WireClient(hub, relayUrl)
             try {
                 val session =
-                    NegentropySession(
+                    NegentropySession.fromEvents(
                         subId = "neg-1",
                         filter = Filter(kinds = listOf(1)),
                         localEvents = clientEvents,
@@ -205,7 +205,7 @@ class Nip77NegentropyTest {
             val client = WireClient(hub, relayUrl)
             try {
                 // First session.
-                val s1 = NegentropySession("neg", Filter(kinds = listOf(1)), localEvents = emptyList())
+                val s1 = NegentropySession.fromEvents("neg", Filter(kinds = listOf(1)), localEvents = emptyList())
                 client.send(OptimizedJsonMapper.toJson(s1.open()))
                 val response = client.nextMessage() as NegMsgMessage
                 val r1 = s1.processMessage(response.message)
@@ -219,7 +219,7 @@ class Nip77NegentropyTest {
                 // server must build a new session and respond. If the
                 // close didn't free state, this would either error or
                 // continue the previous reconciliation.
-                val s2 = NegentropySession("neg", Filter(kinds = listOf(1)), localEvents = emptyList())
+                val s2 = NegentropySession.fromEvents("neg", Filter(kinds = listOf(1)), localEvents = emptyList())
                 client.send(OptimizedJsonMapper.toJson(s2.open()))
                 val resp2 = client.nextMessage() as NegMsgMessage
                 val r2 = s2.processMessage(resp2.message)
@@ -262,7 +262,7 @@ class Nip77NegentropyTest {
                 val client = WireClient(capped, capUrl)
                 try {
                     val session =
-                        NegentropySession(
+                        NegentropySession.fromEvents(
                             subId = "neg-overflow",
                             filter = Filter(kinds = listOf(1)),
                             localEvents = emptyList(),
@@ -295,7 +295,7 @@ class Nip77NegentropyTest {
                 val client = WireClient(capped, capUrl)
                 try {
                     repeat(2) { i ->
-                        val s = NegentropySession("ok-$i", Filter(kinds = listOf(1)), localEvents = emptyList())
+                        val s = NegentropySession.fromEvents("ok-$i", Filter(kinds = listOf(1)), localEvents = emptyList())
                         client.send(OptimizedJsonMapper.toJson(s.open()))
                         // Drain the NEG-MSG response so the next OPEN goes
                         // through cleanly.
@@ -303,7 +303,7 @@ class Nip77NegentropyTest {
                     }
 
                     // Third OPEN — should be rejected with a NOTICE.
-                    val third = NegentropySession("third", Filter(kinds = listOf(1)), localEvents = emptyList())
+                    val third = NegentropySession.fromEvents("third", Filter(kinds = listOf(1)), localEvents = emptyList())
                     client.send(OptimizedJsonMapper.toJson(third.open()))
                     val response = client.nextMessage()
                     assertTrue(response is NoticeMessage, "expected NOTICE, got ${response::class.simpleName}")
@@ -327,12 +327,12 @@ class Nip77NegentropyTest {
             try {
                 // First open with localEvents = a; next we'll re-open
                 // and confirm the new session sees a fresh state.
-                val first = NegentropySession("dup", Filter(kinds = listOf(1)), localEvents = a)
+                val first = NegentropySession.fromEvents("dup", Filter(kinds = listOf(1)), localEvents = a)
                 client.send(OptimizedJsonMapper.toJson(first.open()))
                 client.nextMessage() as NegMsgMessage // discard
 
                 // Re-OPEN with same subId, different localEvents.
-                val second = NegentropySession("dup", Filter(kinds = listOf(1)), localEvents = a + b)
+                val second = NegentropySession.fromEvents("dup", Filter(kinds = listOf(1)), localEvents = a + b)
                 client.send(OptimizedJsonMapper.toJson(second.open()))
                 val resp = client.nextMessage() as NegMsgMessage
                 val r = second.processMessage(resp.message)

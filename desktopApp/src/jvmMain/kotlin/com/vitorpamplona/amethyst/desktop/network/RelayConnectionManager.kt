@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -56,7 +57,9 @@ data class RelayMetrics(
 open class RelayConnectionManager(
     websocketBuilder: WebsocketBuilder,
 ) : RelayConnectionListener {
-    private val _client = NostrClient(websocketBuilder)
+    // The caching decoder skips re-parsing EVENT frames that arrive again via
+    // another subscription or relay.
+    private val _client = NostrClient(websocketBuilder, decoder = CachingEventDecoder())
 
     /** Exposes the underlying INostrClient for subscription coordinators */
     val client: com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient get() = _client

@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MessageDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -80,10 +81,18 @@ import kotlinx.coroutines.launch
 class NostrClient(
     private val websocketBuilder: WebsocketBuilder,
     private val parentScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+    /**
+     * Per-frame decode strategy shared by every relay connection. Pass a
+     * [com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder]
+     * to skip re-parsing duplicate EVENT frames (the same event arriving via
+     * another subscription or another relay reuses the already-parsed Event;
+     * dispatch semantics are unchanged).
+     */
+    decoder: MessageDecoder = MessageDecoder.Default,
 ) : INostrClient,
     RelayConnectionListener,
     AutoCloseable {
-    private val relayPool: RelayPool = RelayPool(websocketBuilder, this)
+    private val relayPool: RelayPool = RelayPool(websocketBuilder, this, decoder)
 
     /** Scope for all subscriptions. */
     private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob())

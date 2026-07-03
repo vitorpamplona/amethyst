@@ -112,6 +112,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -310,8 +311,9 @@ class AccountViewModel(
         // but uses a SupervisorJob so child failures are independent.
         val customScope = CoroutineScope(viewModelScope.coroutineContext + SupervisorJob())
 
-        // Provides a relay pool
-        val newClient = NostrClient(Amethyst.instance.websocketBuilder, customScope)
+        // Provides a relay pool. Crawls hit many relays with overlapping
+        // filters, so the duplicate-frame decoder pays off most here.
+        val newClient = NostrClient(Amethyst.instance.websocketBuilder, customScope, CachingEventDecoder())
 
         // Authenticates with relays (registers itself with the client).
         RelayAuthenticator(

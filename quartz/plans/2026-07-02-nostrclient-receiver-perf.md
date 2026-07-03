@@ -1,0 +1,681 @@
+# NostrClient receiver performance — review + production measurements
+
+**Date:** 2026-07-02
+**Status:** findings + measurement harness; no production code changed yet
+**Harness:** `quartz/src/jvmTest/.../relay/prodbench/ProductionReceiverBenchmark.kt`
+(run with `./gradlew :quartz:jvmTest --tests "*.ProductionReceiverBenchmark" -PprodRelayBench=1`)
+
+## Question
+
+Is the NostrClient's single-threaded receiver making us significantly slower?
+And how do our filters actually behave against production relays?
+
+## What the receiver actually is (review)
+
+The receive path is single-threaded **per relay connection**, not globally:
+
+```
+OkHttp reader thread (per socket)
+  └─ trySendBlocking → Channel(UNLIMITED)            [BasicOkHttpWebSocket / app OkHttpWebSocket]
+       └─ ONE consumer coroutine per connection (Dispatchers.IO)
+            ├─ OptimizedJsonMapper.fromJsonToMessage  [JSON parse]        ~32µs/msg (JVM)
+            ├─ PoolRequests.onIncomingMessage         [spin-lock + state]
+            │    └─ SubscriptionListener.onEvent      [assemblers, inline]
+            └─ NostrClient.listeners.forEach          [EventCollector, loggers…]
+                 └─ LocalCache.justConsume(…, wasVerified = false)
+                      └─ dedup by id → justVerify()   [Schnorr verify]    ~75µs/event (JVM)
+                      └─ note creation, index updates, flow emissions
+```
+
+Everything downstream of the channel — parse, subscription state machine, every
+listener, signature verification, and LocalCache consumption — runs serially on
+that one consumer coroutine. Different relays run on different coroutines
+(cross-relay parallelism exists), but they contend on shared state: the
+`PoolRequests` spin lock, `LocalCache`'s maps, and (on Android) the same
+`Dispatchers.IO` pool as everything else.
+
+Notably, the **relay-server side already solved this** on the write path:
+`IngestQueue` batches incoming EVENTs and runs Schnorr verification for a batch
+in parallel on `Dispatchers.Default` (`parallelVerify`), precisely because "an
+event's `verify()` is CPU-bound and parallelisable". The client receiver has no
+equivalent.
+
+## Production measurements (2026-07-02)
+
+Environment: JVM 21, 4-core x86 cloud container (server CPU — phones are
+5–10× slower per core), relays `relay.damus.io`, `nos.lol`, `relay.primal.net`,
+`nostr.wine`. All scenarios ran after a discarded warmup pass (JIT warm).
+`INLINE` = verify on the receiver coroutine (what the app does today via
+`CacheClientConnector`); `PARALLEL` = verify offloaded to a
+`Dispatchers.Default` pool.
+
+### Filter behavior
+
+| Scenario | received | unique | duplicates | notes |
+|---|---|---|---|---|
+| kind-1 firehose, limit 500 ×4 relays | 2013 | 1738 | 14% | all relays honored limit; EOSE 0.3–1.0s after REQ |
+| notifications (p=busy pubkey, kinds 1,6,7,9735) | 1552 | 986 | 36% | primal returned only 52 (thin index for this query) |
+| metadata burst (kinds 0,10002, 300 authors) | 1146 | 491 | 57% | each profile fetched ~2.3× across 4 relays |
+
+- Time from `subscribe()` to REQ-on-the-wire is dominated by connect/TLS
+  (~0.7–1.5s cold); local dispatch is negligible.
+- Event sizes vary wildly by relay: damus kind-1 averaged **8.7 KB**/event
+  (4.4 MB for 500 events) vs ~0.8 KB on nos.lol — parse cost tracks size
+  (p90 proc 1.5ms on damus vs 0.18ms on nos.lol).
+- Duplicate factor grows with fan-out: the metadata pattern wastes >half the
+  received bytes on duplicates. Dedup happens *before* verify (LocalCache
+  checks the id first), so duplicates cost parse + dedup lookup, not a verify.
+
+### Receiver queue behavior (the actual question)
+
+Queue delay = how long a frame sat in the per-connection channel before the
+consumer picked it up. This is the direct symptom of a saturated receiver.
+
+kind-1 firehose (large events), per relay:
+
+| | INLINE p50 / p90 / max | PARALLEL p50 / p90 / max |
+|---|---|---|
+| relay.damus.io | 6.8ms / 26.6ms / 77.9ms | 5.4ms / 38.1ms / 41.5ms |
+| nos.lol | 4.3ms / 11.2ms / 15.9ms | 1.3ms / 3.8ms / 4.5ms |
+| relay.primal.net | 5.4ms / 24.5ms / 28.1ms | 1.2ms / 1.8ms / 7.7ms |
+| nostr.wine | 9.4ms / 30.3ms / 34.8ms | 2.4ms / 8.4ms / 20.7ms |
+
+metadata burst (small events, fastest arrival — damus delivered at 3300–8400 msg/s):
+
+| | INLINE p50 / max | PARALLEL p50 / max |
+|---|---|---|
+| relay.damus.io | 3.0ms / 10.7ms | 0.14ms / 0.48ms |
+
+Consumer busy fraction peaked at **53%** (nostr.wine, INLINE, 3000 msg/s) on
+this fast CPU — i.e. a single relay bursting at production speed already
+consumes half of one core with inline verification, on hardware much faster
+than a phone.
+
+### Single-thread ceilings (offline, captured production frames)
+
+- JSON parse: **31,000 msg/s** (32µs/msg, mixed sizes incl. damus 8.7KB events)
+- Schnorr verify: **13,200 events/s** sequential (75µs/event);
+  **34,400 events/s** across 4 cores (2.6–3.0× speedup)
+- Combined parse+verify ceiling for one receiver coroutine: **~9,000 events/s**
+  on this CPU. On a phone core (5–10× slower): **~1,000–2,000 events/s**, and
+  that is *before* LocalCache's note creation, index updates and flow emissions,
+  which the harness does not model and which run on the same coroutine.
+
+## Answer
+
+1. **The receiver is not globally single-threaded** — it is one consumer per
+   relay. Cross-relay parallelism already exists. The per-relay serialization
+   is what caps throughput.
+
+2. **For steady-state browsing the receiver is not the bottleneck.** Queue
+   delays with today's inline design are single-digit-to-tens of ms; connect
+   latency and relay EOSE times (300ms–1.5s) dominate what the user perceives.
+
+3. **For burst ingest (app start, feed switch, big profile sync) it is a real
+   cost, and it scales linearly with burst size.** A 5,000-event burst from one
+   fast relay serializes ~375ms of parse+verify on this benchmark machine —
+   plausibly **2–4s per relay on a mid-range phone**, during which that relay's
+   EOSE, OKs and live events all sit behind the backlog. Verification is
+   60–70% of that inline cost and is embarrassingly parallel (measured 2.6–3×
+   on 4 cores; phones have 8).
+
+4. **Offloading verification cuts queue latency 2–5× and raises the per-relay
+   ceiling ~3×** with no protocol or API change — the exact pattern
+   `IngestQueue.parallelVerify` already uses on the server side.
+
+## Dispatch stage (post-parse, pre-verify) microbenchmark
+
+**Harness:** `quartz/src/jvmTest/.../relay/prodbench/DispatchStageBenchmark.kt`
+(offline, ungated: `./gradlew :quartz:jvmTest --tests "*.DispatchStageBenchmark"`)
+
+Measures everything between the JSON parse and where verification would start:
+`NostrClient.onIncomingMessage` → `PoolRequests` (spin lock + sub state) →
+listeners → id-dedup → handoff to a verify stage. 30k unique synthetic events,
+2 overlapping subs per relay, delivered by 1 feeder thread (one busy relay) and
+by 4 (four relays bursting into the shared client). JVM 21, 4 cores.
+
+| variant | 1 feeder (deliveries/s) | 4 feeders (aggregate deliveries/s) |
+|---|---|---|
+| PoolRequests-only | 11.1M | 3.6M |
+| full dispatch, no-op sink | 10.2M | 4.3M |
+| + dedup (CHM keySet) | 6.8M | 3.5M |
+| + dedup + per-event channel handoff | 3.6M | 3.1M |
+| + dedup + batched handoff (64) | 6.8M | 2.8M |
+| **early dedup + batched handoff** | 7.2M | **11.4M** |
+
+Findings:
+
+1. **Uncontended, the dispatch stage is ~100ns/message** — 300× cheaper than
+   parse (32µs) and 750× cheaper than verify (75µs). One relay can never
+   saturate it; nothing to fix for the single-relay case.
+2. **It scales negatively under concurrency.** Four feeder threads deliver
+   *less* aggregate throughput (3.6–4.3M/s) than one thread alone (10–11M/s):
+   the `PoolRequests` busy-wait spin lock serializes every EVENT frame from
+   every relay and burns the other cores spinning. Isolated `PoolRequests`
+   shows the same collapse, so the lock (not listeners or dedup) is the cause.
+   At production message rates (~3k msg/s/relay) this is not yet the
+   bottleneck, but it wastes cores the verify pool would want, and it is the
+   structural ceiling once verify moves off the receiver.
+3. **Handoff granularity matters:** a per-event `Channel.send` costs ~180ns
+   extra per event (halves single-feeder throughput); a 64-event batch makes
+   the handoff essentially free — same conclusion the server's `IngestQueue`
+   already embodies.
+4. **Early dedup is the biggest lever under multi-relay load:** checking the
+   seen-ids set right after parse — before entering the locked dispatch path —
+   let duplicate frames (75% of deliveries in the 4-relay setup; production
+   showed 14–57% dups) skip the contended section entirely: 2.7–4× the
+   aggregate throughput of every other 4-feeder variant. Semantic caveat: a
+   short-circuited duplicate no longer bumps that sub's per-relay
+   `onNewEvent`/stats counters, so paging/EOSE bookkeeping would need the
+   cheap counters kept ahead of the skip.
+
+## Bulk download: N-million events from one relay (download + parse only)
+
+**Harness:** `quartz/src/jvmTest/.../relay/prodbench/BulkDownloadBenchmark.kt`
+(gated: `./gradlew :quartz:jvmTest --tests "*.BulkDownloadBenchmark" -PprodRelayBench=1`)
+
+### Local ceilings (geode on localhost TCP, 100k seeded events, 4 cores)
+
+| strategy | events/s | wall for 100k |
+|---|---|---|
+| quartz, 1 conn, one giant REQ | 476 | 210s (and 2 events silently missing) |
+| quartz, 4 conns time-sharded, giant REQs | 2,001 | 50s |
+| quartz, 1 conn, paged 1000/page | 12,480 | 8.0s |
+| **quartz, 4 conns time-sharded + paged** | **24,210** | **4.1s** |
+| raw socket (no parse), one giant REQ | ~676 | timed out at 120s (81k/100k) |
+
+- **Giant single REQs are a trap.** The raw (no-parse) variant proves it's
+  server-side: geode streams a 100k-event response at ~700 events/s
+  (per-frame cost in the session pump / query streaming path — needs its own
+  investigation, `WebSocketSessionPump`), and the quartz run came back 2
+  events short. Public relays are worse: they clamp limits and may drop
+  frames or the connection under output backpressure. Paged cursors through
+  the very same server ran 26× faster.
+- **Sharding the `created_at` range across connections stacks with paging:**
+  4 sharded + paged connections ≈ 2× one paged connection locally (24k/s),
+  and each connection gets its own receiver coroutine, so parse parallelizes
+  for free.
+
+### Per-frame strategies, offline (50k frames, ~580B each)
+
+| strategy | events/s | µs/frame |
+|---|---|---|
+| full `fromJsonToMessage`, 1 thread | 276k | 3.6 |
+| full parse, 4 threads | 657k | 1.5 (aggregate) |
+| id-scan only (archive raw, parse lazily) | 2.96M | 0.34 |
+
+Parse of small events is ~3.6µs; the earlier production capture (mixed sizes,
+damus 8.7KB events) measured 32µs. Either way **parse is not the bottleneck
+for bulk download**: one core parses 10M small events in ~36s, and a 4-core
+fan-out does it in ~15s. The wire and the relay's page cadence dominate.
+
+### Production test case: kinds=[30382] on nip85.nosfabrica.com (cap 20k)
+
+| strategy | wall | events/s | notes |
+|---|---|---|---|
+| paged download (until-cursor) | 5.4s | 3,711 | 41 pages ≈ 500/page (relay clamp) |
+| NIP-77 negentropy sync | 12.7s | 1,575 | full set = 31,241 ids, 9 reconcile windows |
+
+Negentropy correctly enumerated the whole 31,241-id set (splitting 9 windows
+around the relay's `max_sync_events` cap) and streamed id-batch REQs — but
+for a **cold** download it was 2.4× slower than plain paging: the reconcile
+rounds and by-id lookups cost more than sequential pages when you need
+*everything anyway*. Negentropy's win is **incremental re-sync**: once the
+10M events are local, the next sync transfers only fingerprints + the diff
+instead of re-paging the world. (kind 30382 events carry empty `content` —
+all data in tags — so the MB/s column reads 0.)
+
+### Per-connection wall: relay pacing, not client parse (2026-07-03)
+
+A user report proposed "parallel parse + strictly-ordered dispatch" on the
+theory that the per-connection serial parse caps a single connection at
+~4k events/s (fetch-by-id, 12 idle cores, no gain past ~4 concurrent REQs,
+throughput scaling only with connections). The discriminating test
+(`BulkDownloadBenchmark.perConnectionWall`) pages the same production query
+on one connection twice — once through a raw socket that does NO JSON parse
+(only an `indexOf` scan for `created_at`), once through the full quartz
+stack:
+
+| | events/s (nip85.nosfabrica.com, kinds 30382, 20k cap) |
+|---|---|
+| raw socket, no parse | 3,382 |
+| full quartz stack, parse + dispatch | 3,754 |
+
+Identical within noise. **The ~3.5–4k/s single-connection ceiling is the
+relay's per-connection page/response cadence, not client CPU** — at 465B
+events the parser is ~1% busy at this rate (single-thread parse ceiling:
+276k/s small events, 31k/s for the large-frame production mix). The same
+relay served our negentropy fetch-by-id at only 1.6k/s with 8 concurrent
+REQs and an idle client — also server-side. This matches every symptom in
+the report: per-connection pacing explains "more REQs on one connection
+don't help" and "throughput scales with connections" just as well as a
+client-side serial stage would, and "CPU idle" is what a network wall looks
+like.
+
+Implications for the proposed parallel-parse pipeline:
+
+- It will NOT lift the reported 4k/s ceiling on relays with this pacing; the
+  proven lever is **more connections** (created_at- or id-range sharding).
+- It IS still worth having for the cases where the consumer genuinely
+  saturates: large-frame relays (32µs/frame mix) on phones (5–10× slower
+  cores → ~3–6k/s parse ceiling) being streamed by fast relays, and any
+  setup where verify/consume stays inline on the consumer.
+- The proposal's ordering constraints are correct and non-negotiable:
+  NEG-MSG/NEG-ERR handshake order, EOSE-only-after-its-EVENTs,
+  per-subscription EVENT order, OK/CLOSED/NOTICE/AUTH stream order. A
+  sequence-numbered reorder buffer after a parallel parse pool satisfies all
+  four (dispatch order = receive order).
+- The bounded-pipeline half of the proposal is worth doing regardless — the
+  UNLIMITED per-connection channel is the unbounded-memory risk under any
+  slow consumer (see below), and bounding it converts overload into TCP
+  backpressure. One caveat: blocking OkHttp's reader thread also delays its
+  PING/PONG handling, so sustained backpressure can trip relay-side ping
+  timeouts — the bound should be sized generously.
+
+### Parallel fetch-by-id matrix — full corpus, no cap (2026-07-03)
+
+**Harness:** `quartz/src/jvmTest/.../relay/prodbench/ByIdFetchBenchmark.kt`.
+Enumerates every kind-30382 id on nip85.nosfabrica.com (33,000 that day), then
+each cell re-downloads the FULL corpus by 250-id REQ batches from a shared
+queue. Connections are pre-established before timing; every cell completed
+with zero missing ids and zero timed-out batches.
+
+| cell | events/s |
+|---|---|
+| 1 conn × 1 REQ | 1,970 |
+| 1 conn × 2 REQs | 3,423 |
+| 1 conn × 4 REQs | 8,026 |
+| 1 conn × 8 REQs | 17,214 |
+| 1 conn × 16 REQs | **30,735** |
+| 2 conns × 4 REQs | 15,557 |
+| 4 conns × 4 REQs | 27,251 |
+| 8 conns × 4 REQs | **40,402** |
+
+This corrects both the user report AND this doc's own earlier "relay
+per-connection pacing" phrasing:
+
+1. **No wall at ~4 concurrent REQs** — one connection scales near-linearly to
+   16 in-flight REQs (1,970 → 30,735 events/s). The relay is happy to serve
+   30k+/s down a single socket when the client keeps requests in flight.
+2. **Connections and per-connection REQs are interchangeable**: 1×16 ≈ 4×4.
+   The real variable is **total in-flight REQs** (Little's law: throughput ≈
+   in-flight ÷ per-REQ latency; a 250-id batch serves in ~130ms here).
+   Diminishing returns start around 32 in-flight (~40k/s) — likely relay
+   query capacity.
+3. **Every slow configuration measured so far is a serialization problem,
+   not a bandwidth/CPU one**: until-cursor paging is 1-in-flight by
+   construction (~2–3.7k/s ≈ the 1×1 cell); `negentropySync` measured
+   1.6k/s with `maxConcurrentReqs = 8` because its download workers starve —
+   the reconcile rounds pace id production (bounded `idBatches` buffer of
+   `workerCount` batches) and overflow windows recurse **sequentially**
+   (`syncWindow` lo-half then hi-half).
+4. The reported "stops helping past ~4 REQs" is consistent with
+   `negentropySync`'s internal throttling (or a relay-side subscription cap,
+   or a slow per-event sink) — not with independent by-id REQs on this relay.
+5. Client parse at 30.7k/s through ONE connection's consumer coroutine was
+   ~11% of a core (3.6µs × 30.7k) on this machine — still not the wall. On a
+   phone (5–10× slower) 15–30k/s IS where the single consumer saturates, so
+   the parallel-parse proposal becomes relevant on mobile at exactly the
+   rates this fan-out unlocks.
+
+**Concrete quartz improvements this implies** (in `negentropySync`):
+raise `maxConcurrentReqs` (16 measured safe here), deepen the `idBatches`
+buffer so downloads don't starve on reconcile cadence, and reconcile
+overflow-split windows concurrently instead of recursing sequentially.
+Together these should move it from 1.6k/s toward the ~30k/s the same
+connection demonstrably sustains. At 40k/s, 10M events by id is ~4 minutes
+(plus id enumeration).
+
+### Extended matrix on a 2.6M corpus — saturation found (2026-07-03, later)
+
+Between the two runs the relay was **backfilled from 33k to 2,628,328
+kind-30382 events** (it's an actively-loading NIP-85 dataset — cross-run
+comparisons must account for corpus size). Rerun with 125-id batches, cells
+capped at a 120s budget (all cells partial by design at this corpus size):
+
+| cell | events/s | effective per-REQ latency |
+|---|---|---|
+| 1 conn × 1 REQ | 1,088 | ~115ms |
+| 1 conn × 4 REQs | 3,953 | ~126ms |
+| 1 conn × 8 REQs | 5,420 | ~184ms |
+| 1 conn × 16 REQs | 5,480 | ~365ms |
+| 1 conn × 20 REQs (relay cap) | 5,464 | ~458ms |
+| 2 conns × 10 REQs | 10,508 | ~285ms |
+| 4 conns × 10 REQs | **14,757** | ~542ms |
+| 8 conns × 10 REQs | 14,617 | ~1.1s |
+| 16 conns × 10 REQs | 14,921 | ~2.2s |
+
+Also learned the hard way (first extended run wedged): the relay's NIP-11
+advertises `limitation.max_subscriptions = 20` — REQs 21+ on one connection
+aren't just rejected, they wedged the connection, and with the client's
+5-minute reconnect backoff every subsequent batch burned its full timeout.
+**A bulk downloader must read NIP-11 and stay under the caps.**
+
+What changed vs the 33k-corpus run:
+
+1. **On the big corpus there IS a per-connection wall — at ~8 in-flight
+   REQs / ~5.5k events/s**, where the small corpus scaled linearly to 16 /
+   30.7k/s. Past 8, added in-flight only inflates per-REQ latency (queueing,
+   textbook Little's law). The user report's "stops helping past ~4" is
+   therefore *scale-dependent*: wrong on a hot 33k dataset, roughly right
+   (off by 2×) on a cold 2.6M one — by-id lookups on the larger index cost
+   more and strfry's per-connection service saturates.
+2. **The relay-wide ceiling is ~15k events/s at ~40 total in-flight** (vs
+   ~40k/s on the small corpus). 4 conns × 10 REQs already reaches it; 16
+   conns adds nothing but latency. More connections cannot beat the server's
+   aggregate query capacity.
+3. Client-side cost remains negligible at these rates — every wall in this
+   table is server-side.
+
+Practical shape for a bulk-by-id downloader, from the data: read NIP-11 →
+open ~4 connections × ~10 REQs — and make concurrency **adaptive** (grow
+in-flight until events/s stops improving / per-REQ latency inflates, then
+back off), since the same relay's sweet spot moved 8× in one day as its
+dataset grew. At today's ~15k/s ceiling: 2.6M events ≈ 3 min; 10M ≈ 11 min.
+
+### negentropySync pipelining (implemented, 2026-07-03)
+
+`NostrClientNegentropySyncExt` was restructured around the findings — no
+NIP-11 auto-detection, the budget knobs are the caller's:
+
+- **Global download-worker pool** spanning the whole sync (was per-window
+  with a join between windows, so the connection idled while the next
+  window's NEG rounds ran).
+- **`reconcileConcurrency` parameter** — overflow-split windows are
+  reconciled by N concurrent NEG sessions from a shared work queue (was a
+  strictly sequential lo-half/hi-half recursion). Default 1.
+- **`idBufferBatches` parameter** — depth of the bounded buffer between
+  reconciliation and download workers (was hardcoded to `workerCount`).
+- KDoc contract: peak subscriptions = `maxConcurrentReqs +
+  reconcileConcurrency + 1`; sizing it under the relay's
+  `limitation.max_subscriptions` is the caller's responsibility.
+
+All 44 negentropy tests (unit + end-to-end against the in-process relay +
+geode interop) pass unchanged. Production shootout on the 2.6M corpus,
+100k-event cap, same day, single connection
+(`BulkDownloadBenchmark.negentropyPipelineShootout`):
+
+| variant | events/s | note |
+|---|---|---|
+| old implementation (previous day, 31k corpus) | 1,575 | not same-day comparable |
+| new pipeline, old-equivalent params (8 reqs, seq windows) | 3,601 | global pool already overlaps windows |
+| new pipeline, tuned (12 reqs, 4 reconcilers, 96-batch buffer) | **4,497** | 17 subs ≤ strfry's 20 cap |
+
+Tuned reaches **~82% of the measured ~5.5k/s single-connection by-id
+ceiling**; the 4 reconcilers also produced ids 2.3× faster (need=171,812
+enumerated vs 109,336 in less wall time). The remaining gap is reconcile
+burstiness plus by-id query cost. Going past ~5.5k/s on this relay requires
+multiple connections (caller-level: disjoint `created_at` windows per
+client), which the matrix caps at ~15k/s relay-wide.
+
+### negentropyReconcile: the composable half (implemented, 2026-07-03)
+
+To let callers own the loading strategy (fan the download across several
+connections/clients, prioritize, or push local events up), the reconcile is
+now available standalone in `NostrClientNegentropySyncExt`:
+
+- **`negentropyReconcile(relay, filter, localEntries, …)`** — pure NIP-77
+  diff, no downloads/uploads. Streams both directions in `batchSize` chunks
+  as rounds arrive: `onNeedIds` (relay has, local set lacks → download) and
+  `onHaveIds` (local has, relay lacks → publish). Back-pressured: the
+  callbacks suspend the reconcile round that produced them. Local state goes
+  in as `List<IdAndTime>` (the same 40 B/entry projection
+  `IEventStore.snapshotIdsForNegentropy` returns), and window splits slice
+  it by `createdAt` via binary search, so both sides always reconcile the
+  same timeline slice. Overflow windows split exactly like `negentropySync`,
+  with the same `reconcileConcurrency` knob.
+- **`negentropyReconcileIds(…): NegentropyIdDiff`** — convenience that
+  materializes `needIds` + `haveIds` lists (KDoc warns about heap on
+  multi-million diffs; the streaming form is the scalable one).
+- `NegentropySession`'s primary constructor now takes `List<IdAndTime>`
+  (JVM erasure forbids overloading on `List<Event>`); the old event-list
+  form moved to `NegentropySession.fromEvents(…)`, mirroring
+  `NegentropyServerSession` — call sites in `cli`, `geode` tests and
+  `NegentropyManager` migrated. **API note for external quartz users:**
+  `NegentropySession(subId, filter, events)` must become
+  `NegentropySession.fromEvents(subId, filter, events)`.
+
+`negentropySync` itself now delegates to the same window engine. Covered by
+`NostrClientNegentropyReconcileTest` (empty-local, partial overlap both
+ways, identical sets, batch streaming, since/until window slicing) — 49
+negentropy tests green.
+
+**`amy sync` migrated onto it (2026-07-03):** the CLI's hand-rolled raw
+WebSocket negotiate loop (single un-windowed session; a strfry
+`max_sync_events` overflow was a hard error) is gone. `SyncCommand` now
+calls `negentropyReconcile` on amy's own `NostrClient` and pipelines the
+loop-closing: need-id batches feed 4 concurrent by-id `drain`s and have-ids
+feed an uploader, both overlapping the remaining reconcile rounds (peak 7
+subs on the relay, under the common cap of 20). Downloads still funnel
+through amy's verify-and-store path. Output field `rounds` (protocol
+round-trips) became `windows` (created_at splits). Verified end-to-end
+against two embedded geode relays: down-only 25/25, up-only 5/5, and
+bidirectional re-runs converge to a zero diff.
+
+### Answer for "10M events from one relay, fastest"
+
+At nosfabrica's measured page cadence, one connection ≈ 3.7k events/s → 10M
+in ~45 min. To improve, in order:
+
+1. **Page with until-cursors — never one giant REQ** (silent drops, server
+   slow paths, relay clamps).
+2. **Shard the `created_at` range across K connections** to the same relay
+   (each shard pages independently; no cursor dependency between shards).
+   Local: 2× at K=4; WAN, where RTT dominates page turnaround, closer to
+   linear until the relay rate-limits per-IP.
+3. **Don't optimize parse first** — it's 2–5% of the budget. If the goal is
+   archival, id-scan + store raw frames (0.34µs/frame) and parse lazily
+   in parallel later.
+4. **Use negentropy for the second sync onward**, not the first.
+5. **Memory:** the per-connection channel is UNLIMITED — at 10M events a
+   sink slower than the socket accumulates heap without bound. A bulk
+   downloader should bound the channel (blocking the OkHttp reader thread is
+   fine — that's TCP backpressure doing its job) and stream events to disk,
+   never hold the set.
+
+## Implemented optimizations (2026-07-03)
+
+### PoolRequests lock sharding (done)
+
+The global spin lock moved into `RequestSubscriptionState` — one lock per
+subscription — since every compound mutation is scoped to one subId and
+different subs share no wire state. `decideCommandLocked` now takes the state
+instance so it never re-enters the (non-reentrant) lock, and the all-subs
+iterations (connect/disconnect/cannot-connect) lock one sub at a time.
+`withLock` is inline to keep the per-EVENT hot path allocation-free.
+
+Validation (DispatchStageBenchmark, PoolRequests-only, 4 feeder threads vs
+1): scaling flipped from **negative** (11.1M → 3.6M deliveries/s, 0.33×) to
+**positive** (3.4–7.3× across runs; absolute numbers on the shared CI box are
+noisy, the scaling direction is consistent across every run). All
+PoolRequests concurrency + NostrClient + negentropy suites pass.
+
+### CachingEventDecoder: duplicates skip the re-parse (done)
+
+`BasicRelayClient`'s per-frame decode step is now a pluggable
+`MessageDecoder` (default: full parse, unchanged). The opt-in
+`CachingEventDecoder` scans an EVENT frame for its id (~0.3µs; the scan is
+JSON-escape-safe, so reposts embedding event JSON in `content` can't confuse
+it, and ANY irregularity falls back to a full parse) and, on a hit in its
+generational id→Event cache, synthesizes the `EventMessage` from the
+already-parsed `Event` with the frame's own subId. Dispatch semantics are
+IDENTICAL — every subscription still gets its delivery, per-relay
+bookkeeping still happens — only the redundant parse is skipped. Wire it via
+`NostrClient(builder, decoder = CachingEventDecoder())`.
+
+Validation (`DedupDecodeBenchmark`, 60k frames, 67% duplicates — the
+production-measured dup share is 14–57%): full parse 10.0µs/frame vs caching
+decoder 1.5µs/frame — **6.5×**, with duplicates costing ~0.3µs instead of
+10µs. 7 scan-safety unit tests (`CachingEventDecoderTest`) cover repost
+embedding, escaped subIds, malformed ids, cache rotation, non-EVENT frames.
+
+Follow-up (2026-07-03): the decoder's spin lock was replaced with lock-free
+concurrent maps — a new `ConcurrentHashCache` expect/actual
+(`ConcurrentHashMap` on JVM/Android, `CacheMap` on Apple, copy-on-write on
+Linux, mirroring `LargeCache`'s per-platform choices) plus atomic counters.
+Rotation races are deliberately tolerated (documented: every failure mode is
+a redundant re-parse, never a wrong message).
+`CachingEventDecoderConcurrencyTest` hammers one shared decoder from 8
+threads (80k duplicate-heavy frames, capacity 256 so rotations fire
+constantly) and asserts zero wrong messages with exact counter accounting;
+the benchmark assertion still holds post-refactor.
+
+Same-JVM A/B against the resurrected spin-lock implementation (3 rounds,
+interleaved): **1 thread — parity** (0.79–1.02×, noise around 1.0; the
+uncontended lock was already ~free), **8 threads sharing one decoder —
+lock-free wins 3.0–4.5×** (e.g. 127ms → 28ms for 128k frames). The lock was
+serializing the concurrent hit path exactly the way the old global
+PoolRequests lock did; ConcurrentHashMap removes it.
+
+**Adopted in all four front-end clients (2026-07-03):** the Android app's
+pool (`AppModules.kt`), the Android crawl client
+(`AccountViewModel.buildCrawlClient` — Event Sync / Cashu discovery, the
+duplicate-heaviest path), the desktop `RelayConnectionManager`, and amy's
+`Context`. Each passes `CachingEventDecoder()` at `NostrClient`
+construction; no other behavior change.
+
+### Bounded per-connection receive buffer (REVERTED — deliberate design choice)
+
+A 4096-frame bound on the reader→consumer channel was tried (backpressure
+via TCP flow control instead of unbounded heap; proven lossless by a
+slow-consumer test) and then **reverted by explicit maintainer decision**,
+for two reasons that outweigh the heap tail-risk:
+
+1. **The remote infrastructure isn't ours.** Backpressure parks the backlog
+   in the RELAY's outbound buffers/TCP window — a client should release the
+   relay from its duties as fast as the relay can send, and own the
+   buffering itself.
+2. **The app holds 2000+ simultaneous relay connections.** A bounded buffer
+   under a slow consumer blocks OkHttp reader THREADS; at that connection
+   count, blocked readers are a thread-starvation hazard far worse than the
+   heap growth they prevent.
+
+The `Channel.UNLIMITED` receive queues now carry an explicit "do not bound"
+comment with this rationale. The slow-consumer risk is addressed from the
+other side instead: make the consumer fast enough that backlogs don't form
+(CachingEventDecoder, ParallelEventVerifier, PoolRequests sharding).
+
+### ParallelEventVerifier: batched verify off the receiver coroutine (done)
+
+The client-side mirror of `IngestQueue.parallelVerify`:
+`accessories/ParallelEventVerifier`. `submit(event, context)` is a cheap
+bounded-channel send from the receiver coroutine; a drain loop batches
+greedily (up to 256) and fans each batch across `Dispatchers.Default` in
+core-sized CHUNKS — a per-event `async` measured ~40µs/event of scheduling
+overhead that swallowed the entire parallel gain, and the per-batch
+fork/join barrier at batch 64 still cost half of it (64 → 1.2×, 256 → 2.2×,
+1024 → 3.2× on 4 cores). Callbacks dispatch in submission order, a
+`preVerified` hook short-circuits already-trusted ids, and the bounded
+submit channel backpressures the socket.
+
+Also learned while measuring: `Event` caches derived state after its first
+verification, so any verify benchmark must use disjoint event sets per pass
+(the first version accidentally measured warm objects and reported 0.94–1.2×).
+
+Validation: `ParallelVerifyBenchmark` (4k fresh signed events, 8 signers) —
+sequential 50.6µs/event vs pipeline 28.1µs/event, **1.8×** on the noisy
+4-core CI box with an in-benchmark ≥1.5× assertion (crypto-only parallel
+ceiling measured 2.89× there). 4 correctness tests: valid/tampered routing,
+submission-order preservation, preVerified short-circuit, callback-crash
+resilience.
+
+**App-side scope correction (2026-07-03): do NOT wire this into
+`CacheClientConnector`.** Code review confirmed the mobile app's
+verification is ALREADY parallel across relays: each connection's
+`OkHttpWebSocket` owns its own consumer coroutine on `Dispatchers.IO`, and
+nothing downstream funnels — `NostrClient.onIncomingMessage` →
+`EventCollector` → `LocalCache.justConsume` → `justVerify` all run inline
+on the delivering connection's coroutine, `LargeCache` is a
+`ConcurrentSkipListMap`, and the one global serializer (`PoolRequests`'
+lock) is now per-subscription. With 2000+ connections a multi-relay burst
+already saturates the cores; the verifier would only reshuffle the work.
+Its real scope is where a SINGLE connection's stream serializes verifies:
+bulk flows (`fetchAllPages`-style downloads, each client's leg inside
+`negentropySyncFanOut`, amy/CLI syncs). One second-order note for a future
+on-device profile: today's verifies run on `Dispatchers.IO` (64 threads on
+~8 phone cores), so a large burst can oversubscribe cores with CPU-bound
+crypto and starve the IO pool — if profiling ever shows that, moving verify
+to a core-bounded dispatcher (which this accessory does) is the fix.
+
+### negentropySyncFanOut: multi-connection sync (done)
+
+`accessories/NostrClientNegentropyFanOutExt`: one reconcile feeding by-id
+download batches to N clients (one socket each) × `reqsPerClient` workers,
+with reconcile windows ALSO round-robined across the connections. Events
+funnel through a bounded channel to a single consumer (exact `maxEvents`,
+single-threaded `onEvent`); everything backpressures; `localEntries` diffing
+and have-reporting work as in `negentropyReconcile`. 4 in-process
+multi-client tests (full download, cap, local-diff, single-client
+degradation) — 18 negentropy tests green.
+
+Production shootout (100k cap, kind 30382, same-run pairs): fan-out 4×8 vs
+tuned single client measured **+18% to +64%** (7.3k vs 6.1k/s; 7.5k vs
+4.5k/s) with heavy relay-side variance — the relay is being actively
+backfilled and its NEG snapshot caching favors whichever variant runs
+second. The honest bound: **this relay produces reconcile ids at only
+~9–10k/s regardless of connection count** (server-side snapshot build), so
+end-to-end fan-out gains cap there even though the download stage alone
+scales 2.7× with connections (the by-id matrix). On download-bound syncs
+(bigger events, relays with faster NEG production, phone-CPU clients) the
+gain approaches the matrix ratio.
+
+**Descoped with evidence — adaptive in-flight control (#6):** an AIMD window
+on download REQs would idle-down against today's reconcile-bound relay and
+the benchmarks could not demonstrate a win (the criterion for shipping);
+revisit if a relay shows download-bound behavior with volatile capacity.
+
+### permessage-deflate: verified active (no change needed)
+
+The per-connection-wall test now prints the negotiated
+`Sec-WebSocket-Extensions`; against nip85.nosfabrica.com (strfry) OkHttp
+negotiates `permessage-deflate; client_no_context_takeover` out of the box.
+Compression was on the suspect list as a 3–5× bandwidth lever for mobile —
+it's already engaged; nothing to code.
+
+### Geode giant-REQ crawl + wedge: fixed (two masked bugs)
+
+The "giant single REQ streams at ~700 events/s and came back 2 events
+short" finding decomposed into two server bugs hiding each other:
+
+1. **O(n²) replay dedup** (`LiveEventStore.query`): the historical-replay
+   dedup set was an immutable Kotlin `Set` under an `AtomicReference` with
+   copy-on-add — `set + id` copies the whole set per streamed event (100k
+   events ≈ 5 billion hash inserts). Fixed with a spin-lock-guarded mutable
+   `HashSet` (same read/write threads as before; lock sections are a single
+   contains/add).
+2. **Session-pump slow-client policy misfire** (`WebSocketSessionPump`):
+   with the throttle gone, a fast replay instantly overflowed the
+   8192-frame backlog cap — which conflated "client is slow" with "replay
+   outruns the socket writer" (normal for bulk) — and the "drop" only
+   closed the internal queue, leaving the socket half-dead: the client hung
+   with no EOSE/close and silently missed the response tail (the likely
+   story behind the original 99,998/100,000). Now the producer is PACED
+   against a full backlog (bounded blocking wait for the writer, consistent
+   with the documented ingest-fanout behavior) and only a client still
+   behind after 30s is dropped — by actually cancelling the socket.
+
+Validation: `GiantReqStreamTest` (committed regression guard) — 20k-event
+single REQ over a real socket: pre-fix 8.4s (~2.4k events/s; 100k measured
+476–700/s), post-fix **0.7s (~27k events/s)**, all 20k delivered with EOSE.
+96 geode tests + quartz relay/server suites green.
+
+## Recommendations (in order of value/risk)
+
+1. **Move Schnorr verification off the receiver coroutine** in the app's
+   consume path (`CacheClientConnector` → `LocalCache.justConsume`): a bounded
+   verify stage on `Dispatchers.Default` (batch + `async` per batch, or a small
+   worker pool), mirroring `IngestQueue`. Ordering constraint: dedup must stay
+   before verify (it already is), and consumers of `justConsume`'s return value
+   need an async-tolerant path.
+2. **Keep parse on the receiver coroutine** (32µs/msg is cheap and keeps
+   message ordering per subscription), but consider skipping re-serialization
+   work for duplicates (57% of metadata-burst traffic never needs more than an
+   id lookup).
+3. **Fix the `PoolRequests` spin lock's negative scaling** — the dispatch
+   microbenchmark shows 4 concurrent relay consumers deliver *less* than one
+   thread through it. Either replace the busy-wait with `synchronized`/a
+   parking lock, or shard the state by subId, and consider the early-dedup
+   short-circuit so duplicate frames never enter the locked path at all.
+4. Re-run this harness on-device (the same class compiles for Android
+   instrumentation with minor changes) before/after any fix; the offline
+   ceilings section gives the numbers to compare.

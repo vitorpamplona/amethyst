@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
-import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
@@ -140,24 +140,37 @@ class LiveEventStore(
         //
         // The set is read from the [IngestQueue] drain coroutine (in
         // `deliver`, called synchronously from `fanout`) and written
-        // from this coroutine (the historical-replay closure below).
-        // It must be a persistent / immutable Set under an
-        // AtomicReference — wrapping a mutable HashSet would race
-        // because AtomicReference only protects the reference, not
-        // the set's internal state. Each `add` is a CAS-loop that
-        // publishes a new immutable Set; `deliver`'s `load()` always
-        // sees a fully-constructed snapshot.
+        // from this coroutine (the historical-replay closure below),
+        // so access is guarded by a tiny spin lock (contains/add,
+        // never I/O). It MUST be a mutable set under a lock, not an
+        // immutable Set under an AtomicReference with copy-on-add:
+        // `set + id` copies the whole set per streamed event, which
+        // made large replays accidentally O(n²) — a 100k-event REQ
+        // crawled at ~700 events/s and the rate degraded as the
+        // response grew (see the plan doc's giant-REQ finding).
         //
         // Once cleared to null after EOSE, `deliver` short-circuits
         // and every live event is forwarded.
-        val seenIds = AtomicReference<Set<String>?>(emptySet())
+        val seenLock = AtomicBoolean(false)
+        var seenIds: HashSet<String>? = HashSet(1024)
+
+        fun <R> seenLocked(block: () -> R): R {
+            while (seenLock.exchange(true)) {
+                while (seenLock.load()) { }
+            }
+            try {
+                return block()
+            } finally {
+                seenLock.store(false)
+            }
+        }
 
         val sub =
             LiveSubscription(
                 filters = filters,
                 deliver = { event ->
-                    val seen = seenIds.load()
-                    if (seen != null && seen.contains(event.id)) return@LiveSubscription
+                    val duplicate = seenLocked { seenIds?.contains(event.id) ?: false }
+                    if (duplicate) return@LiveSubscription
                     onEach(event)
                 },
             )
@@ -165,24 +178,14 @@ class LiveEventStore(
         index.register(filters, sub)
         try {
             store.query<Event>(filters) { event ->
-                // CAS-loop on an immutable Set. The historical
-                // replay is single-writer in steady state, so the
-                // CAS typically succeeds first try; the loop only
-                // matters if we lose a race on `seenIds.store(null)`
-                // (post-EOSE), in which case `current == null` and
-                // we exit cleanly.
-                while (true) {
-                    val current = seenIds.load() ?: break
-                    if (event.id in current) break
-                    if (seenIds.compareAndSet(current, current + event.id)) break
-                }
+                seenLocked { seenIds?.add(event.id) }
                 onEach(event)
             }
             onEose()
             // Drop the dedupe set so the live path stops paying for
             // it. From this point the index drives delivery and
             // duplicates are no longer possible.
-            seenIds.store(null)
+            seenLocked { seenIds = null }
             // Suspend until the caller's coroutine is cancelled
             // (e.g. NIP-01 CLOSE or connection drop). The `finally`
             // unregisters from the index.

@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnection
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MessageDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
@@ -57,6 +58,8 @@ import kotlinx.coroutines.flow.update
 class RelayPool(
     val websocketBuilder: WebsocketBuilder,
     val listener: RelayConnectionListener = EmptyConnectionListener,
+    /** Shared per-frame decode strategy for every relay in the pool. */
+    val decoder: MessageDecoder = MessageDecoder.Default,
 ) : RelayConnectionListener {
     private val relays = LargeCache<NormalizedRelayUrl, IRelayClient>()
 
@@ -73,6 +76,7 @@ class RelayPool(
             url = url,
             socketBuilder = websocketBuilder,
             listener = this,
+            decoder = decoder,
         )
 
     fun reconnectIfNeedsTo(ignoreRetryDelays: Boolean = false) {

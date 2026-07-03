@@ -76,6 +76,13 @@ class OkHttpWebSocket(
         val out: WebSocketListener,
     ) : okhttp3.WebSocketListener() {
         val scope = CoroutineScope(Dispatchers.IO + exceptionHandler)
+
+        // UNLIMITED on purpose — do NOT bound this channel. The app holds
+        // 2000+ relay connections; a bounded buffer under a slow consumer
+        // would block OkHttp reader threads and park the backlog on the
+        // relay's outbound buffers — infrastructure that isn't ours. Drain
+        // the remote as fast as it can send; consumer speed is handled
+        // downstream.
         val incomingMessages: Channel<String> = Channel(Channel.UNLIMITED)
         val job = // Launch a coroutine to process messages from the channel.
             scope.launch {

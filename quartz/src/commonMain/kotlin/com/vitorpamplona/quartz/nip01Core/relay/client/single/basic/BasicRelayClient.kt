@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient.Companion.DELAY_TO_RECONNECT_IN_SECS
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MessageDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
@@ -61,6 +62,13 @@ open class BasicRelayClient(
     val socketBuilder: WebsocketBuilder,
     val listener: RelayConnectionListener,
     val nowInSeconds: () -> Long = TimeUtils::now,
+    /**
+     * Per-frame decode strategy. The default fully parses every frame; pass a
+     * shared [com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder]
+     * (one instance across the whole pool) to skip re-parsing duplicate EVENT
+     * frames that other relays/subscriptions already delivered.
+     */
+    val decoder: MessageDecoder = MessageDecoder.Default,
 ) : IRelayClient {
     companion object {
         // minimum wait time to reconnect: 1 second
@@ -148,7 +156,7 @@ open class BasicRelayClient(
 
         override fun onMessage(text: String) {
             try {
-                val msg = OptimizedJsonMapper.fromJsonToMessage(text)
+                val msg = decoder.decode(text)
                 listener.onIncomingMessage(this@BasicRelayClient, text, msg)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e

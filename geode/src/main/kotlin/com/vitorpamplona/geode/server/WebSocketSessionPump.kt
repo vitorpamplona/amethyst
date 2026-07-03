@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
 import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.channels.consumeEach
@@ -97,17 +98,34 @@ internal class WebSocketSessionPump(
             }
         val session =
             server.connect { json ->
-                // The channel itself is UNLIMITED, so trySend can't
-                // report "full". Enforce the cap explicitly: increment
-                // first, refuse if we'd cross the bound, otherwise
-                // enqueue.
-                val depth = outstanding.incrementAndGet()
-                if (depth > MAX_OUTGOING_BUFFER) {
-                    outstanding.decrementAndGet()
-                    droppedForBackpressure = true
-                    outQueue.close()
-                    return@connect
+                // Backpressure, not instant drop. A full backlog usually
+                // means a REQ replay is producing faster than the socket
+                // writer ships — normal for bulk downloads to a HEALTHY
+                // client — so pace the producer (this blocks the replay
+                // coroutine's thread; the live-fanout path already
+                // documents that a slow sub blocks the ingest writer).
+                // Only a client that stays behind for the whole deadline
+                // is genuinely slow; then close FOR REAL. The previous
+                // code dropped at the cap immediately — killing healthy
+                // bulk clients the moment the O(n²)-replay throttle was
+                // fixed — and only closed outQueue, leaving the socket
+                // half-dead (no EOSE, no close frame; the client hung).
+                var waitedMs = 0L
+                while (outstanding.get() >= MAX_OUTGOING_BUFFER && !droppedForBackpressure) {
+                    if (waitedMs >= SLOW_CLIENT_DEADLINE_MS) {
+                        droppedForBackpressure = true
+                        outQueue.close()
+                        // Actually terminate the connection so the client
+                        // sees the failure instead of waiting forever.
+                        ws.cancel()
+                        return@connect
+                    }
+                    Thread.sleep(BACKPRESSURE_POLL_MS)
+                    waitedMs += BACKPRESSURE_POLL_MS
                 }
+                if (droppedForBackpressure) return@connect
+
+                outstanding.incrementAndGet()
                 val res = outQueue.trySend(json)
                 if (!res.isSuccess) {
                     // Channel was closed concurrently (e.g. teardown).
@@ -147,5 +165,16 @@ internal class WebSocketSessionPump(
          * channel (≈ a few hundred bytes), not the full cap.
          */
         const val MAX_OUTGOING_BUFFER: Int = 8192
+
+        /**
+         * How long a producer will wait for the writer to drain a full
+         * backlog before the client is declared slow and disconnected.
+         * A healthy client on any sane link drains 8192 frames orders of
+         * magnitude faster than this.
+         */
+        const val SLOW_CLIENT_DEADLINE_MS: Long = 30_000
+
+        /** Poll interval while pacing a producer against a full backlog. */
+        const val BACKPRESSURE_POLL_MS: Long = 5
     }
 }

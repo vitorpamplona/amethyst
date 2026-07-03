@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySession
@@ -41,8 +42,14 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.concurrent.Volatile
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.decrementAndFetch
+import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.coroutines.coroutineContext
 import kotlin.math.min
 import kotlin.time.TimeSource
@@ -121,9 +128,26 @@ class NegentropySyncResult(
  *   it and the disconnect is turned into a clean abort. Pass `0` to disable the
  *   watchdog entirely and run until the socket drops (download batches keep a finite
  *   internal idle bound regardless, so a single stuck batch can't hang the pipeline).
+ * @param reconcileConcurrency how many `created_at` windows are reconciled at once
+ *   after an over-cap split (each holds one NEG session on the connection). `1`
+ *   reproduces the old strictly-sequential window walk. Raising it overlaps the
+ *   reconcile round-trips of one window with another's — the reconcile cadence is
+ *   what starves the download workers on large sets.
+ * @param idBufferBatches   depth (in batches of [fetchBatch] ids) of the buffer
+ *   between reconciliation and the download workers. Deeper keeps the workers fed
+ *   across a window's round-trip gaps; memory is bounded by
+ *   `idBufferBatches * fetchBatch` ids.
+ *
+ *   **Subscription budget is the caller's job:** at peak this method holds
+ *   `maxConcurrentReqs + reconcileConcurrency + 1` (keep-alive) subscriptions on
+ *   the connection. Relays cap concurrent subscriptions per connection (NIP-11
+ *   `limitation.max_subscriptions`; e.g. strfry defaults to 20) and exceeding the
+ *   cap can wedge the connection, not just fail the extra REQ — size the two knobs
+ *   to fit the target relay.
  * @param onProgress        optional `(needSoFar, downloaded)` ticks as work proceeds.
  * @param onEvent           called once per distinct event, on the relay reader thread.
  */
+@OptIn(ExperimentalAtomicApi::class)
 suspend fun INostrClient.negentropySync(
     relay: NormalizedRelayUrl,
     filter: Filter,
@@ -131,11 +155,13 @@ suspend fun INostrClient.negentropySync(
     maxConcurrentReqs: Int = 8,
     fetchBatch: Int = 500,
     idleTimeoutMs: Long = 120_000L,
+    reconcileConcurrency: Int = 1,
+    idBufferBatches: Int = maxConcurrentReqs * 4,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): NegentropySyncResult {
-    var need = 0
-    var windows = 0
+    val need = AtomicInt(0)
+    val windows = AtomicInt(0)
     var downloaded = 0
 
     // Pin the relay in the pool's "desired" set for the whole sync. A NEG-OPEN is not
@@ -156,17 +182,19 @@ suspend fun INostrClient.negentropySync(
             val producer =
                 launch {
                     try {
-                        syncWindow(
+                        syncPipeline(
                             relay = relay,
                             filter = filter,
                             idleTimeoutMs = idleTimeoutMs,
                             fetchBatch = fetchBatch,
                             maxConcurrentReqs = maxConcurrentReqs,
-                            onWindow = { windows++ },
+                            reconcileConcurrency = reconcileConcurrency,
+                            idBufferBatches = idBufferBatches,
+                            onWindow = { windows.incrementAndFetch() },
                             // Only accumulate here; progress is reported from the
                             // single consumer loop below so the user callback is never
                             // invoked from two coroutines at once.
-                            onNeed = { need += it },
+                            onNeed = { need.addAndFetch(it) },
                             deliver = { events.send(it) },
                         )
                     } finally {
@@ -177,7 +205,7 @@ suspend fun INostrClient.negentropySync(
             for (event in events) {
                 downloaded++
                 onEvent(event)
-                onProgress?.invoke(need, downloaded)
+                onProgress?.invoke(need.load(), downloaded)
                 if (maxEvents in 1..downloaded) break
             }
 
@@ -190,10 +218,10 @@ suspend fun INostrClient.negentropySync(
     }
 
     return NegentropySyncResult(
-        needCount = need,
+        needCount = need.load(),
         haveCount = 0,
         downloaded = downloaded,
-        windows = windows,
+        windows = windows.load(),
     )
 }
 
@@ -204,6 +232,8 @@ suspend fun INostrClient.negentropySync(
     maxConcurrentReqs: Int = 8,
     fetchBatch: Int = 500,
     idleTimeoutMs: Long = 120_000L,
+    reconcileConcurrency: Int = 1,
+    idBufferBatches: Int = maxConcurrentReqs * 4,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): NegentropySyncResult =
@@ -214,6 +244,8 @@ suspend fun INostrClient.negentropySync(
         maxConcurrentReqs = maxConcurrentReqs,
         fetchBatch = fetchBatch,
         idleTimeoutMs = idleTimeoutMs,
+        reconcileConcurrency = reconcileConcurrency,
+        idBufferBatches = idBufferBatches,
         onProgress = onProgress,
         onEvent = onEvent,
     )
@@ -257,6 +289,8 @@ suspend fun INostrClient.negentropySyncOrFetch(
     maxConcurrentReqs: Int = 8,
     fetchBatch: Int = 500,
     idleTimeoutMs: Long = 120_000L,
+    reconcileConcurrency: Int = 1,
+    idBufferBatches: Int = maxConcurrentReqs * 4,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): NegentropyOrFetchResult {
@@ -283,6 +317,8 @@ suspend fun INostrClient.negentropySyncOrFetch(
                 maxConcurrentReqs = maxConcurrentReqs,
                 fetchBatch = fetchBatch,
                 idleTimeoutMs = idleTimeoutMs,
+                reconcileConcurrency = reconcileConcurrency,
+                idBufferBatches = idBufferBatches,
                 onProgress = onProgress,
             ) { accept(it) }
         NegentropyOrFetchResult(delivered, pagedFallback = false, negentropy = result, fallbackCause = null)
@@ -306,6 +342,8 @@ suspend fun INostrClient.negentropySyncOrFetch(
     maxConcurrentReqs: Int = 8,
     fetchBatch: Int = 500,
     idleTimeoutMs: Long = 120_000L,
+    reconcileConcurrency: Int = 1,
+    idBufferBatches: Int = maxConcurrentReqs * 4,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): NegentropyOrFetchResult =
@@ -316,60 +354,214 @@ suspend fun INostrClient.negentropySyncOrFetch(
         maxConcurrentReqs = maxConcurrentReqs,
         fetchBatch = fetchBatch,
         idleTimeoutMs = idleTimeoutMs,
+        reconcileConcurrency = reconcileConcurrency,
+        idBufferBatches = idBufferBatches,
         onProgress = onProgress,
         onEvent = onEvent,
     )
 
 /**
- * Recursively reconciles [filter] for [relay], splitting by `created_at` windows
- * whenever the relay rejects the set as too large, and downloading the ids of each
- * window as it resolves. Runs on a single coroutine; [deliver] funnels events out.
+ * The whole-sync pipeline: a single pool of [maxConcurrentReqs] download workers
+ * fed by up to [reconcileConcurrency] concurrent window reconciliations through a
+ * bounded buffer of [idBufferBatches] id batches.
+ *
+ * Why this shape (measured on a 2.6M-event production set — see
+ * `quartz/plans/2026-07-02-nostrclient-receiver-perf.md`):
+ *
+ *  - The workers are GLOBAL, not per-window: with the old per-window pool the
+ *    next window's reconcile round-trips only started after the previous
+ *    window's last download joined, so the connection idled between windows.
+ *  - Overflow-split windows go into a shared work queue processed by
+ *    [reconcileConcurrency] reconcilers, overlapping their NEG round-trips.
+ *    Each active reconcile holds one NEG session on the connection.
+ *  - The id buffer decouples the bursty reconcile id stream from the steady
+ *    download stream; it stays bounded so a slow consumer still back-pressures
+ *    the relay (memory is O(idBufferBatches × fetchBatch) ids).
  *
  * Throws [NegentropySyncException] for any window negentropy cannot reconcile (a
- * minimal window still over the cap, or an unavailable/erroring relay).
+ * minimal window still over the cap, or an unavailable/erroring relay); the
+ * failure cancels the whole pipeline.
  */
-private suspend fun INostrClient.syncWindow(
+@OptIn(ExperimentalAtomicApi::class)
+private suspend fun INostrClient.syncPipeline(
     relay: NormalizedRelayUrl,
     filter: Filter,
     idleTimeoutMs: Long,
     fetchBatch: Int,
     maxConcurrentReqs: Int,
+    reconcileConcurrency: Int,
+    idBufferBatches: Int,
     onWindow: () -> Unit,
     onNeed: (Int) -> Unit,
     deliver: suspend (Event) -> Unit,
-) {
-    coroutineContext.ensureActive()
+) = coroutineScope {
+    val idBatches = Channel<List<HexKey>>(idBufferBatches.coerceAtLeast(1))
 
-    when (val outcome = downloadWindow(relay, filter, idleTimeoutMs, fetchBatch, maxConcurrentReqs, onNeed, deliver)) {
-        is ReconcileOutcome.Complete -> onWindow()
-
-        is ReconcileOutcome.Overflow -> {
-            val lo = filter.since ?: 0L
-            val hi = filter.until ?: TimeUtils.now()
-            if (hi - lo <= MIN_WINDOW_SECONDS) {
-                // A minimal window that still overflows: negentropy genuinely can't
-                // enumerate this slice. Surface it — paging is the caller's call.
-                throw NegentropySyncException(
-                    relay = relay,
-                    window = filter,
-                    reason = NegentropySyncException.Reason.OVER_MAX_SYNC_EVENTS,
-                    detail = "created_at window [$lo, $hi] still exceeds the relay's max_sync_events",
-                )
-            } else {
-                val mid = lo + (hi - lo) / 2
-                syncWindow(relay, filter.copy(since = lo, until = mid), idleTimeoutMs, fetchBatch, maxConcurrentReqs, onWindow, onNeed, deliver)
-                syncWindow(relay, filter.copy(since = mid + 1, until = hi), idleTimeoutMs, fetchBatch, maxConcurrentReqs, onWindow, onNeed, deliver)
+    val workers =
+        List(maxConcurrentReqs.coerceAtLeast(1)) {
+            launch {
+                for (batch in idBatches) {
+                    coroutineContext.ensureActive()
+                    for (event in fetchByIds(relay, batch, idleTimeoutMs)) {
+                        deliver(event)
+                    }
+                }
             }
         }
 
-        is ReconcileOutcome.Failed ->
-            throw NegentropySyncException(
-                relay = relay,
-                window = filter,
-                reason = NegentropySyncException.Reason.UNAVAILABLE,
-                detail = outcome.detail,
-            )
+    reconcileWindows(
+        clients = listOf(this@syncPipeline),
+        relay = relay,
+        filter = filter,
+        localEntries = emptyList(),
+        idleTimeoutMs = idleTimeoutMs,
+        batchSize = fetchBatch,
+        reconcileConcurrency = reconcileConcurrency,
+        onWindow = onWindow,
+        onNeed = onNeed,
+        onHave = {},
+        sendNeedBatch = { batch -> idBatches.send(batch) },
+        sendHaveBatch = null,
+    )
+
+    idBatches.close()
+    workers.joinAll()
+}
+
+/**
+ * The shared window engine behind [negentropySync] and [negentropyReconcile]:
+ * reconciles [filter] against [localEntries], splitting into `created_at`
+ * windows whenever the relay rejects the set as too large, with up to
+ * [reconcileConcurrency] windows reconciling at once from a shared work
+ * queue. Each window's local subset is sliced out of [localEntries] (which
+ * MUST be sorted by `createdAt`) so both sides always reconcile the same
+ * slice of the timeline.
+ *
+ * Throws [NegentropySyncException] for any window negentropy cannot reconcile
+ * (a minimal window still over the cap, or an unavailable/erroring relay); the
+ * failure cancels the whole scope.
+ */
+@OptIn(ExperimentalAtomicApi::class)
+internal suspend fun reconcileWindows(
+    // one or more connections to the SAME relay; reconciler i runs its NEG
+    // sessions on clients[i % size], so concurrent windows spread across
+    // connections (server-side snapshot builds are paced per connection)
+    clients: List<INostrClient>,
+    relay: NormalizedRelayUrl,
+    filter: Filter,
+    localEntries: List<IdAndTime>,
+    idleTimeoutMs: Long,
+    batchSize: Int,
+    reconcileConcurrency: Int,
+    onWindow: () -> Unit,
+    onNeed: (Int) -> Unit,
+    onHave: (Int) -> Unit,
+    sendNeedBatch: suspend (List<HexKey>) -> Unit,
+    sendHaveBatch: (suspend (List<HexKey>) -> Unit)?,
+) = coroutineScope {
+    // Windows waiting for (or under) reconciliation. UNLIMITED so a reconciler
+    // re-queueing an overflow split never suspends while holding queue capacity
+    // (the split fan-out is tiny: two Filters per overflow).
+    val pending = Channel<Filter>(Channel.UNLIMITED)
+
+    // Queued-or-running windows. An overflow replaces one window with two
+    // (net +1); a completion is -1; the queue closes when it hits zero.
+    val remaining = AtomicInt(1)
+    pending.send(filter)
+
+    val reconcilers =
+        List(reconcileConcurrency.coerceAtLeast(1)) { reconcilerIndex ->
+            launch {
+                val client = clients[reconcilerIndex % clients.size]
+                for (window in pending) {
+                    coroutineContext.ensureActive()
+
+                    val outcome =
+                        client.reconcileStreaming(
+                            relay = relay,
+                            filter = window,
+                            localEntries = entriesForWindow(localEntries, window.since, window.until),
+                            idleTimeoutMs = idleTimeoutMs,
+                            fetchBatch = batchSize,
+                            onNeed = onNeed,
+                            onHave = onHave,
+                            sendNeedBatch = sendNeedBatch,
+                            sendHaveBatch = sendHaveBatch,
+                        )
+
+                    when (outcome) {
+                        is ReconcileOutcome.Complete -> {
+                            onWindow()
+                            if (remaining.decrementAndFetch() == 0) pending.close()
+                        }
+
+                        is ReconcileOutcome.Overflow -> {
+                            val lo = window.since ?: 0L
+                            val hi = window.until ?: TimeUtils.now()
+                            if (hi - lo <= MIN_WINDOW_SECONDS) {
+                                // A minimal window that still overflows: negentropy
+                                // genuinely can't enumerate this slice. Surface it —
+                                // paging is the caller's call.
+                                throw NegentropySyncException(
+                                    relay = relay,
+                                    window = window,
+                                    reason = NegentropySyncException.Reason.OVER_MAX_SYNC_EVENTS,
+                                    detail = "created_at window [$lo, $hi] still exceeds the relay's max_sync_events",
+                                )
+                            }
+                            val mid = lo + (hi - lo) / 2
+                            remaining.incrementAndFetch()
+                            pending.send(window.copy(since = lo, until = mid))
+                            pending.send(window.copy(since = mid + 1, until = hi))
+                        }
+
+                        is ReconcileOutcome.Failed ->
+                            throw NegentropySyncException(
+                                relay = relay,
+                                window = window,
+                                reason = NegentropySyncException.Reason.UNAVAILABLE,
+                                detail = outcome.detail,
+                            )
+                    }
+                }
+            }
+        }
+
+    reconcilers.joinAll()
+}
+
+/**
+ * The `createdAt`-range slice of [sorted] (ascending by `createdAt`) that
+ * belongs to the window `[since, until]` (both inclusive, NIP-01 semantics).
+ * Binary-searched so window splits stay O(log n) over multi-million local sets.
+ */
+private fun entriesForWindow(
+    sorted: List<IdAndTime>,
+    since: Long?,
+    until: Long?,
+): List<IdAndTime> {
+    if (sorted.isEmpty() || (since == null && until == null)) return sorted
+
+    val lo = since ?: 0L
+    val hi = until ?: Long.MAX_VALUE
+
+    // first index with createdAt >= lo
+    var start = 0
+    var e = sorted.size
+    while (start < e) {
+        val mid = (start + e) ushr 1
+        if (sorted[mid].createdAt < lo) start = mid + 1 else e = mid
     }
+
+    // first index with createdAt > hi
+    var end = start
+    e = sorted.size
+    while (end < e) {
+        val mid = (end + e) ushr 1
+        if (sorted[mid].createdAt <= hi) end = mid + 1 else e = mid
+    }
+
+    return if (start >= end) emptyList() else sorted.subList(start, end)
 }
 
 private sealed interface ReconcileOutcome {
@@ -386,11 +578,203 @@ private sealed interface ReconcileOutcome {
 }
 
 /**
- * Drives one NIP-77 reconciliation of [filter] against an EMPTY local set, sending
+ * Outcome of a [negentropyReconcile] run.
+ *
+ * @property needCount ids the relay has that the local set lacks (streamed to `onNeedIds`).
+ * @property haveCount ids the local set has that the relay lacks (streamed to `onHaveIds`).
+ * @property windows   number of `created_at` windows the reconcile split into.
+ */
+class NegentropyReconcileResult(
+    val needCount: Int,
+    val haveCount: Int,
+    val windows: Int,
+)
+
+/**
+ * Pure NIP-77 reconciliation — no downloads, no uploads. Diffs the relay's
+ * matched set for [filter] against [localEntries] and streams the two
+ * directions of the diff to the caller, who decides what to do with them:
+ *
+ *  - **need ids** (`onNeedIds`): the relay has them, the local set doesn't —
+ *    fetch them however fits (own REQ fan-out across several connections or
+ *    clients, batching, prioritization, …). The by-id fetch matrix in
+ *    `quartz/plans/2026-07-02-nostrclient-receiver-perf.md` is the map for
+ *    that fan-out.
+ *  - **have ids** (`onHaveIds`): the local set has them, the relay doesn't —
+ *    publish the corresponding events to push the relay up to date.
+ *
+ * Compared to [negentropySync], which couples the reconcile to a built-in
+ * by-id downloader on the same connection, this is the composable half:
+ * `negentropyReconcile` + caller-side loading is how to sync faster than one
+ * connection allows.
+ *
+ * Ids are streamed in chunks of [batchSize] as reconcile rounds arrive — the
+ * full id set is never materialized here (accumulate them yourself or use
+ * [negentropyReconcileIds] when the set is known to be small). Both callbacks
+ * suspend the reconcile round that produced them, so a slow consumer
+ * back-pressures the relay. With [reconcileConcurrency] > 1 the callbacks are
+ * invoked from that many coroutines concurrently.
+ *
+ * Relay-side overflow (strfry `max_sync_events`) is handled by `created_at`
+ * window splitting, like [negentropySync]. [localEntries] may be in any order;
+ * each window reconciles against the matching `createdAt` slice. The caller
+ * is responsible for [localEntries] actually being the local events matching
+ * [filter] — entries outside the filter would show up as false "have" ids.
+ *
+ * Holds `reconcileConcurrency` NEG sessions plus one keep-alive subscription
+ * on the connection; budget that against the relay's
+ * `limitation.max_subscriptions`.
+ *
+ * @throws NegentropySyncException when a window cannot be reconciled via NIP-77.
+ */
+@OptIn(ExperimentalAtomicApi::class)
+suspend fun INostrClient.negentropyReconcile(
+    relay: NormalizedRelayUrl,
+    filter: Filter,
+    localEntries: List<IdAndTime> = emptyList(),
+    batchSize: Int = 500,
+    idleTimeoutMs: Long = 120_000L,
+    reconcileConcurrency: Int = 1,
+    onHaveIds: (suspend (List<HexKey>) -> Unit)? = null,
+    onNeedIds: suspend (List<HexKey>) -> Unit,
+): NegentropyReconcileResult {
+    val need = AtomicInt(0)
+    val have = AtomicInt(0)
+    val windows = AtomicInt(0)
+
+    // Same connection-pinning trick as negentropySync: a NEG-OPEN is not a REQ,
+    // so without a live subscription the pool would consider the relay unwanted
+    // and disconnect it mid-reconcile.
+    val keepAliveSubId = newSubId()
+    subscribe(keepAliveSubId, mapOf(relay to listOf(Filter(ids = listOf(KEEP_ALIVE_ID)))), null)
+    try {
+        val sorted =
+            if (localEntries.size > 1) {
+                localEntries.sortedBy { it.createdAt }
+            } else {
+                localEntries
+            }
+
+        reconcileWindows(
+            clients = listOf(this),
+            relay = relay,
+            filter = filter,
+            localEntries = sorted,
+            idleTimeoutMs = idleTimeoutMs,
+            batchSize = batchSize,
+            reconcileConcurrency = reconcileConcurrency,
+            onWindow = { windows.incrementAndFetch() },
+            onNeed = { need.addAndFetch(it) },
+            onHave = { have.addAndFetch(it) },
+            sendNeedBatch = onNeedIds,
+            sendHaveBatch = onHaveIds,
+        )
+    } finally {
+        unsubscribe(keepAliveSubId)
+    }
+
+    return NegentropyReconcileResult(
+        needCount = need.load(),
+        haveCount = have.load(),
+        windows = windows.load(),
+    )
+}
+
+suspend fun INostrClient.negentropyReconcile(
+    relay: String,
+    filter: Filter,
+    localEntries: List<IdAndTime> = emptyList(),
+    batchSize: Int = 500,
+    idleTimeoutMs: Long = 120_000L,
+    reconcileConcurrency: Int = 1,
+    onHaveIds: (suspend (List<HexKey>) -> Unit)? = null,
+    onNeedIds: suspend (List<HexKey>) -> Unit,
+): NegentropyReconcileResult =
+    negentropyReconcile(
+        relay = RelayUrlNormalizer.normalize(relay),
+        filter = filter,
+        localEntries = localEntries,
+        batchSize = batchSize,
+        idleTimeoutMs = idleTimeoutMs,
+        reconcileConcurrency = reconcileConcurrency,
+        onHaveIds = onHaveIds,
+        onNeedIds = onNeedIds,
+    )
+
+/**
+ * The full id diff from a [negentropyReconcile] run, materialized.
+ *
+ * @property needIds relay has them, the local set doesn't — download these.
+ * @property haveIds local set has them, the relay doesn't — publish these.
+ * @property windows number of `created_at` windows the reconcile split into.
+ */
+class NegentropyIdDiff(
+    val needIds: List<HexKey>,
+    val haveIds: List<HexKey>,
+    val windows: Int,
+)
+
+/**
+ * Convenience over [negentropyReconcile] that accumulates both directions of
+ * the diff and returns them as lists.
+ *
+ * Materializes the FULL diff in memory: at ~100 B per id string a
+ * million-id diff is ~100 MB of heap. Fine for bounded sets (per-author
+ * sync, recent windows); for open-ended bulk syncs prefer the streaming
+ * [negentropyReconcile] and consume batches as they arrive.
+ */
+suspend fun INostrClient.negentropyReconcileIds(
+    relay: NormalizedRelayUrl,
+    filter: Filter,
+    localEntries: List<IdAndTime> = emptyList(),
+    batchSize: Int = 500,
+    idleTimeoutMs: Long = 120_000L,
+    reconcileConcurrency: Int = 1,
+): NegentropyIdDiff {
+    val lock = Mutex()
+    val needIds = ArrayList<HexKey>()
+    val haveIds = ArrayList<HexKey>()
+
+    val result =
+        negentropyReconcile(
+            relay = relay,
+            filter = filter,
+            localEntries = localEntries,
+            batchSize = batchSize,
+            idleTimeoutMs = idleTimeoutMs,
+            reconcileConcurrency = reconcileConcurrency,
+            onHaveIds = { batch -> lock.withLock { haveIds.addAll(batch) } },
+            onNeedIds = { batch -> lock.withLock { needIds.addAll(batch) } },
+        )
+
+    return NegentropyIdDiff(needIds, haveIds, result.windows)
+}
+
+suspend fun INostrClient.negentropyReconcileIds(
+    relay: String,
+    filter: Filter,
+    localEntries: List<IdAndTime> = emptyList(),
+    batchSize: Int = 500,
+    idleTimeoutMs: Long = 120_000L,
+    reconcileConcurrency: Int = 1,
+): NegentropyIdDiff =
+    negentropyReconcileIds(
+        relay = RelayUrlNormalizer.normalize(relay),
+        filter = filter,
+        localEntries = localEntries,
+        batchSize = batchSize,
+        idleTimeoutMs = idleTimeoutMs,
+        reconcileConcurrency = reconcileConcurrency,
+    )
+
+/**
+ * Drives one NIP-77 reconciliation of [filter] against [localEntries], sending
  * `NEG-OPEN` and walking the rounds itself (rather than via [NegentropyManager]) so
- * it can apply back-pressure: each round's `needIds` are handed to [sendBatch] —
+ * it can apply back-pressure: each round's `needIds` are handed to [sendNeedBatch] —
  * which suspends while the download queue is full — *before* the next round is
  * acked, so the relay's id stream is paced to the downloader and never piles up.
+ * When [sendHaveBatch] is non-null the ids the relay LACKS (we have them locally)
+ * are streamed through it the same way.
  *
  * The ids are streamed, not returned; the result is only the terminal outcome.
  * Always sends `NEG-CLOSE` and removes the listener on the way out.
@@ -398,15 +782,18 @@ private sealed interface ReconcileOutcome {
 private suspend fun INostrClient.reconcileStreaming(
     relay: NormalizedRelayUrl,
     filter: Filter,
+    localEntries: List<IdAndTime>,
     idleTimeoutMs: Long,
     fetchBatch: Int,
     onNeed: (Int) -> Unit,
-    sendBatch: suspend (List<HexKey>) -> Unit,
+    onHave: (Int) -> Unit,
+    sendNeedBatch: suspend (List<HexKey>) -> Unit,
+    sendHaveBatch: (suspend (List<HexKey>) -> Unit)?,
 ): ReconcileOutcome {
     val targetUrl = relay
     val relayClient = getOrCreateRelay(relay)
     val subId = newSubId()
-    val session = NegentropySession(subId, filter, localEvents = emptyList())
+    val session = NegentropySession(subId, filter, localEntries = localEntries)
 
     // Reader-thread → driver hand-off. Holds at most one frame: the relay only sends
     // the next one once we ack, and we ack only after this round's ids are queued.
@@ -492,7 +879,17 @@ private suspend fun INostrClient.reconcileStreaming(
                             val end = min(i + fetchBatch, needIds.size)
                             // Copy each batch so the frame's full id list can be freed
                             // as soon as it is chunked; suspends under back-pressure.
-                            sendBatch(ArrayList(needIds.subList(i, end)))
+                            sendNeedBatch(ArrayList(needIds.subList(i, end)))
+                            i = end
+                        }
+                    }
+                    val haveIds = result.haveIds
+                    if (haveIds.isNotEmpty() && sendHaveBatch != null) {
+                        onHave(haveIds.size)
+                        var i = 0
+                        while (i < haveIds.size) {
+                            val end = min(i + fetchBatch, haveIds.size)
+                            sendHaveBatch(ArrayList(haveIds.subList(i, end)))
                             i = end
                         }
                     }
@@ -534,52 +931,6 @@ private fun isOverflow(reason: String): Boolean =
         reason.startsWith("blocked", ignoreCase = true)
 
 /**
- * Reconciles [filter] and streams its ids straight into a bounded download pool, so
- * reconciliation and download overlap and peak memory stays independent of the
- * window's size. At most [maxConcurrentReqs] `REQ`s of [fetchBatch] ids are open at
- * once; the id queue is bounded so a slow download back-pressures reconciliation.
- * Returns the terminal [ReconcileOutcome]; events go out through [deliver].
- */
-private suspend fun INostrClient.downloadWindow(
-    relay: NormalizedRelayUrl,
-    filter: Filter,
-    idleTimeoutMs: Long,
-    fetchBatch: Int,
-    maxConcurrentReqs: Int,
-    onNeed: (Int) -> Unit,
-    deliver: suspend (Event) -> Unit,
-): ReconcileOutcome =
-    coroutineScope {
-        val workerCount = maxConcurrentReqs.coerceAtLeast(1)
-
-        // Bounded: when full, reconcileStreaming suspends instead of letting the
-        // relay's id stream accumulate. This is what keeps memory O(pipeline), not
-        // O(window).
-        val idBatches = Channel<List<HexKey>>(workerCount)
-
-        val workers =
-            List(workerCount) {
-                launch {
-                    for (batch in idBatches) {
-                        coroutineContext.ensureActive()
-                        for (event in fetchByIds(relay, batch, idleTimeoutMs)) {
-                            deliver(event)
-                        }
-                    }
-                }
-            }
-
-        val outcome =
-            reconcileStreaming(relay, filter, idleTimeoutMs, fetchBatch, onNeed) { batch ->
-                idBatches.send(batch)
-            }
-
-        idBatches.close()
-        workers.joinAll()
-        outcome
-    }
-
-/**
  * One `REQ` for [batch] ids; collects the matching events and returns them on
  * `EOSE`/close/timeout. All events for a single relay arrive on its one reader
  * thread, so collecting here needs no synchronisation.
@@ -590,7 +941,7 @@ private suspend fun INostrClient.downloadWindow(
  * replay the batch; without this the same event would be delivered twice. We rely on
  * NIP-77 yielding a distinct id set across batches, so no global dedup is needed.
  */
-private suspend fun INostrClient.fetchByIds(
+internal suspend fun INostrClient.fetchByIds(
     relay: NormalizedRelayUrl,
     batch: List<HexKey>,
     idleTimeoutMs: Long,
@@ -665,7 +1016,7 @@ private const val DELIVERY_BUFFER = 256
  * duration of a sync. Synthetic/real event ids are SHA-256 digests, so this never
  * collides with an actual event.
  */
-private val KEEP_ALIVE_ID = "f".repeat(64)
+internal val KEEP_ALIVE_ID = "f".repeat(64)
 
 /**
  * Finite fallback bounds (ms) for the two waits that must stay bounded even when the
