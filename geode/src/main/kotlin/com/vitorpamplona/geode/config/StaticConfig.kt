@@ -153,6 +153,12 @@ data class StaticConfig(
         val frame_size_limit: Long = 500_000L,
         val max_sync_events: Int = 1_000_000,
         val max_sessions_per_connection: Int = 200,
+        /**
+         * Keep an always-current in-memory `(created_at, id)` set so
+         * full-corpus NEG-OPENs skip the table scan + seal (strfry
+         * parity). ~40 B per stored event of heap; on by default.
+         */
+        val live_index: Boolean = true,
     )
 
     data class AuthorizationSection(

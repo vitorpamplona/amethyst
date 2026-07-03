@@ -126,7 +126,12 @@ fun main(args: Array<String>) {
         cliInfoFile?.let { RelayInfo.fromFile(it) }
             ?: config.resolveInfo(fullTextSearch)
 
-    val store: IEventStore = EventStore(dbName = dbFile, relay = advertisedUrl, indexStrategy = relayIndexingStrategy(fullTextSearch))
+    val store: IEventStore =
+        EventStore(
+            dbName = dbFile,
+            relay = advertisedUrl,
+            indexStrategy = relayIndexingStrategy(fullTextSearch, config.negentropy.live_index),
+        )
 
     val policyBuilder: () -> IRelayPolicy = {
         composePolicy(config, advertisedUrl, requireAuth, optionalAuth, verifySigs, parallelVerify)

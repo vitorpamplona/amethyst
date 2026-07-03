@@ -24,16 +24,23 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.SQLiteException
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import com.vitorpamplona.negentropy.storage.IStorage
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
+import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
+import com.vitorpamplona.quartz.nip77Negentropy.LiveNegentropyIndex
 
 class SQLiteEventStore(
     val driver: SQLiteDriver = BundledSQLiteDriver(),
@@ -73,6 +80,16 @@ class SQLiteEventStore(
             seedModule::hasher,
             indexStrategy,
         )
+
+    /**
+     * Always-current `(created_at, id)` set for NIP-77 (see
+     * [IndexingStrategy.maintainLiveNegentropyIndex]). Populated lazily
+     * by the first [liveNegentropySnapshot]; kept current by the write
+     * paths through a [LiveIndexDelta] applied only after each
+     * transaction commits, so a rolled-back row never leaks into it.
+     */
+    val liveNegentropyIndex: LiveNegentropyIndex? =
+        if (indexStrategy.maintainLiveNegentropyIndex) LiveNegentropyIndex() else null
 
     val modules =
         listOf(
@@ -182,10 +199,12 @@ class SQLiteEventStore(
         }
     }
 
-    suspend fun clearDB() =
+    suspend fun clearDB() {
         pool.useWriter { db ->
             modules.reversed().forEach { it.deleteAll(db) }
         }
+        liveNegentropyIndex?.invalidate()
+    }
 
     suspend fun vacuum() =
         pool.useWriter { db ->
@@ -225,15 +244,127 @@ class SQLiteEventStore(
             db.execSQL("ANALYZE")
         }
 
+    /**
+     * Live-index mutations gathered during one write transaction and
+     * applied only after its COMMIT — a rolled-back row (savepoint or
+     * whole-transaction failure) must never reach the index, and the
+     * index must never advertise an id before it is durable. `null`
+     * when [liveNegentropyIndex] is off: zero cost on the write path.
+     */
+    internal class LiveIndexDelta {
+        val added = ArrayList<IdAndTime>()
+        val removed = ArrayList<IdAndTime>()
+
+        /**
+         * Set when a row's side effects delete OTHER rows in ways this
+         * delta can't itemize (kind-5 targets, vanish-by-pubkey). The
+         * whole index is dropped and lazily rebuilt from one scan.
+         */
+        var invalidateAll = false
+    }
+
+    /**
+     * Starts delta tracking for a write transaction, or `null` when there
+     * is nothing to track — index off, or not (yet) populated. An
+     * unpopulated index is covered by its next [LiveNegentropyIndex.rebuild]
+     * scan instead, so ingest pays zero bookkeeping until the first
+     * NEG-OPEN actually builds the index.
+     *
+     * MUST be called while already holding the writer connection: the
+     * populated check races [liveNegentropySnapshot]'s rebuild otherwise
+     * (rebuild flips `populated` under the writer mutex — deciding out
+     * here could skip tracking for a transaction that commits after the
+     * rebuild's scan, silently losing its rows).
+     */
+    private fun newDeltaOrNull(): LiveIndexDelta? = if (liveNegentropyIndex?.isPopulated() == true) LiveIndexDelta() else null
+
+    /** Records one successfully inserted row into the pending delta. */
+    private fun LiveIndexDelta.recordAccepted(
+        event: Event,
+        displaced: IdAndTime?,
+    ) {
+        if (event is DeletionEvent || (event is RequestToVanishEvent && event.shouldVanishFrom(relay))) {
+            // Their own row lands too, but the rebuild scan picks it up.
+            invalidateAll = true
+            return
+        }
+        displaced?.let { removed += it }
+        added += IdAndTime(event.createdAt, event.id)
+    }
+
+    private fun applyAfterCommit(delta: LiveIndexDelta?) {
+        val index = liveNegentropyIndex ?: return
+        if (delta == null) return
+        if (delta.invalidateAll) {
+            index.invalidate()
+            return
+        }
+        delta.removed.forEach(index::remove)
+        delta.added.forEach(index::insert)
+    }
+
+    /**
+     * The row the replaceable/addressable BEFORE-INSERT trigger is about
+     * to delete for [event], or `null` when nothing will be displaced.
+     * Must run *before* the insert (the trigger fires during it) and
+     * mirrors the trigger predicates exactly — including the NIP-01
+     * lowest-id-wins tie-break. At most one row can match thanks to the
+     * partial unique indexes, and the same indexes make this lookup
+     * O(log n). Only called when the live index is on.
+     */
+    private fun displacedBy(
+        event: Event,
+        db: SQLiteConnection,
+    ): IdAndTime? {
+        // The addressable branch requires the parsed class to carry a
+        // d-tag, mirroring the header insert: events without one store
+        // d_tag NULL, and the trigger's `d_tag = NEW.d_tag` never
+        // matches NULL — so nothing gets displaced.
+        val addressable = event.kind.isAddressable() && event is AddressableEvent
+        val sql =
+            when {
+                event.kind.isReplaceable() ->
+                    """
+                    SELECT created_at, id FROM event_headers
+                    WHERE kind = ? AND pubkey = ?
+                      AND (created_at < ? OR (created_at = ? AND id > ?))
+                    """.trimIndent()
+
+                addressable ->
+                    """
+                    SELECT created_at, id FROM event_headers
+                    WHERE kind = ? AND pubkey = ? AND d_tag = ?
+                      AND kind >= 30000 AND kind < 40000
+                      AND (created_at < ? OR (created_at = ? AND id > ?))
+                    """.trimIndent()
+
+                else -> return null
+            }
+        db.prepare(sql).use { stmt ->
+            var i = 1
+            stmt.bindLong(i++, event.kind.toLong())
+            stmt.bindText(i++, event.pubKey)
+            if (addressable) stmt.bindText(i++, (event as AddressableEvent).dTag())
+            stmt.bindLong(i++, event.createdAt)
+            stmt.bindLong(i++, event.createdAt)
+            stmt.bindText(i, event.id)
+            if (!stmt.step()) return null
+            return IdAndTime(stmt.getLong(0), stmt.getText(1))
+        }
+    }
+
     private fun innerInsertEvent(
         event: Event,
         db: SQLiteConnection,
+        delta: LiveIndexDelta? = null,
     ) {
+        val displaced = if (delta != null) displacedBy(event, db) else null
         val headerId = eventIndexModule.insert(event, db)
         deletionModule.insert(event, db)
         expirationModule.insert(event, headerId, db)
         fullTextSearchModule.insert(event, headerId, db)
         rightToVanishModule.insert(event, relay, headerId, db)
+        delta?.recordAccepted(event, displaced)
     }
 
     suspend fun insertEvent(event: Event) {
@@ -241,9 +372,15 @@ class SQLiteEventStore(
         if (event.kind.isEphemeral()) return
 
         pool.useWriter { db ->
+            val delta = newDeltaOrNull()
             db.transaction {
-                innerInsertEvent(event, this)
+                innerInsertEvent(event, this, delta)
             }
+            // Still holding the writer mutex: the transaction above has
+            // committed, and applying here keeps index updates in exact
+            // commit order across every writer (and the rebuild, which
+            // also runs under this mutex).
+            applyAfterCommit(delta)
         }
     }
 
@@ -268,11 +405,14 @@ class SQLiteEventStore(
         if (events.isEmpty()) return emptyList()
         val outcomes = ArrayList<IEventStore.InsertOutcome>(events.size)
         pool.useWriter { db ->
+            val delta = newDeltaOrNull()
             db.transaction {
                 events.forEachIndexed { i, event ->
-                    outcomes.add(insertWithSavepoint(event, i, this))
+                    outcomes.add(insertWithSavepoint(event, i, this, delta))
                 }
             }
+            // Post-commit, pre-mutex-release: see insertEvent.
+            applyAfterCommit(delta)
         }
         return outcomes
     }
@@ -281,6 +421,7 @@ class SQLiteEventStore(
         event: Event,
         index: Int,
         db: SQLiteConnection,
+        delta: LiveIndexDelta?,
     ): IEventStore.InsertOutcome {
         if (event.isExpired()) {
             return IEventStore.InsertOutcome.Rejected("blocked: Cannot insert an expired event")
@@ -290,7 +431,10 @@ class SQLiteEventStore(
         val sp = "ev$index"
         db.execSQL("SAVEPOINT $sp")
         return try {
-            innerInsertEvent(event, db)
+            // The delta records this row only after every module insert
+            // succeeded (last step of innerInsertEvent), so a savepoint
+            // rollback below leaves the pending delta untouched.
+            innerInsertEvent(event, db, delta)
             db.execSQL("RELEASE SAVEPOINT $sp")
             IEventStore.InsertOutcome.Accepted
         } catch (e: Throwable) {
@@ -304,24 +448,28 @@ class SQLiteEventStore(
         }
     }
 
-    inner class Transaction(
+    inner class Transaction internal constructor(
         val db: SQLiteConnection,
+        private val delta: LiveIndexDelta?,
     ) : IEventStore.ITransaction {
         override fun insert(event: Event) {
             if (event.isExpired()) throw SQLiteException("blocked: Cannot insert an expired event")
             if (event.kind.isEphemeral()) return
 
-            innerInsertEvent(event, db)
+            innerInsertEvent(event, db, delta)
         }
     }
 
     suspend fun transaction(body: Transaction.() -> Unit) {
         pool.useWriter { db ->
+            val delta = newDeltaOrNull()
             db.transaction {
-                with(Transaction(this)) {
+                with(Transaction(this, delta)) {
                     body()
                 }
             }
+            // Post-commit, pre-mutex-release: see insertEvent.
+            applyAfterCommit(delta)
         }
     }
 
@@ -366,17 +514,57 @@ class SQLiteEventStore(
         maxEntries: Int? = null,
     ): List<IdAndTime> = pool.useReader { queryBuilder.snapshotIdsForNegentropy(filters, it, maxEntries) }
 
-    suspend fun delete(filter: Filter) = pool.useWriter { queryBuilder.delete(filter, it) }
+    suspend fun delete(filter: Filter) {
+        pool.useWriter { queryBuilder.delete(filter, it) }
+        // Delete-by-filter can't itemize what it removed; drop the live
+        // index and let the next NEG-OPEN rebuild from one scan.
+        liveNegentropyIndex?.invalidate()
+    }
 
-    suspend fun delete(filters: List<Filter>) = pool.useWriter { queryBuilder.delete(filters, it) }
+    suspend fun delete(filters: List<Filter>) {
+        pool.useWriter { queryBuilder.delete(filters, it) }
+        liveNegentropyIndex?.invalidate()
+    }
 
-    suspend fun delete(id: HexKey): Int =
-        pool.useWriter { db ->
-            db.execSQL("DELETE FROM event_headers WHERE id = ?", arrayOf(id))
-            db.changes()
+    suspend fun delete(id: HexKey): Int {
+        val changes =
+            pool.useWriter { db ->
+                db.execSQL("DELETE FROM event_headers WHERE id = ?", arrayOf(id))
+                db.changes()
+            }
+        if (changes > 0) liveNegentropyIndex?.invalidate()
+        return changes
+    }
+
+    suspend fun deleteExpiredEvents() {
+        val swept =
+            pool.useWriter { db ->
+                expirationModule.deleteExpiredEvents(db)
+                db.changes()
+            }
+        if (swept > 0) liveNegentropyIndex?.invalidate()
+    }
+
+    /**
+     * Sealed live-index snapshot of the FULL stored set for NIP-77, or
+     * `null` when the live index is off (strategy default) or the set
+     * exceeds [maxEntries] — callers fall back to the scan path either
+     * way. The first call after boot or an invalidation rebuilds the
+     * index from one scan **on the writer connection**, so no insert can
+     * commit between the scan and the rebuild — after that, the write
+     * paths keep it current and this is a cached-snapshot lookup.
+     */
+    suspend fun liveNegentropySnapshot(maxEntries: Int): IStorage? {
+        val index = liveNegentropyIndex ?: return null
+        if (!index.isPopulated()) {
+            pool.useWriter { db ->
+                if (!index.isPopulated()) {
+                    index.rebuild(queryBuilder.snapshotIdsForNegentropy(listOf(Filter()), db, null))
+                }
+            }
         }
-
-    suspend fun deleteExpiredEvents() = pool.useWriter { expirationModule.deleteExpiredEvents(it) }
+        return index.sealedSnapshot(maxEntries)
+    }
 
     /**
      * Wipe and rebuild the NIP-50 full-text search index for every

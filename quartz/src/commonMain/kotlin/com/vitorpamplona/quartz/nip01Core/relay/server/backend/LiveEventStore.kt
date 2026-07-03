@@ -381,6 +381,15 @@ class LiveEventStore(
         filters: List<Filter>,
         maxEntries: Int,
     ): IStorage? {
+        // Full-set NEG-OPENs — a single unconstrained filter, the shape
+        // relay-relay sync sends by default — are served from the store's
+        // always-current index when it maintains one: no scan, no
+        // O(n log n) seal, cold or not. `null` falls through to the scan
+        // path, which also owns the over-cap NEG-ERR detection.
+        if (filters.size == 1 && filters[0].isEmpty()) {
+            store.liveNegentropySnapshot(maxEntries)?.let { return it }
+        }
+
         val generation = writeGeneration.load()
         val key = filters.joinToString(" ") { it.toJson() } + " cap=$maxEntries"
         val now = TimeUtils.now()

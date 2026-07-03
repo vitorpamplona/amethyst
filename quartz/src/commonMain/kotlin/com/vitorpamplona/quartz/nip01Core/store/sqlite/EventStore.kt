@@ -76,6 +76,8 @@ class EventStore(
         maxEntries: Int?,
     ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters, maxEntries)
 
+    override suspend fun liveNegentropySnapshot(maxEntries: Int) = store.liveNegentropySnapshot(maxEntries)
+
     override val needsFtsCatchUp: Boolean get() = store.needsFtsCatchUp
 
     override suspend fun ftsCatchUp(batchSize: Int) = store.ftsCatchUp(batchSize)
