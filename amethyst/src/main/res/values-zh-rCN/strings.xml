@@ -3249,6 +3249,9 @@
     <string name="compose_settings">撰写设置</string>
     <string name="auto_create_drafts_setting_title">自动创建草稿</string>
     <string name="auto_create_drafts_setting_description">当您输入或在编辑器中有未发送的文本时自动保存草稿事件并发送到您的私人发件箱中继。</string>
+    <string name="compose_signature_setting_title">签名</string>
+    <string name="compose_signature_setting_description">在开启新帖子、回复、引用或文章时在消息末尾添加。留空则禁用。</string>
+    <string name="compose_signature_setting_hint">您的签名</string>
     <string name="ai_writing_use_this">使用它</string>
     <string name="ai_writing_dismiss">忽略</string>
     <string name="ai_tone_correct">更正</string>
