@@ -133,9 +133,23 @@ interface IRelayPolicy {
      * Called for each event that matches a subscription's filters. Return
      * true to deliver the event, false to suppress it for this session.
      *
+     * Any implementation that can return `false` here MUST also override
+     * [filtersOutgoingEvents] to return `true`, otherwise the session may
+     * take the zero-decode REQ fast path that never consults this method.
+     *
      * @param event The event about to be sent.
      */
     fun canSendToSession(event: Event): Boolean = true
+
+    /**
+     * Declares whether [canSendToSession] can ever suppress an event for
+     * this session. When `false` (the default, matching the default
+     * [canSendToSession] that always allows), the engine answers REQs
+     * through the zero-decode raw path — storage strings are spliced
+     * straight into wire frames and [canSendToSession] is never called.
+     * When `true`, every delivered event is materialized and screened.
+     */
+    val filtersOutgoingEvents: Boolean get() = false
 
     operator fun plus(other: IRelayPolicy): IRelayPolicy = PolicyStack(this, other)
 }

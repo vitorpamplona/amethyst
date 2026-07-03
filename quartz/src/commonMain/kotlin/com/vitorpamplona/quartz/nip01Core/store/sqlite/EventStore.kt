@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
+import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 
 /**
  * SQLite-backed [IEventStore] with default DB-file name and relay
@@ -61,6 +62,11 @@ class EventStore(
         onEach: (T) -> Unit,
     ) = store.query(filters, onEach)
 
+    override suspend fun rawQuery(
+        filters: List<Filter>,
+        onEach: (RawEvent) -> Unit,
+    ) = store.rawQuery(filters, onEach)
+
     override suspend fun count(filter: Filter) = store.count(filter)
 
     override suspend fun count(filters: List<Filter>) = store.count(filters)
@@ -69,6 +75,10 @@ class EventStore(
         filters: List<Filter>,
         maxEntries: Int?,
     ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters, maxEntries)
+
+    override val needsFtsCatchUp: Boolean get() = store.needsFtsCatchUp
+
+    override suspend fun ftsCatchUp(batchSize: Int) = store.ftsCatchUp(batchSize)
 
     override suspend fun delete(filter: Filter) {
         store.delete(filter)

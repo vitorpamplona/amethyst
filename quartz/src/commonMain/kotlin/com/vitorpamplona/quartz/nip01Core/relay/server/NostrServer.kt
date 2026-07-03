@@ -29,8 +29,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -66,6 +70,12 @@ class NostrServer(
     limits: RelayLimits? = null,
 ) : RelayServerBase(policyBuilder, parentContext, negentropySettings, listener, limits) {
     /**
+     * Wakes the deferred-FTS catch-up worker. Conflated: N batch commits
+     * while the worker is mid-drain collapse into one more pass.
+     */
+    private val ftsCatchUpPokes = Channel<Unit>(Channel.CONFLATED)
+
+    /**
      * Group-commit writer shared across every connected session.
      * Sessions hand off EVENT publishes here instead of awaiting
      * [IEventStore.insert] inline; the queue coalesces back-to-back
@@ -77,9 +87,55 @@ class NostrServer(
             store = store,
             parentContext = parentContext,
             verify = if (parallelVerify) ({ it.verify() }) else null,
+            onBatchCommitted =
+                if (store.needsFtsCatchUp) {
+                    { ftsCatchUpPokes.trySend(Unit) }
+                } else {
+                    null
+                },
         )
 
     override val backend: SessionBackend = LiveEventStore(store, ingest)
+
+    init {
+        // Deferred-FTS catch-up worker: tokenizes in the gaps between
+        // publish batches. Each catch-up batch is its own write
+        // transaction, so a publish burst arriving mid-drain interleaves
+        // at batch granularity instead of stalling. Search REQs don't
+        // depend on this worker's pace — LiveEventStore drains the
+        // backlog synchronously before serving any search filter.
+        if (store.needsFtsCatchUp) {
+            // Drain any backlog left over from a previous run before the
+            // first publish arrives.
+            ftsCatchUpPokes.trySend(Unit)
+            scope.launch {
+                for (poke in ftsCatchUpPokes) {
+                    // Yield to publish traffic: while the ingest queue has
+                    // backlog, don't compete for the writer connection —
+                    // the burst's final batch commit pokes again, and the
+                    // pre-search drain covers correctness regardless.
+                    while (!ingest.hasBacklog()) {
+                        val done =
+                            try {
+                                store.ftsCatchUp()
+                            } catch (e: Throwable) {
+                                if (e is CancellationException) throw e
+                                // A shutdown can close the store between this
+                                // worker's cancellation and its last batch (the
+                                // mutex fast path skips the cancellation check),
+                                // and an uncaught throw here poisons unrelated
+                                // runTest tests via the global handler. Nothing
+                                // depends on this pass — the pre-search drain
+                                // covers correctness — so log and stop.
+                                Log.w("NostrServer") { "FTS catch-up batch failed: ${e.message}" }
+                                break
+                            }
+                        if (done) break
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Shuts down the server, cancelling all subscriptions and closing the store.

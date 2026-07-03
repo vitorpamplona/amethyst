@@ -25,6 +25,8 @@ import androidx.sqlite.SQLiteDriver
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Room-style connection pool for an `androidx.sqlite` database.
@@ -66,6 +68,7 @@ import kotlinx.coroutines.sync.withLock
  * (e.g. `innerInsertEvent`) must operate on the `SQLiteConnection`
  * handed to its block; it must not re-enter the pool.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class SQLiteConnectionPool(
     val driver: SQLiteDriver,
     val dbName: String?,
@@ -75,6 +78,8 @@ class SQLiteConnectionPool(
 ) : AutoCloseable {
     private val isInMemory = dbName == null
 
+    private val closed = AtomicBoolean(false)
+
     private val writerMutex = Mutex()
     val writer: SQLiteConnection
 
@@ -82,14 +87,21 @@ class SQLiteConnectionPool(
     private val readerChannel: Channel<SQLiteConnection>?
 
     init {
-        writer = openConnection()
+        // The writer replays the same INSERT statements for every event —
+        // cache its prepared statements so sqlite3_prepare is paid once per
+        // SQL string instead of once per row. (Migrations run through the
+        // same wrapper; DDL statements just cache and stay unused.)
+        writer = StatementCachingConnection(openConnection())
         onMigrate(writer)
 
         if (isInMemory) {
             readers = emptyList()
             readerChannel = null
         } else {
-            readers = List(numReaders) { openConnection() }
+            // Readers replay the same filter shapes all day (feeds, threads,
+            // profile hydrations) — caching their prepared statements pays
+            // the parse/plan cost once per shape per connection.
+            readers = List(numReaders) { StatementCachingConnection(openConnection()) }
             readerChannel = Channel(numReaders)
             readers.forEach { readerChannel.trySend(it) }
         }
@@ -134,8 +146,34 @@ class SQLiteConnectionPool(
     }
 
     override fun close() {
-        readerChannel?.close()
+        if (!closed.compareAndSet(expectedValue = false, newValue = true)) return
+
+        // Reclaim every connection before freeing its native handle. A
+        // concurrent [useWriter]/[useReader] block may still be running on
+        // another thread (e.g. the relay's deferred-FTS catch-up worker,
+        // whose scope is cancelled but whose current batch is mid-flight) —
+        // closing a `sqlite3*` out from under sqlite3_prepare corrupts the
+        // native heap and SIGSEGVs instead of throwing. Spinning is safe:
+        // blocks are synchronous and short, and this only runs at shutdown.
+        if (readerChannel != null) {
+            var reclaimed = 0
+            while (reclaimed < readers.size) {
+                if (readerChannel.tryReceive().isSuccess) reclaimed++
+            }
+            readerChannel.close()
+        }
         readers.forEach { runCatching { it.close() } }
-        runCatching { writer.close() }
+
+        while (!writerMutex.tryLock()) {
+            // An in-flight writer block is finishing; wait it out.
+        }
+        try {
+            runCatching { writer.close() }
+        } finally {
+            // Release so a straggler lands on the closed connection's
+            // managed "connection is closed" exception instead of
+            // suspending forever on the mutex.
+            writerMutex.unlock()
+        }
     }
 }

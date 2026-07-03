@@ -59,6 +59,12 @@ verify_signatures = true
 # legacy in-policy verify path.
 # parallel_verify = true
 
+# NIP-50 full-text search. Default: true. When false no FTS index is
+# built or maintained (inserts skip tokenization — a measurable share
+# of ingest cost), NIP-11 stops advertising NIP-50, and REQ filters
+# with a `search` term match nothing. CLI: --no-search.
+# full_text_search = true
+
 # Require clients to NIP-42 AUTH before REQ/EVENT/COUNT.
 require_auth = false
 

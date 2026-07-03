@@ -26,16 +26,14 @@ import androidx.sqlite.SQLiteException
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.Kind
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
+import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
-import com.vitorpamplona.quartz.utils.EventFactory
 
 class SQLiteEventStore(
     val driver: SQLiteDriver = BundledSQLiteDriver(),
@@ -45,12 +43,16 @@ class SQLiteEventStore(
     val numReaders: Int = 4,
 ) {
     companion object {
-        const val DATABASE_VERSION = 2
+        const val DATABASE_VERSION = 4
     }
 
     val seedModule = SeedModule()
 
-    val fullTextSearchModule = FullTextSearchModule(indexStrategy.indexFullTextSearch)
+    val fullTextSearchModule =
+        FullTextSearchModule(
+            indexStrategy.indexFullTextSearch,
+            indexStrategy.deferFullTextSearchIndexing,
+        )
     val eventIndexModule =
         EventIndexesModule(
             seedModule::hasher,
@@ -165,6 +167,17 @@ class SQLiteEventStore(
                     modules.reversed().forEach { it.drop(db) }
                     modules.forEach { it.create(db) }
                 }
+                2 -> {
+                    // Upgrade from version 2 to 3: authors-only query index
+                    // (created only for strategies that opt in).
+                    eventIndexModule.migrateV2AddPubkeyIndex(db)
+                }
+                3 -> {
+                    // Upgrade from version 3 to 4: deferred-FTS watermark.
+                    // Pre-v4 rows were indexed synchronously, so the
+                    // watermark seeds at the current MAX(row_id).
+                    fullTextSearchModule.createStateTable(db)
+                }
             }
         }
     }
@@ -179,6 +192,30 @@ class SQLiteEventStore(
             // VACUUM: Rebuilds the database file, reclaiming unused space
             // and reducing fragmentation.
             db.execSQL("VACUUM")
+        }
+
+    /**
+     * True when something must drive [ftsCatchUp] for NIP-50 to work —
+     * i.e. the strategy defers tokenization off the insert path. The
+     * relay server wires a background worker (and a pre-search drain)
+     * when this is set.
+     */
+    val needsFtsCatchUp: Boolean =
+        indexStrategy.indexFullTextSearch && indexStrategy.deferFullTextSearchIndexing
+
+    /**
+     * One deferred-FTS catch-up batch; returns `true` once the index has
+     * caught up with the table. Each batch is its own write transaction,
+     * so publishes interleave between batches instead of stalling behind
+     * a long rebuild.
+     */
+    suspend fun ftsCatchUp(batchSize: Int = 1000): Boolean =
+        pool.useWriter { db ->
+            var done = false
+            db.transaction {
+                done = fullTextSearchModule.catchUpBatch(this, batchSize)
+            }
+            done
         }
 
     suspend fun analyse() =
@@ -371,25 +408,4 @@ class SQLiteEventStore(
         }
 
     fun close() = pool.close()
-}
-
-class RawEvent(
-    val id: HexKey,
-    val pubKey: HexKey,
-    val createdAt: Long,
-    val kind: Kind,
-    val jsonTags: String,
-    val content: String,
-    val sig: HexKey,
-) {
-    fun <T : Event> toEvent() =
-        EventFactory.create<T>(
-            id,
-            pubKey,
-            createdAt,
-            kind,
-            OptimizedJsonMapper.fromJsonToTagArray(jsonTags),
-            content,
-            sig,
-        )
 }

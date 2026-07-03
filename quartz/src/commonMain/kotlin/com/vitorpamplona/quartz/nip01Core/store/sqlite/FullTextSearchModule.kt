@@ -42,11 +42,19 @@ import com.vitorpamplona.quartz.utils.EventFactory
  */
 class FullTextSearchModule(
     val enabled: Boolean = true,
+    /**
+     * Skip tokenization in [insert] and let [catchUpBatch] index from the
+     * persisted watermark instead. See
+     * [IndexingStrategy.deferFullTextSearchIndexing] for the contract —
+     * something must drive the catch-up (the relay server does).
+     */
+    val deferIndexing: Boolean = false,
 ) : IModule {
     val tableName = "event_fts"
     val triggerName = "fts_foreign_key"
     val eventHeaderRowIdName = "event_header_row_id"
     val contentName = "content"
+    val stateTableName = "fts_catchup_state"
 
     override fun create(db: SQLiteConnection) {
         if (!enabled) return
@@ -69,6 +77,33 @@ class FullTextSearchModule(
                     WHERE old.row_id = $tableName.$eventHeaderRowIdName;
                 END;
             """,
+        )
+
+        createStateTable(db)
+    }
+
+    /**
+     * Watermark for the deferred path: everything with
+     * `row_id <= last_row_id` is guaranteed indexed. Idempotent — also
+     * used as the v3→v4 migration for databases created before the
+     * deferred mode existed; those seeded their FTS synchronously, so
+     * the watermark starts at the current MAX(row_id).
+     */
+    fun createStateTable(db: SQLiteConnection) {
+        if (!enabled) return
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS $stateTableName (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                last_row_id INTEGER NOT NULL
+            )
+            """.trimIndent(),
+        )
+        db.execSQL(
+            """
+            INSERT OR IGNORE INTO $stateTableName (id, last_row_id)
+            SELECT 1, COALESCE(MAX(row_id), 0) FROM event_headers
+            """.trimIndent(),
         )
     }
 
@@ -103,7 +138,7 @@ class FullTextSearchModule(
         headerId: Long,
         db: SQLiteConnection,
     ) {
-        if (!enabled) return
+        if (!enabled || deferIndexing) return
         if (event is SearchableEvent) {
             db.prepare(insertFTS).use { stmt ->
                 stmt.bindLong(1, headerId)
@@ -274,6 +309,95 @@ class FullTextSearchModule(
             processedThisBatch = processed,
             done = done,
         )
+    }
+
+    /**
+     * One catch-up step of the deferred path: index up to [batchSize]
+     * events past the persisted watermark, then advance it. Returns
+     * `true` when the index has caught up with the table (within this
+     * transaction's snapshot). Must run inside the caller's write
+     * transaction so the watermark advances atomically with the FTS
+     * rows it covers — a crash replays the batch, and [reindexBatch]'s
+     * delete-then-insert keeps the replay harmless.
+     */
+    fun catchUpBatch(
+        db: SQLiteConnection,
+        batchSize: Int,
+    ): Boolean {
+        if (!enabled) return true
+
+        val watermark =
+            db.prepare("SELECT last_row_id FROM $stateTableName WHERE id = 1").use { stmt ->
+                if (stmt.step()) stmt.getLong(0) else 0L
+            }
+
+        // Unlike [reindexBatch] there is NO per-row delete here: rows past
+        // the watermark were never indexed (deferred mode skips insert()),
+        // and the watermark advances atomically with the FTS rows it
+        // covers, so a crash replay is impossible. The delete would also
+        // be ruinous — `event_header_row_id` is a plain FTS5 column, so
+        // deleting by it scans the whole FTS table per row, which turned
+        // the first catch-up implementation O(n²). Consequence: switching
+        // a database back and forth between deferred and synchronous
+        // strategies requires a [reindexAll] in between (same rule as a
+        // searchable-kinds change).
+        val limit = batchSize.coerceAtLeast(1)
+        val kinds = searchableKindsPresent(db)
+        var last = watermark
+        var processed = 0
+        if (kinds.isNotEmpty()) {
+            val selectSql =
+                "SELECT row_id, id, pubkey, created_at, kind, tags, content, sig " +
+                    "FROM event_headers WHERE row_id > ? AND kind IN (${kinds.joinToString(",")}) " +
+                    "ORDER BY row_id LIMIT ?"
+            db.prepare(insertFTS).use { write ->
+                db.prepare(selectSql).use { read ->
+                    read.bindLong(1, watermark)
+                    read.bindLong(2, limit.toLong())
+                    while (read.step()) {
+                        val event =
+                            EventFactory.create<Event>(
+                                read.getText(1),
+                                read.getText(2),
+                                read.getLong(3),
+                                read.getInt(4),
+                                OptimizedJsonMapper.fromJsonToTagArray(read.getText(5)),
+                                read.getText(6),
+                                read.getText(7),
+                            )
+                        if (event is SearchableEvent) {
+                            write.bindLong(1, read.getLong(0))
+                            write.bindText(2, event.indexableContent())
+                            write.step()
+                            write.reset()
+                        }
+                        last = read.getLong(0)
+                        processed++
+                    }
+                }
+            }
+        }
+
+        val done = processed < limit
+        val newWatermark =
+            if (done) {
+                // Scan reached the end of the table: everything visible in
+                // this snapshot is indexed.
+                db.prepare("SELECT COALESCE(MAX(row_id), 0) FROM event_headers").use { stmt ->
+                    stmt.step()
+                    stmt.getLong(0)
+                }
+            } else {
+                last
+            }
+
+        if (newWatermark != watermark) {
+            db.prepare("UPDATE $stateTableName SET last_row_id = ? WHERE id = 1").use { stmt ->
+                stmt.bindLong(1, newWatermark)
+                stmt.step()
+            }
+        }
+        return done
     }
 
     /**

@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.backend.SessionBackend
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
@@ -120,6 +121,15 @@ class RelaySession(
     fun send(message: Message) {
         try {
             onSend(OptimizedJsonMapper.toJson(message))
+        } catch (e: Exception) {
+            Log.w("ClientSession") { "Failed to send to ${e.message}" }
+        }
+    }
+
+    /** [send] for frames that are already wire-format JSON (the raw REQ path). */
+    private fun sendRaw(json: String) {
+        try {
+            onSend(json)
         } catch (e: Exception) {
             Log.w("ClientSession") { "Failed to send to ${e.message}" }
         }
@@ -281,16 +291,47 @@ class RelaySession(
         val job =
             scope.launch {
                 try {
-                    store.query(
-                        ctx = requestContext,
-                        filters = filters,
-                        onEach = { event ->
-                            if (policy.canSendToSession(event)) {
-                                send(EventMessage(cmd.subId, event))
+                    if (policy.filtersOutgoingEvents) {
+                        // Screened path: every event is materialized so the
+                        // policy can veto it per session.
+                        store.query(
+                            ctx = requestContext,
+                            filters = filters,
+                            onEach = { event ->
+                                if (policy.canSendToSession(event)) {
+                                    send(EventMessage(cmd.subId, event))
+                                }
+                            },
+                            onEose = { send(EoseMessage(cmd.subId)) },
+                        )
+                    } else {
+                        // Zero-decode path: the stored replay splices raw
+                        // storage strings straight into wire frames — no tags
+                        // parse, no Event materialization, no re-serialize.
+                        // The `["EVENT","<subId>",` prefix is built once per
+                        // subscription, not per row.
+                        val framePrefix =
+                            buildString {
+                                append("[\"EVENT\",")
+                                RawEvent.appendJsonQuoted(this, cmd.subId)
+                                append(',')
                             }
-                        },
-                        onEose = { send(EoseMessage(cmd.subId)) },
-                    )
+                        store.queryRaw(
+                            ctx = requestContext,
+                            filters = filters,
+                            onEachStored = { raw ->
+                                sendRaw(
+                                    buildString(framePrefix.length + raw.jsonTags.length + raw.content.length + 256) {
+                                        append(framePrefix)
+                                        raw.appendJsonObjectTo(this)
+                                        append(']')
+                                    },
+                                )
+                            },
+                            onEachLive = { event -> send(EventMessage(cmd.subId, event)) },
+                            onEose = { send(EoseMessage(cmd.subId)) },
+                        )
+                    }
                 } catch (e: CancellationException) {
                     // Subscription was closed – this is expected.
                     throw e

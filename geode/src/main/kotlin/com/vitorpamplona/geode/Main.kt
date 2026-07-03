@@ -71,6 +71,11 @@ import java.io.File
  *   --no-verify        DO NOT verify event signatures (off by default
  *                      verify is on; use only for trusted-input
  *                      scenarios like fixture replay).
+ *   --no-search        disable NIP-50 full-text search (sets
+ *                      options.full_text_search = false): no FTS index is
+ *                      built or maintained, NIP-11 stops advertising 50,
+ *                      and `search` filters match nothing. Skips the
+ *                      per-event tokenization cost on ingest.
  */
 fun main(args: Array<String>) {
     val a = parseArgs(args)
@@ -101,6 +106,10 @@ fun main(args: Array<String>) {
     // `[options].parallel_verify = false`.
     val parallelVerify =
         verifySigs && !a.flag("--no-parallel-verify") && config.options.parallel_verify
+    // NIP-50 search is on by default; `--no-search` (or
+    // `[options].full_text_search = false`) trades it for cheaper ingest —
+    // e.g. to match relays that don't implement NIP-50 at all.
+    val fullTextSearch = !a.flag("--no-search") && config.options.full_text_search
 
     // Advertised URL: explicit `info.relay_url` wins, then build from
     // host/port/path. 0.0.0.0 bind → 127.0.0.1 in the URL so NIP-42
@@ -111,9 +120,9 @@ fun main(args: Array<String>) {
 
     val info =
         cliInfoFile?.let { RelayInfo.fromFile(it) }
-            ?: config.resolveInfo()
+            ?: config.resolveInfo(fullTextSearch)
 
-    val store: IEventStore = EventStore(dbName = dbFile, relay = advertisedUrl)
+    val store: IEventStore = EventStore(dbName = dbFile, relay = advertisedUrl, indexStrategy = relayIndexingStrategy(fullTextSearch))
 
     val policyBuilder: () -> IRelayPolicy = {
         composePolicy(config, advertisedUrl, requireAuth, optionalAuth, verifySigs, parallelVerify)

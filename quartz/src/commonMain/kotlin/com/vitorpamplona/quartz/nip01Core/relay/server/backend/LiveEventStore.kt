@@ -20,15 +20,20 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.server.backend
 
+import com.vitorpamplona.negentropy.storage.IStorage
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
+import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
@@ -89,6 +94,7 @@ class LiveEventStore(
     ) {
         ingest.submit(event) { outcome ->
             if (outcome is IEventStore.InsertOutcome.Accepted) {
+                writeGeneration.addAndFetch(1L)
                 fanout(event)
             }
             onComplete(outcome)
@@ -135,12 +141,28 @@ class LiveEventStore(
         }
     }
 
+    /**
+     * With deferred FTS, a search query must first drain the catch-up
+     * backlog — that keeps NIP-50 results exactly as fresh as the
+     * synchronous path (the deferral is invisible to correctness; only
+     * publishes stop paying for tokenization). Non-search filters never
+     * touch the FTS index and skip this entirely.
+     */
+    private suspend fun drainFtsIfSearching(filters: List<Filter>) {
+        if (!store.needsFtsCatchUp) return
+        if (filters.none { !it.search.isNullOrEmpty() }) return
+        while (!store.ftsCatchUp()) {
+            // Each batch is its own write transaction; loop until caught up.
+        }
+    }
+
     override suspend fun query(
         ctx: RequestContext,
         filters: List<Filter>,
         onEach: (Event) -> Unit,
         onEose: () -> Unit,
     ) {
+        drainFtsIfSearching(filters)
         // During the historical replay, record ids the store has
         // emitted so the live path can dedupe. The index registers
         // *before* the replay starts (otherwise an event accepted
@@ -205,10 +227,68 @@ class LiveEventStore(
         }
     }
 
+    /**
+     * Zero-decode variant of [query]: the historical replay streams
+     * [RawEvent] rows straight from storage (no tags parse, no Event
+     * materialization, no re-serialization), while the live path after
+     * EOSE is identical to [query]'s. Same registration-before-replay
+     * ordering, and the same spin-locked mutable dedupe set — NOT a
+     * copy-on-add immutable set, which made giant replays O(n²) (see
+     * the dedup comment in [query]).
+     */
+    override suspend fun queryRaw(
+        ctx: RequestContext,
+        filters: List<Filter>,
+        onEachStored: (RawEvent) -> Unit,
+        onEachLive: (Event) -> Unit,
+        onEose: () -> Unit,
+    ) {
+        drainFtsIfSearching(filters)
+        val seenLock = AtomicBoolean(false)
+        var seenIds: HashSet<String>? = HashSet(1024)
+
+        fun <R> seenLocked(block: () -> R): R {
+            while (seenLock.exchange(true)) {
+                while (seenLock.load()) { }
+            }
+            try {
+                return block()
+            } finally {
+                seenLock.store(false)
+            }
+        }
+
+        val sub =
+            LiveSubscription(
+                filters = filters,
+                deliver = { event ->
+                    val duplicate = seenLocked { seenIds?.contains(event.id) ?: false }
+                    if (duplicate) return@LiveSubscription
+                    onEachLive(event)
+                },
+            )
+
+        index.register(filters, sub)
+        try {
+            store.rawQuery(filters.strippingSearchExtensions()) { raw ->
+                seenLocked { seenIds?.add(raw.id) }
+                onEachStored(raw)
+            }
+            onEose()
+            seenLocked { seenIds = null }
+            awaitCancellation()
+        } finally {
+            index.unregister(sub)
+        }
+    }
+
     override suspend fun count(
         ctx: RequestContext,
         filters: List<Filter>,
-    ): Int = store.count(filters.strippingSearchExtensions())
+    ): Int {
+        drainFtsIfSearching(filters)
+        return store.count(filters.strippingSearchExtensions())
+    }
 
     /**
      * One-shot snapshot query. Used by NIP-77 negentropy: the server
@@ -249,4 +329,67 @@ class LiveEventStore(
         filters: List<Filter>,
         maxEntries: Int?,
     ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters.strippingSearchExtensions(), maxEntries)
+
+    // ------------------------------------------------------------------
+    // NIP-77 snapshot cache
+    // ------------------------------------------------------------------
+
+    /**
+     * Bumped after every accepted write. A cached negentropy snapshot is
+     * only valid while this hasn't moved. Deletion paths that bypass the
+     * ingest queue (expiration sweeps, NIP-86 admin purges) don't bump it,
+     * which is why cache entries also carry a short TTL: a snapshot is a
+     * point-in-time set by NIP-77's nature, and a few seconds of staleness
+     * only means a peer momentarily re-offers ids the relay just dropped.
+     */
+    private val writeGeneration = AtomicLong(0L)
+
+    private class CachedSnapshot(
+        val filterKey: String,
+        val generation: Long,
+        val builtAt: Long,
+        val storage: IStorage?,
+    )
+
+    private val snapshotCache = AtomicReference<CachedSnapshot?>(null)
+
+    /**
+     * Serves repeated NEG-OPENs of the same filter from one sealed
+     * storage as long as no write landed in between (single slot — the
+     * mirror-heartbeat pattern is many peers reconciling the same broad
+     * filter, not many filters). Rebuilding on every open costs a full
+     * scan + O(n log n) seal that grows with the corpus: relayBench
+     * measured 342 ms per identical-set reconcile at 50k events vs
+     * strfry's 26 ms off its always-current tree.
+     */
+    override suspend fun sealedNegentropyStorage(
+        filters: List<Filter>,
+        maxEntries: Int,
+    ): IStorage? {
+        val generation = writeGeneration.load()
+        val key = filters.joinToString(" ") { it.toJson() } + " cap=$maxEntries"
+        val now = TimeUtils.now()
+
+        val cached = snapshotCache.load()
+        if (cached != null &&
+            cached.filterKey == key &&
+            cached.generation == generation &&
+            now - cached.builtAt <= SNAPSHOT_TTL_SECONDS
+        ) {
+            return cached.storage
+        }
+
+        val built = super.sealedNegentropyStorage(filters, maxEntries)
+        snapshotCache.store(CachedSnapshot(key, generation, now, built))
+        return built
+    }
+
+    private companion object {
+        /**
+         * Ceiling on how long a cached snapshot may serve NEG-OPENs even
+         * with no observed writes — bounds staleness from delete paths
+         * the generation counter can't see.
+         */
+        const val SNAPSHOT_TTL_SECONDS = 30L
+    }
 }

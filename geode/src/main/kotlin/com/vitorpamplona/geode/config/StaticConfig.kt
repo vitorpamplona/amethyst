@@ -46,7 +46,7 @@ data class StaticConfig(
     val admin: AdminSection = AdminSection(),
     val negentropy: NegentropySection = NegentropySection(),
 ) {
-    fun resolveInfo(): RelayInfo =
+    fun resolveInfo(fullTextSearch: Boolean = true): RelayInfo =
         RelayInfo(
             Nip11RelayInformation(
                 name = info.name ?: RelayInfo.NAME,
@@ -58,7 +58,9 @@ data class StaticConfig(
                 version = info.version ?: RelayInfo.VERSION,
                 supported_nips =
                     info.supported_nips?.map(Int::toString)
-                        ?: RelayInfo.SUPPORTED_NIPS,
+                        // An explicit [info] nips list is operator-authoritative;
+                        // the default list stays honest about search.
+                        ?: if (fullTextSearch) RelayInfo.SUPPORTED_NIPS else RelayInfo.SUPPORTED_NIPS - "50",
                 privacy_policy = info.privacy_policy,
                 terms_of_service = info.terms_of_service,
                 relay_countries = info.relay_countries,
@@ -123,6 +125,15 @@ data class StaticConfig(
         val verify_signatures: Boolean = true,
         /** CPU fan-out verification in the IngestQueue. No-op when [verify_signatures] is false. */
         val parallel_verify: Boolean = true,
+        /**
+         * NIP-50 full-text search. On by default. When off, no FTS index
+         * is created or maintained (inserts skip tokenization — a
+         * measurable share of ingest cost), NIP-11 stops advertising
+         * NIP-50, and REQ filters carrying a `search` term match nothing.
+         * Turn off when search isn't needed, or to compare against relays
+         * that don't offer NIP-50 at all (strfry, for example).
+         */
+        val full_text_search: Boolean = true,
     )
 
     /**

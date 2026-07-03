@@ -101,6 +101,21 @@ interface IEventStore : AutoCloseable {
         onEach: (T) -> Unit,
     )
 
+    /**
+     * Streams matching events in storage form — tags still serialized,
+     * nothing materialized — for read paths that only put events back on
+     * the wire (see [RawEvent]). The default decodes and re-wraps so
+     * every store stays correct; SQLite overrides with a true zero-decode
+     * row read.
+     */
+    suspend fun rawQuery(
+        filters: List<Filter>,
+        onEach: (RawEvent) -> Unit,
+    ): Unit =
+        query<Event>(filters) { event ->
+            onEach(RawEvent.fromEvent(event))
+        }
+
     suspend fun count(filter: Filter): Int
 
     suspend fun count(filters: List<Filter>): Int
@@ -136,6 +151,20 @@ interface IEventStore : AutoCloseable {
             all
         }
     }
+
+    /**
+     * True when NIP-50 tokenization is deferred and something must drive
+     * [ftsCatchUp] for search to see new events. The relay server checks
+     * this to start its catch-up worker; stores that index synchronously
+     * (the default) report `false` and [ftsCatchUp] is a no-op.
+     */
+    val needsFtsCatchUp: Boolean get() = false
+
+    /**
+     * One deferred-FTS catch-up batch; `true` once the index has caught
+     * up. Safe to call on any store — the default reports done.
+     */
+    suspend fun ftsCatchUp(batchSize: Int = DEFAULT_FTS_REINDEX_BATCH): Boolean = true
 
     suspend fun delete(filter: Filter)
 
