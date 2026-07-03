@@ -39,6 +39,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -389,6 +390,96 @@ class BulkDownloadBenchmark {
                 client.close()
             }
         }
+    }
+
+    // ------------------------------------------------------------------
+    // negentropySync pipelining shootout: old sequential behavior
+    // (reconcileConcurrency=1, shallow buffer) vs the tuned pipeline, on the
+    // same production corpus, both capped at the same number of events. The
+    // per-connection by-id ceiling measured by ByIdFetchBenchmark (~5.5k/s on
+    // the 2.6M corpus) is the target; the old defaults measured ~1.6k/s.
+    // ------------------------------------------------------------------
+
+    private suspend fun negentropyVariant(
+        label: String,
+        httpClient: OkHttpClient,
+        maxEvents: Int,
+        maxConcurrentReqs: Int,
+        reconcileConcurrency: Int,
+        idBufferBatches: Int,
+        budgetMs: Long,
+    ) {
+        val relay = PROD_RELAY.normalizeRelayUrl()
+        val client = NostrClient(BasicOkHttpWebSocket.Builder { httpClient })
+        val count = AtomicLong(0)
+        val start = System.nanoTime()
+        try {
+            val result =
+                withTimeoutOrNull(budgetMs) {
+                    client.negentropySync(
+                        relay = relay,
+                        filter = Filter(kinds = listOf(PROD_KIND)),
+                        maxEvents = maxEvents,
+                        maxConcurrentReqs = maxConcurrentReqs,
+                        reconcileConcurrency = reconcileConcurrency,
+                        idBufferBatches = idBufferBatches,
+                    ) { count.incrementAndGet() }
+                }
+            val wall = System.nanoTime() - start
+            report(label, count.get(), 0, wall)
+            if (result == null) {
+                println("    (budget ${budgetMs}ms exceeded — partial)")
+            } else {
+                println("    windows=${result.windows} need=${result.needCount}")
+            }
+        } catch (e: NegentropySyncException) {
+            val wall = System.nanoTime() - start
+            report(label, count.get(), 0, wall)
+            println("    !! failed: ${e.reason} ${e.message}")
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun negentropyPipelineShootout() {
+        if (System.getenv("PROD_RELAY_BENCH") == null && System.getProperty("prodRelayBench") == null) {
+            println("negentropyPipelineShootout skipped. Run with -PprodRelayBench=1 to enable.")
+            return
+        }
+
+        val httpClient =
+            OkHttpClient
+                .Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+                .pingInterval(30, TimeUnit.SECONDS)
+                .build()
+
+        println("=== NEGENTROPY PIPELINE SHOOTOUT: $PROD_RELAY kinds=[$PROD_KIND], cap 100k events ===")
+        runBlocking {
+            // Old behavior: sequential windows, shallow id buffer.
+            negentropyVariant(
+                "baseline (8 reqs, seq windows)",
+                httpClient,
+                maxEvents = 100_000,
+                maxConcurrentReqs = 8,
+                reconcileConcurrency = 1,
+                idBufferBatches = 8,
+                budgetMs = 240_000L,
+            )
+            // Tuned: 12 + 4 + 1 keep-alive = 17 subs, under strfry's 20 cap.
+            negentropyVariant(
+                "tuned (12 reqs, 4 reconcilers)",
+                httpClient,
+                maxEvents = 100_000,
+                maxConcurrentReqs = 12,
+                reconcileConcurrency = 4,
+                idBufferBatches = 96,
+                budgetMs = 240_000L,
+            )
+        }
+        httpClient.dispatcher.executorService.shutdown()
     }
 
     // ------------------------------------------------------------------

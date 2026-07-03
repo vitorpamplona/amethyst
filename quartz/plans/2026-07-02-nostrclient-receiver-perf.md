@@ -373,6 +373,41 @@ in-flight until events/s stops improving / per-REQ latency inflates, then
 back off), since the same relay's sweet spot moved 8× in one day as its
 dataset grew. At today's ~15k/s ceiling: 2.6M events ≈ 3 min; 10M ≈ 11 min.
 
+### negentropySync pipelining (implemented, 2026-07-03)
+
+`NostrClientNegentropySyncExt` was restructured around the findings — no
+NIP-11 auto-detection, the budget knobs are the caller's:
+
+- **Global download-worker pool** spanning the whole sync (was per-window
+  with a join between windows, so the connection idled while the next
+  window's NEG rounds ran).
+- **`reconcileConcurrency` parameter** — overflow-split windows are
+  reconciled by N concurrent NEG sessions from a shared work queue (was a
+  strictly sequential lo-half/hi-half recursion). Default 1.
+- **`idBufferBatches` parameter** — depth of the bounded buffer between
+  reconciliation and download workers (was hardcoded to `workerCount`).
+- KDoc contract: peak subscriptions = `maxConcurrentReqs +
+  reconcileConcurrency + 1`; sizing it under the relay's
+  `limitation.max_subscriptions` is the caller's responsibility.
+
+All 44 negentropy tests (unit + end-to-end against the in-process relay +
+geode interop) pass unchanged. Production shootout on the 2.6M corpus,
+100k-event cap, same day, single connection
+(`BulkDownloadBenchmark.negentropyPipelineShootout`):
+
+| variant | events/s | note |
+|---|---|---|
+| old implementation (previous day, 31k corpus) | 1,575 | not same-day comparable |
+| new pipeline, old-equivalent params (8 reqs, seq windows) | 3,601 | global pool already overlaps windows |
+| new pipeline, tuned (12 reqs, 4 reconcilers, 96-batch buffer) | **4,497** | 17 subs ≤ strfry's 20 cap |
+
+Tuned reaches **~82% of the measured ~5.5k/s single-connection by-id
+ceiling**; the 4 reconcilers also produced ids 2.3× faster (need=171,812
+enumerated vs 109,336 in less wall time). The remaining gap is reconcile
+burstiness plus by-id query cost. Going past ~5.5k/s on this relay requires
+multiple connections (caller-level: disjoint `created_at` windows per
+client), which the matrix caps at ~15k/s relay-wide.
+
 ### Answer for "10M events from one relay, fastest"
 
 At nosfabrica's measured page cadence, one connection ≈ 3.7k events/s → 10M
