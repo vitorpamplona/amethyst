@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps.validate
 
+import com.vitorpamplona.quartz.utils.cache.ConcurrentLruCache
+
 /**
  * Process-wide cache of LNURL-pay endpoint metadata, keyed by the canonical
  * `/.well-known/lnurlp/<user>` URL the recipient resolves to.
@@ -37,37 +39,23 @@ package com.vitorpamplona.quartz.nip57Zaps.validate
 object LnurlEndpointCache {
     private const val MAX_ENTRIES = 1000
 
-    // Insertion-ordered map so we can evict the oldest entry once we hit the cap.
-    // Synchronized externally — every mutating call holds the monitor.
-    private val cache: LinkedHashMap<String, LnurlEndpointInfo> = LinkedHashMap()
+    // Bounded cache with a lock-free get — hot on the zap-validation read path.
+    // Eviction is least-recently-put (a get does not refresh recency), matching
+    // the previous LinkedHashMap-based behaviour where only put reordered.
+    private val cache = ConcurrentLruCache<String, LnurlEndpointInfo>(MAX_ENTRIES)
 
-    @Synchronized
-    fun get(url: String): LnurlEndpointInfo? = cache[LnurlForm.normalizeUrl(url)]
+    fun get(url: String): LnurlEndpointInfo? = cache.get(LnurlForm.normalizeUrl(url))
 
-    @Synchronized
     fun put(
         url: String,
         info: LnurlEndpointInfo,
     ) {
-        val key = LnurlForm.normalizeUrl(url)
-        // Re-insert so the entry becomes "youngest" in iteration order.
-        cache.remove(key)
-        cache[key] = info
-        if (cache.size > MAX_ENTRIES) {
-            val oldest =
-                cache.entries
-                    .iterator()
-                    .next()
-                    .key
-            cache.remove(oldest)
-        }
+        cache.put(LnurlForm.normalizeUrl(url), info)
     }
 
-    @Synchronized
     fun clear() {
         cache.clear()
     }
 
-    @Synchronized
-    internal fun size(): Int = cache.size
+    internal fun size(): Int = cache.size()
 }

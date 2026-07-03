@@ -34,12 +34,18 @@ import javax.crypto.spec.SecretKeySpec
  * (which is much cheaper than `getInstance`) plus the AEAD math itself.
  *
  * Single-thread per direction: one PacketProtection feeds either the read
- * loop OR the send loop, never both. The class still synchronizes on a
- * private monitor as a defence-in-depth: the lock-split refactor in
- * `QuicConnectionDriver` keeps each side single-threaded by design, but
- * a future caller (test harness, key-update path) sharing the instance
- * across coroutines would otherwise corrupt the cached `Cipher` state
- * silently. The JCA `Cipher` itself is documented as not thread-safe.
+ * loop OR the send loop, never both. The class still synchronizes as
+ * defence-in-depth: the lock-split refactor in `QuicConnectionDriver`
+ * keeps each side single-threaded by design, but a future caller (test
+ * harness, key-update path) sharing the instance across coroutines would
+ * otherwise corrupt the cached `Cipher` state silently. The JCA `Cipher`
+ * itself is documented as not thread-safe.
+ *
+ * Two independent monitors — [encryptLock] guards the encrypt-side state
+ * ([encryptCipher] + [recentEncryptNonces]); [decryptLock] guards
+ * [decryptCipher]. The two state groups are disjoint, so seal (send loop)
+ * and open (read loop) — which genuinely run on different coroutines —
+ * no longer serialize against each other per packet.
  */
 class JcaAesGcmAead(
     key: ByteArray,
@@ -67,6 +73,11 @@ class JcaAesGcmAead(
     private val encryptCipher: Cipher = Cipher.getInstance("AES/GCM/NoPadding")
     private val decryptCipher: Cipher = Cipher.getInstance("AES/GCM/NoPadding")
 
+    // Disjoint monitors so encrypt and decrypt don't serialize against each
+    // other. seal-family holds encryptLock; open-family holds decryptLock.
+    private val encryptLock = Any()
+    private val decryptLock = Any()
+
     /**
      * Last nonce successfully consumed by [seal]. We use a fresh
      * [Cipher.getInstance] when the caller asks us to seal under the
@@ -89,7 +100,7 @@ class JcaAesGcmAead(
         aad: ByteArray,
         plaintext: ByteArray,
     ): ByteArray =
-        synchronized(this) {
+        synchronized(encryptLock) {
             val reuse = recentEncryptNonces.any { it.contentEquals(nonce) }
             if (reuse) {
                 val fresh = Cipher.getInstance("AES/GCM/NoPadding")
@@ -132,7 +143,7 @@ class JcaAesGcmAead(
         aad: ByteArray,
         ciphertext: ByteArray,
     ): ByteArray? =
-        synchronized(this) {
+        synchronized(decryptLock) {
             try {
                 decryptCipher.init(Cipher.DECRYPT_MODE, keySpec, GCMParameterSpec(128, nonce))
                 decryptCipher.updateAAD(aad)
@@ -161,7 +172,7 @@ class JcaAesGcmAead(
         ciphertextOffset: Int,
         ciphertextLength: Int,
     ): ByteArray? =
-        synchronized(this) {
+        synchronized(decryptLock) {
             try {
                 decryptCipher.init(Cipher.DECRYPT_MODE, keySpec, GCMParameterSpec(128, nonce))
                 decryptCipher.updateAAD(aad, aadOffset, aadLength)
@@ -187,7 +198,7 @@ class JcaAesGcmAead(
         plaintextOffset: Int,
         plaintextLength: Int,
     ): ByteArray =
-        synchronized(this) {
+        synchronized(encryptLock) {
             val reuse = recentEncryptNonces.any { it.contentEquals(nonce) }
             if (reuse) {
                 val fresh = Cipher.getInstance("AES/GCM/NoPadding")
@@ -230,7 +241,7 @@ class JcaAesGcmAead(
         output: ByteArray,
         outputOffset: Int,
     ): Int =
-        synchronized(this) {
+        synchronized(encryptLock) {
             val reuse = recentEncryptNonces.any { it.contentEquals(nonce) }
             val cipher: Cipher
             if (reuse) {

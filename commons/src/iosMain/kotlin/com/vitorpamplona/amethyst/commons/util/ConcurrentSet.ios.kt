@@ -18,25 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.search
+package com.vitorpamplona.amethyst.commons.util
 
-import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
+actual class ConcurrentSet<E : Any> {
+    // No lock-free set in the K/N standard library — guard a plain set with the
+    // same reentrant lock KmpLock uses. Same behaviour as the previous
+    // KmpLock-wrapped sets; the lock-striped win only exists on JVM/Android.
+    private val lock = KmpLock()
+    private val set = HashSet<E>()
 
-/**
- * Tracks event ids already seen so duplicate deliveries can be dropped.
- *
- * Fed from relay subscription callbacks, which can arrive on multiple threads
- * concurrently, so this uses a [ConcurrentSet] (lock-striped on JVM/Android)
- * rather than a single lock that would serialize every delivery.
- */
-class EventDeduplicator {
-    private val seenIds = ConcurrentSet<String>()
+    actual fun add(element: E): Boolean = lock.withLock { set.add(element) }
 
-    fun tryAdd(id: String): Boolean = seenIds.add(id)
+    actual fun contains(element: E): Boolean = lock.withLock { set.contains(element) }
 
-    fun contains(id: String): Boolean = seenIds.contains(id)
+    actual fun remove(element: E): Boolean = lock.withLock { set.remove(element) }
 
-    fun clear() = seenIds.clear()
+    actual fun clear() = lock.withLock { set.clear() }
 
-    val size: Int get() = seenIds.size
+    actual val size: Int get() = lock.withLock { set.size }
 }

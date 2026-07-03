@@ -18,25 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.search
+package com.vitorpamplona.amethyst.commons.util
 
-import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
+import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Tracks event ids already seen so duplicate deliveries can be dropped.
- *
- * Fed from relay subscription callbacks, which can arrive on multiple threads
- * concurrently, so this uses a [ConcurrentSet] (lock-striped on JVM/Android)
- * rather than a single lock that would serialize every delivery.
- */
-class EventDeduplicator {
-    private val seenIds = ConcurrentSet<String>()
+actual class ConcurrentSet<E : Any> {
+    // Lock-striped writes, lock-free reads — no single monitor across threads.
+    private val set: MutableSet<E> = ConcurrentHashMap.newKeySet()
 
-    fun tryAdd(id: String): Boolean = seenIds.add(id)
+    actual fun add(element: E): Boolean = set.add(element)
 
-    fun contains(id: String): Boolean = seenIds.contains(id)
+    actual fun contains(element: E): Boolean = set.contains(element)
 
-    fun clear() = seenIds.clear()
+    actual fun remove(element: E): Boolean = set.remove(element)
 
-    val size: Int get() = seenIds.size
+    actual fun clear() = set.clear()
+
+    actual val size: Int get() = set.size
 }
