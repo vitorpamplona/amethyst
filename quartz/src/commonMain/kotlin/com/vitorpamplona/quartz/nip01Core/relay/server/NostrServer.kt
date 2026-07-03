@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.IngestQueue
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.LiveEventStore
@@ -95,7 +96,28 @@ class NostrServer(
                 },
         )
 
-    override val backend: SessionBackend = LiveEventStore(store, ingest)
+    private val liveStore = LiveEventStore(store, ingest)
+
+    override val backend: SessionBackend = liveStore
+
+    /**
+     * Local ingestion path for events that did not arrive over a client
+     * connection — e.g. a mirror worker streaming a trusted upstream
+     * relay, or an import job. Routes through the same group-commit
+     * [IngestQueue] and live fanout as a client EVENT publish, but skips
+     * the per-connection policy chain (there is no connection).
+     *
+     * [skipVerify] exempts the event from the parallel signature-verify
+     * hook — the relay-to-relay trust model: pass `true` only for events
+     * from an explicitly configured upstream that already verified them
+     * (Schnorr verify profiles at ~8% of busy ingest CPU). The default
+     * `false` keeps verify-everything semantics.
+     */
+    suspend fun ingest(
+        event: Event,
+        skipVerify: Boolean = false,
+        onComplete: (IEventStore.InsertOutcome) -> Unit,
+    ) = liveStore.submit(event, skipVerify, onComplete)
 
     init {
         // Deferred-FTS catch-up worker: tokenizes in the gaps between

@@ -91,8 +91,23 @@ class LiveEventStore(
     override suspend fun submit(
         event: Event,
         onComplete: (IEventStore.InsertOutcome) -> Unit,
+    ) = submit(event, skipVerify = false, onComplete = onComplete)
+
+    /**
+     * [submit] variant for locally-originated traffic (mirror/sync
+     * workers rather than client connections). [skipVerify] exempts
+     * this event from the [IngestQueue]'s signature-verification hook —
+     * the relay-to-relay trust model: set it only for events streamed
+     * from a configured upstream relay that already verified them.
+     * Accepted events fan out to live subscribers exactly like a
+     * client publish.
+     */
+    suspend fun submit(
+        event: Event,
+        skipVerify: Boolean,
+        onComplete: (IEventStore.InsertOutcome) -> Unit,
     ) {
-        ingest.submit(event) { outcome ->
+        ingest.submit(event, skipVerify) { outcome ->
             if (outcome is IEventStore.InsertOutcome.Accepted) {
                 writeGeneration.addAndFetch(1L)
                 fanout(event)
