@@ -257,6 +257,16 @@ q.domain       // "example.com"
 q.nsfwIncluded // false  (NIP-50 default is true when the token is absent)
 ```
 
+The SQLite store expects `Filter.search` to be plain FTS text: `:` is FTS5
+column-filter syntax, so a raw `include:spam` reaching MATCH raises "no such
+column: include" instead of matching. Strip the tokens before querying with
+`SearchQuery.stripExtensions(raw)` or `filter.strippingSearchExtensions()` —
+an extensions-only query collapses to an empty search, which imposes no
+constraint (NIP-50: unsupported extensions are ignored, not match-nothing).
+The storage-backed server path (`NostrServer` / `LiveEventStore`) already does
+this, so relays like geode comply out of the box; `EventSource` backends get
+the raw string because a real search backend wants the extensions.
+
 A search/redirector relay is just a custom policy (or, for computed results, a
 custom `IEventStore` whose `query` answers the REQ) that reads the parsed query:
 

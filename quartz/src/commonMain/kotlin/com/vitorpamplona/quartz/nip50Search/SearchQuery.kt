@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip50Search
 
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+
 /**
  * Parsed representation of a NIP-50 `search` filter string.
  *
@@ -163,7 +165,53 @@ class SearchQuery(
         }
 
         private fun isExtensionKey(key: String): Boolean = key.isNotEmpty() && key.all { it in 'a'..'z' }
+
+        /**
+         * Returns [search] with every `key:value` extension token removed,
+         * leaving only the free-text terms (tokenized as in [parse]).
+         *
+         * Backends that hand the search string to an engine with its own
+         * query syntax — e.g. SQLite FTS, where `:` is column-filter
+         * syntax and `include:spam` raises "no such column" — must call
+         * this (or apply the extensions themselves) before querying.
+         *
+         * A string with no extension tokens is returned unchanged. An
+         * extensions-only query collapses to `""`, which event stores
+         * treat as "no search constraint" — the NIP-50 behaviour for
+         * relays that don't support an extension is to ignore it, not to
+         * return nothing.
+         */
+        fun stripExtensions(search: String?): String? {
+            if (search.isNullOrBlank()) return search
+            val parsed = parse(search)
+            return if (parsed.extensions.isEmpty()) search else parsed.terms
+        }
     }
+}
+
+/**
+ * Returns a copy of this filter whose `search` string has all NIP-50
+ * extension tokens removed (see [SearchQuery.stripExtensions]), or this
+ * same instance when there is nothing to strip.
+ */
+fun Filter.strippingSearchExtensions(): Filter {
+    val stripped = SearchQuery.stripExtensions(search)
+    return if (stripped == search) this else copy(search = stripped)
+}
+
+/**
+ * Applies [strippingSearchExtensions] to every filter, returning this
+ * same list when no filter carried extension tokens.
+ */
+fun List<Filter>.strippingSearchExtensions(): List<Filter> {
+    var changed = false
+    val out =
+        map {
+            val stripped = it.strippingSearchExtensions()
+            if (stripped !== it) changed = true
+            stripped
+        }
+    return if (changed) out else this
 }
 
 /** NIP-50 `sentiment:` extension values. */

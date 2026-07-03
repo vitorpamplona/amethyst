@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip50Search
 
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class SearchQueryTest {
@@ -143,5 +145,58 @@ class SearchQueryTest {
     fun toSearchStringWithExtensionsOnly() {
         val q = SearchQuery.parse("nsfw:false")
         assertEquals("nsfw:false", q.toSearchString())
+    }
+
+    @Test
+    fun stripExtensionsRemovesTokens() {
+        assertEquals("bitcoin", SearchQuery.stripExtensions("bitcoin include:spam"))
+        assertEquals("best nostr apps", SearchQuery.stripExtensions("best domain:example.com nostr language:en apps"))
+        // Unknown extension keys are stripped too — the store can't apply them either.
+        assertEquals("hello", SearchQuery.stripExtensions("hello foo:bar"))
+    }
+
+    @Test
+    fun stripExtensionsOnExtensionsOnlyYieldsEmpty() {
+        // Empty, not null: an empty search imposes no constraint (NIP-50
+        // says unsupported extensions are ignored, not match-nothing).
+        assertEquals("", SearchQuery.stripExtensions("include:spam nsfw:false"))
+    }
+
+    @Test
+    fun stripExtensionsPassesPlainQueriesThrough() {
+        assertNull(SearchQuery.stripExtensions(null))
+        assertEquals("", SearchQuery.stripExtensions(""))
+        assertEquals("  ", SearchQuery.stripExtensions("  "))
+        assertEquals("best nostr apps", SearchQuery.stripExtensions("best nostr apps"))
+        // URLs and uppercase-key tokens are terms, not extensions.
+        assertEquals("check https://example.com out", SearchQuery.stripExtensions("check https://example.com out"))
+        assertEquals("NASA:cool stuff", SearchQuery.stripExtensions("NASA:cool stuff"))
+    }
+
+    @Test
+    fun filterStrippingSearchExtensions() {
+        val filter = Filter(kinds = listOf(1), search = "bitcoin include:spam")
+        val stripped = filter.strippingSearchExtensions()
+        assertEquals("bitcoin", stripped.search)
+        assertEquals(listOf(1), stripped.kinds)
+
+        // Nothing to strip -> same instance, no copy.
+        val plain = Filter(kinds = listOf(1), search = "bitcoin")
+        assertSame(plain, plain.strippingSearchExtensions())
+        val noSearch = Filter(kinds = listOf(1))
+        assertSame(noSearch, noSearch.strippingSearchExtensions())
+    }
+
+    @Test
+    fun filterListStrippingSearchExtensions() {
+        val plain = Filter(search = "bitcoin")
+        val extended = Filter(search = "bitcoin language:en")
+
+        val untouched = listOf(plain, Filter(kinds = listOf(1)))
+        assertSame(untouched, untouched.strippingSearchExtensions())
+
+        val mixed = listOf(plain, extended).strippingSearchExtensions()
+        assertSame(plain, mixed[0])
+        assertEquals("bitcoin", mixed[1].search)
     }
 }

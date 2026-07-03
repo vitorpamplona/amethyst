@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -195,6 +196,44 @@ class NostrServerTest {
 
             val events = collector.parsedEventMessages().filterIsInstance<EventMessage>()
             assertEquals(3, events.size)
+
+            server.close()
+        }
+
+    @Test
+    fun reqWithSearchExtensionsIsAnsweredNotErrored() =
+        runTest {
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val store = EventStore(null)
+            val server = createServer(dispatcher, store)
+
+            // Build through EventFactory so kind 1 materializes as a
+            // TextNoteEvent — only SearchableEvent instances are FTS-indexed.
+            store.insert(EventFactory.create(hexId(1), pubkey, 100L, 1, emptyArray(), "bitcoin is money", sig))
+            store.insert(EventFactory.create(hexId(2), pubkey, 200L, 1, emptyArray(), "coffee time", sig))
+
+            val collector = MessageCollector()
+            val c1 = server.connect(collector.sendCallback)
+
+            // The raw string would be FTS5 syntax ("no such column: include")
+            // if it reached MATCH unstripped — the REQ must answer, not CLOSE.
+            c1.receive("""["REQ","sub1",{"search":"bitcoin include:spam"}]""")
+
+            var events = collector.parsedEventMessages().filterIsInstance<EventMessage>()
+            assertEquals(1, events.size)
+            assertEquals("bitcoin is money", events[0].event.content)
+            assertEquals(1, collector.parsedEventMessages().filterIsInstance<EoseMessage>().size)
+            assertTrue(collector.rawMessagesContaining("CLOSED").isEmpty())
+
+            // Extensions-only search: NIP-50 ignores unsupported extensions,
+            // so the search constraint drops and the filter is unconstrained.
+            c1.receive("""["CLOSE","sub1"]""")
+            collector.messages.clear()
+            c1.receive("""["REQ","sub2",{"search":"language:en"}]""")
+
+            events = collector.parsedEventMessages().filterIsInstance<EventMessage>()
+            assertEquals(2, events.size)
+            assertTrue(collector.rawMessagesContaining("CLOSED").isEmpty())
 
             server.close()
         }
