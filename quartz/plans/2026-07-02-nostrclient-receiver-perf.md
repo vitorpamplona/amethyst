@@ -272,6 +272,60 @@ Implications for the proposed parallel-parse pipeline:
   PING/PONG handling, so sustained backpressure can trip relay-side ping
   timeouts — the bound should be sized generously.
 
+### Parallel fetch-by-id matrix — full corpus, no cap (2026-07-03)
+
+**Harness:** `quartz/src/jvmTest/.../relay/prodbench/ByIdFetchBenchmark.kt`.
+Enumerates every kind-30382 id on nip85.nosfabrica.com (33,000 that day), then
+each cell re-downloads the FULL corpus by 250-id REQ batches from a shared
+queue. Connections are pre-established before timing; every cell completed
+with zero missing ids and zero timed-out batches.
+
+| cell | events/s |
+|---|---|
+| 1 conn × 1 REQ | 1,970 |
+| 1 conn × 2 REQs | 3,423 |
+| 1 conn × 4 REQs | 8,026 |
+| 1 conn × 8 REQs | 17,214 |
+| 1 conn × 16 REQs | **30,735** |
+| 2 conns × 4 REQs | 15,557 |
+| 4 conns × 4 REQs | 27,251 |
+| 8 conns × 4 REQs | **40,402** |
+
+This corrects both the user report AND this doc's own earlier "relay
+per-connection pacing" phrasing:
+
+1. **No wall at ~4 concurrent REQs** — one connection scales near-linearly to
+   16 in-flight REQs (1,970 → 30,735 events/s). The relay is happy to serve
+   30k+/s down a single socket when the client keeps requests in flight.
+2. **Connections and per-connection REQs are interchangeable**: 1×16 ≈ 4×4.
+   The real variable is **total in-flight REQs** (Little's law: throughput ≈
+   in-flight ÷ per-REQ latency; a 250-id batch serves in ~130ms here).
+   Diminishing returns start around 32 in-flight (~40k/s) — likely relay
+   query capacity.
+3. **Every slow configuration measured so far is a serialization problem,
+   not a bandwidth/CPU one**: until-cursor paging is 1-in-flight by
+   construction (~2–3.7k/s ≈ the 1×1 cell); `negentropySync` measured
+   1.6k/s with `maxConcurrentReqs = 8` because its download workers starve —
+   the reconcile rounds pace id production (bounded `idBatches` buffer of
+   `workerCount` batches) and overflow windows recurse **sequentially**
+   (`syncWindow` lo-half then hi-half).
+4. The reported "stops helping past ~4 REQs" is consistent with
+   `negentropySync`'s internal throttling (or a relay-side subscription cap,
+   or a slow per-event sink) — not with independent by-id REQs on this relay.
+5. Client parse at 30.7k/s through ONE connection's consumer coroutine was
+   ~11% of a core (3.6µs × 30.7k) on this machine — still not the wall. On a
+   phone (5–10× slower) 15–30k/s IS where the single consumer saturates, so
+   the parallel-parse proposal becomes relevant on mobile at exactly the
+   rates this fan-out unlocks.
+
+**Concrete quartz improvements this implies** (in `negentropySync`):
+raise `maxConcurrentReqs` (16 measured safe here), deepen the `idBatches`
+buffer so downloads don't starve on reconcile cadence, and reconcile
+overflow-split windows concurrently instead of recursing sequentially.
+Together these should move it from 1.6k/s toward the ~30k/s the same
+connection demonstrably sustains. At 40k/s, 10M events by id is ~4 minutes
+(plus id enumeration).
+
 ### Answer for "10M events from one relay, fastest"
 
 At nosfabrica's measured page cadence, one connection ≈ 3.7k events/s → 10M
