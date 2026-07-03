@@ -270,7 +270,7 @@ class LiveEventStore(
 
         index.register(filters, sub)
         try {
-            store.rawQuery(filters) { raw ->
+            store.rawQuery(filters.strippingSearchExtensions()) { raw ->
                 seenLocked { seenIds?.add(raw.id) }
                 onEachStored(raw)
             }
