@@ -21,4 +21,8 @@ files:
     #     values-sw-rTZ.
     languages_mapping:
       android_code:
+        # Czech: single target, but Crowdin's default android_code is cs-rCZ, so
+        # without this it writes values-cs-rCZ instead of base values-cs. Single
+        # target => no collision; cs-CZ is dropped from locales_config to match.
+        cs: cs
         sw-KE: sw
