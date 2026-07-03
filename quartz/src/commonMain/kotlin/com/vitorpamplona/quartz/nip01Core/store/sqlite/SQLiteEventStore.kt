@@ -43,7 +43,7 @@ class SQLiteEventStore(
     val numReaders: Int = 4,
 ) {
     companion object {
-        const val DATABASE_VERSION = 2
+        const val DATABASE_VERSION = 3
     }
 
     val seedModule = SeedModule()
@@ -162,6 +162,11 @@ class SQLiteEventStore(
                     // We changed event_tags to use a probabilistic hash as tag
                     modules.reversed().forEach { it.drop(db) }
                     modules.forEach { it.create(db) }
+                }
+                2 -> {
+                    // Upgrade from version 2 to 3: authors-only query index
+                    // (created only for strategies that opt in).
+                    eventIndexModule.migrateV2AddPubkeyIndex(db)
                 }
             }
         }

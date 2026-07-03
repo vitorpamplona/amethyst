@@ -79,6 +79,13 @@ class EventIndexesModule(
             db.execSQL("CREATE INDEX query_by_created_at_id        ON event_headers ($orderBy)")
         }
 
+        // queries by author only, no kind — "everything by these pubkeys"
+        // (profile archives, migration/backup tools). Relays need it;
+        // clients query their supported kinds and can skip it.
+        if (indexStrategy.indexEventsByPubkeyAlone) {
+            db.execSQL("CREATE INDEX query_by_pubkey_created       ON event_headers (pubkey, $orderBy)")
+        }
+
         // queries by kind only, mostly used in Global Feeds when author is not important.
         db.execSQL("CREATE INDEX query_by_kind_created         ON event_headers (kind, $orderBy)")
 
@@ -131,6 +138,22 @@ class EventIndexesModule(
     override fun drop(db: SQLiteConnection) {
         db.execSQL("DROP TABLE IF EXISTS event_tags")
         db.execSQL("DROP TABLE IF EXISTS event_headers")
+    }
+
+    /**
+     * v2 → v3 migration: the authors-only index arrived after v2 schemas
+     * shipped. Backfills it (idempotently) for strategies that want it;
+     * everyone else just gets the version bump.
+     */
+    fun migrateV2AddPubkeyIndex(db: SQLiteConnection) {
+        if (!indexStrategy.indexEventsByPubkeyAlone) return
+        val orderBy =
+            if (indexStrategy.useAndIndexIdOnOrderBy) {
+                "created_at DESC, id ASC"
+            } else {
+                "created_at DESC"
+            }
+        db.execSQL("CREATE INDEX IF NOT EXISTS query_by_pubkey_created ON event_headers (pubkey, $orderBy)")
     }
 
     val sqlInsertHeader =

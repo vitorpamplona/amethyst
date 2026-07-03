@@ -42,6 +42,17 @@ interface IndexingStrategy {
     val indexEventsByCreatedAtAlone: Boolean
 
     /**
+     * Activate this for filters that carry `authors` but no `kinds` —
+     * "everything by these pubkeys". Clients rarely need it (they query
+     * their supported kinds), but relays receive it constantly: profile
+     * archives, account migration/backup tools, and follow-everything
+     * feeds. Without it those filters degrade to a full scan of the
+     * time index. strfry maintains the equivalent (`pubkey`) index
+     * unconditionally.
+     */
+    val indexEventsByPubkeyAlone: Boolean
+
+    /**
      * Activate this if you see too many Tag-centric Filters without
      * kind, pubkey or id.
      *
@@ -107,6 +118,7 @@ interface IndexingStrategy {
  */
 class DefaultIndexingStrategy(
     override val indexEventsByCreatedAtAlone: Boolean = false,
+    override val indexEventsByPubkeyAlone: Boolean = false,
     override val indexTagsByCreatedAtAlone: Boolean = false,
     override val indexTagsWithKindAndPubkey: Boolean = false,
     override val useAndIndexIdOnOrderBy: Boolean = false,

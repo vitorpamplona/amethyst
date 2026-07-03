@@ -121,6 +121,18 @@ object Scenarios {
                         Filter(kinds = listOf(0), authors = topAuthors.take(50)),
                     ),
                 )
+                // Deliberately *quiet* authors (popularity tail): their rows
+                // are sparse in the time index, so an authors-only filter
+                // exposes whether the store has a (pubkey, created_at) path
+                // or has to walk the whole table. Prolific authors would
+                // mask the difference — a time-index scan finds them fast.
+                add(
+                    Scenario(
+                        "author-archive",
+                        "every kind by ${topAuthors.takeLast(3).size} quiet pubkeys (archive/migration pull)",
+                        Filter(authors = topAuthors.takeLast(3), limit = 500),
+                    ),
+                )
                 add(
                     Scenario(
                         "follow-feed",

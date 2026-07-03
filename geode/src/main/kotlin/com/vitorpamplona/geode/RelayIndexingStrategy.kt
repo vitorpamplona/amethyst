@@ -44,6 +44,11 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 fun relayIndexingStrategy(fullTextSearch: Boolean = true) =
     DefaultIndexingStrategy(
         indexEventsByCreatedAtAlone = true,
+        // Authors-only filters (no kinds) are relay-common — archives,
+        // migration tools. strfry maintains the same (pubkey, created_at)
+        // index unconditionally; without it the filter walks the whole
+        // time index.
+        indexEventsByPubkeyAlone = true,
         indexFullTextSearch = fullTextSearch,
     )
 
