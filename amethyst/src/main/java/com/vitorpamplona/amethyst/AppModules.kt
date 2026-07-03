@@ -100,6 +100,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
@@ -499,8 +500,10 @@ class AppModules(
             OkHttpLnurlEndpointResolver(roleBasedHttpClientBuilder::okHttpClientForMoney)
     }
 
-    // Provides a relay pool
-    val client: INostrClient = NostrClient(websocketBuilder, applicationIOScope)
+    // Provides a relay pool. The caching decoder skips re-parsing EVENT frames
+    // that arrive again via another subscription or relay (14-57% of frames in
+    // production measurements).
+    val client: INostrClient = NostrClient(websocketBuilder, applicationIOScope, CachingEventDecoder())
 
     // Self-heals the "Tor Active but every circuit dead" state the lifecycle watchdogs can't
     // see (they only arm while Connecting). Watches Tor-routed relay outcomes and, when enough

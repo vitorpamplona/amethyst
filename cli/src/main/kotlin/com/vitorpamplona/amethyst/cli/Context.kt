@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -115,6 +116,9 @@ class Context(
     val client: NostrClient =
         NostrClient(
             websocketBuilder = BasicOkHttpWebSocket.Builder { okhttp },
+            // Skips re-parsing EVENT frames that arrive again via another
+            // subscription or relay.
+            decoder = CachingEventDecoder(),
         )
 
     /**
