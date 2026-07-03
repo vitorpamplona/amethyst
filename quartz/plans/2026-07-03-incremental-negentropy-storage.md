@@ -24,6 +24,24 @@ relayBench run controls container noise better than alternating runs,
 but per-phase run-order bias is real (~100 ms on initial reconcile,
 ~10% on ingest) — always repeat with the order reversed.
 
+**strfry head-to-head** (same container, 50k corpus, `--geode-no-search`,
+strfry built from source, single run): identical-set reconcile geode
+41.4 ms vs strfry 30.1 ms — the always-current-tree gap is down to
+~1.4× from the campaign-opening "full scan + seal per open". Initial
+(cold) reconcile 177 vs 112 ms: strfry keeps its tree across the whole
+run while geode's first open pays the lazy rebuild. Ingest measured at
+parity in this container (7,972 vs 7,860 ev/s — treat as ±noise, the
+earlier 1.59× gap was measured on different hardware); storage 72.8 vs
+106.0 MiB.
+
+**Possible follow-up** if the residual matters: the per-open cost is now
+the O(n) copy + re-seal into a `StorageVector` (~16 ms at 50k). A custom
+immutable `IStorage` view over the live entries (copy-on-write chunks,
+no re-seal) would make an open O(1), matching strfry's zero-copy read of
+its tree — that is the "interesting part" the original backlog item
+anticipated, deferred until a benchmark says the remaining ~11 ms is
+worth it.
+
 ## Problem
 
 A cold NEG-OPEN pays a full scan + O(n log n) seal: `snapshotIdsForNegentropy`
