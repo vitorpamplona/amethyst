@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
+import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
@@ -199,6 +200,51 @@ class LiveEventStore(
             // Suspend until the caller's coroutine is cancelled
             // (e.g. NIP-01 CLOSE or connection drop). The `finally`
             // unregisters from the index.
+            awaitCancellation()
+        } finally {
+            index.unregister(sub)
+        }
+    }
+
+    /**
+     * Zero-decode variant of [query]: the historical replay streams
+     * [com.vitorpamplona.quartz.nip01Core.store.RawEvent] rows straight
+     * from storage (no tags parse, no Event materialization, no
+     * re-serialization), while the live path after EOSE is identical to
+     * [query]'s. Same registration-before-replay ordering and the same
+     * immutable-set dedupe against events accepted mid-replay.
+     */
+    override suspend fun queryRaw(
+        ctx: RequestContext,
+        filters: List<Filter>,
+        onEachStored: (RawEvent) -> Unit,
+        onEachLive: (Event) -> Unit,
+        onEose: () -> Unit,
+    ) {
+        val seenIds = AtomicReference<Set<String>?>(emptySet())
+
+        val sub =
+            LiveSubscription(
+                filters = filters,
+                deliver = { event ->
+                    val seen = seenIds.load()
+                    if (seen != null && seen.contains(event.id)) return@LiveSubscription
+                    onEachLive(event)
+                },
+            )
+
+        index.register(filters, sub)
+        try {
+            store.rawQuery(filters) { raw ->
+                while (true) {
+                    val current = seenIds.load() ?: break
+                    if (raw.id in current) break
+                    if (seenIds.compareAndSet(current, current + raw.id)) break
+                }
+                onEachStored(raw)
+            }
+            onEose()
+            seenIds.store(null)
             awaitCancellation()
         } finally {
             index.unregister(sub)

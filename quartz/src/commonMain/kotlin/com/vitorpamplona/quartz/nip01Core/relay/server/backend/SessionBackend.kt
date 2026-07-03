@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
+import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 
 /**
  * The data plane a [RelaySession] talks to: how REQ/COUNT are answered, how
@@ -57,6 +58,27 @@ interface SessionBackend {
         onEach: (Event) -> Unit,
         onEose: () -> Unit,
     )
+
+    /**
+     * [query] variant for sessions whose policy does not filter outgoing
+     * events (see
+     * [com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy.filtersOutgoingEvents]):
+     * the stored replay is delivered as [RawEvent]s so the transport can
+     * splice storage strings straight into wire frames without
+     * materializing an [Event] per row. Live events after EOSE still
+     * arrive as [Event]s via [onEachLive] — they exist in object form
+     * already, and live matching needs them.
+     *
+     * The default falls back to [query], treating every delivery as live —
+     * correct for any backend, just without the zero-decode win.
+     */
+    suspend fun queryRaw(
+        ctx: RequestContext,
+        filters: List<Filter>,
+        onEachStored: (RawEvent) -> Unit,
+        onEachLive: (Event) -> Unit,
+        onEose: () -> Unit,
+    ): Unit = query(ctx, filters, onEachLive, onEose)
 
     /** Answers a NIP-45 COUNT with an exact cardinality for the caller in [ctx]. */
     suspend fun count(

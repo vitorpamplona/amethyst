@@ -113,7 +113,7 @@ fun main(args: Array<String>) {
         cliInfoFile?.let { RelayInfo.fromFile(it) }
             ?: config.resolveInfo()
 
-    val store: IEventStore = EventStore(dbName = dbFile, relay = advertisedUrl)
+    val store: IEventStore = EventStore(dbName = dbFile, relay = advertisedUrl, indexStrategy = RelayIndexingStrategy)
 
     val policyBuilder: () -> IRelayPolicy = {
         composePolicy(config, advertisedUrl, requireAuth, optionalAuth, verifySigs, parallelVerify)

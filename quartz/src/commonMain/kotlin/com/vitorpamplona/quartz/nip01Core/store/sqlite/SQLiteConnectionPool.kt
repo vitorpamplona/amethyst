@@ -82,14 +82,21 @@ class SQLiteConnectionPool(
     private val readerChannel: Channel<SQLiteConnection>?
 
     init {
-        writer = openConnection()
+        // The writer replays the same INSERT statements for every event —
+        // cache its prepared statements so sqlite3_prepare is paid once per
+        // SQL string instead of once per row. (Migrations run through the
+        // same wrapper; DDL statements just cache and stay unused.)
+        writer = StatementCachingConnection(openConnection())
         onMigrate(writer)
 
         if (isInMemory) {
             readers = emptyList()
             readerChannel = null
         } else {
-            readers = List(numReaders) { openConnection() }
+            // Readers replay the same filter shapes all day (feeds, threads,
+            // profile hydrations) — caching their prepared statements pays
+            // the parse/plan cost once per shape per connection.
+            readers = List(numReaders) { StatementCachingConnection(openConnection()) }
             readerChannel = Channel(numReaders)
             readers.forEach { readerChannel.trySend(it) }
         }

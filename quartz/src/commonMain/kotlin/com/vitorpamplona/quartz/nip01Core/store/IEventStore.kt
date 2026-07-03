@@ -101,6 +101,21 @@ interface IEventStore : AutoCloseable {
         onEach: (T) -> Unit,
     )
 
+    /**
+     * Streams matching events in storage form — tags still serialized,
+     * nothing materialized — for read paths that only put events back on
+     * the wire (see [RawEvent]). The default decodes and re-wraps so
+     * every store stays correct; SQLite overrides with a true zero-decode
+     * row read.
+     */
+    suspend fun rawQuery(
+        filters: List<Filter>,
+        onEach: (RawEvent) -> Unit,
+    ): Unit =
+        query<Event>(filters) { event ->
+            onEach(RawEvent.fromEvent(event))
+        }
+
     suspend fun count(filter: Filter): Int
 
     suspend fun count(filters: List<Filter>): Int

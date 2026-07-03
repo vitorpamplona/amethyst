@@ -58,7 +58,7 @@ import kotlin.coroutines.CoroutineContext
  */
 class RelayEngine(
     val url: NormalizedRelayUrl,
-    val store: IEventStore = EventStore(dbName = null, relay = url),
+    val store: IEventStore = EventStore(dbName = null, relay = url, indexStrategy = RelayIndexingStrategy),
     /**
      * Runtime configuration handle — owns the persistence path (when
      * any), the NIP-11 doc seed, and the seed for the NIP-86 ban /

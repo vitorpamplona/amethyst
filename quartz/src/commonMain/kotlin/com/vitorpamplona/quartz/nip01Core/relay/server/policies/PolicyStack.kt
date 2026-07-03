@@ -77,4 +77,6 @@ class PolicyStack(
     }
 
     override fun canSendToSession(event: Event): Boolean = policies.all { it.canSendToSession(event) }
+
+    override val filtersOutgoingEvents: Boolean get() = policies.any { it.filtersOutgoingEvents }
 }

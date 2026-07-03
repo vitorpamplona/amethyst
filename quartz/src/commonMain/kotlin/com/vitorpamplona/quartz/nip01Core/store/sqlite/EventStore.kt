@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
+import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 
 /**
  * SQLite-backed [IEventStore] with default DB-file name and relay
@@ -60,6 +61,11 @@ class EventStore(
         filters: List<Filter>,
         onEach: (T) -> Unit,
     ) = store.query(filters, onEach)
+
+    override suspend fun rawQuery(
+        filters: List<Filter>,
+        onEach: (RawEvent) -> Unit,
+    ) = store.rawQuery(filters, onEach)
 
     override suspend fun count(filter: Filter) = store.count(filter)
 

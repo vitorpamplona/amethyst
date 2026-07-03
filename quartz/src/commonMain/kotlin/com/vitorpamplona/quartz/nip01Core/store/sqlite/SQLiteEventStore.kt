@@ -26,16 +26,14 @@ import androidx.sqlite.SQLiteException
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.Kind
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
+import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
-import com.vitorpamplona.quartz.utils.EventFactory
 
 class SQLiteEventStore(
     val driver: SQLiteDriver = BundledSQLiteDriver(),
@@ -371,25 +369,4 @@ class SQLiteEventStore(
         }
 
     fun close() = pool.close()
-}
-
-class RawEvent(
-    val id: HexKey,
-    val pubKey: HexKey,
-    val createdAt: Long,
-    val kind: Kind,
-    val jsonTags: String,
-    val content: String,
-    val sig: HexKey,
-) {
-    fun <T : Event> toEvent() =
-        EventFactory.create<T>(
-            id,
-            pubKey,
-            createdAt,
-            kind,
-            OptimizedJsonMapper.fromJsonToTagArray(jsonTags),
-            content,
-            sig,
-        )
 }
