@@ -497,18 +497,26 @@ decoder 1.5µs/frame — **6.5×**, with duplicates costing ~0.3µs instead of
 10µs. 7 scan-safety unit tests (`CachingEventDecoderTest`) cover repost
 embedding, escaped subIds, malformed ids, cache rotation, non-EVENT frames.
 
-### Bounded per-connection receive buffer (done)
+### Bounded per-connection receive buffer (REVERTED — deliberate design choice)
 
-`BasicOkHttpWebSocket` (quartz) and `OkHttpWebSocket` (amethyst) now bound
-the reader-thread→consumer channel at 4096 frames (was `UNLIMITED`). A
-consumer slower than the socket blocks OkHttp's reader thread — TCP flow
-control pushes back on the relay instead of accumulating frame Strings on
-our heap (a multi-million-event bulk download could previously queue
-gigabytes). Trade-off documented on the constant: a blocked reader also
-delays PING/PONG, so the bound is generous. Validated by
-`BoundedReceiveBufferTest`: an 8-frame buffer against a deliberately slow
-consumer over a real socket — every EVENT plus EOSE arrives, in order, no
-drops, no deadlock.
+A 4096-frame bound on the reader→consumer channel was tried (backpressure
+via TCP flow control instead of unbounded heap; proven lossless by a
+slow-consumer test) and then **reverted by explicit maintainer decision**,
+for two reasons that outweigh the heap tail-risk:
+
+1. **The remote infrastructure isn't ours.** Backpressure parks the backlog
+   in the RELAY's outbound buffers/TCP window — a client should release the
+   relay from its duties as fast as the relay can send, and own the
+   buffering itself.
+2. **The app holds 2000+ simultaneous relay connections.** A bounded buffer
+   under a slow consumer blocks OkHttp reader THREADS; at that connection
+   count, blocked readers are a thread-starvation hazard far worse than the
+   heap growth they prevent.
+
+The `Channel.UNLIMITED` receive queues now carry an explicit "do not bound"
+comment with this rationale. The slow-consumer risk is addressed from the
+other side instead: make the consumer fast enough that backlogs don't form
+(CachingEventDecoder, ParallelEventVerifier, PoolRequests sharding).
 
 ### ParallelEventVerifier: batched verify off the receiver coroutine (done)
 

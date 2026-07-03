@@ -42,7 +42,6 @@ class BasicOkHttpWebSocket(
     val url: NormalizedRelayUrl,
     val httpClient: (NormalizedRelayUrl) -> OkHttpClient,
     val out: WebSocketListener,
-    val receiveBufferFrames: Int = RECEIVE_BUFFER_FRAMES,
 ) : WebSocket {
     companion object {
         // Exists to avoid exceptions stopping the coroutine
@@ -50,23 +49,6 @@ class BasicOkHttpWebSocket(
             CoroutineExceptionHandler { _, throwable ->
                 Log.e("BasicOkHttpWebSocket", "WebsocketListener Caught exception: ${throwable.message}", throwable)
             }
-
-        /**
-         * Cap on frames buffered between OkHttp's reader thread and the
-         * consumer coroutine. Bounded ON PURPOSE: with an unlimited channel a
-         * consumer slower than the socket accumulates heap without limit (a
-         * multi-million-event bulk download can queue gigabytes of frame
-         * Strings). When full, [trySendBlocking] blocks the OkHttp reader
-         * thread, which stops reading the TCP socket — flow control then
-         * pushes back on the relay instead of on our heap.
-         *
-         * Trade-off: a blocked reader thread also delays OkHttp's PING/PONG
-         * handling, so the bound is generous (4096 frames ≈ 4–40 MB of text
-         * at typical event sizes) — deep enough that only a pathologically
-         * slow consumer ever hits it, and short stalls stay well under relay
-         * ping timeouts.
-         */
-        const val RECEIVE_BUFFER_FRAMES = 4096
     }
 
     private var socket: OkHttpWebSocket? = null
@@ -79,7 +61,17 @@ class BasicOkHttpWebSocket(
         val listener =
             object : OkHttpWebSocketListener() {
                 val scope = CoroutineScope(Dispatchers.IO + exceptionHandler)
-                val incomingMessages: Channel<String> = Channel(receiveBufferFrames)
+
+                // UNLIMITED on purpose — do NOT bound this channel. The app
+                // holds 2000+ relay connections; a bounded buffer under a
+                // slow consumer would block OkHttp reader threads (thread
+                // starvation at that connection count) and park the backlog
+                // on the RELAY's outbound buffers via TCP backpressure —
+                // infrastructure that isn't ours. We drain the remote as
+                // fast as it can send and own the buffering; consumer speed
+                // is handled downstream (CachingEventDecoder,
+                // ParallelEventVerifier).
+                val incomingMessages: Channel<String> = Channel(Channel.UNLIMITED)
                 val job = // Launch a coroutine to process messages from the channel.
                     scope.launch {
                         for (message in incomingMessages) {
@@ -99,8 +91,8 @@ class BasicOkHttpWebSocket(
                     webSocket: OkHttpWebSocket,
                     text: String,
                 ) {
-                    // Blocks the OkHttp reader thread when the buffer is full —
-                    // that's the backpressure mechanism, see RECEIVE_BUFFER_FRAMES.
+                    // Never blocks (unlimited channel): the OkHttp reader
+                    // thread must stay free to keep draining the socket.
                     incomingMessages.trySendBlocking(text)
                 }
 

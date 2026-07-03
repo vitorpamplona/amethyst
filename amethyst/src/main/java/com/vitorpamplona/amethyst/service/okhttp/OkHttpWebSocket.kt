@@ -24,7 +24,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket.Companion.exceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -78,10 +77,13 @@ class OkHttpWebSocket(
     ) : okhttp3.WebSocketListener() {
         val scope = CoroutineScope(Dispatchers.IO + exceptionHandler)
 
-        // Bounded: a consumer slower than the socket blocks OkHttp's reader
-        // thread (TCP backpressure) instead of accumulating unbounded heap.
-        // See BasicOkHttpWebSocket.RECEIVE_BUFFER_FRAMES for the rationale.
-        val incomingMessages: Channel<String> = Channel(BasicOkHttpWebSocket.RECEIVE_BUFFER_FRAMES)
+        // UNLIMITED on purpose — do NOT bound this channel. The app holds
+        // 2000+ relay connections; a bounded buffer under a slow consumer
+        // would block OkHttp reader threads and park the backlog on the
+        // relay's outbound buffers — infrastructure that isn't ours. Drain
+        // the remote as fast as it can send; consumer speed is handled
+        // downstream.
+        val incomingMessages: Channel<String> = Channel(Channel.UNLIMITED)
         val job = // Launch a coroutine to process messages from the channel.
             scope.launch {
                 for (message in incomingMessages) {
