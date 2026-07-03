@@ -562,6 +562,14 @@ on download REQs would idle-down against today's reconcile-bound relay and
 the benchmarks could not demonstrate a win (the criterion for shipping);
 revisit if a relay shows download-bound behavior with volatile capacity.
 
+### permessage-deflate: verified active (no change needed)
+
+The per-connection-wall test now prints the negotiated
+`Sec-WebSocket-Extensions`; against nip85.nosfabrica.com (strfry) OkHttp
+negotiates `permessage-deflate; client_no_context_takeover` out of the box.
+Compression was on the suspect list as a 3–5× bandwidth lever for mobile —
+it's already engaged; nothing to code.
+
 ## Recommendations (in order of value/risk)
 
 1. **Move Schnorr verification off the receiver coroutine** in the app's

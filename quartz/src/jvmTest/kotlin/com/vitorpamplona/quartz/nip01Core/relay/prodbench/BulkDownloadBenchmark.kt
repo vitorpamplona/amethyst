@@ -592,6 +592,9 @@ class BulkDownloadBenchmark {
                         webSocket: okhttp3.WebSocket,
                         response: Response,
                     ) {
+                        // Compression matters 3-5x on bandwidth-limited links; report
+                        // whether the relay actually negotiated it with OkHttp.
+                        println("    negotiated Sec-WebSocket-Extensions: ${response.header("Sec-WebSocket-Extensions") ?: "(none — uncompressed)"}")
                         webSocket.send("""["REQ","raw",{"kinds":[$kind],"limit":$pageLimit,"until":$until}]""")
                     }
 
