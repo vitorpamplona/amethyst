@@ -21,12 +21,51 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Manages the State of Subscriptions by logging states as the
  * subscription progresses.
+ *
+ * Thread-safety: the plain maps below are only touched inside [withLock].
+ * The lock lives HERE — one per subscription — instead of a single global
+ * lock in PoolRequests, because every mutation is scoped to one subId:
+ * relays delivering EVENTs for *different* subscriptions have no shared
+ * state and must not serialize on each other. (A single global spin lock
+ * measured *negative* scaling: 4 relay consumer threads pushed less
+ * aggregate throughput through it than 1 — see
+ * quartz/plans/2026-07-02-nostrclient-receiver-perf.md.)
  */
+@OptIn(ExperimentalAtomicApi::class)
 class RequestSubscriptionState<T> {
+    /**
+     * Tiny non-reentrant spin lock (same primitive as BasicRelayClient's
+     * connecting mutex). Critical sections are a handful of map operations,
+     * never I/O — callers MUST NOT re-enter and MUST NOT hold two
+     * subscriptions' locks at once (PoolRequests locks one sub at a time,
+     * including inside its all-subs iterations).
+     *
+     * `@PublishedApi internal` only because [withLock] is inline (this sits
+     * on the per-EVENT hot path; inlining avoids a closure allocation per
+     * message) — treat it as private.
+     */
+    @PublishedApi
+    internal val lock = AtomicBoolean(false)
+
+    inline fun <R> withLock(block: () -> R): R {
+        while (lock.exchange(true)) {
+            // Test-and-test-and-set: spin-read until it looks free (cheaper
+            // on the cache line than hammering exchange), then retry above.
+            while (lock.load()) { }
+        }
+        try {
+            return block()
+        } finally {
+            lock.store(false)
+        }
+    }
+
     // Logs the state of each channel to:
     // 1. inform when an event is received as live
     // 2. to block REQs being sent before finished (receiving an EOSE or Closed)

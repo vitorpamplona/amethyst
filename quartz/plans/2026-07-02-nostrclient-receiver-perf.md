@@ -461,6 +461,23 @@ in ~45 min. To improve, in order:
    fine — that's TCP backpressure doing its job) and stream events to disk,
    never hold the set.
 
+## Implemented optimizations (2026-07-03)
+
+### PoolRequests lock sharding (done)
+
+The global spin lock moved into `RequestSubscriptionState` — one lock per
+subscription — since every compound mutation is scoped to one subId and
+different subs share no wire state. `decideCommandLocked` now takes the state
+instance so it never re-enters the (non-reentrant) lock, and the all-subs
+iterations (connect/disconnect/cannot-connect) lock one sub at a time.
+`withLock` is inline to keep the per-EVENT hot path allocation-free.
+
+Validation (DispatchStageBenchmark, PoolRequests-only, 4 feeder threads vs
+1): scaling flipped from **negative** (11.1M → 3.6M deliveries/s, 0.33×) to
+**positive** (3.4–7.3× across runs; absolute numbers on the shared CI box are
+noisy, the scaling direction is consistent across every run). All
+PoolRequests concurrency + NostrClient + negentropy suites pass.
+
 ## Recommendations (in order of value/risk)
 
 1. **Move Schnorr verification off the receiver coroutine** in the app's
