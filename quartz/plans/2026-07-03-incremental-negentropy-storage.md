@@ -1,7 +1,28 @@
 # Incremental live negentropy storage
 
-**Status: planned** — backlog item 3 of the relay performance campaign
-(PR #3466 follow-up).
+**Status: shipped** — backlog item 3 of the relay performance campaign
+(PR #3466 follow-up). All four milestones landed on this branch.
+
+**Measured results.** Micro (LiveNegentropyBenchmark, 50k events,
+in-container): scan+seal cold path 80–100 ms per open; index post-write
+open 9–16 ms (~5–10×); first open ~70 ms (pays the one-time rebuild).
+relayBench A/B (both variants in ONE run — geode with index vs geode
+with `[negentropy].live_index = false` — 50k corpus, then repeated with
+the relay order reversed to control for run-order bias):
+
+ - **identical-set reconcile: 56/57 ms with the index vs 110/130 ms
+   without, in both orders — the real ~2.2× win.** This phase runs
+   after the delta transfer wrote events, so the old single-slot cache
+   always misses — the exact gap the index closes.
+ - initial (first-ever) reconcile and ingest throughput: whichever
+   relay ran first won/lost respectively in BOTH runs — pure run-order
+   effect, i.e. no ingest regression and (as designed) no win on the
+   very first open, which pays the lazy rebuild.
+
+Measurement note for future A/Bs: putting both variants in one
+relayBench run controls container noise better than alternating runs,
+but per-phase run-order bias is real (~100 ms on initial reconcile,
+~10% on ingest) — always repeat with the order reversed.
 
 ## Problem
 
