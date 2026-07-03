@@ -275,19 +275,21 @@ class RelaySession(
 
     /**
      * A REQ qualifies for the inline fast path when its replay is
-     * provably small: every filter carries a `limit` and the limits sum
-     * to at most [INLINE_REPLAY_MAX_ROWS]. Inline replays run on this
-     * connection's receive coroutine — no per-REQ launch, no dispatcher
-     * handoffs (profiled at ~2/3 of a ~20-row REQ's time-to-EOSE) — at
-     * the price of delaying the connection's NEXT command until EOSE,
-     * which a bounded replay keeps in the tens-of-rows range. Unbounded
-     * REQs keep the launched path so a CLOSE can always interrupt them.
+     * provably bounded: every filter carries a `limit`, or an `ids` list
+     * (ids are unique keys, so the result can't exceed the list), and
+     * the bounds sum to at most [INLINE_REPLAY_MAX_ROWS]. Inline replays
+     * run on this connection's receive coroutine — no per-REQ launch, no
+     * dispatcher handoffs (profiled at ~2/3 of a ~20-row REQ's
+     * time-to-EOSE) — at the price of delaying the connection's NEXT
+     * command until EOSE, which the row cap keeps in the
+     * single-digit-milliseconds range. Unbounded REQs keep the launched
+     * path so a CLOSE can always interrupt a genuinely giant replay.
      */
     private fun isInlineEligible(filters: List<Filter>): Boolean {
         var total = 0
         for (f in filters) {
-            val limit = f.limit ?: return false
-            total += limit
+            val bound = f.limit ?: f.ids?.size ?: return false
+            total += bound
             if (total > INLINE_REPLAY_MAX_ROWS) return false
         }
         return true
@@ -428,13 +430,14 @@ class RelaySession(
         fun nextConnectionId(): Long = connectionIdSeq.fetchAndAdd(1L)
 
         /**
-         * Ceiling on the summed filter limits for the inline REQ fast
-         * path. Sized so the worst-case inline replay stays around a
-         * millisecond (~20-row REQs profile at ~0.2 ms of storage work)
-         * — small enough that delaying the connection's next command is
-         * unnoticeable, large enough to cover the profile/thread/
-         * notifications-style lookups clients hammer relays with.
+         * Ceiling on the summed per-filter bounds (limit or ids count)
+         * for the inline REQ fast path. Sized so the worst-case inline
+         * replay stays in single-digit milliseconds (500-row replays
+         * measure ~5–8 ms of storage+frame work) — small enough that
+         * delaying the connection's next command is unnoticeable, large
+         * enough to cover the limit≤500 feed/notifications/archive
+         * shapes real clients hammer relays with.
          */
-        const val INLINE_REPLAY_MAX_ROWS = 256
+        const val INLINE_REPLAY_MAX_ROWS = 512
     }
 }
