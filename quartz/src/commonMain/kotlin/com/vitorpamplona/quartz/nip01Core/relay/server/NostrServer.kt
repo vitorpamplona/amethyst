@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
@@ -113,7 +115,22 @@ class NostrServer(
                     // the burst's final batch commit pokes again, and the
                     // pre-search drain covers correctness regardless.
                     while (!ingest.hasBacklog()) {
-                        if (store.ftsCatchUp()) break
+                        val done =
+                            try {
+                                store.ftsCatchUp()
+                            } catch (e: Throwable) {
+                                if (e is CancellationException) throw e
+                                // A shutdown can close the store between this
+                                // worker's cancellation and its last batch (the
+                                // mutex fast path skips the cancellation check),
+                                // and an uncaught throw here poisons unrelated
+                                // runTest tests via the global handler. Nothing
+                                // depends on this pass — the pre-search drain
+                                // covers correctness — so log and stop.
+                                Log.w("NostrServer") { "FTS catch-up batch failed: ${e.message}" }
+                                break
+                            }
+                        if (done) break
                     }
                 }
             }
