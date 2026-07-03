@@ -2126,8 +2126,8 @@
     <string name="expiration_date_select">காலாவதி தேதி மற்றும் நேரத்தை தேர்ந்தெடு</string>
     <string name="expiration_expires_in">%1$s இல் காலாவதியாகும்</string>
     <string name="expiration_time">காலாவதி நேரம்</string>
-    <string name="show_npub_as_a_qr_code">npub-�ை QR குறியீடாகக் காட்டு</string>
-    <string name="show_nprofile_as_a_qr_code">nprofile-�ை QR குறியீடாகக் காட்டு</string>
+    <string name="show_npub_as_a_qr_code">npub-ஐ QR குறியீடாகக் காட்டு</string>
+    <string name="show_nprofile_as_a_qr_code">nprofile-ஐ QR குறியீடாகக் காட்டு</string>
     <string name="invalid_nip19_uri">தவறான முகவரி</string>
     <string name="invalid_nip19_uri_description">Amethyst திறக்க ஒரு URI பெற்றது, ஆனால் அந்த URI தவறானது: %1$s</string>
     <string name="dm_relays_title">DM இன்பாக்ஸ் Relays</string>
@@ -2153,7 +2153,7 @@
     <string name="inbox_relays_not_found_editing">உங்களுக்கான அறிவிப்புகளை பெறும் 1–3 relays சேர்க்கவும். அனுப்புபவரிடம் கட்டணம் அல்லது நம்பகமான நெட்வொர்க்கை தேவைப்படாது என்று உறுதிப்படுத்தவும், இல்லையெனில் கட்டணம் செலுத்துபவர்கள் அல்லது நீண்ட கால பயனர்களிடமிருந்து மட்டுமே அறிவிப்புகளைப் பெறுவீர்கள்</string>
     <string name="inbox_relays_not_found_examples">நல்ல விருப்பங்கள்:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="relay_settings">Relay அமைப்புகள்</string>
-    <string name="relay_reorder">Relay-�ை மறுவரிசைப்படுத்து</string>
+    <string name="relay_reorder">Relay-ஐ மறுவரிசைப்படுத்து</string>
     <string name="public_home_section">பொது அவுட்பாக்ஸ்/முகப்பு Relays</string>
     <string name="public_home_section_explainer_profile">பயனர் இந்த relays-ல் தன் உள்ளடக்கத்தை இடுகையிடுகிறார்</string>
     <string name="public_home_section_explainer">இந்த relay வகை உங்கள் அனைத்து உள்ளடக்கத்தையும் சேமிக்கிறது. Amethyst உங்கள் இடுகைகளை இங்கே அனுப்பும், மற்றவர்கள் உங்கள் உள்ளடக்கத்தை கண்டுபிடிக்க இந்த relays பயன்படுத்துவார்கள். 1–3 relays சேர்க்கவும். அவை தனிப்பட்ட relays, கட்டண relays அல்லது பொது relays ஆக இருக்கலாம்.</string>
