@@ -130,6 +130,7 @@ fun DeckColumnType.category(): ScreenCategory =
 
         DeckColumnType.MyProfile,
         DeckColumnType.Settings,
+        DeckColumnType.NotificationSettings,
         DeckColumnType.Wallet,
         -> ScreenCategory.IDENTITY
 

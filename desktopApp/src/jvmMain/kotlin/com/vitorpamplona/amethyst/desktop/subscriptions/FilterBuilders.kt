@@ -126,14 +126,15 @@ object FilterBuilders {
         )
 
     /**
-     * Creates a filter for notifications (mentions, replies, reactions, reposts, zaps) for a user.
+     * Notification subscription filter — shared across Desktop and Android via
+     * [com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds].
+     * Covers 13 event kinds: text notes, comments, DMs (NIP-04 + NIP-17 gift-wrap),
+     * reactions, reposts, channel messages, nutzaps, zap receipts, onchain zaps.
      *
-     * Includes:
-     * - kind 1 (text notes mentioning user)
-     * - kind 7 (reactions)
-     * - kind 6 (reposts)
-     * - kind 16 (generic reposts)
-     * - kind 9735 (zaps)
+     * The subscription filter is intentionally broad — client-side
+     * [com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds.tagsAnEventForUser]
+     * applies the semantic accept rule (e.g. reactions must target one of the
+     * user's own notes).
      *
      * @param pubKeyHex User public key (hex-encoded, 64 chars) to filter notifications for
      * @param limit Maximum number of events to request
@@ -145,19 +146,8 @@ object FilterBuilders {
         limit: Int? = null,
         since: Long? = null,
     ): Filter =
-        Filter(
-            kinds =
-                listOf(
-                    1, // TextNoteEvent.KIND (mentions/replies)
-                    7, // ReactionEvent.KIND
-                    6, // RepostEvent.KIND
-                    16, // GenericRepostEvent.KIND
-                    9735, // LnZapEvent.KIND
-                ),
-            tags = mapOf("p" to listOf(pubKeyHex)),
-            limit = limit,
-            since = since,
-        )
+        com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds
+            .subscriptionFilter(pubKeyHex, limit = limit, since = since)
 
     /**
      * Creates a filter for specific event kinds.

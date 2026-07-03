@@ -43,6 +43,8 @@ sealed class DeckColumnType {
 
     object Settings : DeckColumnType()
 
+    object NotificationSettings : DeckColumnType()
+
     object Relays : DeckColumnType()
 
     object Wallet : DeckColumnType()
@@ -93,6 +95,7 @@ sealed class DeckColumnType {
             MyProfile -> "Profile"
             Chess -> "Chess"
             Settings -> "Settings"
+            NotificationSettings -> "Notification Settings"
             Relays -> "Relays"
             Wallet -> "Wallet"
             is Article -> "Article"
@@ -119,6 +122,7 @@ sealed class DeckColumnType {
             MyProfile -> "my_profile"
             Chess -> "chess"
             Settings -> "settings"
+            NotificationSettings -> "notification_settings"
             Relays -> "relays"
             Wallet -> "wallet"
             is Article -> "article"

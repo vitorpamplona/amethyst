@@ -136,6 +136,8 @@ fun SinglePaneLayout(
                     onOpenFeedsDrawer = onOpenFeedsDrawer,
                     onNavigateToPack = { navState.push(DesktopScreen.FollowPackDetail(it)) },
                     onNavigateToPackBrowseAll = { navState.push(DesktopScreen.FollowPackBrowseAll) },
+                    onOpenNotificationSettings = { navState.push(DesktopScreen.NotificationSettings) },
+                    onOpenMessages = { singlePaneState.navigate(DeckColumnType.Messages) },
                 )
                 AnimatedContent(
                     targetState = currentOverlay,

@@ -191,6 +191,14 @@ kotlin {
                 // Image re-encode + progressive downscale (used by service/upload/ImageReencoder).
                 // Pure-Java, MIT. See docs/plans/2026-06-08-feat-desktop-image-compression-plan.md.
                 implementation(libs.thumbnailator)
+
+                // Native OS notification bridges — Nucleus per-OS JNI shims.
+                // macOS: UNUserNotificationCenter. Windows: WinRT Toasts. Linux: freedesktop D-Bus.
+                // Only the matching-OS module's native lib loads at runtime; the others
+                // stay dormant on the classpath.
+                implementation("io.github.kdroidfilter:nucleus.notification-macos:1.15.7")
+                implementation("io.github.kdroidfilter:nucleus.notification-windows:1.15.7")
+                implementation("io.github.kdroidfilter:nucleus.notification-linux:1.15.7")
             }
         }
 

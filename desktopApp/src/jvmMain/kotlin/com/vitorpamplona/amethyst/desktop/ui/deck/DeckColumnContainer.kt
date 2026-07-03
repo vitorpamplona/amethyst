@@ -140,6 +140,8 @@ fun DeckColumnContainer(
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
     onNavigateToRelays: () -> Unit = {},
+    onOpenNotificationSettings: () -> Unit = {},
+    onOpenMessages: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val navState = remember(column.id) { ColumnNavigationState() }
@@ -229,6 +231,8 @@ fun DeckColumnContainer(
                 onNavigateToRelays = onNavigateToRelays,
                 onNavigateToPack = { navState.push(DesktopScreen.FollowPackDetail(it)) },
                 onNavigateToPackBrowseAll = { navState.push(DesktopScreen.FollowPackBrowseAll) },
+                onOpenNotificationSettings = { navState.push(DesktopScreen.NotificationSettings) },
+                onOpenMessages = onOpenMessages,
             )
 
             // Overlay with slide animation
@@ -333,6 +337,8 @@ internal fun RootContent(
     onOpenFeedsDrawer: () -> Unit = {},
     onNavigateToPack: (String) -> Unit = {},
     onNavigateToPackBrowseAll: () -> Unit = {},
+    onOpenNotificationSettings: () -> Unit = {},
+    onOpenMessages: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
 
@@ -357,7 +363,21 @@ internal fun RootContent(
         }
 
         DeckColumnType.Notifications -> {
-            NotificationsScreen(relayManager, localCache, account, subscriptionsCoordinator)
+            NotificationsScreen(
+                relayManager = relayManager,
+                localCache = localCache,
+                account = account,
+                subscriptionsCoordinator = subscriptionsCoordinator,
+                onOpenSettings = onOpenNotificationSettings,
+                onNavigateToThread = onNavigateToThread,
+                onNavigateToProfile = onNavigateToProfile,
+                onOpenMessages = onOpenMessages,
+            )
+        }
+
+        DeckColumnType.NotificationSettings -> {
+            com.vitorpamplona.amethyst.desktop.ui.settings
+                .NotificationSettingsScreen()
         }
 
         DeckColumnType.Messages -> {
@@ -724,6 +744,12 @@ internal fun OverlayContent(
                         onBack = onBack,
                     )
             }
+        }
+
+        is DesktopScreen.NotificationSettings -> {
+            com.vitorpamplona.amethyst.desktop.ui.settings.NotificationSettingsScreen(
+                onBack = onBack,
+            )
         }
 
         else -> {

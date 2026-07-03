@@ -121,6 +121,7 @@ fun DeckColumnType.icon(): MaterialSymbol =
         DeckColumnType.MyProfile -> MaterialSymbols.Person
         DeckColumnType.Chess -> MaterialSymbols.Extension
         DeckColumnType.Settings -> MaterialSymbols.Settings
+        DeckColumnType.NotificationSettings -> MaterialSymbols.Tune
         DeckColumnType.Relays -> MaterialSymbols.Dns
         DeckColumnType.Wallet -> MaterialSymbols.AccountBalanceWallet
         is DeckColumnType.Article -> MaterialSymbols.AutoMirrored.Article
