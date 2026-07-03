@@ -86,6 +86,24 @@ require_auth = false
 # kind_whitelist = [0, 1, 3, 7, 1059, 30023]
 # kind_blacklist = [4]
 
+# Mirror upstream relays (strfry-router style, "down" direction): the
+# relay dials each [[mirror]] url, subscribes to everything newer than
+# now - backfill_seconds, and ingests the stream alongside client
+# publishes. Reconnects and re-subscribes automatically.
+#
+# `trusted = true` is the relay-to-relay trust switch: events from that
+# upstream skip Schnorr signature verification (the upstream already
+# verified its own ingest; re-verifying burns ~8% of ingest CPU). The
+# trusted identity is the URL *this* relay dialed — TLS-authenticated
+# for wss:// — so an inbound client can never claim it. Default false:
+# mirror-but-verify. Only trust relays you operate or whose ingest
+# discipline you'd stake your own db on.
+#
+# [[mirror]]
+# url = "wss://upstream.example.com/"
+# trusted = true
+# backfill_seconds = 3600
+
 [admin]
 # NIP-86 relay management API. When `pubkeys` is non-empty, the relay
 # accepts HTTP POST application/nostr+json+rpc on the same URL,

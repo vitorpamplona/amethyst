@@ -24,6 +24,8 @@ import com.vitorpamplona.geode.config.BannedEntry
 import com.vitorpamplona.geode.config.RuntimeConfig
 import com.vitorpamplona.geode.config.RuntimeConfigData
 import com.vitorpamplona.geode.config.StaticConfig
+import com.vitorpamplona.geode.mirror.MirrorUpstream
+import com.vitorpamplona.geode.mirror.MirrorWorker
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
@@ -172,10 +174,37 @@ fun main(args: Array<String>) {
             callGroupSize = config.network.call_group_size,
         ).start()
 
+    // `[[mirror]]` upstreams: dial each configured relay and stream its
+    // events into the local store. `trusted = true` entries skip Schnorr
+    // verification for that connection (relay-to-relay trust) — only
+    // meaningful while verify is on; with --no-verify nothing verifies
+    // anyway. Never mirror ourselves: a self-URL would echo every local
+    // publish back forever.
+    val upstreams =
+        config.mirror.map {
+            MirrorUpstream(
+                url = it.url.normalizeRelayUrl(),
+                trusted = it.trusted,
+                backfillSeconds = it.backfill_seconds,
+            )
+        }
+    require(upstreams.none { it.url == advertisedUrl }) {
+        "[[mirror]] must not list this relay's own URL ($advertisedUrl)"
+    }
+    val mirror =
+        if (upstreams.isEmpty()) {
+            null
+        } else {
+            MirrorWorker(upstreams, relay.server).also { it.start() }
+        }
+
     Runtime.getRuntime().addShutdownHook(
         Thread {
-            // Each step wrapped so a throw in `server.stop()` doesn't
-            // skip `relay.close()` (which closes the SQLite store).
+            // Each step wrapped so a throw in any stage doesn't skip
+            // `relay.close()` (which closes the SQLite store). The mirror
+            // goes first: stop pulling new events before the queue and
+            // store beneath it shut down.
+            runCatching { mirror?.close() }
             runCatching { server.stop() }
             runCatching { relay.close() }
         },
@@ -183,6 +212,10 @@ fun main(args: Array<String>) {
 
     println("geode listening on ${server.url}")
     println("NIP-11 info doc: curl -H 'Accept: application/nostr+json' http://$advertisedHost:$port$path")
+    if (upstreams.isNotEmpty()) {
+        val trusted = upstreams.count { it.trusted }
+        println("mirroring ${upstreams.size} upstream relay(s), $trusted trusted (signature verification skipped)")
+    }
 
     // Park the main thread; shutdown hook handles teardown.
     Thread.currentThread().join()

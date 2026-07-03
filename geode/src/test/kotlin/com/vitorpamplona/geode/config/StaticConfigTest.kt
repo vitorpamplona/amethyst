@@ -47,6 +47,36 @@ class StaticConfigTest {
     }
 
     @Test
+    fun mirrorSectionDefaultsToEmpty() {
+        assertTrue(StaticConfig.fromToml("").mirror.isEmpty())
+    }
+
+    @Test
+    fun parsesMirrorUpstreams() {
+        val toml =
+            """
+            [[mirror]]
+            url = "wss://trusted.upstream.example/"
+            trusted = true
+            backfill_seconds = 3600
+
+            [[mirror]]
+            url = "wss://public.upstream.example/"
+            """.trimIndent()
+
+        val c = StaticConfig.fromToml(toml)
+
+        assertEquals(2, c.mirror.size)
+        assertEquals("wss://trusted.upstream.example/", c.mirror[0].url)
+        assertEquals(true, c.mirror[0].trusted)
+        assertEquals(3600L, c.mirror[0].backfill_seconds)
+        // Trust is opt-in per upstream: the default is mirror-but-verify.
+        assertEquals("wss://public.upstream.example/", c.mirror[1].url)
+        assertEquals(false, c.mirror[1].trusted)
+        assertEquals(0L, c.mirror[1].backfill_seconds)
+    }
+
+    @Test
     fun parsesAllSectionsTogether() {
         val toml =
             """

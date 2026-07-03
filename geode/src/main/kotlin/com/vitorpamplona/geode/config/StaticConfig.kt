@@ -45,6 +45,8 @@ data class StaticConfig(
     val authorization: AuthorizationSection = AuthorizationSection(),
     val admin: AdminSection = AdminSection(),
     val negentropy: NegentropySection = NegentropySection(),
+    /** `[[mirror]]` entries — upstream relays this relay streams from. */
+    val mirror: List<MirrorSection> = emptyList(),
 ) {
     fun resolveInfo(fullTextSearch: Boolean = true): RelayInfo =
         RelayInfo(
@@ -158,6 +160,27 @@ data class StaticConfig(
         val pubkey_blacklist: List<String> = emptyList(),
         val kind_whitelist: List<Int> = emptyList(),
         val kind_blacklist: List<Int> = emptyList(),
+    )
+
+    /**
+     * One upstream relay to mirror, declared as a `[[mirror]]` TOML array
+     * entry. The relay dials [url] itself, subscribes to everything newer
+     * than `now - backfill_seconds`, and ingests the stream through the
+     * same group-commit writer as client publishes (reconnects and
+     * re-subscribes automatically).
+     *
+     * [trusted] is the relay-to-relay trust switch (strfry's model):
+     * `true` skips Schnorr signature verification for events arriving on
+     * this connection — sound only when the upstream verifies its own
+     * ingest, which is why it defaults to `false` (mirror-but-verify).
+     * The identity being trusted is the URL this relay dialed (TLS-
+     * authenticated for `wss://`), never anything a peer claims.
+     */
+    data class MirrorSection(
+        val url: String,
+        val trusted: Boolean = false,
+        /** How far back the initial subscription reaches. 0 = live-only. */
+        val backfill_seconds: Long = 0L,
     )
 
     /**
