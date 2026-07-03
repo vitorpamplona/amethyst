@@ -30,8 +30,8 @@
     <string name="relay_notice">Relay-Hinweis</string>
     <string name="duplicated_post">Doppelter Beitrag</string>
     <string name="spam">Spam</string>
-    <string name="spam_description">Anzahl der Spam-Ereignisse von diesem Relais</string>
-    <string name="impersonation">Vortäuschung</string>
+    <string name="spam_description">Anzahl der Spam-Ereignisse von diesem Relay</string>
+    <string name="impersonation">Identitätsbetrug</string>
     <string name="illegal_behavior">Illegales Verhalten</string>
     <string name="other">Andere</string>
     <string name="harassment">Belästigung</string>
@@ -39,8 +39,8 @@
     <string name="unknown_author">Unbekannter Autor</string>
     <string name="copy_text">Text kopieren</string>
     <string name="copy_user_pubkey">Autor-ID kopieren</string>
-    <string name="copy_note_id">Notiz-ID kopieren</string>
-    <string name="copy_raw_json">Rohes JSON kopieren</string>
+    <string name="copy_note_id">Beitrags-ID kopieren</string>
+    <string name="copy_raw_json">JSON kopieren</string>
     <string name="broadcast">Übertragungen</string>
     <string name="timestamp_it">Zeitstempel es</string>
     <string name="timestamp_pending">Zeitstempel: Ausstehende Bestätigungen</string>
@@ -49,30 +49,30 @@
     <string name="block_report">Blockieren / Melden</string>
     <string name="block_hide_user"><![CDATA[Benutzer blockieren und ausblenden]]></string>
     <string name="report_spam_scam">Spam / Betrug melden</string>
-    <string name="report_impersonation">Vortäuschung melden</string>
+    <string name="report_impersonation">Identitätsbetrug melden</string>
     <string name="report_illegal_behaviour">Illegales Verhalten melden</string>
     <string name="report_malware">Malware melden</string>
     <string name="malware">Malware</string>
-    <string name="login_with_a_private_key_to_be_able_to_reply">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um antworten zu können</string>
-    <string name="login_with_a_private_key_to_be_able_to_boost_posts">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um Beiträge boosten zu können</string>
-    <string name="login_with_a_private_key_to_like_posts">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um Beiträge zu liken</string>
-    <string name="no_zap_amount_setup_long_press_to_change">Keinen Zap-Betrag festgelegt. Drücken Sie lange, um dies anzupassen</string>
+    <string name="login_with_a_private_key_to_be_able_to_reply">Du verwendest einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um antworten zu können</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">Du verwendest einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um Beiträge boosten zu können</string>
+    <string name="login_with_a_private_key_to_like_posts">Du verwendest einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um Beiträge zu liken</string>
+    <string name="no_zap_amount_setup_long_press_to_change">Kein Zap-Betrag festgelegt. Lang drücken, um dies zu ändern</string>
     <string name="chat_zap_amount_suffix">hat %1$s Sats gezappt</string>
     <string name="chat_zap_anonymous">Anonym</string>
     <string name="chat_raid_is_raiding">raidet</string>
     <string name="chat_clip_created_a_clip">hat einen Clip erstellt</string>
-    <string name="login_with_a_private_key_to_be_able_to_send_zaps">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um Zaps senden zu können</string>
-    <string name="login_with_a_private_key_to_be_able_to_follow">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um folgen zu können</string>
-    <string name="login_with_a_private_key_to_be_able_to_unfollow">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um nicht mehr zu folgen</string>
-    <string name="login_with_a_private_key_to_be_able_to_hide_word">Sie verwenden einen öffentlichen Schlüssel, und öffentliche Schlüssel sind nur lesbar. Melden Sie sich mit einem privaten Schlüssel an, um ein Wort oder einen Satz auszublenden</string>
-    <string name="login_with_a_private_key_to_be_able_to_show_word">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um ein Wort oder einen Satz anzeigen zu können</string>
+    <string name="login_with_a_private_key_to_be_able_to_send_zaps">Du verwendest einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um Zaps senden zu können</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">Du verwendest einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um folgen zu können</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">Du verwendest einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um nicht mehr zu folgen</string>
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Du verwendest einen öffentlichen Schlüssel, und öffentliche Schlüssel sind nur lesbar. Melden Sie sich mit einem privaten Schlüssel an, um ein Wort oder einen Satz auszublenden</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Du verwendest einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um ein Wort oder einen Satz anzeigen zu können</string>
     <string name="login_with_a_private_key_to_be_able_to_upload">Du verwendest einen öffentlichen Schlüssel, der nur lesbar ist. Melde dich mit einem privaten Schlüssel an, um hochladen zu können</string>
     <string name="login_with_a_private_key_to_be_able_to_sign_events">Du verwendest einen öffentlichen Schlüssel, der nur lesbar ist. Melde dich mit einem privaten Schlüssel an, um Ereignisse zu signieren</string>
     <string name="unauthorized_exception">Unbefugte Entschlüsselung</string>
-    <string name="unauthorized_exception_description">Der Signierer hat die erforderliche Entschlüsselung nicht autorisiert. Aktiviere NIP-44-Entschlüsselung in deiner Signierer-App und versuche es erneut</string>
-    <string name="signer_not_found_exception">Signierer nicht gefunden</string>
-    <string name="signer_not_found_exception_description">Wurde die Signierer-App deinstalliert? Überprüfe, ob sie installiert ist und dieses Konto enthält. Melde dich ab und wieder an, falls sich die App geändert hat.</string>
-    <string name="signer_illegal_state_exception_description">Externer Signierer hat Daten zurückgegeben, die für die Anfrage ungewöhnlich sind. Es könnte ein Fehler in Amethyst oder im Signierer vorliegen.</string>
+    <string name="unauthorized_exception_description">Der Signer hat die erforderliche Entschlüsselung nicht autorisiert. Aktiviere NIP-44-Entschlüsselung in deiner Signer-App und versuche es erneut</string>
+    <string name="signer_not_found_exception">Signer nicht gefunden</string>
+    <string name="signer_not_found_exception_description">Wurde die Signer-App deinstalliert? Überprüfe, ob sie installiert ist und dieses Konto enthält. Melde dich ab und wieder an, falls sich die App geändert hat.</string>
+    <string name="signer_illegal_state_exception_description">Externer Signer hat Daten zurückgegeben, die für die Anfrage ungewöhnlich sind. Es könnte ein Fehler in Amethyst oder im Signer vorliegen.</string>
     <string name="zaps">Zaps</string>
     <string name="boost">Boost</string>
     <string name="boosted">boosted</string>
@@ -88,17 +88,17 @@
     <string name="and">" und "</string>
     <string name="profile_banner">Profilbanner</string>
     <string name="error_parsing_error_message">Fehler beim Parsen der Fehlermeldung</string>
-    <string name="following">" Folgen"</string>
-    <string name="followers">" Anhänger"</string>
-    <string name="number_following">"%1$s Folgen"</string>
-    <string name="number_followers">"%1$s Anhänger"</string>
+    <string name="following">" Gefolgt"</string>
+    <string name="followers">" Follower"</string>
+    <string name="number_following">"%1$s Gefolgt"</string>
+    <string name="number_followers">"%1$s Follower"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Sicherheitsfilter</string>
     <string name="log_out">Ausloggen</string>
     <string name="show_more">Mehr anzeigen</string>
     <string name="lightning_invoice">Lightning-Rechnung</string>
     <string name="invoice_expired">Abgelaufen</string>
-    <string name="clink_lightning_offer">CLINK-Angebot</string>
+    <string name="clink_lightning_offer">CLINK-Zahlungsanfrage</string>
     <string name="clink_offer_pay_to">An</string>
     <string name="clink_requesting_invoice">Rechnung wird angefordert…</string>
     <string name="clink_debit_no_response">Der Debit-Dienst hat die Zahlung nicht abgeschlossen.</string>
@@ -106,9 +106,9 @@
     <string name="clink_confirm_pay_amount_via_source">%1$s über %2$s bezahlen?</string>
     <string name="clink_confirm_pay_via_source">Diese Rechnung über %1$s bezahlen?</string>
     <string name="clink_offer_amount_sats">Betrag (Sats)</string>
-    <string name="clink_offer_invalid_amount">Geben Sie einen gültigen Betrag für dieses Angebot ein.</string>
+    <string name="clink_offer_invalid_amount">Gib einen gültigen Betrag für dieses Angebot ein.</string>
     <string name="clink_offer_amount_range">Erlaubter Bereich: %1$s–%2$s Sats</string>
-    <string name="clink_offer_label">CLINK-Angebot (noffer)</string>
+    <string name="clink_offer_label">CLINK-Zahlungsanfrage (noffer)</string>
     <string name="clink_budget_set">Budget</string>
     <string name="clink_budget_title">Ausgabenbudget</string>
     <string name="clink_budget_amount_sats">Betrag (Sats)</string>
@@ -120,7 +120,7 @@
     <string name="clink_budget_monthly">Monatlich</string>
     <string name="clink_debit_pay_only">Nur bezahlen</string>
     <string name="wallet_add_clink_title">CLINK-Debit</string>
-    <string name="wallet_add_clink_description">Bezahlen und zappen Sie aus einer Wallet, die Ihr Konto vorab autorisiert hat. Nur Ausgeben — kein Guthaben, keine Historie.</string>
+    <string name="wallet_add_clink_description">Bezahle und zappe aus einer Wallet, die dein Konto vorab autorisiert hat. Nur Ausgaben — kein Guthaben, kein Verlauf.</string>
     <string name="wallet_add_clink_invalid">Ungültiger CLINK-Debit-Pointer. Erwartet wird eine ndebit1…-Zeichenfolge.</string>
     <string name="wallet_paste_ndebit">ndebit-Pointer einfügen</string>
     <string name="pay">Bezahlen</string>
@@ -128,11 +128,11 @@
     <string name="send_payment_method">Empfangen über</string>
     <string name="send_payment_from">Bezahlen von</string>
     <string name="send_payment_source_external">Andere Wallet-App</string>
-    <string name="send_payment_source_onchain_wallet">On-chain-Wallet</string>
+    <string name="send_payment_source_onchain_wallet">On-Chain-Wallet</string>
     <string name="send_payment_source_cashu_wallet">Cashu-Wallet</string>
     <string name="send_payment_method_lightning">Lightning</string>
-    <string name="send_payment_method_clink">CLINK-Angebot</string>
-    <string name="send_payment_method_onchain">On-chain</string>
+    <string name="send_payment_method_clink">CLINK-Zahlungsanfrage</string>
+    <string name="send_payment_method_onchain">On-Chain</string>
     <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">Betrag</string>
     <string name="send_payment_fixed_price">Preis durch das Angebot festgelegt</string>
@@ -155,8 +155,8 @@
     <string name="send_payment_pay_button">%1$s Sats bezahlen</string>
     <string name="send_payment_pay_button_empty">Bezahlen</string>
     <string name="send_payment_no_methods">Dieses Profil hat keine Zahlungsmethoden, die Amethyst direkt bezahlen kann.</string>
-    <string name="send_payment_min_onchain">On-chain-Zaps erfordern mindestens %1$s Sats</string>
-    <string name="send_payment_cashu_insufficient">Nicht genug Guthaben in einer Mint, die dieser Empfänger akzeptiert. Laden Sie zuerst Ihre Cashu-Wallet auf.</string>
+    <string name="send_payment_min_onchain">On-Chain-Zaps erfordern mindestens %1$s Sats</string>
+    <string name="send_payment_cashu_insufficient">Nicht genug Guthaben in einer Mint, die dieser Empfänger akzeptiert. Lade zuerst deine Cashu-Wallet auf.</string>
     <string name="send_payment_cashu_balance">Verfügbar für diesen Empfänger: %1$s Sats</string>
     <string name="send_payment_onchain_fee">Netzwerkgebühr</string>
     <string name="send_payment_onchain_txid">Transaktion: %1$s</string>
@@ -206,17 +206,15 @@
     <string name="pronouns">Pronomen</string>
     <string name="stale_relay_hint_label">Quell-Relays könnten veraltet sein</string>
     <string name="stale_relay_hint_icon_description">Warnung über veraltetes Relay</string>
-    <string name="download_to_phone">Auf dem Telefon speichern</string>
-    <string name="image_saved_to_the_gallery">Bild in der Gal
-
-erie gespeichert</string>
+    <string name="download_to_phone">Auf dem Smartphone speichern</string>
+    <string name="image_saved_to_the_gallery">Bild in der Galerie gespeichert</string>
     <string name="video_download_has_started_toast">Der Videodownload wurde gestartet…</string>
     <string name="media_download_has_started_toast">Der Mediendownload wurde gestartet…</string>
     <string name="pin_conversation">Oben anheften</string>
     <string name="unpin_conversation">Nicht mehr anheften</string>
     <string name="pinned_to_top">Oben angeheftet</string>
     <string name="failed_to_save_the_image">Fehler beim Speichern des Bildes</string>
-    <string name="video_saved_to_the_gallery">Video in der Videogalerie des Telefons gespeichert</string>
+    <string name="video_saved_to_the_gallery">Video in der Galerie des Smartphones gespeichert</string>
     <string name="failed_to_save_the_video">Video konnte nicht gespeichert werden</string>
     <string name="pdf_saved_to_the_gallery">PDF in Downloads/Amethyst gespeichert</string>
     <string name="failed_to_save_the_pdf">PDF konnte nicht gespeichert werden</string>
@@ -252,15 +250,15 @@ erie gespeichert</string>
     <string name="conversations">Unterhaltungen</string>
     <string name="feed">Feed</string>
     <string name="mod_queue">Mod-Warteschlange</string>
-    <string name="notes">Notizen</string>
+    <string name="notes">Beiträge</string>
     <string name="replies">Antworten</string>
-    <string name="mutual">Deine</string>
+    <string name="mutual">Von mir</string>
     <string name="gallery">Galerie</string>
-    <string name="reports">"Berichte"</string>
+    <string name="reports">"Meldungen"</string>
     <string name="number_reports">"%1$s Meldungen"</string>
     <string name="more_options">Weitere Optionen</string>
-    <string name="relays">" Relais"</string>
-    <string name="website">Webseite</string>
+    <string name="relays">" Relays"</string>
+    <string name="website">Website</string>
     <string name="lightning_address">Lightning-Adresse</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopiert die Nsec-ID (Ihr Passwort) zur Sicherung in die Zwischenablage</string>
     <string name="show_private_key_qr_code">Privaten QR-Code anzeigen</string>
@@ -273,10 +271,10 @@ erie gespeichert</string>
     <string name="copy_user_id">Benutzer-ID kopieren</string>
     <string name="unblock_user">Benutzer freigeben</string>
     <string name="user_is_blocked_hidden">Dieser Nutzer ist blockiert/stummgeschaltet. Seine Beiträge sind ausgeblendet.</string>
-    <string name="npub_hex_username">"Npub, Hex, Benutzername "</string>
+    <string name="npub_hex_username">"npub, Benutzername, Text "</string>
     <string name="clear">Löschen</string>
     <string name="app_logo">App-Logo</string>
-    <string name="nsec_npub_hex_private_key">Nsec / Npub / Hex-Privatschlüssel</string>
+    <string name="nsec_npub_hex_private_key">nsec.. oder npub..</string>
     <string name="ncryptsec_password">Passwort zum Öffnen des Schlüssels</string>
     <string name="show_password">Passwort anzeigen</string>
     <string name="hide_password">Passwort ausblenden</string>
@@ -284,18 +282,16 @@ erie gespeichert</string>
     <string name="invalid_key_with_message">Ungültiger Schlüssel: %1$s</string>
     <string name="i_accept_the">"Ich akzeptiere die "</string>
     <string name="terms_of_use">Nutzungsbedingungen</string>
-    <string name="acceptance_of_terms_is_required">Die Akzept
-
-anz der Bedingungen ist erforderlich</string>
+    <string name="acceptance_of_terms_is_required">Die Akzeptanz der Bedingungen ist erforderlich</string>
     <string name="password_is_required">Passwort ist erforderlich</string>
     <string name="key_is_required">Schlüssel ist erforderlich</string>
     <string name="name_is_required">Ein Name wird benötigt</string>
-    <string name="login">Anmeldung</string>
-    <string name="sign_up">Anmelden</string>
+    <string name="login">Anmelden</string>
+    <string name="sign_up">Registrieren</string>
     <string name="create_account">Konto erstellen</string>
-    <string name="how_should_we_call_you">Wie sollen wir Sie nennen?</string>
-    <string name="don_t_have_an_account">Sie haben kein Nostr-Konto?</string>
-    <string name="already_have_an_account">Haben Sie schon ein Nostr-Konto?</string>
+    <string name="how_should_we_call_you">Wie sollen wir dich nennen?</string>
+    <string name="don_t_have_an_account">Du hast noch kein Nostr-Konto?</string>
+    <string name="already_have_an_account">Hast du schon ein Nostr-Konto?</string>
     <string name="loading_feed">Feed wird geladen</string>
     <string name="loading_account">Konto wird geladen</string>
     <string name="chats_history_proto_nip17">verschlüsselt</string>
@@ -319,7 +315,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="ephemeral_relay_chat">Verschwindender Chat</string>
     <string name="relay_chat">Relay-Chat</string>
     <string name="relay_chat_title">Relay-Chats</string>
-    <string name="relay_chat_explainer">Relaischats sind Chatgruppen, die von ihrem Home-Relais gesteuert werden.
+    <string name="relay_chat_explainer">Relay-Chats sind Chatgruppen, die von ihrem Home-Relay gesteuert werden.
         Sie sind für jeden auf Nostr sichtbar und jeder kann an ihnen teilnehmen.
         Sie eignen sich hervorragend für offene Communities rund um bestimmte Themen. Einige dieser Gruppen sind kurzsichtig
     und daher verschwinden Chat-Nachrichten im Laufe der Zeit</string>
@@ -329,9 +325,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="public_chat_title">Öffentliche Chat Metadaten</string>
     <string name="public_chat_explainer">Öffentliche Chats sind für jeden auf Nostr sichtbar und jeder
         kann daran teilnehmen. Sie eignen sich hervorragend für offene Gemeinschaften rund um bestimmte Themen.
-        Moderation kann durch Löschen von Beiträgen auf den Relais gesteuert werden</string>
-    <string name="public_chat_relays_title">Relais</string>
-    <string name="public_chat_relays_explainer">Fügen Sie zwischen 1–3 Relais ein, die diese Gruppe beherbergen.
+        Moderation kann durch Löschen von Beiträgen auf den Relays gesteuert werden</string>
+    <string name="public_chat_relays_title">Relays</string>
+    <string name="public_chat_relays_explainer">Füge zwischen 1–3 Relays ein, die diese Gruppe beherbergen.
         Nostr Clients verwenden diese Einstellung, um zu wissen, woher sie Nachrichten herunterladen und an welche gesendet werden sollen.</string>
     <string name="paid_relay">Bezahltes Relay</string>
     <string name="tor_relay">Tor-Verbindung erzwingen</string>
@@ -355,32 +351,32 @@ anz der Bedingungen ist erforderlich</string>
     <string name="profanity_hateful_speech">Beleidigungen / Hassrede</string>
     <string name="report_hateful_speech">Hassrede melden</string>
     <string name="report_nudity_porn">Nacktheit / Pornografie melden</string>
-    <string name="mark_all_known_as_read">Alle als bekannt markieren</string>
-    <string name="mark_all_new_as_read">Alle als neu markieren</string>
+    <string name="mark_all_known_as_read">Alle Kontakte als gelesen markieren</string>
+    <string name="mark_all_new_as_read">Alle Unbekannten als gelesen markieren</string>
     <string name="mark_all_as_read">Alle als gelesen markieren</string>
     <string name="backup_keys">Schlüssel sichern</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">    ## Schlüsselsicherheits-Tipps
-    \n\nIhr Konto ist durch einen geheimen Schlüssel gesichert. Der Schlüssel ist eine lange Zeichenfolge, die mit **nsec1** beginnt. Jeder, der Zugriff auf diesen geheimen Schlüssel hat, kann Ihre Identität posten und ändern.
-    \n\n- Legen Sie Ihren geheimen Schlüssel **nicht** auf eine Website oder in eine Software, der Sie nicht vertrauen.
-    \n- Die Entwickler von Amethyst werden Sie **niemals** nach Ihrem geheimen Schlüssel fragen.
-    \n- **Bewahren Sie** eine sichere Sicherung Ihres geheimen Schlüssels zur Kontowiederherstellung auf. Wir empfehlen die Verwendung eines Passwort-Managers.</string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">    Für zusätzliche Sicherheit können Sie Ihren Schlüssel mit einem Passwort verschlüsseln. Dieser Schlüssel beginnt mit **ncryptsec1** und kann ohne Ihr Passwort nicht verwendet werden.
-    \n\nWenn Sie Ihr Passwort verlieren, können Sie Ihren Schlüssel nicht wiederherstellen.</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">    ## Tipps zur Schlüsselsicherheit
+    \n\nDein Konto ist durch einen privaten Schlüssel gesichert. Der Schlüssel ist eine lange Zeichenfolge, die mit **nsec1** beginnt. Jeder, der Zugriff auf diesen privaten Schlüssel hat, kann in deinem Namen posten und dein Profil ändern.
+    \n\n- Lege deinen privaten Schlüssel **nicht** auf einer Website oder in einer Software ab, der du nicht vertraust.
+    \n- Die Entwickler von Amethyst werden dich **niemals** nach deinem privaten Schlüssel fragen.
+    \n- **Bewahre** eine sichere Kopie deines privaten Schlüssels zur Kontowiederherstellung auf. Wir empfehlen die Verwendung eines Passwort-Managers.</string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">    Für zusätzliche Sicherheit kannst du deinen Schlüssel mit einem Passwort verschlüsseln. Dieser Schlüssel beginnt mit **ncryptsec1** und kann ohne dein Passwort nicht verwendet werden.
+    \n\nWenn du dein Passwort verlierst, kannst du deinen Schlüssel nicht wiederherstellen.</string>
     <string name="failed_to_encrypt_key">Fehler beim Verschlüsseln Ihres privaten Schlüssels</string>
     <string name="secret_key_copied_to_clipboard">Geheimer Schlüssel (nsec) in die Zwischenablage kopiert</string>
     <string name="copy_my_secret_key">Meinen geheimen Schlüssel kopieren</string>
-    <string name="encrypt_and_copy_my_secret_key">Verschlüsseln und kopieren Sie meinen geheimen Schlüssel</string>
+    <string name="encrypt_and_copy_my_secret_key">Meinen privaten Schlüssel verschlüsseln und kopieren</string>
     <string name="biometric_authentication_failed">Authentifizierung fehlgeschlagen</string>
-    <string name="biometric_authentication_failed_explainer">Biometrie konnte den Besitzer dieses Telefons nicht authentifizieren</string>
-    <string name="biometric_authentication_failed_explainer_with_error">Biometrie konnte den Besitzer dieses Telefons nicht authentifizieren. Fehler: %1$s</string>
+    <string name="biometric_authentication_failed_explainer">Biometrie konnte den Inhaber dieses Smartphones nicht authentifizieren</string>
+    <string name="biometric_authentication_failed_explainer_with_error">Biometrie konnte den Inhaber dieses Smartphones nicht authentifizieren. Fehler: %1$s</string>
     <string name="badge_award_image_for">"Auszeichnungsbild für %1$s"</string>
     <string name="badge_award_image">Auszeichnungsbild</string>
-    <string name="new_badge_award_notif">Sie haben eine neue Auszeichnung erhalten</string>
+    <string name="new_badge_award_notif">Du hast eine neue Auszeichnung erhalten</string>
     <string name="award_granted_to">Auszeichnung verliehen an</string>
     <string name="copied_note_text_to_clipboard">Notiztext in die Zwischenablage kopiert</string>
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Autor-ID in die Zwischenablage kopiert</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Notiz-ID in die Zwischenablage kopiert</string>
-    <string name="private_conversation_notification">"&lt;Private Nachricht kann nicht entschlüsselt werden&gt;\n\nSie wurden in einer privaten/verschlüsselten Unterhaltung zwischen %1$s und %2$s erwähnt."</string>
+    <string name="private_conversation_notification">"&lt;Private Nachricht kann nicht entschlüsselt werden&gt;\n\nDu wurdest in einer privaten/verschlüsselten Unterhaltung zwischen %1$s und %2$s erwähnt."</string>
     <string name="account_switch_add_account_dialog_title">Neues Konto hinzufügen</string>
     <string name="drawer_accounts">Konten</string>
     <string name="drawer_section_navigate">Navigieren</string>
@@ -400,7 +396,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="share_as_image_generating">Vorschau wird erstellt…</string>
     <string name="share_as_image_watermark">Geteilt über Amethyst</string>
     <string name="quick_action_copy_user_id">Autoren-ID kopieren</string>
-    <string name="quick_action_copy_note_id">Notiz-ID kopieren</string>
+    <string name="quick_action_copy_note_id">Beitrags-ID kopieren</string>
     <string name="quick_action_copy_text">Text kopieren</string>
     <string name="quick_action_delete">Löschen</string>
     <string name="quick_action_unfollow">Entfolgen</string>
@@ -408,7 +404,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="quick_action_request_deletion_gallery_title">Aus Galerie löschen</string>
     <string name="quick_action_request_deletion_gallery_alert_body_v2">Entferne dieses Medium von deiner Galerie.</string>
     <string name="quick_action_request_deletion_alert_title">Löschung anfordern</string>
-    <string name="quick_action_request_deletion_alert_body">Amethyst wird beantragen, dass Ihre Notiz von den Relays gelöscht wird, mit denen Sie derzeit verbunden sind. Es gibt keine Garantie dafür, dass Ihre Notiz dauerhaft von diesen Relays oder anderen Relays, in denen sie gespeichert sein kann, gelöscht wird.</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst wird darum bitten, dass dein Beitrag von den Relays gelöscht wird, mit denen du derzeit verbunden bist. Es gibt keine Garantie dafür, dass dein Beitrag dauerhaft von diesen oder anderen Relays, auf denen er gespeichert sein könnte, gelöscht wird.</string>
     <string name="quick_action_block_dialog_btn">Blockieren</string>
     <string name="quick_action_delete_dialog_btn">Löschen</string>
     <string name="quick_action_block">Blockieren</string>
@@ -421,13 +417,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="report_dialog_impersonation">Bösartige Nachahmung</string>
     <string name="report_dialog_nudity">Nacktheit oder explizite Inhalte</string>
     <string name="report_dialog_illegal">Illegales Verhalten</string>
-    <string name="report_dialog_blocking_a_user">Durch das Blockieren eines Benutzers werden deren Inhalte in Ihrer App ausgeblendet. Ihre Notizen sind weiterhin öffentlich sichtbar, auch für Personen, die Sie blockiert haben. Blockierte Benutzer werden auf dem Bildschirm \"Sicherheitsfilter\" aufgelistet.</string>
+    <string name="report_dialog_blocking_a_user">Durch das Blockieren eines Nutzers werden dessen Inhalte in deiner App ausgeblendet. Deine Beiträge sind weiterhin öffentlich sichtbar, auch für Personen, die du blockiert hast. Blockierte Nutzer werden auf dem Bildschirm \"Sicherheitsfilter\" aufgelistet.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Benutzer
 
  blockieren & ausblenden]]></string>
     <string name="report_dialog_report_btn">Missbrauch melden</string>
     <string name="report_dialog_reminder_public">Alle gemeldeten Beiträge werden öffentlich sichtbar sein.</string>
-    <string name="report_dialog_additional_reason_placeholder">Geben Sie optional weitere Informationen zu Ihrer Meldung an…</string>
+    <string name="report_dialog_additional_reason_placeholder">Optional weitere Informationen zu deiner Meldung angeben…</string>
     <string name="report_dialog_additional_reason_label">Zusätzlicher Kontext</string>
     <string name="report_dialog_select_reason_label">Grund</string>
     <string name="report_dialog_select_reason_placeholder">Grund auswählen…</string>
@@ -460,7 +456,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="schedule_post_preset_tomorrow_morning">Morgen 9 Uhr</string>
     <string name="schedule_post_preset_next_monday_morning">Nächsten Montag 9 Uhr</string>
     <string name="schedule_post_always_on_prompt_title">Dauerbenachrichtigungen aktivieren?</string>
-    <string name="schedule_post_always_on_prompt_message">Geplante Beiträge werden zuverlässig nur veröffentlicht, wenn Dauerbenachrichtigungen aktiviert sind. Andernfalls werden sie möglicherweise erst beim nächsten Öffnen der App ausgelöst.</string>
+    <string name="schedule_post_always_on_prompt_message">Geplante Beiträge werden nur dann pünktlich veröffentlicht, wenn Hintergrundbenachrichtigungen aktiviert sind. Andernfalls kann es sein, dass sie erst beim nächsten Öffnen der App erscheinen.</string>
     <string name="schedule_post_always_on_prompt_open_settings">Einstellungen öffnen</string>
     <string name="schedule_post_always_on_prompt_continue">Trotzdem fortfahren</string>
     <string name="scheduled_posts_at_time">%1$s · in %2$s</string>
@@ -477,7 +473,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="app_notification_scheduled_posts_channel_description">Benachrichtigungen, wenn ein geplanter Beitrag veröffentlicht wird oder die Veröffentlichung fehlschlägt.</string>
     <string name="scheduled_posts_action_send_now">Jetzt senden</string>
     <string name="scheduled_posts_empty_title">Keine geplanten Beiträge</string>
-    <string name="scheduled_posts_empty_hint">Verfasse eine Notiz und tippe auf das Uhr-Symbol, um sie für später zu planen.</string>
+    <string name="scheduled_posts_empty_hint">Verfasse einen Beitrag und tippe auf das Uhr-Symbol, um ihn für später zu planen</string>
     <string name="scheduled_posts_error_prefix">Fehler: %1$s</string>
     <string name="scheduled_posts_status_pending">Geplant</string>
     <string name="scheduled_posts_status_publishing">Wird gesendet…</string>
@@ -518,7 +514,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="new_community_add_moderator">Moderator hinzufügen</string>
     <string name="new_community_add_moderator_placeholder">Name, npub oder NIP-05</string>
     <string name="new_community_owner">Eigentümer</string>
-    <string name="new_community_relays_section">Relais</string>
+    <string name="new_community_relays_section">Relays</string>
     <string name="new_community_relays_hint">Wähle Relays, die Anfragen, Genehmigungen oder die Metadaten des Community-Autors hosten.</string>
     <string name="new_community_relay_marker_none">Beliebig</string>
     <string name="new_community_relay_marker_author">Autor</string>
@@ -589,6 +585,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="app_definition_handles">Verarbeitet</string>
     <string name="app_definition_by">von</string>
     <string name="app_definition_available_on">Verfügbar auf</string>
+    <string name="app_definition_categories">Kategorien</string>
     <string name="platform_web">Web</string>
     <string name="platform_android">Android</string>
     <string name="platform_ios">iOS</string>
@@ -634,9 +631,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="software_apps">Apps</string>
     <string name="route_software_apps">Apps</string>
     <string name="nsite_none_found">Noch keine nSites gefunden.</string>
+    <string name="browser">Browser</string>
     <string name="browser_reload">Neu laden</string>
-    <string name="browser_tor_on">Laden über Tor. Tippen Sie, um das offene Web zu verwenden.</string>
-    <string name="browser_tor_off">Laden über das offene Web. Tippen Sie, um Tor zu verwenden.</string>
+    <string name="browser_tor_on">Laden über Tor. Tippe, um Clearnet zu verwenden.</string>
+    <string name="browser_tor_off">Laden über Clearnet. Tippe, um Tor zu verwenden.</string>
     <string name="browser_unsupported">Der In-App-Browser benötigt Android 11 oder neuer.</string>
     <string name="embedded_tab_load_failed">Diese App konnte nicht geladen werden.</string>
     <string name="browser_go">Öffnen</string>
@@ -645,7 +643,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="browser_recent_options">Optionen</string>
     <string name="browser_recent_remove">Aus Verlauf entfernen</string>
     <string name="favorite_apps">Lieblings-Apps</string>
-    <string name="favorite_apps_empty">Noch keine Lieblings-Apps. Öffnen Sie einen Web-Client oder eine nSite und tippen Sie auf den Stern, um sie hier anzuheften.</string>
+    <string name="favorite_apps_empty">Noch keine Lieblings-Apps. Öffne einen Web-Client oder eine nSite und tippe auf den Stern, um sie hier anzuheften.</string>
     <string name="favorite_app_add">Zu Favoriten hinzufügen</string>
     <string name="favorite_app_remove">Aus Favoriten entfernen</string>
     <string name="favorite_app_open_window">In eigenem Fenster öffnen</string>
@@ -654,16 +652,16 @@ anz der Bedingungen ist erforderlich</string>
     <string name="favorite_app_access_show">Worauf sie zugreifen kann</string>
     <string name="favorite_app_network_tor">Lädt über Tor.</string>
     <string name="favorite_app_network_open">Lädt über das offene Web.</string>
-    <string name="favorite_app_unavailable">Diese App ist noch nicht geladen. Öffnen Sie sie über ihre Karte oder versuchen Sie es in einem Moment erneut.</string>
+    <string name="favorite_app_unavailable">Diese App ist noch nicht geladen. Öffne sie über die App-Leiste oder versuche es gleich nochmal.</string>
     <string name="favorite_notice_published">An Relays veröffentlicht</string>
     <string name="favorite_notice_uploaded">Eine Datei hochgeladen</string>
     <string name="favorite_notice_paid">Eine Zahlung durchgeführt</string>
-    <string name="favorite_app_still_loading">Diese App ist noch nicht geladen. Versuchen Sie es in einem Moment erneut.</string>
+    <string name="favorite_app_still_loading">Diese App ist noch nicht geladen. Versuche es gleich nochmal.</string>
     <string name="favorite_app_recent">Zuletzt verwendet</string>
     <string name="napplet_permissions">nApplet-Berechtigungen</string>
     <string name="napplet_manage_permissions">Berechtigungen verwalten</string>
     <string name="napplet_permissions_empty">Noch keine nApplet-Berechtigungen</string>
-    <string name="napplet_permissions_empty_subtitle">Berechtigungen, die Sie nApplets erteilen, werden hier angezeigt.</string>
+    <string name="napplet_permissions_empty_subtitle">Berechtigungen, die du nApplets erteilst, werden hier angezeigt.</string>
     <string name="napplet_permissions_forget">Dieses nApplet vergessen</string>
     <string name="napplet_permissions_blocked">Blockiert</string>
     <string name="napplet_permissions_revoke">Widerrufen</string>
@@ -672,6 +670,7 @@ anz der Bedingungen ist erforderlich</string>
     <!-- Napplet capability names -->
     <string name="napplet_cap_identity">Identität</string>
     <string name="napplet_cap_keys">Tastaturaktionen</string>
+    <string name="napplet_cap_relay">Relays</string>
     <string name="napplet_cap_storage">Speicher</string>
     <string name="napplet_cap_value">Zahlungen</string>
     <string name="napplet_cap_resource">Netzwerk</string>
@@ -867,7 +866,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nests_servers_add_relay_field">Relay-URL (WebTransport)</string>
     <string name="nests_servers_add_auth_field">Auth-URL (JWT-Mint)</string>
     <string name="nests_servers_add_pair_button">Hinzufügen</string>
-    <string name="nests_servers_relay_label">Relais</string>
+    <string name="nests_servers_relay_label">Relay</string>
     <string name="nests_servers_auth_label">Authentifizierung</string>
     <string name="nests_servers_recommended_section">Empfohlene Server</string>
     <string name="nests_servers_recommended_explainer">Eingebaute Vorschläge, die du mit einem Tippen zu deiner Liste hinzufügen kannst.</string>
@@ -920,8 +919,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="add_hashtag_label_field">Hashtag</string>
     <string name="add_hashtag_label_confirm">Hinzufügen</string>
     <string name="hashtag_label_added_by">hinzugefügt von</string>
-    <string name="pinned_notes">Angeheftete Notizen</string>
-    <string name="pinned_notes_explainer">Deine angepinnten Notizen</string>
+    <string name="pinned_notes">Angeheftete Beiträge</string>
+    <string name="pinned_notes_explainer">Deine angepinnten Beiträge</string>
     <string name="pin_to_profile">An Profil anheften</string>
     <string name="unpin_from_profile">Von Profil lösen</string>
     <string name="deleted_items_banner_title">%1$d Element(e) in dieser Liste wurden von ihren Autoren gelöscht.</string>
@@ -1059,9 +1058,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="zap_type_nonzap_explainer">Keine Spur in Nostr, nur in Lightning</string>
     <string name="post_anonymously">Anonym</string>
     <string name="file_server">Dateiserver</string>
-    <string name="file_server_description">Wählen Sie einen Server zum Hochladen dieser Datei</string>
+    <string name="file_server_description">Wähle einen Server zum Hochladen dieser Datei</string>
     <string name="media_servers">Medienserver</string>
-    <string name="set_preferred_media_servers">Legen Sie Ihre bevorzugten Medienupload Server fest.</string>
+    <string name="set_preferred_media_servers">Leg deinen bevorzugten Medienupload Server fest.</string>
     <string name="use_local_blossom_cache">Lokalen Blossom-Cache verwenden</string>
     <string name="use_local_blossom_cache_caption">Wenn auf diesem Gerät ein Blossom-Cache läuft (Port 24242), Bild- und Video-Downloads darüber leiten.</string>
     <string name="local_blossom_cache_detected">Lokaler Cache an Port 24242 erkannt.</string>
@@ -1070,18 +1069,18 @@ anz der Bedingungen ist erforderlich</string>
     <string name="local_blossom_cache_profile_pics_only_caption">Den lokalen Cache auf Profilbilder beschränken. Feed-Bilder und -Videos werden direkt von den Originalservern geladen.</string>
     <string name="no_blossom_server_message">Du hast keine Blossom Server gesetzt. Du kannst die Amethyst-Liste verwenden oder unten einen hinzufügen ↓</string>
     <string name="recommended_media_servers">Empfohlene Medienserver</string>
-    <string name="built_in_servers_description">Amethysts Standardliste. Sie können sie einzeln hinzufügen oder die Liste hinzufügen.</string>
+    <string name="built_in_servers_description">Amethysts Standardliste. Du kannst einzelne Server hinzufügen oder die gesamte Liste auf einmal übernehmen.</string>
     <string name="use_default_servers">Standardliste verwenden</string>
     <string name="add_media_server">Medienserver hinzufügen</string>
     <string name="delete_media_server">Medienserver löschen</string>
     <string name="payment_targets">Zahlungsziele</string>
-    <string name="payment_targets_explainer">Veröffentlichen Sie Ihre Zahlungsadressen, damit andere Ihnen direkt Mittel senden können.</string>
-    <string name="payment_targets_section_explainer">Fügen Sie Zahlungsadressen für verschiedene Netzwerke hinzu (z.B. Bitcoin, Lightning, Ethereum).</string>
-    <string name="no_payment_targets_message">Keine Zahlungsziele festgelegt. Fügen Sie unten eines hinzu ↓</string>
+    <string name="payment_targets_explainer">Veröffentliche deine Zahlungsadressen, damit andere dir direkt Geld senden können.</string>
+    <string name="payment_targets_section_explainer">Füge Zahlungsadressen für verschiedene Netzwerke hinzu (z.B. Bitcoin, Lightning, Ethereum).</string>
+    <string name="no_payment_targets_message">Keine Zahlungsadressen festgelegt. Füge unten eine hinzu ↓</string>
     <string name="payment_target_type">Netzwerktyp (z.B. Bitcoin)</string>
     <string name="payment_target_authority">Adresse</string>
     <string name="delete_payment_target">Zahlungsziel löschen</string>
-    <string name="no_payment_app_found">Keine App gefunden, die diese Zahlung verarbeiten kann. Bitte installieren Sie eine kompatible Wallet.</string>
+    <string name="no_payment_app_found">Keine App gefunden, die diese Zahlung verarbeiten kann. Bitte installiere eine kompatible Wallet.</string>
     <string name="no_payment_app_found_for_type">Es ist keine App installiert, die Zahlungen vom Typ %1$s verarbeiten kann. Bitte installiere eine kompatible Wallet.</string>
     <string name="error_dialog_payment_error">Zahlung konnte nicht geöffnet werden</string>
     <string name="uploading_state_ready">Noch nicht angefangen</string>
@@ -1139,31 +1138,31 @@ anz der Bedingungen ist erforderlich</string>
     <string name="connect_through_your_orbot_setup_short">Standard-Port ist 9050</string>
     <string name="orbot_socks_port">Orbot Socks-Port</string>
     <string name="use_internal_tor">Aktiver Tor-Engine</string>
-    <string name="use_internal_tor_explainer">Verwenden Sie die interne Version oder Orbot</string>
+    <string name="use_internal_tor_explainer">Verwende die interne Version oder Orbot</string>
     <string name="tor_preset">Tor/Datenschutz-Presets</string>
-    <string name="tor_preset_explainer">Ändern Sie schnell alle untenstehenden Einstellungen</string>
+    <string name="tor_preset_explainer">Ändere schnell alle Einstellungen unten auf einmal</string>
     <string name="tor_use_onion_address">Onion URL/Relays</string>
-    <string name="tor_use_onion_address_explainer">Verwenden Sie Tor für jede .onion URL</string>
+    <string name="tor_use_onion_address_explainer">Verwende Tor für jede .onion URL</string>
     <string name="tor_use_dm_relays">DM-Relays</string>
     <string name="tor_use_dm_relays_explainer">Tor erzwingen, um DMs zu senden und empfangen</string>
     <string name="tor_use_new_relays">Nicht vertrauenswürdige Relays</string>
-    <string name="tor_use_new_relays_explainer">Erzwingen Sie Tor für ausgehende/eingehende Relays</string>
+    <string name="tor_use_new_relays_explainer">Erzwinge Tor für ausgehende/eingehende Relays</string>
     <string name="tor_use_trusted_relays">Vertrauenswürdige Relays</string>
-    <string name="tor_use_trusted_relays_explainer">Erzwingen Sie Tor für alle Relays in Ihren Listen</string>
+    <string name="tor_use_trusted_relays_explainer">Erzwinge Tor für alle Relays in deinen Listen</string>
     <string name="tor_use_profile_pictures">Profilbilder</string>
-    <string name="tor_use_profile_pictures_explainer">Erzwingen Sie Tor beim Laden von Profilbildern</string>
+    <string name="tor_use_profile_pictures_explainer">Erzwinge Tor beim Laden von Profilbildern</string>
     <string name="tor_use_url_previews">URL-Vorschauen</string>
-    <string name="tor_use_url_previews_explainer">Erzwingen Sie Tor beim Laden von URL-Vorschauen</string>
+    <string name="tor_use_url_previews_explainer">Erzwinge Tor beim Laden von URL-Vorschauen</string>
     <string name="tor_use_images">Bilder</string>
-    <string name="tor_use_images_explainer">Erzwingen Sie Tor beim Laden von Bildern</string>
+    <string name="tor_use_images_explainer">Erzwinge Tor beim Laden von Bildern</string>
     <string name="tor_use_videos">Video</string>
-    <string name="tor_use_videos_explainer">Erzwingen Sie Tor beim Laden von Videos</string>
+    <string name="tor_use_videos_explainer">Erzwinge Tor beim Laden von Videos</string>
     <string name="tor_use_money_operations">Geldtransaktionen</string>
-    <string name="tor_use_money_operations_explainer">Erzwingen Sie Tor bei Zaps, Lightning und Cashu-Transfers</string>
+    <string name="tor_use_money_operations_explainer">Erzwinge Tor bei Zaps, Lightning und Cashu-Transfers</string>
     <string name="tor_use_nip05_verification">Nostr Adressverifizierung</string>
-    <string name="tor_use_nip05_verification_explainer">Erzwingen Sie Tor bei der Überprüfung von NIP-05-Adressen</string>
+    <string name="tor_use_nip05_verification_explainer">Erzwinge Tor bei der Überprüfung von NIP-05-Adressen</string>
     <string name="tor_use_media_uploads">Medien-Uploads</string>
-    <string name="tor_use_media_uploads_explainer">Erzwingen Sie Tor beim Hochladen von Inhalten</string>
+    <string name="tor_use_media_uploads_explainer">Erzwinge Tor beim Hochladen von Inhalten</string>
     <string name="tor_internal">Intern</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Aus</string>
@@ -1172,11 +1171,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="tor_small_payloads">Alles außer Medien</string>
     <string name="tor_full_privacy">Volle Privatsphäre</string>
     <string name="tor_custom">Benutzerdefiniert</string>
-    <string name="tor_when_needed_explainer">Verwenden Sie Tor, wenn es vom Server benötigt wird</string>
-    <string name="tor_default_explainer">Verbergen Sie Ihre IP vor zufälligen Relays</string>
-    <string name="tor_small_payloads_explainer">Verbergen Sie Ihre IP vor allem außer Bildern und Videos</string>
-    <string name="tor_full_privacy_explainer">Verbergen Sie Ihre IP bei allen Verbindungen</string>
-    <string name="tor_custom_explainer">Erstellen Sie Ihre eigenen</string>
+    <string name="tor_when_needed_explainer">Verwende Tor, wenn es vom Server benötigt wird</string>
+    <string name="tor_default_explainer">Verbirg deine IP vor zufälligen Relays</string>
+    <string name="tor_small_payloads_explainer">Verbirg deine IP vor allem außer Bildern und Videos</string>
+    <string name="tor_full_privacy_explainer">Verbirg deine IP bei allen Verbindungen</string>
+    <string name="tor_custom_explainer">Eigene Einstellungen</string>
     <string name="invalid_port_number">Ungültige Portnummer</string>
     <string name="app_notification_dms_channel_name">Private Nachrichten</string>
     <string name="app_notification_dms_channel_description">Benachrichtigt dich, wenn eine private Nachricht eingeht</string>
@@ -1247,7 +1246,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="call_settings_video_quality">Videoqualität</string>
     <string name="call_settings_max_bitrate">Maximale Video-Bitrate</string>
     <string name="call_settings_turn_servers">TURN- / STUN-Server</string>
-    <string name="call_settings_turn_description">Standard-STUN- und TURN-Server werden immer eingebunden. Fügen Sie für restriktive Netzwerke benutzerdefinierte TURN-Server hinzu.</string>
+    <string name="call_settings_turn_description">Standard-STUN- und TURN-Server werden immer eingebunden. Füge für restriktive Netzwerke benutzerdefinierte TURN-Server hinzu.</string>
     <string name="call_settings_default_servers">Standard-Server (immer aktiv)</string>
     <string name="call_settings_custom_turn">Benutzerdefinierte TURN-Server</string>
     <string name="call_settings_no_custom_turn">Keine benutzerdefinierten TURN-Server konfiguriert.</string>
@@ -1314,8 +1313,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="sats_to_complete">Zapraiser bei %1$s. %2$s Sats bis zum Ziel</string>
     <string name="read_from_relay">Von Relay lesen</string>
     <string name="write_to_relay">In Relay schreiben</string>
-    <string name="write_to_relay_description">Die Menge in Bytes, die an dieses Relais gesendet wurde, einschließlich Filter und Ereignisse</string>
-    <string name="read_from_relay_description">Die Menge in Bytes, die von diesem Relais empfangen wurde, einschließlich Filter und Ereignisse</string>
+    <string name="write_to_relay_description">Die Menge in Bytes, die an dieses Relay gesendet wurde, einschließlich Filter und Ereignisse</string>
+    <string name="read_from_relay_description">Die Menge in Bytes, die von diesem Relay empfangen wurde, einschließlich Filter und Ereignisse</string>
     <string name="relay_event_count">Ereignisse gespeichert</string>
     <string name="owner">Inhaber</string>
     <string name="used_by">Verwendet von</string>
@@ -1344,7 +1343,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="child_safety_standards">Kinderschutzstandards</string>
     <string name="about_legal">Über &amp; Rechtliches</string>
     <string name="not_available_acronym">N/A</string>
-    <string name="relay_error_messages">Fehler und Hinweise von diesem Relais</string>
+    <string name="relay_error_messages">Fehler und Hinweise von diesem Relay</string>
     <string name="relay_monitor_reports">Relay-Überwachungsberichte</string>
     <string name="relay_monitor_rtt_open">Öffnen</string>
     <string name="relay_monitor_rtt_read">Lesen</string>
@@ -1403,9 +1402,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="meeting_space_closed_tag">GESCHLOSSEN</string>
     <string name="meeting_space_planned_tag">GEPLANT</string>
     <string name="meeting_space_planned_starts_at">Beginnt %1$s</string>
-    <string name="are_you_sure_you_want_to_log_out">Das Abmelden löscht alle Ihre lokalen Informationen. Stellen Sie sicher, dass Sie Ihre privaten Schlüssel gesichert haben, um einen Kontoverlust zu vermeiden. Möchten Sie fortfahren?</string>
+    <string name="are_you_sure_you_want_to_log_out">Das Abmelden löscht alle deine lokalen Daten. Stelle sicher, dass deine privaten Schlüssel gesichert sind, um deinen Account nicht zu verlieren. Möchtest du fortfahren?</string>
     <string name="followed_tags">Gefolgte Tags</string>
-    <string name="relay_setup">Relais</string>
+    <string name="relay_setup">Relays</string>
     <string name="discover_follows">Folge Paketen</string>
     <string name="discover_follows_explainer">Dies sind Listen von Nutzern, die du anderen empfiehlst. Nur öffentliche Nutzer sind erlaubt.</string>
     <string name="discover_reads">Lesungen</string>
@@ -1415,8 +1414,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="discover_community_v2">Gemeinschaften</string>
     <string name="discover_chat">Plaudern</string>
     <string name="community_approved_posts">Genehmigte Beiträge</string>
-    <string name="groups_no_descriptor">Diese Gruppe hat keine Beschreibung oder Regeln. Sprechen Sie mit dem Eigentümer, um eine hinzuzufügen.</string>
-    <string name="community_no_descriptor">Diese Community hat keine Beschreibung. Sprechen Sie mit dem Eigentümer, um eine hinzuzufügen.</string>
+    <string name="groups_no_descriptor">Diese Gruppe hat keine Beschreibung oder Regeln. Sprich mit dem Eigentümer, um eine hinzuzufügen.</string>
+    <string name="community_no_descriptor">Diese Community hat keine Beschreibung. Sprich mit dem Eigentümer, um eine hinzuzufügen.</string>
     <string name="add_sensitive_content_label">Sensibler Inhalt</string>
     <string name="add_sensitive_content_description">Fügt eine Warnung für sensiblen Inhalt hinzu, bevor dieser Inhalt angezeigt wird.</string>
     <string name="ui_preferences">UI-Einstellungen</string>
@@ -1462,7 +1461,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="automatically_hide_nav_bars">Immersives Scrollen</string>
     <string name="automatically_hide_nav_bars_description">Navigationsleisten beim Scrollen ausblenden</string>
     <string name="ui_style">UI-Modus</string>
-    <string name="ui_style_description">Wählen Sie den Beitragsstil</string>
+    <string name="ui_style_description">Wähle den Beitragsstil</string>
     <string name="gallery_style">Profilgalerie-Stil</string>
     <string name="gallery_style_description">Galeriestil auswählen</string>
     <string name="spamming_users">Spammer</string>
@@ -1479,9 +1478,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="default_relays">Standard</string>
     <string name="default_relays_longer">Auf Standardeinstellung zurücksetzen</string>
     <string name="geohash_title">Ort preisgeben als </string>
-    <string name="geohash_explainer">Fügt dem Beitrag einen Geohash Ihres Standorts hinzu. Die Öffentlichkeit wird wissen, dass Sie sich innerhalb von 5 km (3 mi) vom aktuellen Standort befinden</string>
+    <string name="geohash_explainer">Fügt dem Beitrag einen Geohash Ihres Standorts hinzu. Die Öffentlichkeit wird wissen, dass du dich innerhalb von 5 km (3 mi) vom aktuellen Standort befinden</string>
     <string name="geohash_exclusive">Standort-exklusiver Beitrag</string>
-    <string name="geohash_exclusive_explainer">Nur Anhänger des Ortes werden es sehen. Deine allgemeinen Anhänger werden es nicht sehen.</string>
+    <string name="geohash_exclusive_explainer">Nur Follower des Ortes werden es sehen. Deine allgemeinen Follower werden es nicht sehen.</string>
     <string name="hashtag_exclusive">Hashtag-exklusive Beitrag</string>
     <string name="external_url_scope">Eine Webseite kommentieren</string>
     <string name="external_id_scope">Eine externe Ressource kommentieren</string>
@@ -1510,13 +1509,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="music_playlist_description_label">Beschreibung (optional)</string>
     <string name="music_playlist_notes_label">Notizen (optional)</string>
     <string name="music_playlist_cover_upload_cta">Coverbild hochladen</string>
-    <string name="music_playlist_cover_upload_hint">Wählen Sie ein quadratisches Bild als Artwork für diese Playlist.</string>
+    <string name="music_playlist_cover_upload_hint">Wähle ein quadratisches Bild als Artwork für diese Playlist.</string>
     <string name="music_playlist_private_hint">Diese Playlist vor Ihrem öffentlichen Profil verbergen.</string>
     <string name="music_playlist_collaborative_hint">Anderen erlauben, Titel zu dieser Playlist hinzuzufügen.</string>
     <string name="music_playlist_delete">Diese Playlist löschen</string>
     <string name="music_playlist_delete_confirm">Eine NIP-09-Löschung für diese Playlist veröffentlichen?</string>
-    <string name="music_playlist_uploading_banner">Cover wird hochgeladen und veröffentlicht. Dies läuft weiter, auch wenn Sie den Bildschirm verlassen.</string>
-    <string name="music_playlist_no_tracks_hint">Noch keine Titel. Fügen Sie Titel über das Menü eines Songs mit „Zur Playlist hinzufügen\" hinzu.</string>
+    <string name="music_playlist_uploading_banner">Cover wird hochgeladen und veröffentlicht. Dies läuft weiter, auch wenn du die Seite verlässt.</string>
+    <string name="music_playlist_no_tracks_hint">Noch keine Titel. Füge Titel über das Menü eines Songs mit „Zur Playlist hinzufügen\" hinzu.</string>
     <string name="music_playlist_move_track_up">Titel nach oben verschieben</string>
     <string name="music_playlist_move_track_down">Titel nach unten verschieben</string>
     <string name="music_playlist_remove_track">Titel aus Playlist entfernen</string>
@@ -1572,28 +1571,28 @@ anz der Bedingungen ist erforderlich</string>
     <string name="moderators">Moderatoren</string>
     <string name="login_with_external_signer">Mit Amber anmelden</string>
     <string name="status_update">Status aktualisieren</string>
-    <string name="poll_zap_value_min_max_explainer">Die Abstimmungen werden nach der Höhe des Zaps gewichtet. Sie können einen Mindestbetrag festlegen, um Spam zu verhindern, und einen Höchstbetrag, um zu verhindern, dass große Zapper die Abstimmung dominieren. Verwenden Sie denselben Betrag in beiden Feldern, um sicherzustellen, dass jeder Stimme der gleiche Wert zukommt. Lassen Sie es leer, um jeden Betrag zu akzeptieren.</string>
+    <string name="poll_zap_value_min_max_explainer">Die Abstimmungen werden nach der Höhe des Zaps gewichtet. Du kannst einen Mindestbetrag festlegen, um Spam zu verhindern, und einen Höchstbetrag, um zu verhindern, dass große Zapper die Abstimmung dominieren. Verwende denselben Betrag in beiden Feldern, um sicherzustellen, dass jeder Stimme der gleiche Wert zukommt. Lass die Felder leer, um jeden Betrag zu akzeptieren.</string>
     <string name="error_dialog_zap_error">Zap konnte nicht gesendet werden</string>
     <string name="error_dialog_talk_to_user">Mit dem Benutzer kommunizieren</string>
     <string name="error_dialog_talk_to_user_name">Nachricht %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="zap_split_title">Zaps aufteilen und weiterleiten</string>
-    <string name="zap_split_explainer">Unterstützende Clients werden Zaps an die hier hinzugefügten Benutzer aufteilen und weiterleiten, anstatt an Sie</string>
+    <string name="zap_split_explainer">Unterstützende Clients werden Zaps an die hier hinzugefügten Benutzer aufteilen und weiterleiten, anstatt an dich</string>
     <string name="zap_split_search_and_add_user">Benutzer suchen und hinzufügen</string>
     <string name="zap_split_search_and_add_user_placeholder">Benutzername oder Anzeigename</string>
     <string name="missing_lud16">Fehlende Lightning-Konfiguration</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Benutzer %1$s hat keine Lightning-Adresse eingerichtet, um Sats zu empfangen</string>
     <string name="paid">Bezahlt</string>
     <string name="wallet_number">Brieftasche %1$s</string>
-    <string name="error_opening_external_signer">Fehler beim Öffnen der Signatur-App</string>
-    <string name="error_opening_external_signer_description">Die Unterzeichner-App konnte nicht gefunden werden. Prüfen Sie, ob die App nicht deinstalliert wurde</string>
+    <string name="error_opening_external_signer">Fehler beim Öffnen der Signer-App</string>
+    <string name="error_opening_external_signer_description">Die Signer-App konnte nicht gefunden werden. Prüfe, ob die App noch installiert ist</string>
     <string name="error_video_playback_failed">Dieses Video kann nicht abgespielt werden</string>
     <string name="error_video_playback_failed_description">Der Codec oder das Format wird auf diesem Gerät nicht unterstützt (%1$s). Versuche, es im Browser zu öffnen.</string>
     <string name="error_video_open_in_browser">Im Browser öffnen</string>
     <string name="sign_request_rejected2">Signaturanfrage abgelehnt</string>
-    <string name="sign_request_rejected_description">Stellen Sie sicher, dass die Unterzeichner-Anwendung diese Transaktion autorisiert hat</string>
-    <string name="no_wallet_found_with_error">Keine Wallets gefunden, um eine Lightning-Rechnung zu bezahlen (Fehler: %1$s). Installieren Sie eine Lightning-Wallet, um Zaps zu verwenden</string>
-    <string name="no_wallet_found">Keine Wallets gefunden, um eine Lightning-Rechnung zu bezahlen. Installieren Sie eine Lightning-Wallet, um Zaps zu verwenden</string>
+    <string name="sign_request_rejected_description">Stell sicher, dass die Signer-App diese Transaktion autorisiert hat</string>
+    <string name="no_wallet_found_with_error">Keine Wallets gefunden, um eine Lightning-Rechnung zu bezahlen (Fehler: %1$s). Installiere eine Lightning-Wallet, um Zaps zu verwenden</string>
+    <string name="no_wallet_found">Keine Wallets gefunden, um eine Lightning-Rechnung zu bezahlen. Installiere eine Lightning-Wallet, um Zaps zu verwenden</string>
     <string name="no_blossom_apps_found_title">Blossom-Links können nicht geöffnet werden</string>
     <string name="no_blossom_apps_found_description">Keine Blossom-Apps gefunden. Bitte installiere eine lokale Blossom-App, um diese Datei anzuzeigen</string>
     <string name="hidden_words">Versteckte Wörter</string>
@@ -1617,9 +1616,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="tor_connection_failed_body">Amethyst konnte den Tor-Start nicht abschließen. Eine reguläre (Nicht-Tor-)Verbindung verwenden, damit der Feed laden kann? Wir merken uns diese Auswahl für die nächste Stunde und versuchen Tor danach erneut.</string>
     <string name="tor_continue_without_for_session">Verbindung ohne Tor verwenden</string>
     <string name="tor_keep_waiting">Weiter warten</string>
-    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Konnte keine LNUrl aus der Lightning-Adresse \"%1$s\" zusammenstellen. Überprüfen Sie die Konfiguration des Benutzers</string>
+    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Konnte keine LNUrl aus der Lightning-Adresse \"%1$s\" zusammenstellen. Überprüfe die Konfiguration des Benutzers</string>
     <string name="could_not_fetch_invoice_from_details">Rechnung konnte nicht von %1$s abgerufen werden: %2$s</string>
-    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Fehler beim Parsen von JSON von %1$s. Überprüfen Sie die Blitzeinrichtung des Benutzers</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Fehler beim Parsen von JSON von %1$s. Überprüfe die Lightning-Einstellungen des Benutzers</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Callback-URL aus %1$s Antwort nicht gefunden</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Falscher Rechnungsbetrag (%1$s Sats) von %2$s. Er hätte %3$s sein sollen</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Konnte keine Lightning-Rechnung erstellen, bevor der Zap gesendet wurde. Die Lightning-Wallet des Empfängers hat folgenden Fehler gesendet: %1$s</string>
@@ -1640,8 +1639,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="push_server_none_explainer">Push-Benachrichtigungen deaktivieren</string>
     <string name="push_server_uses_app_explainer">Verwendet die App %1$s</string>
     <string name="push_server_install_app">Push-Benachrichtigungen einrichten</string>
-    <string name="push_server_install_app_description">        Um Push-Benachrichtigungen zu erhalten, installieren Sie eine App, die [Unified Push](https://unifiedpush.org/) unterstützt, wie zum Beispiel [Ntfy](https://ntfy.sh/).
-        Nach der Installation wählen Sie die App aus, die Sie in den Einstellungen verwenden möchten.
+    <string name="push_server_install_app_description">        Um Push-Benachrichtigungen zu erhalten, installiere eine App, die [Unified Push](https://unifiedpush.org/) unterstützt, wie zum Beispiel [Ntfy](https://ntfy.sh/).
+        Nach der Installation wähle in den Einstellungen die App aus, die du verwenden möchtest.
     </string>
     <string name="payment_required_title">Nachricht von %1$s</string>
     <string name="thread_title">Faden</string>
@@ -1695,7 +1694,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="retry_without_encryption">Ohne Verschlüsselung wiederholen</string>
     <string name="upload_without_encryption_warning">Warnung: Ohne Verschlüsselung kann jeder mit dem Dateilink den Inhalt sehen.</string>
     <string name="media_compression_quality_label">Medienqualität</string>
-    <string name="media_compression_quality_explainer">Wählen Sie Niedrige Qualität, um Ihre Medien in eine kleinere Datei mit geringerer Qualität zu komprimieren, Hohe Qualität, um sie in eine größere Datei mit höherer Qualität zu komprimieren, oder \"Ohne Kompression\", um die Medien ohne Kompression hochzuladen.</string>
+    <string name="media_compression_quality_explainer">Wähle \"Niedrige Qualität\", um deine Medien in eine kleinere Datei mit geringerer Qualität zu komprimieren, \"Hohe Qualität\" für eine größere Datei mit besserer Qualität, oder \"Unkomprimiert\", um die Medien ohne Komprimierung hochzuladen.</string>
     <string name="media_compression_quality_low">Niedrig</string>
     <string name="media_compression_quality_medium">Mittel</string>
     <string name="media_compression_quality_high">Hoch</string>
@@ -1808,7 +1807,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="cashu_settings_edit_wallet">Meine Mints</string>
     <string name="cashu_settings_edit_wallet_subtitle">Mints, Nutzap-Schlüssel</string>
     <string name="cashu_settings_my_recommendations">Meine Mint-Empfehlungen</string>
-    <string name="cashu_settings_recommendations_subtitle">Bürgen Sie öffentlich für Mints, denen Sie vertrauen, und widerrufen Sie Empfehlungen.</string>
+    <string name="cashu_settings_recommendations_subtitle">Empfehle öffentlich Mints, denen du vertraust, und widerrufe Empfehlungen.</string>
     <string name="cashu_settings_no_recommendations">Du hast noch keine Mints empfohlen. Tippe auf das Daumen-hoch-Symbol neben einem Mint, um ihn öffentlich zu empfehlen.</string>
     <string name="cashu_settings_delete_recommendation">Empfehlung löschen</string>
     <string name="cashu_settings_delete_confirm_title">Empfehlung zurückziehen?</string>
@@ -1820,16 +1819,16 @@ anz der Bedingungen ist erforderlich</string>
     <string name="cashu_settings_restore_nothing_found">Keine wiederherstellbaren Proofs gefunden.</string>
     <string name="cashu_settings_restore_result">%1$s Sats über %2$s Proofs wiederhergestellt.</string>
     <string name="cashu_settings_stop_nutzaps">nutzaps nicht mehr empfangen</string>
-    <string name="cashu_settings_stop_nutzaps_subtitle">Ziehen Sie Ihre kind:10019 zurück, damit andere Ihnen keine nutzaps mehr senden können. Ihr Wallet und Ihr Guthaben bleiben erhalten.</string>
+    <string name="cashu_settings_stop_nutzaps_subtitle">Ziehe dein kind:10019 Event zurück, damit andere dir keine nutzaps mehr senden können. Dein Wallet und dein Guthaben bleiben erhalten.</string>
     <string name="cashu_settings_stop_nutzaps_confirm_title">nutzaps nicht mehr empfangen?</string>
-    <string name="cashu_settings_stop_nutzaps_confirm_body">Wir ersetzen Ihr nutzap-Info-Ereignis durch ein leeres und beantragen dessen Löschung. Andere werden Ihnen keine nutzaps mehr senden können. Sie können es wieder aktivieren, indem Sie Ihr Wallet bearbeiten. Ihr Guthaben ist nicht betroffen.</string>
+    <string name="cashu_settings_stop_nutzaps_confirm_body">Wir ersetzen dein nutzap-Info-Ereignis durch ein leeres und beantragen dessen Löschung. Andere werden dir keine nutzaps mehr senden können. Du kannst es wieder aktivieren, indem du deine Wallet bearbeitest. Dein Guthaben ist nicht betroffen.</string>
     <string name="cashu_settings_recreate_key">nutzap-Schlüssel neu erstellen</string>
     <string name="cashu_settings_recreate_key_subtitle">Einen brandneuen Schlüssel für den Empfang von nutzaps generieren. Selten benötigt — typischerweise nur, wenn Ihr aktueller Schlüssel kompromittiert wurde. nutzaps, die bereits an Ihren alten Schlüssel gesendet, aber noch nicht eingelöst wurden, gehen verloren.</string>
     <string name="cashu_settings_recreate_key_confirm_title">nutzap-Schlüssel neu erstellen?</string>
-    <string name="cashu_settings_recreate_key_confirm_body">Ein neuer P2PK-Schlüssel wird generiert und in Ihrer kind:10019 und kind:17375 veröffentlicht, wobei Ihre aktuellen Mints erhalten bleiben. Absender werden nutzaps auf den neuen Schlüssel sperren. Alle nutzaps, die bereits an Ihren alten Schlüssel gesendet wurden und die Sie noch nicht eingelöst haben, werden unwiederbringlich verloren gehen. Dies wird selten benötigt.</string>
+    <string name="cashu_settings_recreate_key_confirm_body">Ein neuer P2PK-Schlüssel wird generiert und in deiner kind:10019 und kind:17375 veröffentlicht, wobei deine aktuellen Mints erhalten bleiben. Absender werden nutzaps künftig an den neuen Schlüssel binden. Alle nutzaps, die bereits an deinen alten Schlüssel gesendet wurden und die du noch nicht eingelöst hast, werden unwiederbringlich verloren gehen. Dies wird selten benötigt.</string>
     <string name="cashu_settings_recreate_key_action">Schlüssel neu erstellen</string>
     <string name="cashu_settings_import_key">nutzap-Schlüssel importieren</string>
-    <string name="cashu_settings_import_key_subtitle">Ersetzen Sie Ihren nutzap-Schlüssel durch einen eingefügten — z. B. um ein Wallet aus einem Backup wiederherzustellen. Selten benötigt. nutzaps, die auf Ihren alten Schlüssel gesperrt sind, können nicht mehr eingelöst werden.</string>
+    <string name="cashu_settings_import_key_subtitle">Ersetze deinen nutzap-Schlüssel durch einen eingefügten — z. B. um ein Wallet aus einem Backup wiederherzustellen. Selten benötigt. nutzaps, die auf deinen alten Schlüssel gesperrt sind, können nicht mehr eingelöst werden.</string>
     <string name="cashu_settings_import_key_confirm_title">nutzap-Schlüssel importieren?</string>
     <string name="cashu_settings_import_key_confirm_body">Fügen Sie den privaten P2PK-Schlüssel (hex) ein, der für den Empfang von nutzaps verwendet werden soll. Ihre kind:10019 und kind:17375 werden damit neu veröffentlicht, wobei Ihre aktuellen Mints erhalten bleiben. nutzaps, die auf Ihren aktuellen Schlüssel gesperrt sind, können nicht mehr eingelöst werden, es sei denn, dieser Schlüssel stimmt überein. Dies wird selten benötigt.</string>
     <string name="cashu_settings_import_key_field">Privater P2PK-Schlüssel (hex)</string>
@@ -2142,7 +2141,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="video_player_settings_action_cast">An Gerät streamen</string>
     <string name="video_player_settings_action_cast_description">Sendet das Video an einen Chromecast-Empfänger in deinem WLAN (für lokale Dateien ausgeblendet)</string>
     <string name="audio_visualizer_settings">Audio-Visualisierer</string>
-    <string name="audio_visualizer_settings_description">Wähle die Animation, die beim Abspielen von Audio-Notizen angezeigt wird.</string>
+    <string name="audio_visualizer_settings_description">Wähle die Animation, die beim Abspielen von Audios angezeigt wird.</string>
     <string name="audio_visualizer_off">Aus</string>
     <string name="audio_visualizer_bars">Spektrum-Balken</string>
     <string name="audio_visualizer_waves">Color Waves</string>
@@ -2175,17 +2174,17 @@ anz der Bedingungen ist erforderlich</string>
     <string name="show_nprofile_as_a_qr_code">nprofile als QR-Code anzeigen</string>
     <string name="invalid_nip19_uri">Ungültige Adresse</string>
     <string name="invalid_nip19_uri_description">Amethyst hat eine URI zum Öffnen erhalten, aber diese URI war ungültig: %1$s</string>
-    <string name="dm_relays_title">DM Posteingangs-Relais</string>
-    <string name="dm_relays_not_found">Richten Sie Ihre privaten Posteingangs-Relais ein</string>
-    <string name="dm_relays_not_found_description">Diese Einstellung lässt alle wissen, welche Relais verwendet werden sollen, wenn sie Nachrichten an Sie senden. Ohne diese könnten Sie einige Nachrichten verpassen.</string>
+    <string name="dm_relays_title">DM-Posteingangs-Relays</string>
+    <string name="dm_relays_not_found">Richten Sie Ihre privaten Posteingangs-Relays ein</string>
+    <string name="dm_relays_not_found_description">Diese Einstellung lässt alle wissen, welche Relays verwendet werden sollen, wenn sie Nachrichten an Sie senden. Ohne diese könnten Sie einige Nachrichten verpassen.</string>
     <string name="dm_relays_not_found_examples2">Gute Optionen sind:\n - auth.nostr1.com (gratis)\n - inbox.nostr.wine (bezahlt)\n - relay.0xchat.com (gratis)</string>
-    <string name="dm_relays_not_found_editing">Fügen Sie 1–3 Relais ein, die als Ihr privater Posteingang dienen sollen. DM Posteingangs-Relais sollten Nachrichten von jedem akzeptieren, aber nur Ihnen erlauben, sie herunterzuladen.</string>
+    <string name="dm_relays_not_found_editing">Fügen Sie 1–3 Relays ein, die als Ihr privater Posteingang dienen sollen. DM-Posteingangs-Relays sollten Nachrichten von jedem akzeptieren, aber nur Ihnen erlauben, sie herunterzuladen.</string>
     <string name="dm_relays_not_found_create_now">Jetzt einrichten</string>
     <string name="recipient_missing_dm_relays">DM-Inbox-Relays nicht gefunden. Nachrichten können nicht zugestellt werden, bis die Relay-Liste konfiguriert wurde.</string>
-    <string name="search_relays_title">Suchrelais</string>
-    <string name="search_relays_not_found">Richten Sie Ihre Suchrelais ein</string>
-    <string name="search_relays_not_found_description">Das Erstellen einer Relaisliste, die speziell für die Suche und Benutzerkennzeichnung entwickelt wurde, wird diese Ergebnisse verbessern.</string>
-    <string name="search_relays_not_found_editing">Fügen Sie 1–3 Relais ein, die beim Suchen nach Inhalten oder beim Taggen von Benutzern verwendet werden sollen. Stellen Sie sicher, dass Ihre ausgewählten Relais NIP-50 implementieren</string>
+    <string name="search_relays_title">Such-Relays</string>
+    <string name="search_relays_not_found">Richten Sie Ihre Such-Relays ein</string>
+    <string name="search_relays_not_found_description">Das Erstellen einer Relayliste, die speziell für die Suche und Benutzerkennzeichnung entwickelt wurde, wird diese Ergebnisse verbessern.</string>
+    <string name="search_relays_not_found_editing">Fügen Sie 1–3 Relays ein, die beim Suchen nach Inhalten oder beim Taggen von Benutzern verwendet werden sollen. Stellen Sie sicher, dass Ihre ausgewählten Relays NIP-50 implementieren</string>
     <string name="search_relays_not_found_examples">Gute Optionen sind:\n%1$s</string>
     <string name="outbox_relays_title">Ausgehende Relays</string>
     <string name="outbox_relays_not_found">Richte deine öffentlichen Ausgehenden Relays zum Posten ein</string>
@@ -2197,27 +2196,27 @@ anz der Bedingungen ist erforderlich</string>
     <string name="inbox_relays_not_found_description">Das Erstellen einer Relay-Liste, die speziell zum Empfangen von Benachrichtigungen gedacht ist, ist entscheidend für dein Nostr-Erlebnis.</string>
     <string name="inbox_relays_not_found_editing">Füge 1–3 Relays hinzu, die Benachrichtigungen für dich empfangen. Stelle sicher, dass sie keine Zahlung oder Web of Trust vom Absender verlangen, sonst erhältst du nur Benachrichtigungen von zahlenden oder langjährigen Nutzern.</string>
     <string name="inbox_relays_not_found_examples">Gute Optionen sind:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
-    <string name="relay_settings">Relaiseinstellungen</string>
+    <string name="relay_settings">Relay-Einstellungen</string>
     <string name="relay_reorder">Relay neu anordnen</string>
-    <string name="public_home_section">Öffentliche Heimrelais</string>
+    <string name="public_home_section">Öffentliche Outbox/Home-Relays</string>
     <string name="public_home_section_explainer_profile">Der Benutzer veröffentlicht seine Inhalte auf diesen Relays</string>
-    <string name="public_home_section_explainer">Dieser Relais-Typ speichert alle Ihre Inhalte. Amethyst sendet Ihre Beiträge hierher und andere werden diese Relais verwenden, um Ihre Inhalte zu finden. Fügen Sie 1–3 Relais ein. Sie können persönliche Relais, bezahlte Relais oder öffentliche Relais sein.</string>
-    <string name="public_notif_section">Öffentliche Posteingangsrelais</string>
+    <string name="public_home_section_explainer">Dieser Relay-Typ speichert alle Ihre Inhalte. Amethyst sendet Ihre Beiträge hierher und andere werden diese Relais verwenden, um Ihre Inhalte zu finden. Fügen Sie 1–3 Relais ein. Sie können persönliche Relais, bezahlte Relais oder öffentliche Relais sein.</string>
+    <string name="public_notif_section">Öffentliche Posteingangs-Relays</string>
     <string name="public_notif_section_explainer_profile">Der Benutzer erhält Benachrichtigungen auf diesen Relays</string>
-    <string name="public_notif_section_explainer">Dieser Relais-Typ empfängt alle Antworten, Kommentare, Likes und Zaps auf Ihre Beiträge. Fügen Sie 1–3 Relais ein und stellen Sie sicher, dass sie Beiträge von jedem akzeptieren.</string>
-    <string name="private_inbox_section">DM-Posteingangsrelais</string>
+    <string name="public_notif_section_explainer">Dieser Relay-Typ empfängt alle Antworten, Kommentare, Likes und Zaps auf Ihre Beiträge. Fügen Sie 1–3 Relays ein und stellen Sie sicher, dass sie Beiträge von jedem akzeptieren.</string>
+    <string name="private_inbox_section">DM-Posteingangs-Relays</string>
     <string name="private_inbox_section_explainer_profile">Der Benutzer empfängt Direktnachrichten auf diesen Relays</string>
-    <string name="private_inbox_section_explainer">Fügen Sie 1–3 Relais ein, die als Ihr privater Posteingang dienen sollen. Andere werden diese Relais verwenden, um Ihnen DMs zu senden. DM-Posteingangsrelais sollten Nachrichten von jedem akzeptieren, aber nur Ihnen erlauben, sie herunterzuladen. Gute Optionen sind:\n - inbox.nostr.wine (bezahlt)\n - you.nostr1.com (persönliche Relais - bezahlt)</string>
+    <string name="private_inbox_section_explainer">Fügen Sie 1–3 Relays ein, die als Ihr privater Posteingang dienen sollen. Andere werden diese Relays verwenden, um Ihnen DMs zu senden. DM-Posteingangsrelays sollten Nachrichten von jedem akzeptieren, aber nur Ihnen erlauben, sie herunterzuladen. Gute Optionen sind:\n - inbox.nostr.wine (bezahlt)\n - you.nostr1.com (persönliche Relays - bezahlt)</string>
     <string name="keypackages">KeyPackages</string>
     <string name="keypackage_section">KeyPackage-Relays</string>
     <string name="keypackage_section_explainer">Relays, auf denen deine MLS KeyPackages veröffentlicht werden (MIP-00). Andere Nutzer rufen diese KeyPackages ab, um dich zu Marmot-Gruppenchats einzuladen. Füge 1–3 Relays hinzu, die KeyPackage-Ereignisse von dir akzeptieren und öffentliches Lesen erlauben.</string>
-    <string name="private_outbox_section">Private Relais</string>
-    <string name="private_outbox_section_explainer">Fügen Sie zwischen 1–3 Relais ein, um Ereignisse zu speichern, die niemand anders sehen kann, wie Ihre Entwürfe und/oder App-Einstellungen. Idealerweise sind diese Relais entweder lokal oder erfordern eine Authentifizierung, bevor Sie die Inhalte eines jeden Benutzers herunterladen.</string>
+    <string name="private_outbox_section">Private Relays</string>
+    <string name="private_outbox_section_explainer">Fügen Sie zwischen 1–3 Relays ein, um Ereignisse zu speichern, die niemand anders sehen kann, wie Ihre Entwürfe und/oder App-Einstellungen. Idealerweise sind diese Relays entweder lokal oder erfordern eine Authentifizierung, bevor Sie die Inhalte eines jeden Benutzers herunterladen.</string>
     <string name="connected_section">Verbundene Relays</string>
     <string name="connected_section_description">Aktuelle Liste der verwendeten Relays</string>
-    <string name="search_section">Suchrelais</string>
-    <string name="search_section_explainer">Liste der Relais, die für die Suche und das Taggen von Benutzern verwendet werden. Das Taggen und die Suche funktionieren nicht, wenn keine Optionen verfügbar sind.</string>
-    <string name="local_section">Lokale Relais</string>
+    <string name="search_section">Such-Relays</string>
+    <string name="search_section_explainer">Liste der Relays, die für die Suche und das Taggen von Benutzern verwendet werden. Das Taggen und die Suche funktionieren nicht, wenn keine Optionen verfügbar sind.</string>
+    <string name="local_section">Lokale Relays</string>
     <string name="local_section_explainer">Liste der Relays, die auf diesem Gerät laufen.</string>
     <string name="send_kind0_to_local_relay_title">Profile an lokalen Relay weiterleiten</string>
     <string name="send_kind0_to_local_relay_description">Alle empfangenen Profilereignisse (kind 0) an Ihren lokalen Relay senden</string>
@@ -2260,11 +2259,29 @@ anz der Bedingungen ist erforderlich</string>
     <string name="git_repo_tab_overview">Übersicht</string>
     <string name="git_repo_tab_issues">Tickets</string>
     <string name="git_repo_tab_patches">Patches und PRs</string>
+    <string name="git_repo_stat_files">Dateien</string>
+    <string name="git_repo_open_in_browser">Im Browser öffnen</string>
     <string name="git_repo_section_about">Über</string>
     <string name="git_repo_section_links">Links</string>
     <string name="git_repo_section_maintainers">Maintainer</string>
     <string name="git_repo_section_topics">Themen</string>
     <string name="git_repo_personal_fork">Persönlicher Fork</string>
+    <string name="git_repo_tab_readme">Readme</string>
+    <string name="git_repo_tab_code">Code</string>
+    <string name="git_repo_root">Root</string>
+    <string name="git_repo_default_branch">default</string>
+    <string name="git_repo_branches">Branches</string>
+    <string name="git_repo_commits">Commits</string>
+    <string name="git_repo_no_commits">Kein Commit-Verlauf verfügbar.</string>
+    <string name="git_repo_plain_text">Text</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="one">Datei geändert</item>
+        <item quantity="other">Dateien geändert</item>
+    </plurals>
+    <string name="git_repo_settings_name">Name</string>
+    <string name="git_repo_settings_description">Beschreibung</string>
+    <string name="git_repo_settings_save">Speichern</string>
+    <string name="git_repositories">Git Repositories</string>
     <string name="nsite_title">Statische Website: %1$s</string>
     <string name="napplet_card_permissions">Berechtigungen:</string>
     <string name="nsite_root_site">Stammseite</string>
@@ -2346,7 +2363,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="feed_group_lists">Listen</string>
     <string name="feed_group_dvms">Feed-Algorithmen</string>
     <string name="follow_list_all_favorite_dvms">Alle bevorzugten Feed-Algorithmen</string>
-    <string name="feed_group_relays">Relais</string>
+    <string name="feed_group_relays">Relays</string>
     <string name="add_dvm_to_favorites">Feed-Algorithmus zu Favoriten hinzufügen</string>
     <string name="remove_dvm_from_favorites">Aus Favoriten entfernen</string>
     <string name="favorite_dvms_title">Bevorzugte Feed-Algorithmen</string>
@@ -2366,7 +2383,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="temporary_account">Beim Sperren des Geräts abmelden</string>
     <string name="private_message">Private Nachricht</string>
     <string name="public_message">Öffentliche Nachricht</string>
-    <string name="group_relay">Chat-Relais</string>
+    <string name="group_relay">Chat-Relays</string>
     <string name="share_image">Bild teilen…</string>
     <string name="unable_to_share_image">Bild kann nicht geteilt werden, bitte versuchen Sie es später erneut…</string>
     <string name="share_video">Video teilen…</string>
@@ -2375,9 +2392,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="search_by_hashtag">Suche Hashtag: #%1$s</string>
     <string name="search_scope_all">Alle</string>
     <string name="search_scope_people">Personen</string>
-    <string name="search_scope_notes">Notizen</string>
+    <string name="search_scope_notes">Beiträge</string>
     <string name="search_source_local">Lokal</string>
-    <string name="search_source_relays">Relais</string>
+    <string name="search_source_relays">Relays</string>
     <string name="search_follows_only">Nur Gefolgte</string>
     <string name="search_sort_newest">Neueste</string>
     <string name="search_sort_oldest">Älteste</string>
@@ -2553,6 +2570,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="kind_git_patch">Git-Patch</string>
     <string name="kind_git_repo">Git-Repository</string>
     <string name="kind_git_reply">Git-Antwort</string>
+    <string name="kind_git_pr">Pull Request</string>
+    <string name="kind_git_pr_update">PR Update</string>
     <string name="kind_zap_goals">Zap-Ziele</string>
     <string name="kind_hashtag_follows">Gefolgte Hashtags</string>
     <string name="kind_highlights">Highlights</string>
@@ -2593,7 +2612,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="kind_poll">Umfrage</string>
     <string name="kind_poll_response">Umfrageantwort</string>
     <string name="kind_nip04_dms">NIP-04-DMs</string>
-    <string name="kind_private_relays">Private Relais</string>
+    <string name="kind_private_relays">Private Relays</string>
     <string name="kind_proxy_relays">Proxy-Relays</string>
     <string name="kind_public_message">Öffentliche Nachricht</string>
     <string name="kind_reactions">Reaktionen</string>
@@ -2608,7 +2627,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="kind_seals">Siegel</string>
     <string name="kind_search_relays">Such-Relays</string>
     <string name="kind_user_status">Benutzerstatus</string>
-    <string name="kind_notes">Notizen</string>
+    <string name="kind_notes">Beiträge</string>
     <string name="kind_edits">Bearbeitungen</string>
     <string name="kind_torrents">Torrents</string>
     <string name="kind_torrent_comments">Torrent-Kommentare</string>
@@ -2665,7 +2684,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="event_sync_start">Synchronisierung starten</string>
     <string name="event_sync_start_anyway">Trotzdem starten (mobile Daten)</string>
     <string name="event_sync_cancel">Abbrechen</string>
-    <string name="event_sync_relays_progress">Relais: %1$d / %2$d</string>
+    <string name="event_sync_relays_progress">Relays: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Ereignisse verteilt: %1$d neue von %2$d gesendeten und %3$d empfangenen</string>
     <string name="event_sync_done_title">Synchronisierung abgeschlossen</string>
     <string name="event_sync_done_sent">%1$d Ereignisse an Ziel-Relays weitergeleitet von %2$d empfangenen.</string>
@@ -3104,6 +3123,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="marmot_revoke_admin_confirm">Administratorrechte von \"%1$s\" widerrufen? Diese Person bleibt Mitglied der Gruppe.</string>
     <string name="marmot_admin_revoked">Administratorrechte widerrufen</string>
     <string name="marmot_failed_to_revoke_admin">Administratorrechte konnten nicht widerrufen werden: %1$s</string>
+    <string name="marmot_relays_header">Relays</string>
     <string name="marmot_relay_no_events">noch keine Ereignisse</string>
     <string name="marmot_relay_last_event">letztes Ereignis%1$s</string>
     <string name="marmot_not_a_member">Kein Mitglied dieser Gruppe</string>
