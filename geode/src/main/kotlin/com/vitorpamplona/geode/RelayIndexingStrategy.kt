@@ -50,6 +50,10 @@ fun relayIndexingStrategy(fullTextSearch: Boolean = true) =
         // time index.
         indexEventsByPubkeyAlone = true,
         indexFullTextSearch = fullTextSearch,
+        // Tokenize off the commit path; NostrServer drives the catch-up
+        // worker and search queries drain it first, so NIP-50 stays
+        // exactly as fresh while publishes stop paying for it.
+        deferFullTextSearchIndexing = fullTextSearch,
     )
 
 /** Stock relay strategy — everything on, matching geode's defaults. */

@@ -43,12 +43,16 @@ class SQLiteEventStore(
     val numReaders: Int = 4,
 ) {
     companion object {
-        const val DATABASE_VERSION = 3
+        const val DATABASE_VERSION = 4
     }
 
     val seedModule = SeedModule()
 
-    val fullTextSearchModule = FullTextSearchModule(indexStrategy.indexFullTextSearch)
+    val fullTextSearchModule =
+        FullTextSearchModule(
+            indexStrategy.indexFullTextSearch,
+            indexStrategy.deferFullTextSearchIndexing,
+        )
     val eventIndexModule =
         EventIndexesModule(
             seedModule::hasher,
@@ -168,6 +172,12 @@ class SQLiteEventStore(
                     // (created only for strategies that opt in).
                     eventIndexModule.migrateV2AddPubkeyIndex(db)
                 }
+                3 -> {
+                    // Upgrade from version 3 to 4: deferred-FTS watermark.
+                    // Pre-v4 rows were indexed synchronously, so the
+                    // watermark seeds at the current MAX(row_id).
+                    fullTextSearchModule.createStateTable(db)
+                }
             }
         }
     }
@@ -182,6 +192,30 @@ class SQLiteEventStore(
             // VACUUM: Rebuilds the database file, reclaiming unused space
             // and reducing fragmentation.
             db.execSQL("VACUUM")
+        }
+
+    /**
+     * True when something must drive [ftsCatchUp] for NIP-50 to work —
+     * i.e. the strategy defers tokenization off the insert path. The
+     * relay server wires a background worker (and a pre-search drain)
+     * when this is set.
+     */
+    val needsFtsCatchUp: Boolean =
+        indexStrategy.indexFullTextSearch && indexStrategy.deferFullTextSearchIndexing
+
+    /**
+     * One deferred-FTS catch-up batch; returns `true` once the index has
+     * caught up with the table. Each batch is its own write transaction,
+     * so publishes interleave between batches instead of stalling behind
+     * a long rebuild.
+     */
+    suspend fun ftsCatchUp(batchSize: Int = 1000): Boolean =
+        pool.useWriter { db ->
+            var done = false
+            db.transaction {
+                done = fullTextSearchModule.catchUpBatch(this, batchSize)
+            }
+            done
         }
 
     suspend fun analyse() =

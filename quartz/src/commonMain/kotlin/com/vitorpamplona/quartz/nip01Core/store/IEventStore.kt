@@ -152,6 +152,20 @@ interface IEventStore : AutoCloseable {
         }
     }
 
+    /**
+     * True when NIP-50 tokenization is deferred and something must drive
+     * [ftsCatchUp] for search to see new events. The relay server checks
+     * this to start its catch-up worker; stores that index synchronously
+     * (the default) report `false` and [ftsCatchUp] is a no-op.
+     */
+    val needsFtsCatchUp: Boolean get() = false
+
+    /**
+     * One deferred-FTS catch-up batch; `true` once the index has caught
+     * up. Safe to call on any store — the default reports done.
+     */
+    suspend fun ftsCatchUp(batchSize: Int = DEFAULT_FTS_REINDEX_BATCH): Boolean = true
+
     suspend fun delete(filter: Filter)
 
     suspend fun delete(filters: List<Filter>)

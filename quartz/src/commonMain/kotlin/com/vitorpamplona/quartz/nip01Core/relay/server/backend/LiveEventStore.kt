@@ -141,12 +141,28 @@ class LiveEventStore(
         }
     }
 
+    /**
+     * With deferred FTS, a search query must first drain the catch-up
+     * backlog — that keeps NIP-50 results exactly as fresh as the
+     * synchronous path (the deferral is invisible to correctness; only
+     * publishes stop paying for tokenization). Non-search filters never
+     * touch the FTS index and skip this entirely.
+     */
+    private suspend fun drainFtsIfSearching(filters: List<Filter>) {
+        if (!store.needsFtsCatchUp) return
+        if (filters.none { !it.search.isNullOrEmpty() }) return
+        while (!store.ftsCatchUp()) {
+            // Each batch is its own write transaction; loop until caught up.
+        }
+    }
+
     override suspend fun query(
         ctx: RequestContext,
         filters: List<Filter>,
         onEach: (Event) -> Unit,
         onEose: () -> Unit,
     ) {
+        drainFtsIfSearching(filters)
         // During the historical replay, record ids the store has
         // emitted so the live path can dedupe. The index registers
         // *before* the replay starts (otherwise an event accepted
@@ -227,6 +243,7 @@ class LiveEventStore(
         onEachLive: (Event) -> Unit,
         onEose: () -> Unit,
     ) {
+        drainFtsIfSearching(filters)
         val seenLock = AtomicBoolean(false)
         var seenIds: HashSet<String>? = HashSet(1024)
 
@@ -268,7 +285,10 @@ class LiveEventStore(
     override suspend fun count(
         ctx: RequestContext,
         filters: List<Filter>,
-    ): Int = store.count(filters.strippingSearchExtensions())
+    ): Int {
+        drainFtsIfSearching(filters)
+        return store.count(filters.strippingSearchExtensions())
+    }
 
     /**
      * One-shot snapshot query. Used by NIP-77 negentropy: the server
@@ -308,10 +328,7 @@ class LiveEventStore(
     override suspend fun snapshotIdsForNegentropy(
         filters: List<Filter>,
         maxEntries: Int?,
-<<<<<<< HEAD
     ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters.strippingSearchExtensions(), maxEntries)
-=======
-    ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters, maxEntries)
 
     // ------------------------------------------------------------------
     // NIP-77 snapshot cache
@@ -375,5 +392,4 @@ class LiveEventStore(
          */
         const val SNAPSHOT_TTL_SECONDS = 30L
     }
->>>>>>> 55139747 (perf: cache the sealed negentropy snapshot across NEG-OPENs)
 }

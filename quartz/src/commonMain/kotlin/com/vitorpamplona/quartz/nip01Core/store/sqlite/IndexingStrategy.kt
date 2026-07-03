@@ -93,6 +93,18 @@ interface IndexingStrategy {
     val useAndIndexIdOnOrderBy: Boolean
 
     /**
+     * Defer NIP-50 tokenization off the insert path. When on (and
+     * [indexFullTextSearch] is on), inserts skip the FTS write — a
+     * measurable slice of commit cost — and a catch-up pass indexes
+     * from a persisted `row_id` watermark later: continuously in idle
+     * gaps on a relay, and always drained *before* a search query runs,
+     * so NIP-50 results stay exactly as fresh as the synchronous path.
+     * Only pays off where something drives the catch-up (the relay
+     * server does); leave it off for client-side stores.
+     */
+    val deferFullTextSearchIndexing: Boolean
+
+    /**
      * Maintain the NIP-50 full-text search index (`event_fts`).
      *
      * Unlike the other flags this defaults to **on**: search is a core
@@ -123,6 +135,7 @@ class DefaultIndexingStrategy(
     override val indexTagsWithKindAndPubkey: Boolean = false,
     override val useAndIndexIdOnOrderBy: Boolean = false,
     override val indexFullTextSearch: Boolean = true,
+    override val deferFullTextSearchIndexing: Boolean = false,
 ) : IndexingStrategy {
     override fun shouldIndex(
         kind: Int,

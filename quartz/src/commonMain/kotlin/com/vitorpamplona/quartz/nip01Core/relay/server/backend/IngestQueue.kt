@@ -34,6 +34,7 @@ import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.CoroutineContext
 
@@ -103,6 +104,13 @@ class IngestQueue(
      */
     private val verify: ((Event) -> Boolean)? = null,
     private val verifyRejectionReason: String = "invalid: bad signature or id",
+    /**
+     * Fired after each batch's transaction commits and its OKs dispatch.
+     * Used to poke deferred maintenance (the FTS catch-up worker) so it
+     * runs in the gaps between publishes rather than inside them. Must
+     * be cheap and non-suspending — it runs on the writer stage.
+     */
+    private val onBatchCommitted: (() -> Unit)? = null,
 ) : AutoCloseable {
     /**
      * One outstanding ingest request: the event to insert plus the
@@ -115,6 +123,16 @@ class IngestQueue(
 
     private val incoming = Channel<Submission>(capacity)
     private val scope = CoroutineScope(parentContext + SupervisorJob())
+
+    /** Submissions accepted but whose outcome hasn't been dispatched yet. */
+    private val pending = AtomicInt(0)
+
+    /**
+     * True while publishes are queued or mid-batch. Deferred maintenance
+     * (the FTS catch-up) checks this to yield the writer connection to
+     * publish traffic instead of competing with it.
+     */
+    fun hasBacklog(): Boolean = pending.load() > 0
 
     /**
      * Lazily-launched drain coroutine. We don't start it in `init`
@@ -144,6 +162,7 @@ class IngestQueue(
         onComplete: (IEventStore.InsertOutcome) -> Unit,
     ) {
         ensureWriterStarted()
+        pending.addAndFetch(1)
         incoming.send(Submission(event, onComplete))
     }
 
@@ -203,6 +222,7 @@ class IngestQueue(
                 val next = verified.receive()
                 val finalOutcomes = runInsertStage(next.batch, next.results)
                 dispatchOutcomes(next.batch, finalOutcomes)
+                onBatchCommitted?.invoke()
             }
         } catch (_: ClosedReceiveChannelException) {
             // Normal shutdown via close().
@@ -290,6 +310,7 @@ class IngestQueue(
                 Log.w("IngestQueue") { "onComplete threw: ${e.message}" }
             }
         }
+        pending.addAndFetch(-batch.size)
     }
 
     /**
