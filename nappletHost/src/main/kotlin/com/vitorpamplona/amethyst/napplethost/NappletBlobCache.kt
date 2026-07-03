@@ -69,8 +69,12 @@ class NappletBlobCache(
             if (total <= maxBytes) return
             files.sortedBy { it.lastModified() }.forEach { f ->
                 if (total <= maxBytes) return
-                total -= f.length()
-                f.delete()
+                val length = f.length()
+                if (f.delete()) {
+                    total -= length
+                } else {
+                    Log.w("NappletBlobCache") { "Failed to evict blob ${f.absolutePath}" }
+                }
             }
         }
     }

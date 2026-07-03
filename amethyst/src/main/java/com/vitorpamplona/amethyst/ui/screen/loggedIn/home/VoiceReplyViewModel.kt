@@ -156,8 +156,11 @@ class VoiceReplyViewModel : ViewModel() {
         voiceLocalFile?.let { file ->
             try {
                 if (file.exists()) {
-                    file.delete()
-                    Log.d("VoiceReplyViewModel") { "Deleted voice file: ${file.absolutePath}" }
+                    if (file.delete()) {
+                        Log.d("VoiceReplyViewModel") { "Deleted voice file: ${file.absolutePath}" }
+                    } else {
+                        Log.w("VoiceReplyViewModel") { "Failed to delete voice file: ${file.absolutePath}" }
+                    }
                 }
             } catch (e: Exception) {
                 Log.w("VoiceReplyViewModel", "Failed to delete voice file: ${file.absolutePath}", e)

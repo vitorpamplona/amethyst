@@ -193,7 +193,11 @@ class ThumbnailDiskCache(
             files
                 .sortedBy { it.lastModified() }
                 .take(files.size - maxEntries)
-                .forEach { it.delete() }
+                .forEach {
+                    if (!it.delete()) {
+                        Log.w("ThumbnailDiskCache") { "Failed to evict thumbnail ${it.absolutePath}" }
+                    }
+                }
         }
     }
 
