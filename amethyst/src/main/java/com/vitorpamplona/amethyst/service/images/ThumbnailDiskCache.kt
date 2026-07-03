@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.images
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
@@ -193,11 +194,7 @@ class ThumbnailDiskCache(
             files
                 .sortedBy { it.lastModified() }
                 .take(files.size - maxEntries)
-                .forEach {
-                    if (!it.delete()) {
-                        Log.w("ThumbnailDiskCache") { "Failed to evict thumbnail ${it.absolutePath}" }
-                    }
-                }
+                .forEach { it.deleteOrWarn("ThumbnailDiskCache", "thumbnail") }
         }
     }
 

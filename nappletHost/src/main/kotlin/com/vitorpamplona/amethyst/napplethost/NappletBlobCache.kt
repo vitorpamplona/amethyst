@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
@@ -64,16 +65,17 @@ class NappletBlobCache(
     /** Best-effort eviction: if the store exceeds [maxBytes], delete oldest blobs until under it. */
     fun trimToSize(maxBytes: Long) {
         runCatching {
-            val files = dir.listFiles()?.filter { it.isFile && !it.name.contains(".tmp.") } ?: return
-            var total = files.sumOf { it.length() }
+            val files =
+                dir
+                    .listFiles()
+                    ?.filter { it.isFile && !it.name.contains(".tmp.") }
+                    ?.map { it to it.length() } ?: return
+            var total = files.sumOf { it.second }
             if (total <= maxBytes) return
-            files.sortedBy { it.lastModified() }.forEach { f ->
+            files.sortedBy { it.first.lastModified() }.forEach { (f, length) ->
                 if (total <= maxBytes) return
-                val length = f.length()
-                if (f.delete()) {
+                if (f.deleteOrWarn("NappletBlobCache", "blob")) {
                     total -= length
-                } else {
-                    Log.w("NappletBlobCache") { "Failed to evict blob ${f.absolutePath}" }
                 }
             }
         }
