@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncException
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySync
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySyncFanOut
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
@@ -478,6 +479,69 @@ class BulkDownloadBenchmark {
                 idBufferBatches = 96,
                 budgetMs = 240_000L,
             )
+        }
+        httpClient.dispatcher.executorService.shutdown()
+    }
+
+    @Test
+    fun negentropyFanOutShootout() {
+        if (System.getenv("PROD_RELAY_BENCH") == null && System.getProperty("prodRelayBench") == null) {
+            println("negentropyFanOutShootout skipped. Run with -PprodRelayBench=1 to enable.")
+            return
+        }
+
+        val httpClient =
+            OkHttpClient
+                .Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+                .pingInterval(30, TimeUnit.SECONDS)
+                .build()
+
+        val relay = PROD_RELAY.normalizeRelayUrl()
+        println("=== NEGENTROPY FAN-OUT SHOOTOUT: $PROD_RELAY kinds=[$PROD_KIND], cap 100k events ===")
+
+        runBlocking {
+            // Baseline: one connection, tuned pipeline (measured ~4.5k/s).
+            negentropyVariant(
+                "single client (12r/4rc)",
+                httpClient,
+                maxEvents = 100_000,
+                maxConcurrentReqs = 12,
+                reconcileConcurrency = 4,
+                idBufferBatches = 96,
+                budgetMs = 240_000L,
+            )
+
+            // Fan-out: 4 connections, 10 download REQs each + reconcile on the first.
+            val clients = List(4) { NostrClient(BasicOkHttpWebSocket.Builder { httpClient }) }
+            try {
+                val count = AtomicLong(0)
+                val start = System.nanoTime()
+                val result =
+                    withTimeoutOrNull(240_000L) {
+                        negentropySyncFanOut(
+                            clients = clients,
+                            relay = relay,
+                            filter = Filter(kinds = listOf(PROD_KIND)),
+                            maxEvents = 100_000,
+                            reqsPerClient = 8,
+                            fetchBatch = 250,
+                            reconcileConcurrency = 6,
+                        ) { count.incrementAndGet() }
+                    }
+                val wall = System.nanoTime() - start
+                report("fan-out 4 clients x 8 reqs", count.get(), 0, wall)
+                if (result == null) {
+                    println("    (budget exceeded — partial)")
+                } else {
+                    println("    windows=${result.windows} need=${result.needCount} connectionsUsed=${result.connections}")
+                }
+            } catch (e: Exception) {
+                println("  !! fan-out errored: ${e::class.simpleName} ${e.message}")
+            } finally {
+                clients.forEach { it.close() }
+            }
         }
         httpClient.dispatcher.executorService.shutdown()
     }

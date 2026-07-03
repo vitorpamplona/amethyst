@@ -410,6 +410,7 @@ private suspend fun INostrClient.syncPipeline(
         }
 
     reconcileWindows(
+        clients = listOf(this@syncPipeline),
         relay = relay,
         filter = filter,
         localEntries = emptyList(),
@@ -441,7 +442,11 @@ private suspend fun INostrClient.syncPipeline(
  * failure cancels the whole scope.
  */
 @OptIn(ExperimentalAtomicApi::class)
-private suspend fun INostrClient.reconcileWindows(
+internal suspend fun reconcileWindows(
+    // one or more connections to the SAME relay; reconciler i runs its NEG
+    // sessions on clients[i % size], so concurrent windows spread across
+    // connections (server-side snapshot builds are paced per connection)
+    clients: List<INostrClient>,
     relay: NormalizedRelayUrl,
     filter: Filter,
     localEntries: List<IdAndTime>,
@@ -465,13 +470,14 @@ private suspend fun INostrClient.reconcileWindows(
     pending.send(filter)
 
     val reconcilers =
-        List(reconcileConcurrency.coerceAtLeast(1)) {
+        List(reconcileConcurrency.coerceAtLeast(1)) { reconcilerIndex ->
             launch {
+                val client = clients[reconcilerIndex % clients.size]
                 for (window in pending) {
                     coroutineContext.ensureActive()
 
                     val outcome =
-                        reconcileStreaming(
+                        client.reconcileStreaming(
                             relay = relay,
                             filter = window,
                             localEntries = entriesForWindow(localEntries, window.since, window.until),
@@ -650,6 +656,7 @@ suspend fun INostrClient.negentropyReconcile(
             }
 
         reconcileWindows(
+            clients = listOf(this),
             relay = relay,
             filter = filter,
             localEntries = sorted,
@@ -934,7 +941,7 @@ private fun isOverflow(reason: String): Boolean =
  * replay the batch; without this the same event would be delivered twice. We rely on
  * NIP-77 yielding a distinct id set across batches, so no global dedup is needed.
  */
-private suspend fun INostrClient.fetchByIds(
+internal suspend fun INostrClient.fetchByIds(
     relay: NormalizedRelayUrl,
     batch: List<HexKey>,
     idleTimeoutMs: Long,
@@ -1009,7 +1016,7 @@ private const val DELIVERY_BUFFER = 256
  * duration of a sync. Synthetic/real event ids are SHA-256 digests, so this never
  * collides with an actual event.
  */
-private val KEEP_ALIVE_ID = "f".repeat(64)
+internal val KEEP_ALIVE_ID = "f".repeat(64)
 
 /**
  * Finite fallback bounds (ms) for the two waits that must stay bounded even when the

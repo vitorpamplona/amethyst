@@ -535,6 +535,33 @@ submission-order preservation, preVerified short-circuit, callback-crash
 resilience. Wiring it into `CacheClientConnector`/`LocalCache` (consume with
 `wasVerified = true`) is the app-side follow-up.
 
+### negentropySyncFanOut: multi-connection sync (done)
+
+`accessories/NostrClientNegentropyFanOutExt`: one reconcile feeding by-id
+download batches to N clients (one socket each) × `reqsPerClient` workers,
+with reconcile windows ALSO round-robined across the connections. Events
+funnel through a bounded channel to a single consumer (exact `maxEvents`,
+single-threaded `onEvent`); everything backpressures; `localEntries` diffing
+and have-reporting work as in `negentropyReconcile`. 4 in-process
+multi-client tests (full download, cap, local-diff, single-client
+degradation) — 18 negentropy tests green.
+
+Production shootout (100k cap, kind 30382, same-run pairs): fan-out 4×8 vs
+tuned single client measured **+18% to +64%** (7.3k vs 6.1k/s; 7.5k vs
+4.5k/s) with heavy relay-side variance — the relay is being actively
+backfilled and its NEG snapshot caching favors whichever variant runs
+second. The honest bound: **this relay produces reconcile ids at only
+~9–10k/s regardless of connection count** (server-side snapshot build), so
+end-to-end fan-out gains cap there even though the download stage alone
+scales 2.7× with connections (the by-id matrix). On download-bound syncs
+(bigger events, relays with faster NEG production, phone-CPU clients) the
+gain approaches the matrix ratio.
+
+**Descoped with evidence — adaptive in-flight control (#6):** an AIMD window
+on download REQs would idle-down against today's reconcile-bound relay and
+the benchmarks could not demonstrate a win (the criterion for shipping);
+revisit if a relay shows download-bound behavior with volatile capacity.
+
 ## Recommendations (in order of value/risk)
 
 1. **Move Schnorr verification off the receiver coroutine** in the app's
