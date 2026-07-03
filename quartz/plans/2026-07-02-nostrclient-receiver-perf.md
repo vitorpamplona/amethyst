@@ -408,6 +408,38 @@ burstiness plus by-id query cost. Going past ~5.5k/s on this relay requires
 multiple connections (caller-level: disjoint `created_at` windows per
 client), which the matrix caps at ~15k/s relay-wide.
 
+### negentropyReconcile: the composable half (implemented, 2026-07-03)
+
+To let callers own the loading strategy (fan the download across several
+connections/clients, prioritize, or push local events up), the reconcile is
+now available standalone in `NostrClientNegentropySyncExt`:
+
+- **`negentropyReconcile(relay, filter, localEntries, …)`** — pure NIP-77
+  diff, no downloads/uploads. Streams both directions in `batchSize` chunks
+  as rounds arrive: `onNeedIds` (relay has, local set lacks → download) and
+  `onHaveIds` (local has, relay lacks → publish). Back-pressured: the
+  callbacks suspend the reconcile round that produced them. Local state goes
+  in as `List<IdAndTime>` (the same 40 B/entry projection
+  `IEventStore.snapshotIdsForNegentropy` returns), and window splits slice
+  it by `createdAt` via binary search, so both sides always reconcile the
+  same timeline slice. Overflow windows split exactly like `negentropySync`,
+  with the same `reconcileConcurrency` knob.
+- **`negentropyReconcileIds(…): NegentropyIdDiff`** — convenience that
+  materializes `needIds` + `haveIds` lists (KDoc warns about heap on
+  multi-million diffs; the streaming form is the scalable one).
+- `NegentropySession`'s primary constructor now takes `List<IdAndTime>`
+  (JVM erasure forbids overloading on `List<Event>`); the old event-list
+  form moved to `NegentropySession.fromEvents(…)`, mirroring
+  `NegentropyServerSession` — call sites in `cli`, `geode` tests and
+  `NegentropyManager` migrated. **API note for external quartz users:**
+  `NegentropySession(subId, filter, events)` must become
+  `NegentropySession.fromEvents(subId, filter, events)`.
+
+`negentropySync` itself now delegates to the same window engine. Covered by
+`NostrClientNegentropyReconcileTest` (empty-local, partial overlap both
+ways, identical sets, batch streaming, since/until window slicing) — 49
+negentropy tests green.
+
 ### Answer for "10M events from one relay, fastest"
 
 At nosfabrica's measured page cadence, one connection ≈ 3.7k events/s → 10M

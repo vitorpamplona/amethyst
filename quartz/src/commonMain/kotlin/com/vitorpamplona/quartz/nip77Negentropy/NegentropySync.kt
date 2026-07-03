@@ -24,6 +24,7 @@ import com.vitorpamplona.negentropy.Negentropy
 import com.vitorpamplona.negentropy.storage.StorageVector
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.utils.Hex
 
 /**
@@ -37,19 +38,44 @@ import com.vitorpamplona.quartz.utils.Hex
  * 5. Repeat until [processMessage] returns a result with a null command (reconciliation complete)
  * 6. Use [haveIds] and [needIds] from the result to send/request events
  * 7. Call [close] to produce a NEG-CLOSE command when done
+ *
+ * The primary constructor takes [IdAndTime] entries (just `created_at` and the
+ * event id — all the reconciliation library indexes) so callers with a store
+ * snapshot don't materialize full events; the [Event] overload is kept for
+ * callers that already hold them (mirrors [NegentropyServerSession]).
  */
 class NegentropySession(
     val subId: String,
     val filter: Filter,
-    localEvents: List<Event>,
+    localEntries: List<IdAndTime>,
     frameSizeLimit: Long = 0,
 ) {
+    companion object {
+        /**
+         * Convenience for callers that hold full [Event] objects (JVM type
+         * erasure forbids a `List<Event>` constructor overload). Mirrors
+         * [NegentropyServerSession.fromEvents].
+         */
+        fun fromEvents(
+            subId: String,
+            filter: Filter,
+            localEvents: List<Event>,
+            frameSizeLimit: Long = 0,
+        ): NegentropySession =
+            NegentropySession(
+                subId = subId,
+                filter = filter,
+                localEntries = localEvents.map { IdAndTime(it.createdAt, it.id) },
+                frameSizeLimit = frameSizeLimit,
+            )
+    }
+
     private val storage = StorageVector()
     private val negentropy: Negentropy
 
     init {
-        for (event in localEvents) {
-            storage.insert(event.createdAt, event.id)
+        for (entry in localEntries) {
+            storage.insert(entry.createdAt, entry.id)
         }
         storage.seal()
         negentropy = Negentropy(storage, frameSizeLimit)

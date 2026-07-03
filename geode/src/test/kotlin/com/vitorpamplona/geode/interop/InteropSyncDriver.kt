@@ -116,7 +116,7 @@ class InteropSyncDriver(
             )
 
         return try {
-            val session = NegentropySession(subId, filter, localEvents, frameSizeLimit)
+            val session = NegentropySession.fromEvents(subId, filter, localEvents, frameSizeLimit)
 
             // Step 1: NEG-OPEN.
             check(ws.send(OptimizedJsonMapper.toJson(session.open()))) { "send NEG-OPEN failed" }

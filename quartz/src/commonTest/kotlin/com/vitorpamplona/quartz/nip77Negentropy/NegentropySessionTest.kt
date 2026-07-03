@@ -54,7 +54,7 @@ class NegentropySessionTest {
                 makeEvent("c".repeat(64), 3000),
             )
 
-        val clientSession = NegentropySession("sub1", Filter(), events)
+        val clientSession = NegentropySession.fromEvents("sub1", Filter(), events)
         val openCmd = clientSession.open()
 
         assertEquals("NEG-OPEN", openCmd.label())
@@ -90,7 +90,7 @@ class NegentropySessionTest {
         val clientOnlyEvent = makeEvent("c".repeat(64), 3000)
         val clientEvents = sharedEvents + clientOnlyEvent
 
-        val clientSession = NegentropySession("sub1", Filter(), clientEvents)
+        val clientSession = NegentropySession.fromEvents("sub1", Filter(), clientEvents)
         val openCmd = clientSession.open()
 
         // Server side: only shared events
@@ -119,7 +119,7 @@ class NegentropySessionTest {
                 makeEvent("b".repeat(64), 2000),
             )
 
-        val clientSession = NegentropySession("sub1", Filter(), sharedEvents)
+        val clientSession = NegentropySession.fromEvents("sub1", Filter(), sharedEvents)
         val openCmd = clientSession.open()
 
         // Server side: shared + extra
@@ -151,7 +151,7 @@ class NegentropySessionTest {
         val clientOnly = makeEvent("b".repeat(64), 2000)
         val clientEvents = sharedEvents + clientOnly
 
-        val clientSession = NegentropySession("sub1", Filter(), clientEvents)
+        val clientSession = NegentropySession.fromEvents("sub1", Filter(), clientEvents)
         val openCmd = clientSession.open()
 
         // Server side: shared + different extra
@@ -174,7 +174,7 @@ class NegentropySessionTest {
 
     @Test
     fun clientServerSync_emptyClient_needsAll() {
-        val clientSession = NegentropySession("sub1", Filter(), emptyList())
+        val clientSession = NegentropySession.fromEvents("sub1", Filter(), emptyList())
         val openCmd = clientSession.open()
 
         // Server has events
@@ -201,7 +201,7 @@ class NegentropySessionTest {
                 makeEvent("b".repeat(64), 2000),
             )
 
-        val clientSession = NegentropySession("sub1", Filter(), clientEvents)
+        val clientSession = NegentropySession.fromEvents("sub1", Filter(), clientEvents)
         val openCmd = clientSession.open()
 
         // Server is empty
@@ -235,7 +235,7 @@ class NegentropySessionTest {
             }
 
         // Small frame limit to force multiple rounds
-        val clientSession = NegentropySession("sub1", Filter(), clientEvents, frameSizeLimit = 4096)
+        val clientSession = NegentropySession.fromEvents("sub1", Filter(), clientEvents, frameSizeLimit = 4096)
         val openCmd = clientSession.open()
 
         val serverStorage = StorageVector()
@@ -281,7 +281,7 @@ class NegentropySessionTest {
         val serverEvents = sharedEvents + serverOnlyEvent
 
         // Client initiates
-        val clientSession = NegentropySession("sub1", Filter(), sharedEvents)
+        val clientSession = NegentropySession.fromEvents("sub1", Filter(), sharedEvents)
         val openCmd = clientSession.open()
 
         // Server processes via NegentropyServerSession
@@ -296,7 +296,7 @@ class NegentropySessionTest {
 
     @Test
     fun close_returnsCorrectCmd() {
-        val session = NegentropySession("sub1", Filter(), emptyList())
+        val session = NegentropySession.fromEvents("sub1", Filter(), emptyList())
         val closeCmd = session.close()
 
         assertEquals("NEG-CLOSE", closeCmd.label())

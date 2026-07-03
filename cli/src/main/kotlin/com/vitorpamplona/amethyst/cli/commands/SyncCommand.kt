@@ -177,7 +177,7 @@ object SyncCommand {
 
         return try {
             withTimeoutOrNull(timeoutMs) {
-                val session = NegentropySession(subId, filter, localEvents, frameSizeLimit = 0)
+                val session = NegentropySession.fromEvents(subId, filter, localEvents, frameSizeLimit = 0)
                 ws.send(OptimizedJsonMapper.toJson(session.open()))
 
                 val have = mutableSetOf<HexKey>()

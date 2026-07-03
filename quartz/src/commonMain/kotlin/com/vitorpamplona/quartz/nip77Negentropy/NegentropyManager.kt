@@ -79,7 +79,7 @@ class NegentropyManager(
         localEvents: List<Event>,
         frameSizeLimit: Long = 0,
     ) {
-        val session = NegentropySession(subId, filter, localEvents, frameSizeLimit)
+        val session = NegentropySession.fromEvents(subId, filter, localEvents, frameSizeLimit)
         activeSessions[subId] = Pair(relay.url, session)
 
         val openCmd = session.open()
