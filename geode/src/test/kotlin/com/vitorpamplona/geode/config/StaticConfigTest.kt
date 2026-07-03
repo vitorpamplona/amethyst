@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.geode.config
 
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -52,6 +54,16 @@ class StaticConfigTest {
     }
 
     @Test
+    fun mirrorFilterJsonParsesToANip01Filter() {
+        // The exact parse Main.kt runs on [[mirror]].filter at boot.
+        val f = OptimizedJsonMapper.fromJsonTo<Filter>("""{"kinds":[0,1],"#t":["nostr"],"since":123,"limit":5}""")
+        assertEquals(listOf(0, 1), f.kinds)
+        assertEquals(listOf("nostr"), f.tags?.get("t"))
+        assertEquals(123L, f.since)
+        assertEquals(5, f.limit)
+    }
+
+    @Test
     fun parsesMirrorUpstreams() {
         val toml =
             """
@@ -59,6 +71,7 @@ class StaticConfigTest {
             url = "wss://trusted.upstream.example/"
             trusted = true
             backfill_seconds = 3600
+            filter = '{"kinds":[0,1,3],"#t":["nostr"]}'
 
             [[mirror]]
             url = "wss://public.upstream.example/"
@@ -70,10 +83,13 @@ class StaticConfigTest {
         assertEquals("wss://trusted.upstream.example/", c.mirror[0].url)
         assertEquals(true, c.mirror[0].trusted)
         assertEquals(3600L, c.mirror[0].backfill_seconds)
-        // Trust is opt-in per upstream: the default is mirror-but-verify.
+        assertEquals("""{"kinds":[0,1,3],"#t":["nostr"]}""", c.mirror[0].filter)
+        // Trust and scoping are opt-in per upstream: the default is
+        // mirror-everything-but-verify.
         assertEquals("wss://public.upstream.example/", c.mirror[1].url)
         assertEquals(false, c.mirror[1].trusted)
         assertEquals(0L, c.mirror[1].backfill_seconds)
+        assertEquals(null, c.mirror[1].filter)
     }
 
     @Test

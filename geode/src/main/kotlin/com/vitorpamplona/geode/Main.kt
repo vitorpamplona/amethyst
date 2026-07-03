@@ -26,6 +26,8 @@ import com.vitorpamplona.geode.config.RuntimeConfigData
 import com.vitorpamplona.geode.config.StaticConfig
 import com.vitorpamplona.geode.mirror.MirrorUpstream
 import com.vitorpamplona.geode.mirror.MirrorWorker
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
@@ -181,11 +183,29 @@ fun main(args: Array<String>) {
     // anyway. Never mirror ourselves: a self-URL would echo every local
     // publish back forever.
     val upstreams =
-        config.mirror.map {
+        config.mirror.map { m ->
+            // The optional scope filter is parsed eagerly so a malformed
+            // JSON object fails the boot, not the first delivery. Its
+            // since/limit are stripped: the mirror owns the time window
+            // (backfill_seconds) and never bounds the subscription.
+            val scope =
+                m.filter?.let { json ->
+                    val parsed =
+                        try {
+                            OptimizedJsonMapper.fromJsonTo<Filter>(json)
+                        } catch (e: Exception) {
+                            throw IllegalArgumentException(
+                                "[[mirror]] filter for ${m.url} is not a valid NIP-01 filter object: $json",
+                                e,
+                            )
+                        }
+                    parsed.copy(since = null, limit = null)
+                }
             MirrorUpstream(
-                url = it.url.normalizeRelayUrl(),
-                trusted = it.trusted,
-                backfillSeconds = it.backfill_seconds,
+                url = m.url.normalizeRelayUrl(),
+                trusted = m.trusted,
+                backfillSeconds = m.backfill_seconds,
+                filter = scope,
             )
         }
     require(upstreams.none { it.url == advertisedUrl }) {

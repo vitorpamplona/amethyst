@@ -55,6 +55,16 @@ class MirrorUpstream(
     val trusted: Boolean,
     /** How far back the initial REQ reaches. 0 = live-only from connect. */
     val backfillSeconds: Long = 0L,
+    /**
+     * Optional scope for this upstream (strfry-router's per-stream
+     * `filter`). Used twice: it shapes the REQ sent upstream, and every
+     * delivered event is re-checked against it before ingest — so even a
+     * [trusted] upstream can only inject events inside the declared
+     * scope. Its `since`/`limit` are ignored ([backfillSeconds] owns the
+     * time window; the subscription is unbounded). `null` mirrors
+     * everything.
+     */
+    val filter: Filter? = null,
 )
 
 /**
@@ -113,6 +123,13 @@ class MirrorWorker(
     /** Events the store rejected — mostly duplicate replays after a reconnect. */
     val rejected = AtomicLong(0)
 
+    /**
+     * Deliveries dropped by the [MirrorUpstream.filter] re-check before
+     * ever reaching the store — an upstream sending these is answering
+     * outside the REQ it was given.
+     */
+    val filtered = AtomicLong(0)
+
     /** Dials every upstream and starts streaming. Call once. */
     fun start() {
         scope.launch {
@@ -151,6 +168,17 @@ class MirrorWorker(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
+                        // strfry-router parity: never take the upstream's
+                        // word for what matched. Re-checking the configured
+                        // scope here means even a trusted (skip-verify)
+                        // upstream can only inject events the operator
+                        // declared — the REQ shapes what we ask for, this
+                        // shapes what we accept.
+                        if (up.filter != null && !up.filter.match(event)) {
+                            filtered.incrementAndGet()
+                            Log.d("MirrorWorker") { "out-of-scope from ${relay.url}: ${event.id}" }
+                            return
+                        }
                         inbound.trySend(Inbound(event, up.trusted))
                     }
 
@@ -162,9 +190,16 @@ class MirrorWorker(
                         Log.w("MirrorWorker") { "cannot reach upstream ${relay.url}: $message" }
                     }
                 }
+            // The operator's filter scopes the REQ; the mirror owns the
+            // time window (since) and never bounds the result (limit).
+            val reqFilter =
+                (up.filter ?: Filter()).copy(
+                    since = since - up.backfillSeconds,
+                    limit = null,
+                )
             client.subscribe(
                 subId = "geode-mirror-$i",
-                filters = mapOf(up.url to listOf(Filter(since = since - up.backfillSeconds))),
+                filters = mapOf(up.url to listOf(reqFilter)),
                 listener = listener,
             )
         }

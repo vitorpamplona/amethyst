@@ -99,10 +99,20 @@ require_auth = false
 # mirror-but-verify. Only trust relays you operate or whose ingest
 # discipline you'd stake your own db on.
 #
+# `filter` (optional) scopes an upstream, as a NIP-01 filter JSON
+# object — same idea as strfry-router's per-stream filter. It shapes
+# the REQ sent upstream AND every delivered event is re-checked
+# against it before ingest, so even a trusted upstream can only
+# inject events inside the declared scope. `since`/`limit` inside it
+# are ignored (backfill_seconds owns the time window). Omit to mirror
+# everything; for several disjoint scopes, repeat [[mirror]] with the
+# same url.
+#
 # [[mirror]]
 # url = "wss://upstream.example.com/"
 # trusted = true
 # backfill_seconds = 3600
+# filter = '{"kinds":[0,1,3,7],"#t":["nostr"]}'
 
 [admin]
 # NIP-86 relay management API. When `pubkeys` is non-empty, the relay

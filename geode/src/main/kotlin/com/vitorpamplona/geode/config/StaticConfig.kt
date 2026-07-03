@@ -181,6 +181,18 @@ data class StaticConfig(
         val trusted: Boolean = false,
         /** How far back the initial subscription reaches. 0 = live-only. */
         val backfill_seconds: Long = 0L,
+        /**
+         * Optional NIP-01 filter as a JSON object string (strfry-router
+         * parity), e.g. `'{"kinds":[0,1,3],"#t":["nostr"]}'`. Scopes what
+         * this upstream is asked for AND what it is allowed to deliver —
+         * every received event is re-checked against it before ingest, so
+         * even a trusted upstream can't push events outside the declared
+         * scope. `since` is managed by the mirror (see [backfill_seconds])
+         * and `limit` is transport-level, so both are ignored if present.
+         * Omitted = mirror everything. For several disjoint filters, add
+         * several `[[mirror]]` entries with the same url.
+         */
+        val filter: String? = null,
     )
 
     /**

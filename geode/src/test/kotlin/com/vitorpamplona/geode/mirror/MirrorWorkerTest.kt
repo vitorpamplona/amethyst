@@ -77,9 +77,12 @@ class MirrorWorkerTest {
         hub.close()
     }
 
-    private fun startMirror(trusted: Boolean): MirrorWorker =
+    private fun startMirror(
+        trusted: Boolean,
+        filter: Filter? = null,
+    ): MirrorWorker =
         MirrorWorker(
-            upstreams = listOf(MirrorUpstream(upstreamUrl, trusted = trusted, backfillSeconds = 3600)),
+            upstreams = listOf(MirrorUpstream(upstreamUrl, trusted = trusted, backfillSeconds = 3600, filter = filter)),
             server = downstream.server,
             websocketBuilder = hub,
         ).also {
@@ -87,12 +90,15 @@ class MirrorWorkerTest {
             it.start()
         }
 
-    private fun forgedEvent(idSeed: Int): Event =
+    private fun forgedEvent(
+        idSeed: Int,
+        kind: Int = 1,
+    ): Event =
         Event(
             id = idSeed.toString().padStart(64, '0'),
             pubKey = "1".repeat(64),
             createdAt = TimeUtils.now() - idSeed,
-            kind = 1,
+            kind = kind,
             tags = emptyArray(),
             content = "forged $idSeed",
             sig = "f".repeat(128),
@@ -142,6 +148,29 @@ class MirrorWorkerTest {
 
             val ids = downstreamStore.query<Event>(Filter()).map { it.id }.toSet()
             assertEquals(setOf(stored.id, live.id), ids)
+        }
+
+    @Test
+    fun filterScopesTheMirrorToDeclaredKinds() =
+        runBlocking {
+            val wantedStored = forgedEvent(1, kind = 1)
+            val unwantedStored = forgedEvent(2, kind = 7)
+            hub.getOrCreate(upstreamUrl).preload(wantedStored, unwantedStored)
+
+            startMirror(trusted = true, filter = Filter(kinds = listOf(1)))
+            awaitDownstreamCount(1)
+
+            // Live tail: the out-of-scope kind is published FIRST, so by the
+            // time the in-scope one lands downstream (same connection, same
+            // ordered pipeline), the kind-7 has already had its chance.
+            hub.getOrCreate(upstreamUrl).publish(forgedEvent(3, kind = 7))
+            val wantedLive = forgedEvent(4, kind = 1)
+            hub.getOrCreate(upstreamUrl).publish(wantedLive)
+            awaitDownstreamCount(2)
+
+            val stored = downstreamStore.query<Event>(Filter())
+            assertEquals(setOf(wantedStored.id, wantedLive.id), stored.map { it.id }.toSet())
+            assertTrue(stored.all { it.kind == 1 })
         }
 
     @Test
