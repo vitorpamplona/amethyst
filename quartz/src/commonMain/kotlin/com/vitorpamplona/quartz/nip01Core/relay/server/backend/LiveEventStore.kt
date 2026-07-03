@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
+import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlin.concurrent.atomics.AtomicBoolean
@@ -43,6 +44,15 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * the (much smaller) candidate set and we deliver only to those whose filters actually
  * match. This avoids the quadratic O(N_subscribers × N_filters_per_sub) per-event walk
  * that a SharedFlow-based broadcast would do.
+ *
+ * NIP-50 `search` strings are handed to the store with their `key:value`
+ * extension tokens stripped ([strippingSearchExtensions]): the SQLite FTS
+ * backend treats `:` as column-filter syntax, so a raw `include:spam`
+ * would raise "no such column" instead of matching. Per NIP-50, an
+ * unsupported extension is ignored — an extensions-only search therefore
+ * becomes unconstrained, not match-nothing. Relays that *do* implement
+ * extensions serve search through an [EventSource] backend, which
+ * receives the raw string.
  *
  * @property store The underlying persistent storage for events.
  * @property ingest The group-commit writer pipeline. Accepted events fan out via the
@@ -177,7 +187,7 @@ class LiveEventStore(
 
         index.register(filters, sub)
         try {
-            store.query<Event>(filters) { event ->
+            store.query<Event>(filters.strippingSearchExtensions()) { event ->
                 seenLocked { seenIds?.add(event.id) }
                 onEach(event)
             }
@@ -198,14 +208,14 @@ class LiveEventStore(
     override suspend fun count(
         ctx: RequestContext,
         filters: List<Filter>,
-    ): Int = store.count(filters)
+    ): Int = store.count(filters.strippingSearchExtensions())
 
     /**
      * One-shot snapshot query. Used by NIP-77 negentropy: the server
      * needs the full set of event ids matching the filter at the
      * moment the NEG-OPEN arrives, not a streamed/live result.
      */
-    suspend fun snapshotQuery(filter: Filter): List<Event> = store.query(filter)
+    suspend fun snapshotQuery(filter: Filter): List<Event> = store.query(filter.strippingSearchExtensions())
 
     /**
      * Multi-filter snapshot. Unions the per-filter results and
@@ -218,7 +228,7 @@ class LiveEventStore(
         val seen = HashSet<String>()
         val merged = ArrayList<Event>()
         for (f in filters) {
-            for (e in store.query<Event>(f)) {
+            for (e in store.query<Event>(f.strippingSearchExtensions())) {
                 if (seen.add(e.id)) merged += e
             }
         }
@@ -238,5 +248,5 @@ class LiveEventStore(
     override suspend fun snapshotIdsForNegentropy(
         filters: List<Filter>,
         maxEntries: Int?,
-    ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters, maxEntries)
+    ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters.strippingSearchExtensions(), maxEntries)
 }
