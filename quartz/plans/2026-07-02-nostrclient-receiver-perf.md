@@ -497,6 +497,17 @@ decoder 1.5µs/frame — **6.5×**, with duplicates costing ~0.3µs instead of
 10µs. 7 scan-safety unit tests (`CachingEventDecoderTest`) cover repost
 embedding, escaped subIds, malformed ids, cache rotation, non-EVENT frames.
 
+Follow-up (2026-07-03): the decoder's spin lock was replaced with lock-free
+concurrent maps — a new `ConcurrentHashCache` expect/actual
+(`ConcurrentHashMap` on JVM/Android, `CacheMap` on Apple, copy-on-write on
+Linux, mirroring `LargeCache`'s per-platform choices) plus atomic counters.
+Rotation races are deliberately tolerated (documented: every failure mode is
+a redundant re-parse, never a wrong message).
+`CachingEventDecoderConcurrencyTest` hammers one shared decoder from 8
+threads (80k duplicate-heavy frames, capacity 256 so rotations fire
+constantly) and asserts zero wrong messages with exact counter accounting;
+the benchmark assertion still holds post-refactor.
+
 ### Bounded per-connection receive buffer (REVERTED — deliberate design choice)
 
 A 4096-frame bound on the reader→consumer channel was tried (backpressure

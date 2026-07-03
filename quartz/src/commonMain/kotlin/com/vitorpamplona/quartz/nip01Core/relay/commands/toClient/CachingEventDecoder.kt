@@ -22,8 +22,11 @@ package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import kotlin.concurrent.atomics.AtomicBoolean
+import com.vitorpamplona.quartz.utils.cache.ConcurrentHashCache
+import kotlin.concurrent.Volatile
+import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.incrementAndFetch
 
 /**
  * A [MessageDecoder] that skips the full JSON parse for EVENT frames whose
@@ -50,10 +53,17 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  *    value (inner quotes are escaped as `\"`, e.g. kind-6 reposts embedding
  *    full event JSON in `content`), so a match is the top-level id key.
  *
- * The id → Event cache is generational: two maps, rotated when the live one
- * reaches [capacity]. A rotation only causes a re-parse (never a wrong
- * message). Thread-safe: frames arrive from every relay's consumer coroutine;
- * map access is guarded by a tiny spin lock (lookups/inserts, never I/O).
+ * The id → Event cache is generational: two lock-free concurrent maps
+ * ([ConcurrentHashCache]: `ConcurrentHashMap` on JVM/Android), rotated when
+ * the live one reaches [capacity]. Frames arrive from every relay's consumer
+ * coroutine concurrently; the hit path is entirely lock-free, and the
+ * rotation races are DELIBERATELY tolerated because every one of them is
+ * benign — the worst outcome is always a redundant re-parse, never a wrong
+ * message:
+ *  - two threads rotating at once: one generation of ids is dropped early;
+ *  - inserting into a map that just became `previous`: still found by the
+ *    two-generation lookup until the next rotation;
+ *  - two threads first-seeing the same id simultaneously: both full-parse.
  *
  * Note the trust model is unchanged: events are identified by id here exactly
  * like in the app-level dedup (LocalCache), and signatures are verified
@@ -64,51 +74,36 @@ class CachingEventDecoder(
     private val capacity: Int = 2048,
     private val fullParser: MessageDecoder = MessageDecoder.Default,
 ) : MessageDecoder {
-    private val lock = AtomicBoolean(false)
-    private var live = HashMap<HexKey, Event>(capacity)
-    private var previous = HashMap<HexKey, Event>(0)
+    @Volatile private var live = ConcurrentHashCache<HexKey, Event>()
+
+    @Volatile private var previous = ConcurrentHashCache<HexKey, Event>()
 
     // Observability + benchmark hooks.
-    var parsedCount: Long = 0
-        private set
-    var reusedCount: Long = 0
-        private set
+    private val parsed = AtomicLong(0)
+    private val reused = AtomicLong(0)
 
-    private inline fun <R> locked(block: () -> R): R {
-        while (lock.exchange(true)) {
-            while (lock.load()) { }
-        }
-        try {
-            return block()
-        } finally {
-            lock.store(false)
-        }
-    }
+    val parsedCount: Long get() = parsed.load()
+    val reusedCount: Long get() = reused.load()
 
     override fun decode(text: String): Message {
         val scanned = scanEventFrame(text)
         if (scanned != null) {
-            val cached =
-                locked {
-                    val hit = live[scanned.eventId] ?: previous[scanned.eventId]
-                    if (hit != null) reusedCount++
-                    hit
-                }
+            val cached = live.get(scanned.eventId) ?: previous.get(scanned.eventId)
             if (cached != null) {
+                reused.incrementAndFetch()
                 return EventMessage(scanned.subId, cached)
             }
         }
 
         val msg = fullParser.decode(text)
         if (msg is EventMessage) {
-            locked {
-                parsedCount++
-                if (live.size >= capacity) {
-                    previous = live
-                    live = HashMap(capacity)
-                }
-                live[msg.event.id] = msg.event
+            parsed.incrementAndFetch()
+            if (live.size() >= capacity) {
+                // Benign-race rotation: see class kdoc.
+                previous = live
+                live = ConcurrentHashCache()
             }
+            live.put(msg.event.id, msg.event)
         }
         return msg
     }
