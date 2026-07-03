@@ -508,6 +508,13 @@ threads (80k duplicate-heavy frames, capacity 256 so rotations fire
 constantly) and asserts zero wrong messages with exact counter accounting;
 the benchmark assertion still holds post-refactor.
 
+Same-JVM A/B against the resurrected spin-lock implementation (3 rounds,
+interleaved): **1 thread — parity** (0.79–1.02×, noise around 1.0; the
+uncontended lock was already ~free), **8 threads sharing one decoder —
+lock-free wins 3.0–4.5×** (e.g. 127ms → 28ms for 128k frames). The lock was
+serializing the concurrent hit path exactly the way the old global
+PoolRequests lock did; ConcurrentHashMap removes it.
+
 ### Bounded per-connection receive buffer (REVERTED — deliberate design choice)
 
 A 4096-frame bound on the reader→consumer channel was tried (backpressure
