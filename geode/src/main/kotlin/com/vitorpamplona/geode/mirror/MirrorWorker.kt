@@ -37,8 +37,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -102,7 +104,24 @@ class MirrorWorker(
 ) : AutoCloseable {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val okhttp: OkHttpClient? = if (websocketBuilder == null) OkHttpClient.Builder().build() else null
+    /**
+     * The ping interval matters on a long-running daemon: a half-open
+     * upstream connection (network drop with no FIN) never fires
+     * onDisconnected on its own, so without pings the client would
+     * believe it is connected forever and stop mirroring silently. A
+     * missed pong fails the socket, which routes into the normal
+     * disconnect → backoff → re-dial path. Same value the Android app
+     * uses for its relay pool.
+     */
+    private val okhttp: OkHttpClient? =
+        if (websocketBuilder == null) {
+            OkHttpClient
+                .Builder()
+                .pingInterval(Duration.ofSeconds(PING_INTERVAL_SECS))
+                .build()
+        } else {
+            null
+        }
 
     private val client =
         NostrClient(
@@ -204,6 +223,21 @@ class MirrorWorker(
             )
         }
         client.connect()
+
+        // Retry pump. NostrClient re-dials once on disconnect and then
+        // relies on its 60s keep-alive — measured as a 61s mirror blackout
+        // when an upstream restarts and the immediate re-dial races the
+        // port rebind. Poking more often costs nothing: reconnectIfNeedsTo
+        // skips connected relays, and each relay's exponential backoff
+        // (1s doubling, 5min cap) still gates actual dial attempts, so a
+        // long-dead upstream is not hammered — only a briefly-restarting
+        // one is picked back up in seconds instead of a minute.
+        scope.launch {
+            while (true) {
+                delay(RECONNECT_POKE_MS)
+                client.reconnect(onlyIfChanged = true, ignoreRetryDelays = false)
+            }
+        }
     }
 
     /**
@@ -221,5 +255,13 @@ class MirrorWorker(
         scope.cancel()
         okhttp?.dispatcher?.executorService?.shutdown()
         okhttp?.connectionPool?.evictAll()
+    }
+
+    private companion object {
+        /** Matches the Android app's relay-pool WebSocket ping interval. */
+        const val PING_INTERVAL_SECS = 120L
+
+        /** How often the retry pump nudges disconnected upstreams. */
+        const val RECONNECT_POKE_MS = 5_000L
     }
 }
