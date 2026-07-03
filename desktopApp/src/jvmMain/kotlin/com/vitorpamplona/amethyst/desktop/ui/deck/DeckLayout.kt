@@ -75,6 +75,8 @@ fun DeckLayout(
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
     onNavigateToRelays: () -> Unit = {},
+    onOpenNotificationSettings: () -> Unit = {},
+    onOpenMessages: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val columns by deckState.columns.collectAsState()
@@ -143,6 +145,8 @@ fun DeckLayout(
                         onShowReplyDialog = onShowReplyDialog,
                         onZapFeedback = onZapFeedback,
                         onNavigateToRelays = onNavigateToRelays,
+                        onOpenNotificationSettings = onOpenNotificationSettings,
+                        onOpenMessages = onOpenMessages,
                     )
                 }
             }

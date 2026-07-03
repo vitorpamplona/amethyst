@@ -182,6 +182,11 @@ compose.desktop {
                 iconFile.set(project.file("src/jvmMain/resources/icon.ico"))
                 menuGroup = "Amethyst"
                 upgradeUuid = "A1B2C3D4-E5F6-7890-ABCD-EF1234567890"
+                // AUMID persistence for Windows Toast notifications — without a
+                // Start Menu shortcut the AUMID isn't registered and toasts
+                // disappear from Windows Settings → Notifications after reboot.
+                menu = true
+                shortcut = true
             }
 
             linux {

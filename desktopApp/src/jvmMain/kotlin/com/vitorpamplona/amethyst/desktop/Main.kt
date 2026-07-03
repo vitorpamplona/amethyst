@@ -190,6 +190,8 @@ sealed class DesktopScreen {
 
     data object Drafts : DesktopScreen()
 
+    data object NotificationSettings : DesktopScreen()
+
     data object Settings : DesktopScreen()
 
     data object LocalRelaySettings : DesktopScreen()
@@ -1062,11 +1064,78 @@ private fun AppInner(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background,
             ) {
+                // OS notification dispatcher: Nucleus-backed with AWT fallback.
+                // Constructed once for the app lifetime; native lib loads
+                // lazily on first requestPermission / send.
+                val notifDispatcherScope = rememberCoroutineScope()
+                val notifDispatcher =
+                    remember {
+                        com.vitorpamplona.amethyst.commons.moderation.notifications
+                            .NucleusNotificationDispatcher(
+                                bundleId = "com.vitorpamplona.amethyst.desktop",
+                                appLabel = "Amethyst",
+                                fallback =
+                                    com.vitorpamplona.amethyst.commons.moderation.notifications
+                                        .AwtTrayNotifier(),
+                                scope = notifDispatcherScope,
+                            )
+                    }
+                DisposableEffect(notifDispatcher) {
+                    onDispose { notifDispatcher.release() }
+                }
+
+                // Window-focus tracking for the auto-dispatcher's suppression rule.
+                val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
+                val isWindowFocusedFlow =
+                    remember {
+                        kotlinx.coroutines.flow.MutableStateFlow(windowInfo.isWindowFocused)
+                    }
+                LaunchedEffect(windowInfo) {
+                    androidx.compose.runtime
+                        .snapshotFlow { windowInfo.isWindowFocused }
+                        .collect { isWindowFocusedFlow.value = it }
+                }
+
+                // Session start — used by the auto-dispatcher to reject cold-boot backfill.
+                val notifSessionStartSec =
+                    remember {
+                        com.vitorpamplona.amethyst.commons.moderation.notifications
+                            .nowEpochSeconds()
+                    }
+
+                // Auto-dispatcher: subscribes to newEventBundles and fires OS toasts.
+                // Only starts once the user is logged in — pubKey and settings must exist.
+                val loggedIn = accountState as? AccountState.LoggedIn
+                val notifSettings =
+                    remember {
+                        com.vitorpamplona.amethyst.commons.moderation.notifications
+                            .PreferencesNotificationSettings()
+                    }
+                DisposableEffect(loggedIn?.pubKeyHex, notifDispatcher, localCache) {
+                    val myPk = loggedIn?.pubKeyHex
+                    val autoDispatcherJob =
+                        if (myPk != null) {
+                            com.vitorpamplona.amethyst.desktop.ui.notifications
+                                .DesktopNotificationAutoDispatcher(
+                                    dispatcher = notifDispatcher,
+                                    settings = notifSettings,
+                                    myPubKeyHex = myPk,
+                                    localCache = localCache,
+                                    isWindowFocused = isWindowFocusedFlow,
+                                    sessionStartSec = notifSessionStartSec,
+                                    scope = notifDispatcherScope,
+                                ).start()
+                        } else {
+                            null
+                        }
+                    onDispose { autoDispatcherJob?.cancel() }
+                }
                 CompositionLocalProvider(
                     com.vitorpamplona.amethyst.desktop.ui.deck.LocalDesktopCache provides localCache,
                     com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager provides relayManager,
                     com.vitorpamplona.amethyst.desktop.ui.deck.LocalLocalRelayStore provides localRelayStore,
                     LocalHashtagSpamSettings provides hashtagSpamSettings,
+                    com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationDispatcher provides notifDispatcher,
                 ) {
                     when (accountState) {
                         is AccountState.Loading -> {
@@ -1770,6 +1839,20 @@ fun MainContent(
                                         deckState.focusExistingColumn(DeckColumnType.Relays)
                                     } else {
                                         deckState.addColumn(DeckColumnType.Relays)
+                                    }
+                                },
+                                onOpenNotificationSettings = {
+                                    if (deckState.hasColumnOfType(DeckColumnType.NotificationSettings)) {
+                                        deckState.focusExistingColumn(DeckColumnType.NotificationSettings)
+                                    } else {
+                                        deckState.addColumn(DeckColumnType.NotificationSettings)
+                                    }
+                                },
+                                onOpenMessages = {
+                                    if (deckState.hasColumnOfType(DeckColumnType.Messages)) {
+                                        deckState.focusExistingColumn(DeckColumnType.Messages)
+                                    } else {
+                                        deckState.addColumn(DeckColumnType.Messages)
                                     }
                                 },
                                 modifier = Modifier.weight(1f),

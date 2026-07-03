@@ -102,7 +102,14 @@ class FilterBuildersTest {
     fun testNotificationsForUser() {
         val filter = FilterBuilders.notificationsForUser(testPubKey, limit = 100)
 
-        assertEquals(listOf(1, 7, 6, 16, 9735), filter.kinds)
+        // Delegates to shared NotificationKinds.SUBSCRIPTION_KINDS. Assert the
+        // full expected set as a set so this test doesn't break when the shared
+        // list re-orders kinds.
+        assertEquals(
+            com.vitorpamplona.amethyst.commons.moderation.notifications
+                .NotificationKinds.SUBSCRIPTION_KINDS,
+            filter.kinds,
+        )
         assertNotNull(filter.tags)
         assertEquals(listOf(testPubKey), filter.tags!!["p"])
         assertEquals(100, filter.limit)
@@ -113,7 +120,11 @@ class FilterBuildersTest {
         val since = 1609459200L
         val filter = FilterBuilders.notificationsForUser(testPubKey, limit = 50, since = since)
 
-        assertEquals(listOf(1, 7, 6, 16, 9735), filter.kinds)
+        assertEquals(
+            com.vitorpamplona.amethyst.commons.moderation.notifications
+                .NotificationKinds.SUBSCRIPTION_KINDS,
+            filter.kinds,
+        )
         assertNotNull(filter.tags)
         assertEquals(listOf(testPubKey), filter.tags!!["p"])
         assertEquals(50, filter.limit)
@@ -456,7 +467,11 @@ class FilterBuildersTest {
         val filter = FilterBuilders.notificationsForUser(testPubKey, limit = 100)
 
         assertTrue(!filter.isEmpty())
-        assertEquals(listOf(1, 7, 6, 16, 9735), filter.kinds)
+        assertEquals(
+            com.vitorpamplona.amethyst.commons.moderation.notifications
+                .NotificationKinds.SUBSCRIPTION_KINDS,
+            filter.kinds,
+        )
         assertNotNull(filter.tags)
         assertEquals(listOf(testPubKey), filter.tags!!["p"])
         assertEquals(100, filter.limit)

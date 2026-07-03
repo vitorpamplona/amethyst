@@ -99,6 +99,7 @@ private data class NavItem(
 private val NAV_ITEMS =
     listOf(
         NavItem(DeckColumnType.HomeFeed, "Home", MaterialSymbols.Home),
+        NavItem(DeckColumnType.Notifications, "Notifications", MaterialSymbols.Notifications),
         NavItem(DeckColumnType.Discover, "Discover", MaterialSymbols.Explore),
         NavItem(DeckColumnType.Search, "Search", MaterialSymbols.Search),
         NavItem(DeckColumnType.Messages, "Messages", MaterialSymbols.Mail),
