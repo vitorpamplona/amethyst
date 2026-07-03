@@ -326,6 +326,53 @@ Together these should move it from 1.6k/s toward the ~30k/s the same
 connection demonstrably sustains. At 40k/s, 10M events by id is ~4 minutes
 (plus id enumeration).
 
+### Extended matrix on a 2.6M corpus — saturation found (2026-07-03, later)
+
+Between the two runs the relay was **backfilled from 33k to 2,628,328
+kind-30382 events** (it's an actively-loading NIP-85 dataset — cross-run
+comparisons must account for corpus size). Rerun with 125-id batches, cells
+capped at a 120s budget (all cells partial by design at this corpus size):
+
+| cell | events/s | effective per-REQ latency |
+|---|---|---|
+| 1 conn × 1 REQ | 1,088 | ~115ms |
+| 1 conn × 4 REQs | 3,953 | ~126ms |
+| 1 conn × 8 REQs | 5,420 | ~184ms |
+| 1 conn × 16 REQs | 5,480 | ~365ms |
+| 1 conn × 20 REQs (relay cap) | 5,464 | ~458ms |
+| 2 conns × 10 REQs | 10,508 | ~285ms |
+| 4 conns × 10 REQs | **14,757** | ~542ms |
+| 8 conns × 10 REQs | 14,617 | ~1.1s |
+| 16 conns × 10 REQs | 14,921 | ~2.2s |
+
+Also learned the hard way (first extended run wedged): the relay's NIP-11
+advertises `limitation.max_subscriptions = 20` — REQs 21+ on one connection
+aren't just rejected, they wedged the connection, and with the client's
+5-minute reconnect backoff every subsequent batch burned its full timeout.
+**A bulk downloader must read NIP-11 and stay under the caps.**
+
+What changed vs the 33k-corpus run:
+
+1. **On the big corpus there IS a per-connection wall — at ~8 in-flight
+   REQs / ~5.5k events/s**, where the small corpus scaled linearly to 16 /
+   30.7k/s. Past 8, added in-flight only inflates per-REQ latency (queueing,
+   textbook Little's law). The user report's "stops helping past ~4" is
+   therefore *scale-dependent*: wrong on a hot 33k dataset, roughly right
+   (off by 2×) on a cold 2.6M one — by-id lookups on the larger index cost
+   more and strfry's per-connection service saturates.
+2. **The relay-wide ceiling is ~15k events/s at ~40 total in-flight** (vs
+   ~40k/s on the small corpus). 4 conns × 10 REQs already reaches it; 16
+   conns adds nothing but latency. More connections cannot beat the server's
+   aggregate query capacity.
+3. Client-side cost remains negligible at these rates — every wall in this
+   table is server-side.
+
+Practical shape for a bulk-by-id downloader, from the data: read NIP-11 →
+open ~4 connections × ~10 REQs — and make concurrency **adaptive** (grow
+in-flight until events/s stops improving / per-REQ latency inflates, then
+back off), since the same relay's sweet spot moved 8× in one day as its
+dataset grew. At today's ~15k/s ceiling: 2.6M events ≈ 3 min; 10M ≈ 11 min.
+
 ### Answer for "10M events from one relay, fastest"
 
 At nosfabrica's measured page cadence, one connection ≈ 3.7k events/s → 10M

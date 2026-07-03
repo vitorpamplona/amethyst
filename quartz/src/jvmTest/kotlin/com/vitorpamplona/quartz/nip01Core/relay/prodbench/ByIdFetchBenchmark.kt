@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSoc
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -69,9 +70,27 @@ class ByIdFetchBenchmark {
     companion object {
         const val RELAY = "wss://nip85.nosfabrica.com"
         const val KIND = 30382
-        const val BATCH = 250
-        const val BATCH_TIMEOUT_MS = 30_000L
+
+        /**
+         * Small enough that the corpus yields several batches per worker even
+         * at 160 in-flight REQs (33k ids / 125 = ~264 batches); otherwise the
+         * high-concurrency cells measure tail/wave effects, not throughput.
+         */
+        const val BATCH = 125
+        const val BATCH_TIMEOUT_MS = 10_000L
         const val ENUM_PAGE_TIMEOUT_MS = 30_000L
+
+        /**
+         * The relay's NIP-11 `limitation.max_subscriptions` (strfry: 20 on
+         * nip85.nosfabrica.com). REQs beyond this on ONE connection are
+         * rejected/dropped — the first matrix run proved it the hard way (a
+         * 1×128 cell wedged the connection and every batch burned its full
+         * timeout). Axis 1 stops here; more in-flight requires connections.
+         */
+        const val RELAY_MAX_SUBS = 20
+
+        /** Hard wall-clock budget per cell so a saturated cell fails fast. */
+        const val CELL_BUDGET_MS = 120_000L
 
         /** A never-matching id (all f's) to pin connections open. */
         val KEEP_ALIVE_ID = "f".repeat(64)
@@ -83,19 +102,26 @@ class ByIdFetchBenchmark {
         val bytes: Long,
         val uniques: Int,
         val requested: Int,
-        val timedOutBatches: Int,
+        val batches: Int,
+        val inFlight: Int,
+        val retriedBatches: Int,
+        val failedBatches: Int,
         val wallNanos: Long,
     ) {
         override fun toString(): String =
-            "  %-22s %,8d events  %6.1f MB  wall=%7.0fms  -> %,7.0f events/s%s%s"
+            "  %-22s %,8d events  wall=%7.0fms  -> %,7.0f events/s  reqLat~%4.0fms%s%s%s"
                 .format(
                     label,
                     received,
-                    bytes / 1e6,
                     wallNanos / 1e6,
                     received * 1e9 / wallNanos,
+                    // Little's-law effective per-REQ latency over COMPLETED
+                    // batches (cells can hit their budget with work left);
+                    // inflates when the relay (or the client) saturates.
+                    wallNanos / 1e6 * inFlight / (received.toDouble() / BATCH).coerceAtLeast(1.0),
                     if (uniques < requested) "  MISSING=${requested - uniques}" else "",
-                    if (timedOutBatches > 0) "  TIMED-OUT-BATCHES=$timedOutBatches" else "",
+                    if (retriedBatches > 0) "  RETRIED=$retriedBatches" else "",
+                    if (failedBatches > 0) "  FAILED=$failedBatches" else "",
                 )
     }
 
@@ -181,33 +207,45 @@ class ByIdFetchBenchmark {
             val received = AtomicLong(0)
             val bytes = AtomicLong(0)
             val uniques = ConcurrentHashMap.newKeySet<HexKey>(batches.size * BATCH)
-            val timedOut = AtomicLong(0)
+            val retried = AtomicLong(0)
+            val failed = AtomicLong(0)
 
             val queue = Channel<List<HexKey>>(Channel.UNLIMITED)
             batches.forEach { queue.trySend(it) }
             queue.close()
 
+            val onEvent: (Event) -> Unit = { event ->
+                received.incrementAndGet()
+                // content only — cheap; kind-30382 payloads live in
+                // tags, so this is a floor, not wire bytes
+                bytes.addAndGet(event.content.length.toLong())
+                uniques.add(event.id)
+            }
+
             val start = System.nanoTime()
-            coroutineScope {
-                clients.forEach { client ->
-                    repeat(reqsPerConn) {
-                        launch(Dispatchers.IO) {
-                            for (batch in queue) {
-                                val ok =
-                                    fetchBatch(client, relay, batch) { event ->
-                                        received.incrementAndGet()
-                                        // content only — cheap; kind-30382 payloads live in
-                                        // tags, so this is a floor, not wire bytes
-                                        bytes.addAndGet(event.content.length.toLong())
-                                        uniques.add(event.id)
+            val finished =
+                withTimeoutOrNull(CELL_BUDGET_MS) {
+                    coroutineScope {
+                        clients.forEach { client ->
+                            repeat(reqsPerConn) {
+                                launch(Dispatchers.IO) {
+                                    for (batch in queue) {
+                                        var ok = fetchBatch(client, relay, batch, onEvent)
+                                        if (!ok) {
+                                            // one retry so a relay-side subscription cap or a
+                                            // dropped REQ reads as RETRIED, not silent shortfall
+                                            retried.incrementAndGet()
+                                            ok = fetchBatch(client, relay, batch, onEvent)
+                                        }
+                                        if (!ok) failed.incrementAndGet()
                                     }
-                                if (!ok) timedOut.incrementAndGet()
+                                }
                             }
                         }
                     }
                 }
-            }
             val wall = System.nanoTime() - start
+            if (finished == null) println("  !! $label: cell budget (${CELL_BUDGET_MS}ms) exceeded — partial result")
 
             val result =
                 CellResult(
@@ -216,7 +254,10 @@ class ByIdFetchBenchmark {
                     bytes = bytes.get(),
                     uniques = uniques.size,
                     requested = batches.sumOf { it.size },
-                    timedOutBatches = timedOut.get().toInt(),
+                    batches = batches.size,
+                    inFlight = connections * reqsPerConn,
+                    retriedBatches = retried.get().toInt(),
+                    failedBatches = failed.get().toInt(),
                     wallNanos = wall,
                 )
             if (!quiet) println(result)
@@ -279,16 +320,18 @@ class ByIdFetchBenchmark {
             println("  corpus=${ids.size} ids in ${batches.size} batches; every cell downloads the full corpus\n")
 
             // Warmup: JIT + server page cache, untimed.
-            runCell("warmup", relay, httpClient, connections = 2, reqsPerConn = 4, batches = batches.take(12), quiet = true)
+            runCell("warmup", relay, httpClient, connections = 2, reqsPerConn = 4, batches = batches.take(24), quiet = true)
 
-            println("  --- axis 1: concurrent REQs on ONE connection ---")
-            for (reqs in listOf(1, 2, 4, 8, 16)) {
+            println("  --- axis 1: concurrent REQs on ONE connection (relay caps subs at $RELAY_MAX_SUBS) ---")
+            for (reqs in listOf(1, 4, 8, 16, RELAY_MAX_SUBS)) {
                 runCell("1 conn x $reqs reqs", relay, httpClient, connections = 1, reqsPerConn = reqs, batches = batches)
+                delay(2_000)
             }
 
-            println("  --- axis 2: connections (4 REQs each) ---")
-            for (conns in listOf(2, 4, 8)) {
-                runCell("$conns conns x 4 reqs", relay, httpClient, connections = conns, reqsPerConn = 4, batches = batches)
+            println("  --- axis 2: scaling total in-flight past the per-connection cap via connections (10 REQs each) ---")
+            for (conns in listOf(2, 4, 8, 16)) {
+                runCell("$conns conns x 10 reqs", relay, httpClient, connections = conns, reqsPerConn = 10, batches = batches)
+                delay(2_000)
             }
         }
 
