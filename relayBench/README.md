@@ -80,6 +80,27 @@ benchmark artifact.
 > and manifest/fingerprint convention are designed so other relay authors can
 > run the exact same workload and publish comparable numbers.
 
+## Feature parity: NIP-50 search
+
+geode maintains a NIP-50 full-text index by default; strfry has no search
+at all. That skews the *ingest* comparison — geode tokenizes every
+searchable event into the FTS index (~a quarter of its write cost) for a
+feature strfry isn't providing. `--geode-no-search` runs geode with
+`--no-search` (no FTS index, NIP-11 stops advertising 50) for the
+apples-to-apples write path:
+
+```bash
+./relayBench/run.sh --geode-no-search          # geode(no NIP-50) vs strfry
+```
+
+To see the price of search inline, run both geode flavors side by side:
+
+```bash
+GEODE=geode/build/install/geode/bin/geode
+./relayBench/run.sh --geode-no-search \
+    --relay "geode-fts=$GEODE --host 127.0.0.1 --port {port} --db {dir}/geode.sqlite"
+```
+
 ## Adding another relay
 
 No code needed if the relay can be launched from a command line:

@@ -35,8 +35,17 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
  * the gap grows linearly with the table. The extra index costs one B-tree
  * insert per event, which the same benchmark shows is noise next to the
  * Schnorr verify + tag indexing already paid on the write path.
+ *
+ * @param fullTextSearch maintain the NIP-50 FTS index. Off skips the
+ *   per-event tokenization on ingest (relayBench measured it at roughly a
+ *   quarter of write cost) at the price of `search` filters matching
+ *   nothing — pair it with a NIP-11 doc that doesn't advertise 50.
  */
-val RelayIndexingStrategy =
+fun relayIndexingStrategy(fullTextSearch: Boolean = true) =
     DefaultIndexingStrategy(
         indexEventsByCreatedAtAlone = true,
+        indexFullTextSearch = fullTextSearch,
     )
+
+/** Stock relay strategy — everything on, matching geode's defaults. */
+val RelayIndexingStrategy = relayIndexingStrategy()

@@ -57,6 +57,7 @@ import kotlin.system.exitProcess
  */
 class Options(
     val geodeBin: String?,
+    val geodeNoSearch: Boolean,
     val strfryBin: String?,
     val customRelays: List<Pair<String, String>>,
     val events: Int,
@@ -87,6 +88,10 @@ private val USAGE =
 
     Relays (at least one):
       --geode-bin PATH        geode launcher (from :geode:installDist)
+      --geode-no-search       run geode with --no-search (NIP-50 off) so the
+                              write path matches relays that have no FTS at
+                              all, e.g. strfry — the apples-to-apples ingest
+                              comparison
       --strfry-bin PATH       strfry binary
       --relay NAME=CMD        any other relay; CMD may use {port} and {dir}
                               (repeatable)
@@ -199,7 +204,7 @@ fun main(args: Array<String>) {
 
 private fun buildRelays(options: Options): List<RelayUnderTest> =
     buildList {
-        options.geodeBin?.let { add(GeodeRelay(it)) }
+        options.geodeBin?.let { add(GeodeRelay(it, noSearch = options.geodeNoSearch)) }
         options.strfryBin?.let { add(StrfryRelay(it, options.maxEventBytes, options.maxTags)) }
         options.customRelays.forEach { (name, cmd) -> add(CustomRelay(name, cmd)) }
     }
@@ -307,6 +312,7 @@ private fun parseArgs(args: Array<String>): Options? {
     val moduleDir = File("relayBench").takeIf { it.isDirectory } ?: File(".")
     return Options(
         geodeBin = one("--geode-bin"),
+        geodeNoSearch = "--geode-no-search" in flags,
         strfryBin = one("--strfry-bin"),
         customRelays =
             (map["--relay"] ?: emptyList()).map {

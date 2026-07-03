@@ -133,23 +133,32 @@ data class Nip11Info(
     val version: String?,
 )
 
-/** Geode — the standalone JVM relay from this repo (`:geode:installDist`). */
+/**
+ * Geode — the standalone JVM relay from this repo (`:geode:installDist`).
+ *
+ * [noSearch] passes `--no-search`, dropping NIP-50 (no FTS index, no
+ * per-event tokenization on ingest). strfry has no NIP-50 at all, so this
+ * is the apples-to-apples ingest configuration against it; the default
+ * keeps geode's stock feature set and eats the indexing cost.
+ */
 class GeodeRelay(
     private val bin: String,
-) : RelayUnderTest("geode") {
+    private val noSearch: Boolean = false,
+) : RelayUnderTest(if (noSearch) "geode-nosearch" else "geode") {
     override fun command(
         port: Int,
         dataDir: File,
     ): List<String> =
-        listOf(
-            bin,
-            "--host",
-            "127.0.0.1",
-            "--port",
-            "$port",
-            "--db",
-            File(dataDir, "geode.sqlite").absolutePath,
-        )
+        buildList {
+            add(bin)
+            add("--host")
+            add("127.0.0.1")
+            add("--port")
+            add("$port")
+            add("--db")
+            add(File(dataDir, "geode.sqlite").absolutePath)
+            if (noSearch) add("--no-search")
+        }
 }
 
 /**
