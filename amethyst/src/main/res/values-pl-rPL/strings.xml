@@ -599,6 +599,13 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="app_definition_handles">Identyfikatory</string>
     <string name="app_definition_by">przez</string>
     <string name="app_definition_available_on">Dostępna w</string>
+    <string name="app_definition_categories">Kategorie</string>
+    <string name="app_definition_related">Powiązane</string>
+    <string name="app_definition_implements">Wdrażane</string>
+    <string name="app_definition_supported_nips">Obsługiwane Nipy</string>
+    <string name="app_definition_via">za pomocą %1$s</string>
+    <string name="app_definition_nip">NIP-%1$s</string>
+    <string name="app_definition_kind_app">Aplikacja</string>
     <string name="platform_web">Aplikacja webowa</string>
     <string name="platform_android">Android</string>
     <string name="platform_ios">iOS</string>
@@ -687,6 +694,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="napplet_permissions_forget">Zapomnij o tym nApplet</string>
     <string name="napplet_permissions_blocked">Zablokowane</string>
     <string name="napplet_permissions_revoke">Odwołaj</string>
+    <string name="napplet_permissions_ask_each_time">Pytaj za każdym razem</string>
     <string name="napplet_none_found">Nie znaleziono jeszcze żadnych nApplets.</string>
     <string name="napplet_fallback_title">nApplet %1$s…</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
@@ -738,12 +746,69 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="other">Ta aplikacja nApplet chce opłacić fakturę Lightning w wysokości %1$d satoszów.</item>
     </plurals>
     <!-- Signer permissions: first-connect dialog -->
+    <string name="napplet_connect_title">Połącz z Nostr</string>
+    <string name="napplet_connect_subtitle">chce połączyć się z Twoim kontem Nostr</string>
+    <string name="napplet_connect_how_handle">Jak obsługiwać żądania tej aplikacji?</string>
+    <string name="napplet_connect_button">Połącz</string>
+    <string name="napplet_connect_block">Blokuj i ignoruj %1$s</string>
     <!-- Signer trust levels -->
+    <string name="napplet_policy_full_trust">W pełni temu ufam</string>
+    <string name="napplet_policy_full_trust_desc">Automatycznie podpisuj wszystkie żądania (z wyjątkiem płatności)</string>
+    <string name="napplet_policy_reasonable">Bądźmy rozsądni</string>
+    <string name="napplet_policy_reasonable_desc">Automatyczne zatwierdzanie najczęstszych żądań</string>
+    <string name="napplet_policy_paranoid">Jestem trochę paranoikiem</string>
+    <string name="napplet_policy_paranoid_desc">Nie podpisuj niczego bez pytania!</string>
     <!-- Signer per-op consent dialog -->
+    <string name="napplet_consent_wants_to">chce %1$s</string>
+    <string name="napplet_consent_show_event">Pokaż wydarzenie</string>
+    <string name="napplet_consent_hide_event">Ukryj wydarzenie</string>
+    <string name="napplet_consent_more_options">Więcej opcji</string>
+    <string name="napplet_consent_fewer_options">Mniej opcji</string>
+    <string name="napplet_signer_allow_once">Zezwól jednorazowo</string>
+    <string name="napplet_signer_allow_session">Zezwól dla tej sesji</string>
+    <string name="napplet_signer_allow_24h">Zezwalaj na 24 godziny</string>
+    <string name="napplet_signer_allow_30d">Zezwalaj na 30 dni</string>
+    <string name="napplet_signer_allow_op">Nie pytaj ponownie do %1$s</string>
+    <string name="napplet_signer_allow_all">Nie pytaj ponownie o żadne żądania Nostr</string>
+    <string name="napplet_signer_deny_once">Odmów</string>
+    <string name="napplet_signer_deny_op">Zawsze odmawiaj %1$s</string>
+    <string name="napplet_signer_last_used">Ostatnio użyte</string>
+    <string name="napplet_signer_expires">Wygasa</string>
     <!-- Signer op labels -->
+    <string name="napplet_op_sign_kind">podpisz zdarzenie %1$d</string>
+    <string name="napplet_op_sign_kind_named">podpisz dla %1$s (typ: %2$d)</string>
+    <string name="napplet_op_encrypt">zaszyfruj wiadomość</string>
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <string name="napplet_op_decrypt">odczytaj prywatne wiadomości</string>
     <!-- Permissions management screen -->
+    <string name="napplet_permissions_title">Podłączone aplikacje</string>
+    <string name="napplet_permissions_revoke_all">Cofnij wszystkie uprawnienia</string>
+    <string name="napplet_permissions_overrides">Nadpisywanie operacji</string>
+    <string name="napplet_signer_permissions_empty">Żadna aplikacja jeszcze się nie połączyła.</string>
+    <string name="napplet_signer_permissions_revoke_all">Cofnij wszystkie uprawnienia</string>
+    <string name="napplet_decision_allow">Zezwól</string>
+    <string name="napplet_decision_ask">Pytaj</string>
+    <string name="napplet_decision_deny">Odmów</string>
+    <string name="napplet_connected_apps_search_keywords">uprawnienia aplikacji, sygnatariusz, napplet, nsite, aplikacja internetowa, zaufanie, połączone</string>
+    <string name="napplet_connected_app_trust_level">Podpisywanie poziomu zaufania</string>
+    <string name="napplet_connected_app_capabilities">Możliwości</string>
+    <string name="napplet_connected_app_forget">Zapomnij o aplikacji</string>
+    <string name="napplet_connected_app_empty">Nie ma jeszcze żadnych połączonych aplikacji.\n\nGdy aplikacja internetowa połączy się z Twoim kluczem Nostr, pojawi się tutaj.</string>
     <!-- Relay Authentication (NIP-42) settings -->
+    <string name="relay_auth_settings_title">Uwierzytelnianie transmitera</string>
+    <string name="relay_auth_search_keywords">auth uwierzytelnianie transmiter podpis weryfikacja nip-42 tożsamość</string>
+    <string name="relay_auth_global_policy">Polityka globalna</string>
+    <string name="relay_auth_policy_always">Zawsze uwierzytelniaj</string>
+    <string name="relay_auth_policy_always_desc">Poświadcz autoryzację dla każdego transmitera, który o to poprosi</string>
+    <string name="relay_auth_policy_never">Nigdy nie uwierzytelniaj</string>
+    <string name="relay_auth_policy_never_desc">Ignoruj żądania uwierzytelnienia ze wszystkich transmiterów</string>
+    <string name="relay_auth_policy_if_in_my_list">Tylko moje transmitery</string>
+    <string name="relay_auth_policy_if_in_my_list_desc">Uwierzytelniaj tylko z transmiterami z listy transmiterów</string>
+    <string name="relay_auth_per_relay_overrides">Nadrzędność dla poszczególnych transmiterów</string>
+    <string name="relay_auth_no_overrides">Brak nadrzędnych reguł dla transmiterów — polityka globalna obowiązuje wszędzie</string>
+    <string name="relay_auth_decision_allow">Zezwól</string>
+    <string name="relay_auth_decision_deny">Odmów</string>
+    <string name="relay_auth_remove_override">Usuń nadpisanie</string>
     <string name="nip82_repository_label">Źródło: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Pobierz</string>
@@ -910,6 +975,73 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="route_podcasts">Podcasty</string>
     <string name="podcast_view_episodes">Pokaż odcinki</string>
     <string name="podcast_no_episodes">Brak odcinków</string>
+    <string name="podcast_trailer">Zwiastun</string>
+    <string name="podcast_trailer_season">Sezon %1$d</string>
+    <string name="podcast_explicit">Wulgarne</string>
+    <string name="podcast_completed">Zakończone</string>
+    <string name="podcast_premium">Premium</string>
+    <string name="podcast_support_show">Wesprzyj program</string>
+    <string name="podcast_by_author">przez %1$s</string>
+    <string name="podcast_season_episode">S%1$d · E%2$d</string>
+    <string name="podcast_episode_number">Ep %1$d</string>
+    <string name="podcast_season">Sezon %1$d</string>
+    <string name="podcast_video">Wideo</string>
+    <string name="podcast_transcript">Transkrypcja</string>
+    <string name="podcast_chapters">Rozdziały</string>
+    <string name="podcast_value_for_value">Wartość-za-wartość</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_zap_split_hint">Zaps do tego są podzielone między:</string>
+    <string name="podcast_hosts_and_guests">Gospodarze &amp; Goście</string>
+    <string name="podcast_play_soundbite">Odtwórz najciekawsze momenty</string>
+    <string name="podcast_top_supporters">Najwięksi darczyńcy</string>
+    <plurals name="podcast_chapters_count">
+        <item quantity="one">%1$d rozdział</item>
+        <item quantity="few">%1$d rozdziałów</item>
+        <item quantity="many">%1$d rozdziałów</item>
+        <item quantity="other">%1$d rozdziały</item>
+    </plurals>
+    <string name="podcast_role_host">Gospodarz</string>
+    <string name="podcast_role_cohost">Współgospodarz</string>
+    <string name="podcast_role_editor">Edytor</string>
+    <string name="podcast_author_verified">Zweryfikowany autor</string>
+    <string name="podcast_value_error_title">Błąd typu „wartość za wartość”</string>
+    <string name="podcast_value_no_recipients">Ten podcast nie ma odbiorców, płacących za niego.</string>
+    <string name="podcast_value_keysend_requires_nwc">Podłącz portfel Nostr Wallet Connect, aby wysyłać wiadomości do odbiorców korzystających z usługi keysend (node).</string>
+    <string name="podcast_value_stream">Satosze transmisji</string>
+    <string name="podcast_value_stream_rate">%1$d satoszy/min.</string>
+    <string name="podcast_value_stream_hint">Wysyła wartość automatycznie, gdy słuchasz.</string>
+    <string name="podcast_value_streamed_total">W tej sesji przesłano %1$d satoszy</string>
+    <string name="podcast_value_stream_requires_wallet">Podłącz portfel Nostr Wallet Connect lub portfel debetowy, aby przesyłać satosze podczas słuchania.</string>
+    <string name="podcast_new_episode">Nowy odcinek</string>
+    <string name="podcast_edit_episode">Edytuj odcinek</string>
+    <string name="podcast_publishing_banner">Publikowanie…</string>
+    <string name="podcast_cover_upload_cta">Dodaj okładkę</string>
+    <string name="podcast_no_episodes_yet">Nie ma jeszcze odcinków. Kliknij „Nowy odcinek”, aby opublikować pierwszy.</string>
+    <string name="podcast_create_your_show">Utwórz swój podcast</string>
+    <string name="podcast_tap_to_edit_show">Kliknij, aby edytować szczegóły programu</string>
+    <string name="podcast_create_show_hint">Ustaw tytuł, grafikę i szczegóły swojego programu</string>
+    <plurals name="podcast_trailer_count">
+        <item quantity="one">%1$d zwiastun</item>
+        <item quantity="few">%1$d zwiastunów</item>
+        <item quantity="many">%1$d zwiastunów</item>
+        <item quantity="other">%1$d zwiastuny</item>
+    </plurals>
+    <string name="podcast_value_editor_hint">Dodaj odbiorców, aby rozdzielić przychodzące satosze według wagi. Słuchacze przekazują lub przesyłają wartość do tych miejsc docelowych.</string>
+    <string name="podcast_value_add_recipient">Dodaj odbiorcę</string>
+    <string name="podcast_value_add_address">Dodaj adres ręcznie</string>
+    <string name="podcast_value_search_user">Dodaj użytkownika Nostr</string>
+    <string name="podcast_value_search_user_hint">Wyszukaj według nazwy lub @identyfikatora</string>
+    <string name="podcast_value_user_no_lnaddress">Ten użytkownik nie posiada adresu Lightning</string>
+    <string name="podcast_value_remove_recipient">Usuń odbiorcę</string>
+    <string name="podcast_value_recipient_name">Imię (opcjonalnie)</string>
+    <string name="podcast_value_type_lnaddress">Lightning Adres</string>
+    <string name="podcast_value_type_node">Node (keysend)</string>
+    <string name="podcast_value_lnaddress">Lightning Adres</string>
+    <string name="podcast_value_lnaddress_hint">nazwa@przyklad.com</string>
+    <string name="podcast_value_node_pubkey">Klucz publiczny Node</string>
+    <string name="podcast_value_node_pubkey_hint">02abc… (33-bajt hex)</string>
+    <string name="podcast_value_weight">Waga</string>
+    <string name="podcast_value_fee">Opłata</string>
     <plurals name="podcast_episode_count">
         <item quantity="one">%1$d odcinek</item>
         <item quantity="few">%1$d odcinków</item>
@@ -942,6 +1074,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     </plurals>
     <string name="private_bookmarks">Prywatne Zakładki</string>
     <string name="public_bookmarks">Publiczne zakładki</string>
+    <string name="repository_bookmarks">Repozytoria</string>
+    <string name="repository_bookmarks_explainer">Repozytoria Git dodane do zakładek</string>
+    <string name="podcast_bookmarks">Podcasty</string>
     <string name="add_to_private_bookmarks">Dodaj do prywatnych zakładek</string>
     <string name="add_to_public_bookmarks">Dodaj do publicznych zakładek</string>
     <string name="remove_from_private_bookmarks">Usuń z prywatnych zakładek</string>
