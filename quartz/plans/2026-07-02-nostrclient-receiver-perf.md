@@ -510,6 +510,31 @@ delays PING/PONG, so the bound is generous. Validated by
 consumer over a real socket — every EVENT plus EOSE arrives, in order, no
 drops, no deadlock.
 
+### ParallelEventVerifier: batched verify off the receiver coroutine (done)
+
+The client-side mirror of `IngestQueue.parallelVerify`:
+`accessories/ParallelEventVerifier`. `submit(event, context)` is a cheap
+bounded-channel send from the receiver coroutine; a drain loop batches
+greedily (up to 256) and fans each batch across `Dispatchers.Default` in
+core-sized CHUNKS — a per-event `async` measured ~40µs/event of scheduling
+overhead that swallowed the entire parallel gain, and the per-batch
+fork/join barrier at batch 64 still cost half of it (64 → 1.2×, 256 → 2.2×,
+1024 → 3.2× on 4 cores). Callbacks dispatch in submission order, a
+`preVerified` hook short-circuits already-trusted ids, and the bounded
+submit channel backpressures the socket.
+
+Also learned while measuring: `Event` caches derived state after its first
+verification, so any verify benchmark must use disjoint event sets per pass
+(the first version accidentally measured warm objects and reported 0.94–1.2×).
+
+Validation: `ParallelVerifyBenchmark` (4k fresh signed events, 8 signers) —
+sequential 50.6µs/event vs pipeline 28.1µs/event, **1.8×** on the noisy
+4-core CI box with an in-benchmark ≥1.5× assertion (crypto-only parallel
+ceiling measured 2.89× there). 4 correctness tests: valid/tampered routing,
+submission-order preservation, preVerified short-circuit, callback-crash
+resilience. Wiring it into `CacheClientConnector`/`LocalCache` (consume with
+`wasVerified = true`) is the app-side follow-up.
+
 ## Recommendations (in order of value/risk)
 
 1. **Move Schnorr verification off the receiver coroutine** in the app's
