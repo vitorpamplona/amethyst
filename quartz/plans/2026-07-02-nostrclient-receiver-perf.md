@@ -540,8 +540,25 @@ sequential 50.6µs/event vs pipeline 28.1µs/event, **1.8×** on the noisy
 4-core CI box with an in-benchmark ≥1.5× assertion (crypto-only parallel
 ceiling measured 2.89× there). 4 correctness tests: valid/tampered routing,
 submission-order preservation, preVerified short-circuit, callback-crash
-resilience. Wiring it into `CacheClientConnector`/`LocalCache` (consume with
-`wasVerified = true`) is the app-side follow-up.
+resilience.
+
+**App-side scope correction (2026-07-03): do NOT wire this into
+`CacheClientConnector`.** Code review confirmed the mobile app's
+verification is ALREADY parallel across relays: each connection's
+`OkHttpWebSocket` owns its own consumer coroutine on `Dispatchers.IO`, and
+nothing downstream funnels — `NostrClient.onIncomingMessage` →
+`EventCollector` → `LocalCache.justConsume` → `justVerify` all run inline
+on the delivering connection's coroutine, `LargeCache` is a
+`ConcurrentSkipListMap`, and the one global serializer (`PoolRequests`'
+lock) is now per-subscription. With 2000+ connections a multi-relay burst
+already saturates the cores; the verifier would only reshuffle the work.
+Its real scope is where a SINGLE connection's stream serializes verifies:
+bulk flows (`fetchAllPages`-style downloads, each client's leg inside
+`negentropySyncFanOut`, amy/CLI syncs). One second-order note for a future
+on-device profile: today's verifies run on `Dispatchers.IO` (64 threads on
+~8 phone cores), so a large burst can oversubscribe cores with CPU-bound
+crypto and starve the IO pool — if profiling ever shows that, moving verify
+to a core-bounded dispatcher (which this accessory does) is the fix.
 
 ### negentropySyncFanOut: multi-connection sync (done)
 
