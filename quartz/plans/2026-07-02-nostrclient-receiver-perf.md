@@ -440,6 +440,18 @@ now available standalone in `NostrClientNegentropySyncExt`:
 ways, identical sets, batch streaming, since/until window slicing) — 49
 negentropy tests green.
 
+**`amy sync` migrated onto it (2026-07-03):** the CLI's hand-rolled raw
+WebSocket negotiate loop (single un-windowed session; a strfry
+`max_sync_events` overflow was a hard error) is gone. `SyncCommand` now
+calls `negentropyReconcile` on amy's own `NostrClient` and pipelines the
+loop-closing: need-id batches feed 4 concurrent by-id `drain`s and have-ids
+feed an uploader, both overlapping the remaining reconcile rounds (peak 7
+subs on the relay, under the common cap of 20). Downloads still funnel
+through amy's verify-and-store path. Output field `rounds` (protocol
+round-trips) became `windows` (created_at splits). Verified end-to-end
+against two embedded geode relays: down-only 25/25, up-only 5/5, and
+bidirectional re-runs converge to a zero diff.
+
 ### Answer for "10M events from one relay, fastest"
 
 At nosfabrica's measured page cadence, one connection ≈ 3.7k events/s → 10M
@@ -514,6 +526,13 @@ uncontended lock was already ~free), **8 threads sharing one decoder —
 lock-free wins 3.0–4.5×** (e.g. 127ms → 28ms for 128k frames). The lock was
 serializing the concurrent hit path exactly the way the old global
 PoolRequests lock did; ConcurrentHashMap removes it.
+
+**Adopted in all four front-end clients (2026-07-03):** the Android app's
+pool (`AppModules.kt`), the Android crawl client
+(`AccountViewModel.buildCrawlClient` — Event Sync / Cashu discovery, the
+duplicate-heaviest path), the desktop `RelayConnectionManager`, and amy's
+`Context`. Each passes `CachingEventDecoder()` at `NostrClient`
+construction; no other behavior change.
 
 ### Bounded per-connection receive buffer (REVERTED — deliberate design choice)
 
