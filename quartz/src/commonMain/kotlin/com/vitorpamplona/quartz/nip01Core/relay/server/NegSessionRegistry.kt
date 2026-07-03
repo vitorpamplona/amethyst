@@ -98,9 +98,12 @@ class NegSessionRegistry(
         // NIP-77: same-subId OPEN replaces any prior session.
         sessions.remove(cmd.subId)
 
-        val cap = settings.maxSyncEvents
-        val entries = store.snapshotIdsForNegentropy(filters, maxEntries = cap)
-        if (entries.size > cap) {
+        // Sealed storage may come from the backend's snapshot cache — a
+        // repeated NEG-OPEN of the same filter with no writes in between
+        // (the mirror-heartbeat pattern) skips the scan + sort entirely.
+        // `null` = matching set exceeds the cap (strfry-parity error).
+        val sealedStorage = store.sealedNegentropyStorage(filters, maxEntries = settings.maxSyncEvents)
+        if (sealedStorage == null) {
             send(NegErrMessage(cmd.subId, "blocked: too many query results"))
             return
         }
@@ -108,7 +111,7 @@ class NegSessionRegistry(
         val session =
             NegentropyServerSession(
                 subId = cmd.subId,
-                localEntries = entries,
+                sealedStorage = sealedStorage,
                 frameSizeLimit = settings.frameSizeLimit,
             )
         sessions[cmd.subId] = session

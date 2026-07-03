@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.server.backend
 
+import com.vitorpamplona.negentropy.storage.IStorage
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
+import com.vitorpamplona.quartz.nip77Negentropy.NegentropyServerSession
 
 /**
  * The data plane a [RelaySession] talks to: how REQ/COUNT are answered, how
@@ -118,4 +120,25 @@ interface SessionBackend {
         filters: List<Filter>,
         maxEntries: Int?,
     ): List<IdAndTime> = emptyList()
+
+    /**
+     * NIP-77 snapshot as a **sealed** negentropy storage, ready to back a
+     * server session. Returns `null` when the matching set exceeds
+     * [maxEntries] (the caller answers NEG-ERR, strfry-parity).
+     *
+     * Reconciliation only reads the storage, so implementations may hand
+     * the same sealed instance to any number of concurrent sessions —
+     * [LiveEventStore] caches the most recent one and reuses it until a
+     * write invalidates it, which turns the periodic-mirror heartbeat
+     * ("anything new since last sync?") from a full scan + sort per
+     * NEG-OPEN into a cache hit. The default builds fresh per call.
+     */
+    suspend fun sealedNegentropyStorage(
+        filters: List<Filter>,
+        maxEntries: Int,
+    ): IStorage? {
+        val entries = snapshotIdsForNegentropy(filters, maxEntries)
+        if (entries.size > maxEntries) return null
+        return NegentropyServerSession.sealVector(entries)
+    }
 }

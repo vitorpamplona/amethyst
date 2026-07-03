@@ -79,6 +79,14 @@ object SyncBenchmark {
         val transferredToA: Int,
         val transferredToB: Int,
         val identicalReconcile: Map<String, ReconcileStats>,
+        /**
+         * A second identical-set reconcile fired immediately after the
+         * first with no writes in between — the periodic-mirror
+         * heartbeat ("anything new?" × N peers). Relays that keep a
+         * live/cached reconciliation structure answer from it here;
+         * relays that rebuild per NEG-OPEN pay the full cost again.
+         */
+        val repeatReconcile: Map<String, ReconcileStats> = emptyMap(),
         val converged: Boolean,
         val error: String? = null,
     )
@@ -255,6 +263,13 @@ object SyncBenchmark {
         log("    re-reconciling identical sets…")
         val identicalA = reconcile(urlA, effective, http)
         val identicalB = reconcile(urlB, effective, http)
+
+        // 4. Heartbeat: same reconcile again, immediately, no writes in
+        // between — measures whether the server keeps its reconciliation
+        // structure warm across NEG-OPENs.
+        log("    repeating identical-set reconcile (warm)…")
+        val repeatA = reconcile(urlA, effective, http)
+        val repeatB = reconcile(urlB, effective, http)
         val converged =
             diffCorrect &&
                 identicalA.error == null &&
@@ -275,6 +290,7 @@ object SyncBenchmark {
             transferredToA = toA.size,
             transferredToB = toB.size,
             identicalReconcile = mapOf(nameA to stats(identicalA), nameB to stats(identicalB)),
+            repeatReconcile = mapOf(nameA to stats(repeatA), nameB to stats(repeatB)),
             converged = converged,
         )
     }

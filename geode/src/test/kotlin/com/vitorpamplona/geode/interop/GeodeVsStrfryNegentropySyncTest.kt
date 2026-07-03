@@ -99,6 +99,7 @@ class GeodeVsStrfryNegentropySyncTest {
             relay {
                 bind = "127.0.0.1"
                 port = $port
+                nofiles = 0
             }
             """.trimIndent(),
         )

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip77Negentropy
 
 import com.vitorpamplona.negentropy.Negentropy
+import com.vitorpamplona.negentropy.storage.IStorage
 import com.vitorpamplona.negentropy.storage.StorageVector
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
@@ -50,19 +51,22 @@ import com.vitorpamplona.quartz.utils.Hex
  */
 class NegentropyServerSession(
     val subId: String,
-    localEntries: List<IdAndTime>,
+    /**
+     * A **sealed** storage. Reconciliation only reads it (range
+     * fingerprints), so one sealed instance may safely back any number
+     * of concurrent sessions — that is what lets the relay cache the
+     * snapshot across NEG-OPENs instead of rebuilding per session.
+     */
+    sealedStorage: IStorage,
     frameSizeLimit: Long = DEFAULT_FRAME_SIZE_LIMIT,
 ) {
-    private val storage = StorageVector()
-    private val negentropy: Negentropy
+    constructor(
+        subId: String,
+        localEntries: List<IdAndTime>,
+        frameSizeLimit: Long = DEFAULT_FRAME_SIZE_LIMIT,
+    ) : this(subId, sealVector(localEntries), frameSizeLimit)
 
-    init {
-        for (entry in localEntries) {
-            storage.insert(entry.createdAt, entry.id)
-        }
-        storage.seal()
-        negentropy = Negentropy(storage, frameSizeLimit)
-    }
+    private val negentropy: Negentropy = Negentropy(sealedStorage, frameSizeLimit)
 
     companion object {
         /**
@@ -71,6 +75,16 @@ class NegentropyServerSession(
          * per NEG-MSG, the de-facto sync round-trip size.
          */
         const val DEFAULT_FRAME_SIZE_LIMIT: Long = 500_000L
+
+        /** Builds and seals a [StorageVector] from `(created_at, id)` pairs. */
+        fun sealVector(localEntries: List<IdAndTime>): StorageVector {
+            val storage = StorageVector()
+            for (entry in localEntries) {
+                storage.insert(entry.createdAt, entry.id)
+            }
+            storage.seal()
+            return storage
+        }
 
         /**
          * Convenience for callers that hold full [Event] objects

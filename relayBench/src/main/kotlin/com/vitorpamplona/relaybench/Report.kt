@@ -239,6 +239,15 @@ object Report {
                             higherIsBetter = false,
                             detail = pair.identicalReconcile.mapValues { (_, s) -> "${s.rounds} rounds, ${bytesHuman(s.wireBytes)}" },
                         )
+                        if (pair.repeatReconcile.isNotEmpty()) {
+                            appendLine(dim("    heartbeat: same reconcile again, no writes in between:"))
+                            metricRows(
+                                pair.repeatReconcile.map { (name, s) -> name to s.ms },
+                                "ms",
+                                higherIsBetter = false,
+                                detail = pair.repeatReconcile.mapValues { (_, s) -> "${s.rounds} rounds, ${bytesHuman(s.wireBytes)}" },
+                            )
+                        }
                     }
                 }
             }
