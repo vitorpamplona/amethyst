@@ -392,6 +392,145 @@ class BulkDownloadBenchmark {
     }
 
     // ------------------------------------------------------------------
+    // Per-connection wall: is a single connection limited by the relay's
+    // pacing or by the client's serial parse? A raw socket that only scans
+    // frames (no JSON parse, no quartz stack) pages the same filter on one
+    // connection. If it caps at the same events/s as the full quartz stack,
+    // the wall is the relay/network; if it runs much faster, the client's
+    // per-connection consumer is the wall and parallel parse would help.
+    // ------------------------------------------------------------------
+
+    private fun rawPagedDownload(
+        relayWsUrl: String,
+        httpClient: OkHttpClient,
+        kind: Int,
+        pageLimit: Int,
+        maxEvents: Int,
+    ) {
+        var count = 0L
+        var bytes = 0L
+        var pages = 0
+        var pageCount = 0
+        var pageMinCreatedAt = Long.MAX_VALUE
+        var until = Long.MAX_VALUE / 2
+
+        // Cheap created_at scan — the only per-frame work besides counting.
+        fun scanCreatedAt(frame: String): Long {
+            val i = frame.indexOf("\"created_at\":")
+            if (i < 0) return Long.MAX_VALUE
+            var j = i + 13
+            var v = 0L
+            while (j < frame.length && frame[j].isDigit()) {
+                v = v * 10 + (frame[j] - '0')
+                j++
+            }
+            return v
+        }
+
+        val start = System.nanoTime()
+        val latch = CountDownLatch(1)
+        val socket =
+            httpClient.newWebSocket(
+                Request.Builder().url(relayWsUrl).build(),
+                object : okhttp3.WebSocketListener() {
+                    override fun onOpen(
+                        webSocket: okhttp3.WebSocket,
+                        response: Response,
+                    ) {
+                        webSocket.send("""["REQ","raw",{"kinds":[$kind],"limit":$pageLimit,"until":$until}]""")
+                    }
+
+                    override fun onMessage(
+                        webSocket: okhttp3.WebSocket,
+                        text: String,
+                    ) {
+                        if (text.startsWith("[\"EVENT\"")) {
+                            count++
+                            bytes += text.length
+                            pageCount++
+                            val ts = scanCreatedAt(text)
+                            if (ts < pageMinCreatedAt) pageMinCreatedAt = ts
+                        } else if (text.startsWith("[\"EOSE\"")) {
+                            pages++
+                            val done = pageCount == 0 || count >= maxEvents || pageMinCreatedAt == Long.MAX_VALUE
+                            if (done) {
+                                latch.countDown()
+                            } else {
+                                until = pageMinCreatedAt - 1
+                                pageCount = 0
+                                pageMinCreatedAt = Long.MAX_VALUE
+                                webSocket.send("""["REQ","raw",{"kinds":[$kind],"limit":$pageLimit,"until":$until}]""")
+                            }
+                        }
+                    }
+
+                    override fun onFailure(
+                        webSocket: okhttp3.WebSocket,
+                        t: Throwable,
+                        response: Response?,
+                    ) {
+                        println("  !! raw socket failure: ${t.message}")
+                        latch.countDown()
+                    }
+                },
+            )
+
+        latch.await(120, TimeUnit.SECONDS)
+        val wall = System.nanoTime() - start
+        socket.cancel()
+        report("raw paged (no parse), 1 conn", count, bytes, wall)
+        println("    pages=$pages")
+    }
+
+    @Test
+    fun perConnectionWall() {
+        if (System.getenv("PROD_RELAY_BENCH") == null && System.getProperty("prodRelayBench") == null) {
+            println("perConnectionWall skipped. Run with -PprodRelayBench=1 to enable.")
+            return
+        }
+
+        val httpClient =
+            OkHttpClient
+                .Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+                .pingInterval(30, TimeUnit.SECONDS)
+                .build()
+
+        println("\n=== PER-CONNECTION WALL: $PROD_RELAY kinds=[$PROD_KIND], 1 connection, cap $PROD_MAX_EVENTS ===")
+
+        // A) raw socket, until-cursor paging, no JSON parse at all
+        rawPagedDownload(PROD_RELAY, httpClient, PROD_KIND, pageLimit = 500, maxEvents = PROD_MAX_EVENTS)
+
+        // B) full quartz stack, same query, same connection count
+        runBlocking {
+            val relay = PROD_RELAY.normalizeRelayUrl()
+            val client = NostrClient(BasicOkHttpWebSocket.Builder { httpClient })
+            try {
+                val count = AtomicLong(0)
+                val bytes = AtomicLong(0)
+                var pages = 0
+                val start = System.nanoTime()
+                client.fetchAllPages(
+                    relay = relay,
+                    filters = listOf(Filter(kinds = listOf(PROD_KIND), limit = PROD_MAX_EVENTS)),
+                    timeoutMs = 30_000L,
+                    onNewPage = { pages++ },
+                ) { event ->
+                    count.incrementAndGet()
+                    bytes.addAndGet(event.content.length.toLong())
+                }
+                report("quartz paged (full parse), 1 conn", count.get(), bytes.get(), System.nanoTime() - start)
+                println("    pages=${pages + 1}")
+            } finally {
+                client.close()
+            }
+        }
+
+        httpClient.dispatcher.executorService.shutdown()
+    }
+
+    // ------------------------------------------------------------------
 
     @Test
     fun bulkDownloadBenchmark() {

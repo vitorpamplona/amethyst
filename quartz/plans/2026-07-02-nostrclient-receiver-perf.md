@@ -225,6 +225,53 @@ rounds and by-id lookups cost more than sequential pages when you need
 instead of re-paging the world. (kind 30382 events carry empty `content` —
 all data in tags — so the MB/s column reads 0.)
 
+### Per-connection wall: relay pacing, not client parse (2026-07-03)
+
+A user report proposed "parallel parse + strictly-ordered dispatch" on the
+theory that the per-connection serial parse caps a single connection at
+~4k events/s (fetch-by-id, 12 idle cores, no gain past ~4 concurrent REQs,
+throughput scaling only with connections). The discriminating test
+(`BulkDownloadBenchmark.perConnectionWall`) pages the same production query
+on one connection twice — once through a raw socket that does NO JSON parse
+(only an `indexOf` scan for `created_at`), once through the full quartz
+stack:
+
+| | events/s (nip85.nosfabrica.com, kinds 30382, 20k cap) |
+|---|---|
+| raw socket, no parse | 3,382 |
+| full quartz stack, parse + dispatch | 3,754 |
+
+Identical within noise. **The ~3.5–4k/s single-connection ceiling is the
+relay's per-connection page/response cadence, not client CPU** — at 465B
+events the parser is ~1% busy at this rate (single-thread parse ceiling:
+276k/s small events, 31k/s for the large-frame production mix). The same
+relay served our negentropy fetch-by-id at only 1.6k/s with 8 concurrent
+REQs and an idle client — also server-side. This matches every symptom in
+the report: per-connection pacing explains "more REQs on one connection
+don't help" and "throughput scales with connections" just as well as a
+client-side serial stage would, and "CPU idle" is what a network wall looks
+like.
+
+Implications for the proposed parallel-parse pipeline:
+
+- It will NOT lift the reported 4k/s ceiling on relays with this pacing; the
+  proven lever is **more connections** (created_at- or id-range sharding).
+- It IS still worth having for the cases where the consumer genuinely
+  saturates: large-frame relays (32µs/frame mix) on phones (5–10× slower
+  cores → ~3–6k/s parse ceiling) being streamed by fast relays, and any
+  setup where verify/consume stays inline on the consumer.
+- The proposal's ordering constraints are correct and non-negotiable:
+  NEG-MSG/NEG-ERR handshake order, EOSE-only-after-its-EVENTs,
+  per-subscription EVENT order, OK/CLOSED/NOTICE/AUTH stream order. A
+  sequence-numbered reorder buffer after a parallel parse pool satisfies all
+  four (dispatch order = receive order).
+- The bounded-pipeline half of the proposal is worth doing regardless — the
+  UNLIMITED per-connection channel is the unbounded-memory risk under any
+  slow consumer (see below), and bounding it converts overload into TCP
+  backpressure. One caveat: blocking OkHttp's reader thread also delays its
+  PING/PONG handling, so sustained backpressure can trip relay-side ping
+  timeouts — the bound should be sized generously.
+
 ### Answer for "10M events from one relay, fastest"
 
 At nosfabrica's measured page cadence, one connection ≈ 3.7k events/s → 10M
