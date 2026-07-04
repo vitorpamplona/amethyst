@@ -65,7 +65,7 @@ class NostrServer(
     private val store: IEventStore,
     policyBuilder: () -> IRelayPolicy = { VerifyPolicy },
     parentContext: CoroutineContext = SupervisorJob(),
-    parallelVerify: Boolean = false,
+    private val parallelVerify: Boolean = false,
     negentropySettings: NegentropySettings = NegentropySettings.Default,
     listener: RelayServerListener = RelayServerListener.None,
     limits: RelayLimits? = null,
@@ -105,19 +105,32 @@ class NostrServer(
      * connection — e.g. a mirror worker streaming a trusted upstream
      * relay, or an import job. Routes through the same group-commit
      * [IngestQueue] and live fanout as a client EVENT publish, but skips
-     * the per-connection policy chain (there is no connection).
+     * the **entire** per-connection policy chain (there is no
+     * connection): no [VerifyPolicy], no allow/deny lists, no size
+     * limits. Callers own that screening — scope what may enter this
+     * path (e.g. geode's per-upstream mirror filters) accordingly.
      *
-     * [skipVerify] exempts the event from the parallel signature-verify
-     * hook — the relay-to-relay trust model: pass `true` only for events
-     * from an explicitly configured upstream that already verified them
-     * (Schnorr verify profiles at ~8% of busy ingest CPU). The default
-     * `false` keeps verify-everything semantics.
+     * [skipVerify] exempts the event from signature verification — the
+     * relay-to-relay trust model: pass `true` only for events from an
+     * explicitly configured upstream that already verified them (Schnorr
+     * verify profiles at ~8% of busy ingest CPU). The default `false`
+     * keeps verify-everything semantics regardless of configuration:
+     * when the [IngestQueue] hook is on ([parallelVerify]) it verifies
+     * there, otherwise this method verifies inline — without this, a
+     * server whose verification lives in the (bypassed) policy chain
+     * would silently ingest forgeries.
      */
     suspend fun ingest(
         event: Event,
         skipVerify: Boolean = false,
         onComplete: (IEventStore.InsertOutcome) -> Unit,
-    ) = liveStore.submit(event, skipVerify, onComplete)
+    ) {
+        if (!skipVerify && !parallelVerify && !event.verify()) {
+            onComplete(IEventStore.InsertOutcome.Rejected("invalid: bad signature or id"))
+            return
+        }
+        liveStore.submit(event, skipVerify, onComplete)
+    }
 
     init {
         // Deferred-FTS catch-up worker: tokenizes in the gaps between

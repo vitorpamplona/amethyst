@@ -59,12 +59,15 @@ class NostrServerIngestTest {
             sig = "f".repeat(128),
         )
 
-    private fun createServer(dispatcher: CoroutineDispatcher): NostrServer =
+    private fun createServer(
+        dispatcher: CoroutineDispatcher,
+        parallelVerify: Boolean = true,
+    ): NostrServer =
         NostrServer(
             store = EventStore(null),
             policyBuilder = { EmptyPolicy },
             parentContext = dispatcher,
-            parallelVerify = true,
+            parallelVerify = parallelVerify,
         )
 
     private suspend fun NostrServer.ingestOutcome(
@@ -113,6 +116,32 @@ class NostrServerIngestTest {
             assertEquals(
                 IEventStore.InsertOutcome.Accepted,
                 server.ingestOutcome(signedEvent("via trust"), skipVerify = true),
+            )
+
+            server.close()
+        }
+
+    @Test
+    fun forgedEventIsRejectedEvenWithoutTheQueueVerifyHook() =
+        runTest {
+            // With parallelVerify = false the IngestQueue has no verify
+            // hook AND ingest() bypasses the policy chain where
+            // VerifyPolicy would live — the inline fallback is the only
+            // thing standing between an untrusted mirror and forgeries.
+            val server = createServer(UnconfinedTestDispatcher(testScheduler), parallelVerify = false)
+
+            val outcome = server.ingestOutcome(forgedEvent(), skipVerify = false)
+            assertTrue(outcome is IEventStore.InsertOutcome.Rejected)
+            assertTrue(outcome.reason.contains("signature"))
+
+            // The trust switch and valid events still work on this config.
+            assertEquals(
+                IEventStore.InsertOutcome.Accepted,
+                server.ingestOutcome(forgedEvent(2), skipVerify = true),
+            )
+            assertEquals(
+                IEventStore.InsertOutcome.Accepted,
+                server.ingestOutcome(signedEvent(), skipVerify = false),
             )
 
             server.close()
