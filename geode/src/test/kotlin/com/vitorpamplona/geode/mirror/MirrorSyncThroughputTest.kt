@@ -22,10 +22,10 @@ package com.vitorpamplona.geode.mirror
 
 import com.vitorpamplona.geode.KtorRelay
 import com.vitorpamplona.geode.RelayEngine
-import com.vitorpamplona.geode.RelayIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
@@ -52,7 +52,18 @@ class MirrorSyncThroughputTest {
     // geode's real relay config (deferred FTS, live negentropy index) — not the
     // default EventStore(null), whose synchronous FTS tokenization on every
     // insert would dominate ingest and misrepresent the sync rate.
-    private val downstreamStore = EventStore(dbName = null, indexStrategy = RelayIndexingStrategy)
+    // `-DsyncLiveIndex=false` disables the live negentropy index to isolate its
+    // O(n)-insert cost during out-of-order backfill.
+    private val liveIndex = System.getProperty("syncLiveIndex")?.toBoolean() ?: true
+    private val strategy =
+        DefaultIndexingStrategy(
+            indexEventsByCreatedAtAlone = true,
+            indexEventsByPubkeyAlone = true,
+            indexFullTextSearch = true,
+            deferFullTextSearchIndexing = true,
+            maintainLiveNegentropyIndex = liveIndex,
+        )
+    private val downstreamStore = EventStore(dbName = null, indexStrategy = strategy)
     private val downstream =
         RelayEngine(url = "ws://127.0.0.1:7899/".normalizeRelayUrl(), store = downstreamStore, parallelVerify = true)
 
@@ -106,7 +117,17 @@ class MirrorSyncThroughputTest {
                 sourceUrl = externalUrl
                 println("─ MirrorSyncThroughput: mirroring EXTERNAL source $externalUrl, expect $expect ─")
             } else {
-                val store = EventStore(dbName = null, indexStrategy = RelayIndexingStrategy).also { upstreamStore = it }
+                // Source is infrastructure (serves the REQ); keep its preload
+                // fast by not maintaining the live index here.
+                val srcStrategy =
+                    DefaultIndexingStrategy(
+                        indexEventsByCreatedAtAlone = true,
+                        indexEventsByPubkeyAlone = true,
+                        indexFullTextSearch = true,
+                        deferFullTextSearchIndexing = true,
+                        maintainLiveNegentropyIndex = false,
+                    )
+                val store = EventStore(dbName = null, indexStrategy = srcStrategy).also { upstreamStore = it }
                 val now = TimeUtils.now()
                 val sig = "f".repeat(128)
                 val batch = ArrayList<Event>(10_000)
