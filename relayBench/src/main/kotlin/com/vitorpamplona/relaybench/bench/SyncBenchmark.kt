@@ -264,6 +264,38 @@ object SyncBenchmark {
         val identicalA = reconcile(urlA, effective, http)
         val identicalB = reconcile(urlB, effective, http)
 
+        // Diagnostic: when a side didn't converge to `effective`, name the
+        // events it's missing (present in the reference, absent from the
+        // relay) by kind — that identifies the ingest-semantics mismatch
+        // (NIP-09 deletion / NIP-40 expiration / validation) rather than
+        // leaving a bare "did not converge". `haveIds` are ids the initiator
+        // (holding `effective`) has that the server lacks.
+        fun reportMissing(
+            serverName: String,
+            r: NegotiationResult,
+        ) {
+            val missing = r.haveIds.mapNotNull { byId[it] }
+            if (missing.isEmpty()) return
+            val byKind =
+                missing
+                    .groupingBy { it.kind }
+                    .eachCount()
+                    .entries
+                    .sortedByDescending { it.value }
+            log("    ⚠ $serverName is missing ${r.haveIds.size} events the reference set has:")
+            log("      by kind: " + byKind.joinToString(" ") { "k${it.key}:${it.value}" })
+            missing.take(5).forEach { e ->
+                val tagKeys =
+                    e.tags
+                        .mapNotNull { it.getOrNull(0) }
+                        .distinct()
+                        .joinToString(",")
+                log("      e.g. kind=${e.kind} created_at=${e.createdAt} id=${e.id.take(12)}… tags=[$tagKeys]")
+            }
+        }
+        reportMissing(nameA, identicalA)
+        reportMissing(nameB, identicalB)
+
         // 4. Heartbeat: same reconcile again, immediately, no writes in
         // between — measures whether the server keeps its reconciliation
         // structure warm across NEG-OPENs.
