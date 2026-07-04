@@ -167,6 +167,16 @@ class LocalRelayStoreHydrationTest {
 
             val cache = DesktopLocalCache()
             val store = newStore()
+
+            // Pin a strong reference to the followee's User for the duration of the
+            // test. DesktopLocalCache stores Users in a WeakReference-backed cache
+            // (LargeSoftCache), and a metadata-only followed user has no Note pointing
+            // at it, so nothing else keeps it strongly reachable. Without this pin a GC
+            // landing between hydrate() and the assertions below could evict the user
+            // and flake the test. In the running app followed users stay reachable via
+            // live account/UI state.
+            val pinnedFollowee = cache.getOrCreateUser(followee.pubKey.toHexKey())
+
             try {
                 store.hydrate(cache)
             } finally {
@@ -184,6 +194,9 @@ class LocalRelayStoreHydrationTest {
                 actual = followeeUser.toBestDisplayName(),
                 message = "Phase 2 (kind:0) must run after phase 1 so metadata is applied to followed users",
             )
+            // Keep the pin alive past the assertions and confirm hydrate updated the
+            // same instance rather than a second copy.
+            assertEquals(pinnedFollowee, followeeUser, "hydrate must update the cached User in place")
         }
 
     @Test
