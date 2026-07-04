@@ -72,6 +72,12 @@ tasks.withType<Test>().configureEach {
     // NegentropyServerReconcileBenchmark opt-in + sizing.
     System.getProperty("negServerBench")?.let { systemProperty("negServerBench", it) }
     System.getProperty("negBenchN")?.let { systemProperty("negBenchN", it) }
+    // MirrorSyncThroughputTest sizing + external-source opt-in.
+    System.getProperty("syncN")?.let { systemProperty("syncN", it) }
+    System.getProperty("syncExpect")?.let { systemProperty("syncExpect", it) }
+    System.getProperty("syncSourceUrl")?.let { systemProperty("syncSourceUrl", it) }
+    System.getProperty("syncLiveIndex")?.let { systemProperty("syncLiveIndex", it) }
+    System.getProperty("syncBackfillSeconds")?.let { systemProperty("syncBackfillSeconds", it) }
     maxHeapSize = System.getProperty("testHeap") ?: maxHeapSize
     // Opt-in JFR profiling (-PnegProfile=/tmp/neg.jfr).
     (project.findProperty("negProfile") as? String)?.let {
