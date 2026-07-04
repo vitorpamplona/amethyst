@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.MergeQueryExecutor
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.QueryBuilder
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.explainQuery
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.coroutines.runBlocking
@@ -173,9 +175,44 @@ class FollowFeedReadBenchmark {
                         println("    %-8s ERROR: %s".format(name, e.message?.take(80)))
                     }
                 }
+                // The app-level k-way merge is not a SQL string, so time it directly.
+                try {
+                    val (n, ms) = timeMerge(store, authors)
+                    val streams = 2 * authors.size
+                    println("    %-8s %6.1f ms  (%d rows)  k-way merge, %d streams".format("merge", ms, n, streams))
+                } catch (e: Exception) {
+                    println("    %-8s ERROR: %s".format("merge", e.message?.take(80)))
+                }
             }
             store.close()
         }
+
+    private fun timeMerge(
+        store: EventStore,
+        authors: List<String>,
+    ): Pair<Int, Double> {
+        val filter =
+            QueryBuilder.FilterWithDTags(
+                authors = authors,
+                kinds = listOf(1, 6),
+                limit = 500,
+            )
+
+        fun run() =
+            runBlocking {
+                store.store.pool.useReader { c ->
+                    var n = 0
+                    MergeQueryExecutor.run(c, filter) { n++ }
+                    n
+                }
+            }
+        repeat(3) { run() }
+        val runs = 10
+        val start = System.nanoTime()
+        var got = 0
+        repeat(runs) { got = run() }
+        return got to (System.nanoTime() - start) / 1e6 / runs
+    }
 
     private fun timeRaw(
         store: EventStore,

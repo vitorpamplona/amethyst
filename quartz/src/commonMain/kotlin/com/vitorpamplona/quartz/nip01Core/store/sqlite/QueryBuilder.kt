@@ -44,24 +44,52 @@ class QueryBuilder(
     fun <T : Event> query(
         filter: Filter,
         db: SQLiteConnection,
-    ): List<T> = db.runQuery(toSql(filter, hasher(db)))
+    ): List<T> {
+        val merge = filter.toFilterWithDTags()
+        if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
+            val out = ArrayList<T>(merge.limit!!)
+            MergeQueryExecutor.run(db, merge) { out.add(it.toEvent()) }
+            return out
+        }
+        return db.runQuery(toSql(filter, hasher(db)))
+    }
 
     fun <T : Event> query(
         filter: Filter,
         db: SQLiteConnection,
         onEach: (T) -> Unit,
-    ) = db.runQuery(toSql(filter, hasher(db)), onEach)
+    ) {
+        val merge = filter.toFilterWithDTags()
+        if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
+            MergeQueryExecutor.run(db, merge) { onEach(it.toEvent()) }
+            return
+        }
+        db.runQuery(toSql(filter, hasher(db)), onEach)
+    }
 
+    // A single-filter list is the home-feed REQ shape — route it through the
+    // single-filter path so the k-way merge (MergeQueryExecutor) applies.
     fun <T : Event> query(
         filters: List<Filter>,
         db: SQLiteConnection,
-    ): List<T> = db.runQuery(toSql(filters, hasher(db)))
+    ): List<T> =
+        if (filters.size == 1) {
+            query(filters[0], db)
+        } else {
+            db.runQuery(toSql(filters, hasher(db)))
+        }
 
     fun <T : Event> query(
         filters: List<Filter>,
         db: SQLiteConnection,
         onEach: (T) -> Unit,
-    ) = db.runQuery(toSql(filters, hasher(db)), onEach)
+    ) {
+        if (filters.size == 1) {
+            query(filters[0], db, onEach)
+        } else {
+            db.runQuery(toSql(filters, hasher(db)), onEach)
+        }
+    }
 
     // ---------------------------
     // Raw methods for performance
@@ -69,24 +97,50 @@ class QueryBuilder(
     fun rawQuery(
         filter: Filter,
         db: SQLiteConnection,
-    ): List<RawEvent> = db.runRawQuery(toSql(filter, hasher(db)))
+    ): List<RawEvent> {
+        val merge = filter.toFilterWithDTags()
+        if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
+            val out = ArrayList<RawEvent>(merge.limit!!)
+            MergeQueryExecutor.run(db, merge) { out.add(it.toRawEvent()) }
+            return out
+        }
+        return db.runRawQuery(toSql(filter, hasher(db)))
+    }
 
     fun rawQuery(
         filter: Filter,
         db: SQLiteConnection,
         onEach: (RawEvent) -> Unit,
-    ) = db.runRawQuery(toSql(filter, hasher(db)), onEach)
+    ) {
+        val merge = filter.toFilterWithDTags()
+        if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
+            MergeQueryExecutor.run(db, merge) { onEach(it.toRawEvent()) }
+            return
+        }
+        db.runRawQuery(toSql(filter, hasher(db)), onEach)
+    }
 
     fun rawQuery(
         filters: List<Filter>,
         db: SQLiteConnection,
-    ): List<RawEvent> = db.runRawQuery(toSql(filters, hasher(db)))
+    ): List<RawEvent> =
+        if (filters.size == 1) {
+            rawQuery(filters[0], db)
+        } else {
+            db.runRawQuery(toSql(filters, hasher(db)))
+        }
 
     fun rawQuery(
         filters: List<Filter>,
         db: SQLiteConnection,
         onEach: (RawEvent) -> Unit,
-    ) = db.runRawQuery(toSql(filters, hasher(db)), onEach)
+    ) {
+        if (filters.size == 1) {
+            rawQuery(filters[0], db, onEach)
+        } else {
+            db.runRawQuery(toSql(filters, hasher(db)), onEach)
+        }
+    }
 
     // -----------
     // Debug Tools
