@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store
 
+import com.vitorpamplona.negentropy.storage.IStorage
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -151,6 +152,18 @@ interface IEventStore : AutoCloseable {
             all
         }
     }
+
+    /**
+     * Sealed negentropy storage of the store's FULL set from an
+     * always-current in-memory index — the fast path for NEG-OPENs whose
+     * filter matches everything, skipping [snapshotIdsForNegentropy]'s
+     * scan and the O(n log n) seal. Returns `null` when the store keeps
+     * no such index (the default; see
+     * [com.vitorpamplona.quartz.nip01Core.store.sqlite.IndexingStrategy.maintainLiveNegentropyIndex])
+     * or the set exceeds [maxEntries] — callers fall back to the scan
+     * path either way.
+     */
+    suspend fun liveNegentropySnapshot(maxEntries: Int): IStorage? = null
 
     /**
      * True when NIP-50 tokenization is deferred and something must drive

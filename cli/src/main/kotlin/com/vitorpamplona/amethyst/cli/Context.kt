@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
@@ -111,7 +112,7 @@ class Context(
     val identity: Identity,
     val state: RunState,
 ) : AutoCloseable {
-    private val okhttp = OkHttpClient.Builder().build()
+    private val okhttp = OkHttpClient.Builder().socketFactory(TcpNoDelaySocketFactory).build()
 
     val client: NostrClient =
         NostrClient(

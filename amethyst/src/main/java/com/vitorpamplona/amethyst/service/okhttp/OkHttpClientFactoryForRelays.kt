@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketFactory
 import com.vitorpamplona.quartz.utils.Log
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
@@ -57,6 +58,12 @@ class OkHttpClientFactoryForRelays(
         OkHttpClient
             .Builder()
             .dispatcher(myDispatcher)
+            // TCP_NODELAY: a CLOSE (never answered by relays) followed by a
+            // REQ — every feed switch — otherwise nagles the REQ behind the
+            // unACKed CLOSE for the peer's delayed-ACK window (~40 ms+).
+            // See quartz TcpNoDelaySocketFactory. Direct connections only;
+            // the Tor SOCKS path is unaffected.
+            .socketFactory(TcpNoDelaySocketFactory)
             .dns(dns)
             .eventListenerFactory(DnsInvalidatingEventListener.Factory(dns))
             .followRedirects(true)

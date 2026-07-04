@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.geode.config
 
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -44,6 +47,130 @@ class StaticConfigTest {
     fun verifySignaturesCanBeExplicitlyDisabled() {
         val c = StaticConfig.fromToml("[options]\nverify_signatures = false")
         assertEquals(false, c.options.verify_signatures)
+    }
+
+    @Test
+    fun parsesDatabaseTuningKnobs() {
+        val toml =
+            """
+            [database]
+            in_memory = false
+            file = "/tmp/x.db"
+            readers = 8
+            mmap_size = 268435456
+            temp_store_memory = true
+            optimize_interval_seconds = 3600
+            """.trimIndent()
+
+        val c = StaticConfig.fromToml(toml)
+
+        assertEquals(8, c.database.readers)
+        assertEquals(268435456L, c.database.mmap_size)
+        assertEquals(true, c.database.temp_store_memory)
+        assertEquals(3600L, c.database.optimize_interval_seconds)
+
+        // And all knobs default to off/null so plain configs are untouched.
+        val d = StaticConfig.fromToml("")
+        assertEquals(null, d.database.readers)
+        assertEquals(null, d.database.mmap_size)
+        assertEquals(false, d.database.temp_store_memory)
+        assertEquals(null, d.database.optimize_interval_seconds)
+    }
+
+    @Test
+    fun mirrorSectionDefaultsToEmpty() {
+        assertTrue(StaticConfig.fromToml("").mirror.isEmpty())
+    }
+
+    @Test
+    fun validateRejectsNonPositiveReaders() {
+        assertFailsWith<IllegalArgumentException> {
+            StaticConfig.fromToml("[database]\nreaders = 0").validate()
+        }
+        assertFailsWith<IllegalArgumentException> {
+            StaticConfig.fromToml("[database]\nreaders = -1").validate()
+        }
+        // A sane pool passes.
+        StaticConfig.fromToml("[database]\nreaders = 1").validate()
+        // Unset passes (quartz default applies).
+        StaticConfig.fromToml("").validate()
+    }
+
+    @Test
+    fun validateRejectsNonPositiveOptimizeInterval() {
+        assertFailsWith<IllegalArgumentException> {
+            StaticConfig.fromToml("[database]\noptimize_interval_seconds = 0").validate()
+        }
+        assertFailsWith<IllegalArgumentException> {
+            StaticConfig.fromToml("[database]\noptimize_interval_seconds = -5").validate()
+        }
+        StaticConfig.fromToml("[database]\noptimize_interval_seconds = 3600").validate()
+    }
+
+    @Test
+    fun mirrorFilterValidatorRejectsTyposAndScalars() {
+        val url = "wss://up.example/"
+
+        // Unknown key (a typo) — must fail, not silently widen scope.
+        assertFailsWith<IllegalArgumentException> {
+            MirrorFilterValidator.validate(url, """{"kindss":[4]}""")
+        }
+        // List field given a scalar.
+        assertFailsWith<IllegalArgumentException> {
+            MirrorFilterValidator.validate(url, """{"authors":"abc"}""")
+        }
+        // Not an object.
+        assertFailsWith<IllegalArgumentException> {
+            MirrorFilterValidator.validate(url, """["kinds",1]""")
+        }
+        // Malformed JSON.
+        assertFailsWith<IllegalArgumentException> {
+            MirrorFilterValidator.validate(url, """{"kinds":[1,}""")
+        }
+
+        // Valid shapes pass: recognized scalar + array + tag keys.
+        MirrorFilterValidator.validate(url, """{"kinds":[0,1,3],"#t":["nostr"],"since":123,"limit":5,"search":"x"}""")
+        MirrorFilterValidator.validate(url, """{"&p":["abc"]}""")
+        MirrorFilterValidator.validate(url, "{}")
+    }
+
+    @Test
+    fun mirrorFilterJsonParsesToANip01Filter() {
+        // The exact parse Main.kt runs on [[mirror]].filter at boot.
+        val f = OptimizedJsonMapper.fromJsonTo<Filter>("""{"kinds":[0,1],"#t":["nostr"],"since":123,"limit":5}""")
+        assertEquals(listOf(0, 1), f.kinds)
+        assertEquals(listOf("nostr"), f.tags?.get("t"))
+        assertEquals(123L, f.since)
+        assertEquals(5, f.limit)
+    }
+
+    @Test
+    fun parsesMirrorUpstreams() {
+        val toml =
+            """
+            [[mirror]]
+            url = "wss://trusted.upstream.example/"
+            trusted = true
+            backfill_seconds = 3600
+            filter = '{"kinds":[0,1,3],"#t":["nostr"]}'
+
+            [[mirror]]
+            url = "wss://public.upstream.example/"
+            """.trimIndent()
+
+        val c = StaticConfig.fromToml(toml)
+
+        assertEquals(2, c.mirror.size)
+        assertEquals("wss://trusted.upstream.example/", c.mirror[0].url)
+        assertEquals(true, c.mirror[0].trusted)
+        assertEquals(3600L, c.mirror[0].backfill_seconds)
+        assertEquals("""{"kinds":[0,1,3],"#t":["nostr"]}""", c.mirror[0].filter)
+        // Trust and scoping are opt-in per upstream: the default is
+        // mirror-everything-but-verify.
+        assertEquals("wss://public.upstream.example/", c.mirror[1].url)
+        assertEquals(false, c.mirror[1].trusted)
+        assertEquals(0L, c.mirror[1].backfill_seconds)
+        assertEquals(null, c.mirror[1].filter)
     }
 
     @Test

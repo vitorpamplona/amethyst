@@ -82,15 +82,18 @@ class DeletionRequestModule(
     fun insert(
         event: Event,
         db: SQLiteConnection,
-    ) {
-        if (event is DeletionEvent) {
-            val idValues = event.deleteEventIds()
-            val addresses = event.deleteAddresses()
+    ): Int {
+        if (event !is DeletionEvent) return 0
 
-            deleteSQL(event.pubKey, event.createdAt, idValues, addresses, hasher(db)).forEach { delete ->
-                db.execSQL(delete.sql, delete.args)
-            }
+        val idValues = event.deleteEventIds()
+        val addresses = event.deleteAddresses()
+
+        var deletedRows = 0
+        deleteSQL(event.pubKey, event.createdAt, idValues, addresses, hasher(db)).forEach { delete ->
+            db.execSQL(delete.sql, delete.args)
+            deletedRows += db.changes()
         }
+        return deletedRows
     }
 
     /**

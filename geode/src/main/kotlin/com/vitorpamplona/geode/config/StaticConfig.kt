@@ -45,6 +45,8 @@ data class StaticConfig(
     val authorization: AuthorizationSection = AuthorizationSection(),
     val admin: AdminSection = AdminSection(),
     val negentropy: NegentropySection = NegentropySection(),
+    /** `[[mirror]]` entries — upstream relays this relay streams from. */
+    val mirror: List<MirrorSection> = emptyList(),
 ) {
     fun resolveInfo(fullTextSearch: Boolean = true): RelayInfo =
         RelayInfo(
@@ -104,6 +106,30 @@ data class StaticConfig(
         /** True keeps an in-memory SQLite db (default — events vanish on restart). */
         val in_memory: Boolean = true,
         val file: String? = null,
+        /**
+         * Reader-connection pool size. `null` keeps quartz's default (4).
+         * Only meaningful for file-backed stores; in-memory databases
+         * share the single writer connection regardless.
+         */
+        val readers: Int? = null,
+        /**
+         * `PRAGMA mmap_size` in bytes, e.g. `268435456` for 256 MiB.
+         * Maps the database file into memory so reads skip the pread
+         * syscall + page-cache copy. `null` keeps SQLite's default (off).
+         */
+        val mmap_size: Long? = null,
+        /**
+         * `PRAGMA temp_store = MEMORY` — keeps sort/temp b-trees for
+         * large queries in RAM instead of temp files.
+         */
+        val temp_store_memory: Boolean = false,
+        /**
+         * Refresh query-planner statistics (`PRAGMA analysis_limit;
+         * PRAGMA optimize`) every this many seconds. Incremental and
+         * usually a no-op, but keeps the planner from drifting onto the
+         * wrong index as the corpus grows/changes shape. `null` = never.
+         */
+        val optimize_interval_seconds: Long? = null,
     )
 
     data class OptionsSection(
@@ -151,6 +177,15 @@ data class StaticConfig(
         val frame_size_limit: Long = 500_000L,
         val max_sync_events: Int = 1_000_000,
         val max_sessions_per_connection: Int = 200,
+        /**
+         * Keep an always-current in-memory `(created_at, id)` set so
+         * full-corpus NEG-OPENs skip the table scan + seal (strfry
+         * parity). ~140 B per stored event of heap; on by default. Only
+         * built once the first full-corpus NEG-OPEN arrives, and only
+         * when the corpus fits `max_sync_events` (an over-cap corpus
+         * answers NEG-ERR from a capped scan instead).
+         */
+        val live_index: Boolean = true,
     )
 
     data class AuthorizationSection(
@@ -158,6 +193,46 @@ data class StaticConfig(
         val pubkey_blacklist: List<String> = emptyList(),
         val kind_whitelist: List<Int> = emptyList(),
         val kind_blacklist: List<Int> = emptyList(),
+    )
+
+    /**
+     * One upstream relay to mirror, declared as a `[[mirror]]` TOML array
+     * entry. The relay dials [url] itself, subscribes to everything newer
+     * than `now - backfill_seconds`, and ingests the stream through the
+     * same group-commit writer as client publishes (reconnects and
+     * re-subscribes automatically).
+     *
+     * [trusted] is the relay-to-relay trust switch (strfry's model):
+     * `true` skips Schnorr signature verification for events arriving on
+     * this connection — sound only when the upstream verifies its own
+     * ingest, which is why it defaults to `false` (mirror-but-verify).
+     * The identity being trusted is the URL this relay dialed (TLS-
+     * authenticated for `wss://`), never anything a peer claims.
+     */
+    data class MirrorSection(
+        val url: String,
+        val trusted: Boolean = false,
+        /** How far back the initial subscription reaches. 0 = live-only. */
+        val backfill_seconds: Long = 0L,
+        /**
+         * Optional NIP-01 filter as a JSON object string (strfry-router
+         * parity), e.g. `'{"kinds":[0,1,3],"#t":["nostr"]}'`. Scopes what
+         * this upstream is asked for AND what it is allowed to deliver —
+         * every received event is re-checked against it before ingest, so
+         * even a trusted upstream can't push events outside the declared
+         * scope. `since` is managed by the mirror (see [backfill_seconds])
+         * and `limit` is transport-level, so both are ignored if present.
+         * Omitted = mirror everything. For several disjoint filters, add
+         * several `[[mirror]]` entries with the same url.
+         */
+        val filter: String? = null,
+        /**
+         * Flow direction, strfry-router's `dir`: `"down"` (pull from the
+         * upstream — the default), `"up"` (push this relay's matching
+         * events to it), or `"both"`. Both-way mirrors suppress echoes
+         * (an event pulled down is not pushed straight back).
+         */
+        val dir: String = "down",
     )
 
     /**
@@ -177,6 +252,25 @@ data class StaticConfig(
          */
         val state_file: String? = null,
     )
+
+    /**
+     * Boot-time sanity check for values the TOML types can't constrain.
+     * Throws [IllegalArgumentException] (fail-loud at startup) rather
+     * than letting a nonsensical knob degrade the running relay — a zero
+     * reader pool hangs every query, a non-positive optimize interval
+     * busy-loops the writer. Call once after parsing, before building
+     * the store.
+     */
+    fun validate() {
+        database.readers?.let {
+            require(it >= 1) { "[database].readers must be >= 1 (got $it); a 0/negative pool can never answer a query" }
+        }
+        database.optimize_interval_seconds?.let {
+            require(it > 0) {
+                "[database].optimize_interval_seconds must be > 0 (got $it); a non-positive interval busy-loops PRAGMA optimize under the writer mutex"
+            }
+        }
+    }
 
     companion object {
         private val mapper = tomlMapper { }

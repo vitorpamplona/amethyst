@@ -33,12 +33,12 @@ listing (including archived plans), open that folder's `README.md`.
 | amethyst | 21 | 19 | 1 | 1 | 0 | [amethyst/plans](amethyst/plans/README.md) |
 | nestsClient | 26 | 23 | 1 | 2 | 0 | [nestsClient/plans](nestsClient/plans/README.md) |
 | desktopApp | 13 | 10 | 2 | 1 | 0 | [desktopApp/plans](desktopApp/plans/README.md) |
-| quartz | 9 | 7 | 0 | 2 | 0 | [quartz/plans](quartz/plans/README.md) |
+| quartz | 10 | 7 | 0 | 3 | 0 | [quartz/plans](quartz/plans/README.md) |
 | commons | 6 | 2 | 2 | 2 | 0 | [commons/plans](commons/plans/README.md) |
 | cli | 6 | 5 | 1 | 0 | 0 | [cli/plans](cli/plans/README.md) |
 | quic | 4 | 3 | 0 | 0 | 1 | [quic/plans](quic/plans/README.md) |
 | quic/interop | 1 | 1 | 0 | 0 | 0 | [quic/interop/plans](quic/interop/plans/README.md) |
-| geode | 4 | 4 | 0 | 0 | 0 | [geode/plans](geode/plans/README.md) |
+| geode | 5 | 4 | 0 | 0 | 0 | [geode/plans](geode/plans/README.md) |
 | docs (frozen) | 52 | 48 | 2 | 0 | 2 | [docs/plans](docs/plans/README.md) |
 
 ## Live work (not shipped)
@@ -67,6 +67,7 @@ them under each folder's `archive/` via the per-module index above.
 | amethyst | [napplet-inter-applet](amethyst/plans/2026-06-20-napplet-inter-applet.md) | NAP-INC / NAP-INTENT inter-applet messaging; prerequisites (multi-applet hosting, archetype registry, `MESSAGING` capability) not built. |
 | quartz | [local-headers-explorer](quartz/plans/2026-05-08-local-headers-explorer.md) | Headers-only Bitcoin P2P client to verify NIP-03 OTS attestations without a trusted block explorer. |
 | quartz | [giftwrap-deletion-requests](quartz/plans/2026-06-12-giftwrap-deletion-requests.md) | Let a recipient-authored kind-5 delete/block a gift wrap (kind 1059) addressed to them. |
+| quartz | [incremental-negentropy-storage](quartz/plans/2026-07-03-incremental-negentropy-storage.md) | Always-current (created_at, id) index so cold NEG-OPENs stop paying a full scan + seal. |
 | commons | [event-renderer](commons/plans/2026-04-21-event-renderer.md) | Cross-platform UI-agnostic `RenderedEvent` subsystem shared by Amy, Desktop, Android; not started. |
 | commons | [amethyst-to-commons-migration](commons/plans/2026-05-30-amethyst-to-commons-migration.md) | Roadmap to move shared `amethyst` Android code into `commons`; keystone `Account`/`LocalCache` extraction not begun. |
 | desktopApp | [embedded-wallet-phase2-research](desktopApp/plans/2026-05-21-embedded-wallet-phase2-research.md) | Research for an embedded self-custodial Lightning wallet (Breez/ldk-node/lightning-kmp); parked, no code. |

@@ -21,10 +21,17 @@
 package com.vitorpamplona.geode
 
 import com.vitorpamplona.geode.config.BannedEntry
+import com.vitorpamplona.geode.config.MirrorFilterValidator
 import com.vitorpamplona.geode.config.RuntimeConfig
 import com.vitorpamplona.geode.config.RuntimeConfigData
 import com.vitorpamplona.geode.config.StaticConfig
+import com.vitorpamplona.geode.mirror.MirrorDirection
+import com.vitorpamplona.geode.mirror.MirrorUpstream
+import com.vitorpamplona.geode.mirror.MirrorWorker
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
@@ -33,9 +40,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.OptionalAuthPoli
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RejectFutureEventsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyAuthOnlyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
-import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
 
 /**
@@ -85,6 +98,7 @@ fun main(args: Array<String>) {
             .opt("--config")
             ?.let { StaticConfig.fromFile(File(it)) }
             ?: StaticConfig()
+    config.validate()
 
     val host = a.opt("--host") ?: config.network.host
     val port = a.opt("--port")?.toInt() ?: config.network.port
@@ -122,7 +136,21 @@ fun main(args: Array<String>) {
         cliInfoFile?.let { RelayInfo.fromFile(it) }
             ?: config.resolveInfo(fullTextSearch)
 
-    val store: IEventStore = EventStore(dbName = dbFile, relay = advertisedUrl, indexStrategy = relayIndexingStrategy(fullTextSearch))
+    // Deployment tuning from `[database]` — off by default; the quartz
+    // library defaults stay tuned for the app-side stores.
+    val extraPragmas =
+        buildList {
+            config.database.mmap_size?.let { add("PRAGMA mmap_size = $it;") }
+            if (config.database.temp_store_memory) add("PRAGMA temp_store = MEMORY;")
+        }
+    val store =
+        EventStore(
+            dbName = dbFile,
+            relay = advertisedUrl,
+            indexStrategy = relayIndexingStrategy(fullTextSearch, config.negentropy.live_index),
+            numReaders = config.database.readers ?: 4,
+            extraPragmas = extraPragmas,
+        )
 
     val policyBuilder: () -> IRelayPolicy = {
         composePolicy(config, advertisedUrl, requireAuth, optionalAuth, verifySigs, parallelVerify)
@@ -172,10 +200,99 @@ fun main(args: Array<String>) {
             callGroupSize = config.network.call_group_size,
         ).start()
 
+    // `[[mirror]]` upstreams: dial each configured relay and stream its
+    // events into the local store. `trusted = true` entries skip Schnorr
+    // verification for that connection (relay-to-relay trust) — only
+    // meaningful while verify is on; with --no-verify nothing verifies
+    // anyway. Never mirror ourselves: a self-URL would echo every local
+    // publish back forever.
+    val upstreams =
+        config.mirror.map { m ->
+            // The optional scope filter is parsed eagerly so a malformed
+            // JSON object fails the boot, not the first delivery. Its
+            // since/limit are stripped: the mirror owns the time window
+            // (backfill_seconds) and never bounds the subscription.
+            val scope =
+                m.filter?.let { json ->
+                    // Strict-validate FIRST: the deserializer is tolerant
+                    // (unknown keys skipped, wrong-typed entries dropped),
+                    // so a typo like `{"kindss":[4]}` would silently parse
+                    // to an empty filter — widening a trusted upstream's
+                    // scope to the whole firehose. This filter is the
+                    // containment boundary for `trusted = true`, so a typo
+                    // must fail the boot, not the boundary.
+                    MirrorFilterValidator.validate(m.url, json)
+                    val parsed =
+                        try {
+                            OptimizedJsonMapper.fromJsonTo<Filter>(json)
+                        } catch (e: Exception) {
+                            throw IllegalArgumentException(
+                                "[[mirror]] filter for ${m.url} is not a valid NIP-01 filter object: $json",
+                                e,
+                            )
+                        }
+                    parsed.copy(since = null, limit = null)
+                }
+            val direction =
+                MirrorDirection.parse(m.dir)
+                    ?: throw IllegalArgumentException(
+                        "[[mirror]] dir for ${m.url} must be \"down\", \"up\" or \"both\" (got \"${m.dir}\")",
+                    )
+            MirrorUpstream(
+                url = m.url.normalizeRelayUrl(),
+                trusted = m.trusted,
+                backfillSeconds = m.backfill_seconds,
+                filter = scope,
+                direction = direction,
+            )
+        }
+    // Never mirror ourselves — a self-URL echoes every local publish
+    // back forever. Compare scheme-insensitively (ws:// vs wss:// for the
+    // same host is still us) and ignoring the trailing slash. This can't
+    // catch a public URL that resolves to this bind behind a proxy, nor a
+    // `--port 0` autobind, so it's a guardrail against the obvious typo,
+    // not a proof of non-self-reference.
+    val advertisedIdentity = advertisedUrl.displayUrl()
+    require(upstreams.none { it.url.displayUrl() == advertisedIdentity }) {
+        "[[mirror]] must not list this relay's own URL ($advertisedUrl)"
+    }
+    val mirror =
+        if (upstreams.isEmpty()) {
+            null
+        } else {
+            MirrorWorker(upstreams, relay.server).also { it.start() }
+        }
+
+    // Periodic query-planner statistics refresh (`PRAGMA optimize`).
+    // Incremental and usually a no-op; failures are swallowed — a missed
+    // refresh only means slightly staler planner stats until the next tick.
+    val maintenanceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    config.database.optimize_interval_seconds?.let { secs ->
+        maintenanceScope.launch {
+            while (true) {
+                delay(secs * 1000)
+                try {
+                    store.optimize()
+                } catch (e: CancellationException) {
+                    throw e // shutdown cancelled us; don't swallow it
+                } catch (e: Exception) {
+                    // A missed refresh only means slightly staler planner
+                    // stats until the next tick — log and keep the loop.
+                    // Errors (OOM, etc.) are NOT swallowed.
+                    println("PRAGMA optimize failed: ${e.message}")
+                }
+            }
+        }
+    }
+
     Runtime.getRuntime().addShutdownHook(
         Thread {
-            // Each step wrapped so a throw in `server.stop()` doesn't
-            // skip `relay.close()` (which closes the SQLite store).
+            // Each step wrapped so a throw in any stage doesn't skip
+            // `relay.close()` (which closes the SQLite store). The mirror
+            // and maintenance go first: stop touching the store before the
+            // queue and store beneath them shut down.
+            runCatching { maintenanceScope.cancel() }
+            runCatching { mirror?.close() }
             runCatching { server.stop() }
             runCatching { relay.close() }
         },
@@ -183,6 +300,10 @@ fun main(args: Array<String>) {
 
     println("geode listening on ${server.url}")
     println("NIP-11 info doc: curl -H 'Accept: application/nostr+json' http://$advertisedHost:$port$path")
+    if (upstreams.isNotEmpty()) {
+        val trusted = upstreams.count { it.trusted }
+        println("mirroring ${upstreams.size} upstream relay(s), $trusted trusted (signature verification skipped)")
+    }
 
     // Park the main thread; shutdown hook handles teardown.
     Thread.currentThread().join()

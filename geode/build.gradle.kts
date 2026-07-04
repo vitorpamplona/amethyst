@@ -85,6 +85,11 @@ dependencies {
     implementation(libs.jackson.module.kotlin)
     implementation(libs.kotlinx.serialization.json)
 
+    // Outbound WebSockets for the [[mirror]] upstream streams (quartz's
+    // BasicOkHttpWebSocket transport). Same OkHttp the rest of the repo
+    // already ships (Apache-2.0).
+    implementation(libs.okhttp)
+
     // Bundled SQLite driver — Relay's default in-memory EventStore creates
     // an in-memory DB at runtime.
     implementation(libs.androidx.sqlite.bundled.jvm)

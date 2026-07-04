@@ -40,21 +40,30 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
  *   per-event tokenization on ingest (relayBench measured it at roughly a
  *   quarter of write cost) at the price of `search` filters matching
  *   nothing — pair it with a NIP-11 doc that doesn't advertise 50.
+ * @param liveNegentropyIndex keep the always-current `(created_at, id)`
+ *   set that serves full-corpus NIP-77 NEG-OPENs without a scan + seal
+ *   (strfry answers those off its live tree; the scan+seal path measured
+ *   ~340 ms per cold open at 50k events). Costs ~140 B/event of JVM heap
+ *   (hex-string ids) and one indexed pre-SELECT per replaceable insert.
+ *   `[negentropy].live_index = false` turns it off.
  */
-fun relayIndexingStrategy(fullTextSearch: Boolean = true) =
-    DefaultIndexingStrategy(
-        indexEventsByCreatedAtAlone = true,
-        // Authors-only filters (no kinds) are relay-common — archives,
-        // migration tools. strfry maintains the same (pubkey, created_at)
-        // index unconditionally; without it the filter walks the whole
-        // time index.
-        indexEventsByPubkeyAlone = true,
-        indexFullTextSearch = fullTextSearch,
-        // Tokenize off the commit path; NostrServer drives the catch-up
-        // worker and search queries drain it first, so NIP-50 stays
-        // exactly as fresh while publishes stop paying for it.
-        deferFullTextSearchIndexing = fullTextSearch,
-    )
+fun relayIndexingStrategy(
+    fullTextSearch: Boolean = true,
+    liveNegentropyIndex: Boolean = true,
+) = DefaultIndexingStrategy(
+    indexEventsByCreatedAtAlone = true,
+    // Authors-only filters (no kinds) are relay-common — archives,
+    // migration tools. strfry maintains the same (pubkey, created_at)
+    // index unconditionally; without it the filter walks the whole
+    // time index.
+    indexEventsByPubkeyAlone = true,
+    indexFullTextSearch = fullTextSearch,
+    // Tokenize off the commit path; NostrServer drives the catch-up
+    // worker and search queries drain it first, so NIP-50 stays
+    // exactly as fresh while publishes stop paying for it.
+    deferFullTextSearchIndexing = fullTextSearch,
+    maintainLiveNegentropyIndex = liveNegentropyIndex,
+)
 
 /** Stock relay strategy — everything on, matching geode's defaults. */
 val RelayIndexingStrategy = relayIndexingStrategy()

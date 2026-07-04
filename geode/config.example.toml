@@ -46,6 +46,27 @@ path = "/"
 in_memory = false
 file = "/var/lib/geode/events.db"
 
+# NOTE: the four knobs below measured as pure noise in relayBench A/B
+# runs on 4-core container hardware at 50k events (see
+# geode/plans/2026-07-04-sqlite-knobs-ab.md) — their value is
+# hardware-dependent, so benchmark on YOUR box before enabling.
+#
+# Reader-connection pool size (file-backed stores only). Default 4.
+# readers = 4
+
+# PRAGMA mmap_size in bytes — maps the db file into memory so reads
+# skip the pread syscall. Off by default (SQLite default).
+# mmap_size = 268435456
+
+# PRAGMA temp_store = MEMORY — RAM instead of temp files for large
+# sorts. Off by default.
+# temp_store_memory = true
+
+# Refresh query-planner statistics (PRAGMA optimize) every N seconds.
+# Incremental and usually a no-op; keeps the planner from drifting
+# onto the wrong index as the corpus grows. Off by default.
+# optimize_interval_seconds = 3600
+
 [options]
 # Drop events whose Schnorr signature does not verify. Strongly
 # recommended for any relay accepting traffic from real clients.
@@ -85,6 +106,42 @@ require_auth = false
 # pubkey_blacklist = []
 # kind_whitelist = [0, 1, 3, 7, 1059, 30023]
 # kind_blacklist = [4]
+
+# Mirror upstream relays (strfry-router style, "down" direction): the
+# relay dials each [[mirror]] url, subscribes to everything newer than
+# now - backfill_seconds, and ingests the stream alongside client
+# publishes. Reconnects and re-subscribes automatically.
+#
+# `trusted = true` is the relay-to-relay trust switch: events from that
+# upstream skip Schnorr signature verification (the upstream already
+# verified its own ingest; re-verifying burns ~8% of ingest CPU). The
+# trusted identity is the URL *this* relay dialed — TLS-authenticated
+# for wss:// — so an inbound client can never claim it. Default false:
+# mirror-but-verify. Only trust relays you operate or whose ingest
+# discipline you'd stake your own db on.
+#
+# `filter` (optional) scopes an upstream, as a NIP-01 filter JSON
+# object — same idea as strfry-router's per-stream filter. It shapes
+# the REQ sent upstream AND every delivered event is re-checked
+# against it before ingest, so even a trusted upstream can only
+# inject events inside the declared scope. `since`/`limit` inside it
+# are ignored (backfill_seconds owns the time window). Omit to mirror
+# everything; for several disjoint scopes, repeat [[mirror]] with the
+# same url. The keys are validated at boot (a typo like `kindss` or a
+# scalar where an array belongs fails startup) precisely because this
+# filter is the trust boundary for `trusted = true`.
+#
+# `dir` (strfry-router parity) sets the flow direction: "down" pulls
+# from the upstream (default), "up" pushes this relay's matching
+# events to it, "both" does both with echo suppression so the two
+# directions don't ping-pong the same event.
+#
+# [[mirror]]
+# url = "wss://upstream.example.com/"
+# dir = "both"
+# trusted = true
+# backfill_seconds = 3600
+# filter = '{"kinds":[0,1,3,7],"#t":["nostr"]}'
 
 [admin]
 # NIP-86 relay management API. When `pubkeys` is non-empty, the relay

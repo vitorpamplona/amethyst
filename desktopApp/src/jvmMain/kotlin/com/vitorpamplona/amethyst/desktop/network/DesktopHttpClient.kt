@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -66,6 +67,9 @@ class DesktopHttpClient(
     private val directClient: OkHttpClient by lazy {
         OkHttpClient
             .Builder()
+            // TCP_NODELAY: keeps CLOSE-then-REQ bursts (feed switches) from
+            // nagling behind the unACKed CLOSE — see TcpNoDelaySocketFactory.
+            .socketFactory(TcpNoDelaySocketFactory)
             .connectionPool(sharedConnectionPool)
             .connectTimeout(BASE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(BASE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
@@ -150,6 +154,12 @@ class DesktopHttpClient(
         private val simpleClient: OkHttpClient by lazy {
             OkHttpClient
                 .Builder()
+                // Direct relay sockets opened before setInstance() should
+                // get the same TCP_NODELAY as directClient — see
+                // TcpNoDelaySocketFactory. (failClosedClient is SOCKS, and
+                // OkHttp bypasses the socket factory for SOCKS proxies, so
+                // it doesn't need this.)
+                .socketFactory(TcpNoDelaySocketFactory)
                 .connectTimeout(BASE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .readTimeout(BASE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .writeTimeout(BASE_TIMEOUT_SECONDS, TimeUnit.SECONDS)

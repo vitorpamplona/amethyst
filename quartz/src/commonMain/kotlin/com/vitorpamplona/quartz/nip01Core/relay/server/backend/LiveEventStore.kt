@@ -91,8 +91,23 @@ class LiveEventStore(
     override suspend fun submit(
         event: Event,
         onComplete: (IEventStore.InsertOutcome) -> Unit,
+    ) = submit(event, skipVerify = false, onComplete = onComplete)
+
+    /**
+     * [submit] variant for locally-originated traffic (mirror/sync
+     * workers rather than client connections). [skipVerify] exempts
+     * this event from the [IngestQueue]'s signature-verification hook —
+     * the relay-to-relay trust model: set it only for events streamed
+     * from a configured upstream relay that already verified them.
+     * Accepted events fan out to live subscribers exactly like a
+     * client publish.
+     */
+    suspend fun submit(
+        event: Event,
+        skipVerify: Boolean,
+        onComplete: (IEventStore.InsertOutcome) -> Unit,
     ) {
-        ingest.submit(event) { outcome ->
+        ingest.submit(event, skipVerify) { outcome ->
             if (outcome is IEventStore.InsertOutcome.Accepted) {
                 writeGeneration.addAndFetch(1L)
                 fanout(event)
@@ -366,6 +381,15 @@ class LiveEventStore(
         filters: List<Filter>,
         maxEntries: Int,
     ): IStorage? {
+        // Full-set NEG-OPENs — a single unconstrained filter, the shape
+        // relay-relay sync sends by default — are served from the store's
+        // always-current index when it maintains one: no scan, no
+        // O(n log n) seal, cold or not. `null` falls through to the scan
+        // path, which also owns the over-cap NEG-ERR detection.
+        if (filters.size == 1 && filters[0].isEmpty()) {
+            store.liveNegentropySnapshot(maxEntries)?.let { return it }
+        }
+
         val generation = writeGeneration.load()
         val key = filters.joinToString(" ") { it.toJson() } + " cap=$maxEntries"
         val now = TimeUtils.now()

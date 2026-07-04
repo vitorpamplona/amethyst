@@ -27,7 +27,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
@@ -115,9 +114,15 @@ class IngestQueue(
     /**
      * One outstanding ingest request: the event to insert plus the
      * callback the writer fires once the row's outcome is known.
+     * [skipVerify] exempts this row from the [verify] hook — the
+     * relay-to-relay trust model: set by local ingestion paths for
+     * events streamed from an explicitly configured upstream relay
+     * that already verified them (see
+     * [com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer.ingest]).
      */
     class Submission(
         val event: Event,
+        val skipVerify: Boolean,
         val onComplete: (IEventStore.InsertOutcome) -> Unit,
     )
 
@@ -159,11 +164,12 @@ class IngestQueue(
      */
     suspend fun submit(
         event: Event,
+        skipVerify: Boolean = false,
         onComplete: (IEventStore.InsertOutcome) -> Unit,
     ) {
         ensureWriterStarted()
         pending.addAndFetch(1)
-        incoming.send(Submission(event, onComplete))
+        incoming.send(Submission(event, skipVerify, onComplete))
     }
 
     private fun ensureWriterStarted() {
@@ -234,15 +240,26 @@ class IngestQueue(
      * configured (skip the stage entirely). For multi-event batches
      * each verify runs as its own `async(Default)` so they spread
      * across CPU cores; single-event batches short-circuit to a
-     * direct call to avoid coroutine-scope overhead.
+     * direct call to avoid coroutine-scope overhead. Rows flagged
+     * [Submission.skipVerify] (trusted publishers) pass without
+     * invoking the hook.
      */
     private suspend fun verifyBatch(batch: List<Submission>): BooleanArray? {
         val hook = verify ?: return null
-        if (batch.size == 1) return BooleanArray(1) { hook(batch[0].event) }
+        if (batch.size == 1) {
+            val sub = batch[0]
+            return BooleanArray(1) { sub.skipVerify || hook(sub.event) }
+        }
+        if (batch.all { it.skipVerify }) return BooleanArray(batch.size) { true }
         return coroutineScope {
             batch
-                .map { sub -> async(Dispatchers.Default) { hook(sub.event) } }
-                .awaitAll()
+                .map { sub ->
+                    if (sub.skipVerify) {
+                        null
+                    } else {
+                        async(Dispatchers.Default) { hook(sub.event) }
+                    }
+                }.map { it?.await() ?: true }
                 .toBooleanArray()
         }
     }

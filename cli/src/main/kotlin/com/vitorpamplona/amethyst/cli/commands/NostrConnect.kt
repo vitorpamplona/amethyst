@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
@@ -128,7 +129,7 @@ object NostrConnect {
         System.err.println("[nostrconnect] paste this into your signer within ${timeoutMs / 1000}s:")
         System.err.println(offer)
 
-        val okhttp = OkHttpClient.Builder().build()
+        val okhttp = OkHttpClient.Builder().socketFactory(TcpNoDelaySocketFactory).build()
         val client = NostrClient(websocketBuilder = BasicOkHttpWebSocket.Builder { okhttp })
         val incoming = Channel<NostrConnectEvent>(UNLIMITED)
         val subId = newSubId()
