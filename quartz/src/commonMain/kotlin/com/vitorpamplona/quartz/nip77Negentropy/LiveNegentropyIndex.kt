@@ -156,7 +156,22 @@ class LiveNegentropyIndex {
             if (!populated) return
             val at = search(entry)
             if (at >= 0) return
-            entries.add(-(at + 1), entry)
+            val insertionPoint = -(at + 1)
+            // Far-from-tail insert = bulk / out-of-order backfill (a mirror
+            // pulling history, an import). The O(n) array shift would make the
+            // whole run O(n²) — a 1M sync crawls once the list is big. Drop to
+            // the invalidate path instead: the index rebuilds in one O(n log n)
+            // pass on the next NEG-OPEN, so backfill costs O(1) per event here.
+            // Near-tail live traffic (created_at ≈ now, the common case) stays
+            // on the cheap incremental insert.
+            if (entries.size - insertionPoint > REBUILD_THRESHOLD) {
+                entries = ArrayList()
+                populated = false
+                generation++
+                cachedSnapshot = null
+                return
+            }
+            entries.add(insertionPoint, entry)
             generation++
             cachedSnapshot = null
         }
@@ -211,5 +226,15 @@ class LiveNegentropyIndex {
             }
         }
         return sealed
+    }
+
+    private companion object {
+        /**
+         * Max element-shift an incremental [insert] will pay before it drops
+         * the whole index (rebuilt lazily on the next NEG-OPEN) instead. Keeps
+         * near-tail live inserts cheap while stopping a bulk backfill of
+         * historical events from turning ingest into O(n²).
+         */
+        const val REBUILD_THRESHOLD = 4096
     }
 }
