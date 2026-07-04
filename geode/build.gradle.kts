@@ -69,11 +69,20 @@ tasks.withType<Test>().configureEach {
     systemProperty("runLoadBenchmark", System.getProperty("runLoadBenchmark") ?: "false")
     System.getProperty("fanoutScalingEvents")?.let { systemProperty("fanoutScalingEvents", it) }
     System.getProperty("fanoutScalingSubs")?.let { systemProperty("fanoutScalingSubs", it) }
+    // NegentropyServerReconcileBenchmark opt-in + sizing.
+    System.getProperty("negServerBench")?.let { systemProperty("negServerBench", it) }
+    System.getProperty("negBenchN")?.let { systemProperty("negBenchN", it) }
+    maxHeapSize = System.getProperty("testHeap") ?: maxHeapSize
+    // Opt-in JFR profiling (-PnegProfile=/tmp/neg.jfr).
+    (project.findProperty("negProfile") as? String)?.let {
+        jvmArgs("-XX:+FlightRecorder", "-XX:StartFlightRecording=filename=$it,settings=profile,dumponexit=true")
+    }
     // Show println output from test JVM so the benchmark numbers are
     // actually visible without grepping the report XML.
     testLogging {
         showStandardStreams =
-            (System.getProperty("runLoadBenchmark") == "true")
+            (System.getProperty("runLoadBenchmark") == "true") ||
+            (System.getProperty("negServerBench") == "1")
         events("standard_out")
     }
 }
