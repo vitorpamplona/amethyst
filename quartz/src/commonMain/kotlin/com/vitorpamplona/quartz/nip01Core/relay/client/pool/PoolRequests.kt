@@ -295,9 +295,26 @@ class PoolRequests {
         relay: NormalizedRelayUrl,
         sync: (Command) -> Unit,
     ) {
-        desiredSubs.forEach { subId, filters ->
-            val filters = filters[relay]
+        // Pre-mark the subscription as SENT (recording the filters) *before*
+        // the frame leaves, so a response can never race ahead of the record.
+        // A fast relay — the in-process transport, or any relay that answers
+        // before the sender's post-send onSent callback runs — can deliver the
+        // EOSE for this REQ while the state still reads "nothing in flight"
+        // (onConnecting cleared it and onSent hasn't recorded it yet). The EOSE
+        // handler would then see empty filters, conclude it never sent a REQ,
+        // and fire a duplicate — replaying the whole page a second time.
+        // Recording under the lock up front closes that window.
+        //
+        // This is a fresh-connection sync (onConnected → onConnecting always
+        // cleared the per-relay state first), so every desired filter is
+        // (re)sent unconditionally: unlike the change-driven path there is no
+        // in-flight REQ on this brand-new socket to dedupe against.
+        desiredSubs.forEach { subId, perRelayFilters ->
+            val filters = perRelayFilters[relay]
             if (!filters.isNullOrEmpty()) {
+                subState(subId).let { state ->
+                    state.withLock { state.onOpenReq(relay, filters) }
+                }
                 sync(ReqCmd(subId, filters))
             }
         }
