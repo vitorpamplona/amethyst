@@ -68,3 +68,27 @@ wire.
 Until then, a clean wire-level sync measurement needs a **pre-filtered corpus**
 (drop vanish-pubkey events + expiry-tagged events); see the geode↔geode run that
 accompanies this note.
+
+## Follow-up: a ~0.05% shortfall is in the harness delta transfer, not geode
+
+Even on the pre-filtered corpus, the geode↔geode run showed one side ending ~19
+of ~40k events short (all kind-1, empty tags, scattered across pubkeys). That is
+**not** a geode event-loss bug — geode is proven lossless at every layer:
+
+- `quartz …store.BatchInsertLossTest` — sequential `batchInsertEvents`, 199,612
+  in / 199,612 stored.
+- `quartz …relay.prodbench.ConcurrentIngestLossTest` — the full `IngestQueue`
+  pipeline (parallel verify, greedy-drain group commit, a concurrent FTS
+  catch-up worker on the pool writer, windowed concurrent submits) — 0 lost.
+- `RelaySession.handleEvent` sends `OK true` only from the writer callback, i.e.
+  **after** the row commits.
+- `geode …mirror.MirrorSyncLossTest` — the **real** relay-to-relay path
+  (upstream `KtorRelay` WebSocket ⇄ `MirrorWorker` OkHttp client, trusted
+  `skipVerify` ingest) delivers **50,000 / 50,000**, 0 missing.
+
+So the shortfall is an artifact of the benchmark's hand-rolled delta transfer
+(`SyncBenchmark.fetchByIds` + `IngestBenchmark.publishSlice`'s windowed
+publish/OK-counting), which stands in for what `strfry sync` does. geode's own
+sync is lossless. The proper fix is to harden that harness path — or, better,
+drive convergence through geode's real `MirrorWorker` instead of simulating it —
+so the benchmark stops reporting phantom loss.
