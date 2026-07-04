@@ -49,6 +49,34 @@ class StaticConfigTest {
     }
 
     @Test
+    fun parsesDatabaseTuningKnobs() {
+        val toml =
+            """
+            [database]
+            in_memory = false
+            file = "/tmp/x.db"
+            readers = 8
+            mmap_size = 268435456
+            temp_store_memory = true
+            optimize_interval_seconds = 3600
+            """.trimIndent()
+
+        val c = StaticConfig.fromToml(toml)
+
+        assertEquals(8, c.database.readers)
+        assertEquals(268435456L, c.database.mmap_size)
+        assertEquals(true, c.database.temp_store_memory)
+        assertEquals(3600L, c.database.optimize_interval_seconds)
+
+        // And all knobs default to off/null so plain configs are untouched.
+        val d = StaticConfig.fromToml("")
+        assertEquals(null, d.database.readers)
+        assertEquals(null, d.database.mmap_size)
+        assertEquals(false, d.database.temp_store_memory)
+        assertEquals(null, d.database.optimize_interval_seconds)
+    }
+
+    @Test
     fun mirrorSectionDefaultsToEmpty() {
         assertTrue(StaticConfig.fromToml("").mirror.isEmpty())
     }

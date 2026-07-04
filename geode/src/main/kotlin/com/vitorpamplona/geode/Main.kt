@@ -37,9 +37,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.OptionalAuthPoli
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RejectFutureEventsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyAuthOnlyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
-import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
 
 /**
@@ -126,11 +131,20 @@ fun main(args: Array<String>) {
         cliInfoFile?.let { RelayInfo.fromFile(it) }
             ?: config.resolveInfo(fullTextSearch)
 
-    val store: IEventStore =
+    // Deployment tuning from `[database]` — off by default; the quartz
+    // library defaults stay tuned for the app-side stores.
+    val extraPragmas =
+        buildList {
+            config.database.mmap_size?.let { add("PRAGMA mmap_size = $it;") }
+            if (config.database.temp_store_memory) add("PRAGMA temp_store = MEMORY;")
+        }
+    val store =
         EventStore(
             dbName = dbFile,
             relay = advertisedUrl,
             indexStrategy = relayIndexingStrategy(fullTextSearch, config.negentropy.live_index),
+            numReaders = config.database.readers ?: 4,
+            extraPragmas = extraPragmas,
         )
 
     val policyBuilder: () -> IRelayPolicy = {
@@ -223,12 +237,26 @@ fun main(args: Array<String>) {
             MirrorWorker(upstreams, relay.server).also { it.start() }
         }
 
+    // Periodic query-planner statistics refresh (`PRAGMA optimize`).
+    // Incremental and usually a no-op; failures are swallowed — a missed
+    // refresh only means slightly staler planner stats until the next tick.
+    val maintenanceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    config.database.optimize_interval_seconds?.let { secs ->
+        maintenanceScope.launch {
+            while (true) {
+                delay(secs * 1000)
+                runCatching { store.optimize() }
+            }
+        }
+    }
+
     Runtime.getRuntime().addShutdownHook(
         Thread {
             // Each step wrapped so a throw in any stage doesn't skip
             // `relay.close()` (which closes the SQLite store). The mirror
-            // goes first: stop pulling new events before the queue and
-            // store beneath it shut down.
+            // and maintenance go first: stop touching the store before the
+            // queue and store beneath them shut down.
+            runCatching { maintenanceScope.cancel() }
             runCatching { mirror?.close() }
             runCatching { server.stop() }
             runCatching { relay.close() }

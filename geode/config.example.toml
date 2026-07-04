@@ -46,6 +46,22 @@ path = "/"
 in_memory = false
 file = "/var/lib/geode/events.db"
 
+# Reader-connection pool size (file-backed stores only). Default 4.
+# readers = 4
+
+# PRAGMA mmap_size in bytes — maps the db file into memory so reads
+# skip the pread syscall. Off by default (SQLite default).
+# mmap_size = 268435456
+
+# PRAGMA temp_store = MEMORY — RAM instead of temp files for large
+# sorts. Off by default.
+# temp_store_memory = true
+
+# Refresh query-planner statistics (PRAGMA optimize) every N seconds.
+# Incremental and usually a no-op; keeps the planner from drifting
+# onto the wrong index as the corpus grows. Off by default.
+# optimize_interval_seconds = 3600
+
 [options]
 # Drop events whose Schnorr signature does not verify. Strongly
 # recommended for any relay accepting traffic from real clients.

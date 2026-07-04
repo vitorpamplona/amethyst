@@ -48,6 +48,15 @@ class SQLiteEventStore(
     val relay: NormalizedRelayUrl? = null,
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
     val numReaders: Int = 4,
+    /**
+     * Extra `PRAGMA` statements run on every pooled connection after the
+     * built-in configuration (cache size, WAL, busy timeout, …), so they
+     * can override it. Deployment-specific tuning goes here — e.g.
+     * `PRAGMA mmap_size = 268435456;` or `PRAGMA temp_store = MEMORY;`
+     * on server hardware — while the library defaults stay tuned for the
+     * app-side stores. Statements must be self-contained SQL.
+     */
+    val extraPragmas: List<String> = emptyList(),
 ) {
     companion object {
         const val DATABASE_VERSION = 4
@@ -133,6 +142,9 @@ class SQLiteEventStore(
                 // upgrading its snapshot. With it, SQLite retries internally
                 // for up to N ms before giving up. Matches Room's default.
                 db.execSQL("PRAGMA busy_timeout = 5000;")
+
+                // Deployment overrides last, so they win over the defaults.
+                extraPragmas.forEach { db.execSQL(it) }
             },
             onMigrate = { db ->
                 val currentVersion = getUserVersion(db)
@@ -242,6 +254,20 @@ class SQLiteEventStore(
             // ANALYZE: Collects statistics about tables and indices
             // to help the query planner optimize queries.
             db.execSQL("ANALYZE")
+        }
+
+    /**
+     * Incremental planner-statistics refresh for long-running relays.
+     * `PRAGMA optimize` re-analyzes only tables whose content changed
+     * enough to matter, and `analysis_limit` bounds each table's scan —
+     * so a periodic call stays cheap (typically no-op) while keeping the
+     * planner from drifting onto the wrong index as the corpus grows.
+     * Runs on the writer connection; call it off the hot path.
+     */
+    suspend fun optimize() =
+        pool.useWriter { db ->
+            db.execSQL("PRAGMA analysis_limit = 400;")
+            db.execSQL("PRAGMA optimize;")
         }
 
     /**

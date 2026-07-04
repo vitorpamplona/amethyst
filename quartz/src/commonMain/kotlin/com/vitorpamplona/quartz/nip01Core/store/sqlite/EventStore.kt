@@ -39,8 +39,14 @@ class EventStore(
     dbName: String? = "events.db",
     override val relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
+    numReaders: Int = 4,
+    /** See [SQLiteEventStore.extraPragmas] — deployment-specific tuning. */
+    extraPragmas: List<String> = emptyList(),
 ) : IEventStore {
-    val store = SQLiteEventStore(BundledSQLiteDriver(), dbName, relay, indexStrategy)
+    val store = SQLiteEventStore(BundledSQLiteDriver(), dbName, relay, indexStrategy, numReaders, extraPragmas)
+
+    /** Incremental planner-stats refresh — see [SQLiteEventStore.optimize]. */
+    suspend fun optimize() = store.optimize()
 
     override suspend fun insert(event: Event) = store.insertEvent(event)
 

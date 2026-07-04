@@ -106,6 +106,30 @@ data class StaticConfig(
         /** True keeps an in-memory SQLite db (default — events vanish on restart). */
         val in_memory: Boolean = true,
         val file: String? = null,
+        /**
+         * Reader-connection pool size. `null` keeps quartz's default (4).
+         * Only meaningful for file-backed stores; in-memory databases
+         * share the single writer connection regardless.
+         */
+        val readers: Int? = null,
+        /**
+         * `PRAGMA mmap_size` in bytes, e.g. `268435456` for 256 MiB.
+         * Maps the database file into memory so reads skip the pread
+         * syscall + page-cache copy. `null` keeps SQLite's default (off).
+         */
+        val mmap_size: Long? = null,
+        /**
+         * `PRAGMA temp_store = MEMORY` — keeps sort/temp b-trees for
+         * large queries in RAM instead of temp files.
+         */
+        val temp_store_memory: Boolean = false,
+        /**
+         * Refresh query-planner statistics (`PRAGMA analysis_limit;
+         * PRAGMA optimize`) every this many seconds. Incremental and
+         * usually a no-op, but keeps the planner from drifting onto the
+         * wrong index as the corpus grows/changes shape. `null` = never.
+         */
+        val optimize_interval_seconds: Long? = null,
     )
 
     data class OptionsSection(
