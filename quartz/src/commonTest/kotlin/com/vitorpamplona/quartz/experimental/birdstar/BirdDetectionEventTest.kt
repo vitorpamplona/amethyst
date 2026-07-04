@@ -52,11 +52,24 @@ class BirdDetectionEventTest {
 
     @Test
     fun factoryBuildsBirdDetectionForKind2473() {
-        val event = sampleEvent()
-        assertTrue(
-            event is BirdDetectionEvent,
-            "Expected a BirdDetectionEvent but got ${event::class.simpleName}",
-        )
+        assertIs<BirdDetectionEvent>(sampleEvent())
+    }
+
+    @Test
+    fun speciesReferenceRejectsNonHttpValues() {
+        val event: Event =
+            EventFactory.create(
+                id = "00".repeat(32),
+                pubKey = "00".repeat(32),
+                createdAt = 1_783_089_908L,
+                kind = BirdDetectionEvent.KIND,
+                tags = arrayOf(arrayOf("i", "javascript:alert(1)")),
+                content = "",
+                sig = "00".repeat(64),
+            )
+        assertIs<BirdDetectionEvent>(event)
+
+        assertEquals(null, event.speciesReference())
     }
 
     @Test
@@ -81,6 +94,23 @@ class BirdDetectionEventTest {
                 createdAt = 1_783_089_908L,
                 kind = BirdDetectionEvent.KIND,
                 tags = arrayOf(arrayOf("n", "Porphyrio martinica")),
+                content = "",
+                sig = "00".repeat(64),
+            )
+        assertIs<BirdDetectionEvent>(event)
+
+        assertEquals(null, event.commonName())
+    }
+
+    @Test
+    fun commonNameIsNullWhenAltLacksTheBirdstarPrefix() {
+        val event: Event =
+            EventFactory.create(
+                id = "00".repeat(32),
+                pubKey = "00".repeat(32),
+                createdAt = 1_783_089_908L,
+                kind = BirdDetectionEvent.KIND,
+                tags = arrayOf(arrayOf("alt", "Arbitrary attacker-controlled title (spoof)")),
                 content = "",
                 sig = "00".repeat(64),
             )

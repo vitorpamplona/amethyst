@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
@@ -59,20 +60,26 @@ class BirdDetectionEvent(
     /** Scientific name of the detected species, from the `n` tag (may be null). */
     fun speciesName() = tags.firstTagValue("n")
 
-    /** External species reference (Wikidata entity URL), from the `i` tag (may be null). */
-    fun speciesReference() = tags.firstTagValue("i")
+    /**
+     * External species reference (Wikidata entity URL), from the `i` tag.
+     * Only http(s) URLs are returned — UIs render this as a clickable link,
+     * so other schemes are rejected here rather than at every call site.
+     */
+    fun speciesReference() = tags.firstTagValue("i")?.takeIf { it.startsWith("https://") || it.startsWith("http://") }
 
-    /** Publisher-provided human-readable summary, from the `alt` tag (may be null). */
-    fun summary() = tags.firstTagValue("alt")
+    /** Publisher-provided human-readable summary, from the NIP-31 `alt` tag (may be null). */
+    fun summary() = tags.alt()
 
     /**
      * Common (vernacular) species name, parsed out of the `alt` tag. Birdstar
-     * writes `Bird detection: <Common name> (<Scientific name>)`; this strips the
-     * fixed prefix and the trailing parenthetical. Null when the `alt` tag is
-     * missing or nothing is left after stripping.
+     * currently writes `Bird detection: <Common name> (<Scientific name>)` (in
+     * English); this strips the fixed prefix and the trailing parenthetical.
+     * Null when the `alt` tag is missing or nothing is left after stripping —
+     * including if a future Birdstar release rewords the alt text.
      */
     fun commonName(): String? {
         val alt = summary() ?: return null
+        if (!alt.startsWith(ALT_PREFIX)) return null
         return alt
             .removePrefix(ALT_PREFIX)
             .substringBeforeLast(" (")

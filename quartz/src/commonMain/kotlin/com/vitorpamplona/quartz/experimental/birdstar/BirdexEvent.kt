@@ -23,8 +23,8 @@ package com.vitorpamplona.quartz.experimental.birdstar
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
@@ -65,8 +65,8 @@ class BirdexEvent(
     /** Number of collected species (one `n` tag per species). */
     fun speciesCount() = speciesNames().size
 
-    /** Publisher-provided human-readable summary, from the `alt` tag (may be null). */
-    fun summary() = tags.firstTagValue("alt")
+    /** Publisher-provided human-readable summary, from the NIP-31 `alt` tag (may be null). */
+    fun summary() = tags.alt()
 
     companion object {
         const val KIND = 12473
