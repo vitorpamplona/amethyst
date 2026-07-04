@@ -154,6 +154,12 @@ class DesktopHttpClient(
         private val simpleClient: OkHttpClient by lazy {
             OkHttpClient
                 .Builder()
+                // Direct relay sockets opened before setInstance() should
+                // get the same TCP_NODELAY as directClient — see
+                // TcpNoDelaySocketFactory. (failClosedClient is SOCKS, and
+                // OkHttp bypasses the socket factory for SOCKS proxies, so
+                // it doesn't need this.)
+                .socketFactory(TcpNoDelaySocketFactory)
                 .connectTimeout(BASE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .readTimeout(BASE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .writeTimeout(BASE_TIMEOUT_SECONDS, TimeUnit.SECONDS)

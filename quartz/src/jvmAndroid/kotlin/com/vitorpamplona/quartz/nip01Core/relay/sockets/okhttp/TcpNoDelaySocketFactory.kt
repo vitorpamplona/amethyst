@@ -47,12 +47,31 @@ import javax.net.SocketFactory
 object TcpNoDelaySocketFactory : SocketFactory() {
     private fun socket() = Socket().apply { tcpNoDelay = true }
 
+    /**
+     * Runs [block] on a fresh NODELAY socket, closing it if the
+     * bind/connect throws — the JDK's connecting `Socket(...)`
+     * constructors do this, but our `Socket().apply { connect(...) }`
+     * form would otherwise leak the descriptor on a failed connect.
+     * (OkHttp only calls the no-arg overload, so this guards the other
+     * overloads for any direct caller.)
+     */
+    private inline fun connecting(block: (Socket) -> Unit): Socket {
+        val s = socket()
+        try {
+            block(s)
+        } catch (t: Throwable) {
+            runCatching { s.close() }
+            throw t
+        }
+        return s
+    }
+
     override fun createSocket(): Socket = socket()
 
     override fun createSocket(
         host: String?,
         port: Int,
-    ): Socket = socket().apply { connect(InetSocketAddress(host, port)) }
+    ): Socket = connecting { it.connect(InetSocketAddress(host, port)) }
 
     override fun createSocket(
         host: String?,
@@ -60,15 +79,15 @@ object TcpNoDelaySocketFactory : SocketFactory() {
         localHost: InetAddress?,
         localPort: Int,
     ): Socket =
-        socket().apply {
-            bind(InetSocketAddress(localHost, localPort))
-            connect(InetSocketAddress(host, port))
+        connecting {
+            it.bind(InetSocketAddress(localHost, localPort))
+            it.connect(InetSocketAddress(host, port))
         }
 
     override fun createSocket(
         host: InetAddress?,
         port: Int,
-    ): Socket = socket().apply { connect(InetSocketAddress(host, port)) }
+    ): Socket = connecting { it.connect(InetSocketAddress(host, port)) }
 
     override fun createSocket(
         address: InetAddress?,
@@ -76,8 +95,8 @@ object TcpNoDelaySocketFactory : SocketFactory() {
         localAddress: InetAddress?,
         localPort: Int,
     ): Socket =
-        socket().apply {
-            bind(InetSocketAddress(localAddress, localPort))
-            connect(InetSocketAddress(address, port))
+        connecting {
+            it.bind(InetSocketAddress(localAddress, localPort))
+            it.connect(InetSocketAddress(address, port))
         }
 }
