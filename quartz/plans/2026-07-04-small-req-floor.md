@@ -42,17 +42,36 @@ the container drift band** — strfry's own numbers drifted ±30% run to
 run, and inline-eligible scenarios moved the same as ineligible ones.
 Reverted per the keep-only-winners rule.
 
-## Where the floor actually is
+## Where the floor actually is (corrected after WireReqFloorBenchmark)
 
-In-process REQ→EOSE is ~0.5–0.6 ms, but the wire-level p50 is
-1.2–1.7 ms: the missing ~1 ms per REQ is transport-side — the Ktor CIO
-frame write path, per-frame sends with no batching, and the client
-round trip — which is backlog item 6 (websocket send path, 13–25% of
-ingest CPU in the JFR profile) territory. strfry completes the whole
-round trip in under 0.6 ms on a single event loop with uWebSockets.
+The follow-up wire benchmark (geode's `WireReqFloorBenchmark`, Ktor CIO
++ OkHttp on loopback) attributed the full path:
 
-**Do not retry** coroutine-dispatch shaving for this gap without first
-measuring the transport side: instrument the time between
-`RelaySession`'s `onSend` invocation and the frame actually leaving
-the socket, and compare permessage-deflate/frame-batching settings
-against strfry's uWS configuration.
+| leg | ms |
+|---|---:|
+| bare Ktor CIO echo round trip (1 or 22 frames — same) | ~0.9–1.0 |
+| geode NOTICE (inline, full pump + Ktor send) | ~0.5 |
+| geode empty REQ (launch + SQL, 0 rows) | ~0.6–0.8 |
+| geode ~21-row REQ, wire | ~1.25 (= relayBench's number) |
+
+**geode's websocket send path has no latency problem** — per-frame burst
+cost is negligible (echo-22 ≈ echo-1), the pump adds ~nothing (NOTICE ≈
+0.5 ms), and the residual vs strfry (~0.5 ms/REQ) is the per-REQ server
+work already investigated above. Frame batching / permessage-deflate
+would not move these numbers. Backlog item 6's remaining open angle is
+the INGEST-side CPU share (13–25% in the JFR profile) — a throughput
+question, not this latency one.
+
+**The real find was client-side.** The first wire measurements showed a
+flat 43.7 ms per REQ — which turned out to be the benchmark's own OkHttp
+client: OkHttp does not set TCP_NODELAY, and the CLOSE-then-REQ pattern
+(every feed/filter switch!) nagles the REQ behind the unACKed CLOSE
+(relays never answer CLOSE) for the ~40 ms delayed-ACK window.
+relayBench's harness client already carried a no-delay socket factory —
+which is why bench numbers never showed it — but the production clients
+(Android relay pool, Desktop, amy, geode's mirror) did not. Fixed by
+`TcpNoDelaySocketFactory` (quartz jvmAndroid), now used by all of them.
+
+**Do not retry** relay-side latency work for the small-REQ gap; the
+addressable remainder is the ~0.4 ms of per-REQ dispatch machinery this
+doc's revert already covers, and it does not show on the wire.
