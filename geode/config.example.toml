@@ -46,6 +46,11 @@ path = "/"
 in_memory = false
 file = "/var/lib/geode/events.db"
 
+# NOTE: the four knobs below measured as pure noise in relayBench A/B
+# runs on 4-core container hardware at 50k events (see
+# geode/plans/2026-07-04-sqlite-knobs-ab.md) — their value is
+# hardware-dependent, so benchmark on YOUR box before enabling.
+#
 # Reader-connection pool size (file-backed stores only). Default 4.
 # readers = 4
 

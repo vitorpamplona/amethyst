@@ -38,7 +38,7 @@ listing (including archived plans), open that folder's `README.md`.
 | cli | 6 | 5 | 1 | 0 | 0 | [cli/plans](cli/plans/README.md) |
 | quic | 4 | 3 | 0 | 0 | 1 | [quic/plans](quic/plans/README.md) |
 | quic/interop | 1 | 1 | 0 | 0 | 0 | [quic/interop/plans](quic/interop/plans/README.md) |
-| geode | 4 | 4 | 0 | 0 | 0 | [geode/plans](geode/plans/README.md) |
+| geode | 5 | 4 | 0 | 0 | 0 | [geode/plans](geode/plans/README.md) |
 | docs (frozen) | 52 | 48 | 2 | 0 | 2 | [docs/plans](docs/plans/README.md) |
 
 ## Live work (not shipped)
