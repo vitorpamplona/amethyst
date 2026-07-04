@@ -70,21 +70,38 @@ For the top-of-tree fingerprints (each round re-walks ~all 800k ids) and
 the identical-set case (16 full-corpus-ish fingerprints per reconcile),
 this is the difference between an O(n) walk and a table lookup.
 
-## Why it isn't wired yet
+## Shipped — wired via kmp-negentropy v1.1.1+ (option 1)
 
-`com.vitorpamplona.negentropy.Negentropy` instantiates its own
-`FingerprintCalculator` internally — there's no seam to inject a
-prefix-sum-backed one from geode/quartz. Shipping it needs one of:
+The cleanest option landed upstream: kmp-negentropy **v1.1.1** added the
+`IStorage.fingerprint(begin, end)` seam and a drop-in `PrefixSumStorageVector`
+that builds the additive prefix-sum table at `seal()` and answers any range
+fingerprint in O(1). Quartz now seals a `PrefixSumStorageVector` in both
+`NegentropyServerSession.sealVector` (server / relay-relay responder, also
+backing the `LiveNegentropyIndex` snapshot cache) and `NegentropySession`
+(initiator). Byte-identical to the plain vector; `NegentropyPrefixFingerprintTest`
+asserts the library's accelerated path matches the plain walk over 2000 random
+ranges + boundaries.
 
-1. **kmp-negentropy change** (cleanest): let `Negentropy` take a storage
-   that can answer `fingerprint(lo, hi)` itself, and have `StorageVector`
-   (or a new sealed storage) carry the prefix-sum table built at seal time.
-   `LiveNegentropyIndex` already keeps the sorted `(created_at, id)` set, so
-   the table is one extra pass at seal.
-2. **quartz-side fast server**: reimplement the server reconcile against the
-   prefix-sum index. Larger and interop-critical (must match the wire byte
-   for byte with strfry) — the benchmarks + bit-exact test above are the
-   safety net for it.
+**v1.2.0** then sped up the library's own reconcile/fingerprint internals. At
+the 1M relayBench slice shape (`NegentropyReconcileBenchmark -DnegBenchN=1000000`,
+converges exactly, need/have = 200k):
+
+| | pre-fix (v1.0.2) | v1.1.1 | v1.2.0 |
+|---|---:|---:|---:|
+| seal (NEG-OPEN) | 331 ms | 424 ms | **320 ms** |
+| server reconcile | 207 ms | 128 ms | **128 ms** |
+| client reconcile | 302 ms | 264 ms | **178 ms** |
+| library range-fingerprint walk | 465 ms | 447 ms | **252 ms** |
+
+The prefix-sum still answers each range fingerprint in **0.7 ms** — 356× the
+(now faster) v1.2.0 walk. A quartz-side fast server (option 2 below) is no
+longer needed.
+
+### Option 2 (not taken): quartz-side fast server
+
+Reimplementing the server reconcile against the prefix-sum index — larger and
+interop-critical (must match the wire byte for byte with strfry). Superseded by
+the upstream seam; the benchmarks + bit-exact test remain the safety net.
 
 The serialization tax (~40%) is separate and only closes by writing the
 hex payload straight into the output buffer as ASCII instead of
