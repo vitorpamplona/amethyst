@@ -180,14 +180,62 @@ class MirrorWorker(
     val rejected = AtomicLong(0)
 
     /**
-     * Deliveries dropped by the [MirrorUpstream.filter] re-check before
-     * ever reaching the store — an upstream sending these is answering
-     * outside the REQ it was given.
+     * Deliveries dropped before ever reaching the store: events outside
+     * the [MirrorUpstream.filter] scope (an upstream answering outside
+     * the REQ it was given) and events delivered by a different relay
+     * than the one the subscription dialed (a peer answering with a
+     * subscription id that isn't its own).
      */
     val filtered = AtomicLong(0)
 
     /** Local events handed to the client's outbox for an up-direction upstream. */
     val sentUp = AtomicLong(0)
+
+    /**
+     * How many times a down subscription advanced its `since` watermark
+     * on a reconnect (test/observability hook). Each advance is one
+     * avoided full-window replay.
+     */
+    val sinceAdvances = AtomicLong(0)
+
+    /**
+     * One down subscription's re-subscribe state. The upstream replays
+     * everything at or after the REQ's `since` on every (re)connect; left
+     * at the boot-time value, a month-old daemon re-streams a month of
+     * events on every flap. So we track the newest `created_at` ingested
+     * from this upstream and, on a disconnect, advance the REQ's `since`
+     * to `watermark - overlap` before the reconnect re-sends it. The
+     * overlap re-requests a small tail (dup-safe against the store's
+     * unique-id constraint) to cover out-of-order streaming and clock
+     * skew. Advancing only on disconnect keeps a healthy connection from
+     * ever re-querying — no steady-state cost.
+     */
+    private inner class DownSub(
+        val subId: String,
+        val up: MirrorUpstream,
+        val scopedBase: Filter,
+        val listener: SubscriptionListener,
+        initialSince: Long,
+        val watermark: AtomicLong,
+    ) {
+        @Volatile
+        var issuedSince: Long = initialSince
+
+        fun advanceSinceOnReconnect() {
+            val candidate = watermark.get() - WATERMARK_OVERLAP_SECS
+            if (candidate > issuedSince) {
+                issuedSince = candidate
+                client.subscribe(
+                    subId = subId,
+                    filters = mapOf(up.url to listOf(scopedBase.copy(since = candidate))),
+                    listener = listener,
+                )
+                sinceAdvances.incrementAndGet()
+            }
+        }
+    }
+
+    private val downSubs = mutableListOf<DownSub>()
 
     /**
      * Recently exchanged event ids, one set per up-capable upstream —
@@ -254,21 +302,36 @@ class MirrorWorker(
 
             // The operator's filter scopes the subscriptions in both
             // directions; the mirror owns the time window (since) and
-            // never bounds the result (limit).
-            val scopedFilter =
-                (up.filter ?: Filter()).copy(
-                    since = since - up.backfillSeconds,
-                    limit = null,
-                )
+            // never bounds the result (limit). scopedBase carries no
+            // since — the down path applies (and later advances) it via
+            // the watermark; the up path uses the fixed initial value.
+            val scopedBase = (up.filter ?: Filter()).copy(since = null, limit = null)
+            val initialSince = since - up.backfillSeconds
 
             if (up.direction != MirrorDirection.UP) {
-                startDown(i, up, scopedFilter, exchanged)
+                downSubs += startDown(i, up, scopedBase, initialSince, exchanged)
             }
             if (up.direction != MirrorDirection.DOWN) {
-                startUp(up, scopedFilter, exchanged)
+                startUp(up, scopedBase.copy(since = initialSince), exchanged)
             }
         }
         client.connect()
+
+        // Watermark advance: when an upstream drops, bump its REQ's since
+        // to the newest event we ingested from it (minus an overlap) so
+        // the reconnect doesn't replay the whole window since boot. Only
+        // fires on the connected→disconnected edge, so a stable link
+        // never re-queries.
+        scope.launch {
+            var prev = emptySet<NormalizedRelayUrl>()
+            client.connectedRelaysFlow().collect { current ->
+                val dropped = prev - current
+                if (dropped.isNotEmpty()) {
+                    downSubs.forEach { if (it.up.url in dropped) it.advanceSinceOnReconnect() }
+                }
+                prev = current
+            }
+        }
 
         // Retry pump. NostrClient re-dials once on disconnect and then
         // relies on its 60s keep-alive — measured as a 61s mirror blackout
@@ -290,9 +353,14 @@ class MirrorWorker(
     private fun startDown(
         index: Int,
         up: MirrorUpstream,
-        scopedFilter: Filter,
+        scopedBase: Filter,
+        initialSince: Long,
         exchanged: RecentIds?,
-    ) {
+    ): DownSub {
+        // watermark tracks the newest created_at ingested from this
+        // upstream; seeded at initialSince so a still-catching-up
+        // backfill can never advance the since backwards.
+        val watermark = AtomicLong(initialSince)
         val listener =
             object : SubscriptionListener {
                 override fun onEvent(
@@ -301,6 +369,18 @@ class MirrorWorker(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
+                    // The trusted identity is the relay THIS subscription
+                    // dialed. The pool dispatches EVENTs by subscription
+                    // id alone and every upstream shares this one client,
+                    // so a hostile co-configured upstream could answer
+                    // with another subscription's id and ride its trust —
+                    // bind the decision to the delivering relay, not the
+                    // sub id.
+                    if (relay != up.url) {
+                        filtered.incrementAndGet()
+                        Log.w("MirrorWorker") { "dropped event delivered by ${relay.url} on ${up.url.url}'s subscription: ${event.id}" }
+                        return
+                    }
                     // strfry-router parity: never take the upstream's
                     // word for what matched. Re-checking the configured
                     // scope here means even a trusted (skip-verify)
@@ -316,6 +396,8 @@ class MirrorWorker(
                     // this subscription — it already exists locally.
                     if (exchanged?.contains(event.id) == true) return
                     exchanged?.add(event.id)
+                    // Advance the reconnect watermark past this event.
+                    watermark.updateAndGet { if (event.createdAt > it) event.createdAt else it }
                     inbound.trySend(Inbound(event, up.trusted))
                 }
 
@@ -327,11 +409,13 @@ class MirrorWorker(
                     Log.w("MirrorWorker") { "cannot reach upstream ${relay.url}: $message" }
                 }
             }
+        val subId = "geode-mirror-$index"
         client.subscribe(
-            subId = "geode-mirror-$index",
-            filters = mapOf(up.url to listOf(scopedFilter)),
+            subId = subId,
+            filters = mapOf(up.url to listOf(scopedBase.copy(since = initialSince))),
             listener = listener,
         )
+        return DownSub(subId, up, scopedBase, listener, initialSince, watermark)
     }
 
     /**
@@ -391,6 +475,15 @@ class MirrorWorker(
 
         /** How often the retry pump nudges disconnected upstreams. */
         const val RECONNECT_POKE_MS = 5_000L
+
+        /**
+         * Overlap (seconds) subtracted from the reconnect `since`
+         * watermark. Re-requests a small tail on reconnect to cover
+         * out-of-order streaming and clock skew; the store's unique-id
+         * constraint drops the duplicates. Bounds worst-case replay after
+         * a flap to this window instead of everything since boot.
+         */
+        const val WATERMARK_OVERLAP_SECS = 300L
 
         /**
          * Per-upstream echo-suppression LRU size (BOTH direction only).

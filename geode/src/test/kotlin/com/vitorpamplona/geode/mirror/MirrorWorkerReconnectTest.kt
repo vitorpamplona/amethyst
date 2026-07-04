@@ -34,6 +34,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * The mirror is a long-running daemon, so surviving its upstream is not
@@ -151,6 +152,12 @@ class MirrorWorkerReconnectTest {
             // The duplicate replay of the pre-restart event was dropped by
             // the store, not double-inserted.
             assertEquals(2, downstreamStore.count(Filter()))
+
+            // The disconnect advanced the REQ's since watermark: the
+            // reconnect subscribed from ~(newest event - overlap), not
+            // from the boot-time `now - backfill`. Without this the
+            // reconnect would replay the whole backfill window every flap.
+            assertTrue(mirror.sinceAdvances.get() >= 1)
 
             second.stop(gracePeriodMillis = 0, timeoutMillis = 1_000)
         }
