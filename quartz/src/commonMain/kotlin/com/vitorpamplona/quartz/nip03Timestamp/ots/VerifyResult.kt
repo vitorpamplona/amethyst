@@ -40,5 +40,10 @@ data class VerifyResult(
         return "block $height attests data existed as of unix timestamp of $timestamp"
     }
 
+    /**
+     * Orders by [height] only, intentionally ignoring [timestamp] — NOT
+     * consistent with [equals], which compares both fields. Fine for picking
+     * the earliest attestation; do not rely on it for sorted-set dedup.
+     */
     override fun compareTo(other: VerifyResult): Int = this.height - other.height
 }

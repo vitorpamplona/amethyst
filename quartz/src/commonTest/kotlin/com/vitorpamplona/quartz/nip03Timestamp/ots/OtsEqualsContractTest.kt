@@ -24,11 +24,13 @@ import com.vitorpamplona.quartz.nip03Timestamp.ots.op.Op
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpAppend
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpKECCAK256
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpPrepend
+import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpRIPEMD160
+import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpSHA1
+import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpSHA256
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
 
 /**
  * Equals/hashCode contract tests for the types keying [Timestamp.ops]
@@ -36,6 +38,23 @@ import kotlin.test.assertTrue
  * lookups produce duplicate branches and failed upgrades.
  */
 class OtsEqualsContractTest {
+    @Test
+    fun allOpTagsAreUnique() {
+        // The protocol invariant everything leans on: serialization dispatches
+        // on the tag byte and hashCode is tag-based. A new op MUST use a fresh tag.
+        val tags =
+            listOf(
+                OpAppend.TAG,
+                OpPrepend.TAG,
+                OpSHA1.TAG,
+                OpSHA256.TAG,
+                OpRIPEMD160.TAG,
+                OpKECCAK256.TAG,
+            )
+
+        assertEquals(tags.size, tags.toSet().size)
+    }
+
     // --- OpKECCAK256: equals existed without hashCode; equal instances hashed by identity ---
 
     @Test
@@ -52,6 +71,12 @@ class OtsEqualsContractTest {
         val map = mutableMapOf<Op, String>(OpKECCAK256() to "branch")
 
         assertEquals("branch", map[OpKECCAK256()])
+    }
+
+    @Test
+    fun cryptoOpsWithDifferentTagsAreNotEqual() {
+        // The shared OpCrypto equals is tag-keyed — distinct ops must not conflate.
+        assertNotEquals<Op>(OpSHA256(), OpKECCAK256())
     }
 
     // --- OpBinary: equals is defined once on the superclass, keyed on tag() + arg content ---
@@ -105,6 +130,6 @@ class OtsEqualsContractTest {
         val result = VerifyResult(null, 100)
 
         result.hashCode()
-        assertTrue(result == VerifyResult(null, 100))
+        assertEquals(VerifyResult(null, 100), result)
     }
 }
