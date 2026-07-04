@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * relayBench's `profiles` scenario — `Filter(kinds=[0], authors=[…50…])`,
@@ -45,15 +47,17 @@ import kotlin.test.assertEquals
  *
  * `ANALYZE` does **not** help — even a connection that reads fresh stats
  * keeps the scan, because with the ORDER BY the scan genuinely avoids a
- * sort. Two fixes work (see `plans/2026-07-04-profiles-query-plan.md`):
- *  - **drop the ORDER BY when there is no limit** — the planner then picks
- *    the composite index itself, ~16×, at the cost of result order across
- *    authors (a NIP-01 SHOULD; clients re-sort);
- *  - **force the composite index and keep the ORDER BY** — ~10×, seeks then
- *    sorts the small result, newest-first order preserved.
+ * sort. **Applied fix** (`QueryBuilder.makeSimpleQuery`, see
+ * `plans/2026-07-04-profiles-query-plan.md`): for a **multi-author**
+ * (`pubkey IN (…)`) filter with `kinds`, no `limit`, and no d-tags, pin
+ * `INDEXED BY query_by_kind_pubkey_created` — SQLite then seeks the authors
+ * and sorts the small result, keeping the newest-first ORDER BY (zero
+ * behavior change). Single-author queries already seek; limited feeds keep
+ * the `created_at` scan + early LIMIT.
  *
- * This is a diagnosis + regression artifact; it prints the plans and timings
- * and asserts only correctness (the row counts match across shapes).
+ * This is now a regression guard: it asserts the live REQ plan for this
+ * shape seeks the composite index (not the kind scan), and prints the
+ * before/after timings.
  */
 class ProfilesQueryPlanBenchmark {
     private val hex = "0123456789abcdef"
@@ -155,29 +159,35 @@ class ProfilesQueryPlanBenchmark {
 
             println("─ ProfilesQueryPlanBenchmark: $total events, $authorCount kind-0 profiles, filter kinds=[0]+50 authors ─")
 
-            // 1. Current REQ shape: ORDER BY created_at DESC, no limit.
-            val (baseN, baseMs) = timeRaw("$base ORDER BY created_at DESC")
-            println("  current (ORDER BY, no limit):")
+            // The old (bad) shape: ORDER BY created_at DESC forces the kind scan.
+            val (oldN, oldMs) = timeRaw("$base ORDER BY created_at DESC")
+            println("  old shape (ORDER BY, no limit):")
             println(planTree(store.store.explainQuery("$base ORDER BY created_at DESC")))
-            println("    → $baseN events, ${"%.3f".format(baseMs)} ms/run")
+            println("    → $oldN events, ${"%.3f".format(oldMs)} ms/run")
 
-            // 2. Fix A: drop ORDER BY (no limit) — planner picks composite itself.
-            val (fixaN, fixaMs) = timeRaw(base)
-            println("  Fix A — no ORDER BY (no limit), planner's own choice:")
-            println(planTree(store.store.explainQuery(base)))
-            println("    → $fixaN events, ${"%.3f".format(fixaMs)} ms/run  (${"%.1f".format(baseMs / fixaMs)}×)")
+            // The fix, as the REQ path now builds it: INDEXED BY the composite
+            // index for this multi-author, no-limit shape — seeks the authors,
+            // keeps the newest-first ORDER BY (sorts the small result).
+            val reqPlan = store.store.planQuery(profiles)
+            val fixedSql = "SELECT $cols FROM event_headers INDEXED BY query_by_kind_pubkey_created WHERE kind = 0 AND pubkey IN ($inList) ORDER BY created_at DESC"
+            val (newN, newMs) = timeRaw(fixedSql)
+            println("  fixed REQ path (INDEXED BY composite, ORDER BY kept):")
+            println(planTree(reqPlan))
+            println("    → $newN events, ${"%.3f".format(newMs)} ms/run  (${"%.1f".format(oldMs / newMs)}× faster, grows with profile count)")
 
-            // 3. Fix B: force composite index, keep ORDER BY (order preserved).
-            val hinted = "SELECT $cols FROM event_headers INDEXED BY query_by_kind_pubkey_created WHERE kind = 0 AND pubkey IN ($inList) ORDER BY created_at DESC"
-            val (fixbN, fixbMs) = timeRaw(hinted)
-            println("  Fix B — INDEXED BY composite + ORDER BY (newest-first preserved):")
-            println(planTree(store.store.explainQuery(hinted)))
-            println("    → $fixbN events, ${"%.3f".format(fixbMs)} ms/run  (${"%.1f".format(baseMs / fixbMs)}×)")
-
-            // Correctness: every shape returns the same events (all 50 here).
-            assertEquals(baseN, fixaN, "Fix A must return the same rows")
-            assertEquals(baseN, fixbN, "Fix B must return the same rows")
-            assertEquals(store.query<Event>(profiles).size, baseN, "REQ path matches raw SQL")
+            // Regression guards: the live REQ path must seek the composite
+            // index (not scan the kind-only one) and preserve the ORDER BY.
+            assertEquals(oldN, newN, "row count unchanged by the fix")
+            assertEquals(newN, store.query<Event>(profiles).size, "REQ path returns the match set")
+            assertTrue(
+                reqPlan.contains("query_by_kind_pubkey_created"),
+                "REQ plan should seek the (kind, pubkey) index, was:\n$reqPlan",
+            )
+            assertFalse(
+                reqPlan.contains("query_by_kind_created "),
+                "REQ plan must not scan the kind-only index, was:\n$reqPlan",
+            )
+            assertTrue(reqPlan.contains("ORDER BY"), "newest-first order is preserved, was:\n$reqPlan")
 
             store.close()
         }

@@ -1,8 +1,16 @@
 # The `profiles` query: why kind-0 + authors scans, and how to fix it
 
-**Status: diagnosed + two fixes measured, not yet applied** (the fix is a
-core-QueryBuilder behavior change with an ordering trade-off — wants a
-maintainer call). Follow-up to the 1M relayBench run, where `profiles`
+**Status: shipped — Fix B applied** (the order-preserving one, chosen over
+Fix A because dropping the ORDER BY changed observable result ordering — it
+broke `FsParityTest`'s ordered-parity assertions, i.e. it's client-visible).
+`QueryBuilder.makeSimpleQuery` now pins `INDEXED BY query_by_kind_pubkey_created`
+for the exact broken shape — multi-author (`pubkey IN (…)`) + `kinds`, no
+`limit`, no d-tags — keeping the newest-first ORDER BY. The REQ plan for
+`profiles` seeks the composite index instead of scanning, ~8× at 42k profiles
+and growing with profile count (the ~100× at 1M), with **zero behavior
+change** (identical rows, identical order). Guarded by
+`ProfilesQueryPlanBenchmark`. Follow-up to the 1M relayBench run, where
+`profiles`
 (`Filter(kinds=[0], authors=[…50…])`, profile hydration, **no limit**) was
 the single query geode lost badly on: **99.5 ms p50 vs strfry 0.94 ms
 (~100×)**, while geode won or tied the other nine scenarios.
@@ -51,15 +59,29 @@ At 2k profiles / 42k events (the gap widens with profile count):
 | **Fix A** — drop `ORDER BY` when `limit == null` | planner picks `query_by_kind_pubkey_created` itself | **0.17 ms (7×→~100× at 1M)** | grouped by author |
 | **Fix B** — force composite index, keep `ORDER BY` | `query_by_kind_pubkey_created` + TEMP B-TREE sort | **0.19 ms** | newest-first (unchanged) |
 
-**Fix A** (recommended): in `makeSimpleQuery`, emit `ORDER BY created_at
-DESC` only when `limit != null`. Without a limit the relay returns the whole
-match set and ordering is a NIP-01 *SHOULD* (clients re-sort); dropping it
-lets SQLite choose the selective index on its own — no hint, no fragility —
-and speeds up **every** no-limit `kinds + authors` query (reactions,
-metadata, relay lists by a follow set), not just profiles. Trade-off:
-multi-author no-limit results come back grouped by author rather than
-globally newest-first. Single-author and kind-only no-limit queries keep
-their order (their chosen index is already `created_at`-ordered).
+**Fix A (rejected):** emit `ORDER BY` only when `limit != null || authors ==
+null`. Fastest (0.15 ms) and no hint, but dropping the order for multi-author
+no-limit queries is **client-visible** — it broke `FsParityTest`'s
+ordered-parity assertions, i.e. it changes what a REQ returns on the wire.
+Not worth a semantic change for this.
+
+**Fix B (applied):** in `makeSimpleQuery`, pin `INDEXED BY
+query_by_kind_pubkey_created` when the filter is multi-author (`authors.size >
+1`) with `kinds`, no `ids`, no d-tags, and **no `limit`** — keeping the ORDER
+BY. SQLite seeks the authors and sorts the (small) result: same rows, same
+newest-first order, ~8× here / ~100× at 1M. The scoping is exact:
+
+- **single author** (`pubkey = ?`) is already costed right and seeks — no pin;
+- **with a limit** (the 150-author home feed) the `created_at` scan + early
+  `LIMIT` is the better plan — no pin;
+- **d-tag / addressable** filters have their own index — no pin;
+- **authors-only, no kinds** keeps the planner's choice (needs the
+  flag-gated `query_by_pubkey_created`; it was only a ~3× minor loss, not the
+  100× regression) — left for later.
+
+`query_by_kind_pubkey_created` is created unconditionally, so the hint never
+dangles. No existing test changed — the only multi-author cases in
+`QueryAssemblerTest` carry a `limit` or a `search`, both excluded.
 
 **Fix B** (zero behavior change): when the filter has `kinds` + `authors`
 and **no limit**, add `INDEXED BY query_by_kind_pubkey_created` and keep the
