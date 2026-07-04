@@ -46,6 +46,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermission
 
 /**
  * Desktop Tor daemon manager using kmp-tor.
@@ -190,19 +192,31 @@ class DesktopTorManager(
         private fun desktopEnvironment(): TorRuntime.Environment {
             val appDir = torDataDirectory()
             appDir.mkdirs()
-            // Restrict permissions to owner only (700)
-            appDir.setReadable(false, false)
-            appDir.setReadable(true, true)
-            appDir.setWritable(false, false)
-            appDir.setWritable(true, true)
-            appDir.setExecutable(false, false)
-            appDir.setExecutable(true, true)
+            restrictToOwner(appDir)
 
             return TorRuntime.Environment.Builder(
                 workDirectory = appDir.resolve("work"),
                 cacheDirectory = appDir.resolve("cache"),
                 loader = ResourceLoaderTorExec::getOrCreate,
             ) {}
+        }
+
+        /** Restricts [dir] to owner only (700) — Tor state includes onion keys. */
+        private fun restrictToOwner(dir: File) {
+            try {
+                Files.setPosixFilePermissions(
+                    dir.toPath(),
+                    setOf(
+                        PosixFilePermission.OWNER_READ,
+                        PosixFilePermission.OWNER_WRITE,
+                        PosixFilePermission.OWNER_EXECUTE,
+                    ),
+                )
+            } catch (e: UnsupportedOperationException) {
+                // Windows: no POSIX permissions; the user profile's NTFS ACLs apply instead.
+            } catch (e: Exception) {
+                Log.w("DesktopTorManager", "Could not restrict permissions on ${dir.absolutePath}", e)
+            }
         }
 
         /** OS-specific data directory for Tor. */

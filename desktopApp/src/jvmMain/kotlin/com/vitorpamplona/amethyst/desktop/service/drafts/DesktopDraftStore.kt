@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.service.drafts
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -174,7 +175,7 @@ class DesktopDraftStore(
     suspend fun deleteDraft(slug: String) {
         val safeSlug = sanitizeSlug(slug)
         mutex.withLock {
-            File(draftsDir, "$safeSlug.md").delete()
+            File(draftsDir, "$safeSlug.md").deleteOrWarn("DesktopDraftStore", "draft file")
 
             val index = loadIndexMap()
             index.remove(safeSlug)
@@ -249,7 +250,7 @@ class DesktopDraftStore(
                 StandardCopyOption.REPLACE_EXISTING,
             )
         } finally {
-            if (tempFile.exists()) tempFile.delete()
+            if (tempFile.exists()) tempFile.deleteOrWarn("DesktopDraftStore", "temp draft file")
         }
     }
 

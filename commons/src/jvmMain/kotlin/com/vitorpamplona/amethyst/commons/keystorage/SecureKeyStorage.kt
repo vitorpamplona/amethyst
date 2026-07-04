@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.keystorage
 import com.github.javakeyring.BackendNotSupportedException
 import com.github.javakeyring.Keyring
 import com.github.javakeyring.PasswordAccessException
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -277,7 +278,7 @@ actual class SecureKeyStorage private actual constructor() {
         } finally {
             // Clean up temp file if it still exists
             if (tempFile.exists()) {
-                tempFile.delete()
+                tempFile.deleteOrWarn("SecureKeyStorage", "temp key file")
             }
         }
     }

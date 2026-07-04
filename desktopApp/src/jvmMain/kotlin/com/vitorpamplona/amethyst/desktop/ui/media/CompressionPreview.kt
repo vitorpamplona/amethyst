@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.ImageFormatSniffer
 import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder
 import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder.PassReason
 import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder.ReencodeResult
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import java.io.File
 import javax.imageio.ImageIO
 
@@ -163,7 +164,7 @@ suspend fun buildPreview(
 fun cleanupPreviewTemps(items: List<PreviewItem>) {
     items.forEach { item ->
         if (item is PreviewItem.Reencoded) {
-            item.compressedFile.delete()
+            item.compressedFile.deleteOrWarn("CompressionPreview", "compressed temp")
         }
     }
 }
