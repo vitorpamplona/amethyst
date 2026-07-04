@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip77Negentropy
 
 import com.vitorpamplona.negentropy.Negentropy
-import com.vitorpamplona.negentropy.storage.StorageVector
+import com.vitorpamplona.negentropy.storage.PrefixSumStorageVector
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
@@ -70,7 +70,7 @@ class NegentropySession(
             )
     }
 
-    private val storage = StorageVector()
+    private val storage = PrefixSumStorageVector()
     private val negentropy: Negentropy
 
     init {

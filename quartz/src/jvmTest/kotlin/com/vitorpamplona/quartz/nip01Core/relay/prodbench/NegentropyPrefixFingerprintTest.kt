@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.prodbench
 
 import com.vitorpamplona.negentropy.fingerprint.FingerprintCalculator
+import com.vitorpamplona.negentropy.storage.PrefixSumStorageVector
 import com.vitorpamplona.negentropy.storage.StorageVector
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.sha256.sha256
@@ -153,6 +154,13 @@ class NegentropyPrefixFingerprintTest {
         storage.seal()
         val library = FingerprintCalculator()
 
+        // The library's accelerated storage (now wired into quartz via
+        // `NegentropyServerSession.sealVector`): same entries, prefix-sum
+        // table built on seal. Every range must match the plain walk.
+        val accelerated = PrefixSumStorageVector()
+        ids.forEachIndexed { i, id -> accelerated.insert(1_700_000_000L + i, id) }
+        accelerated.seal()
+
         val index = PrefixFingerprintIndex(ids)
         val rnd = Random(42)
 
@@ -164,10 +172,16 @@ class NegentropyPrefixFingerprintTest {
             val lo = minOf(a, b)
             val hi = maxOf(a, b)
             if (lo == hi) return@repeat
+            val expected = library.run(storage, lo, hi).bytes
             assertContentEquals(
-                library.run(storage, lo, hi).bytes,
+                expected,
                 index.fingerprint(lo, hi),
-                "fingerprint mismatch for [$lo,$hi)",
+                "prototype fingerprint mismatch for [$lo,$hi)",
+            )
+            assertContentEquals(
+                expected,
+                accelerated.fingerprint(lo, hi).bytes,
+                "PrefixSumStorageVector fingerprint mismatch for [$lo,$hi)",
             )
             checked++
         }
