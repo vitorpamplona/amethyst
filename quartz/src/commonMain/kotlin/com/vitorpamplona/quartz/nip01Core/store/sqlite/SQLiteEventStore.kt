@@ -214,8 +214,8 @@ class SQLiteEventStore(
     suspend fun clearDB() {
         pool.useWriter { db ->
             modules.reversed().forEach { it.deleteAll(db) }
+            liveNegentropyIndex?.invalidate()
         }
-        liveNegentropyIndex?.invalidate()
     }
 
     suspend fun vacuum() =
@@ -278,7 +278,12 @@ class SQLiteEventStore(
      * when [liveNegentropyIndex] is off: zero cost on the write path.
      */
     internal class LiveIndexDelta {
-        val added = ArrayList<IdAndTime>()
+        /**
+         * A set (not a list) so a row displaced by a LATER row of the
+         * same transaction can be cancelled in O(1) — see
+         * [recordAccepted]. Unique ids make duplicates impossible.
+         */
+        val added = LinkedHashSet<IdAndTime>()
         val removed = ArrayList<IdAndTime>()
 
         /**
@@ -308,13 +313,28 @@ class SQLiteEventStore(
     private fun LiveIndexDelta.recordAccepted(
         event: Event,
         displaced: IdAndTime?,
+        deletedRows: Int,
     ) {
-        if (event is DeletionEvent || (event is RequestToVanishEvent && event.shouldVanishFrom(relay))) {
-            // Their own row lands too, but the rebuild scan picks it up.
+        if (event is RequestToVanishEvent && event.shouldVanishFrom(relay)) {
+            // Vanish deletes by pubkey inside a trigger; not itemizable.
+            // Its own row lands too, but the rebuild scan picks it up.
             invalidateAll = true
             return
         }
-        displaced?.let { removed += it }
+        if (event is DeletionEvent && deletedRows > 0) {
+            // Only a kind-5 that actually removed rows costs a rebuild.
+            // The common case — a delete broadcast for events this relay
+            // never stored — deletes nothing and records as a plain row,
+            // so it can't be used to thrash the index.
+            invalidateAll = true
+            return
+        }
+        // A row displaced by this insert that was added earlier in the
+        // SAME transaction (two versions of one replaceable in one
+        // batch) was never in the live index: cancel its pending add.
+        // Queueing a remove instead would no-op against the index and
+        // let the stale add through — advertising a dead id.
+        displaced?.let { if (!added.remove(it)) removed += it }
         added += IdAndTime(event.createdAt, event.id)
     }
 
@@ -386,11 +406,11 @@ class SQLiteEventStore(
     ) {
         val displaced = if (delta != null) displacedBy(event, db) else null
         val headerId = eventIndexModule.insert(event, db)
-        deletionModule.insert(event, db)
+        val deletedRows = deletionModule.insert(event, db)
         expirationModule.insert(event, headerId, db)
         fullTextSearchModule.insert(event, headerId, db)
         rightToVanishModule.insert(event, relay, headerId, db)
-        delta?.recordAccepted(event, displaced)
+        delta?.recordAccepted(event, displaced, deletedRows)
     }
 
     suspend fun insertEvent(event: Event) {
@@ -540,35 +560,41 @@ class SQLiteEventStore(
         maxEntries: Int? = null,
     ): List<IdAndTime> = pool.useReader { queryBuilder.snapshotIdsForNegentropy(filters, it, maxEntries) }
 
+    // The invalidate() calls below run INSIDE useWriter: dropping the
+    // index while still holding the mutex means no NEG-OPEN can seal a
+    // snapshot that still advertises the just-deleted rows, and a
+    // concurrent rebuild (also writer-mutexed) can't complete only to
+    // have its fresh content thrown away by a late invalidate.
+
     suspend fun delete(filter: Filter) {
-        pool.useWriter { queryBuilder.delete(filter, it) }
-        // Delete-by-filter can't itemize what it removed; drop the live
-        // index and let the next NEG-OPEN rebuild from one scan.
-        liveNegentropyIndex?.invalidate()
+        pool.useWriter {
+            queryBuilder.delete(filter, it)
+            // Delete-by-filter can't itemize what it removed; drop the
+            // live index and let the next NEG-OPEN rebuild from one scan.
+            liveNegentropyIndex?.invalidate()
+        }
     }
 
     suspend fun delete(filters: List<Filter>) {
-        pool.useWriter { queryBuilder.delete(filters, it) }
-        liveNegentropyIndex?.invalidate()
+        pool.useWriter {
+            queryBuilder.delete(filters, it)
+            liveNegentropyIndex?.invalidate()
+        }
     }
 
-    suspend fun delete(id: HexKey): Int {
-        val changes =
-            pool.useWriter { db ->
-                db.execSQL("DELETE FROM event_headers WHERE id = ?", arrayOf(id))
-                db.changes()
-            }
-        if (changes > 0) liveNegentropyIndex?.invalidate()
-        return changes
-    }
+    suspend fun delete(id: HexKey): Int =
+        pool.useWriter { db ->
+            db.execSQL("DELETE FROM event_headers WHERE id = ?", arrayOf(id))
+            val changes = db.changes()
+            if (changes > 0) liveNegentropyIndex?.invalidate()
+            changes
+        }
 
     suspend fun deleteExpiredEvents() {
-        val swept =
-            pool.useWriter { db ->
-                expirationModule.deleteExpiredEvents(db)
-                db.changes()
-            }
-        if (swept > 0) liveNegentropyIndex?.invalidate()
+        pool.useWriter { db ->
+            expirationModule.deleteExpiredEvents(db)
+            if (db.changes() > 0) liveNegentropyIndex?.invalidate()
+        }
     }
 
     /**
@@ -585,7 +611,17 @@ class SQLiteEventStore(
         if (!index.isPopulated()) {
             pool.useWriter { db ->
                 if (!index.isPopulated()) {
-                    index.rebuild(queryBuilder.snapshotIdsForNegentropy(listOf(Filter()), db, null))
+                    // The scan is capped at maxEntries + 1: a corpus over
+                    // the serve cap can never produce a snapshot (callers
+                    // answer NEG-ERR from the scan path instead), so
+                    // building — and then maintaining — a full index for
+                    // it would cost heap and write-path work for zero
+                    // benefit. Leaving it unpopulated also keeps ingest
+                    // delta-free (see newDeltaOrNull).
+                    val scan = queryBuilder.snapshotIdsForNegentropy(listOf(Filter()), db, maxEntries)
+                    if (scan.size <= maxEntries) {
+                        index.rebuild(scan)
+                    }
                 }
             }
         }

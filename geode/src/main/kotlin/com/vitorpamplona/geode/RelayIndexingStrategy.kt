@@ -43,8 +43,8 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
  * @param liveNegentropyIndex keep the always-current `(created_at, id)`
  *   set that serves full-corpus NIP-77 NEG-OPENs without a scan + seal
  *   (strfry answers those off its live tree; the scan+seal path measured
- *   ~340 ms per cold open at 50k events). Costs ~40 B/event of heap and
- *   one indexed pre-SELECT per replaceable insert.
+ *   ~340 ms per cold open at 50k events). Costs ~140 B/event of JVM heap
+ *   (hex-string ids) and one indexed pre-SELECT per replaceable insert.
  *   `[negentropy].live_index = false` turns it off.
  */
 fun relayIndexingStrategy(

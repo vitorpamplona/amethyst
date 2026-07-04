@@ -60,8 +60,10 @@ are effectively always cold; any new filter is cold by definition.
 ### 1. `LiveNegentropyIndex` (quartz, server-only, opt-in)
 
 An always-current sorted set of `(createdAt, id₃₂)` maintained from the
-store's write path — strfry's `MemoryView` equivalent, ~40 B/entry
-(1M events ≈ 40 MB; capped by `negentropy.max_sync_events`).
+store's write path — strfry's `MemoryView` equivalent, ~140 B/entry on
+the JVM (`IdAndTime` keeps the id as a 64-char hex string; 1M events ≈
+140 MB; the index is only built when the corpus fits
+`negentropy.max_sync_events`, so that also caps the heap).
 
 - **Structure**: single sorted array with binary-search insert. Nostr inserts
   are near-tail (created_at ≈ now), so the memmove is tiny in the common

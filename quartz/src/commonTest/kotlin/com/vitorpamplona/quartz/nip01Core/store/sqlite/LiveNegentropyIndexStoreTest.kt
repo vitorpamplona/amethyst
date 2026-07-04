@@ -194,6 +194,136 @@ class LiveNegentropyIndexStoreTest {
         }
 
     @Test
+    fun sameBatchReplaceableOverwriteDropsTheDisplacedId() =
+        runTest {
+            val store = newStore()
+            store.insert(event(1))
+            // Populate the index first so the batch runs the DELTA path
+            // (an unpopulated index would be covered by the rebuild scan
+            // and could never expose this).
+            assertIndexMatchesScan(store)
+
+            // Three versions of one replaceable in ONE batch: each later
+            // row displaces the previous one INSIDE the same transaction.
+            // The displaced rows were never in the index, so their
+            // pending adds must be cancelled — a remove would no-op and
+            // leave the index advertising dead ids.
+            val outcomes =
+                store.batchInsert(
+                    listOf(
+                        event(2, kind = 0, createdAt = 100, pubKey = pubkey(7)),
+                        event(3, kind = 0, createdAt = 200, pubKey = pubkey(7)),
+                        event(4, kind = 0, createdAt = 300, pubKey = pubkey(7)),
+                    ),
+                )
+            assertTrue(outcomes.all { it == IEventStore.InsertOutcome.Accepted })
+            assertEquals(1, store.count(Filter(kinds = listOf(0))))
+            assertIndexMatchesScan(store)
+
+            store.close()
+        }
+
+    @Test
+    fun sameTransactionReplaceableOverwriteDropsTheDisplacedId() =
+        runTest {
+            val store = newStore()
+            store.insert(event(1))
+            assertIndexMatchesScan(store)
+
+            store.transaction {
+                insert(event(2, kind = 10002, createdAt = 100, pubKey = pubkey(8)))
+                insert(event(3, kind = 10002, createdAt = 200, pubKey = pubkey(8)))
+            }
+            assertEquals(1, store.count(Filter(kinds = listOf(10002))))
+            assertIndexMatchesScan(store)
+
+            store.close()
+        }
+
+    @Test
+    fun sameBatchAddressableOverwriteDropsTheDisplacedId() =
+        runTest {
+            val store = newStore()
+            store.insert(event(1))
+            assertIndexMatchesScan(store)
+
+            val author = pubkey(9)
+            store.batchInsert(
+                listOf(
+                    event(2, kind = 30023, createdAt = 100, pubKey = author, tags = arrayOf(arrayOf("d", "post-a"))),
+                    event(3, kind = 30023, createdAt = 200, pubKey = author, tags = arrayOf(arrayOf("d", "post-a"))),
+                ),
+            )
+            assertEquals(1, store.count(Filter(kinds = listOf(30023))))
+            assertIndexMatchesScan(store)
+
+            store.close()
+        }
+
+    @Test
+    fun noOpDeletionKeepsTheIndexLive() =
+        runTest {
+            val store = newStore()
+            store.insert(event(1))
+            assertIndexMatchesScan(store)
+
+            // A kind-5 referencing an id this store never had — the
+            // common case for broadcast deletes — removes nothing, so it
+            // must NOT invalidate the index (that would be a free way to
+            // force full-scan rebuilds); it lands as a plain row.
+            store.insert(
+                event(2, kind = 5, createdAt = 120, tags = arrayOf(arrayOf("e", hexId(999)))),
+            )
+            val index = assertNotNull(store.store.liveNegentropyIndex)
+            assertTrue(index.isPopulated(), "no-op kind-5 must not invalidate the live index")
+            assertIndexMatchesScan(store)
+
+            store.close()
+        }
+
+    @Test
+    fun effectiveDeletionStillInvalidates() =
+        runTest {
+            val store = newStore()
+            val author = pubkey(3)
+            val target = event(1, createdAt = 100, pubKey = author)
+            store.insert(target)
+            assertIndexMatchesScan(store)
+
+            store.insert(
+                event(2, kind = 5, createdAt = 120, pubKey = author, tags = arrayOf(arrayOf("e", target.id))),
+            )
+            val index = assertNotNull(store.store.liveNegentropyIndex)
+            assertTrue(!index.isPopulated(), "a kind-5 that deleted rows must invalidate")
+            assertIndexMatchesScan(store)
+
+            store.close()
+        }
+
+    @Test
+    fun overCapCorpusNeverBuildsTheIndex() =
+        runTest {
+            val store = newStore()
+            store.insert(event(1))
+            store.insert(event(2))
+            store.insert(event(3))
+
+            // First-ever NEG-OPEN over a corpus above the serve cap: the
+            // rebuild scan is capped, the index stays unpopulated (no
+            // heap, no write-path deltas), and the caller falls back.
+            assertNull(store.liveNegentropySnapshot(2))
+            val index = assertNotNull(store.store.liveNegentropyIndex)
+            assertTrue(!index.isPopulated(), "an over-cap corpus must not build the index")
+
+            // A cap the corpus fits builds and serves as usual.
+            assertNotNull(store.liveNegentropySnapshot(3))
+            assertTrue(index.isPopulated())
+            assertIndexMatchesScan(store)
+
+            store.close()
+        }
+
+    @Test
     fun overCapFallsBackToNull() =
         runTest {
             val store = newStore()

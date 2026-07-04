@@ -123,8 +123,9 @@ interface IndexingStrategy {
      * Maintain an always-current in-memory `(created_at, id)` set (a
      * [com.vitorpamplona.quartz.nip77Negentropy.LiveNegentropyIndex]) so
      * NIP-77 NEG-OPENs over the full corpus skip the scan + O(n log n)
-     * seal — strfry answers those off its live tree. Costs ~40 B/event
-     * of heap plus one indexed pre-SELECT per replaceable insert, which
+     * seal — strfry answers those off its live tree. Costs ~140 B/event
+     * of JVM heap (the id is kept as a 64-char hex string, not 32 bytes)
+     * plus one indexed pre-SELECT per replaceable insert, which
      * only makes sense on a *relay*; client-side stores don't serve
      * NEG-OPENs, so the default is **off**.
      */
