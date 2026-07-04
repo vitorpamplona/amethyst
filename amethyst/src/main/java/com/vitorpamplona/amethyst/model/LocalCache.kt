@@ -77,6 +77,7 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -3492,6 +3493,10 @@ object LocalCache : ILocalCache, ICacheProvider {
 
                 is BirdDetectionEvent -> {
                     consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is Ps1SaveEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
                 }
 
                 is CommentEvent -> {

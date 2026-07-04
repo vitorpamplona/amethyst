@@ -192,6 +192,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPodcastMetadata
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderPs1Save
 import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayAddMember
@@ -264,6 +265,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.Softw
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -976,6 +978,8 @@ private fun FullBleedNoteCompose(
                     RenderBirdex(baseNote)
                 } else if (noteEvent is BirdDetectionEvent) {
                     RenderBirdDetection(baseNote)
+                } else if (noteEvent is Ps1SaveEvent) {
+                    RenderPs1Save(baseNote)
                 } else if (noteEvent is RoadEventReportEvent) {
                     RenderRoadEventReport(baseNote)
                 } else if (noteEvent is RoadEventConfirmationEvent) {

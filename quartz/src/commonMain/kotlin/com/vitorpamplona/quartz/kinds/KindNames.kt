@@ -54,6 +54,7 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -560,6 +561,7 @@ object KindNames {
             UserGraspListEvent.KIND to KindName("GRASP Servers", "34"),
             BirdexEvent.KIND to KindName("Birdex", null),
             BirdDetectionEvent.KIND to KindName("Bird Detection", null),
+            Ps1SaveEvent.KIND to KindName("PS1 Save", null),
             NwcInfoEvent.KIND to KindName("NWC Info", "47"),
             RelayMembershipListEvent.KIND to KindName("Relay Memberships", "43"),
             RootSiteEvent.KIND to KindName("Website Root", "5A"),
