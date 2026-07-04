@@ -10,7 +10,11 @@ application {
     applicationName = "relaybench"
     // Percentile latencies get skewed by GC pauses in the *client* — give the
     // harness enough heap that it never becomes the bottleneck being measured.
-    applicationDefaultJvmArgs = listOf("-Xmx2g")
+    // The sync phase also materializes the whole corpus as Event objects (plus
+    // a dedup map) to derive the 80% slices, so a million-event run needs more
+    // than 2g or `SyncBenchmark.effectiveEvents` OOMs. -Xmx is a ceiling, not a
+    // reservation, so small runs don't pay for it. Override with JAVA_OPTS.
+    applicationDefaultJvmArgs = listOf("-Xmx8g")
 }
 
 kotlin {
