@@ -250,11 +250,27 @@ object SyncBenchmark {
         val byId = effective.associateBy { it.id }
         val toA = fetchByIds(urlB, againstB.needIds, http)
         val toB = againstB.haveIds.mapNotNull { byId[it] }
-        coroutineScope {
-            listOf(
-                async { if (toA.isNotEmpty()) IngestBenchmark.throughput(urlA, toA, 1, window, http) },
-                async { if (toB.isNotEmpty()) IngestBenchmark.throughput(urlB, toB, 1, window, http) },
-            ).awaitAll()
+        // Localize where events can be lost in the transfer: fetch coverage
+        // (did the peer REQ return every needed id, without dups?) vs publish
+        // acks (did the target OK every event?). A gap between fetched and
+        // acked, or acked and actually-stored, pinpoints the layer.
+        val fetchedDistinct = toA.mapTo(HashSet()) { it.id }.size
+        if (toA.size != againstB.needIds.size || fetchedDistinct != toA.size) {
+            log("    ⚠ fetch $nameB→$nameA: needed ${againstB.needIds.size}, got ${toA.size} (distinct $fetchedDistinct)")
+        }
+        val transferResults =
+            coroutineScope {
+                listOf(
+                    async { nameA to (if (toA.isNotEmpty()) IngestBenchmark.throughput(urlA, toA, 1, window, http) else null) },
+                    async { nameB to (if (toB.isNotEmpty()) IngestBenchmark.throughput(urlB, toB, 1, window, http) else null) },
+                ).awaitAll()
+            }
+        for ((name, res) in transferResults) {
+            if (res != null && res.accepted + res.rejected != res.events) {
+                log("    ⚠ publish→$name: events=${res.events} accepted=${res.accepted} rejected=${res.rejected} (unacked=${res.events - res.accepted - res.rejected})")
+            } else if (res != null && res.rejected > 0) {
+                log("    ⚠ publish→$name: ${res.rejected} of ${res.events} rejected by relay")
+            }
         }
         val transferMs = (System.nanoTime() - transferStart) / 1_000_000.0
         log("    delta transfer: ${toA.size} → $nameA, ${toB.size} → $nameB in ${"%.0f".format(transferMs)} ms")
@@ -273,6 +289,7 @@ object SyncBenchmark {
         fun reportMissing(
             serverName: String,
             r: NegotiationResult,
+            deliveredBatch: List<Event>,
         ) {
             val missing = r.haveIds.mapNotNull { byId[it] }
             if (missing.isEmpty()) return
@@ -282,19 +299,25 @@ object SyncBenchmark {
                     .eachCount()
                     .entries
                     .sortedByDescending { it.value }
+            // Was each missing event actually delivered to this relay in the
+            // delta batch? In-batch-but-absent ⇒ the relay ACKed then dropped
+            // it (ingest loss); not-in-batch ⇒ it was never fetched/sent.
+            val batchIds = deliveredBatch.mapTo(HashSet()) { it.id }
+            val inBatch = r.haveIds.count { it in batchIds }
             log("    ⚠ $serverName is missing ${r.haveIds.size} events the reference set has:")
             log("      by kind: " + byKind.joinToString(" ") { "k${it.key}:${it.value}" })
+            log("      of these, $inBatch were in the delta batch published to $serverName (dropped after delivery), ${r.haveIds.size - inBatch} were never delivered")
             missing.take(5).forEach { e ->
                 val tagKeys =
                     e.tags
                         .mapNotNull { it.getOrNull(0) }
                         .distinct()
                         .joinToString(",")
-                log("      e.g. kind=${e.kind} created_at=${e.createdAt} id=${e.id.take(12)}… tags=[$tagKeys]")
+                log("      e.g. kind=${e.kind} created_at=${e.createdAt} id=${e.id.take(12)}… tags=[$tagKeys] inBatch=${e.id in batchIds}")
             }
         }
-        reportMissing(nameA, identicalA)
-        reportMissing(nameB, identicalB)
+        reportMissing(nameA, identicalA, toA)
+        reportMissing(nameB, identicalB, toB)
 
         // 4. Heartbeat: same reconcile again, immediately, no writes in
         // between — measures whether the server keeps its reconciliation
