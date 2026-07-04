@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -74,6 +76,8 @@ val UserProfilePostKinds2 =
         ZapPollEvent.KIND,
         PinListEvent.KIND,
         AttestationEvent.KIND,
+        BirdDetectionEvent.KIND,
+        BirdexEvent.KIND,
     )
 
 // NIP-5A nsites (15128/35128) and NIP-5D napplets (15129/35129) the user publishes, surfaced in

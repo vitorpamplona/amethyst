@@ -155,6 +155,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAttestation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestationRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorProficiency
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorRecommendation
+import com.vitorpamplona.amethyst.ui.note.types.RenderBirdDetection
 import com.vitorpamplona.amethyst.ui.note.types.RenderBirdex
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarTimeSlotEvent
@@ -249,6 +250,7 @@ import com.vitorpamplona.quartz.experimental.attestations.recommendation.Attesto
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
@@ -972,6 +974,8 @@ private fun FullBleedNoteCompose(
                     RenderFundraiser(baseNote, makeItShort = false, accountViewModel, nav)
                 } else if (noteEvent is BirdexEvent) {
                     RenderBirdex(baseNote)
+                } else if (noteEvent is BirdDetectionEvent) {
+                    RenderBirdDetection(baseNote)
                 } else if (noteEvent is RoadEventReportEvent) {
                     RenderRoadEventReport(baseNote)
                 } else if (noteEvent is RoadEventConfirmationEvent) {

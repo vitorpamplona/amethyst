@@ -30,12 +30,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
+import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 
 /** How many species names to list before collapsing into a "+N more" suffix. */
@@ -61,7 +65,7 @@ fun RenderBirdex(baseNote: Note) {
 
     Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
         Text(
-            text = pluralStringResource(R.plurals.birdex_species_count, names.size, names.size),
+            text = "\uD83D\uDC26 " + pluralStringResource(R.plurals.birdex_species_count, names.size, names.size),
             style = MaterialTheme.typography.titleMedium,
         )
 
@@ -79,6 +83,54 @@ fun RenderBirdex(baseNote: Note) {
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+    }
+}
+
+/**
+ * Minimal card for a single Birdstar bird detection (kind 2473).
+ *
+ * The event has no body and no images. The title is the common name parsed from
+ * the publisher's `alt` tag (falling back to the raw `alt`, then a generic
+ * label), and the scientific name renders as an italic link to the Wikidata
+ * species entry from the `i` tag when one is present. The `g` geohash is
+ * surfaced by the generic note-location UI, not here.
+ */
+@Composable
+fun RenderBirdDetection(baseNote: Note) {
+    val noteEvent = baseNote.event as? BirdDetectionEvent ?: return
+
+    val commonName = remember(noteEvent) { noteEvent.commonName() }
+    val summary = remember(noteEvent) { noteEvent.summary() }
+    val species = remember(noteEvent) { noteEvent.speciesName() }
+    val reference = remember(noteEvent) { noteEvent.speciesReference() }
+
+    Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
+        Text(
+            text = "\uD83D\uDC26 " + (commonName ?: summary ?: stringResource(R.string.bird_detection_title)),
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        if (species != null) {
+            Spacer(Modifier.height(6.dp))
+            val speciesStyle = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic)
+            if (reference != null) {
+                ClickableUrl(
+                    urlText = species,
+                    url = reference,
+                    style = speciesStyle,
+                )
+            } else {
+                Text(
+                    text = species,
+                    style = speciesStyle,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

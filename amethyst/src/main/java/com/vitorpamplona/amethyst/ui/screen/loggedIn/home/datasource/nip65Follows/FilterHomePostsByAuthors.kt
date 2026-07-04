@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopN
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
@@ -72,6 +74,8 @@ val HomePostsNewThreadKinds2 =
         ChessGameEvent.KIND,
         LiveChessGameChallengeEvent.KIND,
         LiveChessGameEndEvent.KIND,
+        BirdDetectionEvent.KIND,
+        BirdexEvent.KIND,
     )
 
 val HomePostsConversationKinds =

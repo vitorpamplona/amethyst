@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
@@ -140,6 +141,7 @@ class FollowPackFeedNewThreadFeedFilter(
                 noteEvent is ClassifiedsEvent ||
                 noteEvent is FundraiserEvent ||
                 noteEvent is BirdexEvent ||
+                noteEvent is BirdDetectionEvent ||
                 noteEvent.isRenderableRepost() ||
                 (noteEvent is LongTextNoteEvent && noteEvent.content.isNotEmpty()) ||
                 (noteEvent is WikiNoteEvent && noteEvent.content.isNotEmpty()) ||
