@@ -303,7 +303,7 @@ class MergeQueryCorrectnessTest {
 
             val filter = Filter(kinds = listOf(1, 6), authors = authors, limit = 30)
             val decoded = store.query<Event>(filter).map { it.id }
-            val raw = store.rawQuery(filter).map { it.id }
+            val raw = store.store.rawQuery(filter).map { it.id }
 
             assertEquals(decoded, raw, "the zero-decode raw path must match the decoded query")
             assertEquals(reference(all, filter, 30), raw)

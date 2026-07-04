@@ -1,9 +1,13 @@
-# follow-feed: measured read/write/size tradeoff — keep the current plan
+# follow-feed: measured read/write/size tradeoff — shipped the k-way merge
 
-The 1M run showed geode's `follow-feed` (`kinds=[1,6] AND authors=[150]
-ORDER BY created_at DESC LIMIT 500`) at 97.7 ms vs strfry 17.6 ms. This
-measured whether any change is worth it, deliberately across **read**,
-**write**, and **size** so a read win doesn't quietly cost elsewhere.
+**Status: shipped.** The 1M run showed geode's `follow-feed` (`kinds=[1,6] AND
+authors=[150] ORDER BY created_at DESC LIMIT 500`) at 97.7 ms vs strfry 17.6 ms.
+This measured whether any change is worth it, deliberately across **read**,
+**write**, and **size** so a read win doesn't quietly cost elsewhere — and the
+one universally-better option (the app-level k-way merge) was then built.
+`MergeQueryExecutor` now serves this shape; a fresh 1M relayBench run has geode
+at **18.8 ms vs strfry 17.7 ms** (parity, down from 97.7 ms) and **46,258 ev/s
+vs strfry 15,365 @8conn** (3×), with both relays returning the same 500 events.
 
 ## What the current plan actually does
 
@@ -63,11 +67,26 @@ shape was considered and rejected: it would tax every insert and grow the DB
 for a single query pattern, and (as the profiles investigation already
 showed) SQLite reverts to the scan under `ANALYZE` anyway.
 
-## Decision
+## Decision — built the k-way merge
 
-Keep the current composite plan. It's the robust default; the tempting SQL
-fixes each break a common workload and get worse at scale, which is exactly
-the "don't break something else" risk. If follow-feed latency on prolific
-follows becomes a priority, the app-level k-way merge is the only approach
-that improves it universally, and it's write/size-neutral. Benchmark kept as
-the evidence and as a guard for anyone tempted by the `scan` shortcut.
+The SQL alternatives were all rejected (each breaks a common workload and gets
+worse at scale). The app-level **k-way merge** was the only approach that
+improves this shape universally while staying write/size-neutral, so it was
+built as `MergeQueryExecutor` and wired into both `query` and the zero-decode
+`rawQuery` relay path.
+
+It opens one lazy newest-first cursor per `(kind, pubkey)` stream off the
+existing `query_by_kind_pubkey_created` index (or `query_by_pubkey_created` for
+authors-only), merges their heads `(created_at DESC, id ASC)`, and stops at the
+limit — reading **O(limit + streams)** rows regardless of follow activity or
+corpus size, which is exactly strfry's algorithm. Eligibility is narrow
+(2..2048 streams, simple filter, explicit limit, no ids/d-tags); everything
+else falls through to the single-SQL plan, so no other query shape changes.
+
+Correctness is pinned by `MergeQueryCorrectnessTest` (merge == single-SQL top-N
+vs both an independent reference and the SQL path, across ties/windows/raw).
+`FollowFeedReadBenchmark` gained a `merge` variant showing it flat ~10-12 ms
+in-memory across both profiles — the in-memory number understates the win
+because the merge trades *disk* reads for CPU; the real gain is the cold-disk
+1M relayBench result above (97.7 → 18.8 ms). The `scan` guard stays as evidence
+of why the tempting shortcut is catastrophic on sparse follows (1995 ms at 1M).
