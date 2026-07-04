@@ -37,16 +37,6 @@ class OpPrepend(
 
     public override fun call(msg: ByteArray): ByteArray = this.arg + msg
 
-    override fun equals(other: Any?): Boolean {
-        if (other !is OpPrepend) {
-            return false
-        }
-
-        return this.arg.contentEquals(other.arg)
-    }
-
-    public override fun hashCode(): Int = TAG.toInt() xor this.arg.contentHashCode()
-
     companion object {
         val TAG: Byte = 0xf1.toByte()
 

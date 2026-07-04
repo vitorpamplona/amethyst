@@ -46,10 +46,6 @@ class OpSHA1 : OpCrypto() {
 
     override fun call(msg: ByteArray): ByteArray = super.call(msg)
 
-    override fun equals(other: Any?): Boolean = (other is OpSHA1)
-
-    override fun hashCode(): Int = TAG.toInt()
-
     companion object {
         val TAG: Byte = 0x02
 

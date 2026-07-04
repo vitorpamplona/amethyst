@@ -64,6 +64,14 @@ abstract class OpCrypto internal constructor() : OpUnary() {
         return hashFd(ctx)
     }
 
+    // Crypto ops carry no identity state — class-scoped equality with a
+    // tag-based hashCode (never conflates ops even if a subclass reused a
+    // tag by mistake). Tag uniqueness itself is a protocol invariant
+    // (serialization dispatches on it), pinned by OtsEqualsContractTest.
+    override fun equals(other: Any?): Boolean = other is OpCrypto && this::class == other::class
+
+    override fun hashCode(): Int = this.tag().toInt()
+
     companion object {
         fun deserializeFromTag(
             ctx: StreamDeserializationContext,

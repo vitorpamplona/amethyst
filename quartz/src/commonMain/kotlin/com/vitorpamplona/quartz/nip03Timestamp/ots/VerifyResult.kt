@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip03Timestamp.ots
 /**
  * Class that lets us compare, sort, store and print timestamps.
  */
-class VerifyResult(
+data class VerifyResult(
     val timestamp: Long?,
     val height: Int,
 ) : Comparable<VerifyResult> {
@@ -40,12 +40,10 @@ class VerifyResult(
         return "block $height attests data existed as of unix timestamp of $timestamp"
     }
 
+    /**
+     * Orders by [height] only, intentionally ignoring [timestamp] — NOT
+     * consistent with [equals], which compares both fields. Fine for picking
+     * the earliest attestation; do not rely on it for sorted-set dedup.
+     */
     override fun compareTo(other: VerifyResult): Int = this.height - other.height
-
-    override fun equals(other: Any?): Boolean {
-        val vr = other as VerifyResult
-        return this.timestamp == vr.timestamp && this.height == vr.height
-    }
-
-    override fun hashCode(): Int = (((this.timestamp) as Long).toInt()) xor this.height
 }
