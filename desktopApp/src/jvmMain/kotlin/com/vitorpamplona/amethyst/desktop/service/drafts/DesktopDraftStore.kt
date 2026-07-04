@@ -250,7 +250,7 @@ class DesktopDraftStore(
                 StandardCopyOption.REPLACE_EXISTING,
             )
         } finally {
-            if (tempFile.exists()) tempFile.deleteOrWarn("DesktopDraftStore", "temp draft file")
+            tempFile.deleteOrWarn("DesktopDraftStore", "temp draft file")
         }
     }
 

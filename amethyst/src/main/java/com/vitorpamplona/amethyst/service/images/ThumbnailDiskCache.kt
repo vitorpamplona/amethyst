@@ -69,9 +69,7 @@ class ThumbnailDiskCache(
             BitmapFactory.decodeFile(file.absolutePath)
         } catch (e: Exception) {
             Log.w("ThumbnailDiskCache", "Failed to decode cached thumbnail, deleting: ${file.absolutePath}", e)
-            if (!file.delete()) {
-                Log.w("ThumbnailDiskCache") { "Failed to delete corrupt cache file: ${file.absolutePath}" }
-            }
+            file.deleteOrWarn("ThumbnailDiskCache", "corrupt cache file")
             null
         }
     }
@@ -156,9 +154,7 @@ class ThumbnailDiskCache(
             scaled.recycle()
             if (!tempFile.renameTo(finalFile)) {
                 Log.w("ThumbnailDiskCache") { "Failed to rename temp thumbnail to final: ${tempFile.absolutePath}" }
-                if (!tempFile.delete()) {
-                    Log.w("ThumbnailDiskCache") { "Failed to delete temp thumbnail: ${tempFile.absolutePath}" }
-                }
+                tempFile.deleteOrWarn("ThumbnailDiskCache", "temp thumbnail")
                 return false
             }
 

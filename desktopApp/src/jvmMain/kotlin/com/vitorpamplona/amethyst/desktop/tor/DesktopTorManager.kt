@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.tor
 import com.vitorpamplona.amethyst.commons.tor.ITorManager
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.util.restrictToOwner
 import com.vitorpamplona.quartz.utils.Log
 import io.matthewnelson.kmp.tor.resource.exec.tor.ResourceLoaderTorExec
 import io.matthewnelson.kmp.tor.runtime.Action.Companion.startDaemonAsync
@@ -46,8 +47,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.attribute.PosixFilePermission
 
 /**
  * Desktop Tor daemon manager using kmp-tor.
@@ -192,31 +191,14 @@ class DesktopTorManager(
         private fun desktopEnvironment(): TorRuntime.Environment {
             val appDir = torDataDirectory()
             appDir.mkdirs()
-            restrictToOwner(appDir)
+            // Owner-only (700) — Tor state includes onion keys.
+            appDir.restrictToOwner("DesktopTorManager")
 
             return TorRuntime.Environment.Builder(
                 workDirectory = appDir.resolve("work"),
                 cacheDirectory = appDir.resolve("cache"),
                 loader = ResourceLoaderTorExec::getOrCreate,
             ) {}
-        }
-
-        /** Restricts [dir] to owner only (700) — Tor state includes onion keys. */
-        private fun restrictToOwner(dir: File) {
-            try {
-                Files.setPosixFilePermissions(
-                    dir.toPath(),
-                    setOf(
-                        PosixFilePermission.OWNER_READ,
-                        PosixFilePermission.OWNER_WRITE,
-                        PosixFilePermission.OWNER_EXECUTE,
-                    ),
-                )
-            } catch (e: UnsupportedOperationException) {
-                // Windows: no POSIX permissions; the user profile's NTFS ACLs apply instead.
-            } catch (e: Exception) {
-                Log.w("DesktopTorManager", "Could not restrict permissions on ${dir.absolutePath}", e)
-            }
         }
 
         /** OS-specific data directory for Tor. */

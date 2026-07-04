@@ -229,7 +229,7 @@ actual class SecureKeyStorage private actual constructor() {
 
                 if (existed) {
                     if (data.isEmpty()) {
-                        fallbackFile.delete()
+                        fallbackFile.deleteOrWarn("SecureKeyStorage", "fallback key file")
                     } else {
                         atomicWriteFallbackData(fallbackFile, data)
                     }
@@ -276,10 +276,8 @@ actual class SecureKeyStorage private actual constructor() {
                 StandardCopyOption.REPLACE_EXISTING,
             )
         } finally {
-            // Clean up temp file if it still exists
-            if (tempFile.exists()) {
-                tempFile.deleteOrWarn("SecureKeyStorage", "temp key file")
-            }
+            // Clean up any leftover temp file
+            tempFile.deleteOrWarn("SecureKeyStorage", "temp key file")
         }
     }
 

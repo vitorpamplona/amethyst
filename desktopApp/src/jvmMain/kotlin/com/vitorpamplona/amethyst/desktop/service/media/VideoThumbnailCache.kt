@@ -167,7 +167,7 @@ object VideoThumbnailCache {
         val hash = sha1Hex(url)
         val cached = File(downloadCacheDir, "$hash.mp4")
         if (cached.length() > 0L) return Download(cached, persistable = true)
-        if (cached.exists()) cached.deleteOrWarn("VideoThumbnailCache", "empty cached chunk")
+        cached.deleteOrWarn("VideoThumbnailCache", "empty cached chunk")
 
         var wrote = false
         var rangeHonored = false

@@ -261,10 +261,9 @@ class AccountManager internal constructor(
 
     suspend fun loadSavedAccount(): Result<AccountState.LoggedIn> =
         try {
-            // Clean up legacy files (one-time, silent)
-            File(amethystDir, "last_account.txt").deleteOrWarn("AccountManager", "legacy file")
-            File(amethystDir, "bunker_uri.txt").deleteOrWarn("AccountManager", "legacy file")
-            File(amethystDir, "nwc_connection.txt").deleteOrWarn("AccountManager", "legacy file")
+            // Clean up legacy files (one-time)
+            listOf("last_account.txt", "bunker_uri.txt", "nwc_connection.txt")
+                .forEach { File(amethystDir, it).deleteOrWarn("AccountManager", "legacy file") }
 
             // Single source of truth: accounts.json.enc
             val activeNpub =
