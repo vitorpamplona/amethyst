@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.experimental.attestations.recommendation.Attesto
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
 import com.vitorpamplona.quartz.experimental.clink.manage.ManageEvent
@@ -558,6 +559,7 @@ object KindNames {
             GoodWikiRelayListEvent.KIND to KindName("Wiki Relays", "51"),
             UserGraspListEvent.KIND to KindName("GRASP Servers", "34"),
             BirdexEvent.KIND to KindName("Birdex", null),
+            BirdDetectionEvent.KIND to KindName("Bird Detection", null),
             NwcInfoEvent.KIND to KindName("NWC Info", "47"),
             RelayMembershipListEvent.KIND to KindName("Relay Memberships", "43"),
             RootSiteEvent.KIND to KindName("Website Root", "5A"),

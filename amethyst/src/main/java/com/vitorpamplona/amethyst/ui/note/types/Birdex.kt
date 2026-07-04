@@ -30,16 +30,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
+import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 
 /** How many species names to list before collapsing into a "+N more" suffix. */
 private const val SPECIES_PREVIEW_LIMIT = 6
+
+/** Bird emoji prefix shared by both Birdstar card titles. */
+private const val BIRD_PREFIX = "\uD83D\uDC26 "
 
 /**
  * Minimal, fixed-size summary card for a Birdstar "Birdex" (kind 12473).
@@ -61,7 +68,7 @@ fun RenderBirdex(baseNote: Note) {
 
     Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
         Text(
-            text = pluralStringResource(R.plurals.birdex_species_count, names.size, names.size),
+            text = BIRD_PREFIX + pluralStringResource(R.plurals.birdex_species_count, names.size, names.size),
             style = MaterialTheme.typography.titleMedium,
         )
 
@@ -82,3 +89,64 @@ fun RenderBirdex(baseNote: Note) {
         }
     }
 }
+
+/**
+ * Minimal card for a single Birdstar bird detection (kind 2473).
+ *
+ * The event has no body and no images. The title is the common name parsed from
+ * the publisher's `alt` tag (a generic label when absent), and the scientific
+ * name renders as an italic link to the Wikidata species entry from the `i` tag
+ * when one is present. The `g` geohash is surfaced by the generic note-location
+ * UI, not here.
+ */
+@Composable
+fun RenderBirdDetection(baseNote: Note) {
+    val noteEvent = baseNote.event as? BirdDetectionEvent ?: return
+
+    val detection =
+        remember(noteEvent) {
+            BirdDetectionInfo(
+                commonName = noteEvent.commonName(),
+                species = noteEvent.speciesName(),
+                reference = noteEvent.speciesReference(),
+            )
+        }
+
+    Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
+        Text(
+            text = BIRD_PREFIX + (detection.commonName ?: stringResource(R.string.bird_detection_title)),
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        if (detection.species != null) {
+            Spacer(Modifier.height(6.dp))
+            if (detection.reference != null) {
+                val typography = MaterialTheme.typography
+                val speciesStyle = remember(typography) { typography.bodyMedium.copy(fontStyle = FontStyle.Italic) }
+                ClickableUrl(
+                    urlText = detection.species,
+                    url = detection.reference,
+                    style = speciesStyle,
+                )
+            } else {
+                Text(
+                    text = detection.species,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+/** Tag values parsed once per event for the detection card. */
+private class BirdDetectionInfo(
+    val commonName: String?,
+    val species: String?,
+    val reference: String?,
+)
