@@ -22,6 +22,7 @@ package com.vitorpamplona.geode.mirror
 
 import com.vitorpamplona.geode.KtorRelay
 import com.vitorpamplona.geode.RelayEngine
+import com.vitorpamplona.geode.RelayIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
@@ -48,7 +49,10 @@ import kotlin.test.Test
  * downstream reaching the target (or plateauing).
  */
 class MirrorSyncThroughputTest {
-    private val downstreamStore = EventStore(null)
+    // geode's real relay config (deferred FTS, live negentropy index) — not the
+    // default EventStore(null), whose synchronous FTS tokenization on every
+    // insert would dominate ingest and misrepresent the sync rate.
+    private val downstreamStore = EventStore(dbName = null, indexStrategy = RelayIndexingStrategy)
     private val downstream =
         RelayEngine(url = "ws://127.0.0.1:7899/".normalizeRelayUrl(), store = downstreamStore, parallelVerify = true)
 
@@ -102,7 +106,7 @@ class MirrorSyncThroughputTest {
                 sourceUrl = externalUrl
                 println("─ MirrorSyncThroughput: mirroring EXTERNAL source $externalUrl, expect $expect ─")
             } else {
-                val store = EventStore(null).also { upstreamStore = it }
+                val store = EventStore(dbName = null, indexStrategy = RelayIndexingStrategy).also { upstreamStore = it }
                 val now = TimeUtils.now()
                 val sig = "f".repeat(128)
                 val batch = ArrayList<Event>(10_000)
@@ -156,11 +160,20 @@ class MirrorSyncThroughputTest {
             var reached = 0
             var last = -1
             var stable = 0
+            var lastLog = startNanos
+            var lastLogCount = 0
             withTimeoutOrNull(600_000) {
                 while (true) {
                     val c = downstreamStore.count(Filter())
                     reached = c
                     if (c >= expect) break
+                    val nowNanos = System.nanoTime()
+                    if (nowNanos - lastLog >= 3_000_000_000L) {
+                        val instRate = ((c - lastLogCount) / ((nowNanos - lastLog) / 1e9)).toLong()
+                        println("    …$c/$expect  (%,d ev/s inst)".format(instRate))
+                        lastLog = nowNanos
+                        lastLogCount = c
+                    }
                     if (c == last) {
                         if (++stable >= 30) break // ~15s no progress
                     } else {
