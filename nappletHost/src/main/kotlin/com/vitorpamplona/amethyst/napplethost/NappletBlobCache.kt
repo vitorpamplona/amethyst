@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
 
@@ -55,8 +55,8 @@ class NappletBlobCache(
             dir.mkdirs()
             val tmp = File(dir, "$sha256.tmp.${System.nanoTime()}")
             tmp.writeBytes(bytes)
-            if (!tmp.renameTo(target) && !tmp.delete()) {
-                Log.w("NappletBlobCache") { "Failed to delete leftover temp file ${tmp.absolutePath} after a failed rename" }
+            if (!tmp.renameTo(target)) {
+                tmp.deleteOrWarn("NappletBlobCache", "leftover temp file")
             }
         }
     }
@@ -64,13 +64,18 @@ class NappletBlobCache(
     /** Best-effort eviction: if the store exceeds [maxBytes], delete oldest blobs until under it. */
     fun trimToSize(maxBytes: Long) {
         runCatching {
-            val files = dir.listFiles()?.filter { it.isFile && !it.name.contains(".tmp.") } ?: return
-            var total = files.sumOf { it.length() }
+            val files =
+                dir
+                    .listFiles()
+                    ?.filter { it.isFile && !it.name.contains(".tmp.") }
+                    ?.map { Triple(it, it.length(), it.lastModified()) } ?: return
+            var total = files.sumOf { it.second }
             if (total <= maxBytes) return
-            files.sortedBy { it.lastModified() }.forEach { f ->
+            files.sortedBy { it.third }.forEach { (f, length, _) ->
                 if (total <= maxBytes) return
-                total -= f.length()
-                f.delete()
+                if (f.deleteOrWarn("NappletBlobCache", "blob")) {
+                    total -= length
+                }
             }
         }
     }

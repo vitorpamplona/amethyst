@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.model.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.model.account.AccountStorage
 import com.vitorpamplona.amethyst.commons.model.account.SignerType
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 import java.nio.file.Files
@@ -166,7 +167,7 @@ class DesktopAccountStorage(
             val backup = File(file.parent, "accounts.json.enc.corrupt.${System.currentTimeMillis()}")
             java.nio.file.Files
                 .copy(file.toPath(), backup.toPath())
-            file.delete()
+            file.deleteOrWarn("DesktopAccountStorage", "corrupt accounts file")
             backup.absolutePath
         } catch (_: Exception) {
             null

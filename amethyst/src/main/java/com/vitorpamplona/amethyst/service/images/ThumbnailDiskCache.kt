@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.images
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
@@ -68,9 +69,7 @@ class ThumbnailDiskCache(
             BitmapFactory.decodeFile(file.absolutePath)
         } catch (e: Exception) {
             Log.w("ThumbnailDiskCache", "Failed to decode cached thumbnail, deleting: ${file.absolutePath}", e)
-            if (!file.delete()) {
-                Log.w("ThumbnailDiskCache") { "Failed to delete corrupt cache file: ${file.absolutePath}" }
-            }
+            file.deleteOrWarn("ThumbnailDiskCache", "corrupt cache file")
             null
         }
     }
@@ -155,9 +154,7 @@ class ThumbnailDiskCache(
             scaled.recycle()
             if (!tempFile.renameTo(finalFile)) {
                 Log.w("ThumbnailDiskCache") { "Failed to rename temp thumbnail to final: ${tempFile.absolutePath}" }
-                if (!tempFile.delete()) {
-                    Log.w("ThumbnailDiskCache") { "Failed to delete temp thumbnail: ${tempFile.absolutePath}" }
-                }
+                tempFile.deleteOrWarn("ThumbnailDiskCache", "temp thumbnail")
                 return false
             }
 
@@ -193,7 +190,7 @@ class ThumbnailDiskCache(
             files
                 .sortedBy { it.lastModified() }
                 .take(files.size - maxEntries)
-                .forEach { it.delete() }
+                .forEach { it.deleteOrWarn("ThumbnailDiskCache", "thumbnail") }
         }
     }
 

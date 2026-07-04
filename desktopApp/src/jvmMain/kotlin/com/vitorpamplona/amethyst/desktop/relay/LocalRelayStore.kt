@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.relay
 
 import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -276,7 +277,7 @@ class LocalRelayStore(
 
     private fun deleteDbFiles(path: String) {
         listOf("", "-wal", "-shm", "-journal").forEach { suffix ->
-            File(path + suffix).delete()
+            File(path + suffix).deleteOrWarn("LocalRelayStore", "relay db file")
         }
     }
 }

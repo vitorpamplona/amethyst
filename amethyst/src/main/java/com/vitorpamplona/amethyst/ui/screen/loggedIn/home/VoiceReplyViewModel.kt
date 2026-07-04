@@ -28,6 +28,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -155,9 +156,8 @@ class VoiceReplyViewModel : ViewModel() {
     private fun deleteVoiceLocalFile() {
         voiceLocalFile?.let { file ->
             try {
-                if (file.exists()) {
-                    file.delete()
-                    Log.d("VoiceReplyViewModel") { "Deleted voice file: ${file.absolutePath}" }
+                if (file.deleteOrWarn("VoiceReplyViewModel", "voice file")) {
+                    Log.d("VoiceReplyViewModel") { "Voice file removed or already gone: ${file.absolutePath}" }
                 }
             } catch (e: Exception) {
                 Log.w("VoiceReplyViewModel", "Failed to delete voice file: ${file.absolutePath}", e)
