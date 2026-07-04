@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -79,6 +80,58 @@ class StaticConfigTest {
     @Test
     fun mirrorSectionDefaultsToEmpty() {
         assertTrue(StaticConfig.fromToml("").mirror.isEmpty())
+    }
+
+    @Test
+    fun validateRejectsNonPositiveReaders() {
+        assertFailsWith<IllegalArgumentException> {
+            StaticConfig.fromToml("[database]\nreaders = 0").validate()
+        }
+        assertFailsWith<IllegalArgumentException> {
+            StaticConfig.fromToml("[database]\nreaders = -1").validate()
+        }
+        // A sane pool passes.
+        StaticConfig.fromToml("[database]\nreaders = 1").validate()
+        // Unset passes (quartz default applies).
+        StaticConfig.fromToml("").validate()
+    }
+
+    @Test
+    fun validateRejectsNonPositiveOptimizeInterval() {
+        assertFailsWith<IllegalArgumentException> {
+            StaticConfig.fromToml("[database]\noptimize_interval_seconds = 0").validate()
+        }
+        assertFailsWith<IllegalArgumentException> {
+            StaticConfig.fromToml("[database]\noptimize_interval_seconds = -5").validate()
+        }
+        StaticConfig.fromToml("[database]\noptimize_interval_seconds = 3600").validate()
+    }
+
+    @Test
+    fun mirrorFilterValidatorRejectsTyposAndScalars() {
+        val url = "wss://up.example/"
+
+        // Unknown key (a typo) — must fail, not silently widen scope.
+        assertFailsWith<IllegalArgumentException> {
+            MirrorFilterValidator.validate(url, """{"kindss":[4]}""")
+        }
+        // List field given a scalar.
+        assertFailsWith<IllegalArgumentException> {
+            MirrorFilterValidator.validate(url, """{"authors":"abc"}""")
+        }
+        // Not an object.
+        assertFailsWith<IllegalArgumentException> {
+            MirrorFilterValidator.validate(url, """["kinds",1]""")
+        }
+        // Malformed JSON.
+        assertFailsWith<IllegalArgumentException> {
+            MirrorFilterValidator.validate(url, """{"kinds":[1,}""")
+        }
+
+        // Valid shapes pass: recognized scalar + array + tag keys.
+        MirrorFilterValidator.validate(url, """{"kinds":[0,1,3],"#t":["nostr"],"since":123,"limit":5,"search":"x"}""")
+        MirrorFilterValidator.validate(url, """{"&p":["abc"]}""")
+        MirrorFilterValidator.validate(url, "{}")
     }
 
     @Test

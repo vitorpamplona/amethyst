@@ -127,7 +127,9 @@ require_auth = false
 # inject events inside the declared scope. `since`/`limit` inside it
 # are ignored (backfill_seconds owns the time window). Omit to mirror
 # everything; for several disjoint scopes, repeat [[mirror]] with the
-# same url.
+# same url. The keys are validated at boot (a typo like `kindss` or a
+# scalar where an array belongs fails startup) precisely because this
+# filter is the trust boundary for `trusted = true`.
 #
 # `dir` (strfry-router parity) sets the flow direction: "down" pulls
 # from the upstream (default), "up" pushes this relay's matching

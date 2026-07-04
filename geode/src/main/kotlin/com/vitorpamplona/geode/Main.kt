@@ -21,6 +21,7 @@
 package com.vitorpamplona.geode
 
 import com.vitorpamplona.geode.config.BannedEntry
+import com.vitorpamplona.geode.config.MirrorFilterValidator
 import com.vitorpamplona.geode.config.RuntimeConfig
 import com.vitorpamplona.geode.config.RuntimeConfigData
 import com.vitorpamplona.geode.config.StaticConfig
@@ -30,6 +31,7 @@ import com.vitorpamplona.geode.mirror.MirrorWorker
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
@@ -40,6 +42,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyAuthOnlyPo
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -95,6 +98,7 @@ fun main(args: Array<String>) {
             .opt("--config")
             ?.let { StaticConfig.fromFile(File(it)) }
             ?: StaticConfig()
+    config.validate()
 
     val host = a.opt("--host") ?: config.network.host
     val port = a.opt("--port")?.toInt() ?: config.network.port
@@ -210,6 +214,14 @@ fun main(args: Array<String>) {
             // (backfill_seconds) and never bounds the subscription.
             val scope =
                 m.filter?.let { json ->
+                    // Strict-validate FIRST: the deserializer is tolerant
+                    // (unknown keys skipped, wrong-typed entries dropped),
+                    // so a typo like `{"kindss":[4]}` would silently parse
+                    // to an empty filter — widening a trusted upstream's
+                    // scope to the whole firehose. This filter is the
+                    // containment boundary for `trusted = true`, so a typo
+                    // must fail the boot, not the boundary.
+                    MirrorFilterValidator.validate(m.url, json)
                     val parsed =
                         try {
                             OptimizedJsonMapper.fromJsonTo<Filter>(json)
@@ -234,7 +246,14 @@ fun main(args: Array<String>) {
                 direction = direction,
             )
         }
-    require(upstreams.none { it.url == advertisedUrl }) {
+    // Never mirror ourselves — a self-URL echoes every local publish
+    // back forever. Compare scheme-insensitively (ws:// vs wss:// for the
+    // same host is still us) and ignoring the trailing slash. This can't
+    // catch a public URL that resolves to this bind behind a proxy, nor a
+    // `--port 0` autobind, so it's a guardrail against the obvious typo,
+    // not a proof of non-self-reference.
+    val advertisedIdentity = advertisedUrl.displayUrl()
+    require(upstreams.none { it.url.displayUrl() == advertisedIdentity }) {
         "[[mirror]] must not list this relay's own URL ($advertisedUrl)"
     }
     val mirror =
@@ -252,7 +271,16 @@ fun main(args: Array<String>) {
         maintenanceScope.launch {
             while (true) {
                 delay(secs * 1000)
-                runCatching { store.optimize() }
+                try {
+                    store.optimize()
+                } catch (e: CancellationException) {
+                    throw e // shutdown cancelled us; don't swallow it
+                } catch (e: Exception) {
+                    // A missed refresh only means slightly staler planner
+                    // stats until the next tick — log and keep the loop.
+                    // Errors (OOM, etc.) are NOT swallowed.
+                    println("PRAGMA optimize failed: ${e.message}")
+                }
             }
         }
     }

@@ -180,7 +180,10 @@ data class StaticConfig(
         /**
          * Keep an always-current in-memory `(created_at, id)` set so
          * full-corpus NEG-OPENs skip the table scan + seal (strfry
-         * parity). ~40 B per stored event of heap; on by default.
+         * parity). ~140 B per stored event of heap; on by default. Only
+         * built once the first full-corpus NEG-OPEN arrives, and only
+         * when the corpus fits `max_sync_events` (an over-cap corpus
+         * answers NEG-ERR from a capped scan instead).
          */
         val live_index: Boolean = true,
     )
@@ -249,6 +252,25 @@ data class StaticConfig(
          */
         val state_file: String? = null,
     )
+
+    /**
+     * Boot-time sanity check for values the TOML types can't constrain.
+     * Throws [IllegalArgumentException] (fail-loud at startup) rather
+     * than letting a nonsensical knob degrade the running relay — a zero
+     * reader pool hangs every query, a non-positive optimize interval
+     * busy-loops the writer. Call once after parsing, before building
+     * the store.
+     */
+    fun validate() {
+        database.readers?.let {
+            require(it >= 1) { "[database].readers must be >= 1 (got $it); a 0/negative pool can never answer a query" }
+        }
+        database.optimize_interval_seconds?.let {
+            require(it > 0) {
+                "[database].optimize_interval_seconds must be > 0 (got $it); a non-positive interval busy-loops PRAGMA optimize under the writer mutex"
+            }
+        }
+    }
 
     companion object {
         private val mapper = tomlMapper { }
