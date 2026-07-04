@@ -120,7 +120,10 @@ class RelaySession(
 
     fun send(message: Message) {
         try {
-            onSend(OptimizedJsonMapper.toJson(message))
+            // message.toJson() defaults to OptimizedJsonMapper.toJson(this) for
+            // every type; NegMsgMessage overrides it with a direct-build wire
+            // path (identical output, ~2× faster on big reconcile frames).
+            onSend(message.toJson())
         } catch (e: Exception) {
             Log.w("ClientSession") { "Failed to send to ${e.message}" }
         }

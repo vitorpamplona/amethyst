@@ -20,58 +20,26 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.prodbench
 
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Isolates the per-round NEG-MSG serialization tax that geode's server-path
- * JFR attributed ~40% of reconcile time to: a reconcile produces a binary
- * frame, `Hex.encode`s it to a ~1 MB hex String, then the outgoing [Message]
- * is turned into wire JSON by [com.vitorpamplona.quartz.nip01Core.kotlinSerialization.MessageKSerializer],
- * which builds a `JsonElement` tree (wrapping the giant hex string in a
- * `JsonPrimitive`) and re-serializes it — scanning every hex char for JSON
- * escapes that a `[0-9a-f]` payload can never contain — before Ktor UTF-8
- * encodes it to the socket.
+ * Measures the NEG-MSG wire-serialization fix and guards its correctness.
+ * geode's server-path JFR attributed a large slice of per-round reconcile
+ * time to turning the reconcile frame into wire JSON: `Hex.encode` → the
+ * generic (Jackson) [com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper]
+ * serializer, which wraps the ~1 MB hex string in a value node and scans
+ * every char for JSON escapes a `[0-9a-f]` payload can never contain.
  *
- * The wire is trivially `["NEG-MSG","<sub>","<hex>"]`, so a direct
- * `StringBuilder` skips the tree. This measures the current `toJson()` path
- * against that direct build (both followed by the UTF-8 encode a websocket
- * text frame pays), at realistic NEG-MSG sizes, and asserts they produce
- * byte-identical wire output.
+ * [NegMsgMessage.toJson] now builds `["NEG-MSG","<sub>","<hex>"]` directly
+ * (fast path for escape-free ASCII subIds; generic fallback otherwise).
+ * This asserts the fast path is **byte-identical** to the generic path
+ * across a battery of subIds — including exotic ones that must hit the
+ * fallback — and times the two at realistic frame sizes.
  */
 class NegMsgSerializationBenchmark {
-    /** Direct wire build — `["NEG-MSG","<sub>","<hex>"]`, hex needs no escaping. */
-    private fun directWire(
-        subId: String,
-        hex: String,
-    ): String =
-        buildString(hex.length + subId.length + 16) {
-            append("[\"NEG-MSG\",")
-            append(jsonString(subId)) // client-chosen subId: escape defensively
-            append(',')
-            append('"')
-            append(hex) // pure hex, no escaping possible
-            append("\"]")
-        }
-
-    /** Minimal JSON string encoder for the (short, usually-safe) subId. */
-    private fun jsonString(s: String): String =
-        buildString(s.length + 2) {
-            append('"')
-            for (c in s) {
-                when (c) {
-                    '"' -> append("\\\"")
-                    '\\' -> append("\\\\")
-                    '\n' -> append("\\n")
-                    '\r' -> append("\\r")
-                    '\t' -> append("\\t")
-                    else -> if (c < ' ') append("\\u%04x".format(c.code)) else append(c)
-                }
-            }
-            append('"')
-        }
-
     private fun hexPayload(rawBytes: Int): String {
         val chars = "0123456789abcdef"
         val sb = StringBuilder(rawBytes * 2)
@@ -83,37 +51,59 @@ class NegMsgSerializationBenchmark {
         return sb.toString()
     }
 
+    @Test
+    fun fastPathIsByteIdenticalToGeneric() {
+        val hex = hexPayload(1024)
+        val subIds =
+            listOf(
+                "bench-sync",
+                "sub_123",
+                "a".repeat(64),
+                "", // empty
+                "with\"quote", // → fallback
+                "with\\backslash", // → fallback
+                "tab\there", // → fallback
+                "new\nline", // → fallback
+                "unicode-é中", // non-ASCII → fallback
+                "ctrlchar", // → fallback
+            )
+        for (sub in subIds) {
+            val msg = NegMsgMessage(sub, hex)
+            assertEquals(
+                OptimizedJsonMapper.toJson(msg),
+                msg.toJson(),
+                "toJson() must match the generic serializer for subId=<$sub>",
+            )
+        }
+    }
+
     private fun bench(
         label: String,
         rawFrameBytes: Int,
     ) {
-        val subId = "bench-sync"
         val hex = hexPayload(rawFrameBytes)
-        val msg = NegMsgMessage(subId, hex)
-
-        // Correctness: direct build must equal the serializer's wire output.
-        assertEquals(msg.toJson(), directWire(subId, hex), "wire mismatch for $label")
+        val msg = NegMsgMessage("bench-sync", hex)
 
         val warmup = 200
         val runs = 500
         var sink = 0
+        repeat(warmup) { sink = sink xor msg.toJson().length xor OptimizedJsonMapper.toJson(msg).length }
 
-        repeat(warmup) { sink = sink xor msg.toJson().length xor directWire(subId, hex).length }
-
+        // Include the UTF-8 encode a websocket text frame pays either way.
         val t0 = System.nanoTime()
-        repeat(runs) { sink = sink xor msg.toJson().encodeToByteArray().size }
-        val curMs = (System.nanoTime() - t0) / 1e6 / runs
+        repeat(runs) { sink = sink xor OptimizedJsonMapper.toJson(msg).encodeToByteArray().size }
+        val genMs = (System.nanoTime() - t0) / 1e6 / runs
 
         val t1 = System.nanoTime()
-        repeat(runs) { sink = sink xor directWire(subId, hex).encodeToByteArray().size }
+        repeat(runs) { sink = sink xor msg.toJson().encodeToByteArray().size }
         val fastMs = (System.nanoTime() - t1) / 1e6 / runs
 
-        println("  %-18s cur %6.3f ms   direct %6.3f ms   %.1f×  (sink=%d)".format(label, curMs, fastMs, curMs / fastMs, sink and 1))
+        println("  %-16s generic %6.3f ms   fast %6.3f ms   %.1f×  (sink=%d)".format(label, genMs, fastMs, genMs / fastMs, sink and 1))
     }
 
     @Test
-    fun negMsgWireSerialization() {
-        println("─ NegMsgSerializationBenchmark: toJson()+utf8 vs direct build+utf8 ─")
+    fun negMsgWireSerializationSpeedup() {
+        println("─ NegMsgSerializationBenchmark: generic vs fast toJson()+utf8 ─")
         bench("64 KiB frame", 64 * 1024)
         bench("250 KiB frame", 250 * 1024)
         bench("500 KiB frame", 500 * 1024) // strfry's frame cap

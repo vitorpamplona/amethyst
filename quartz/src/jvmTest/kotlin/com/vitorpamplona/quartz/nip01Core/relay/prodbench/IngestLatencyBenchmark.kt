@@ -45,6 +45,14 @@ import kotlin.test.Test
  * `store.batchInsert(listOf(e))` — the delta is exactly the pipeline's
  * coroutine-handoff overhead, the thing a single-event fast path would save.
  *
+ * **Verdict (measured): the pipeline is not the bottleneck.** The overhead
+ * came out at ~0.17 ms p50 (queue 0.21 ms vs direct 0.05 ms) — the whole
+ * ingest trip is ~0.2 ms, far under the ~2.4 ms receipt➜queryable gap the 1M
+ * run showed (geode 4.68 vs strfry 2.32 ms). So a single-event fast path in
+ * [IngestQueue] can close <10 % of the gap; it isn't worth the complexity.
+ * The gap lives in the cross-connection REQ-visibility/poll path, not the
+ * writer — a separate investigation. This benchmark stays as the evidence.
+ *
  * Prints percentiles; no speed assertion (container-noisy).
  */
 class IngestLatencyBenchmark {
