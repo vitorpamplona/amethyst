@@ -223,6 +223,13 @@ data class StaticConfig(
          * several `[[mirror]]` entries with the same url.
          */
         val filter: String? = null,
+        /**
+         * Flow direction, strfry-router's `dir`: `"down"` (pull from the
+         * upstream — the default), `"up"` (push this relay's matching
+         * events to it), or `"both"`. Both-way mirrors suppress echoes
+         * (an event pulled down is not pushed straight back).
+         */
+        val dir: String = "down",
     )
 
     /**

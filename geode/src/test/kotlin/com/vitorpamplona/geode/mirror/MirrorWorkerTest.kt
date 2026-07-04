@@ -80,9 +80,19 @@ class MirrorWorkerTest {
     private fun startMirror(
         trusted: Boolean,
         filter: Filter? = null,
+        direction: MirrorDirection = MirrorDirection.DOWN,
     ): MirrorWorker =
         MirrorWorker(
-            upstreams = listOf(MirrorUpstream(upstreamUrl, trusted = trusted, backfillSeconds = 3600, filter = filter)),
+            upstreams =
+                listOf(
+                    MirrorUpstream(
+                        upstreamUrl,
+                        trusted = trusted,
+                        backfillSeconds = 3600,
+                        filter = filter,
+                        direction = direction,
+                    ),
+                ),
             server = downstream.server,
             websocketBuilder = hub,
         ).also {
@@ -171,6 +181,63 @@ class MirrorWorkerTest {
             val stored = downstreamStore.query<Event>(Filter())
             assertEquals(setOf(wantedStored.id, wantedLive.id), stored.map { it.id }.toSet())
             assertTrue(stored.all { it.kind == 1 })
+        }
+
+    @Test
+    fun upDirectionPushesLocalEventsToTheUpstream() =
+        runBlocking {
+            // Pre-existing local event: the up replay (backfill window)
+            // must carry it; then a live local publish must follow.
+            val preexisting = forgedEvent(1)
+            downstream.preload(preexisting)
+
+            startMirror(trusted = false, direction = MirrorDirection.UP)
+
+            val upstreamStore = hub.getOrCreate(upstreamUrl).store
+            await { upstreamStore.count(Filter()) >= 1 }
+
+            // Live events go through the verifying publish path, so they
+            // must be genuinely signed (preload bypasses verification).
+            val live = signedEvent("up live")
+            downstream.publish(live)
+            await { upstreamStore.count(Filter()) >= 2 }
+
+            val ids = upstreamStore.query<Event>(Filter()).map { it.id }.toSet()
+            assertEquals(setOf(preexisting.id, live.id), ids)
+        }
+
+    @Test
+    fun bothDirectionConvergesWithoutPingPong() =
+        runBlocking {
+            // One event only the upstream has, one only the local relay
+            // has. BOTH must converge the two stores; echo suppression
+            // (plus store dedup as the backstop) must keep the shared
+            // events from bouncing.
+            val upstreamOnly = forgedEvent(1)
+            val localOnly = forgedEvent(2)
+            hub.getOrCreate(upstreamUrl).preload(upstreamOnly)
+            downstream.preload(localOnly)
+
+            val mirror = startMirror(trusted = true, direction = MirrorDirection.BOTH)
+
+            val upstreamStore = hub.getOrCreate(upstreamUrl).store
+            await { downstreamStore.count(Filter()) == 2 && upstreamStore.count(Filter()) == 2 }
+
+            val expected = setOf(upstreamOnly.id, localOnly.id)
+            assertEquals(expected, downstreamStore.query<Event>(Filter()).map { it.id }.toSet())
+            assertEquals(expected, upstreamStore.query<Event>(Filter()).map { it.id }.toSet())
+
+            // Live: an event published locally reaches the upstream AND
+            // its echo back down doesn't disturb either store. Signed,
+            // because the local publish path verifies.
+            val live = signedEvent("both live")
+            downstream.publish(live)
+            await { upstreamStore.count(Filter()) == 3 }
+            // Let any echo settle, then confirm counts are exact.
+            delay(500)
+            assertEquals(3, downstreamStore.count(Filter()))
+            assertEquals(3, upstreamStore.count(Filter()))
+            assertTrue(mirror.sentUp.get() >= 2)
         }
 
     @Test

@@ -21,8 +21,11 @@
 package com.vitorpamplona.geode.mirror
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
@@ -45,29 +48,61 @@ import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
 /**
+ * Which way events flow between this relay and one upstream —
+ * strfry-router's per-stream `dir`.
+ */
+enum class MirrorDirection {
+    /** Pull: subscribe to the upstream and ingest what it sends. */
+    DOWN,
+
+    /** Push: publish this relay's matching events to the upstream. */
+    UP,
+
+    /** Pull and push. Echo suppression keeps the two from ping-ponging. */
+    BOTH,
+    ;
+
+    companion object {
+        /** Parses strfry's `"down"` / `"up"` / `"both"`; null if unknown. */
+        fun parse(value: String): MirrorDirection? =
+            when (value.lowercase()) {
+                "down" -> DOWN
+                "up" -> UP
+                "both" -> BOTH
+                else -> null
+            }
+    }
+}
+
+/**
  * One upstream relay this relay mirrors, from the `[[mirror]]` config.
  *
  * [trusted] is the relay-to-relay trust switch: events streamed from this
  * upstream skip Schnorr signature verification on ingest. The trusted
  * identity is [url] — the address *this* relay dialed (TLS-authenticated
  * for `wss://`), never anything the peer claims — so the skip can't be
- * hijacked by an inbound client.
+ * hijacked by an inbound client. Only meaningful for [MirrorDirection.DOWN]
+ * / [MirrorDirection.BOTH]; the up direction never verifies (the upstream
+ * does its own gatekeeping).
  */
 class MirrorUpstream(
     val url: NormalizedRelayUrl,
     val trusted: Boolean,
-    /** How far back the initial REQ reaches. 0 = live-only from connect. */
+    /** How far back the initial replay reaches, in BOTH directions. 0 = live-only from connect. */
     val backfillSeconds: Long = 0L,
     /**
      * Optional scope for this upstream (strfry-router's per-stream
-     * `filter`). Used twice: it shapes the REQ sent upstream, and every
-     * delivered event is re-checked against it before ingest — so even a
-     * [trusted] upstream can only inject events inside the declared
-     * scope. Its `since`/`limit` are ignored ([backfillSeconds] owns the
-     * time window; the subscription is unbounded). `null` mirrors
+     * `filter`). Applied symmetrically: down, it shapes the REQ sent
+     * upstream AND every delivered event is re-checked before ingest —
+     * so even a [trusted] upstream can only inject events inside the
+     * declared scope; up, it selects which local events are pushed. Its
+     * `since`/`limit` are ignored ([backfillSeconds] owns the time
+     * window; the subscriptions are unbounded). `null` mirrors
      * everything.
      */
     val filter: Filter? = null,
+    /** Flow direction — strfry-router's `dir`. Defaults to pull-only. */
+    val direction: MirrorDirection = MirrorDirection.DOWN,
 )
 
 /**
@@ -151,6 +186,38 @@ class MirrorWorker(
      */
     val filtered = AtomicLong(0)
 
+    /** Local events handed to the client's outbox for an up-direction upstream. */
+    val sentUp = AtomicLong(0)
+
+    /**
+     * Recently exchanged event ids, one set per up-capable upstream —
+     * the echo suppressor for [MirrorDirection.BOTH]. An event pulled
+     * DOWN from an upstream must not be pushed straight back UP to it
+     * (and one we pushed up must not be re-ingested when the upstream
+     * fans it back on our down subscription). Bounded LRU: eviction only
+     * costs a wasted round trip that the stores' unique-id constraints
+     * absorb, so correctness never depends on it.
+     */
+    private class RecentIds(
+        private val capacity: Int,
+    ) {
+        private val map =
+            object : LinkedHashMap<String, Boolean>(capacity, 0.75f, true) {
+                override fun removeEldestEntry(eldest: Map.Entry<String, Boolean>) = size > capacity
+            }
+
+        @Synchronized
+        fun add(id: String) {
+            map[id] = true
+        }
+
+        @Synchronized
+        fun contains(id: String): Boolean = map.containsKey(id)
+    }
+
+    /** Open in-process sessions feeding the up direction; closed with the worker. */
+    private val upSessions = mutableListOf<AutoCloseable>()
+
     /** Dials every upstream and starts streaming. Call once. */
     fun start() {
         scope.launch {
@@ -181,48 +248,25 @@ class MirrorWorker(
 
         val since = TimeUtils.now()
         upstreams.forEachIndexed { i, up ->
-            val listener =
-                object : SubscriptionListener {
-                    override fun onEvent(
-                        event: Event,
-                        isLive: Boolean,
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?,
-                    ) {
-                        // strfry-router parity: never take the upstream's
-                        // word for what matched. Re-checking the configured
-                        // scope here means even a trusted (skip-verify)
-                        // upstream can only inject events the operator
-                        // declared — the REQ shapes what we ask for, this
-                        // shapes what we accept.
-                        if (up.filter != null && !up.filter.match(event)) {
-                            filtered.incrementAndGet()
-                            Log.d("MirrorWorker") { "out-of-scope from ${relay.url}: ${event.id}" }
-                            return
-                        }
-                        inbound.trySend(Inbound(event, up.trusted))
-                    }
+            // Echo suppression only matters when events can flow both
+            // ways on the same upstream.
+            val exchanged = if (up.direction == MirrorDirection.BOTH) RecentIds(EXCHANGED_IDS_CAPACITY) else null
 
-                    override fun onCannotConnect(
-                        relay: NormalizedRelayUrl,
-                        message: String,
-                        forFilters: List<Filter>?,
-                    ) {
-                        Log.w("MirrorWorker") { "cannot reach upstream ${relay.url}: $message" }
-                    }
-                }
-            // The operator's filter scopes the REQ; the mirror owns the
-            // time window (since) and never bounds the result (limit).
-            val reqFilter =
+            // The operator's filter scopes the subscriptions in both
+            // directions; the mirror owns the time window (since) and
+            // never bounds the result (limit).
+            val scopedFilter =
                 (up.filter ?: Filter()).copy(
                     since = since - up.backfillSeconds,
                     limit = null,
                 )
-            client.subscribe(
-                subId = "geode-mirror-$i",
-                filters = mapOf(up.url to listOf(reqFilter)),
-                listener = listener,
-            )
+
+            if (up.direction != MirrorDirection.UP) {
+                startDown(i, up, scopedFilter, exchanged)
+            }
+            if (up.direction != MirrorDirection.DOWN) {
+                startUp(up, scopedFilter, exchanged)
+            }
         }
         client.connect()
 
@@ -242,6 +286,87 @@ class MirrorWorker(
         }
     }
 
+    /** Down direction: subscribe to the upstream, ingest what it sends. */
+    private fun startDown(
+        index: Int,
+        up: MirrorUpstream,
+        scopedFilter: Filter,
+        exchanged: RecentIds?,
+    ) {
+        val listener =
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    // strfry-router parity: never take the upstream's
+                    // word for what matched. Re-checking the configured
+                    // scope here means even a trusted (skip-verify)
+                    // upstream can only inject events the operator
+                    // declared — the REQ shapes what we ask for, this
+                    // shapes what we accept.
+                    if (up.filter != null && !up.filter.match(event)) {
+                        filtered.incrementAndGet()
+                        Log.d("MirrorWorker") { "out-of-scope from ${relay.url}: ${event.id}" }
+                        return
+                    }
+                    // BOTH: an event we just pushed up is fanned back on
+                    // this subscription — it already exists locally.
+                    if (exchanged?.contains(event.id) == true) return
+                    exchanged?.add(event.id)
+                    inbound.trySend(Inbound(event, up.trusted))
+                }
+
+                override fun onCannotConnect(
+                    relay: NormalizedRelayUrl,
+                    message: String,
+                    forFilters: List<Filter>?,
+                ) {
+                    Log.w("MirrorWorker") { "cannot reach upstream ${relay.url}: $message" }
+                }
+            }
+        client.subscribe(
+            subId = "geode-mirror-$index",
+            filters = mapOf(up.url to listOf(scopedFilter)),
+            listener = listener,
+        )
+    }
+
+    /**
+     * Up direction: an in-process session on the LOCAL relay subscribes
+     * with the same scoped filter — stored replay covers the backfill
+     * window, the live tail covers everything after — and each matching
+     * event is handed to the client's outbox for [MirrorUpstream.url].
+     * The outbox owns delivery: it re-sends on reconnect until the
+     * upstream OKs, and the upstream's own duplicate handling absorbs
+     * replays. Going through a real session (not the store) means the
+     * relay's policy chain gates what leaves, same as any client.
+     */
+    private fun startUp(
+        up: MirrorUpstream,
+        scopedFilter: Filter,
+        exchanged: RecentIds?,
+    ) {
+        val session =
+            server.connect { json ->
+                if (!json.startsWith("[\"EVENT\"")) return@connect
+                val event =
+                    runCatching { (OptimizedJsonMapper.fromJsonToMessage(json) as? EventMessage)?.event }
+                        .getOrNull() ?: return@connect
+                // BOTH: don't push back what we just pulled down.
+                if (exchanged?.contains(event.id) == true) return@connect
+                exchanged?.add(event.id)
+                client.publish(event, setOf(up.url))
+                sentUp.incrementAndGet()
+            }
+        upSessions += AutoCloseable { session.close() }
+        scope.launch {
+            session.receive(OptimizedJsonMapper.toJson(ReqCmd("geode-mirror-up", listOf(scopedFilter))))
+        }
+    }
+
     /**
      * Stops pulling from every upstream. In-flight ingest submissions
      * drain through the server's queue; events still buffered in
@@ -252,6 +377,7 @@ class MirrorWorker(
     override fun close() {
         // Close the client first so no listener callback races the
         // channel close below.
+        upSessions.forEach { runCatching { it.close() } }
         runCatching { client.close() }
         inbound.close()
         scope.cancel()
@@ -265,5 +391,13 @@ class MirrorWorker(
 
         /** How often the retry pump nudges disconnected upstreams. */
         const val RECONNECT_POKE_MS = 5_000L
+
+        /**
+         * Per-upstream echo-suppression LRU size (BOTH direction only).
+         * Covers the burst window between pulling an event down and the
+         * up-session seeing its local fanout; eviction only costs a
+         * duplicate round trip.
+         */
+        const val EXCHANGED_IDS_CAPACITY = 8_192
     }
 }

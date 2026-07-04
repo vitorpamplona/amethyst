@@ -129,8 +129,14 @@ require_auth = false
 # everything; for several disjoint scopes, repeat [[mirror]] with the
 # same url.
 #
+# `dir` (strfry-router parity) sets the flow direction: "down" pulls
+# from the upstream (default), "up" pushes this relay's matching
+# events to it, "both" does both with echo suppression so the two
+# directions don't ping-pong the same event.
+#
 # [[mirror]]
 # url = "wss://upstream.example.com/"
+# dir = "both"
 # trusted = true
 # backfill_seconds = 3600
 # filter = '{"kinds":[0,1,3,7],"#t":["nostr"]}'

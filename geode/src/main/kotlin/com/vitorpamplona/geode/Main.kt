@@ -24,6 +24,7 @@ import com.vitorpamplona.geode.config.BannedEntry
 import com.vitorpamplona.geode.config.RuntimeConfig
 import com.vitorpamplona.geode.config.RuntimeConfigData
 import com.vitorpamplona.geode.config.StaticConfig
+import com.vitorpamplona.geode.mirror.MirrorDirection
 import com.vitorpamplona.geode.mirror.MirrorUpstream
 import com.vitorpamplona.geode.mirror.MirrorWorker
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
@@ -220,11 +221,17 @@ fun main(args: Array<String>) {
                         }
                     parsed.copy(since = null, limit = null)
                 }
+            val direction =
+                MirrorDirection.parse(m.dir)
+                    ?: throw IllegalArgumentException(
+                        "[[mirror]] dir for ${m.url} must be \"down\", \"up\" or \"both\" (got \"${m.dir}\")",
+                    )
             MirrorUpstream(
                 url = m.url.normalizeRelayUrl(),
                 trusted = m.trusted,
                 backfillSeconds = m.backfill_seconds,
                 filter = scope,
+                direction = direction,
             )
         }
     require(upstreams.none { it.url == advertisedUrl }) {
