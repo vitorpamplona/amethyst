@@ -35,7 +35,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.SessionBackend
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
@@ -50,6 +49,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicLong
@@ -75,16 +75,7 @@ class RelaySession(
      */
     val id: Long = nextConnectionId(),
 ) : AutoCloseable {
-    /**
-     * One active REQ. Launched subscriptions cancel their coroutine;
-     * inline subscriptions (the bounded small-REQ fast path, which never
-     * had a coroutine) close their live-tail registration directly.
-     */
-    private fun interface ActiveSubscription {
-        fun cancel()
-    }
-
-    private val subscriptions = LargeCache<String, ActiveSubscription>()
+    private val subscriptions = LargeCache<String, Job>()
 
     /**
      * The authenticated-identity store for this connection. The engine is the
@@ -112,8 +103,8 @@ class RelaySession(
 
     private fun addSubscription(
         subId: String,
-        sub: ActiveSubscription,
-    ) = subscriptions.put(subId, sub)
+        job: Job,
+    ) = subscriptions.put(subId, job)
 
     private fun cancelSubscription(subId: String): Boolean =
         subscriptions.remove(subId)?.let {
@@ -122,7 +113,7 @@ class RelaySession(
         } ?: false
 
     fun cancelAllSubscriptions() {
-        subscriptions.forEach { _, sub -> sub.cancel() }
+        subscriptions.forEach { _, job -> job.cancel() }
         subscriptions.clear()
         negentropy.clear()
     }
@@ -272,30 +263,7 @@ class RelaySession(
     }
 
     // -- NIP-01: REQ ----------------------------------------------------------
-
-    /**
-     * A REQ qualifies for the inline fast path when its replay is
-     * provably bounded: every filter carries a `limit`, or an `ids` list
-     * (ids are unique keys, so the result can't exceed the list), and
-     * the bounds sum to at most [INLINE_REPLAY_MAX_ROWS]. Inline replays
-     * run on this connection's receive coroutine — no per-REQ launch, no
-     * dispatcher handoffs (profiled at ~2/3 of a ~20-row REQ's
-     * time-to-EOSE) — at the price of delaying the connection's NEXT
-     * command until EOSE, which the row cap keeps in the
-     * single-digit-milliseconds range. Unbounded REQs keep the launched
-     * path so a CLOSE can always interrupt a genuinely giant replay.
-     */
-    private fun isInlineEligible(filters: List<Filter>): Boolean {
-        var total = 0
-        for (f in filters) {
-            val bound = f.limit ?: f.ids?.size ?: return false
-            total += bound
-            if (total > INLINE_REPLAY_MAX_ROWS) return false
-        }
-        return true
-    }
-
-    private suspend fun handleReq(cmd: ReqCmd) {
+    private fun handleReq(cmd: ReqCmd) {
         // Ask the policy whether a *new* subscription may open (e.g. a
         // max_subscriptions cap). A re-REQ on an existing id replaces it
         // 1-for-1 and doesn't grow the count, so it's exempt. Checked before
@@ -320,54 +288,6 @@ class RelaySession(
         // Policy may rewrite filters to match the user's access level.
         val filters = (result as PolicyResult.Accepted).cmd.filters
 
-        // The `["EVENT","<subId>",` prefix is built once per
-        // subscription, not per row (zero-decode paths only).
-        fun framePrefix() =
-            buildString {
-                append("[\"EVENT\",")
-                RawEvent.appendJsonQuoted(this, cmd.subId)
-                append(',')
-            }
-
-        fun sendStored(
-            framePrefix: String,
-            raw: RawEvent,
-        ) = sendRaw(
-            buildString(framePrefix.length + raw.jsonTags.length + raw.content.length + 256) {
-                append(framePrefix)
-                raw.appendJsonObjectTo(this)
-                append(']')
-            },
-        )
-
-        // Small-REQ fast path: a provably bounded replay runs inline on
-        // this receive coroutine — no launch, no dispatcher handoffs —
-        // and only the live-tail handle is retained. See
-        // [SessionBackend.queryRawInline] for the contract.
-        if (!policy.filtersOutgoingEvents && isInlineEligible(filters)) {
-            val handle =
-                try {
-                    val prefix = framePrefix()
-                    store.queryRawInline(
-                        ctx = requestContext,
-                        filters = filters,
-                        onEachStored = { raw -> sendStored(prefix, raw) },
-                        onEachLive = { event -> send(EventMessage(cmd.subId, event)) },
-                        onEose = { send(EoseMessage(cmd.subId)) },
-                    )
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    send(ClosedMessage.of(cmd.subId, MachineReadablePrefix.ERROR, e.message ?: "query failed"))
-                    return
-                }
-            if (handle != null) {
-                addSubscription(cmd.subId) { handle.close() }
-                return
-            }
-            // Backend without an inline path: fall through to launch.
-        }
-
         val job =
             scope.launch {
                 try {
@@ -388,11 +308,26 @@ class RelaySession(
                         // Zero-decode path: the stored replay splices raw
                         // storage strings straight into wire frames — no tags
                         // parse, no Event materialization, no re-serialize.
-                        val prefix = framePrefix()
+                        // The `["EVENT","<subId>",` prefix is built once per
+                        // subscription, not per row.
+                        val framePrefix =
+                            buildString {
+                                append("[\"EVENT\",")
+                                RawEvent.appendJsonQuoted(this, cmd.subId)
+                                append(',')
+                            }
                         store.queryRaw(
                             ctx = requestContext,
                             filters = filters,
-                            onEachStored = { raw -> sendStored(prefix, raw) },
+                            onEachStored = { raw ->
+                                sendRaw(
+                                    buildString(framePrefix.length + raw.jsonTags.length + raw.content.length + 256) {
+                                        append(framePrefix)
+                                        raw.appendJsonObjectTo(this)
+                                        append(']')
+                                    },
+                                )
+                            },
                             onEachLive = { event -> send(EventMessage(cmd.subId, event)) },
                             onEose = { send(EoseMessage(cmd.subId)) },
                         )
@@ -408,7 +343,7 @@ class RelaySession(
                 }
             }
 
-        addSubscription(cmd.subId) { job.cancel() }
+        addSubscription(cmd.subId, job)
     }
 
     // -- NIP-01: CLOSE --------------------------------------------------------
@@ -428,16 +363,5 @@ class RelaySession(
 
         /** Allocates the next process-unique connection id. */
         fun nextConnectionId(): Long = connectionIdSeq.fetchAndAdd(1L)
-
-        /**
-         * Ceiling on the summed per-filter bounds (limit or ids count)
-         * for the inline REQ fast path. Sized so the worst-case inline
-         * replay stays in single-digit milliseconds (500-row replays
-         * measure ~5–8 ms of storage+frame work) — small enough that
-         * delaying the connection's next command is unnoticeable, large
-         * enough to cover the limit≤500 feed/notifications/archive
-         * shapes real clients hammer relays with.
-         */
-        const val INLINE_REPLAY_MAX_ROWS = 512
     }
 }

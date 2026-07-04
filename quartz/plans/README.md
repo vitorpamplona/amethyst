@@ -1,6 +1,6 @@
 # quartz plans
 
-_Audited 2026-06-30. 10 plans: 7 shipped (archived), 0 in-progress, 3 queued, 0 abandoned._
+_Audited 2026-06-30. 11 plans: 7 shipped (archived), 0 in-progress, 3 queued, 1 closed (negative result)._
 
 ## Queued
 | Plan | Summary |
@@ -8,6 +8,7 @@ _Audited 2026-06-30. 10 plans: 7 shipped (archived), 0 in-progress, 3 queued, 0 
 | [2026-05-08-local-headers-explorer.md](2026-05-08-local-headers-explorer.md) | Headers-only Bitcoin P2P client to verify NIP-03 OTS attestations without a trusted block explorer. |
 | [2026-06-12-giftwrap-deletion-requests.md](2026-06-12-giftwrap-deletion-requests.md) | Let a recipient-authored kind-5 delete/block a gift wrap (kind 1059) addressed to them. |
 | [2026-07-03-incremental-negentropy-storage.md](2026-07-03-incremental-negentropy-storage.md) | Always-current (created_at, id) index so cold NEG-OPENs stop paying a full scan + seal (~340 ms at 50k vs strfry's ~21 ms). |
+| [2026-07-04-small-req-floor.md](2026-07-04-small-req-floor.md) | Small-REQ dispatch floor: decomposed, inline fast path tried and reverted (no wire-level win); floor is transport-side. |
 
 ## Archived (shipped)
 | Plan | Summary |

@@ -82,42 +82,6 @@ interface SessionBackend {
         onEose: () -> Unit,
     ): Unit = query(ctx, filters, onEachLive, onEose)
 
-    /**
-     * Keeps a live registration alive after [queryRawInline] returned.
-     * [close] detaches it — idempotent, callable from any thread.
-     */
-    fun interface LiveSubscriptionHandle {
-        fun close()
-    }
-
-    /**
-     * Inline variant of [queryRaw] for BOUNDED replays: runs the stored
-     * replay and [onEose] on the *calling* coroutine — no per-REQ
-     * `launch`, no dispatcher handoffs, no job to keep alive — and
-     * returns a [LiveSubscriptionHandle] whose `close()` ends the live
-     * tail (live events keep arriving via [onEachLive] from the ingest
-     * path until then). This is the small-REQ fast path: profiling put
-     * the per-REQ coroutine machinery at ~2/3 of a ~20-row REQ's
-     * time-to-EOSE.
-     *
-     * Callers MUST only use it when the replay is bounded (e.g. every
-     * filter carries a small `limit`): the replay occupies the session's
-     * receive coroutine, so a giant replay here would delay that
-     * connection's subsequent commands — including the CLOSE that could
-     * have cancelled it. Unbounded REQs belong on [queryRaw] in a
-     * separate coroutine.
-     *
-     * Returns `null` when the backend has no inline path (the default) —
-     * callers fall back to [queryRaw].
-     */
-    suspend fun queryRawInline(
-        ctx: RequestContext,
-        filters: List<Filter>,
-        onEachStored: (RawEvent) -> Unit,
-        onEachLive: (Event) -> Unit,
-        onEose: () -> Unit,
-    ): LiveSubscriptionHandle? = null
-
     /** Answers a NIP-45 COUNT with an exact cardinality for the caller in [ctx]. */
     suspend fun count(
         ctx: RequestContext,
