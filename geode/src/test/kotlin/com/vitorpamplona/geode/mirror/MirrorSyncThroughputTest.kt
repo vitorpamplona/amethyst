@@ -127,9 +127,16 @@ class MirrorSyncThroughputTest {
                 }
                 if (batch.isNotEmpty()) store.batchInsert(batch)
                 val eng = RelayEngine(url = "ws://127.0.0.1:7898/".normalizeRelayUrl(), store = store).also { upstream = it }
-                server = KtorRelay(eng, host = "127.0.0.1", port = 7898).start()
-                sourceUrl = "ws://127.0.0.1:7898/"
-                println("─ MirrorSyncThroughput: geode→geode, in-process source preloaded $loaded ─")
+                val srv = KtorRelay(eng, host = "127.0.0.1", port = 0).start().also { server = it }
+                val port =
+                    srv.url
+                        .normalizeRelayUrl()
+                        .url
+                        .substringAfterLast(':')
+                        .trimEnd('/')
+                        .toInt()
+                sourceUrl = "ws://127.0.0.1:$port/"
+                println("─ MirrorSyncThroughput: geode→geode, in-process source preloaded $loaded on $port ─")
             }
 
             val startNanos = System.nanoTime()
