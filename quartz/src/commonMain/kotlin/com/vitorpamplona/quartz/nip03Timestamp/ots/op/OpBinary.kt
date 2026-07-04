@@ -53,7 +53,9 @@ abstract class OpBinary(
         return this.tag() - other.tag()
     }
 
-    override fun hashCode(): Int = TAG.toInt() xor this.arg.contentHashCode()
+    override fun equals(other: Any?): Boolean = other is OpBinary && this.tag() == other.tag() && this.arg.contentEquals(other.arg)
+
+    override fun hashCode(): Int = this.tag().toInt() xor this.arg.contentHashCode()
 
     companion object {
         @Throws(DeserializationException::class)

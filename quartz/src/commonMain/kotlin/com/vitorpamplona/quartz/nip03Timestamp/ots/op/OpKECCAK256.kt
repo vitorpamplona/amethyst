@@ -51,6 +51,8 @@ class OpKECCAK256 : OpCrypto() {
 
     override fun equals(other: Any?): Boolean = (other is OpKECCAK256)
 
+    override fun hashCode(): Int = TAG.toInt()
+
     companion object {
         val TAG: Byte = 103.toByte()
 

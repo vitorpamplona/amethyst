@@ -37,16 +37,6 @@ class OpAppend(
 
     public override fun call(msg: ByteArray): ByteArray = msg + this.arg
 
-    override fun equals(other: Any?): Boolean {
-        if (other !is OpAppend) {
-            return false
-        }
-
-        return this.arg.contentEquals(other.arg)
-    }
-
-    override fun hashCode(): Int = TAG.toInt() xor this.arg.contentHashCode()
-
     companion object {
         val TAG: Byte = 0xf0.toByte()
 
