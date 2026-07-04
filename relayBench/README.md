@@ -60,7 +60,7 @@ two runs are comparable only when fingerprints match.
 | **real dump** | `--real` | The `quartz` test fixture `nostr_vitor_startup_data.json.gz` — ~31k unique real events from 2024 with a rich kind mix (notes, chats, DMs, zaps, reports, communities). |
 | **contact lists** | `--corpus contact-lists.gz --limit 100000 --max-event-bytes 1048576 --max-tags 20000` | 2.1M real kind-3 contact lists (heavy events, ~1.3 kB avg, up to 100+ kB). Grab it with `pip install gdown && gdown 1yyC93xY9sDsEsa351ZAMhtAXwBUh3LYT`. Raising the size/tag caps reconfigures strfry to match, so both relays still accept the full stream. |
 | **any dump** | `--corpus FILE` | NDJSON or a single JSON array, gzipped or plain (sniffed by magic bytes). |
-| **fresh download** | `--download [urls]` | Pages recent events out of public relays (damus/nos.lol/primal by default). |
+| **fresh download** | `--download [urls]` | Pages the latest events out of public relays newest-first (damus/nos.lol/primal by default), `--limit N` deep — built for million-event pulls: streams to an on-disk spill, checkpoints the pagination cursor, resumes interrupted downloads, reconnects on drops. E.g. `--download wss://relay.damus.io --limit 1000000`. |
 
 Every source goes through the same preparation: dedup by id, drop unsigned
 events (NIP-17 rumors), kind-5 deletions and ephemerals (order-dependent or
