@@ -78,6 +78,8 @@ tasks.withType<Test>().configureEach {
     System.getProperty("syncSourceUrl")?.let { systemProperty("syncSourceUrl", it) }
     System.getProperty("syncLiveIndex")?.let { systemProperty("syncLiveIndex", it) }
     System.getProperty("syncBackfillSeconds")?.let { systemProperty("syncBackfillSeconds", it) }
+    System.getProperty("syncFts")?.let { systemProperty("syncFts", it) }
+    System.getProperty("syncVerify")?.let { systemProperty("syncVerify", it) }
     maxHeapSize = System.getProperty("testHeap") ?: maxHeapSize
     // Opt-in JFR profiling (-PnegProfile=/tmp/neg.jfr).
     (project.findProperty("negProfile") as? String)?.let {

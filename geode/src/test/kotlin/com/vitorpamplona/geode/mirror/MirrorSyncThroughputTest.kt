@@ -89,11 +89,20 @@ class MirrorSyncThroughputTest {
     // `-DsyncLiveIndex=false` disables the live negentropy index to isolate its
     // O(n)-insert cost during out-of-order backfill.
     private val liveIndex = System.getProperty("syncLiveIndex")?.toBoolean() ?: true
+
+    // NIP-50 full-text search (geode's default; strfry has none) — pass
+    // `-DsyncFts=false` to match strfry for an apples-to-apples sync.
+    private val fts = System.getProperty("syncFts")?.toBoolean() ?: true
+
+    // Schnorr verification on the sink's ingest. `strfry sync` always verifies
+    // received events, so the negentropy sink defaults to verifying too; pass
+    // `-DsyncVerify=false` for the trusted-mirror (skip-verify) rate.
+    private val verifySink = System.getProperty("syncVerify")?.toBoolean() ?: true
     private val strategy =
         DefaultIndexingStrategy(
             indexEventsByCreatedAtAlone = true,
             indexEventsByPubkeyAlone = true,
-            indexFullTextSearch = true,
+            indexFullTextSearch = fts,
             deferFullTextSearchIndexing = true,
             maintainLiveNegentropyIndex = liveIndex,
         )
@@ -252,7 +261,7 @@ class MirrorSyncThroughputTest {
         val consumer =
             launch {
                 for (ev in handoff) {
-                    downstream.server.ingest(ev, skipVerify = true) { }
+                    downstream.server.ingest(ev, skipVerify = !verifySink) { }
                 }
             }
 
@@ -407,7 +416,7 @@ class MirrorSyncThroughputTest {
                 val raw = withTimeout(180_000) { incoming.receive() }
                 if (raw.startsWith("[\"EVENT\",\"$subId\"")) {
                     val ev = (OptimizedJsonMapper.fromJsonToMessage(raw) as? EventMessage)?.event ?: continue
-                    downstream.server.ingest(ev, skipVerify = true) { }
+                    downstream.server.ingest(ev, skipVerify = !verifySink) { }
                 } else if (raw.startsWith("[\"EOSE\",\"$subId\"") || raw.startsWith("[\"CLOSED\",\"$subId\"")) {
                     ws.send("""["CLOSE","$subId"]""")
                     break
