@@ -214,14 +214,17 @@ confirms is bidirectional negentropy — `doUp = both||up`, `doDown = both||down
 - **down** catch-up pulls what the upstream has and we lack
   (`negentropySyncOrFetch`, with paged fallback), then the live REQ sub tails.
 - **up** catch-up reconciles and pushes what we have and the upstream lacks
-  (`negentropyReconcileIds`'s `have` ids → `client.publish`), then the live
-  up-session tails. Negentropy-only (no paged fallback needed — the live
-  up-session covers a non-NIP-77 upstream). The push runs as a **reconcile→push
-  convergence loop**: `client.publish`'s outbox is best-effort under a bulk
-  burst (each publish also churns a reconnect; measured ~1–2% dropped per pass),
-  so each round re-reconciles — the reconcile *is* the delivery check — and
-  re-pushes only the stragglers until the `have` diff is empty. Observed on the
-  3000-event up test: 3000 → 69 → 2 → 0 across 3 rounds, lossless.
+  (streaming `negentropyReconcile`, publishing each `onHaveIds` batch straight
+  to `client.publish`), then the live up-session tails. Negentropy-only (no
+  paged fallback needed — the live up-session covers a non-NIP-77 upstream). The
+  streaming reconcile keeps peak memory at one id batch rather than materializing
+  the whole `have`/`need` diff (an important distinction at 1M — the full diff is
+  ~100 MB of id strings). The push runs as a **reconcile→push convergence loop**:
+  `client.publish`'s outbox is best-effort under a bulk burst (each publish also
+  churns a reconnect; measured ~1–2% dropped per pass), so each round
+  re-reconciles — the reconcile *is* the delivery check — and re-pushes only the
+  stragglers until the `have` diff is empty. Observed on the 3000-event up test:
+  3000 → 69 → 2 → 0 across 3 rounds, lossless.
 
 Same vocabulary as strfry throughout — one `[[mirror]]` entry, one `dir`
 (down/up/both) driving both phases; negentropy-vs-REQ is an internal transport

@@ -54,8 +54,7 @@ fun main(args: Array<String>) {
     val maxCount = args.getOrNull(2)?.toInt() ?: Int.MAX_VALUE
 
     // File-backed so a 1M in-memory corpus here doesn't compete for RAM with an
-    // in-memory sink in the same box during the comparison. Reuses an already
-    // loaded DB (serve-only) so a re-run skips the multi-minute reload.
+    // in-memory sink in the same box during the comparison.
     val dbFile = "/tmp/geode-source-$port.sqlite"
     // Reuse an already-loaded DB (serve-only, skipping the multi-minute reload)
     // ONLY when a completion sentinel proves it holds *this* corpus, fully loaded.

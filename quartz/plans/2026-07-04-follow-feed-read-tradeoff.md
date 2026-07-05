@@ -77,11 +77,16 @@ built as `MergeQueryExecutor` and wired into both `query` and the zero-decode
 
 It opens one lazy newest-first cursor per `(kind, pubkey)` stream off the
 existing `query_by_kind_pubkey_created` index (or `query_by_pubkey_created` for
-authors-only), merges their heads `(created_at DESC, id ASC)`, and stops at the
-limit — reading **O(limit + streams)** rows regardless of follow activity or
-corpus size, which is exactly strfry's algorithm. Eligibility is narrow
-(2..2048 streams, simple filter, explicit limit, no ids/d-tags); everything
-else falls through to the single-SQL plan, so no other query shape changes.
+authors-only), merges their heads newest-first (`created_at DESC`, tie-broken by
+`id ASC`), and stops at the limit — reading **O(limit + streams)** rows
+regardless of follow activity or corpus size, which is exactly strfry's
+algorithm. Eligibility is narrow (2..2048 streams, simple filter, explicit
+limit, no ids/d-tags); everything else falls through to the single-SQL plan, so
+no other query shape changes. Duplicate authors/kinds are collapsed before
+opening cursors (a repeat would double-emit), and the `id ASC` tie-break is
+byte-exact against the single-SQL path only when the store indexes id
+(`useAndIndexIdOnOrderBy`) — otherwise same-second ties fall in rowid order, a
+valid newest-N either way.
 
 Correctness is pinned by `MergeQueryCorrectnessTest` (merge == single-SQL top-N
 vs both an independent reference and the SQL path, across ties/windows/raw).
