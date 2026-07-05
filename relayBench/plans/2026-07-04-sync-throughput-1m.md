@@ -2,6 +2,41 @@
 
 Date: 2026-07-04
 
+## Four-pair NEGENTROPY comparison (2026-07-05, apples-to-apples)
+
+All four source→sink pairings, **all NIP-77 negentropy**, empty sink pulls the
+same ~1M damus.io corpus, run sequentially (no contention). geode sink
+configured like strfry: **verify ON, FTS OFF** (`-DsyncVerify=true -DsyncFts=false`);
+`strfry sync` verifies too and has no FTS. Sinks: geode = its negentropy client;
+strfry = `strfry sync --dir down`. Sources: `CorpusServerMain` (geode) + strfry
+relay, each holding the corpus.
+
+| # | source → sink | sink engine | synced | time | throughput |
+|---|---------------|-------------|--------|------|------------|
+| A | geode → geode  | geode neg client | 994,162 / 994,832 | 142.6 s | **6,971 ev/s** |
+| B | strfry → geode | geode neg client | 994,828 / 994,917 | 148.7 s | **6,690 ev/s** |
+| C | strfry → strfry| `strfry sync`    | 893,000           | 333.0 s | **2,682 ev/s** |
+| D | geode → strfry | `strfry sync`    | 994,151           | 467.3 s | **2,127 ev/s** |
+
+**Reads:**
+- **The SINK sets the rate, not the source.** geode sink ≈ 6.7–7.0k ev/s from
+  either source; strfry sink ≈ 2.1–2.7k ev/s from either source. Sync throughput
+  is an *ingest* property.
+- **geode ingests ≈ 2.6–3.3× faster than strfry** via negentropy, verifying.
+- **Full geode↔strfry NIP-77 interop, both directions**: B (geode client ↔
+  strfry server) and D (strfry client ↔ geode server) both complete. geode's
+  negentropy server and client are wire-compatible with strfry's.
+- **Count artifacts** (throughput is unaffected): C synced 893k, not ~994k,
+  because strfry's negentropy snapshot excludes NIP-40-expired events, so a
+  strfry *source* only offers ~893k. geode has no expiration cutoff ("no limits"),
+  so a geode source offers its full ~994k (D transfers all of it). Same
+  NIP-62/09/40 fairness family as `2026-07-04-sync-fairness-nip62-09-40.md`.
+
+REQ-mode comparison to follow separately.
+
+---
+
+
 ## Question
 
 When syncing a full **1,000,000-event** corpus between two *local* relays,
