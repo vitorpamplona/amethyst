@@ -3115,6 +3115,7 @@
     <string name="goal_progress">设定目标为 %2$s sats，筹集到 %1$s</string>
     <string name="fundraiser_ends">结束 %1$s</string>
     <string name="fundraiser_onchain_donation">链上捐助</string>
+    <string name="bird_detection_title">鸟类检测</string>
     <plurals name="birdex_species_count">
         <item quantity="other">Birdex · %1$d 个物种</item>
     </plurals>

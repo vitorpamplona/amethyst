@@ -1032,7 +1032,7 @@
     <string name="podcast_show_funding_placeholder">https://…</string>
     <string name="podcast_show_language_label">भाषा</string>
     <string name="podcast_show_language_placeholder">आंग्ल</string>
-    <string name="podcast_show_copyright_label">प्रतिलिप्यधिकार</string>
+    <string name="podcast_show_copyright_label">अनुकृति अधिकार</string>
     <string name="podcast_show_type_label">कार्यक्रम प्रकार</string>
     <string name="podcast_show_type_episodic">कड्यात्मक</string>
     <string name="podcast_show_type_serial">धारावाहिक</string>
@@ -3155,6 +3155,7 @@
     <string name="goal_progress">%1$s वित्तपोषित %2$s साट्स उद्देश्य में से</string>
     <string name="fundraiser_ends">समाप्ति %1$s</string>
     <string name="fundraiser_onchain_donation">खण्डश्रृंखलाबद्ध दान</string>
+    <string name="bird_detection_title">पक्षी खोज</string>
     <plurals name="birdex_species_count">
         <item quantity="one">बिर्डेक्स। %1$d प्रजाति</item>
         <item quantity="other">बिर्डेक्स। %1$d प्रजातियाँ</item>
