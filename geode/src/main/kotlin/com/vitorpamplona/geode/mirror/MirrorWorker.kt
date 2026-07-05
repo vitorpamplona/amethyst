@@ -23,7 +23,7 @@ package com.vitorpamplona.geode.mirror
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcileIds
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcile
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySyncOrFetch
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
@@ -499,41 +499,49 @@ class MirrorWorker(
         try {
             var round = 0
             while (round < MAX_UP_SYNC_ROUNDS) {
-                // Reconcile (need ids are the down catch-up's job — ignore them);
-                // `have` = events we hold that the upstream still lacks.
-                val diff =
-                    client.negentropyReconcileIds(
-                        relay = up.url,
-                        filter = catchUpFilter,
-                        localEntries = localEntries,
-                    )
-                if (diff.haveIds.isEmpty()) {
+                // Reconcile and PUBLISH the `have` ids (events we hold the
+                // upstream lacks) as each batch streams in — never materialising
+                // the full diff. On a large window the id list is millions of
+                // entries; the streaming reconcile keeps memory at one batch and
+                // still back-pressures the relay because publishing suspends the
+                // round. The `need` direction is the down catch-up's job, so its
+                // ids are discarded (not accumulated) here.
+                var haveCount = 0
+                var pushed = 0
+                client.negentropyReconcile(
+                    relay = up.url,
+                    filter = catchUpFilter,
+                    localEntries = localEntries,
+                    batchSize = HAVE_FETCH_BATCH,
+                    onHaveIds = { batch ->
+                        haveCount += batch.size
+                        for (event in localStore.query<Event>(Filter(ids = batch))) {
+                            // Scope containment: a scoped upstream only receives
+                            // in-scope events. Echo suppression: record the id so
+                            // a BOTH mirror doesn't re-ingest its own push on the
+                            // down sub (but always re-publish — a straggler stays
+                            // in `exchanged` yet still needs delivering).
+                            if (up.filter != null && !up.filter.match(event)) continue
+                            exchanged?.add(event.id)
+                            client.publish(event, setOf(up.url))
+                            pushed++
+                        }
+                        // Pace the outbox so a batch drains before the next.
+                        delay(UP_PUBLISH_PACING_MS)
+                    },
+                    onNeedIds = { },
+                )
+                if (haveCount == 0) {
                     Log.i("MirrorWorker") { "up catch-up to ${up.url.url}: converged after $round round(s)" }
                     return
                 }
-                // Publish the remaining local-only events. `client.publish`'s
-                // outbox is best-effort under a bulk burst (each publish also
-                // churns a reconnect), so instead of trusting one pass we
-                // re-reconcile next round and re-push only what didn't land —
-                // the reconcile is the delivery check, so the push converges
-                // to lossless.
-                var pushed = 0
-                for (batch in diff.haveIds.chunked(HAVE_FETCH_BATCH)) {
-                    for (event in localStore.query<Event>(Filter(ids = batch))) {
-                        // Scope containment: a scoped upstream only receives
-                        // in-scope events. Echo suppression: record the id so a
-                        // BOTH mirror doesn't re-ingest its own push on the down
-                        // sub (but always re-publish — a straggler stays in
-                        // `exchanged` yet still needs delivering).
-                        if (up.filter != null && !up.filter.match(event)) continue
-                        exchanged?.add(event.id)
-                        client.publish(event, setOf(up.url))
-                        pushed++
-                    }
-                    delay(UP_PUBLISH_PACING_MS)
-                }
+                // `client.publish`'s outbox is best-effort under a bulk burst
+                // (each publish also churns a reconnect), so instead of trusting
+                // one pass we re-reconcile next round and re-push only what didn't
+                // land — the reconcile is the delivery check, so the push
+                // converges to lossless.
                 sentUp.addAndGet(pushed.toLong())
-                Log.i("MirrorWorker") { "up catch-up to ${up.url.url}: round $round pushed $pushed (had ${diff.haveIds.size} to go)" }
+                Log.i("MirrorWorker") { "up catch-up to ${up.url.url}: round $round pushed $pushed (had $haveCount to go)" }
                 round++
                 // Let the upstream ingest + OK before the next reconcile, so the
                 // diff reflects what actually landed rather than what's in flight.
