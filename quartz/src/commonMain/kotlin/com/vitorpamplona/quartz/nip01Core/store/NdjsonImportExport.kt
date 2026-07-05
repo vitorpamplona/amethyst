@@ -18,26 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.geode
+package com.vitorpamplona.quartz.nip01Core.store
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 
 /**
- * Bulk NDJSON import/export for a geode store — the `geode import` / `geode export`
- * verbs, geode's equivalent of `strfry import` / `strfry export`. One JSON event
- * per line (the same on-the-wire event object, no envelope), which is the de-facto
- * interchange format across relays (strfry dumps, corpus files, backups).
+ * Bulk NDJSON import/export for any [IEventStore] — one JSON event per line (the
+ * on-the-wire event object, no envelope), which is the de-facto interchange format
+ * across the Nostr ecosystem (`strfry import`/`export` dumps, corpus files, relay
+ * backups, migrations).
  *
- * Both directions stream: memory is bounded to one batch (import) or one event
- * (export) regardless of corpus size, so a multi-million-event dump round-trips in
- * roughly constant memory.
+ * Protocol/store logic only: it operates purely on the [IEventStore] interface and
+ * Quartz event types, so any Quartz consumer — a relay (geode's `import`/`export`
+ * verbs), the `amy` CLI, a desktop backup/restore — can reuse it. The caller owns
+ * the byte plumbing (files, stdin/stdout, compression): [import] takes a line
+ * [Sequence] and [export] writes to an [Appendable].
+ *
+ * Both directions stream: memory is bounded to one batch ([import]) or one event
+ * ([export]) regardless of corpus size, so a multi-million-event dump round-trips
+ * in roughly constant memory.
  */
-object ImportExport {
-    /** Events per [IEventStore.batchInsert]; one transaction per batch. */
+object NdjsonImportExport {
+    /** Events per [IEventStore.batchInsert]; one store transaction per batch. */
     const val BATCH = 10_000
 
     class ImportStats(
@@ -62,11 +67,10 @@ object ImportExport {
     /**
      * Reads one JSON event per line from [lines] and batch-inserts them into
      * [store]. When [verify], each event's Schnorr signature is checked with the
-     * same `Event.verify()` the relay's `VerifyPolicy` uses, and a bad signature
-     * is counted ([ImportStats.invalid]) and skipped — so `import` upholds the
-     * relay's verify-by-default stance rather than trusting the file. Duplicates
-     * are dropped by the store's unique-id constraint and counted as
-     * [ImportStats.rejected].
+     * same `Event.verify()` a relay's `VerifyPolicy` uses, and a bad signature is
+     * counted ([ImportStats.invalid]) and skipped — so an import upholds a relay's
+     * verify-by-default stance rather than trusting the file. Duplicates are dropped
+     * by the store's unique-id constraint and counted as [ImportStats.rejected].
      */
     suspend fun import(
         store: IEventStore,

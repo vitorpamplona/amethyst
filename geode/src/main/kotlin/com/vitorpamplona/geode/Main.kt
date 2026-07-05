@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.OptionalAuthPoli
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RejectFutureEventsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyAuthOnlyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
+import com.vitorpamplona.quartz.nip01Core.store.NdjsonImportExport
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import kotlinx.coroutines.CancellationException
@@ -152,11 +153,11 @@ private fun runImport(args: Array<String>) {
         val stats =
             runBlocking {
                 if (a.positionals.isEmpty()) {
-                    System.`in`.bufferedReader().useLines { ImportExport.import(ctx.store, it, verify) }
+                    System.`in`.bufferedReader().useLines { NdjsonImportExport.import(ctx.store, it, verify) }
                 } else {
-                    var acc = ImportExport.ImportStats.ZERO
+                    var acc = NdjsonImportExport.ImportStats.ZERO
                     for (file in a.positionals) {
-                        acc += File(file).bufferedReader().useLines { ImportExport.import(ctx.store, it, verify) }
+                        acc += File(file).bufferedReader().useLines { NdjsonImportExport.import(ctx.store, it, verify) }
                     }
                     acc
                 }
@@ -176,7 +177,7 @@ private fun runExport(args: Array<String>) {
     val ctx = openStore(a)
     try {
         val out = System.out.bufferedWriter()
-        val n = runBlocking { ImportExport.export(ctx.store, out) }
+        val n = runBlocking { NdjsonImportExport.export(ctx.store, out) }
         out.flush()
         System.err.println("geode export: $n events from ${ctx.dbFile ?: "(in-memory — empty)"}")
     } finally {

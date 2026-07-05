@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.geode
+package com.vitorpamplona.quartz.nip01Core.store
 
-import com.vitorpamplona.geode.fixtures.SyntheticEvents
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -28,17 +27,18 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Guards the `geode import` / `geode export` NDJSON round-trip: import counts,
+ * Guards [NdjsonImportExport]: the NDJSON import/export round-trip, its counts,
  * duplicate handling, malformed-line skipping, and — the security-relevant part —
- * that verification actually gates a bad signature while still admitting a good one.
+ * that verification gates a bad signature while still admitting a good one.
  */
-class ImportExportTest {
+class NdjsonImportExportTest {
     private val store =
         EventStore(
             dbName = null,
@@ -53,13 +53,20 @@ class ImportExportTest {
     @AfterTest
     fun tearDown() = store.close()
 
+    private val fakeSig = "0".repeat(128)
+
+    private fun hex64(n: Int): String = n.toString(16).padStart(64, '0')
+
+    /** A structurally-valid kind-1 event with a fake (cryptographically-invalid) sig. */
+    private fun fake(i: Int): Event = EventFactory.create(hex64(i), hex64(1_000_000 + i), i.toLong(), 1, emptyArray(), "note-$i", fakeSig)
+
     private fun ndjson(events: List<Event>): Sequence<String> = events.asSequence().map { it.toJson() }
 
     @Test
     fun importThenExport_roundTrips() =
         runBlocking {
-            val events = SyntheticEvents.batch(count = 25)
-            val stats = ImportExport.import(store, ndjson(events), verify = false)
+            val events = (1..25).map { fake(it) }
+            val stats = NdjsonImportExport.import(store, ndjson(events), verify = false)
 
             assertEquals(25L, stats.read)
             assertEquals(25L, stats.imported)
@@ -68,7 +75,7 @@ class ImportExportTest {
             assertEquals(0L, stats.malformed)
 
             val out = StringBuilder()
-            val exported = ImportExport.export(store, out)
+            val exported = NdjsonImportExport.export(store, out)
             assertEquals(25L, exported)
 
             val backIds =
@@ -83,10 +90,10 @@ class ImportExportTest {
     @Test
     fun reimport_countsDuplicatesAsRejected() =
         runBlocking {
-            val events = SyntheticEvents.batch(count = 10)
-            ImportExport.import(store, ndjson(events), verify = false)
+            val events = (1..10).map { fake(it) }
+            NdjsonImportExport.import(store, ndjson(events), verify = false)
 
-            val second = ImportExport.import(store, ndjson(events), verify = false)
+            val second = NdjsonImportExport.import(store, ndjson(events), verify = false)
             assertEquals(10L, second.read)
             assertEquals(0L, second.imported)
             assertEquals(10L, second.rejected, "the store's unique-id constraint drops the re-import")
@@ -95,7 +102,7 @@ class ImportExportTest {
     @Test
     fun malformedAndBlankLines_areSkipped() =
         runBlocking {
-            val good = SyntheticEvents.batch(count = 3)
+            val good = (1..3).map { fake(it) }
             val lines =
                 sequenceOf(
                     good[0].toJson(),
@@ -106,7 +113,7 @@ class ImportExportTest {
                     "[\"NOTANEVENT\"]",
                     good[2].toJson(),
                 )
-            val stats = ImportExport.import(store, lines, verify = false)
+            val stats = NdjsonImportExport.import(store, lines, verify = false)
 
             assertEquals(5L, stats.read, "blank lines are not counted as read")
             assertEquals(3L, stats.imported)
@@ -119,17 +126,16 @@ class ImportExportTest {
         runBlocking {
             // Fake events carry a syntactically-valid but cryptographically-wrong
             // signature — verification must drop them all.
-            val fakes = SyntheticEvents.batch(count = 8)
-            val fakeStats = ImportExport.import(store, ndjson(fakes), verify = true)
+            val fakes = (1..8).map { fake(it) }
+            val fakeStats = NdjsonImportExport.import(store, ndjson(fakes), verify = true)
             assertEquals(8L, fakeStats.read)
             assertEquals(0L, fakeStats.imported)
             assertEquals(8L, fakeStats.invalid, "bad signatures must be rejected under verify")
 
-            // Genuinely-signed events (a fresh key, real Schnorr signatures) must
-            // pass verification and land in the store.
+            // Genuinely-signed events (fresh key, real Schnorr signatures) must pass.
             val signer = NostrSignerSync(KeyPair())
             val real = (1..5).map { signer.sign(TextNoteEvent.build("import verify $it", createdAt = it.toLong())) }
-            val realStats = ImportExport.import(store, ndjson(real), verify = true)
+            val realStats = NdjsonImportExport.import(store, ndjson(real), verify = true)
             assertEquals(5L, realStats.read)
             assertEquals(0L, realStats.invalid, "correctly-signed events must not be flagged invalid")
             assertEquals(5L, realStats.imported, "valid events must be admitted under verify")
