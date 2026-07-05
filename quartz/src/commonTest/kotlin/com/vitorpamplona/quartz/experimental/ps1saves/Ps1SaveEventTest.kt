@@ -72,10 +72,7 @@ class Ps1SaveEventTest {
         assertEquals("SYNCED OVER NOST Card", event.saveTitle())
         assertEquals("BASCUS-00001SOFTCARD", event.filename())
         assertEquals("America", event.region())
-        assertEquals("synctest-f1fc95d1", event.memoryCardId())
         assertEquals(1, event.blockNumber())
-        assertEquals("first", event.blockState())
-        assertEquals("4235e8c1d7164927b78dd50e0a12acbea04b2d80f0864fc3298e7d84225d8f41", event.blockHash())
         assertEquals("PS1 save 'SYNCED OVER NOST Card' (BASCUS-00001SOFTCARD)", event.summary())
         assertEquals("synctest-f1fc95d1-1", event.dTag())
     }

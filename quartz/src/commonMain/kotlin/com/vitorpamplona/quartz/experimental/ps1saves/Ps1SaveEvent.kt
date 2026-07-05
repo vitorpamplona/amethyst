@@ -71,17 +71,8 @@ class Ps1SaveEvent(
     /** Game region, from the `region` tag (may be null). */
     fun region() = tags.firstTagValue("region")
 
-    /** Identifier of the memory card this block belongs to, from the `m` tag (may be null). */
-    fun memoryCardId() = tags.firstTagValue("m")
-
     /** Block number within the card, from the `block` tag (null when missing or not a number). */
     fun blockNumber() = tags.firstTagValue("block")?.toIntOrNull()
-
-    /** Position of this block in a multi-block save chain, from the `state` tag (may be null). */
-    fun blockState() = tags.firstTagValue("state")
-
-    /** SHA-256 of the block data, from the `x` tag (may be null). */
-    fun blockHash() = tags.firstTagValue("x")
 
     /** Publisher-provided human-readable summary, from the NIP-31 `alt` tag (may be null). */
     fun summary() = tags.alt()

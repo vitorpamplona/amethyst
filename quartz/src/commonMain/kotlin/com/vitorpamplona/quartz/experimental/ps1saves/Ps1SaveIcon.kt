@@ -35,12 +35,15 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
  *            (bits 0-4 red, 5-9 green, 10-14 blue); raw `0x0000` is transparent.
  * - `0x80` — the frames, each 16×16 pixels at 4bpp (128 bytes), low nibble
  *            first; pixel values index the CLUT.
- *
- * [frames] holds one 256-entry row-major ARGB pixel array per animation frame,
- * ready to blit into a bitmap.
  */
 @Immutable
 class Ps1SaveIcon(
+    /**
+     * One 256-entry row-major ARGB pixel array per animation frame. Treat as
+     * frozen: the arrays back the class's `@Immutable` contract, so mutating
+     * them in place would not recompose — build a new [Ps1SaveIcon] to change
+     * pixels.
+     */
     val frames: List<IntArray>,
 ) {
     companion object {

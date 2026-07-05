@@ -37,22 +37,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveIcon
-import kotlinx.coroutines.delay
 
 /** How many hex characters of the block to preview (the full block is ~16K chars). */
 private const val HEX_PREVIEW_CHARS = 192
@@ -102,7 +102,7 @@ fun RenderPs1Save(baseNote: Note) {
                 Spacer(Modifier.width(8.dp))
             }
             Text(
-                text = (if (save.icon == null) FLOPPY_PREFIX else "") + (save.title ?: stringResource(R.string.ps1_save_title)),
+                text = (if (save.icon == null) FLOPPY_PREFIX else "") + (save.title ?: stringRes(R.string.ps1_save_title)),
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -113,7 +113,7 @@ fun RenderPs1Save(baseNote: Note) {
             listOfNotNull(
                 save.filename,
                 save.region,
-                save.blockNumber?.let { stringResource(R.string.ps1_save_block, it) },
+                save.blockNumber?.let { stringRes(R.string.ps1_save_block, it) },
             ).joinToString(" · ")
 
         if (details.isNotEmpty()) {
@@ -151,7 +151,8 @@ private fun Ps1SaveIconImage(icon: Ps1SaveIcon) {
         remember(icon) {
             icon.frames.map { pixels ->
                 Bitmap
-                    .createBitmap(pixels, Ps1SaveIcon.SIZE, Ps1SaveIcon.SIZE, Bitmap.Config.ARGB_8888)
+                    .createBitmap(Ps1SaveIcon.SIZE, Ps1SaveIcon.SIZE, Bitmap.Config.ARGB_8888)
+                    .apply { setPixels(pixels, 0, Ps1SaveIcon.SIZE, 0, 0, Ps1SaveIcon.SIZE, Ps1SaveIcon.SIZE) }
                     .asImageBitmap()
             }
         }
@@ -159,10 +160,14 @@ private fun Ps1SaveIconImage(icon: Ps1SaveIcon) {
     var frameIndex by remember(icon) { mutableIntStateOf(0) }
 
     if (frames.size > 1) {
+        // Driven by the frame clock (not delay) so the ticker suspends whenever
+        // the composition stops drawing (backgrounded, behind another screen).
         LaunchedEffect(icon) {
+            val start = withFrameMillis { it }
             while (true) {
-                delay(ICON_FRAME_MILLIS)
-                frameIndex = (frameIndex + 1) % frames.size
+                withFrameMillis { now ->
+                    frameIndex = (((now - start) / ICON_FRAME_MILLIS) % frames.size).toInt()
+                }
             }
         }
     }
