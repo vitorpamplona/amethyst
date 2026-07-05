@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
@@ -103,7 +104,9 @@ fun DisplayPaymentRailChips(
                 ?.target
                 ?.mintUrl
         }
-    val onchainAvailable = LocalCache.onchainBackend != null
+    val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
+        .collectAsStateWithLifecycle()
+    val onchainAvailable = showOnchainWallet && LocalCache.onchainBackend != null
 
     val address =
         remember(baseUser.pubkeyHex) {

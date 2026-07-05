@@ -127,6 +127,7 @@ class UiSharedPreferences(
         val UI_FONT_FAMILY = stringPreferencesKey("ui.font_family")
         val UI_FONT_SIZE = stringPreferencesKey("ui.font_size")
         val UI_COMPOSE_SIGNATURE = stringPreferencesKey("ui.compose_signature")
+        val UI_SHOW_ONCHAIN_WALLET = booleanPreferencesKey("ui.show_onchain_wallet")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
@@ -168,6 +169,7 @@ class UiSharedPreferences(
                     fontFamily = preferences[UI_FONT_FAMILY]?.let { FontFamilyType.valueOf(it) } ?: FontFamilyType.SYSTEM,
                     fontSize = preferences[UI_FONT_SIZE]?.let { FontSizeType.valueOf(it) } ?: FontSizeType.NORMAL,
                     composeSignature = preferences[UI_COMPOSE_SIGNATURE] ?: "",
+                    showOnchainWallet = preferences[UI_SHOW_ONCHAIN_WALLET] ?: true,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -221,6 +223,7 @@ class UiSharedPreferences(
                     preferences[UI_FONT_FAMILY] = sharedSettings.fontFamily.name
                     preferences[UI_FONT_SIZE] = sharedSettings.fontSize.name
                     preferences[UI_COMPOSE_SIGNATURE] = sharedSettings.composeSignature
+                    preferences[UI_SHOW_ONCHAIN_WALLET] = sharedSettings.showOnchainWallet
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

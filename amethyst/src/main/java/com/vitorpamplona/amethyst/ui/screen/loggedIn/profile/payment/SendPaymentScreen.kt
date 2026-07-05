@@ -160,7 +160,11 @@ private fun SendPaymentLoaded(
     // Cheap read, intentionally not remembered: the chain backend is wired up
     // asynchronously at boot and a frozen `remember {}` would hide the
     // on-chain rail for the whole composition if the screen won the race.
-    val onchainAvailable = LocalCache.onchainBackend != null
+    // Also honors the user's "show on-chain wallet" preference — off hides the
+    // rail everywhere, matching the wallet screen and profile chips.
+    val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
+        .collectAsStateWithLifecycle()
+    val onchainAvailable = showOnchainWallet && LocalCache.onchainBackend != null
     // When navigated from a `bitcoin` payment target, the on-chain rail pays
     // that announced address directly (plain send, no NIP-BC receipt) instead
     // of the recipient's pubkey-derived Taproot address. Re-validated here in

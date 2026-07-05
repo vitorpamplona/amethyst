@@ -58,6 +58,11 @@ data class UiSettings(
     val fontFamily: FontFamilyType = FontFamilyType.SYSTEM,
     val fontSize: FontSizeType = FontSizeType.NORMAL,
     val composeSignature: String = "",
+    // Whether the on-chain (Bitcoin/Taproot) wallet is shown across the app: the
+    // "Bitcoin" card on the wallet screen, the on-chain chip on profiles, and the
+    // on-chain rail in the Send Payment screen. Defaults to true (shown) so the
+    // behavior is unchanged for everyone who doesn't turn it off.
+    val showOnchainWallet: Boolean = true,
 )
 
 enum class ThemeType(

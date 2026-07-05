@@ -92,6 +92,7 @@ fun ProfileUiSettingsContent(accountViewModel: AccountViewModel) {
     val showAppRecommendations by ui.showProfileAppRecommendations.collectAsStateWithLifecycle()
     val showZapReceived by ui.showProfileZapReceivedFeed.collectAsStateWithLifecycle()
     val showFollowers by ui.showProfileFollowersFeed.collectAsStateWithLifecycle()
+    val showOnchainWallet by ui.showOnchainWallet.collectAsStateWithLifecycle()
 
     Column(
         modifier =
@@ -133,6 +134,13 @@ fun ProfileUiSettingsContent(accountViewModel: AccountViewModel) {
             title = stringRes(R.string.profile_ui_setting_followers_feed),
             checked = showFollowers,
             onCheckedChange = { ui.showProfileFollowersFeed.tryEmit(it) },
+        )
+        HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
+
+        ProfileUiSwitchRow(
+            title = stringRes(R.string.profile_ui_setting_onchain_wallet),
+            checked = showOnchainWallet,
+            onCheckedChange = { ui.showOnchainWallet.tryEmit(it) },
         )
         HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
 
