@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.keystorage
 import com.github.javakeyring.BackendNotSupportedException
 import com.github.javakeyring.Keyring
 import com.github.javakeyring.PasswordAccessException
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -228,7 +229,7 @@ actual class SecureKeyStorage private actual constructor() {
 
                 if (existed) {
                     if (data.isEmpty()) {
-                        fallbackFile.delete()
+                        fallbackFile.deleteOrWarn("SecureKeyStorage", "fallback key file")
                     } else {
                         atomicWriteFallbackData(fallbackFile, data)
                     }
@@ -275,10 +276,8 @@ actual class SecureKeyStorage private actual constructor() {
                 StandardCopyOption.REPLACE_EXISTING,
             )
         } finally {
-            // Clean up temp file if it still exists
-            if (tempFile.exists()) {
-                tempFile.delete()
-            }
+            // Clean up any leftover temp file
+            tempFile.deleteOrWarn("SecureKeyStorage", "temp key file")
         }
     }
 

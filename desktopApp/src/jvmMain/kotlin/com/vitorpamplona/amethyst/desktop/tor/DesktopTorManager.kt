@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.tor
 import com.vitorpamplona.amethyst.commons.tor.ITorManager
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.util.restrictToOwner
 import com.vitorpamplona.quartz.utils.Log
 import io.matthewnelson.kmp.tor.resource.exec.tor.ResourceLoaderTorExec
 import io.matthewnelson.kmp.tor.runtime.Action.Companion.startDaemonAsync
@@ -190,13 +191,8 @@ class DesktopTorManager(
         private fun desktopEnvironment(): TorRuntime.Environment {
             val appDir = torDataDirectory()
             appDir.mkdirs()
-            // Restrict permissions to owner only (700)
-            appDir.setReadable(false, false)
-            appDir.setReadable(true, true)
-            appDir.setWritable(false, false)
-            appDir.setWritable(true, true)
-            appDir.setExecutable(false, false)
-            appDir.setExecutable(true, true)
+            // Owner-only (700) — Tor state includes onion keys.
+            appDir.restrictToOwner("DesktopTorManager")
 
             return TorRuntime.Environment.Builder(
                 workDirectory = appDir.resolve("work"),

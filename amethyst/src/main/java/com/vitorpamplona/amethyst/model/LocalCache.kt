@@ -54,6 +54,7 @@ import com.vitorpamplona.quartz.experimental.attestations.recommendation.Attesto
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -3487,6 +3488,10 @@ object LocalCache : ILocalCache, ICacheProvider {
 
                 is BirdexEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is BirdDetectionEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
                 }
 
                 is CommentEvent -> {

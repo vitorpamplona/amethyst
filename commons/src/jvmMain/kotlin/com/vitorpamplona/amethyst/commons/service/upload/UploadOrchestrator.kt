@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.service.upload
 
 import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder.ReencodeResult
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
@@ -144,8 +145,8 @@ class UploadOrchestrator(
             // Eager cleanup of every intermediate. NonCancellable so a
             // user-cancelled upload still cleans up its temps.
             withContext(NonCancellable) {
-                strippedTemp?.delete()
-                reencodedTemp?.delete()
+                strippedTemp?.deleteOrWarn("UploadOrchestrator", "stripped temp")
+                reencodedTemp?.deleteOrWarn("UploadOrchestrator", "reencoded temp")
             }
         }
     }

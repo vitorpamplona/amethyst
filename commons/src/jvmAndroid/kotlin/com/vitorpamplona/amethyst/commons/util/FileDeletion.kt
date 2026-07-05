@@ -18,43 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip03Timestamp.ots.op
+package com.vitorpamplona.amethyst.commons.util
 
-import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext
-import com.vitorpamplona.quartz.nip03Timestamp.ots.crypto.KeccakDigest
+import com.vitorpamplona.quartz.utils.Log
+import java.io.File
 
 /**
- * Cryptographic Keccak256 operation.
- * Cryptographic operation tag numbers taken from RFC4880, although it's not
- * guaranteed that they'll continue to match that RFC in the future.
+ * Deletes this file, warning on real failures only. [File.delete] returns false
+ * both when deletion genuinely fails and when the file is already gone (e.g.
+ * removed by a concurrent eviction in another thread or process); only the
+ * former deserves a warning.
  *
- * @see OpCrypto
+ * @param tag the log tag of the calling component
+ * @param what a short noun for the log message, e.g. "thumbnail" or "blob"
+ * @return true when the file no longer exists, whether this call deleted it or
+ *   it was already gone; false when it still exists and could not be deleted.
  */
-class OpKECCAK256 : OpCrypto() {
-    private val digest = KeccakDigest(256)
-
-    override fun tag(): Byte = TAG
-
-    override fun tagName(): String = "keccak256"
-
-    override fun hashLibName(): String = "keccak256"
-
-    override fun digestLength(): Int = digest.getDigestSize()
-
-    override fun call(msg: ByteArray): ByteArray {
-        digest.update(msg, 0, msg.size)
-        val hash = ByteArray(digest.getDigestSize())
-        digest.doFinal(hash, 0)
-
-        return hash
-    }
-
-    companion object {
-        val TAG: Byte = 103.toByte()
-
-        fun deserializeFromTag(
-            ctx: StreamDeserializationContext,
-            tag: Byte,
-        ): Op? = OpCrypto.deserializeFromTag(ctx, tag)
-    }
+fun File.deleteOrWarn(
+    tag: String,
+    what: String,
+): Boolean {
+    if (delete() || !exists()) return true
+    Log.w(tag) { "Failed to delete $what $absolutePath" }
+    return false
 }

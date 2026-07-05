@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.service.media
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -137,7 +138,7 @@ object VideoThumbnailCache {
                     // a persistent cache hit (decoders may fail on every
                     // retry against a half-MP4). Discard so the next request
                     // re-downloads from scratch.
-                    if (!downloaded.persistable) downloaded.file.delete()
+                    if (!downloaded.persistable) downloaded.file.deleteOrWarn("VideoThumbnailCache", "truncated video chunk")
                 }
             }
         }
@@ -166,7 +167,7 @@ object VideoThumbnailCache {
         val hash = sha1Hex(url)
         val cached = File(downloadCacheDir, "$hash.mp4")
         if (cached.length() > 0L) return Download(cached, persistable = true)
-        if (cached.exists()) cached.delete()
+        cached.deleteOrWarn("VideoThumbnailCache", "empty cached chunk")
 
         var wrote = false
         var rangeHonored = false
@@ -181,7 +182,7 @@ object VideoThumbnailCache {
             }
         }
         if (!wrote || cached.length() == 0L) {
-            cached.delete()
+            cached.deleteOrWarn("VideoThumbnailCache", "empty cached chunk")
             return null
         }
         return Download(cached, persistable = rangeHonored)

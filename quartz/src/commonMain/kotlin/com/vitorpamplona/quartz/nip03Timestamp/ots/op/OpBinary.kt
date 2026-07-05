@@ -53,7 +53,13 @@ abstract class OpBinary(
         return this.tag() - other.tag()
     }
 
-    override fun hashCode(): Int = TAG.toInt() xor this.arg.contentHashCode()
+    // Class-scoped equality: never conflates two ops as Timestamp.ops map keys
+    // even if a subclass reused a tag by mistake. hashCode stays tag-based
+    // (collisions are legal). Tag uniqueness itself is a protocol invariant
+    // (serialization dispatches on it), pinned by OtsEqualsContractTest.
+    override fun equals(other: Any?): Boolean = other is OpBinary && this::class == other::class && this.arg.contentEquals(other.arg)
+
+    override fun hashCode(): Int = this.tag().toInt() xor this.arg.contentHashCode()
 
     companion object {
         @Throws(DeserializationException::class)

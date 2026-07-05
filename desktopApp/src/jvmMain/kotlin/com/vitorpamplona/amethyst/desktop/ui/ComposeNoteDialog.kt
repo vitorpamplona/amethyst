@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.CompressionQuality
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.upload.UploadResult
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.ImageCompressionStore
 import com.vitorpamplona.amethyst.desktop.account.AccountState
@@ -282,7 +283,7 @@ fun ComposeNoteDialog(
                                 // User opted out of the compressed
                                 // version — drop the temp before we
                                 // ship the original.
-                                item.compressedFile.delete()
+                                item.compressedFile.deleteOrWarn("ComposeNoteDialog", "compressed temp")
                                 orchestrator.upload(
                                     file = file,
                                     alt = null,

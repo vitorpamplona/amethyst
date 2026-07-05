@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureStorageException
 import com.vitorpamplona.amethyst.commons.model.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.model.account.SignerType
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -260,10 +261,9 @@ class AccountManager internal constructor(
 
     suspend fun loadSavedAccount(): Result<AccountState.LoggedIn> =
         try {
-            // Clean up legacy files (one-time, silent)
-            File(amethystDir, "last_account.txt").delete()
-            File(amethystDir, "bunker_uri.txt").delete()
-            File(amethystDir, "nwc_connection.txt").delete()
+            // Clean up legacy files (one-time)
+            listOf("last_account.txt", "bunker_uri.txt", "nwc_connection.txt")
+                .forEach { File(amethystDir, it).deleteOrWarn("AccountManager", "legacy file") }
 
             // Single source of truth: accounts.json.enc
             val activeNpub =

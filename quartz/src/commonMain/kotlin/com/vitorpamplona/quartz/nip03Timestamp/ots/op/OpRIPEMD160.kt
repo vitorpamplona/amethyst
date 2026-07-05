@@ -48,10 +48,6 @@ class OpRIPEMD160 : OpCrypto() {
         return hash
     }
 
-    override fun equals(other: Any?): Boolean = (other is OpRIPEMD160)
-
-    override fun hashCode(): Int = TAG.toInt()
-
     companion object {
         val TAG: Byte = 0x03
 
