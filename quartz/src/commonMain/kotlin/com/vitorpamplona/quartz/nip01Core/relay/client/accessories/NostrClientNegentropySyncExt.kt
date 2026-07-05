@@ -937,13 +937,23 @@ private sealed interface NegFrame {
 /**
  * strfry sends `["NEG-ERR", subId, "blocked: too many query results"]` when a
  * NEG-OPEN matches more than `relay__negentropy__maxSyncEvents`. Match that
- * verbatim, plus a looser contains-check so equivalent wording from other relays
- * still triggers the window split rather than aborting.
+ * verbatim, plus a looser contains-check for equivalent "result set too large"
+ * wording from other relays, so it still triggers the window split rather than
+ * aborting.
+ *
+ * This MUST stay narrow: only a genuine *set-too-large* signal may be treated as
+ * overflow, because overflow triggers `created_at` window-splitting. A NEG-ERR
+ * that is really a hard refusal — negentropy disabled, `auth-required`, a ban —
+ * must NOT match, or every split re-opens, is refused again, and the splitter
+ * fans out across the whole `created_at` range (a ~2^31-window storm) instead of
+ * failing over to paging. In particular a bare `blocked: …` prefix is such a
+ * refusal (e.g. strfry-style `"blocked: Negentropy sync is disabled"`) and is
+ * deliberately excluded — only the specific overflow wording counts.
  */
 private fun isOverflow(reason: String): Boolean =
-    reason == "blocked: too many query results" ||
-        reason.contains("too many", ignoreCase = true) ||
-        reason.startsWith("blocked", ignoreCase = true)
+    reason.contains("too many", ignoreCase = true) ||
+        reason.contains("too large", ignoreCase = true) ||
+        reason.contains("max_sync_events", ignoreCase = true)
 
 /**
  * One `REQ` for [batch] ids; collects the matching events and returns them on
