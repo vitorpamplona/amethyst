@@ -32,7 +32,32 @@ relay, each holding the corpus.
   so a geode source offers its full ~994k (D transfers all of it). Same
   NIP-62/09/40 fairness family as `2026-07-04-sync-fairness-nip62-09-40.md`.
 
-REQ-mode comparison to follow separately.
+### REQ-mode counterpart (2026-07-05)
+
+Same corpus + same geode sink config (verify ON, FTS OFF), but a plain **paged
+`REQ`** pull instead of negentropy (`-DsyncMode=req`, 20k-event `until` windows).
+
+| # | source → sink | mechanism | synced | time | throughput |
+|---|---------------|-----------|--------|------|------------|
+| A | geode → geode  | geode paged REQ | 994,144 / 994,832 | 200.3 s | **4,963 ev/s** ✅ |
+| B | strfry → geode | geode paged REQ | 994,813 / 994,898 | 171.5 s | **5,801 ev/s** ✅ |
+| C | strfry → strfry| — | — | — | **n/a** |
+| D | geode → strfry | — | — | — | **n/a** |
+
+- **strfry has no REQ bulk sync.** Its REQ path is `strfry stream`, which sends
+  `["REQ","sub",{"limit":0}]` — live-only, no historical replay; `strfry sync` is
+  negentropy. So the strfry-*sink* REQ pairs (C, D) have no strfry-native
+  mechanism — that gap is the finding: geode can bulk-pull over REQ, strfry can't.
+- **strfry→geode over REQ now completes** (B) — earlier it stalled at ~310k
+  because FTS-on ingest fell behind strfry's page serving and strfry killed the
+  slow client at its 32 MB pending cap. With FTS off the sink keeps pace, so
+  strfry never trips the cap. (Completion over REQ is contingent on the sink
+  out-running the source; negentropy is immune because it's pull-paced.)
+- **REQ is ~15–30% slower than negentropy** for the geode sink (4,963–5,801 vs
+  6,690–6,971): the paged `until` windows re-fetch boundary duplicates and range-
+  scan the source, vs negentropy's direct id fetch. And geode-as-a-REQ-*source*
+  is slower than strfry-as-a-source (A 4,963 < B 5,801) — SQLite range scans vs
+  strfry's LMDB.
 
 ---
 
