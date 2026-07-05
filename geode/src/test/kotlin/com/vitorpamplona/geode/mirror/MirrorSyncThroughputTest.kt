@@ -25,10 +25,14 @@ import com.vitorpamplona.geode.RelayEngine
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
+import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
+import com.vitorpamplona.quartz.nip77Negentropy.NegentropySession
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.trySendBlocking
@@ -37,6 +41,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -148,7 +153,14 @@ class MirrorSyncThroughputTest {
             val backfillSeconds = System.getProperty("syncBackfillSeconds")?.toLong() ?: 90_000L
 
             if (externalUrl != null) {
-                measureExternalDrain(externalUrl, expect, backfillSeconds)
+                // Default to NIP-77 negentropy (client-paced, completes a bulk
+                // pull from strfry); `-DsyncMode=req` runs the paged-REQ drain
+                // that stalls when strfry kills a slow client (see class kdoc).
+                if ((System.getProperty("syncMode") ?: "negentropy") == "req") {
+                    measureExternalDrain(externalUrl, expect, backfillSeconds)
+                } else {
+                    measureNegentropyDrain(externalUrl, expect)
+                }
                 return@runBlocking
             }
 
@@ -319,6 +331,113 @@ class MirrorSyncThroughputTest {
         ws.cancel()
         handoff.close()
         consumer.join()
+        okhttp.dispatcher.executorService.shutdown()
+        report("strfry", reached, expect, startNanos)
+    }
+
+    /**
+     * strfry→geode over **NIP-77 negentropy** — the same mechanism `strfry
+     * sync` uses, and the only one that completes a bulk pull from strfry
+     * (client-paced, so strfry can't kill us for being slow).
+     *
+     *  1. **Reconcile**: our local set is empty, so a NEG-OPEN → NEG-MSG*
+     *     negotiation over `Filter()` (the whole DB) returns *every* strfry id
+     *     as "need". Frames are bounded (`frameSizeLimit`) so neither side ever
+     *     ships a multi-MB payload.
+     *  2. **Fetch + ingest**: REQ the need-ids in bounded batches, sending the
+     *     next batch only after the current one's EOSE, and hand each event to
+     *     the (backpressured) ingest queue. strfry never buffers more than one
+     *     batch, so the 32 MB pending wall the REQ drain hits never comes.
+     */
+    private suspend fun measureNegentropyDrain(
+        url: String,
+        expect: Int,
+    ) = coroutineScope {
+        println("─ MirrorSyncThroughput: strfry→geode, NIP-77 negentropy sync of $url, expect $expect ─")
+        val http = if (url.startsWith("ws://")) "http://" + url.removePrefix("ws://") else url
+        val okhttp = OkHttpClient.Builder().build()
+        val incoming = Channel<String>(Channel.UNLIMITED)
+        val listener =
+            object : WebSocketListener() {
+                override fun onMessage(
+                    webSocket: WebSocket,
+                    text: String,
+                ) {
+                    incoming.trySend(text)
+                }
+            }
+        val ws = okhttp.newWebSocket(Request.Builder().url(http).build(), listener)
+        val startNanos = System.nanoTime()
+
+        // 1. Reconcile: empty local set → need = strfry's entire id set.
+        val session = NegentropySession.fromEvents("gsync", Filter(), emptyList(), frameSizeLimit = 60_000L)
+        val needIds = LinkedHashSet<String>()
+        ws.send(OptimizedJsonMapper.toJson(session.open()))
+        var rounds = 0
+        while (rounds < 20_000) {
+            val raw = withTimeout(180_000) { incoming.receive() }
+            // Skip anything that isn't a negotiation frame.
+            if (!raw.startsWith("[\"NEG-MSG\"") && !raw.startsWith("[\"NEG-ERR\"") && !raw.startsWith("[\"NOTICE\"")) continue
+            rounds++
+            when (val msg = OptimizedJsonMapper.fromJsonToMessage(raw)) {
+                is NegErrMessage -> error("NEG-ERR from strfry: ${msg.reason}")
+                is NoticeMessage -> continue
+                is NegMsgMessage -> {
+                    val r = session.processMessage(msg.message)
+                    needIds += r.needIds
+                    if (r.isComplete()) {
+                        ws.send("""["NEG-CLOSE","gsync"]""")
+                        break
+                    }
+                    ws.send(OptimizedJsonMapper.toJson(r.nextCmd!!))
+                }
+                else -> {}
+            }
+        }
+        val reconcileMs = (System.nanoTime() - startNanos) / 1e6
+        println("    reconcile: need=${needIds.size} in $rounds rounds, %.0f ms".format(reconcileMs))
+
+        // 2. Fetch the need-ids in bounded batches; ingest under backpressure.
+        var lastLog = System.nanoTime()
+        var lastCount = 0
+        for ((bi, batch) in needIds.chunked(2_000).withIndex()) {
+            val subId = "gfetch-$bi"
+            ws.send("""["REQ","$subId",${Filter(ids = batch).toJson()}]""")
+            while (true) {
+                val raw = withTimeout(180_000) { incoming.receive() }
+                if (raw.startsWith("[\"EVENT\",\"$subId\"")) {
+                    val ev = (OptimizedJsonMapper.fromJsonToMessage(raw) as? EventMessage)?.event ?: continue
+                    downstream.server.ingest(ev, skipVerify = true) { }
+                } else if (raw.startsWith("[\"EOSE\",\"$subId\"") || raw.startsWith("[\"CLOSED\",\"$subId\"")) {
+                    ws.send("""["CLOSE","$subId"]""")
+                    break
+                }
+            }
+            val nowNanos = System.nanoTime()
+            if (nowNanos - lastLog >= 3_000_000_000L) {
+                val c = downstreamStore.count(Filter())
+                val rate = ((c - lastCount) / ((nowNanos - lastLog) / 1e9)).toLong()
+                println("    …ingested $c/${needIds.size}  (%,d ev/s inst)".format(rate))
+                lastLog = nowNanos
+                lastCount = c
+            }
+        }
+
+        // Let the async ingest queue drain to the store.
+        var reached = downstreamStore.count(Filter())
+        var stable = 0
+        while (reached < expect && stable < 20) {
+            delay(250)
+            val c = downstreamStore.count(Filter())
+            if (c == reached) {
+                stable++
+            } else {
+                stable = 0
+                reached = c
+            }
+        }
+
+        ws.cancel()
         okhttp.dispatcher.executorService.shutdown()
         report("strfry", reached, expect, startNanos)
     }

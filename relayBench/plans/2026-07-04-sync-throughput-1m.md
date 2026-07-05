@@ -38,14 +38,26 @@ work a production geode does on every insert).
 
 ## Results (1M corpus, single 16 GB host)
 
-| Pair          | Mechanism                    | Synced            | Time    | Throughput          | Completes? |
-|---------------|------------------------------|-------------------|---------|---------------------|------------|
-| strfry→strfry | `strfry sync` (negentropy)   | 997,977 / 997,980 | ~391 s  | **~2,550 ev/s**     | ✅ |
-| geode→geode   | MirrorWorker REQ (synthetic) | 1,000,000 / 1M    | 76.0 s  | **13,161 ev/s**     | ✅ |
-| strfry→geode  | paged REQ drain (real corpus)| ~310k / 997,980   | —       | **~7,000 ev/s** *   | ❌ (strfry kills conn) |
+| Pair          | Mechanism                        | Synced            | Time    | Throughput          | Completes? |
+|---------------|----------------------------------|-------------------|---------|---------------------|------------|
+| strfry→strfry | `strfry sync` (negentropy)       | 997,977 / 997,980 | ~391 s  | **~2,550 ev/s**     | ✅ |
+| geode→geode   | MirrorWorker REQ (synthetic)     | 1,000,000 / 1M    | 76.0 s  | **13,161 ev/s**     | ✅ |
+| **strfry→geode** | **negentropy (geode client)** | **994,936 / 997,980** | **171.0 s** | **5,818 ev/s** | ✅ |
+| strfry→geode  | paged REQ drain (real corpus)    | ~310k / 997,980   | —       | ~7,000 ev/s *       | ❌ (strfry kills conn) |
 
-\* strfry→geode sustains ~7,000 ev/s (peaks ~11k warm) but **does not finish**:
-see the "strfry kills a slow REQ client" finding below.
+\* the paged-REQ drain sustains ~7,000 ev/s (peaks ~11k warm) but **does not
+finish** — see "strfry kills a slow REQ client" below. Switching geode to a
+**NIP-77 negentropy client** (the same mechanism `strfry sync` uses) **does
+finish**: reconcile against strfry's full set took **11.4 s / 64 rounds**
+(empty local → 995,024 need-ids), then a client-paced fetch (2,000-id REQ
+batches) + ingest completed at ~7k ev/s steady-state, **5,818 ev/s end-to-end**.
+(The 994,936 vs 997,980 gap is the NEG-scope/expiry artifact — strfry's
+negentropy set excludes a few thousand expired/superseded events it still
+exports — same family as the strfry→strfry 3-event shortfall, not data loss.)
+
+**The headline, apples-to-apples comparison** (both negentropy, same corpus,
+empty→full): **strfry→geode 5,818 ev/s vs strfry→strfry ~2,550 ev/s — geode
+ingests real content ≈2.3× faster than strfry, and finishes the pull.**
 
 **Two things make the raw table misleading — read the caveats:**
 
