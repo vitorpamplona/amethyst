@@ -57,11 +57,25 @@ fun main(args: Array<String>) {
     // in-memory sink in the same box during the comparison. Reuses an already
     // loaded DB (serve-only) so a re-run skips the multi-minute reload.
     val dbFile = "/tmp/geode-source-$port.sqlite"
+    // Reuse an already-loaded DB (serve-only, skipping the multi-minute reload)
+    // ONLY when a completion sentinel proves it holds *this* corpus, fully loaded.
+    // The sentinel is written only after a full load and is keyed on corpus
+    // identity (path + byte length) and maxCount, so a different/rebuilt corpus, a
+    // different cap, or a load interrupted mid-way (row count > 0 but incomplete)
+    // all fail the check and force a clean reload — never silently serving the
+    // wrong events under a run that reports success.
+    val sentinel = File("$dbFile.done")
+    val signature = "${corpus.absolutePath}\t${corpus.length()}\tmax=$maxCount"
+    val reusable = sentinel.takeIf { it.exists() }?.readText() == signature
+    if (!reusable) {
+        sentinel.delete()
+        listOf(dbFile, "$dbFile-wal", "$dbFile-shm", "$dbFile-journal").forEach { File(it).delete() }
+    }
     val store = EventStore(dbName = dbFile, indexStrategy = RelayIndexingStrategy)
     val engine = RelayEngine(url = "ws://127.0.0.1:$port/".normalizeRelayUrl(), store = store)
 
     var loaded = runBlocking { store.count(Filter()) }
-    if (loaded > 0) {
+    if (reusable && loaded > 0) {
         println("CorpusServerMain: reusing existing DB with $loaded events (serve-only)")
     } else {
         println("CorpusServerMain: loading up to $maxCount events from ${corpus.name}…")
@@ -89,6 +103,9 @@ fun main(args: Array<String>) {
                 }
                 total
             }
+        // Mark the load complete only now — a crash before this leaves no
+        // sentinel, so the next run rebuilds instead of serving a partial DB.
+        sentinel.writeText(signature)
     }
     val count = runBlocking { store.count(Filter()) }
 

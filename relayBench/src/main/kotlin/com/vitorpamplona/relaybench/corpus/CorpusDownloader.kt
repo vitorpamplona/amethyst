@@ -284,10 +284,24 @@ object CorpusDownloader {
                             val createdAt = event["created_at"]?.asLong() ?: continue
                             page.add(PagedEvent(id, kind, createdAt, event.toString()))
                         }
-                    "EOSE", "CLOSED" ->
+                    "EOSE" ->
                         if (node[1]?.asText() == subId) {
+                            // End of stored events: this page is the complete
+                            // window for the cursor.
                             socket.close(subId)
                             return@withTimeoutOrNull page
+                        }
+                    "CLOSED" ->
+                        if (node[1]?.asText() == subId) {
+                            // The relay terminated the sub itself (rate-limit,
+                            // policy, error) — possibly *before* sending every
+                            // matching event. Treat it as a soft failure, NOT an
+                            // EOSE: returning the partial page as complete would
+                            // advance the cursor past the unsent tail and silently
+                            // drop those events from the corpus. null makes the
+                            // caller reconnect and retry the SAME cursor; the id
+                            // dedup set absorbs the events this attempt did see.
+                            return@withTimeoutOrNull null
                         }
                 }
             }
