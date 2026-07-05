@@ -103,6 +103,8 @@ fun WalletScreen(
     // the first composition pass. init() is idempotent — just sets refs.
     cashuWalletViewModel.init(accountViewModel)
 
+    val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
+        .collectAsState()
     val hasNwcWallet by walletViewModel.hasWalletSetup.collectAsState()
     val cashuWalletEvent by cashuWalletViewModel.walletEvent.collectAsState()
     val hasCashuWallet = cashuWalletEvent != null
@@ -147,11 +149,13 @@ fun WalletScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            OnchainSection(
-                accountViewModel = accountViewModel,
-                nav = nav,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+            if (showOnchainWallet) {
+                OnchainSection(
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
             if (!hasWallet) {
                 NoWalletSetup(
                     modifier = Modifier,

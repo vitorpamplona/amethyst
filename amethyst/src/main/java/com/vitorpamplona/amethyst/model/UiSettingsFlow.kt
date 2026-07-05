@@ -58,6 +58,7 @@ class UiSettingsFlow(
     val fontFamily: MutableStateFlow<FontFamilyType> = MutableStateFlow(FontFamilyType.SYSTEM),
     val fontSize: MutableStateFlow<FontSizeType> = MutableStateFlow(FontSizeType.NORMAL),
     val composeSignature: MutableStateFlow<String> = MutableStateFlow(""),
+    val showOnchainWallet: MutableStateFlow<Boolean> = MutableStateFlow(true),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -90,6 +91,7 @@ class UiSettingsFlow(
             fontFamily,
             fontSize,
             composeSignature,
+            showOnchainWallet,
         )
 
     // emits at every change in any of the propertyes.
@@ -126,6 +128,7 @@ class UiSettingsFlow(
                 flows[26] as FontFamilyType,
                 flows[27] as FontSizeType,
                 flows[28] as String,
+                flows[29] as Boolean,
             )
         }
 
@@ -160,6 +163,7 @@ class UiSettingsFlow(
             fontFamily.value,
             fontSize.value,
             composeSignature.value,
+            showOnchainWallet.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -281,6 +285,10 @@ class UiSettingsFlow(
             composeSignature.tryEmit(torSettings.composeSignature)
             any = true
         }
+        if (showOnchainWallet.value != torSettings.showOnchainWallet) {
+            showOnchainWallet.tryEmit(torSettings.showOnchainWallet)
+            any = true
+        }
 
         return any
     }
@@ -335,6 +343,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.fontFamily),
                 MutableStateFlow(uiSettings.fontSize),
                 MutableStateFlow(uiSettings.composeSignature),
+                MutableStateFlow(uiSettings.showOnchainWallet),
             )
     }
 }

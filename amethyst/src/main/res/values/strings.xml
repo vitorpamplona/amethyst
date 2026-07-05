@@ -2608,6 +2608,7 @@
     <string name="profile_ui_setting_app_recommendations">App Recommendations</string>
     <string name="profile_ui_setting_zap_received_feed">Zap Received Feed</string>
     <string name="profile_ui_setting_followers_feed">Followers Feed</string>
+    <string name="profile_ui_setting_onchain_wallet">Bitcoin (on-chain) Wallet</string>
     <string name="reactions_settings">Reaction Row</string>
     <string name="reactions_settings_description">Configure which reaction buttons are shown, their order, and whether to display counters.</string>
     <string name="reactions_settings_enabled">Enabled</string>

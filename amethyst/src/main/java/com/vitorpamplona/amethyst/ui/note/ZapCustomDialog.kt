@@ -71,6 +71,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -179,6 +180,11 @@ fun ZapCustomDialog(
     // sheet closes the whole zap flow — the user has already committed to a
     // payment method, no "go back to Lightning" is offered here.
     var sendOnchain by remember { mutableStateOf(false) }
+
+    // Hides the "Send on-chain instead" hand-off when the user has turned the
+    // on-chain wallet off, matching every other on-chain surface.
+    val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
+        .collectAsStateWithLifecycle()
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -353,16 +359,18 @@ fun ZapCustomDialog(
                 // Hand off to the on-chain dialog with the entered amount +
                 // message prefilled. Disabled while the amount is empty so the
                 // user can't open a sheet that immediately gates on its own
-                // empty field.
-                TextButton(
-                    onClick = { sendOnchain = true },
-                    enabled = postViewModel.canSend() && !baseNote.isDraft(),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                ) {
-                    Text(text = stringRes(id = R.string.send_onchain_instead))
+                // empty field. Hidden entirely when the on-chain wallet is off.
+                if (showOnchainWallet) {
+                    TextButton(
+                        onClick = { sendOnchain = true },
+                        enabled = postViewModel.canSend() && !baseNote.isDraft(),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                    ) {
+                        Text(text = stringRes(id = R.string.send_onchain_instead))
+                    }
                 }
             }
         }
