@@ -83,6 +83,13 @@ class Ps1SaveEvent(
      */
     fun icon() = Ps1SaveIcon.parse(content)
 
+    /**
+     * True when the block holds no save data: erased flash sectors (all `ff`)
+     * or zero-filled blocks, whatever the publisher's hex casing. UIs show
+     * these as empty slots instead of a hex dump.
+     */
+    fun isBlankBlock() = content.isNotEmpty() && content.all { it.equals(content[0], ignoreCase = true) }
+
     companion object {
         const val KIND = 38192
     }

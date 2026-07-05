@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -86,6 +87,7 @@ fun RenderPs1Save(baseNote: Note) {
                 region = noteEvent.region(),
                 blockNumber = noteEvent.blockNumber(),
                 icon = noteEvent.icon(),
+                isBlank = noteEvent.isBlankBlock(),
                 hexPreview =
                     noteEvent.content
                         .take(HEX_PREVIEW_CHARS)
@@ -127,7 +129,15 @@ fun RenderPs1Save(baseNote: Note) {
             )
         }
 
-        if (save.hexPreview != null) {
+        if (save.isBlank) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = stringRes(R.string.ps1_save_empty_slot),
+                style = MaterialTheme.typography.bodyMedium,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        } else if (save.hexPreview != null) {
             Spacer(Modifier.height(6.dp))
             Text(
                 text = save.hexPreview,
@@ -187,5 +197,6 @@ private class Ps1SaveInfo(
     val region: String?,
     val blockNumber: Int?,
     val icon: Ps1SaveIcon?,
+    val isBlank: Boolean,
     val hexPreview: String?,
 )

@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -75,6 +76,33 @@ class Ps1SaveEventTest {
         assertEquals(1, event.blockNumber())
         assertEquals("PS1 save 'SYNCED OVER NOST Card' (BASCUS-00001SOFTCARD)", event.summary())
         assertEquals("synctest-f1fc95d1-1", event.dTag())
+    }
+
+    @Test
+    fun blankBlockDetection() {
+        fun eventWith(content: String): Ps1SaveEvent {
+            val event: Event =
+                EventFactory.create(
+                    id = "00".repeat(32),
+                    pubKey = "00".repeat(32),
+                    createdAt = 1_783_151_940L,
+                    kind = Ps1SaveEvent.KIND,
+                    tags = arrayOf(arrayOf("d", "card-1")),
+                    content = content,
+                    sig = "00".repeat(64),
+                )
+            assertIs<Ps1SaveEvent>(event)
+            return event
+        }
+
+        // Erased flash sectors (all ff) and zero-filled blocks are both blank,
+        // regardless of the publisher's hex casing.
+        assertTrue(eventWith("ffffffffffff").isBlankBlock())
+        assertTrue(eventWith("ffFFffFFffFF").isBlankBlock())
+        assertTrue(eventWith("000000000000").isBlankBlock())
+        // Real save data and empty content are not.
+        assertFalse(eventWith("5343110153594e43").isBlankBlock())
+        assertFalse(eventWith("").isBlankBlock())
     }
 
     @Test
