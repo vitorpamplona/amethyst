@@ -54,37 +54,42 @@ fun main(args: Array<String>) {
     val maxCount = args.getOrNull(2)?.toInt() ?: Int.MAX_VALUE
 
     // File-backed so a 1M in-memory corpus here doesn't compete for RAM with an
-    // in-memory sink in the same box during the comparison. Fresh each boot.
+    // in-memory sink in the same box during the comparison. Reuses an already
+    // loaded DB (serve-only) so a re-run skips the multi-minute reload.
     val dbFile = "/tmp/geode-source-$port.sqlite"
-    listOf("", "-wal", "-shm").forEach { File(dbFile + it).delete() }
     val store = EventStore(dbName = dbFile, indexStrategy = RelayIndexingStrategy)
     val engine = RelayEngine(url = "ws://127.0.0.1:$port/".normalizeRelayUrl(), store = store)
 
-    println("CorpusServerMain: loading up to $maxCount events from ${corpus.name}…")
-    val loaded =
-        runBlocking {
-            var total = 0
-            val batch = ArrayList<Event>(10_000)
-            corpus.bufferedReader().useLines { lines ->
-                for (line in lines) {
-                    if (total >= maxCount) break
-                    if (line.isBlank()) continue
-                    val event = runCatching { OptimizedJsonMapper.fromJson(line) }.getOrNull() ?: continue
-                    batch.add(event)
-                    if (batch.size == 10_000) {
-                        store.batchInsert(batch)
-                        total += batch.size
-                        batch.clear()
-                        if (total % 200_000 == 0) println("  …loaded $total")
+    var loaded = runBlocking { store.count(Filter()) }
+    if (loaded > 0) {
+        println("CorpusServerMain: reusing existing DB with $loaded events (serve-only)")
+    } else {
+        println("CorpusServerMain: loading up to $maxCount events from ${corpus.name}…")
+        loaded =
+            runBlocking {
+                var total = 0
+                val batch = ArrayList<Event>(10_000)
+                corpus.bufferedReader().useLines { lines ->
+                    for (line in lines) {
+                        if (total >= maxCount) break
+                        if (line.isBlank()) continue
+                        val event = runCatching { OptimizedJsonMapper.fromJson(line) }.getOrNull() ?: continue
+                        batch.add(event)
+                        if (batch.size == 10_000) {
+                            store.batchInsert(batch)
+                            total += batch.size
+                            batch.clear()
+                            if (total % 200_000 == 0) println("  …loaded $total")
+                        }
                     }
                 }
+                if (batch.isNotEmpty()) {
+                    store.batchInsert(batch)
+                    total += batch.size
+                }
+                total
             }
-            if (batch.isNotEmpty()) {
-                store.batchInsert(batch)
-                total += batch.size
-            }
-            total
-        }
+    }
     val count = runBlocking { store.count(Filter()) }
 
     val server = KtorRelay(engine, host = "127.0.0.1", port = port).start()
