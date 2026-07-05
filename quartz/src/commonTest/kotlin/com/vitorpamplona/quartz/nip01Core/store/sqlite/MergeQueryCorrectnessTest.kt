@@ -249,6 +249,60 @@ class MergeQueryCorrectnessTest {
         }
 
     @Test
+    fun tiedCreatedAt_withinSingleStream_limitCutsTheTie() =
+        runBlocking {
+            val store = newStore()
+            // Two authors so the filter is merge-eligible (>1 stream). Each
+            // author posts SEVERAL kind-1 events at the SAME created_at — the
+            // case a per-stream `ORDER BY created_at DESC` alone gets wrong:
+            // the stream's head must be the id-MINIMUM of that second, not
+            // whatever rowid the index happened to store first. The limit is
+            // set to slice through the middle of the tie so an out-of-id-order
+            // head would emit the wrong events.
+            val authors = (0 until 3).map { hex64(11, it) }
+            val all = ArrayList<Event>()
+            val ts = 1_700_000_000L
+            for (pk in authors) repeat(5) { all.add(ev(pk, ts, 1)) }
+            // A newer second with one event each, so the tie isn't at the very top.
+            for (pk in authors) all.add(ev(pk, ts + 1, 1))
+            store.batchInsert(all)
+
+            // 3 newest (ts+1) + 4 into the 15-event same-second tie.
+            val filter = Filter(kinds = listOf(1), authors = authors, limit = 7)
+            assertTrue(mergeEligible(store, filter))
+
+            val merged = store.query<Event>(filter).map { it.id }
+            assertEquals(reference(all, filter, 7), merged, "within-stream same-second tie must be id-ordered")
+            assertEquals(sqlIds(store, filter), merged, "merge must equal the single-SQL plan under a within-stream tie")
+            store.close()
+        }
+
+    @Test
+    fun duplicateAuthors_doNotDuplicateEvents() =
+        runBlocking {
+            val store = newStore()
+            val a = hex64(12, 0)
+            val b = hex64(12, 1)
+            val all = ArrayList<Event>()
+            var t = 1_700_000_000L
+            repeat(10) { all.add(ev(a, t++, 1)) }
+            repeat(10) { all.add(ev(b, t++, 1)) }
+            store.batchInsert(all)
+
+            // `a` listed twice: the merge must not open two cursors for it and
+            // emit each of a's events twice (the single-SQL IN(…) path dedups).
+            val filter = Filter(kinds = listOf(1), authors = listOf(a, a, b), limit = 500)
+            assertTrue(mergeEligible(store, filter))
+
+            val merged = store.query<Event>(filter).map { it.id }
+            assertEquals(merged.toSet().size, merged.size, "no event may be emitted twice")
+            assertEquals(20, merged.size)
+            assertEquals(reference(all, filter, 500), merged)
+            assertEquals(sqlIds(store, filter), merged)
+            store.close()
+        }
+
+    @Test
     fun fewerMatchesThanLimit() =
         runBlocking {
             val store = newStore()

@@ -202,7 +202,7 @@ class FollowFeedReadBenchmark {
             runBlocking {
                 store.store.pool.useReader { c ->
                     var n = 0
-                    MergeQueryExecutor.run(c, filter) { n++ }
+                    MergeQueryExecutor.run(c, filter, store.store.queryBuilder.indexStrategy) { n++ }
                     n
                 }
             }

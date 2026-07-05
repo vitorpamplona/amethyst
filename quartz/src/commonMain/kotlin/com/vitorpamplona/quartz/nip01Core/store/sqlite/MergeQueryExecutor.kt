@@ -40,10 +40,16 @@ import androidx.sqlite.SQLiteStatement
  * reads only **O(limit + streams)** rows regardless of how much history the
  * authors have, and it reuses the existing indexes (no write/size cost).
  *
- * Merge order is `(created_at DESC, id ASC)`: a deterministic, correct
- * top-N. NIP-01 leaves same-`created_at` ties unspecified, so this only
- * pins down (and makes reproducible) which events sit exactly at a
- * same-second boundary — the returned set is a valid newest-N either way.
+ * Merge order is `created_at DESC`, tie-broken by `id ASC`. NIP-01 leaves
+ * same-`created_at` ties unspecified, so the returned set is a valid
+ * newest-N either way. The `id ASC` tie-break is exact — byte-for-byte the
+ * same events the single-SQL path returns — only when the store indexes id
+ * ([IndexingStrategy.useAndIndexIdOnOrderBy]): then each per-stream cursor
+ * streams in `(created_at DESC, id ASC)` straight off the index, so a
+ * stream's same-second head really is its id-minimum. Without that index
+ * the per-stream cursor yields same-second rows in rowid order, so the
+ * result is still a valid newest-N but may differ from the single-SQL path
+ * exactly at a same-second boundary.
  */
 internal object MergeQueryExecutor {
     const val COLS = "id, pubkey, created_at, kind, tags, content, sig"
@@ -71,14 +77,19 @@ internal object MergeQueryExecutor {
         if (filter.limit == null || filter.limit <= 0) return -1
         val authors = filter.authors ?: return -1
         if (authors.isEmpty()) return -1
+        // Dedup: a repeated pubkey/kind would open two identical cursors and
+        // emit every matching event twice (the single-SQL `IN (…)` path dedups
+        // naturally), so the stream count — and the cursors — must be over the
+        // distinct set.
+        val distinctAuthors = authors.distinct().size
         val kinds = filter.kinds
         val streams =
             if (kinds != null && kinds.isNotEmpty()) {
-                authors.size * kinds.size
+                distinctAuthors * kinds.distinct().size
             } else {
                 // authors-only needs the (pubkey, created_at) index to stream.
                 if (!indexStrategy.indexEventsByPubkeyAlone) return -1
-                authors.size
+                distinctAuthors
             }
         // A single stream is already the optimal single index seek — let the
         // normal path handle it; only merge when there's something to merge.
@@ -89,11 +100,22 @@ internal object MergeQueryExecutor {
     private fun prepareStreams(
         db: SQLiteConnection,
         filter: QueryBuilder.FilterWithDTags,
+        indexStrategy: IndexingStrategy,
     ): List<SQLiteStatement> {
-        val authors = filter.authors!!
-        val kinds = filter.kinds?.takeIf { it.isNotEmpty() }
+        // Dedup so a repeated pubkey/kind can't open two identical cursors and
+        // double-emit (see streamCount).
+        val authors = filter.authors!!.distinct()
+        val kinds = filter.kinds?.distinct()?.takeIf { it.isNotEmpty() }
         val since = filter.since
         val until = filter.until
+
+        // `id ASC` is available for free — straight off the index, no sort —
+        // only when the store built the id column into its order-by indexes;
+        // matches every ORDER BY in QueryBuilder. Without it, appending id ASC
+        // would force a materializing sort and defeat the lazy cursor, so we
+        // leave the tie in rowid order (a valid newest-N; see the class doc).
+        val orderBy =
+            if (indexStrategy.useAndIndexIdOnOrderBy) "created_at DESC, id ASC" else "created_at DESC"
 
         val stmts = ArrayList<SQLiteStatement>((kinds?.size ?: 1) * authors.size)
         if (kinds != null) {
@@ -104,7 +126,7 @@ internal object MergeQueryExecutor {
                     append(" WHERE kind = ? AND pubkey = ?")
                     if (until != null) append(" AND created_at <= ?")
                     if (since != null) append(" AND created_at >= ?")
-                    append(" ORDER BY created_at DESC")
+                    append(" ORDER BY ").append(orderBy)
                 }
             for (kind in kinds) {
                 for (author in authors) {
@@ -125,7 +147,7 @@ internal object MergeQueryExecutor {
                     append(" WHERE pubkey = ?")
                     if (until != null) append(" AND created_at <= ?")
                     if (since != null) append(" AND created_at >= ?")
-                    append(" ORDER BY created_at DESC")
+                    append(" ORDER BY ").append(orderBy)
                 }
             for (author in authors) {
                 val stmt = db.prepare(sql)
@@ -147,9 +169,10 @@ internal object MergeQueryExecutor {
     fun run(
         db: SQLiteConnection,
         filter: QueryBuilder.FilterWithDTags,
+        indexStrategy: IndexingStrategy,
         onRow: (SQLiteStatement) -> Unit,
     ) {
-        val stmts = prepareStreams(db, filter)
+        val stmts = prepareStreams(db, filter, indexStrategy)
         try {
             val k = stmts.size
             val headCreatedAt = LongArray(k)

@@ -48,7 +48,7 @@ class QueryBuilder(
         val merge = filter.toFilterWithDTags()
         if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
             val out = ArrayList<T>(merge.limit!!)
-            MergeQueryExecutor.run(db, merge) { out.add(it.toEvent()) }
+            MergeQueryExecutor.run(db, merge, indexStrategy) { out.add(it.toEvent()) }
             return out
         }
         return db.runQuery(toSql(filter, hasher(db)))
@@ -61,7 +61,7 @@ class QueryBuilder(
     ) {
         val merge = filter.toFilterWithDTags()
         if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
-            MergeQueryExecutor.run(db, merge) { onEach(it.toEvent()) }
+            MergeQueryExecutor.run(db, merge, indexStrategy) { onEach(it.toEvent()) }
             return
         }
         db.runQuery(toSql(filter, hasher(db)), onEach)
@@ -101,7 +101,7 @@ class QueryBuilder(
         val merge = filter.toFilterWithDTags()
         if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
             val out = ArrayList<RawEvent>(merge.limit!!)
-            MergeQueryExecutor.run(db, merge) { out.add(it.toRawEvent()) }
+            MergeQueryExecutor.run(db, merge, indexStrategy) { out.add(it.toRawEvent()) }
             return out
         }
         return db.runRawQuery(toSql(filter, hasher(db)))
@@ -114,7 +114,7 @@ class QueryBuilder(
     ) {
         val merge = filter.toFilterWithDTags()
         if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
-            MergeQueryExecutor.run(db, merge) { onEach(it.toRawEvent()) }
+            MergeQueryExecutor.run(db, merge, indexStrategy) { onEach(it.toRawEvent()) }
             return
         }
         db.runRawQuery(toSql(filter, hasher(db)), onEach)
