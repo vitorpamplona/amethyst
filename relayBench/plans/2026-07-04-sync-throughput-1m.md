@@ -129,16 +129,35 @@ is the direct answer to "why aren't we using negentropy for geode too": we
 should, and over plain REQ geode structurally *cannot* finish a 1M pull from
 strfry.
 
-### Recommendation (needs a design call)
+### Implemented: MirrorWorker now mirrors strfry's two-phase model
 
-A production geode that backfills a large foreign relay from empty should use
-**NIP-77 negentropy** for the initial pull (reconcile → client-paced fetch),
-not the live-tail REQ path. geode already has the negentropy client/server;
-wiring a "reconcile then fetch the diff in bounded batches" backfill into
-`MirrorWorker` would make strfry→geode both robust and directly comparable to
-strfry→strfry. (A cheaper stop-gap — bound MirrorWorker's intake per-upstream
-with a dedicated reader — fixes the OOM but not the strfry-kills-slow-clients
-wall; only negentropy fixes both.)
+`MirrorWorker` gained a NIP-77 **"sync" catch-up** phase (geode's equivalent of
+`strfry sync --dir down`) that runs once per down/both upstream before the live
+REQ tail:
+
+- **Catch-up** reconciles the local set against the upstream over the historical
+  `[now - backfill_seconds, now]` window and downloads only the diff, via the
+  ready-made `INostrClient.negentropySyncOrFetch` — client-paced, so strfry can't
+  overrun/kill us, and it **completes** the bulk pull. A small
+  `localEntries` param was added to the public `negentropySync`/
+  `negentropySyncOrFetch` so the reconcile diffs against what we already hold
+  (incremental, like `strfry sync`) instead of re-downloading.
+- **Either mode, transparently**: `negentropySyncOrFetch` auto-falls back to
+  paged REQ for an upstream that doesn't speak NIP-77 — no config toggle.
+- **Live tail** unchanged: the REQ subscription now starts at `now` when catch-up
+  is on (history is the sync's job); the two windows overlap at `now` and the
+  store's unique-id constraint dedups the seam.
+
+Same vocabulary as strfry throughout — one `[[mirror]]` entry, one `dir`
+(down/up/both) driving both phases; negentropy-vs-REQ is an internal transport
+detail. The geode binary opts in (`Main` passes `negentropyBackfill = true` +
+the store); the `MirrorWorker` default stays off so existing live-REQ tests are
+unchanged. See `MirrorNegentropyCatchUpTest` (catch-up isolated from the live
+tail by preloading *historical* events a live-only sub can't deliver).
+
+Remaining follow-ups: negentropy for the **up** direction (currently REQ replay);
+`liveNegentropySnapshot`-based local enumeration for very large mirrors; and
+optionally bounding the live-tail intake per-upstream.
 
 Separately worth a look: geode's real-content ingest *decays* from ~11k→~7k
 ev/s as the in-memory store grows to a few hundred k — expected B-tree/FTS

@@ -260,7 +260,17 @@ fun main(args: Array<String>) {
         if (upstreams.isEmpty()) {
             null
         } else {
-            MirrorWorker(upstreams, relay.server).also { it.start() }
+            MirrorWorker(
+                upstreams = upstreams,
+                server = relay.server,
+                // The store lets the catch-up reconcile against what we already
+                // hold (download only the diff, like `strfry sync`).
+                store = store,
+                // Production mirrors how strfry does it: NIP-77 "sync" catch-up
+                // for the historical window, then live REQ tail. Auto-falls back
+                // to paged REQ for upstreams without NIP-77.
+                negentropyBackfill = true,
+            ).also { it.start() }
         }
 
     // Periodic query-planner statistics refresh (`PRAGMA optimize`).
