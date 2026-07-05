@@ -65,7 +65,7 @@ class MergeQueryCorrectnessTest {
                 out[(w * 8 + b) * 2 + 1] = hex[byte and 0xF]
             }
         }
-        return String(out)
+        return out.concatToString()
     }
 
     private val sig = "0".repeat(128)

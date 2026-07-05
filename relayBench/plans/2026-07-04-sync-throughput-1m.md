@@ -8,8 +8,9 @@ All four source→sink pairings, **all NIP-77 negentropy**, empty sink pulls the
 same ~1M damus.io corpus, run sequentially (no contention). geode sink
 configured like strfry: **verify ON, FTS OFF** (`-DsyncVerify=true -DsyncFts=false`);
 `strfry sync` verifies too and has no FTS. Sinks: geode = its negentropy client;
-strfry = `strfry sync --dir down`. Sources: `CorpusServerMain` (geode) + strfry
-relay, each holding the corpus.
+strfry = `strfry sync --dir down`. Sources: a geode relay seeded with
+`geode import <corpus.ndjson> --db …` then served normally, and a strfry relay
+(`strfry import` + serve) — each holding the corpus.
 
 | # | source → sink | sink engine | synced | time | throughput |
 |---|---------------|-------------|--------|------|------------|

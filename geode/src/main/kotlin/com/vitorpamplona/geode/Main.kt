@@ -49,15 +49,30 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.io.File
 
 /**
- * Standalone entry point.
+ * Standalone entry point. The first argument may be a verb:
+ *
+ *   geode [relay] [flags]      serve the relay (default when no verb is given)
+ *   geode import [flags] [FILE…]   bulk-load NDJSON events into the store
+ *   geode export [flags]           dump the store as NDJSON to stdout
+ *
+ * `import`/`export` are geode's equivalent of `strfry import` / `strfry export`:
+ * one JSON event per line, the interchange format for seeding a relay, migrating
+ * between relays, or taking a backup. `import` reads the given files (or stdin
+ * when none are named), verifies signatures by default (same as the relay;
+ * `--no-verify` to skip), and prints a read/imported/rejected summary to stderr.
+ * `export` streams every stored event, newest-first, to stdout. Both stream, so
+ * a multi-million-event corpus round-trips in roughly constant memory. They share
+ * the relay's `--db`/`--config`/`--no-search` flags so the same store is targeted.
  *
  * Run with:
  *   ./gradlew :geode:run --args="--config /etc/geode.toml"
+ *   ./gradlew :geode:run --args="import --db relay.sqlite corpus.ndjson"
  * or
- *   java -cp ... com.vitorpamplona.geode.MainKt --port 7447 --verify
+ *   java -cp ... com.vitorpamplona.geode.MainKt --port 7447
  *
  * Configuration precedence (highest to lowest):
  *   1. CLI flags (`--host`, `--port`, …)
@@ -91,6 +106,85 @@ import java.io.File
  *                      per-event tokenization cost on ingest.
  */
 fun main(args: Array<String>) {
+    when (args.firstOrNull()?.takeUnless { it.startsWith("--") }) {
+        "import" -> runImport(args.copyOfRange(1, args.size))
+        "export" -> runExport(args.copyOfRange(1, args.size))
+        // Explicit `relay` verb or no verb at all → serve. A bare `geode --port …`
+        // (no verb) stays valid so existing invocations don't change.
+        "relay" -> serve(args.copyOfRange(1, args.size))
+        else -> serve(args)
+    }
+}
+
+/**
+ * Opens the store the `import`/`export` verbs operate on, honoring the same
+ * `--db`/`--config`/`--no-search` selection the relay uses so a verb targets the
+ * exact store the server would.
+ */
+private class StoreContext(
+    val dbFile: String?,
+    val store: EventStore,
+)
+
+private fun openStore(a: Args): StoreContext {
+    val config = a.opt("--config")?.let { StaticConfig.fromFile(File(it)) } ?: StaticConfig()
+    val dbFile = a.opt("--db") ?: config.database.file?.takeUnless { config.database.in_memory }
+    val fullTextSearch = !a.flag("--no-search") && config.options.full_text_search
+    val store =
+        EventStore(
+            dbName = dbFile,
+            indexStrategy = relayIndexingStrategy(fullTextSearch, config.negentropy.live_index),
+            numReaders = config.database.readers ?: 4,
+        )
+    return StoreContext(dbFile, store)
+}
+
+private fun runImport(args: Array<String>) {
+    val a = parseArgs(args)
+    val config = a.opt("--config")?.let { StaticConfig.fromFile(File(it)) } ?: StaticConfig()
+    // Verify by default, matching the relay's stance — `import` won't trust a
+    // file's signatures any more than the relay trusts a client's. `--no-verify`
+    // is the trusted-input escape hatch (fixture replay, a dump from a relay you
+    // already trust).
+    val verify = !a.flag("--no-verify") && config.options.verify_signatures
+    val ctx = openStore(a)
+    try {
+        val stats =
+            runBlocking {
+                if (a.positionals.isEmpty()) {
+                    System.`in`.bufferedReader().useLines { ImportExport.import(ctx.store, it, verify) }
+                } else {
+                    var acc = ImportExport.ImportStats.ZERO
+                    for (file in a.positionals) {
+                        acc += File(file).bufferedReader().useLines { ImportExport.import(ctx.store, it, verify) }
+                    }
+                    acc
+                }
+            }
+        System.err.println(
+            "geode import: read=${stats.read} imported=${stats.imported} " +
+                "rejected=${stats.rejected} invalid-sig=${stats.invalid} malformed=${stats.malformed} " +
+                "→ ${ctx.dbFile ?: "(in-memory — not persisted; pass --db)"}",
+        )
+    } finally {
+        ctx.store.close()
+    }
+}
+
+private fun runExport(args: Array<String>) {
+    val a = parseArgs(args)
+    val ctx = openStore(a)
+    try {
+        val out = System.out.bufferedWriter()
+        val n = runBlocking { ImportExport.export(ctx.store, out) }
+        out.flush()
+        System.err.println("geode export: $n events from ${ctx.dbFile ?: "(in-memory — empty)"}")
+    } finally {
+        ctx.store.close()
+    }
+}
+
+private fun serve(args: Array<String>) {
     val a = parseArgs(args)
 
     val config: StaticConfig =
@@ -363,15 +457,26 @@ private fun composePolicy(
 private class Args(
     private val opts: Map<String, String>,
     private val flags: Set<String>,
+    /** Non-`--` operands, in order (e.g. the NDJSON files for `import`). */
+    val positionals: List<String>,
 ) {
     fun opt(k: String) = opts[k]
 
     fun flag(k: String) = k in flags
 }
 
+/**
+ * Boolean flags that never take a value. Listing them explicitly is what lets a
+ * trailing positional survive after a flag — `import --no-verify corpus.ndjson`
+ * must read `corpus.ndjson` as a file, not as `--no-verify`'s value.
+ */
+private val BOOLEAN_FLAGS =
+    setOf("--auth", "--optional-auth", "--no-verify", "--no-parallel-verify", "--no-search")
+
 private fun parseArgs(args: Array<String>): Args {
     val opts = mutableMapOf<String, String>()
     val flags = mutableSetOf<String>()
+    val positionals = mutableListOf<String>()
     var i = 0
     while (i < args.size) {
         val a = args[i]
@@ -381,22 +486,30 @@ private fun parseArgs(args: Array<String>): Args {
             // happen to contain `=` (e.g. NIP-11 contact emails) by
             // using the space-separated form.
             val eq = a.indexOf('=')
-            if (eq > 0) {
-                opts[a.substring(0, eq)] = a.substring(eq + 1)
-                i += 1
-            } else {
-                val next = args.getOrNull(i + 1)
-                if (next != null && !next.startsWith("--")) {
-                    opts[a] = next
-                    i += 2
-                } else {
+            when {
+                eq > 0 -> {
+                    opts[a.substring(0, eq)] = a.substring(eq + 1)
+                    i += 1
+                }
+                a in BOOLEAN_FLAGS -> {
                     flags += a
                     i += 1
                 }
+                else -> {
+                    val next = args.getOrNull(i + 1)
+                    if (next != null && !next.startsWith("--")) {
+                        opts[a] = next
+                        i += 2
+                    } else {
+                        flags += a
+                        i += 1
+                    }
+                }
             }
         } else {
+            positionals += a
             i += 1
         }
     }
-    return Args(opts, flags)
+    return Args(opts, flags, positionals)
 }
