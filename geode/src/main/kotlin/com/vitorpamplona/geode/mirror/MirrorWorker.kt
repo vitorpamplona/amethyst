@@ -23,6 +23,8 @@ package com.vitorpamplona.geode.mirror
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcile
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySyncOrFetch
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
@@ -41,6 +43,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -133,10 +136,29 @@ class MirrorWorker(
     private val upstreams: List<MirrorUpstream>,
     private val server: NostrServer,
     /**
+     * The local event set — read (never written) to enumerate the ids we
+     * already hold so the negentropy catch-up ([MirrorUpstream.backfillSeconds]
+     * > 0) reconciles against them and downloads only the diff, exactly like
+     * `strfry sync`. `null` reconciles against an empty local set (a full
+     * re-download of the window, which the store's unique-id constraint dedups)
+     * — used by tests that don't wire a store.
+     */
+    private val store: IEventStore? = null,
+    /**
      * Transport override for tests (e.g. `InProcessRelays`). Defaults to
      * a real OkHttp WebSocket per upstream.
      */
     websocketBuilder: WebsocketBuilder? = null,
+    /**
+     * Whether the down catch-up uses NIP-77 negentropy (`strfry sync`) for the
+     * historical window before the live REQ tail takes over. The geode binary
+     * turns this on (see `Main`); it defaults **off** so the many existing
+     * MirrorWorker tests keep exercising the pure live-REQ path unchanged.
+     * When on, `negentropySyncOrFetch` automatically falls back to paged REQ
+     * against an upstream that doesn't speak NIP-77 — so "either mode" is
+     * transparent and needs no separate toggle.
+     */
+    private val negentropyBackfill: Boolean = false,
 ) : AutoCloseable {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -308,11 +330,30 @@ class MirrorWorker(
             val scopedBase = (up.filter ?: Filter()).copy(since = null, limit = null)
             val initialSince = since - up.backfillSeconds
 
+            // strfry's two-phase model, both directions (`strfry sync --dir
+            // both` + the live router): a one-shot NIP-77 "sync" closes the
+            // historical [initialSince, now] gap — down pulls what the upstream
+            // has and we lack, up pushes what we have and it lacks — then the
+            // live REQ subscription/session tails everything new. When a
+            // direction's catch-up is on, that direction's live window starts at
+            // `now` (history is the sync's job); the windows overlap at `now` and
+            // the store's/upstream's unique-id dedup absorbs the seam.
+            val catchUpDown = negentropyBackfill && up.direction != MirrorDirection.UP && up.backfillSeconds > 0
+            val catchUpUp = negentropyBackfill && up.direction != MirrorDirection.DOWN && up.backfillSeconds > 0
+            val downLiveSince = if (catchUpDown) since else initialSince
+            val upLiveSince = if (catchUpUp) since else initialSince
+
             if (up.direction != MirrorDirection.UP) {
-                downSubs += startDown(i, up, scopedBase, initialSince, exchanged)
+                downSubs += startDown(i, up, scopedBase, downLiveSince, exchanged)
             }
             if (up.direction != MirrorDirection.DOWN) {
-                startUp(up, scopedBase.copy(since = initialSince), exchanged)
+                startUp(up, scopedBase.copy(since = upLiveSince), exchanged)
+            }
+            if (catchUpDown) {
+                scope.launch { runCatchUpDown(up, scopedBase, initialSince, since) }
+            }
+            if (catchUpUp) {
+                scope.launch { runCatchUpUp(up, scopedBase, initialSince, since, exchanged) }
             }
         }
         client.connect()
@@ -346,6 +387,171 @@ class MirrorWorker(
                 delay(RECONNECT_POKE_MS)
                 client.reconnect(onlyIfChanged = true, ignoreRetryDelays = false)
             }
+        }
+    }
+
+    /**
+     * The NIP-77 "sync" phase — geode's equivalent of `strfry sync --dir down`,
+     * run once per down/both upstream to close the historical
+     * `[initialSince, until]` gap before (and alongside) the live REQ tail.
+     *
+     * Reconciles the local set against the upstream and downloads only the diff,
+     * **client-paced** so a fast upstream can't overrun the sink: a plain REQ
+     * backfill of a large set dies here (strfry kills a slow REQ client once its
+     * unsent-outbound buffer crosses `maxPendingOutboundBytes`), which is exactly
+     * why this uses negentropy. [INostrClient.negentropySyncOrFetch] falls back
+     * to paged REQ automatically when the upstream doesn't speak NIP-77, so the
+     * mirror is compatible with either kind of upstream with no config.
+     *
+     * A failure here is non-fatal: the live subscription keeps the mirror current
+     * and the reconnect watermark narrows any residual gap.
+     */
+    private suspend fun runCatchUpDown(
+        up: MirrorUpstream,
+        scopedBase: Filter,
+        initialSince: Long,
+        until: Long,
+    ) {
+        val catchUpFilter = scopedBase.copy(since = initialSince, until = until)
+        // Reconcile against what we already hold in this window → download only
+        // the diff (like `strfry sync`). No store wired → empty local set → the
+        // whole window is downloaded and the store's unique-id constraint dedups.
+        val localEntries = store?.snapshotIdsForNegentropy(listOf(catchUpFilter)) ?: emptyList()
+
+        // Bounded hand-off → one ingest consumer. `onEvent` can't suspend, so it
+        // blocks here when the sink falls behind; because negentropySyncOrFetch's
+        // own delivery pipeline is bounded, that backpressure reaches all the way
+        // to the upstream — no unbounded buffering (unlike the live-tail path).
+        val handoff = Channel<Event>(capacity = CATCHUP_HANDOFF)
+        val consumer =
+            scope.launch {
+                for (event in handoff) {
+                    try {
+                        server.ingest(event, up.trusted) { outcome ->
+                            when (outcome) {
+                                IEventStore.InsertOutcome.Accepted -> accepted.incrementAndGet()
+                                is IEventStore.InsertOutcome.Rejected -> rejected.incrementAndGet()
+                            }
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Throwable) {
+                        Log.w("MirrorWorker") { "catch-up ingest stopped for ${up.url.url}: ${e.message}" }
+                        break
+                    }
+                }
+            }
+
+        try {
+            val result =
+                client.negentropySyncOrFetch(
+                    relay = up.url,
+                    filter = catchUpFilter,
+                    localEntries = localEntries,
+                    onEvent = { event ->
+                        // Same containment as the live path: even a trusted
+                        // upstream may only inject events inside the declared scope.
+                        if (up.filter == null || up.filter.match(event)) {
+                            handoff.trySendBlocking(event)
+                        } else {
+                            filtered.incrementAndGet()
+                        }
+                    },
+                )
+            Log.i("MirrorWorker") {
+                val how = if (result.pagedFallback) "paged REQ (upstream has no NIP-77)" else "negentropy"
+                "catch-up from ${up.url.url}: ${result.downloaded} events via $how"
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            Log.w("MirrorWorker") { "down catch-up from ${up.url.url} failed (live tail continues): ${e.message}" }
+        } finally {
+            handoff.close()
+            consumer.join()
+        }
+    }
+
+    /**
+     * The up half of the NIP-77 "sync" — geode's `strfry sync --dir up`.
+     * Reconciles the local set against the upstream and PUSHES the events we
+     * hold that the upstream lacks (the reconcile's `have` ids) — the mirror of
+     * [runCatchUpDown]. Negentropy-only: if the upstream doesn't speak NIP-77 the
+     * reconcile throws and we log; the live up-session (started at `now`) keeps
+     * pushing new local events, so this is a non-fatal historical catch-up.
+     *
+     * Needs [store] to enumerate what we hold; without it there is nothing to
+     * reconcile against and the phase is skipped.
+     */
+    private suspend fun runCatchUpUp(
+        up: MirrorUpstream,
+        scopedBase: Filter,
+        initialSince: Long,
+        until: Long,
+        exchanged: RecentIds?,
+    ) {
+        val localStore = store ?: return
+        val catchUpFilter = scopedBase.copy(since = initialSince, until = until)
+        // Our local set for this window is fixed; each round reconciles it
+        // against the upstream, which grows as we push, so the `have` diff
+        // shrinks to zero.
+        val localEntries = localStore.snapshotIdsForNegentropy(listOf(catchUpFilter))
+        try {
+            var round = 0
+            while (round < MAX_UP_SYNC_ROUNDS) {
+                // Reconcile and PUBLISH the `have` ids (events we hold the
+                // upstream lacks) as each batch streams in — never materialising
+                // the full diff. On a large window the id list is millions of
+                // entries; the streaming reconcile keeps memory at one batch and
+                // still back-pressures the relay because publishing suspends the
+                // round. The `need` direction is the down catch-up's job, so its
+                // ids are discarded (not accumulated) here.
+                var haveCount = 0
+                var pushed = 0
+                client.negentropyReconcile(
+                    relay = up.url,
+                    filter = catchUpFilter,
+                    localEntries = localEntries,
+                    batchSize = HAVE_FETCH_BATCH,
+                    onHaveIds = { batch ->
+                        haveCount += batch.size
+                        for (event in localStore.query<Event>(Filter(ids = batch))) {
+                            // Scope containment: a scoped upstream only receives
+                            // in-scope events. Echo suppression: record the id so
+                            // a BOTH mirror doesn't re-ingest its own push on the
+                            // down sub (but always re-publish — a straggler stays
+                            // in `exchanged` yet still needs delivering).
+                            if (up.filter != null && !up.filter.match(event)) continue
+                            exchanged?.add(event.id)
+                            client.publish(event, setOf(up.url))
+                            pushed++
+                        }
+                        // Pace the outbox so a batch drains before the next.
+                        delay(UP_PUBLISH_PACING_MS)
+                    },
+                    onNeedIds = { },
+                )
+                if (haveCount == 0) {
+                    Log.i("MirrorWorker") { "up catch-up to ${up.url.url}: converged after $round round(s)" }
+                    return
+                }
+                // `client.publish`'s outbox is best-effort under a bulk burst
+                // (each publish also churns a reconnect), so instead of trusting
+                // one pass we re-reconcile next round and re-push only what didn't
+                // land — the reconcile is the delivery check, so the push
+                // converges to lossless.
+                sentUp.addAndGet(pushed.toLong())
+                Log.i("MirrorWorker") { "up catch-up to ${up.url.url}: round $round pushed $pushed (had $haveCount to go)" }
+                round++
+                // Let the upstream ingest + OK before the next reconcile, so the
+                // diff reflects what actually landed rather than what's in flight.
+                delay(UP_SYNC_SETTLE_MS)
+            }
+            Log.w("MirrorWorker") { "up catch-up to ${up.url.url}: did not fully converge in $MAX_UP_SYNC_ROUNDS rounds (live push continues)" }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            Log.w("MirrorWorker") { "up catch-up to ${up.url.url} failed (live push continues): ${e.message}" }
         }
     }
 
@@ -492,5 +698,25 @@ class MirrorWorker(
          * duplicate round trip.
          */
         const val EXCHANGED_IDS_CAPACITY = 8_192
+
+        /**
+         * Depth of the catch-up hand-off between the negentropy download and the
+         * ingest consumer. Small: negentropySyncOrFetch is already internally
+         * backpressured, so this only smooths the seam — the bounded IngestQueue
+         * behind `server.ingest` is the real limiter.
+         */
+        const val CATCHUP_HANDOFF = 4_096
+
+        /** Ids per store read when loading up-catch-up events to publish. */
+        const val HAVE_FETCH_BATCH = 500
+
+        /** Pause between up-catch-up publish batches so the outbox drains. */
+        const val UP_PUBLISH_PACING_MS = 40L
+
+        /** Max reconcile→push rounds before the up catch-up gives up converging. */
+        const val MAX_UP_SYNC_ROUNDS = 8
+
+        /** Settle time between an up-push and the next verifying reconcile. */
+        const val UP_SYNC_SETTLE_MS = 1_500L
     }
 }

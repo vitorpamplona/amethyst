@@ -91,6 +91,13 @@ kotlin {
         (project.findProperty("prodRelayBench") as? String)?.let {
             environment("PROD_RELAY_BENCH", it)
         }
+        // Forward the negentropy-benchmark corpus size to the test JVM.
+        System.getProperty("negBenchN")?.let { systemProperty("negBenchN", it) }
+        System.getProperty("followBenchScale")?.let { systemProperty("followBenchScale", it) }
+        // Opt-in JFR profiling of a benchmark run (-PnegProfile=/tmp/neg.jfr).
+        (project.findProperty("negProfile") as? String)?.let {
+            jvmArgs("-XX:+FlightRecorder", "-XX:StartFlightRecording=filename=$it,settings=profile,dumponexit=true")
+        }
     }
 
     tasks.withType<KotlinNativeTest>().configureEach {

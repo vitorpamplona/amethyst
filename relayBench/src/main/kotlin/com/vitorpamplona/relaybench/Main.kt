@@ -231,6 +231,7 @@ private fun loadCorpus(
                 options.cacheDir,
                 http,
                 log,
+                options.maxEventBytes,
             )
         else ->
             CorpusSource.synthetic(

@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip77Negentropy
 
 import com.vitorpamplona.negentropy.Negentropy
 import com.vitorpamplona.negentropy.storage.IStorage
-import com.vitorpamplona.negentropy.storage.StorageVector
+import com.vitorpamplona.negentropy.storage.PrefixSumStorageVector
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.utils.Hex
@@ -76,9 +76,16 @@ class NegentropyServerSession(
          */
         const val DEFAULT_FRAME_SIZE_LIMIT: Long = 500_000L
 
-        /** Builds and seals a [StorageVector] from `(created_at, id)` pairs. */
-        fun sealVector(localEntries: List<IdAndTime>): StorageVector {
-            val storage = StorageVector()
+        /**
+         * Builds and seals a [PrefixSumStorageVector] from `(created_at, id)`
+         * pairs. The prefix-sum table (built once on [seal]) answers every
+         * range fingerprint the reconcile walk needs in O(1) instead of
+         * O(range), which is the bulk of a NEG-MSG's server-side cost on a
+         * large snapshot. It's a drop-in [IStorage], byte-identical to the
+         * plain vector — only the fingerprint path is accelerated.
+         */
+        fun sealVector(localEntries: List<IdAndTime>): IStorage {
+            val storage = PrefixSumStorageVector()
             for (entry in localEntries) {
                 storage.insert(entry.createdAt, entry.id)
             }

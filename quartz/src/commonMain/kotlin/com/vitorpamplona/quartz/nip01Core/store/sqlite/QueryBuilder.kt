@@ -44,24 +44,52 @@ class QueryBuilder(
     fun <T : Event> query(
         filter: Filter,
         db: SQLiteConnection,
-    ): List<T> = db.runQuery(toSql(filter, hasher(db)))
+    ): List<T> {
+        val merge = filter.toFilterWithDTags()
+        if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
+            val out = ArrayList<T>(merge.limit!!)
+            MergeQueryExecutor.run(db, merge, indexStrategy) { out.add(it.toEvent()) }
+            return out
+        }
+        return db.runQuery(toSql(filter, hasher(db)))
+    }
 
     fun <T : Event> query(
         filter: Filter,
         db: SQLiteConnection,
         onEach: (T) -> Unit,
-    ) = db.runQuery(toSql(filter, hasher(db)), onEach)
+    ) {
+        val merge = filter.toFilterWithDTags()
+        if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
+            MergeQueryExecutor.run(db, merge, indexStrategy) { onEach(it.toEvent()) }
+            return
+        }
+        db.runQuery(toSql(filter, hasher(db)), onEach)
+    }
 
+    // A single-filter list is the home-feed REQ shape — route it through the
+    // single-filter path so the k-way merge (MergeQueryExecutor) applies.
     fun <T : Event> query(
         filters: List<Filter>,
         db: SQLiteConnection,
-    ): List<T> = db.runQuery(toSql(filters, hasher(db)))
+    ): List<T> =
+        if (filters.size == 1) {
+            query(filters[0], db)
+        } else {
+            db.runQuery(toSql(filters, hasher(db)))
+        }
 
     fun <T : Event> query(
         filters: List<Filter>,
         db: SQLiteConnection,
         onEach: (T) -> Unit,
-    ) = db.runQuery(toSql(filters, hasher(db)), onEach)
+    ) {
+        if (filters.size == 1) {
+            query(filters[0], db, onEach)
+        } else {
+            db.runQuery(toSql(filters, hasher(db)), onEach)
+        }
+    }
 
     // ---------------------------
     // Raw methods for performance
@@ -69,24 +97,50 @@ class QueryBuilder(
     fun rawQuery(
         filter: Filter,
         db: SQLiteConnection,
-    ): List<RawEvent> = db.runRawQuery(toSql(filter, hasher(db)))
+    ): List<RawEvent> {
+        val merge = filter.toFilterWithDTags()
+        if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
+            val out = ArrayList<RawEvent>(merge.limit!!)
+            MergeQueryExecutor.run(db, merge, indexStrategy) { out.add(it.toRawEvent()) }
+            return out
+        }
+        return db.runRawQuery(toSql(filter, hasher(db)))
+    }
 
     fun rawQuery(
         filter: Filter,
         db: SQLiteConnection,
         onEach: (RawEvent) -> Unit,
-    ) = db.runRawQuery(toSql(filter, hasher(db)), onEach)
+    ) {
+        val merge = filter.toFilterWithDTags()
+        if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
+            MergeQueryExecutor.run(db, merge, indexStrategy) { onEach(it.toRawEvent()) }
+            return
+        }
+        db.runRawQuery(toSql(filter, hasher(db)), onEach)
+    }
 
     fun rawQuery(
         filters: List<Filter>,
         db: SQLiteConnection,
-    ): List<RawEvent> = db.runRawQuery(toSql(filters, hasher(db)))
+    ): List<RawEvent> =
+        if (filters.size == 1) {
+            rawQuery(filters[0], db)
+        } else {
+            db.runRawQuery(toSql(filters, hasher(db)))
+        }
 
     fun rawQuery(
         filters: List<Filter>,
         db: SQLiteConnection,
         onEach: (RawEvent) -> Unit,
-    ) = db.runRawQuery(toSql(filters, hasher(db)), onEach)
+    ) {
+        if (filters.size == 1) {
+            rawQuery(filters[0], db, onEach)
+        } else {
+            db.runRawQuery(toSql(filters, hasher(db)), onEach)
+        }
+    }
 
     // -----------
     // Debug Tools
@@ -963,12 +1017,38 @@ class QueryBuilder(
                 }
             }
 
+        // A multi-author query (`pubkey IN (…)`) with no limit, combined with
+        // `ORDER BY created_at DESC`, mis-costs in SQLite: it satisfies the
+        // order for free off `query_by_kind_created` (kind, created_at) by
+        // scanning an *entire* kind, rather than doing N seeks on the
+        // selective `query_by_kind_pubkey_created` (kind, pubkey, …) and
+        // sorting the (small) result — the ~100× `profiles` regression at 1M.
+        // Pin the selective index for exactly that shape:
+        //  - single author (`pubkey = ?`) is costed correctly and already
+        //    seeks — no pin needed;
+        //  - *with* a limit, the `created_at` scan + early LIMIT is the better
+        //    plan (the 150-author home feed), so leave it to the planner;
+        //  - d-tag/addressable filters have their own index.
+        // Order is preserved (the ORDER BY stays); this only redirects the
+        // index. See quartz/plans/2026-07-04-profiles-query-plan.md.
+        val pinKindPubkeyIndex =
+            project &&
+                kinds != null &&
+                authors != null &&
+                authors.size > 1 &&
+                ids == null &&
+                dTags == null &&
+                limit == null
+
         val sql =
             buildString {
                 if (project) {
                     append("SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers")
                 } else {
                     append("SELECT row_id FROM event_headers")
+                }
+                if (pinKindPubkeyIndex) {
+                    append(" INDEXED BY query_by_kind_pubkey_created")
                 }
                 if (clause.conditions.isNotEmpty()) {
                     append("\nWHERE ")

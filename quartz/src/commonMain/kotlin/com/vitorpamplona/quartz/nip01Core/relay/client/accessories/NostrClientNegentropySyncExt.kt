@@ -57,11 +57,12 @@ import kotlin.time.TimeSource
 /**
  * Outcome of a successful [negentropySync] run.
  *
- * @property needCount  ids the relay had that we lacked (i.e. everything that
- *   matched [Filter] on the relay — this sync always reconciles against an empty
- *   local set, so it downloads the full matched set).
- * @property haveCount  ids we had that the relay lacked. Always `0` here because
- *   the local set is empty; kept so the result mirrors a full NIP-77 reconcile.
+ * @property needCount  ids the relay had that we lacked — the diff downloaded.
+ *   With the default empty `localEntries` this is the relay's full matched set;
+ *   pass the local set to reconcile incrementally and download only the diff.
+ * @property haveCount  ids we had that the relay lacked. `0` unless `localEntries`
+ *   is supplied (the downloader ignores this direction); kept so the result
+ *   mirrors a full NIP-77 reconcile.
  * @property downloaded distinct events actually delivered through `onEvent`.
  * @property windows    number of `created_at` windows the matched set was split
  *   into (`1` when the relay reconciled the whole filter in one shot).
@@ -78,9 +79,10 @@ class NegentropySyncResult(
  * one (deduped by id) through [onEvent]. A high-level wrapper over NIP-77
  * negentropy that hides the parts that make the raw protocol painful to use:
  *
- *  1. Reconciles the relay's matched set against an empty local set, **streaming**
- *     the ids the relay has straight into the download pipeline as each NIP-77
- *     round arrives — the full id list is never materialised.
+ *  1. Reconciles the relay's matched set against [localEntries] (empty by default,
+ *     which downloads the full matched set; pass the local ids to fetch only the
+ *     diff), **streaming** the ids the relay has straight into the download
+ *     pipeline as each NIP-77 round arrives — the full id list is never materialised.
  *  2. Downloads those ids through at most [maxConcurrentReqs] concurrent `REQ`
  *     subscriptions of [fetchBatch] ids each, refilling as each `EOSE` arrives. The
  *     reconciliation, the id queue and event delivery are all back-pressured, so a
@@ -157,6 +159,7 @@ suspend fun INostrClient.negentropySync(
     idleTimeoutMs: Long = 120_000L,
     reconcileConcurrency: Int = 1,
     idBufferBatches: Int = maxConcurrentReqs * 4,
+    localEntries: List<IdAndTime> = emptyList(),
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): NegentropySyncResult {
@@ -190,6 +193,7 @@ suspend fun INostrClient.negentropySync(
                             maxConcurrentReqs = maxConcurrentReqs,
                             reconcileConcurrency = reconcileConcurrency,
                             idBufferBatches = idBufferBatches,
+                            localEntries = localEntries,
                             onWindow = { windows.incrementAndFetch() },
                             // Only accumulate here; progress is reported from the
                             // single consumer loop below so the user callback is never
@@ -234,6 +238,7 @@ suspend fun INostrClient.negentropySync(
     idleTimeoutMs: Long = 120_000L,
     reconcileConcurrency: Int = 1,
     idBufferBatches: Int = maxConcurrentReqs * 4,
+    localEntries: List<IdAndTime> = emptyList(),
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): NegentropySyncResult =
@@ -246,6 +251,7 @@ suspend fun INostrClient.negentropySync(
         idleTimeoutMs = idleTimeoutMs,
         reconcileConcurrency = reconcileConcurrency,
         idBufferBatches = idBufferBatches,
+        localEntries = localEntries,
         onProgress = onProgress,
         onEvent = onEvent,
     )
@@ -291,6 +297,7 @@ suspend fun INostrClient.negentropySyncOrFetch(
     idleTimeoutMs: Long = 120_000L,
     reconcileConcurrency: Int = 1,
     idBufferBatches: Int = maxConcurrentReqs * 4,
+    localEntries: List<IdAndTime> = emptyList(),
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): NegentropyOrFetchResult {
@@ -319,6 +326,7 @@ suspend fun INostrClient.negentropySyncOrFetch(
                 idleTimeoutMs = idleTimeoutMs,
                 reconcileConcurrency = reconcileConcurrency,
                 idBufferBatches = idBufferBatches,
+                localEntries = localEntries,
                 onProgress = onProgress,
             ) { accept(it) }
         NegentropyOrFetchResult(delivered, pagedFallback = false, negentropy = result, fallbackCause = null)
@@ -344,6 +352,7 @@ suspend fun INostrClient.negentropySyncOrFetch(
     idleTimeoutMs: Long = 120_000L,
     reconcileConcurrency: Int = 1,
     idBufferBatches: Int = maxConcurrentReqs * 4,
+    localEntries: List<IdAndTime> = emptyList(),
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): NegentropyOrFetchResult =
@@ -356,6 +365,7 @@ suspend fun INostrClient.negentropySyncOrFetch(
         idleTimeoutMs = idleTimeoutMs,
         reconcileConcurrency = reconcileConcurrency,
         idBufferBatches = idBufferBatches,
+        localEntries = localEntries,
         onProgress = onProgress,
         onEvent = onEvent,
     )
@@ -391,6 +401,7 @@ private suspend fun INostrClient.syncPipeline(
     maxConcurrentReqs: Int,
     reconcileConcurrency: Int,
     idBufferBatches: Int,
+    localEntries: List<IdAndTime>,
     onWindow: () -> Unit,
     onNeed: (Int) -> Unit,
     deliver: suspend (Event) -> Unit,
@@ -409,11 +420,15 @@ private suspend fun INostrClient.syncPipeline(
             }
         }
 
+    // reconcileWindows needs the local set sorted by createdAt (it binary-searches
+    // each window's slice). Empty/singleton sets are already trivially sorted.
+    val sortedLocal = if (localEntries.size > 1) localEntries.sortedBy { it.createdAt } else localEntries
+
     reconcileWindows(
         clients = listOf(this@syncPipeline),
         relay = relay,
         filter = filter,
-        localEntries = emptyList(),
+        localEntries = sortedLocal,
         idleTimeoutMs = idleTimeoutMs,
         batchSize = fetchBatch,
         reconcileConcurrency = reconcileConcurrency,
