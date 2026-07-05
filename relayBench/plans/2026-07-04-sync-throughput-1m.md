@@ -148,16 +148,37 @@ REQ tail:
   is on (history is the sync's job); the two windows overlap at `now` and the
   store's unique-id constraint dedups the seam.
 
+**Both directions**, matching `strfry sync --dir both` (which strfry's source
+confirms is bidirectional negentropy — `doUp = both||up`, `doDown = both||down`):
+
+- **down** catch-up pulls what the upstream has and we lack
+  (`negentropySyncOrFetch`, with paged fallback), then the live REQ sub tails.
+- **up** catch-up reconciles and pushes what we have and the upstream lacks
+  (`negentropyReconcileIds`'s `have` ids → `client.publish`), then the live
+  up-session tails. Negentropy-only (no paged fallback needed — the live
+  up-session covers a non-NIP-77 upstream). The push runs as a **reconcile→push
+  convergence loop**: `client.publish`'s outbox is best-effort under a bulk
+  burst (each publish also churns a reconnect; measured ~1–2% dropped per pass),
+  so each round re-reconciles — the reconcile *is* the delivery check — and
+  re-pushes only the stragglers until the `have` diff is empty. Observed on the
+  3000-event up test: 3000 → 69 → 2 → 0 across 3 rounds, lossless.
+
 Same vocabulary as strfry throughout — one `[[mirror]]` entry, one `dir`
 (down/up/both) driving both phases; negentropy-vs-REQ is an internal transport
 detail. The geode binary opts in (`Main` passes `negentropyBackfill = true` +
 the store); the `MirrorWorker` default stays off so existing live-REQ tests are
-unchanged. See `MirrorNegentropyCatchUpTest` (catch-up isolated from the live
-tail by preloading *historical* events a live-only sub can't deliver).
+unchanged. See `MirrorNegentropyCatchUpTest`: the down test isolates catch-up
+from the live tail by preloading *historical* events a live-only sub can't
+deliver (3000 + 1 live); the up test pushes 3000 local events to an empty sink.
 
-Remaining follow-ups: negentropy for the **up** direction (currently REQ replay);
-`liveNegentropySnapshot`-based local enumeration for very large mirrors; and
-optionally bounding the live-tail intake per-upstream.
+Structural note: strfry keeps these as *separate commands* (`sync` = negentropy
+both-ways; `router`/`stream` = REQ live both-ways). geode folds both into one
+`MirrorWorker` under a single `dir` — more integrated, same semantics.
+
+Remaining follow-ups: `liveNegentropySnapshot`-based local enumeration for very
+large mirrors (the up path's `snapshotIdsForNegentropy` currently scans); a
+single-pass reconcile for `dir=both` (today it runs one reconcile per
+direction); and optionally bounding the live-tail intake per-upstream.
 
 Separately worth a look: geode's real-content ingest *decays* from ~11k→~7k
 ev/s as the in-memory store grows to a few hundred k — expected B-tree/FTS

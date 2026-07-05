@@ -93,6 +93,7 @@ class MirrorNegentropyCatchUpTest {
     }
 
     private suspend fun awaitCount(
+        store: EventStore,
         target: Int,
         timeoutMs: Long = 120_000,
     ): Int {
@@ -101,7 +102,7 @@ class MirrorNegentropyCatchUpTest {
         var stable = 0
         withTimeoutOrNull(timeoutMs) {
             while (true) {
-                val c = downstreamStore.count(Filter())
+                val c = store.count(Filter())
                 reached = c
                 if (c >= target) break
                 if (c == last) {
@@ -159,7 +160,7 @@ class MirrorNegentropyCatchUpTest {
                 ).also { it.start() }
 
             // Phase 1: the catch-up must deliver every historical event.
-            val afterCatchUp = awaitCount(count)
+            val afterCatchUp = awaitCount(downstreamStore, count)
             assertEquals(count, afterCatchUp, "negentropy catch-up dropped ${count - afterCatchUp} of $count historical events")
 
             // Phase 2: a fresh event published AFTER boot proves the live REQ
@@ -177,13 +178,68 @@ class MirrorNegentropyCatchUpTest {
                 )
             upstream.server.ingest(live, skipVerify = true) { }
 
-            val afterLive = awaitCount(count + 1)
+            val afterLive = awaitCount(downstreamStore, count + 1)
             assertEquals(count + 1, afterLive, "live tail did not deliver the post-boot event")
             assertTrue(
                 downstreamStore.count(Filter(ids = listOf(live.id))) == 1,
                 "the live event is present downstream",
             )
 
-            println("─ MirrorNegentropyCatchUpTest: catch-up $count + live 1 = $afterLive delivered ─")
+            println("─ MirrorNegentropyCatchUpTest(down): catch-up $count + live 1 = $afterLive delivered ─")
+        }
+
+    /**
+     * The mirror image — `dir = up`, geode's `strfry sync --dir up`. The local
+     * geode holds a set of historical events; the upstream sink is empty. The
+     * up catch-up must reconcile and PUSH every local event to the sink. Uses a
+     * default (no-verify) sink so the synthetic-signature events are accepted.
+     */
+    @Test
+    fun negentropyCatchUpPushesUp() =
+        runBlocking {
+            val count = System.getProperty("catchUpUpN")?.toInt() ?: 3_000
+            val now = TimeUtils.now()
+            val sig = "f".repeat(128)
+
+            // The LOCAL geode (downstream) holds the events; the sink (upstream)
+            // starts empty and must receive them all via the up push.
+            val history =
+                (0 until count).map { i ->
+                    Event(
+                        id = hex64(11, i),
+                        pubKey = hex64(3, i % 500),
+                        createdAt = now - 3_600 - (i % 1_000),
+                        kind = 1,
+                        tags = emptyArray(),
+                        content = "u$i",
+                        sig = sig,
+                    )
+                }
+            history.chunked(10_000).forEach { downstreamStore.batchInsert(it) }
+            assertEquals(count, downstreamStore.count(Filter()), "local geode preloaded")
+            assertEquals(0, upstreamStore.count(Filter()), "sink starts empty")
+
+            // The sink is the relay geode dials; it must accept what we push.
+            server = KtorRelay(upstream, host = "127.0.0.1", port = 7894).start()
+
+            worker =
+                MirrorWorker(
+                    upstreams =
+                        listOf(
+                            MirrorUpstream(
+                                url = "ws://127.0.0.1:7894/".normalizeRelayUrl(),
+                                trusted = false,
+                                backfillSeconds = 86_400,
+                                direction = MirrorDirection.UP,
+                            ),
+                        ),
+                    server = downstream.server,
+                    store = downstreamStore,
+                    negentropyBackfill = true,
+                ).also { it.start() }
+
+            val pushed = awaitCount(upstreamStore, count)
+            assertEquals(count, pushed, "up catch-up failed to push ${count - pushed} of $count events")
+            println("─ MirrorNegentropyCatchUpTest(up): pushed $pushed/$count to the sink via negentropy ─")
         }
 }
