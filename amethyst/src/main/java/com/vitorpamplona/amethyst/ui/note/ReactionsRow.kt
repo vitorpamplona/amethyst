@@ -2067,11 +2067,16 @@ fun ZapAmountChoicePopup(
     val cashuEntries by cashuState.tokenEntries.collectAsStateWithLifecycle()
     val recipientInfo = author?.let { observeUserInfo(it, accountViewModel).value }
     val nutzapInfo = author?.let { observeNoteEvent<NutzapInfoEvent>(it.nutzapInfoNote, accountViewModel).value }
+    // Honors the user's "show on-chain wallet" preference: off hides the on-chain
+    // rail from the zap chips too, matching the wallet screen, profile chips, and
+    // Send Payment screen.
+    val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
+        .collectAsStateWithLifecycle()
 
     val railCapability =
-        remember(baseNote, onchainSupported, cashuMints, cashuEntries, recipientInfo, nutzapInfo) {
+        remember(baseNote, onchainSupported, showOnchainWallet, cashuMints, cashuEntries, recipientInfo, nutzapInfo) {
             val rc = RailCapabilityResolver.peek(baseNote, cashuState)
-            if (onchainSupported) rc else rc.copy(hasOnchain = false)
+            if (onchainSupported && showOnchainWallet) rc else rc.copy(hasOnchain = false)
         }
     val amountChoices =
         remember(zapAmountChoices) {
