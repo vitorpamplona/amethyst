@@ -530,8 +530,9 @@ private fun printUsage() {
         |  graperank [OBSERVER]                       compute subjective trust scores (0..1) for every
         |    [--limit N] [--min-score X]               user reachable in the follow/mute/report graph.
         |    [--rigor X] [--attenuation X]             Exhaustively crawls each user's kind:10002 outbox
-        |    [--max-rounds N]                          for their latest kind:3/10000/1984 until every
-        |    [--offline] [--timeout SECS]              discovered user has been checked (no user cap).
+        |    [--max-rounds N] [--max-hops N]           for their latest kind:3/10000/1984 until every
+        |    [--offline] [--timeout SECS]              discovered user has been checked (no user cap;
+        |                                              --max-hops bounds follow distance, e.g. 8).
         |    [--publish] [--min-rank N]                OBSERVER: npub|nprofile|hex|name@domain (default:
         |    [--publish-limit N] [--publish-relay URL] active account). --offline scores from the local
         |                                              store only. --publish writes NIP-85 kind:30382

@@ -115,8 +115,10 @@ object GrapeRankCommand {
         val args = Args(rest)
         val observerArg = args.positionalOrNull(0)
         // Crawl to full convergence by default (every reachable user's outbox
-        // checked). --max-rounds is only a safety backstop.
+        // checked). --max-rounds is only a safety backstop; --max-hops bounds the
+        // follow-graph distance from the observer that we crawl (Brainstorm uses 8).
         val maxRounds = args.intFlag("max-rounds", Int.MAX_VALUE)
+        val maxHops = args.intFlag("max-hops", Int.MAX_VALUE)
         val limit = args.intFlag("limit", 100)
         val minScore = args.flag("min-score")?.toDoubleOrNull() ?: 0.0
         val offline = args.bool("offline")
@@ -146,8 +148,10 @@ object GrapeRankCommand {
             var relaysContactedCount = 0
             var contactListsFed = 0
 
+            val hopOf = HashMap<HexKey, Int>()
             if (!offline) {
                 val discovered = hashSetOf(observer)
+                hopOf[observer] = 0
                 // Per-user relay hints harvested from the `p`-tag relay hints in the
                 // contact lists we crawl (A's follow of B says where B writes) — a
                 // discovery tier below each user's kind:10002 outbox.
@@ -158,32 +162,40 @@ object GrapeRankCommand {
                 val attempts = HashMap<HexKey, Int>()
                 val relaysContacted = hashSetOf<NormalizedRelayUrl>()
 
-                // Feed a user's contact list into the graph, harvest relay hints, and
-                // add its follows to the frontier. Called once per user (guarded by
-                // `done`). Returns the count of newly-discovered users.
+                // Feed a user's contact list into the graph, harvest relay hints, stamp
+                // the hop distance of newly-seen follows, and add them to the frontier.
+                // Called once per user (guarded by `done`). Returns the count of
+                // newly-discovered users.
                 fun ingest(
                     source: HexKey,
                     contacts: ContactListEvent,
                 ): Int {
+                    val nextHop = (hopOf[source] ?: 0) + 1
                     val follows = ArrayList<HexKey>()
                     var fresh = 0
                     for (tag in contacts.follows()) {
                         follows.add(tag.pubKey)
                         tag.relayUri?.let { relayHints.getOrPut(tag.pubKey) { HashSet() }.add(it) }
-                        if (discovered.add(tag.pubKey)) fresh++
+                        if (discovered.add(tag.pubKey)) {
+                            hopOf[tag.pubKey] = nextHop
+                            fresh++
+                        }
                     }
                     builder.addFollows(source, follows)
                     contactListsFed++
                     return fresh
                 }
 
-                // Crawl to full graph depth (no user cap). Each run fetches every
-                // discovered user's LATEST kind:3/10000/1984 once from their outbox
-                // (a freshness pass — grouped by write relay in routeByOutbox), unless
-                // we already fetched it this run (`done`). An unreachable outbox is
-                // retried up to MAX_OUTBOX_ATTEMPTS then dropped so the crawl terminates.
+                // Crawl to full graph depth (no user cap; --max-hops bounds the follow
+                // distance). Each run fetches every discovered user's LATEST
+                // kind:3/10000/1984 once from their outbox (a freshness pass — grouped
+                // by write relay in routeByOutbox), unless we already fetched it this
+                // run (`done`). An unreachable outbox is retried up to
+                // MAX_OUTBOX_ATTEMPTS then dropped so the crawl terminates.
                 while (rounds < maxRounds) {
-                    val pending = discovered.filterNot { it in done }
+                    // Only crawl users within the hop budget; deeper users still appear
+                    // in the graph as follow targets, we just don't fetch their lists.
+                    val pending = discovered.filter { it !in done && (hopOf[it] ?: 0) < maxHops }
                     if (pending.isEmpty()) break
                     rounds++
 
@@ -233,9 +245,15 @@ object GrapeRankCommand {
                 }
 
                 relaysContactedCount = relaysContacted.size
+                val perHop =
+                    hopOf.values
+                        .groupingBy { it }
+                        .eachCount()
+                        .toSortedMap()
                 System.err.println(
                     "[graperank] crawl complete: ${discovered.size} discovered, $contactListsFed contact lists fed, " +
-                        "$relaysContactedCount relays contacted, $rounds rounds",
+                        "$relaysContactedCount relays contacted, $rounds rounds; " +
+                        "by hop: " + perHop.entries.joinToString(" ") { "${it.key}=${it.value}" },
                 )
             } else {
                 // Offline: stream contact lists from the local store into the graph.
@@ -286,6 +304,13 @@ object GrapeRankCommand {
                     "observer" to observer,
                     "crawl_rounds" to rounds,
                     "relays_contacted" to relaysContactedCount,
+                    "max_hop_reached" to (hopOf.values.maxOrNull() ?: 0),
+                    "users_by_hop" to
+                        hopOf.values
+                            .groupingBy { it }
+                            .eachCount()
+                            .toSortedMap()
+                            .mapKeys { it.key.toString() },
                     "graph_users" to graph.nodeCount,
                     "graph_edges" to graph.edgeCount(),
                     "users_scored" to rankedIds.size,
