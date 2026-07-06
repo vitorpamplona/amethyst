@@ -2767,6 +2767,7 @@
         <item quantity="one">%1$s +%2$d zaidi</item>
         <item quantity="other">%1$s +%2$d zaidi</item>
     </plurals>
+    <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <string name="road_event_police">Polisi</string>
     <string name="road_event_speed_camera">Kamera ya kasi</string>
