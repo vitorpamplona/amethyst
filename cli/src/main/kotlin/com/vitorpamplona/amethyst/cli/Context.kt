@@ -70,6 +70,7 @@ import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
+import com.vitorpamplona.quartz.utils.SeenIds
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
@@ -487,10 +488,13 @@ class Context(
      * [fetchAllPagesFromPool] instead of stopping at the first EOSE — so a query
      * larger than a relay's per-`REQ` cap (strfry's `limit`, ~500) is fully
      * retrieved instead of silently truncated. Each relay is walked on its own
-     * `until` cursor, up to [maxConcurrentRelays] at once, and every event still
-     * funnels through [verifyAndStore]; the result is tagged by relay exactly like
-     * [drain] (and, like [drain], is NOT deduped across relays — callers dedup by
-     * id).
+     * `until` cursor, up to [maxConcurrentRelays] at once, and every event funnels
+     * through [verifyAndStore]; the result is tagged by the relay that first
+     * delivered it. Unlike [drain], it IS deduped across relays: the same
+     * widely-mirrored event arrives once per relay, and the repeats are dropped by a
+     * [SeenIds] filter BEFORE the expensive verify+store — an id is marked seen only
+     * after it verifies, so a forged copy (valid id, bad signature) delivered first
+     * can't suppress the genuine one from another relay.
      *
      * Bound the work with the filters' `limit`: each relay pages until it reaches
      * the limit, so an unbounded filter pages that relay's entire matching history.
@@ -511,8 +515,16 @@ class Context(
         coroutineScope {
             val consumer =
                 launch {
+                    // One writer → SeenIds' single-writer contract holds. Skip a
+                    // cross-relay duplicate before verifying it; mark it seen only once
+                    // it verifies so a bad-sig copy can't pre-empt a good one.
+                    val seen = SeenIds()
                     for ((relay, event) in eventChannel) {
-                        if (verifyAndStore(event)) collected.add(relay to event)
+                        if (seen.contains(event.id)) continue
+                        if (verifyAndStore(event)) {
+                            seen.add(event.id)
+                            collected.add(relay to event)
+                        }
                     }
                 }
             try {

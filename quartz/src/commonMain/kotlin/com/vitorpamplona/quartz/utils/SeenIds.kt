@@ -84,6 +84,29 @@ class SeenIds(
         return addKey(Hex.readLong(idHex, 0), Hex.readLong(idHex, 16))
     }
 
+    /**
+     * Whether [idHex] has already been [add]ed this pass, WITHOUT recording it. A
+     * too-short/malformed id is never "seen" (returns false) — the mirror of [add]
+     * letting it through. Use this to check-then-conditionally-add, e.g. to mark an
+     * id seen only after it verifies (so a forged copy sharing a valid id can't
+     * pre-empt the genuine one).
+     */
+    fun contains(idHex: String): Boolean {
+        if (idHex.length < 32) return false
+        val hi = Hex.readLong(idHex, 0)
+        val lo = Hex.readLong(idHex, 16)
+        if (hi == 0L && lo == 0L) return zeroSeen
+        var i = (mix(hi, lo).toInt() and mask)
+        while (true) {
+            val s = i * 2
+            val h = table[s]
+            val l = table[s + 1]
+            if (h == 0L && l == 0L) return false
+            if (h == hi && l == lo) return true
+            i = (i + 1) and mask
+        }
+    }
+
     private fun addKey(
         hi: Long,
         lo: Long,

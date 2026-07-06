@@ -85,4 +85,16 @@ class SeenIdsTest {
         assertTrue(seen.add("not-hex"), "malformed -> flows to verify")
         assertTrue(seen.add("short"))
     }
+
+    @Test
+    fun `contains peeks without recording`() {
+        val seen = SeenIds()
+        assertFalse(seen.contains(id(9)), "never added -> not contained")
+        assertFalse(seen.contains(id(9)), "peeking does not add it")
+        assertEquals(0, seen.size(), "contains must not grow the set")
+        assertTrue(seen.add(id(9)))
+        assertTrue(seen.contains(id(9)), "now contained")
+        assertFalse(seen.contains("short"), "malformed is never contained")
+        assertEquals(1, seen.size())
+    }
 }
