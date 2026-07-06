@@ -114,6 +114,24 @@ class User(
 
     fun dmInboxRelays() = dmInboxRelayList()?.relays()?.ifEmpty { null } ?: inboxRelays()
 
+    /**
+     * Strict variant of [dmInboxRelays] that returns ONLY the user's NIP-17
+     * inbox relays (kind:10050) and never falls back to the NIP-65 read
+     * marker (kind:10002).
+     *
+     * Per NIP-17 §Publishing, gift wraps MUST land on relays advertised in
+     * the recipient's kind:10050 — the NIP-65 read fallback in
+     * [dmInboxRelays] is a UI-convenience heuristic that leaks the DM
+     * metadata to relays the recipient did not designate for DMs. Any code
+     * that decides "can I actually deliver a NIP-17 wrap to this user"
+     * should call this strict variant; UI hints and probe-time bootstrap
+     * paths may continue to use the lenient one.
+     *
+     * Returns `null` when the recipient has no published kind:10050 (or an
+     * empty one) — callers treat this as "unreachable via NIP-17".
+     */
+    fun dmInboxRelaysStrict() = dmInboxRelayList()?.relays()?.ifEmpty { null }
+
     fun bestRelayHint() = authorRelayList()?.writeRelaysNorm()?.firstOrNull() ?: mostUsedNonLocalRelay()
 
     fun allUsedRelaysOrNull() = relays?.allOrNull()

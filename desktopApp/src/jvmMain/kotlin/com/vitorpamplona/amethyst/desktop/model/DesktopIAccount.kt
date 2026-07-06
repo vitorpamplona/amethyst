@@ -74,7 +74,7 @@ class DesktopIAccount(
     val dmSendTracker: DmSendTracker,
     private val scope: CoroutineScope,
     private val accountRelays: DesktopAccountRelays? = null,
-    private val dmInboxResolver: DmInboxRelayResolver? = null,
+    val dmInboxResolver: DmInboxRelayResolver? = null,
 ) : IAccount {
     override val signer: NostrSigner = NostrSignerWithClientTag(accountState.signer, CLIENT_TAG_NAME)
 

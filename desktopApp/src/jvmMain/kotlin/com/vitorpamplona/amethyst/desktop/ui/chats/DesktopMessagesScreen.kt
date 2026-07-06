@@ -246,7 +246,15 @@ private fun CompactMessagesContent(
                 }
             val messageState =
                 remember(currentRoom) {
-                    ChatNewMessageState(account, cacheProvider, scope)
+                    ChatNewMessageState(
+                        account,
+                        cacheProvider,
+                        scope,
+                        dmInboxResolver =
+                            (account as? DesktopIAccount)?.dmInboxResolver?.let { resolver ->
+                                { hexKey -> resolver.resolve(hexKey) }
+                            },
+                    )
                 }
             val broadcastStatus =
                 if (account is DesktopIAccount) {
@@ -342,7 +350,15 @@ private fun SplitMessagesContent(
                     }
                 val messageState =
                     remember(currentRoom) {
-                        ChatNewMessageState(account, cacheProvider, scope)
+                        ChatNewMessageState(
+                            account,
+                            cacheProvider,
+                            scope,
+                            dmInboxResolver =
+                                (account as? DesktopIAccount)?.dmInboxResolver?.let { resolver ->
+                                    { hexKey -> resolver.resolve(hexKey) }
+                                },
+                        )
                     }
                 val broadcastStatus =
                     if (account is DesktopIAccount) {
