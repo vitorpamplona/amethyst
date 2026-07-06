@@ -52,19 +52,20 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
  *    NIP-65 write relays, exactly how the app downloads an event/profile from
  *    a shared link. This is nak's `fetch` (nip19-hint resolution).
  *
- * Results are deduplicated by id, sorted newest-first, and emitted as full event
- * JSON under an `events` array.
+ * Results are deduplicated by id, sorted newest-first, capped at `--limit` (default
+ * 100 — the SAME on both paths), and emitted as full event JSON under an `events`
+ * array. `--limit 0` removes the cap entirely.
  *
- * By default (filter mode) a single `REQ` is drained to EOSE — so a relay that
- * caps its response (strfry's per-`REQ` `limit`, ~500) truncates the result — and
- * the output is trimmed to the newest `--limit` (default 100). `--paginate` (alias
- * `--all`) instead walks each relay page-by-page on `until` cursors via the
- * multi-relay [Context.drainAllPages] path: with `--limit N` it pages up to N per
- * relay, and WITHOUT `--limit` it drains the whole filter unbounded (mind broad
- * filters — that can be a lot). Code mode is always single-shot.
+ * By default (filter mode) a single `REQ` is drained to EOSE — so a relay that caps
+ * its response (strfry's per-`REQ` `limit`, ~500) truncates the result. `--paginate`
+ * (alias `--all`) instead walks each relay page-by-page on `until` cursors via the
+ * multi-relay [Context.drainAllPages] path, fully draining sets larger than one
+ * `REQ`. Both honor the same limit: `--limit N` returns the newest N, absent is 100,
+ * and `--limit 0` is unbounded — combined with `--paginate` that drains the entire
+ * filter, so mind broad filters. Code mode is always single-shot.
  */
 object FetchCommand {
-    /** Output cap for a plain (non-`--paginate`) fetch when `--limit` is omitted. */
+    /** Output/paging cap for a fetch (either path) when `--limit` is omitted. */
     private const val DEFAULT_LIMIT = 100
 
     suspend fun run(
@@ -72,22 +73,25 @@ object FetchCommand {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        // `--limit` is optional. When absent, `--paginate` drains the whole filter
-        // (unbounded) while a plain fetch still trims to DEFAULT_LIMIT.
+        // `--limit`: omitted → DEFAULT_LIMIT on BOTH the plain and --paginate paths;
+        // `0` → unbounded (drain everything — only useful with --paginate); negative
+        // → error. `effectiveLimit == null` means "no cap".
         val explicitLimit = args.flag("limit")?.toIntOrNull()
-        if (explicitLimit != null && explicitLimit <= 0) return Output.error("bad_args", "--limit must be > 0")
+        if (explicitLimit != null && explicitLimit < 0) return Output.error("bad_args", "--limit must be >= 0 (0 = unbounded)")
+        val effectiveLimit: Int? = if (explicitLimit == 0) null else (explicitLimit ?: DEFAULT_LIMIT)
         val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 8L) * 1000
 
         // Code mode: a nip19/nip05 positional resolves its own relays via the
-        // outbox model rather than using a hand-built filter.
+        // outbox model rather than using a hand-built filter. It fetches a single
+        // entity, so it just uses the (positive) default cap.
         args.positionalOrNull(0)?.takeIf { looksLikeCode(it) }?.let {
-            return fetchByCode(dataDir, it, explicitLimit ?: DEFAULT_LIMIT, timeoutMs)
+            return fetchByCode(dataDir, it, effectiveLimit ?: DEFAULT_LIMIT, timeoutMs)
         }
 
-        // buildFilter already carries `--limit` (or null) as the filter's limit, so
-        // the paginate path uses it verbatim: bounded per relay with --limit, or a
-        // full drain of the filter without one.
-        val filter = RawEventSupport.buildFilter(args)
+        // Carry the effective limit on the filter so both paths agree: --paginate
+        // pages each relay up to it (or fully drains the filter when unbounded) and a
+        // plain fetch asks the relay for that many.
+        val filter = RawEventSupport.buildFilter(args).copy(limit = effectiveLimit)
         val paginate = args.bool("paginate") || args.bool("all")
 
         Context.open(dataDir).use { ctx ->
@@ -107,14 +111,8 @@ object FetchCommand {
                     .map { it.second }
                     .distinctBy { it.id }
                     .sortedByDescending { it.createdAt }
-            // An explicit --limit always caps the output. Without it, a single-REQ
-            // fetch trims to DEFAULT_LIMIT; a --paginate drain returns everything.
-            val capped =
-                when {
-                    explicitLimit != null -> ordered.take(explicitLimit)
-                    paginate -> ordered
-                    else -> ordered.take(DEFAULT_LIMIT)
-                }
+            // effectiveLimit caps the output on both paths; null (--limit 0) is uncapped.
+            val capped = if (effectiveLimit != null) ordered.take(effectiveLimit) else ordered
             val events =
                 capped
                     .map { Output.mapper.readTree(it.toJson()) }

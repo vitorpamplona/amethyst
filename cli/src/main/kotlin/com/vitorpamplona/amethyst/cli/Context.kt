@@ -517,8 +517,11 @@ class Context(
                 launch {
                     // One writer → SeenIds' single-writer contract holds. Skip a
                     // cross-relay duplicate before verifying it; mark it seen only once
-                    // it verifies so a bad-sig copy can't pre-empt a good one.
-                    val seen = SeenIds()
+                    // it verifies so a bad-sig copy can't pre-empt a good one. Start
+                    // small (CLI fetches are typically hundreds of events); it grows if
+                    // an unbounded drain needs it, rather than eagerly taking the
+                    // large-walk default table.
+                    val seen = SeenIds(initialSlotsPow2 = 12)
                     for ((relay, event) in eventChannel) {
                         if (seen.contains(event.id)) continue
                         if (verifyAndStore(event)) {

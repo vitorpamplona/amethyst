@@ -257,12 +257,17 @@ suspend fun INostrClient.fetchAllPages(
 
         // Advance inclusively to the oldest second seen, carrying its dedup set:
         // still the same boundary → accumulate; a genuinely older one → replace.
-        if (boundary != null && pageMinTs == boundary) {
+        // Clamp to `boundary` so a misbehaving relay that answers with an event past
+        // the requested `until` can't push the cursor UPWARD — the boundary dedup and
+        // termination both rely on `until` never increasing. Honest relays only
+        // return events at-or-below `until`, so this is a no-op for them.
+        val nextUntil = if (boundary != null) minOf(pageMinTs, boundary) else pageMinTs
+        if (boundary != null && nextUntil == boundary) {
             seenAtBoundary.addAll(idsAtPageMin)
         } else {
             seenAtBoundary = idsAtPageMin
         }
-        until = pageMinTs
+        until = nextUntil
     }
 
     return totalEvents
