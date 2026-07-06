@@ -20,8 +20,11 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.deck
 
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
@@ -31,7 +34,14 @@ class SinglePaneState {
     private val _currentScreen = MutableStateFlow<DeckColumnType>(DeckColumnType.HomeFeed)
     val currentScreen: StateFlow<DeckColumnType> = _currentScreen.asStateFlow()
 
+    // Emitted on every sidebar-driven navigate so the layout can clear its
+    // detail overlay stack — including same-item taps, which don't produce a
+    // new StateFlow value.
+    private val _clearOverlaySignal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val clearOverlaySignal: SharedFlow<Unit> = _clearOverlaySignal.asSharedFlow()
+
     fun navigate(type: DeckColumnType) {
         _currentScreen.value = type
+        _clearOverlaySignal.tryEmit(Unit)
     }
 }

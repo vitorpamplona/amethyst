@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopMessagesScreen
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayDashboardScreen
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.SharedFlow
 
 class ColumnNavigationState {
     private val _stack = mutableStateListOf<DesktopScreen>()
@@ -142,11 +143,23 @@ fun DeckColumnContainer(
     onNavigateToRelays: () -> Unit = {},
     onOpenNotificationSettings: () -> Unit = {},
     onOpenMessages: () -> Unit = {},
+    clearOverlaySignal: SharedFlow<String>? = null,
     modifier: Modifier = Modifier,
 ) {
     val navState = remember(column.id) { ColumnNavigationState() }
     val currentOverlay = navState.current
     val focusRequester = remember { FocusRequester() }
+
+    // Sidebar-driven column focus drains this column's overlay stack so the
+    // tapped destination isn't hidden behind a leftover detail screen. Filter
+    // by column.id so unrelated columns' overlays stay intact.
+    if (clearOverlaySignal != null) {
+        LaunchedEffect(column.id, clearOverlaySignal) {
+            clearOverlaySignal.collect { id ->
+                if (id == column.id) navState.clear()
+            }
+        }
+    }
 
     // Request focus once when the column is created. Re-keying on
     // `currentOverlay` would steal focus from sibling columns whenever any
