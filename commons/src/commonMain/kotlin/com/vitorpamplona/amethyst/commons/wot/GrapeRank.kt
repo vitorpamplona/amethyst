@@ -86,10 +86,15 @@ class GrapeRank(
      * Score every user reachable from [observer]. The returned map excludes the
      * observer itself (its score is a pinned `1.0` and not part of a ranking).
      * Users with no positive path from the observer are absent (equivalently, 0).
+     *
+     * [onProgress] is invoked once per worklist visit with
+     * `(visited, scored, queued)` running counts, so a caller can report progress
+     * on a large graph; it defaults to a no-op.
      */
     fun compute(
         graph: TrustGraph,
         observer: HexKey,
+        onProgress: ((visited: Int, scored: Int, queued: Int) -> Unit)? = null,
     ): Map<HexKey, Double> {
         val scores = HashMap<HexKey, Double>()
         scores[observer] = 1.0
@@ -103,6 +108,7 @@ class GrapeRank(
 
         graph.outgoing[observer]?.forEach(::enqueue)
 
+        var visited = 0
         while (queue.isNotEmpty()) {
             val target = queue.removeFirst()
             queued.remove(target)
@@ -113,6 +119,9 @@ class GrapeRank(
             if (abs(newScore - oldScore) > params.convergence) {
                 graph.outgoing[target]?.forEach(::enqueue)
             }
+
+            visited++
+            onProgress?.invoke(visited, scores.size, queue.size)
         }
 
         scores.remove(observer)

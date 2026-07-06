@@ -90,16 +90,20 @@ It is **data**, not math:
    So the effective scoring input is the same, provided the crawl runs to
    convergence (our default) rather than a shallow `--max-depth`.
 2. **Fringe users / crawl gaps.** Relay timeouts that drop a contact list, or a
-   `--max-users` cap, remove edges and shift nearby scores. The injector now
-   mitigates this with a three-tier discovery model mirroring the app's
-   `pickRelaysToLoadUsers`: each user's kind:10002 **outbox**, then harvested
-   **relay hints** (from `p`-tag hints in the contact lists we crawl), then the
-   broad **discovery set** — bootstrap + event-finder + **indexer relays**
-   (purplepag.es, coracle, …) that serve kind:0/3/10002 for the whole network.
+   `--max-users` cap, remove edges and shift nearby scores. The injector mitigates
+   this with a two-stage model mirroring the app's `pickRelaysToLoadUsers`:
+   - **Relay-list discovery** (kind:10002) queries the account's relays +
+     bootstrap + event-finder + **indexer relays** (purplepag.es, coracle, …).
+     Indexers aggregate kind:10002 (and kind:0) for the whole network, so this is
+     where a stranger's outbox is found — the biggest completeness lever.
+   - **Content** (kind:3/10000/1984/0) is fetched from each user's **own outbox**
+     write relays, with harvested **relay hints** (from the `p`-tag hints in
+     contact lists we crawl) and general-purpose relays as a best-effort fallback
+     when the outbox is unknown/down. **Indexers are not used for content** — they
+     don't serve those kinds; kind:3/mutes/reports live only on the user's outbox.
    A per-hop **retry pass** re-queries any member whose contact list still didn't
-   arrive against that indexer + hint set, recovering users the outbox model
-   alone would miss. Remaining mitigation levers: a full crawl (default) and a
-   generous `--timeout`.
+   arrive against that hint + general-relay set. Remaining mitigation levers: a
+   full crawl (default) and a generous `--timeout`.
 3. **Convergence precision.** Both stop at delta 0.0001; residual error is
    < ~0.0001 in influence ⇒ < ~0.01 rank points ⇒ identical integer `rank`.
 4. **Seeding.** Their hop-distance seed vs our zero seed — same fixed point, no

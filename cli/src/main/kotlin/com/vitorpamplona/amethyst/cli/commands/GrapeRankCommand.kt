@@ -79,6 +79,9 @@ object GrapeRankCommand {
     // Concurrent publishes when writing NIP-85 cards.
     private const val PUBLISH_CONCURRENCY = 16
 
+    // Emit a scoring-progress line every this many worklist visits.
+    private const val SCORE_PROGRESS_STEP = 5_000
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -148,12 +151,14 @@ object GrapeRankCommand {
 
                     // 3. Completeness retry: any member whose contact list still
                     //    didn't arrive (no kind:10002, or its outbox was down) gets
-                    //    re-queried against the broad indexer + hint set. Indexers
-                    //    like purplepag.es serve kind:3 for the whole network, so
-                    //    this recovers users the outbox model alone would miss.
+                    //    re-queried against its relay hints plus the general-purpose
+                    //    fallback relays. kind:3/10000/1984 live on the user's own
+                    //    outbox — NOT on indexers (those only aggregate kind:10002) —
+                    //    so this is best-effort recovery from general relays that may
+                    //    hold a copy, not a guaranteed find.
                     val stillMissing = frontier.filter { ctx.contactsOf(it) == null }
                     if (stillMissing.isNotEmpty()) {
-                        val retryRelays = discoveryRelays(ctx) + stillMissing.flatMap { relayHints[it].orEmpty() }
+                        val retryRelays = contentFallbackRelays(ctx) + stillMissing.flatMap { relayHints[it].orEmpty() }
                         val retry =
                             retryRelays.associateWith {
                                 stillMissing.chunked(AUTHORS_PER_FILTER).map { chunk -> Filter(kinds = graphKinds, authors = chunk) }
@@ -185,7 +190,20 @@ object GrapeRankCommand {
             }
 
             val graph = TrustGraphBuilder.build(events)
-            val scores = GrapeRank(params).compute(graph, observer)
+            System.err.println(
+                "[graperank] graph built: ${graph.users.size} users, ${graph.edgeCount()} edges from ${events.size} events; scoring…",
+            )
+
+            // Live scoring progress: the worklist visits each reachable user once
+            // per relaxation; report every PROGRESS_STEP visits so a large graph
+            // shows movement instead of hanging silently.
+            val scores =
+                GrapeRank(params).compute(graph, observer) { visited, scored, queued ->
+                    if (visited % SCORE_PROGRESS_STEP == 0) {
+                        System.err.println("[graperank] scoring: $visited visited, $scored scored, $queued queued")
+                    }
+                }
+            System.err.println("[graperank] scored ${scores.size} users")
 
             fun rankOf(score: Double) = (score * 100).roundToInt()
 
@@ -423,19 +441,28 @@ object GrapeRankCommand {
     }
 
     /**
-     * The broad, network-wide discovery set: the account's own relays + Amethyst's
-     * bootstrap defaults + the event-finder relays + the **indexer relays**
-     * (purplepag.es, coracle, …). Indexers aggregate kind:0 / kind:3 / kind:10002
-     * for the whole network, so they are where a stranger's relay list and contact
-     * list are actually found — the single biggest lever on crawl completeness.
+     * Relays to query for **kind:10002 relay lists** — the account's own relays +
+     * bootstrap defaults + event-finder relays + the **indexer relays**
+     * (purplepag.es, coracle, …). Indexers aggregate kind:10002 (and kind:0) for
+     * the whole network, so this is where a stranger's relay list is found. They
+     * do NOT hold kind:3/10000/1984 — see [contentFallbackRelays].
      */
-    private suspend fun discoveryRelays(ctx: Context): Set<NormalizedRelayUrl> = ctx.bootstrapRelays() + Constants.eventFinderRelays + DefaultIndexerRelayList
+    private suspend fun relayListDiscoveryRelays(ctx: Context): Set<NormalizedRelayUrl> = ctx.bootstrapRelays() + Constants.eventFinderRelays + DefaultIndexerRelayList
+
+    /**
+     * Best-effort fallback relays for **content** (kind:3/10000/1984/0) when a
+     * user's outbox is unknown or unreachable. Content lives on each user's own
+     * outbox, so this is only general-purpose relays that *might* hold a copy —
+     * bootstrap + event-finder. **No indexers**: they don't serve these kinds.
+     */
+    private suspend fun contentFallbackRelays(ctx: Context): Set<NormalizedRelayUrl> = ctx.bootstrapRelays() + Constants.eventFinderRelays
 
     /**
      * Fetch kind:10002 relay lists for any frontier member we don't already know,
      * so [routeByOutbox] can route their content query to their own write relays.
-     * Queries the broad discovery set (incl. indexers) plus each user's harvested
-     * relay [hints] — the CLI analog of the app's tiered `pickRelaysToLoadUsers`.
+     * Queries the relay-list discovery set (incl. indexers) plus each user's
+     * harvested relay [hints] — the CLI analog of the app's tiered
+     * `pickRelaysToLoadUsers`.
      */
     private suspend fun ensureRelayLists(
         ctx: Context,
@@ -446,7 +473,7 @@ object GrapeRankCommand {
         val missing = pubkeys.filter { ctx.relaysOf(it) == null }
         if (missing.isEmpty()) return
 
-        val base = discoveryRelays(ctx)
+        val base = relayListDiscoveryRelays(ctx)
         val perRelay = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
         for (pk in missing) {
             for (relay in base + hints[pk].orEmpty()) perRelay.getOrPut(relay) { HashSet() }.add(pk)
@@ -474,7 +501,7 @@ object GrapeRankCommand {
         hints: Map<HexKey, Set<NormalizedRelayUrl>>,
         kinds: List<Int>,
     ): Map<NormalizedRelayUrl, List<Filter>> {
-        val fallback = discoveryRelays(ctx)
+        val fallback = contentFallbackRelays(ctx)
         val perRelay = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
 
         for (pk in pubkeys) {
