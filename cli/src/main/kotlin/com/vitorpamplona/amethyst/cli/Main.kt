@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.cli.commands.FilterCommand
 import com.vitorpamplona.amethyst.cli.commands.FollowCommand
 import com.vitorpamplona.amethyst.cli.commands.GiftCommands
 import com.vitorpamplona.amethyst.cli.commands.GitCommands
+import com.vitorpamplona.amethyst.cli.commands.GrapeRankCommand
 import com.vitorpamplona.amethyst.cli.commands.GroupCommands
 import com.vitorpamplona.amethyst.cli.commands.InitCommands
 import com.vitorpamplona.amethyst.cli.commands.KeyCommands
@@ -214,6 +215,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "store" -> StoreCommands.dispatch(dataDir, tail)
         "follow" -> FollowCommand.follow(dataDir, tail)
         "unfollow" -> FollowCommand.unfollow(dataDir, tail)
+        "graperank" -> GrapeRankCommand.run(dataDir, tail)
         "search" -> SearchCommand.dispatch(dataDir, tail)
         "zap" -> ZapCommand.dispatch(dataDir, tail)
         "offer" -> OfferCommands.dispatch(dataDir, tail)
@@ -523,6 +525,17 @@ private fun printUsage() {
         |  follow USER [--timeout SECS]               add USER to your contact list
         |  unfollow USER [--timeout SECS]             remove USER from your contact list
         |                                              (USER: npub|nprofile|hex|name@domain)
+        |
+        |Web of Trust (GrapeRank):
+        |  graperank [OBSERVER]                       compute subjective trust scores (0..1) for every
+        |    [--max-depth N] [--max-users N]           user reachable in the follow/mute/report graph,
+        |    [--limit N] [--min-score X]               crawled via the outbox model until no new users
+        |    [--target USER]                           appear (OBSERVER: npub|nprofile|hex|name@domain,
+        |    [--no-mutes] [--no-reports]               default: active account). --target prints one
+        |    [--rigor X] [--attenuation X]             user's score; --offline scores from the local
+        |    [--offline] [--timeout SECS]              store only. --publish writes NIP-85 kind:30382
+        |    [--publish] [--min-rank N]                trusted-assertion cards (rank = round(score*100))
+        |    [--publish-limit N] [--publish-relay URL] for each user at or above --min-rank.
         |
         |Zaps (NIP-57):
         |  zap user USER SATS               build a profile zap-request, fetch a BOLT11
