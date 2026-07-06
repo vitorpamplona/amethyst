@@ -55,6 +55,7 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -568,6 +569,7 @@ class EventFactory {
                 PollResponseEvent.KIND -> PollResponseEvent(id, pubKey, createdAt, tags, content, sig)
                 PodcastMetadataEvent.KIND -> PodcastMetadataEvent(id, pubKey, createdAt, tags, content, sig)
                 PodcastEpisodeEvent.KIND -> PodcastEpisodeEvent(id, pubKey, createdAt, tags, content, sig)
+                Ps1SaveEvent.KIND -> Ps1SaveEvent(id, pubKey, createdAt, tags, content, sig)
                 AuthoredPodcastsEvent.KIND -> AuthoredPodcastsEvent(id, pubKey, createdAt, tags, content, sig)
                 FavoritePodcastsListEvent.KIND -> FavoritePodcastsListEvent(id, pubKey, createdAt, tags, content, sig)
                 Podcasting20EpisodeEvent.KIND -> Podcasting20EpisodeEvent(id, pubKey, createdAt, tags, content, sig)

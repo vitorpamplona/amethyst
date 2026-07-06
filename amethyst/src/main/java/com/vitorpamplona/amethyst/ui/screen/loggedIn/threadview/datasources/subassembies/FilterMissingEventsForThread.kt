@@ -55,7 +55,11 @@ fun filterMissingEventsForThread(
         mapOfSet {
             val rootNote = threadInfo.root
             if (rootNote.event == null && rootNote is AddressableNote) {
-                potentialRelaysToFindEvent(rootNote).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                // Must be the address-based resolver: the event-based one feeds the
+                // note's aTag idHex into the hex-keyed event-hint index, which throws
+                // on the non-hex string and kills the whole filter build — leaving a
+                // thread opened on an uncached naddr permanently unfetched.
+                potentialRelaysToFindAddress(rootNote).ifEmpty { defaultRelays }.forEach { relayUrl ->
                     add(relayUrl, rootNote.address)
                 }
             }
