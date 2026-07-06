@@ -86,7 +86,6 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopAccountRelays
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.model.DesktopRelayCategories
-import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
@@ -128,7 +127,6 @@ import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -758,6 +756,17 @@ fun App(
     // node so the `amy` CLI binary observes the same toggle.
     val hashtagSpamSettings = remember { PreferencesHashtagSpamSettings() }
 
+    // Index-relay preference — user-configurable set used to fetch profile
+    // metadata (kind 0) and follow lists (kind 3). Persisted in a shared
+    // java.util.prefs node so `amy wot sync` reads from the same source of
+    // truth. Falls back to PreferencesIndexRelays.DEFAULT_INDEX_RELAYS when
+    // the user hasn't configured anything.
+    val indexRelaysStore =
+        remember {
+            com.vitorpamplona.amethyst.commons.relays.index
+                .PreferencesIndexRelays()
+        }
+
     // Local relay store — persists events to SQLite per account
     val localRelayStore =
         remember {
@@ -842,18 +851,16 @@ fun App(
         }
     }
 
-    // Subscriptions coordinator — uses default relay URLs for metadata indexing.
-    // Feed subscriptions (inside MainContent) drive actual relay pool connections.
+    // Subscriptions coordinator — uses the user's configured index relays
+    // (or PreferencesIndexRelays.DEFAULT_INDEX_RELAYS as fallback) for
+    // metadata + follow-list REQs. Changes made via the settings UI take
+    // effect on next relaunch — the coordinator snapshots the set here.
     val subscriptionsCoordinator =
-        remember(relayManager, localCache) {
+        remember(relayManager, localCache, indexRelaysStore) {
             DesktopRelaySubscriptionsCoordinator(
                 client = relayManager.client,
                 scope = scope,
-                indexRelays =
-                    DefaultRelays.RELAYS
-                        .mapNotNull {
-                            RelayUrlNormalizer.normalizeOrNull(it)
-                        }.toSet(),
+                indexRelays = indexRelaysStore.effective(),
                 localCache = localCache,
             ).also { it.startCleanupLoop() }
         }
@@ -1108,6 +1115,7 @@ fun App(
                                     account = account,
                                     nwcConnection = nwcConnection,
                                     subscriptionsCoordinator = subscriptionsCoordinator,
+                                    indexRelaysStore = indexRelaysStore,
                                     nip11Fetcher = nip11Fetcher,
                                     appScope = scope,
                                     torStatus = currentTorStatus,
@@ -1230,6 +1238,7 @@ fun MainContent(
     account: AccountState.LoggedIn,
     nwcConnection: Nip47WalletConnect.Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
+    indexRelaysStore: com.vitorpamplona.amethyst.commons.relays.index.PreferencesIndexRelays,
     nip11Fetcher: Nip11Fetcher,
     appScope: CoroutineScope,
     torStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus,
@@ -1273,13 +1282,14 @@ fun MainContent(
                 )
         }
 
-    // Aggregated relay categories (feed, notifications, search, DM)
+    // Aggregated relay categories (feed, notifications, search, DM, index)
     val relayCategories =
-        remember(iAccount.nip65RelayList, accountRelays, relayManager) {
+        remember(iAccount.nip65RelayList, accountRelays, relayManager, indexRelaysStore) {
             DesktopRelayCategories(
                 nip65State = iAccount.nip65RelayList,
                 accountRelays = accountRelays,
                 connectedRelays = relayManager.connectedRelays,
+                indexRelaysStore = indexRelaysStore,
                 scope = scope,
             )
         }
@@ -2132,6 +2142,14 @@ fun RelaySettingsScreen(
                 HorizontalDivider()
                 Spacer(Modifier.height(16.dp))
             }
+
+            // Index Relays section — shared between Desktop and `amy`.
+            com.vitorpamplona.amethyst.desktop.ui.settings.IndexRelaysSection(
+                categories = LocalRelayCategories.current,
+            )
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
 
             // Content Filters section — hashtag-spam filter and future
             // content-moderation toggles.

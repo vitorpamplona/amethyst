@@ -125,8 +125,13 @@ object WotCommand {
                 Output.emit(mapOf("synced" to 0, "detail" to "empty follow set"))
                 return 0
             }
-            val relays = ctx.outboxRelays().ifEmpty { ctx.inboxRelays() }
-            if (relays.isEmpty()) return Output.error("no_relays", "no relays configured")
+            // Index relays — shared with the Desktop app via
+            // `java.util.prefs`. Falls back to
+            // `PreferencesIndexRelays.DEFAULT_INDEX_RELAYS` when the
+            // user hasn't configured anything, so this is never empty
+            // in practice.
+            val relays = ctx.indexRelays()
+            if (relays.isEmpty()) return Output.error("no_relays", "no index relays configured")
 
             // Chunk authors into ≤100 per Filter for relays with per-filter caps.
             val filters =
