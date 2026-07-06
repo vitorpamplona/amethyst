@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.model.DesktopRelayCategories
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
+import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
@@ -1320,9 +1321,20 @@ private fun AppInner(
                             ) {
                                 val pendingAuthApprovals by authCoordinator.pendingApprovals.collectAsState()
                                 Column(modifier = Modifier.fillMaxSize()) {
+                                    // On macOS the window uses `apple.awt.fullWindowContent`
+                                    // (see [applyNativeWindowChrome]), so the traffic-light
+                                    // buttons sit over the top-left corner of content. Clear
+                                    // that zone so the banner text/icon aren't occluded.
+                                    val bannerModifier =
+                                        if (PlatformInfo.isMacOS) {
+                                            Modifier.padding(start = 80.dp, top = 8.dp, end = 8.dp, bottom = 4.dp)
+                                        } else {
+                                            Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        }
                                     AuthApprovalBanner(
                                         pending = pendingAuthApprovals.values.toList(),
                                         onResolve = { url, scope -> authCoordinator.resolve(url, scope) },
+                                        modifier = bannerModifier,
                                     )
                                     Box(modifier = Modifier.weight(1f)) {
                                         MainContent(
