@@ -190,7 +190,11 @@ added_to:
   - key_package
 already_present: (none)
 
-$ amy relay publish-lists      # broadcast updated kind:10002/10050/10051
+$ amy relay search add wss://relay.nostr.band    # search-only bucket
+$ amy relay blocked set wss://bad.relay          # replace the blocked list
+$ amy relay outbox add wss://nostr.wine          # NIP-65 write relay
+
+$ amy relay publish-lists      # broadcast every updated relay list
 ```
 
 ---
@@ -443,11 +447,40 @@ from "command crashed".
 
 ### Relays
 
+amy mirrors Amethyst's relay-settings screen with one **noun** per relay-list
+kind, followed by `add`/`remove`/`set`/`clear` (a bare noun lists it) — the same
+noun-first shape as `marmot group …` / `cashu mint …`:
+
+| Noun | Kind | Notes |
+|---|---|---|
+| `outbox` / `inbox` / `nip65` | 10002 | NIP-65. `outbox` = write relays, `inbox` = read relays; `nip65` shows the combined read/write view. |
+| `dm` | 10050 | NIP-17 DM inbox. |
+| `key-package` | 10051 | MIP-00 MLS KeyPackage relays. |
+| `search` | 10007 | NIP-50 search relays. |
+| `private` | 10013 | NIP-37 private outbox (encrypted). |
+| `blocked` `trusted` `proxy` `indexer` `broadcast` `feeds` | 10006 / 10089 / 10087 / 10086 / 10088 / 10012 | NIP-51 lists, stored NIP-44-encrypted exactly like the app. |
+
+Local relays (a device-only preference, no Nostr event) and named relay sets
+(kind 30002) are out of scope. Edits are local-first: they build, sign, and
+store the new list event but do not broadcast — run `relay publish-lists`.
+
+**NIP-65 markers.** `outbox`/`inbox` edit the one kind:10002 event and merge per
+the spec: `outbox add R` on a read-only R promotes it to **both**; `outbox
+remove R` on a both-R demotes it to **read** (keeps it in the inbox); dropping
+the last facet removes R entirely.
+
 | Command | What it does |
 |---|---|
-| `amy relay add URL [--type T]` | Add URL to a bucket: `nip65`, `inbox`, `key_package`, or `all`. |
-| `amy relay list` | Print the configured relays per bucket. |
-| `amy relay publish-lists` | Broadcast your kind:10002 / 10050 / 10051. |
+| `amy relay outbox add URL` / `inbox add URL` | Add URL as a write / read relay (merging to `both` if the other marker is already set). |
+| `amy relay outbox remove URL` / `inbox remove URL` | Drop the write / read marker (demoting `both` to the other, or removing R). |
+| `amy relay outbox set URL…` / `inbox set URL…` | Make exactly these the write / read relays. |
+| `amy relay nip65 [list]` | Show the combined read/write/all view. `nip65 remove URL` drops R entirely; `nip65 clear` wipes kind:10002. |
+| `amy relay <noun> add\|remove URL` | For the flat buckets (`dm`, `search`, `blocked`, …): append / drop URL. |
+| `amy relay <noun> set URL…` / `clear` | Replace a bucket's whole list, or empty it. `set` needs ≥1 URL; use `clear` to empty. |
+| `amy relay <noun>` | List that bucket. |
+| `amy relay add URL` / `remove URL` | Fan-out to the transport lists (nip65 `both` + `dm` + `key-package`). |
+| `amy relay list` | Print every configured relay bucket. |
+| `amy relay publish-lists` | Broadcast every configured relay list to the union of your relays. |
 
 ### Local store maintenance
 

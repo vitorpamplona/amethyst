@@ -391,10 +391,19 @@ private fun printUsage() {
         |  login --nostrconnect [--relay URL[,URL…]]   client-initiated: print a nostrconnect:// offer,
         |    [--name N] [--timeout SECS]                 wait for a signer to connect, then persist it
         |
-        |Relays:
-        |  relay add URL [--type T]      T=nip65|inbox|key_package|all (default all)
-        |  relay list                    print configured relays
-        |  relay publish-lists           publish kind:10002 + kind:10050
+        |Relays: `relay NOUN [add|remove|set|clear|list] …` (bare NOUN lists it)
+        |  NOUN = outbox|inbox|nip65 (kind:10002)  dm (10050)  key-package (10051)
+        |         search (10007)  private (10013)  blocked|trusted|proxy|indexer|
+        |         broadcast|feeds (NIP-51, encrypted)
+        |  relay outbox add URL          add URL as a write relay (read-only → both)
+        |  relay inbox add URL           add URL as a read relay (write-only → both)
+        |  relay outbox remove URL       drop write (both → read; write-only → gone)
+        |  relay blocked add URL         e.g. private lists: add/remove/set/clear
+        |  relay nip65                   show the combined read/write list
+        |  relay add URL                 fan-out: nip65(both)+dm+key-package
+        |  relay remove URL              fan-out remove from those three
+        |  relay list                    print every configured relay bucket
+        |  relay publish-lists           broadcast every configured relay list
         |  relay info URL                fetch + print a relay's NIP-11 info document
         |  outbox USER [--refresh]       show USER's NIP-65 read/write relays (outbox model)
         |        [--timeout SECS]         (USER: npub|nprofile|hex|name@domain)

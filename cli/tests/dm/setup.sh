@@ -106,8 +106,8 @@ ensure_identity_for() {
 # so the DM strict-relay routing has something to resolve to.
 configure_relays_dm() {
   banner "Configuring relays → $RELAY_URL"
-  amy_a relay add "$RELAY_URL" --type all >/dev/null
-  amy_d relay add "$RELAY_URL" --type all >/dev/null
+  amy_a relay add "$RELAY_URL" >/dev/null
+  amy_d relay add "$RELAY_URL" >/dev/null
 
   step "publishing A's NIP-65 + kind:10050 lists"
   amy_a relay publish-lists >>"$LOG_FILE" 2>&1 \
