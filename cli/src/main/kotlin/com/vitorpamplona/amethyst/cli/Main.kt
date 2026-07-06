@@ -529,12 +529,11 @@ private fun printUsage() {
         |Web of Trust (GrapeRank):
         |  graperank [OBSERVER]                       compute subjective trust scores (0..1) for every
         |    [--limit N] [--min-score X]               user reachable in the follow/mute/report graph.
-        |    [--rigor X] [--attenuation X]             Crawls each user's kind:10002 outbox for their
-        |    [--max-attempts N] [--max-rounds N]       latest kind:3/10000/1984 until every discovered
-        |    [--offline] [--timeout SECS]              user has been checked (no user cap; --max-attempts
-        |    [--publish] [--min-rank N]                bounds retries of an unreachable outbox, default 3).
-        |    [--publish-limit N] [--publish-relay URL] OBSERVER: npub|nprofile|hex|name@domain (default:
-        |                                              active account). --offline scores from the local
+        |    [--rigor X] [--attenuation X]             Exhaustively crawls each user's kind:10002 outbox
+        |    [--max-rounds N]                          for their latest kind:3/10000/1984 until every
+        |    [--offline] [--timeout SECS]              discovered user has been checked (no user cap).
+        |    [--publish] [--min-rank N]                OBSERVER: npub|nprofile|hex|name@domain (default:
+        |    [--publish-limit N] [--publish-relay URL] active account). --offline scores from the local
         |                                              store only. --publish writes NIP-85 kind:30382
         |                                              cards (rank = round(score*100)) for each user at
         |                                              or above --min-rank (unchanged ranks skipped).

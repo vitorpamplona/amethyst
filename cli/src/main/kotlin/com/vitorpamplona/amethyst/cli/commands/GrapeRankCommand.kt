@@ -60,8 +60,8 @@ import kotlin.math.roundToInt
  * their kind:3 / kind:10000 / kind:1984 events are fetched from *their own*
  * relays. The crawl is exhaustive: it keeps going, with no user cap, until every
  * discovered user's outbox has been checked and their contact list pulled (an
- * unreachable outbox is retried up to `--max-attempts` times), then runs the
- * scoring engine in `commons/wot`.
+ * unreachable outbox is retried a few times), then runs the scoring engine in
+ * `commons/wot`.
  *
  * Prints a ranked list (text, or one JSON object under `--json`). With
  * `--publish`, results are also published as NIP-85 kind:30382 `ContactCardEvent`
@@ -84,6 +84,10 @@ object GrapeRankCommand {
     // Emit a scoring-progress line every this many worklist visits.
     private const val SCORE_PROGRESS_STEP = 5_000
 
+    // Times we re-query an unreachable user's outbox before giving up on it, so
+    // the crawl still terminates on a finite graph.
+    private const val MAX_OUTBOX_ATTEMPTS = 3
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -103,10 +107,8 @@ object GrapeRankCommand {
         val args = Args(rest)
         val observerArg = args.positionalOrNull(0)
         // Crawl to full convergence by default (every reachable user's outbox
-        // checked). --max-rounds is only a safety backstop; --max-attempts bounds
-        // how many times we re-try an unreachable user's outbox before giving up.
+        // checked). --max-rounds is only a safety backstop.
         val maxRounds = args.intFlag("max-rounds", Int.MAX_VALUE)
-        val maxAttempts = args.intFlag("max-attempts", 3)
         val limit = args.intFlag("limit", 100)
         val minScore = args.flag("min-score")?.toDoubleOrNull() ?: 0.0
         val offline = args.bool("offline")
@@ -153,8 +155,8 @@ object GrapeRankCommand {
 
                 // Loop until every discovered user has had their outbox checked and
                 // their kind:3/10000/1984 pulled from it — no user cap. A user whose
-                // outbox stays unreachable is dropped after --max-attempts tries so
-                // the crawl still terminates.
+                // outbox stays unreachable is dropped after MAX_OUTBOX_ATTEMPTS tries
+                // so the crawl still terminates.
                 while (rounds < maxRounds) {
                     val pending = discovered.filterNot { it in done }
                     if (pending.isEmpty()) break
@@ -187,7 +189,7 @@ object GrapeRankCommand {
                             attempts[pk] = tries
                             // Give up once we've exhausted retries: either the user has
                             // no contact list, or their outbox is unreachable.
-                            if (tries >= maxAttempts) done += pk
+                            if (tries >= MAX_OUTBOX_ATTEMPTS) done += pk
                         }
                     }
                     System.err.println(

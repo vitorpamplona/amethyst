@@ -89,7 +89,7 @@ It is **data**, not math:
    exactly the users our crawl discovers and whose kind 3/10000/1984 we fetch.
    So the effective scoring input is the same, as long as the crawl actually
    checks every discovered user's outbox — which it now does exhaustively (no
-   user cap, retrying an unreachable outbox up to `--max-attempts` times).
+   user cap, retrying an unreachable outbox a few times).
 2. **Fringe users / crawl gaps.** A relay timeout that drops a contact list
    removes edges and shifts nearby scores. The injector mitigates this with a
    two-stage model mirroring the app's `pickRelaysToLoadUsers`, plus a
@@ -104,7 +104,7 @@ It is **data**, not math:
      when the outbox is unknown/down. **Indexers are not used for content** — they
      don't serve those kinds; kind:3/mutes/reports live only on the user's outbox.
    The crawl loops round by round, retrying any member whose contact list still
-   didn't arrive (up to `--max-attempts`), until every discovered user's outbox
+   didn't arrive (a few times), until every discovered user's outbox
    has been checked. Remaining mitigation lever: a generous `--timeout`.
 3. **Convergence precision.** Both stop at delta 0.0001; residual error is
    < ~0.0001 in influence ⇒ < ~0.01 rank points ⇒ identical integer `rank`.
@@ -116,7 +116,7 @@ It is **data**, not math:
 - **Keep the current DEFAULT params** — they are byte-for-byte the Brainstorm
   DEFAULT preset. No change needed for parity.
 - **The crawl is exhaustive by default** (no user cap; every reachable user's
-  outbox is checked, unreachable outboxes retried up to `--max-attempts`). An
+  outbox is checked, unreachable outboxes retried a few times). An
   incomplete crawl is the single biggest source of drift, so avoid capping it.
 - **Optional, for fuller parity (not required for close scores):**
   - Add `--preset default|permissive|restrictive`. DEFAULT is confirmed; the
