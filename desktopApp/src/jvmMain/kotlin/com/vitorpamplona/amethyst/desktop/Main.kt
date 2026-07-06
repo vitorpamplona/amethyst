@@ -2143,14 +2143,6 @@ fun RelaySettingsScreen(
                 Spacer(Modifier.height(16.dp))
             }
 
-            // Index Relays section — shared between Desktop and `amy`.
-            com.vitorpamplona.amethyst.desktop.ui.settings.IndexRelaysSection(
-                categories = LocalRelayCategories.current,
-            )
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(16.dp))
-
             // Content Filters section — hashtag-spam filter and future
             // content-moderation toggles.
             Text(
