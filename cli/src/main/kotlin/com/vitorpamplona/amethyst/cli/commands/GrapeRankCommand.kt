@@ -112,6 +112,15 @@ object GrapeRankCommand {
     // to keep as the known-good backbone for retrying users we couldn't reach.
     private const val BACKBONE_SIZE = 30
 
+    // Last-mile sweep: after the outbox crawl gives up on the users whose own
+    // relays never answered, we take one more run at them against the WHOLE
+    // known-good relay pool — the busiest live relays we learned from everyone
+    // else's lists (they include the big aggregators). LAST_MILE_RELAYS caps that
+    // pool; LAST_MILE_PASSES bounds how many times we re-sweep as recovered lists
+    // reveal a few more reachable users.
+    private const val LAST_MILE_RELAYS = 80
+    private const val LAST_MILE_PASSES = 2
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -280,6 +289,67 @@ object GrapeRankCommand {
                         "[graperank] round $rounds: fetched=${pending.size}, gotList=$gotList, " +
                             "newUsers=$newUsers, discovered=${discovered.size}, done=${done.size}",
                     )
+                }
+
+                // Last-mile sweep. The outbox crawl leaves a tail of users whose own
+                // relays never answered (dead/misconfigured outboxes). Their contact
+                // lists very likely still exist — on the big aggregators and busy
+                // relays everyone else writes to. So instead of asking each straggler's
+                // broken outbox again, ask the WHOLE known-good pool at once: the
+                // busiest live relays learned from the crawl, plus the discovery set.
+                val goodPool =
+                    (
+                        writeRelayFreq.entries
+                            .asSequence()
+                            .filter { it.key in liveRelays }
+                            .sortedByDescending { it.value }
+                            .take(LAST_MILE_RELAYS)
+                            .map { it.key }
+                            .toSet() + relayListDiscoveryRelays(ctx)
+                    ).toList()
+                if (goodPool.isNotEmpty()) {
+                    for (pass in 1..LAST_MILE_PASSES) {
+                        val missing = discovered.filter { (hopOf[it] ?: 0) < maxHops && ctx.contactsOf(it) == null }
+                        if (missing.isEmpty()) break
+
+                        var recovered = 0
+                        var newUsers = 0
+                        for (group in missing.chunked(USER_BATCH).chunked(DRAIN_CONCURRENCY)) {
+                            val drained =
+                                coroutineScope {
+                                    group
+                                        .map { batch ->
+                                            val filters =
+                                                goodPool.associateWith {
+                                                    batch.chunked(AUTHORS_PER_FILTER).map { chunk ->
+                                                        Filter(kinds = graphKinds, authors = chunk)
+                                                    }
+                                                }
+                                            async {
+                                                val events = ctx.drain(filters, timeoutMs, diagnose)
+                                                batch to events
+                                            }
+                                        }.awaitAll()
+                                }
+                            for ((batch, events) in drained) {
+                                relaysContacted += goodPool
+                                for ((relay, _) in events) liveRelays.add(relay)
+                                for (pk in batch) {
+                                    val contacts = ctx.contactsOf(pk)
+                                    if (contacts != null) {
+                                        recovered++
+                                        done += pk
+                                        newUsers += ingest(pk, contacts)
+                                    }
+                                }
+                            }
+                        }
+                        System.err.println(
+                            "[graperank] last-mile pass $pass: swept=${missing.size}, recovered=$recovered, " +
+                                "newUsers=$newUsers, discovered=${discovered.size}, still-missing=${discovered.count { (hopOf[it] ?: 0) < maxHops && ctx.contactsOf(it) == null }}",
+                        )
+                        if (recovered == 0) break
+                    }
                 }
 
                 relaysContactedCount = relaysContacted.size
