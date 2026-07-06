@@ -411,11 +411,15 @@ class Context(
     suspend fun drain(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         timeoutMs: Long = 8_000,
+        diagnoseSlow: Boolean = false,
     ): List<Pair<NormalizedRelayUrl, Event>> {
         if (filters.isEmpty()) return emptyList()
         val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
-        val doneChannel = Channel<NormalizedRelayUrl>(UNLIMITED)
+        // Carries the terminal reason per relay so a timeout can distinguish a slow
+        // relay (never terminal) from a connect failure / CLOSED.
+        val doneChannel = Channel<Pair<NormalizedRelayUrl, String>>(UNLIMITED)
         val remaining = filters.keys.toMutableSet()
+        val doneReasons = HashMap<NormalizedRelayUrl, String>()
         val subId = newSubId()
         val listener =
             object : SubscriptionListener {
@@ -432,7 +436,7 @@ class Context(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    doneChannel.trySend(relay)
+                    doneChannel.trySend(relay to "eose")
                 }
 
                 override fun onClosed(
@@ -440,7 +444,7 @@ class Context(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    doneChannel.trySend(relay)
+                    doneChannel.trySend(relay to "closed:$message")
                 }
 
                 override fun onCannotConnect(
@@ -448,28 +452,36 @@ class Context(
                     message: String,
                     forFilters: List<Filter>?,
                 ) {
-                    doneChannel.trySend(relay)
+                    doneChannel.trySend(relay to "cannot:$message")
                 }
             }
         val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
         try {
             client.subscribe(subId, filters, listener)
-            withTimeoutOrNull(timeoutMs) {
-                while (remaining.isNotEmpty()) {
-                    select {
-                        eventChannel.onReceive { pair ->
-                            if (verifyAndStore(pair.second)) collected.add(pair)
+            val completed =
+                withTimeoutOrNull(timeoutMs) {
+                    while (remaining.isNotEmpty()) {
+                        select {
+                            eventChannel.onReceive { pair ->
+                                if (verifyAndStore(pair.second)) collected.add(pair)
+                            }
+                            doneChannel.onReceive { (relay, reason) ->
+                                remaining.remove(relay)
+                                doneReasons[relay] = reason
+                            }
                         }
-                        doneChannel.onReceive { r -> remaining.remove(r) }
                     }
+                    // Drain any events that landed after EOSE but before cancel
+                    while (true) {
+                        val r = eventChannel.tryReceive()
+                        if (!r.isSuccess) break
+                        val pair = r.getOrThrow()
+                        if (verifyAndStore(pair.second)) collected.add(pair)
+                    }
+                    true
                 }
-                // Drain any events that landed after EOSE but before cancel
-                while (true) {
-                    val r = eventChannel.tryReceive()
-                    if (!r.isSuccess) break
-                    val pair = r.getOrThrow()
-                    if (verifyAndStore(pair.second)) collected.add(pair)
-                }
+            if (diagnoseSlow && completed == null && remaining.isNotEmpty()) {
+                logSlowDrain(timeoutMs, remaining, doneReasons, collected)
             }
         } finally {
             client.unsubscribe(subId)
@@ -477,6 +489,31 @@ class Context(
             doneChannel.close()
         }
         return collected
+    }
+
+    /**
+     * On a [drain] timeout, report which relays stalled and why — a relay that
+     * never sent EOSE (slow, possibly still streaming) vs one that couldn't be
+     * reached (CANNOT-CONNECT, which points at our side / the network) vs one
+     * that CLOSED the sub. Includes how many events each slow relay did send, so
+     * "relay is slow" and "we never connected" are easy to tell apart.
+     */
+    private fun logSlowDrain(
+        timeoutMs: Long,
+        stalled: Set<NormalizedRelayUrl>,
+        doneReasons: Map<NormalizedRelayUrl, String>,
+        collected: List<Pair<NormalizedRelayUrl, Event>>,
+    ) {
+        val eventsPer = collected.groupingBy { it.first }.eachCount()
+        val cannot = doneReasons.filterValues { it.startsWith("cannot") }
+        val closed = doneReasons.filterValues { it.startsWith("closed") }
+        val slowDetail = stalled.take(12).joinToString(", ") { "${it.url}(${eventsPer[it] ?: 0}ev)" }
+        val cannotDetail = cannot.entries.take(8).joinToString(", ") { "${it.key.url}=${it.value.removePrefix("cannot:").take(40)}" }
+        System.err.println(
+            "[drain] timeout ${timeoutMs}ms: ${stalled.size} slow(no EOSE), ${cannot.size} cannot-connect, ${closed.size} closed" +
+                (if (slowDetail.isNotEmpty()) " | slow: $slowDetail" else "") +
+                (if (cannotDetail.isNotEmpty()) " | cannot: $cannotDetail" else ""),
+        )
     }
 
     /**

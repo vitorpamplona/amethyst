@@ -96,6 +96,21 @@ object GrapeRankCommand {
     // Concurrent content drains. Bounded so total open connections stay sane.
     private const val DRAIN_CONCURRENCY = 8
 
+    // Broad relays that carry kind:10002 for many users — aggregators + big
+    // general relays — added to the discovery set to raise the odds of resolving
+    // a stranger's outbox quickly.
+    private val EXTRA_DISCOVERY_RELAYS: Set<NormalizedRelayUrl> =
+        listOf(
+            "wss://relay.nostr.band",
+            "wss://relay.damus.io",
+            "wss://relay.snort.social",
+            "wss://offchain.pub",
+            "wss://relayable.org",
+            "wss://nostr.land",
+            "wss://eden.nostr.land",
+            "wss://relay.nostr.bg",
+        ).mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -122,6 +137,7 @@ object GrapeRankCommand {
         val limit = args.intFlag("limit", 100)
         val minScore = args.flag("min-score")?.toDoubleOrNull() ?: 0.0
         val offline = args.bool("offline")
+        val diagnose = args.bool("diagnose")
         val timeoutMs = args.longFlag("timeout", 10L) * 1000
         val doPublish = args.bool("publish")
         val minRank = args.intFlag("min-rank", 1)
@@ -208,7 +224,7 @@ object GrapeRankCommand {
                     // and times out. Routing (store reads) is serial; only the drains
                     // run concurrently, which is safe: inserts serialize on the store
                     // write lock.
-                    ensureRelayLists(ctx, pending.toSet(), timeoutMs)
+                    ensureRelayLists(ctx, pending.toSet(), timeoutMs, diagnose)
                     for (group in pending.chunked(USER_BATCH).chunked(DRAIN_CONCURRENCY)) {
                         val prepared = group.map { batch -> batch to routeByOutbox(ctx, batch.toSet(), relayHints, graphKinds) }
                         val drained =
@@ -216,7 +232,7 @@ object GrapeRankCommand {
                                 prepared
                                     .map { (batch, filters) ->
                                         async {
-                                            ctx.drain(filters, timeoutMs)
+                                            ctx.drain(filters, timeoutMs, diagnose)
                                             batch to filters.keys
                                         }
                                     }.awaitAll()
@@ -542,7 +558,7 @@ object GrapeRankCommand {
      * the whole network, so this is where a stranger's relay list is found. They
      * do NOT hold kind:3/10000/1984 — see [contentFallbackRelays].
      */
-    private suspend fun relayListDiscoveryRelays(ctx: Context): Set<NormalizedRelayUrl> = ctx.bootstrapRelays() + Constants.eventFinderRelays + DefaultIndexerRelayList
+    private suspend fun relayListDiscoveryRelays(ctx: Context): Set<NormalizedRelayUrl> = ctx.bootstrapRelays() + Constants.eventFinderRelays + DefaultIndexerRelayList + EXTRA_DISCOVERY_RELAYS
 
     /**
      * Best-effort fallback relays for **content** (kind:3/10000/1984/0) when a
@@ -563,6 +579,7 @@ object GrapeRankCommand {
         ctx: Context,
         pubkeys: Set<HexKey>,
         timeoutMs: Long,
+        diagnose: Boolean,
     ) {
         val missing = pubkeys.filter { ctx.relaysOf(it) == null }
         if (missing.isEmpty()) return
@@ -576,7 +593,7 @@ object GrapeRankCommand {
                     Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = chunk)
                 }
             }
-        ctx.drain(filters, timeoutMs)
+        ctx.drain(filters, timeoutMs, diagnose)
     }
 
     /**
