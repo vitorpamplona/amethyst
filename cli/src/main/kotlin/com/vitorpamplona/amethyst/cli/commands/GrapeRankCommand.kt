@@ -164,11 +164,22 @@ object GrapeRankCommand {
                         ?.takeIf { it.isNotEmpty() }
                         ?: ctx.outboxRelays()
 
-                val toPublish =
+                // Ranks we've already published (read back from the store, which
+                // holds our own prior cards) — keyed by target, newest per target.
+                // Lets us leave an unchanged card alone instead of churning it.
+                val publishedRanks = publishedCardRanks(ctx)
+
+                val candidates =
                     ranked
                         .filter { rankOf(it.value) >= minRank }
-                        .take(publishLimit)
                         .map { it.key to rankOf(it.value) }
+                val changed = candidates.filter { (target, rank) -> publishedRanks[target] != rank }
+                val toPublish = changed.take(publishLimit)
+
+                result["skipped_unchanged"] = candidates.size - changed.size
+                if (changed.size > toPublish.size) {
+                    result["publish_truncated"] = changed.size - toPublish.size
+                }
 
                 if (relays.isEmpty()) {
                     result["published"] = 0
@@ -238,6 +249,25 @@ object GrapeRankCommand {
                 Filter(kinds = kinds, authors = chunk)
             }
         }
+    }
+
+    /**
+     * The rank we last published for each target, read from the active account's
+     * own kind:30382 cards in the local store (newest card wins per target).
+     * `ctx.publish` stores every card it sends, so on repeat runs this reflects
+     * what's already out there and lets us skip targets whose rank is unchanged.
+     */
+    private suspend fun publishedCardRanks(ctx: Context): Map<HexKey, Int> {
+        val self = ctx.identity.pubKeyHex
+        return ctx.store
+            .query<Event>(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(self)))
+            .filterIsInstance<ContactCardEvent>()
+            .groupBy { it.aboutUser() }
+            .mapNotNull { (target, cards) ->
+                val t = target ?: return@mapNotNull null
+                val rank = cards.maxByOrNull { it.createdAt }?.rank() ?: return@mapNotNull null
+                t to rank
+            }.toMap()
     }
 
     /** Build + publish one NIP-85 kind:30382 card per user, bounded-concurrently. */
