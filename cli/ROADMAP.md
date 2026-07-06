@@ -43,7 +43,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 |---|---|---|
 | Identity create / import (`nsec`, `ncryptsec`, mnemonic, `npub`, `nprofile`, hex, NIP-05) | ✅ | `LoginCommand` + Quartz NIP-05 / NIP-06 / NIP-49 |
 | Account bootstrap (nine events) | ✅ | `commons/account/AccountBootstrapEvents.kt` |
-| Relay config + NIP-65 / NIP-10050 publish | ✅ | `RelayCommands` |
+| Relay config — every relay-list bucket (nip65 10002, dm 10050, key-package 10051, search 10007, private-outbox 10013, blocked 10006, trusted 10089, proxy 10087, indexer 10086, broadcast 10088, favorite 10012) — add / remove / set / list / publish | ✅ | `RelayCommands`. Mirrors the Android relay-settings screen. Local relays (device pref) + relay sets (30002) intentionally out of scope. |
 | MLS KeyPackage publish + fetch | ✅ | `commons/marmot/MarmotManager` |
 | Marmot group create / add / rename / promote / demote / remove / leave | ✅ | `commons/marmot/` |
 | Marmot message send / list | ✅ | `commons/marmot/` |

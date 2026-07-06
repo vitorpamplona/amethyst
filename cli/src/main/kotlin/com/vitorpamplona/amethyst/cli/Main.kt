@@ -392,9 +392,14 @@ private fun printUsage() {
         |    [--name N] [--timeout SECS]                 wait for a signer to connect, then persist it
         |
         |Relays:
-        |  relay add URL [--type T]      T=nip65|inbox|key_package|all (default all)
-        |  relay list                    print configured relays
-        |  relay publish-lists           publish kind:10002 + kind:10050
+        |  relay add URL [--type T]      append URL to a bucket (default all=nip65+inbox+key_package)
+        |        [--marker read|write|both]  T=nip65|inbox|key_package|search|private|blocked|
+        |                                    trusted|proxy|indexer|broadcast|feeds|all
+        |  relay remove URL [--type T]   drop URL from a bucket (default all)
+        |  relay set --type T [URL…]     replace a bucket's whole list (no URLs clears it)
+        |        [--marker read|write|both]
+        |  relay list [--type T]         print configured relays (all buckets, or just T)
+        |  relay publish-lists           broadcast every configured relay list
         |  relay info URL                fetch + print a relay's NIP-11 info document
         |  outbox USER [--refresh]       show USER's NIP-65 read/write relays (outbox model)
         |        [--timeout SECS]         (USER: npub|nprofile|hex|name@domain)

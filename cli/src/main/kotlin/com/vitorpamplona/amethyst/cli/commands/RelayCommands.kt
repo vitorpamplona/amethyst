@@ -25,11 +25,21 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
@@ -37,21 +47,140 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
- * `amy relay <add|list|publish-lists>` — manage this account's relay sets.
+ * `amy relay <add|remove|set|list|publish-lists|info>` — manage every relay
+ * list this account maintains, mirroring Amethyst's relay-settings screen.
  *
- * Source of truth is the local event store (`<data-dir>/events-store/`)
- * via Context.relaysOf / dmInboxOf / keyPackageRelaysOf. There is no
- * `relays.json` any more — the kind:10002 / 10050 / 10051 events ARE
- * the relay configuration.
+ * Source of truth is the local event store (`<data-dir>/events-store/`): the
+ * kind:10002 / 10050 / 10051 / 10007 / 10013 / 10006 / 10012 / 10086 / 10087 /
+ * 10088 / 10089 events ARE the relay configuration. There is no `relays.json`.
  *
- *   - `relay add URL --type T`   builds + signs + ingests a new relay-
- *                                list event for the given bucket. No
- *                                broadcast yet — call `publish-lists`.
- *   - `relay list`               dumps the URLs from the local store.
- *   - `relay publish-lists`      broadcasts the three events to every
- *                                configured relay (union).
+ *   - `relay add URL --type T`   append URL to the T bucket(s), building +
+ *                                signing + ingesting a new list event. No
+ *                                broadcast — call `publish-lists`.
+ *   - `relay remove URL --type T` drop URL from the T bucket(s).
+ *   - `relay set --type T [URL…]` replace the whole T bucket (no URLs clears it).
+ *   - `relay list [--type T]`    dump the URLs from the local store.
+ *   - `relay publish-lists`      broadcast every configured list to the union
+ *                                of all the account's relays.
+ *   - `relay info URL`           fetch + print a relay's NIP-11 document.
+ *
+ * The `nip65` bucket carries per-relay read/write markers ([AdvertisedRelayType]);
+ * the others are flat URL lists. The private NIP-51 buckets (blocked, trusted,
+ * proxy, indexer, broadcast, favorite, private-outbox, and the private half of
+ * search) store their relays NIP-44-encrypted, exactly like the app.
  */
 object RelayCommands {
+    /**
+     * A flat (non-NIP-65) relay-list bucket: one Nostr replaceable event kind,
+     * a [read] that decodes the current URLs from the local store, and a [build]
+     * that signs a fresh event holding exactly the given URLs. `nip65` is NOT in
+     * this table — it carries read/write markers and is handled separately.
+     */
+    private class Bucket(
+        val key: String,
+        val kind: Int,
+        val aliases: Set<String> = emptySet(),
+        val read: suspend (Context, HexKey) -> List<NormalizedRelayUrl>,
+        val build: suspend (Context, List<NormalizedRelayUrl>) -> Event,
+    ) {
+        fun matches(type: String) = type == key || type in aliases
+    }
+
+    private const val NIP65 = "nip65"
+
+    /** Buckets `--type all` fans out to (the transport-critical public lists). */
+    private val ALL_TRANSPORT = listOf(NIP65, "inbox", "key_package")
+
+    private val BUCKETS: List<Bucket> =
+        listOf(
+            Bucket(
+                "inbox",
+                ChatMessageRelayListEvent.KIND,
+                aliases = setOf("dm"),
+                read = { c, pk -> c.dmInboxOf(pk)?.relays().orEmpty() },
+                build = { c, r -> ChatMessageRelayListEvent.create(r, c.signer) },
+            ),
+            Bucket(
+                "key_package",
+                KeyPackageRelayListEvent.KIND,
+                aliases = setOf("keyPackage", "keypackage"),
+                read = { c, pk -> c.keyPackageRelaysOf(pk)?.relays().orEmpty() },
+                build = { c, r -> KeyPackageRelayListEvent.create(r, c.signer) },
+            ),
+            Bucket(
+                "search",
+                SearchRelayListEvent.KIND,
+                read = { c, pk -> (c.latestReplaceable(pk, SearchRelayListEvent.KIND) as? SearchRelayListEvent)?.relays(c.signer).orEmpty() },
+                build = { c, r -> SearchRelayListEvent.create(r, c.signer) },
+            ),
+            Bucket(
+                "private",
+                PrivateOutboxRelayListEvent.KIND,
+                aliases = setOf("private_outbox", "nip37"),
+                read = { c, pk -> (c.latestReplaceable(pk, PrivateOutboxRelayListEvent.KIND) as? PrivateOutboxRelayListEvent)?.relays(c.signer).orEmpty() },
+                build = { c, r -> PrivateOutboxRelayListEvent.create(r, c.signer) },
+            ),
+            Bucket(
+                "blocked",
+                BlockedRelayListEvent.KIND,
+                read = { c, pk -> (c.latestReplaceable(pk, BlockedRelayListEvent.KIND) as? BlockedRelayListEvent)?.relays(c.signer).orEmpty() },
+                build = { c, r -> BlockedRelayListEvent.create(r, c.signer) },
+            ),
+            Bucket(
+                "broadcast",
+                BroadcastRelayListEvent.KIND,
+                read = { c, pk -> (c.latestReplaceable(pk, BroadcastRelayListEvent.KIND) as? BroadcastRelayListEvent)?.decryptRelays(c.signer).orEmpty() },
+                build = { c, r -> BroadcastRelayListEvent.create(r, c.signer) },
+            ),
+            Bucket(
+                "proxy",
+                ProxyRelayListEvent.KIND,
+                read = { c, pk -> (c.latestReplaceable(pk, ProxyRelayListEvent.KIND) as? ProxyRelayListEvent)?.decryptRelays(c.signer).orEmpty() },
+                build = { c, r -> ProxyRelayListEvent.create(r, c.signer) },
+            ),
+            Bucket(
+                "indexer",
+                IndexerRelayListEvent.KIND,
+                read = { c, pk -> (c.latestReplaceable(pk, IndexerRelayListEvent.KIND) as? IndexerRelayListEvent)?.decryptRelays(c.signer).orEmpty() },
+                build = { c, r -> IndexerRelayListEvent.create(r, c.signer) },
+            ),
+            Bucket(
+                "trusted",
+                TrustedRelayListEvent.KIND,
+                read = { c, pk -> (c.latestReplaceable(pk, TrustedRelayListEvent.KIND) as? TrustedRelayListEvent)?.decryptRelays(c.signer).orEmpty() },
+                build = { c, r -> TrustedRelayListEvent.create(r, c.signer) },
+            ),
+            Bucket(
+                "feeds",
+                RelayFeedsListEvent.KIND,
+                aliases = setOf("favorites", "relay_feeds"),
+                read = { c, pk -> (c.latestReplaceable(pk, RelayFeedsListEvent.KIND) as? RelayFeedsListEvent)?.decryptRelays(c.signer).orEmpty() },
+                build = { c, r -> RelayFeedsListEvent.create(r, c.signer) },
+            ),
+        )
+
+    private fun bucketFor(type: String): Bucket? = BUCKETS.firstOrNull { it.matches(type) }
+
+    /** Canonicalize a `--type` token to the buckets it targets, or throw on unknown. */
+    private fun resolveTypes(type: String): List<String> =
+        when {
+            type == "all" -> ALL_TRANSPORT
+            type == NIP65 -> listOf(NIP65)
+            bucketFor(type) != null -> listOf(bucketFor(type)!!.key)
+            else ->
+                throw IllegalArgumentException(
+                    "unknown relay type: $type (known: nip65, inbox, key_package, search, private, blocked, trusted, proxy, indexer, broadcast, feeds, all)",
+                )
+        }
+
+    private fun parseMarker(raw: String?): AdvertisedRelayType =
+        when (raw?.lowercase()) {
+            null, "both", "all", "" -> AdvertisedRelayType.BOTH
+            "read", "inbox" -> AdvertisedRelayType.READ
+            "write", "outbox" -> AdvertisedRelayType.WRITE
+            else -> throw IllegalArgumentException("invalid --marker: $raw (read|write|both)")
+        }
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -59,10 +188,13 @@ object RelayCommands {
         route(
             "relay",
             tail,
-            "relay <add|list|publish-lists|info> …",
+            "relay <add|remove|set|list|publish-lists|info> …",
             mapOf(
                 "add" to { rest -> add(dataDir, Args(rest)) },
-                "list" to { _ -> list(dataDir) },
+                "remove" to { rest -> remove(dataDir, Args(rest)) },
+                "rm" to { rest -> remove(dataDir, Args(rest)) },
+                "set" to { rest -> set(dataDir, Args(rest)) },
+                "list" to { rest -> list(dataDir, Args(rest)) },
                 "publish-lists" to { _ -> publishLists(dataDir) },
                 // `info` is also intercepted in Main before account resolution
                 // (it needs no account); routed here too for when one exists.
@@ -118,17 +250,19 @@ object RelayCommands {
         args: Args,
     ): Int {
         val rawUrl = args.positional(0, "url")
-        val type = args.flag("type", "all") ?: "all"
+        val type = args.flag("type", "all")!!
+        val marker = parseMarker(args.flag("marker"))
         val normalized =
             rawUrl.normalizeRelayUrlOrNull()
                 ?: return Output.error("bad_args", "invalid relay url: $rawUrl")
 
-        val targets = if (type == "all") listOf("nip65", "inbox", "key_package") else listOf(type)
+        val targets = resolveTypes(type)
         Context.open(dataDir).use { ctx ->
+            val self = ctx.identity.pubKeyHex
             val addedTo = mutableListOf<String>()
             val alreadyPresent = mutableListOf<String>()
             for (t in targets) {
-                if (addToBucket(ctx, t, normalized)) addedTo.add(t) else alreadyPresent.add(t)
+                if (addToBucket(ctx, self, t, normalized, marker)) addedTo.add(t) else alreadyPresent.add(t)
             }
             Output.emit(
                 mapOf(
@@ -141,59 +275,170 @@ object RelayCommands {
         }
     }
 
-    /**
-     * Append [url] to the relay-list event for [type] (creating one if
-     * absent). Returns `true` when a new event was inserted, `false`
-     * when [url] was already present in the existing event.
-     */
-    private suspend fun addToBucket(
-        ctx: Context,
-        type: String,
-        url: NormalizedRelayUrl,
-    ): Boolean {
-        val self = ctx.identity.pubKeyHex
-        return when (type) {
-            "nip65" -> {
-                val existing = ctx.relaysOf(self)?.relays().orEmpty()
-                if (existing.any { it.relayUrl.url == url.url }) return false
-                val combined = existing + AdvertisedRelayInfo(url, AdvertisedRelayType.BOTH)
-                val event = AdvertisedRelayListEvent.create(combined, ctx.signer)
-                ctx.verifyAndStore(event)
-                true
-            }
+    private suspend fun remove(
+        dataDir: DataDir,
+        args: Args,
+    ): Int {
+        val rawUrl = args.positional(0, "url")
+        val type = args.flag("type", "all")!!
+        val normalized =
+            rawUrl.normalizeRelayUrlOrNull()
+                ?: return Output.error("bad_args", "invalid relay url: $rawUrl")
 
-            "inbox" -> {
-                val existing = ctx.dmInboxOf(self)?.relays().orEmpty()
-                if (url in existing) return false
-                val event = ChatMessageRelayListEvent.create(existing + url, ctx.signer)
-                ctx.verifyAndStore(event)
-                true
+        val targets = resolveTypes(type)
+        Context.open(dataDir).use { ctx ->
+            val self = ctx.identity.pubKeyHex
+            val removedFrom = mutableListOf<String>()
+            val notPresent = mutableListOf<String>()
+            for (t in targets) {
+                if (removeFromBucket(ctx, self, t, normalized)) removedFrom.add(t) else notPresent.add(t)
             }
-
-            "key_package", "keyPackage" -> {
-                val existing = ctx.keyPackageRelaysOf(self)?.relays().orEmpty()
-                if (url in existing) return false
-                val event = KeyPackageRelayListEvent.create(existing + url, ctx.signer)
-                ctx.verifyAndStore(event)
-                true
-            }
-
-            else -> {
-                throw IllegalArgumentException("unknown relay type: $type")
-            }
+            Output.emit(
+                mapOf(
+                    "url" to rawUrl,
+                    "removed_from" to removedFrom,
+                    "not_present" to notPresent,
+                ),
+            )
+            return 0
         }
     }
 
-    private suspend fun list(dataDir: DataDir): Int {
+    private suspend fun set(
+        dataDir: DataDir,
+        args: Args,
+    ): Int {
+        val type = args.flag("type") ?: return Output.error("bad_args", "set requires --type T")
+        if (type == "all") return Output.error("bad_args", "set needs a single --type, not `all`")
+        val bucket = if (type == NIP65) null else bucketFor(type) ?: return Output.error("bad_args", "unknown relay type: $type")
+        val marker = parseMarker(args.flag("marker"))
+
+        val normalized = mutableListOf<NormalizedRelayUrl>()
+        for (raw in args.positional) {
+            normalized.add(
+                raw.normalizeRelayUrlOrNull()
+                    ?: return Output.error("bad_args", "invalid relay url: $raw"),
+            )
+        }
+        // dedupe, preserve order
+        val relays = normalized.distinctBy { it.url }
+
         Context.open(dataDir).use { ctx ->
-            val self = ctx.identity.pubKeyHex
+            val signed: Event =
+                if (type == NIP65) {
+                    AdvertisedRelayListEvent.create(relays.map { AdvertisedRelayInfo(it, marker) }, ctx.signer)
+                } else {
+                    bucket!!.build(ctx, relays)
+                }
+            ctx.verifyAndStore(signed)
             Output.emit(
                 mapOf(
-                    "nip65" to (ctx.relaysOf(self)?.relaysNorm()?.map { it.url } ?: emptyList()),
-                    "inbox" to (ctx.dmInboxOf(self)?.relays()?.map { it.url } ?: emptyList()),
-                    "key_package" to (ctx.keyPackageRelaysOf(self)?.relays()?.map { it.url } ?: emptyList()),
+                    "type" to type,
+                    "kind" to signed.kind,
+                    "event_id" to signed.id,
+                    "relays" to relays.map { it.url },
                 ),
             )
+            return 0
+        }
+    }
+
+    /**
+     * Append [url] to the relay-list event for [type] (creating one if absent).
+     * Returns `true` when a new event was written, `false` when [url] was
+     * already present. For `nip65`, [marker] sets the read/write role.
+     */
+    private suspend fun addToBucket(
+        ctx: Context,
+        self: HexKey,
+        type: String,
+        url: NormalizedRelayUrl,
+        marker: AdvertisedRelayType,
+    ): Boolean {
+        if (type == NIP65) {
+            val existing = ctx.relaysOf(self)?.relays().orEmpty()
+            if (existing.any { it.relayUrl.url == url.url }) return false
+            val combined = existing + AdvertisedRelayInfo(url, marker)
+            ctx.verifyAndStore(AdvertisedRelayListEvent.create(combined, ctx.signer))
+            return true
+        }
+        val bucket = bucketFor(type) ?: throw IllegalArgumentException("unknown relay type: $type")
+        val existing = bucket.read(ctx, self)
+        if (existing.any { it.url == url.url }) return false
+        ctx.verifyAndStore(bucket.build(ctx, existing + url))
+        return true
+    }
+
+    /**
+     * Drop [url] from the relay-list event for [type]. Returns `true` when the
+     * URL was present (and a new, shorter event was written), `false` otherwise.
+     */
+    private suspend fun removeFromBucket(
+        ctx: Context,
+        self: HexKey,
+        type: String,
+        url: NormalizedRelayUrl,
+    ): Boolean {
+        if (type == NIP65) {
+            val existing = ctx.relaysOf(self)?.relays().orEmpty()
+            if (existing.none { it.relayUrl.url == url.url }) return false
+            val remaining = existing.filterNot { it.relayUrl.url == url.url }
+            ctx.verifyAndStore(AdvertisedRelayListEvent.create(remaining, ctx.signer))
+            return true
+        }
+        val bucket = bucketFor(type) ?: throw IllegalArgumentException("unknown relay type: $type")
+        val existing = bucket.read(ctx, self)
+        if (existing.none { it.url == url.url }) return false
+        ctx.verifyAndStore(bucket.build(ctx, existing.filterNot { it.url == url.url }))
+        return true
+    }
+
+    private suspend fun list(
+        dataDir: DataDir,
+        args: Args,
+    ): Int {
+        val type = args.flag("type")
+        Context.open(dataDir).use { ctx ->
+            val self = ctx.identity.pubKeyHex
+
+            if (type != null) {
+                // Single-bucket view.
+                if (type == NIP65) {
+                    val nip65 = ctx.relaysOf(self)
+                    Output.emit(
+                        mapOf(
+                            "type" to NIP65,
+                            "kind" to AdvertisedRelayListEvent.KIND,
+                            "read" to (nip65?.readRelaysNorm()?.map { it.url } ?: emptyList<String>()),
+                            "write" to (nip65?.writeRelaysNorm()?.map { it.url } ?: emptyList<String>()),
+                            "relays" to (nip65?.relaysNorm()?.map { it.url } ?: emptyList<String>()),
+                        ),
+                    )
+                    return 0
+                }
+                val bucket = bucketFor(type) ?: return Output.error("bad_args", "unknown relay type: $type")
+                Output.emit(
+                    mapOf(
+                        "type" to bucket.key,
+                        "kind" to bucket.kind,
+                        "relays" to bucket.read(ctx, self).map { it.url },
+                    ),
+                )
+                return 0
+            }
+
+            // Full view — every bucket. Keys `nip65`/`inbox`/`key_package` are
+            // kept as flat URL lists for backwards compatibility; `nip65_read`/
+            // `nip65_write` add the marker split, and the private lists follow.
+            val nip65 = ctx.relaysOf(self)
+            val out = linkedMapOf<String, Any?>()
+            out["nip65"] = nip65?.relaysNorm()?.map { it.url } ?: emptyList<String>()
+            out["nip65_read"] = nip65?.readRelaysNorm()?.map { it.url } ?: emptyList<String>()
+            out["nip65_write"] = nip65?.writeRelaysNorm()?.map { it.url } ?: emptyList<String>()
+            for (bucket in BUCKETS) {
+                out[bucket.key] = bucket.read(ctx, self).map { it.url }
+            }
+            Output.emit(out)
             return 0
         }
     }
@@ -202,11 +447,15 @@ object RelayCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val self = ctx.identity.pubKeyHex
-            val nip65Event = ctx.relaysOf(self)
-            val inboxEvent = ctx.dmInboxOf(self)
-            val keyPackageEvent = ctx.keyPackageRelaysOf(self)
 
-            if (nip65Event == null && inboxEvent == null && keyPackageEvent == null) {
+            // Collect every configured list event: nip65 plus each flat bucket.
+            val events = linkedMapOf<String, Event?>()
+            events[NIP65] = ctx.relaysOf(self)
+            for (bucket in BUCKETS) {
+                events[bucket.key] = ctx.latestReplaceable(self, bucket.kind)
+            }
+
+            if (events.values.all { it == null }) {
                 return Output.error(
                     "no_relays",
                     "no relay lists in the local store; run `amy relay add` first or `amy create` to bootstrap defaults",
@@ -214,21 +463,22 @@ object RelayCommands {
             }
 
             val targets = ctx.anyRelays()
-            val nip65Result = nip65Event?.let { ctx.publish(it, targets) }.orEmpty()
-            val inboxResult = inboxEvent?.let { ctx.publish(it, targets) }.orEmpty()
-            val keyPackageResult = keyPackageEvent?.let { ctx.publish(it, targets) }.orEmpty()
+            val eventIds = linkedMapOf<String, String?>()
+            val acceptedBy = linkedMapOf<String, List<String>>()
+            for ((key, event) in events) {
+                eventIds[key] = event?.id
+                val result = event?.let { ctx.publish(it, targets) }.orEmpty()
+                acceptedBy[key] = result.filterValues { it }.keys.map { it.url }
+            }
 
             Output.emit(
                 mapOf(
-                    "nip65_event_id" to nip65Event?.id,
-                    "inbox_event_id" to inboxEvent?.id,
-                    "key_package_list_event_id" to keyPackageEvent?.id,
-                    "accepted_by" to
-                        mapOf(
-                            "nip65" to nip65Result.filterValues { it }.keys.map { it.url },
-                            "inbox" to inboxResult.filterValues { it }.keys.map { it.url },
-                            "key_package_list" to keyPackageResult.filterValues { it }.keys.map { it.url },
-                        ),
+                    // Legacy keys kept verbatim so existing scripts keep working.
+                    "nip65_event_id" to eventIds[NIP65],
+                    "inbox_event_id" to eventIds["inbox"],
+                    "key_package_list_event_id" to eventIds["key_package"],
+                    "event_ids" to eventIds,
+                    "accepted_by" to acceptedBy,
                 ),
             )
             return 0

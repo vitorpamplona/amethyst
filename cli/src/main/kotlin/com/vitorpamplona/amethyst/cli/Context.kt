@@ -599,6 +599,21 @@ class Context(
             ).firstOrNull() as? KeyPackageRelayListEvent
 
     /**
+     * Latest known replaceable event of [kind] authored by [pubKey] in the
+     * local store, or `null`. Generic sibling of [relaysOf] / [dmInboxOf] /
+     * [keyPackageRelaysOf] used by the relay-settings commands to load any of
+     * the NIP-51 relay lists (blocked / search / proxy / indexer / …) without
+     * a dedicated typed helper for each kind.
+     */
+    suspend fun latestReplaceable(
+        pubKey: HexKey,
+        kind: Int,
+    ): Event? =
+        store
+            .query<Event>(Filter(authors = listOf(pubKey), kinds = listOf(kind), limit = 1))
+            .firstOrNull()
+
+    /**
      * Assemble a [RecipientRelayFetcher.Lists] from the local store —
      * the same shape callers get from [RecipientRelayFetcher.fetchRelayLists]
      * after a network drain, but no network round-trip. Returns `null`

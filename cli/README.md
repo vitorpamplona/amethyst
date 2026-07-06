@@ -190,7 +190,10 @@ added_to:
   - key_package
 already_present: (none)
 
-$ amy relay publish-lists      # broadcast updated kind:10002/10050/10051
+$ amy relay add wss://relay.nostr.band --type search   # search-only bucket
+$ amy relay set --type blocked wss://bad.relay          # replace the blocked list
+
+$ amy relay publish-lists      # broadcast every updated relay list
 ```
 
 ---
@@ -443,11 +446,25 @@ from "command crashed".
 
 ### Relays
 
+amy mirrors Amethyst's relay-settings screen: one bucket per relay-list kind.
+`T` is one of `nip65` (10002, read/write markers), `inbox`/`dm` (10050),
+`key_package` (10051), `search` (10007), `private` (10013), `blocked` (10006),
+`trusted` (10089), `proxy` (10087), `indexer` (10086), `broadcast` (10088),
+`feeds`/`favorites` (10012), or `all` (= `nip65`+`inbox`+`key_package`). The
+private NIP-51 buckets are stored NIP-44-encrypted, exactly like the app. Local
+relays (a device-only preference, no Nostr event) and named relay sets (kind
+30002) are out of scope.
+
+Edits are local-first: `add`/`remove`/`set` build, sign, and store the new list
+event but do not broadcast — run `relay publish-lists` to push them.
+
 | Command | What it does |
 |---|---|
-| `amy relay add URL [--type T]` | Add URL to a bucket: `nip65`, `inbox`, `key_package`, or `all`. |
-| `amy relay list` | Print the configured relays per bucket. |
-| `amy relay publish-lists` | Broadcast your kind:10002 / 10050 / 10051. |
+| `amy relay add URL [--type T] [--marker read\|write\|both]` | Append URL to a bucket (default `all`). `--marker` sets the read/write role for `nip65` (default `both`). |
+| `amy relay remove URL [--type T]` | Drop URL from a bucket (default `all`). |
+| `amy relay set --type T [URL…] [--marker read\|write\|both]` | Replace a bucket's whole list. Passing no URLs clears it. |
+| `amy relay list [--type T]` | Print the configured relays for every bucket, or just `T`. |
+| `amy relay publish-lists` | Broadcast every configured relay list to the union of your relays. |
 
 ### Local store maintenance
 
