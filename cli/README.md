@@ -384,7 +384,7 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy profile show [USER]` | Print kind:0 metadata. USER accepts npub/nprofile/hex/NIP-05; defaults to self. |
 | `amy profile edit --name … --about … --picture URL …` | Patch and re-publish your kind:0. |
 | `amy follow USER` / `amy unfollow USER` | Add/remove USER from your kind:3 contact list (fetches the freshest list first). |
-| `amy graperank [OBSERVER] [--max-depth N] [--target USER] [--offline] [--publish]` | Compute GrapeRank web-of-trust scores (0..1) over the follow/mute/report graph, crawled via the outbox model; optionally publish results as NIP-85 kind:30382 cards. |
+| `amy graperank [OBSERVER] [--max-depth N] [--offline] [--publish]` | Compute GrapeRank web-of-trust scores (0..1) over the follow/mute/report graph, crawled via the outbox model; optionally publish results as NIP-85 kind:30382 cards. |
 
 ### Direct messages (NIP-17)
 

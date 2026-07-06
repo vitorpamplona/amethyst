@@ -135,16 +135,4 @@ class TrustGraphBuilderTest {
         assertTrue(graph.incoming[alice].isNullOrEmpty(), "a self-follow must not become an edge")
         assertEquals(setOf(TrustEdge(alice, TrustRelation.FOLLOW)), graph.incoming[bob]?.toSet())
     }
-
-    @Test
-    fun disablingNegativeSignalsExcludesThem() {
-        val events =
-            listOf(
-                contactList(alice, listOf(bob)),
-                muteList(alice, listOf(bob)),
-                report(carol, bob),
-            )
-        val graph = TrustGraphBuilder.build(events, includeMutes = false, includeReports = false)
-        assertEquals(setOf(TrustEdge(alice, TrustRelation.FOLLOW)), graph.incoming[bob]?.toSet())
-    }
 }

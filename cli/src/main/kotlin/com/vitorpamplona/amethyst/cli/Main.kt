@@ -530,12 +530,12 @@ private fun printUsage() {
         |  graperank [OBSERVER]                       compute subjective trust scores (0..1) for every
         |    [--max-depth N] [--max-users N]           user reachable in the follow/mute/report graph,
         |    [--limit N] [--min-score X]               crawled via the outbox model until no new users
-        |    [--target USER]                           appear (OBSERVER: npub|nprofile|hex|name@domain,
-        |    [--no-mutes] [--no-reports]               default: active account). --target prints one
-        |    [--rigor X] [--attenuation X]             user's score; --offline scores from the local
-        |    [--offline] [--timeout SECS]              store only. --publish writes NIP-85 kind:30382
-        |    [--publish] [--min-rank N]                trusted-assertion cards (rank = round(score*100))
-        |    [--publish-limit N] [--publish-relay URL] for each user at or above --min-rank.
+        |    [--rigor X] [--attenuation X]             appear (OBSERVER: npub|nprofile|hex|name@domain,
+        |    [--offline] [--timeout SECS]              default: active account). --offline scores from
+        |    [--publish] [--min-rank N]                the local store only. --publish writes NIP-85
+        |    [--publish-limit N] [--publish-relay URL] kind:30382 trusted-assertion cards
+        |                                              (rank = round(score*100)) for each user at or
+        |                                              above --min-rank.
         |
         |Zaps (NIP-57):
         |  zap user USER SATS               build a profile zap-request, fetch a BOLT11

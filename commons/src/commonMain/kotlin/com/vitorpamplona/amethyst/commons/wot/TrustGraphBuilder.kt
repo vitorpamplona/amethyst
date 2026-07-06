@@ -41,12 +41,7 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
  * once. Self-edges are dropped.
  */
 object TrustGraphBuilder {
-    fun build(
-        events: Collection<Event>,
-        includeFollows: Boolean = true,
-        includeMutes: Boolean = true,
-        includeReports: Boolean = true,
-    ): TrustGraph {
+    fun build(events: Collection<Event>): TrustGraph {
         // Latest replaceable-per-author for kind 3 / 10000.
         val latestContacts = HashMap<HexKey, ContactListEvent>()
         val latestMutes = HashMap<HexKey, MuteListEvent>()
@@ -54,19 +49,17 @@ object TrustGraphBuilder {
 
         for (event in events) {
             when (event) {
-                is ContactListEvent ->
-                    if (includeFollows) {
-                        val prev = latestContacts[event.pubKey]
-                        if (prev == null || event.createdAt > prev.createdAt) latestContacts[event.pubKey] = event
-                    }
+                is ContactListEvent -> {
+                    val prev = latestContacts[event.pubKey]
+                    if (prev == null || event.createdAt > prev.createdAt) latestContacts[event.pubKey] = event
+                }
 
-                is MuteListEvent ->
-                    if (includeMutes) {
-                        val prev = latestMutes[event.pubKey]
-                        if (prev == null || event.createdAt > prev.createdAt) latestMutes[event.pubKey] = event
-                    }
+                is MuteListEvent -> {
+                    val prev = latestMutes[event.pubKey]
+                    if (prev == null || event.createdAt > prev.createdAt) latestMutes[event.pubKey] = event
+                }
 
-                is ReportEvent -> if (includeReports) reports.add(event)
+                is ReportEvent -> reports.add(event)
             }
         }
 

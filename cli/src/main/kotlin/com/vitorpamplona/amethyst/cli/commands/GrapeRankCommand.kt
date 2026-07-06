@@ -76,9 +76,6 @@ object GrapeRankCommand {
         val maxUsers = args.intFlag("max-users", 50_000)
         val limit = args.intFlag("limit", 100)
         val minScore = args.flag("min-score")?.toDoubleOrNull() ?: 0.0
-        val targetArg = args.flag("target")
-        val includeMutes = !args.bool("no-mutes")
-        val includeReports = !args.bool("no-reports")
         val offline = args.bool("offline")
         val timeoutMs = args.longFlag("timeout", 10L) * 1000
         val doPublish = args.bool("publish")
@@ -96,12 +93,7 @@ object GrapeRankCommand {
             ctx.prepare()
             val observer = observerArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
 
-            val graphKinds =
-                buildList {
-                    add(ContactListEvent.KIND)
-                    if (includeMutes) add(MuteListEvent.KIND)
-                    if (includeReports) add(ReportEvent.KIND)
-                }
+            val graphKinds = listOf(ContactListEvent.KIND, MuteListEvent.KIND, ReportEvent.KIND)
 
             var depthReached = 0
             val events: List<Event>
@@ -140,28 +132,10 @@ object GrapeRankCommand {
                 events = collected
             }
 
-            val graph = TrustGraphBuilder.build(events, includeMutes = includeMutes, includeReports = includeReports)
+            val graph = TrustGraphBuilder.build(events)
             val scores = GrapeRank(params).compute(graph, observer)
 
             fun rankOf(score: Double) = (score * 100).roundToInt()
-
-            if (targetArg != null) {
-                val target = ctx.requireUserHex(targetArg)
-                // The observer trusts itself fully by definition; it is excluded
-                // from the ranking map, so answer it directly.
-                val score = if (target == observer) 1.0 else scores[target] ?: 0.0
-                Output.emit(
-                    mapOf(
-                        "observer" to observer,
-                        "target" to target,
-                        "score" to score,
-                        "rank" to rankOf(score),
-                        "users_scored" to scores.size,
-                        "depth_reached" to depthReached,
-                    ),
-                )
-                return 0
-            }
 
             val ranked =
                 scores.entries
