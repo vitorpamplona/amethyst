@@ -88,6 +88,14 @@ object GrapeRankCommand {
     // the crawl still terminates on a finite graph.
     private const val MAX_OUTBOX_ATTEMPTS = 3
 
+    // Users whose outboxes we fetch in a single drain. Draining thousands of
+    // distinct outbox relays at once saturates connections and times out
+    // (empirically ~250 users/drain succeeds, ~17k fails); keep the fan-out small.
+    private const val USER_BATCH = 256
+
+    // Concurrent content drains. Bounded so total open connections stay sane.
+    private const val DRAIN_CONCURRENCY = 8
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -162,34 +170,47 @@ object GrapeRankCommand {
                     if (pending.isEmpty()) break
                     rounds++
 
-                    // 1. Resolve kind:10002 outboxes for pending users missing them.
-                    ensureRelayLists(ctx, pending.toSet(), relayHints, timeoutMs)
+                    // 1. Resolve kind:10002 outboxes for pending users missing them,
+                    //    in bulk from the indexer set (they aggregate kind:10002).
+                    ensureRelayLists(ctx, pending.toSet(), timeoutMs)
 
-                    // 2. Pull kind:3/10000/1984 from each pending user's own outbox
-                    //    (hints + general relays only when the outbox is unknown).
                     val before = collected.size
-                    val filters = routeByOutbox(ctx, pending.toSet(), relayHints, graphKinds)
-                    relaysContacted += filters.keys
-                    collected += ctx.drain(filters, timeoutMs).map { it.second }
-
-                    // 3. Mark done / retry, harvest hints, expand the follow graph.
                     var downloaded = 0
                     var newUsers = 0
-                    for (pk in pending) {
-                        val contacts = ctx.contactsOf(pk)
-                        if (contacts != null) {
-                            done += pk
-                            downloaded++
-                            for (tag in contacts.follows()) {
-                                tag.relayUri?.let { relayHints.getOrPut(tag.pubKey) { HashSet() }.add(it) }
-                                if (discovered.add(tag.pubKey)) newUsers++
+
+                    // 2. Pull kind:3/10000/1984 from each user's own outbox, in small
+                    //    batches drained a few at a time. Routing (store reads) is done
+                    //    serially; only the drains run concurrently — inserts serialize
+                    //    on the store write lock, so that is safe. Processing each
+                    //    batch's results is serial.
+                    for (group in pending.chunked(USER_BATCH).chunked(DRAIN_CONCURRENCY)) {
+                        val prepared = group.map { batch -> batch to routeByOutbox(ctx, batch.toSet(), relayHints, graphKinds) }
+                        val drained =
+                            coroutineScope {
+                                prepared
+                                    .map { (batch, filters) ->
+                                        async { Triple(batch, filters.keys, ctx.drain(filters, timeoutMs).map { it.second }) }
+                                    }.awaitAll()
                             }
-                        } else {
-                            val tries = (attempts[pk] ?: 0) + 1
-                            attempts[pk] = tries
-                            // Give up once we've exhausted retries: either the user has
-                            // no contact list, or their outbox is unreachable.
-                            if (tries >= MAX_OUTBOX_ATTEMPTS) done += pk
+                        for ((batch, relays, ev) in drained) {
+                            relaysContacted += relays
+                            collected += ev
+                            for (pk in batch) {
+                                val contacts = ctx.contactsOf(pk)
+                                if (contacts != null) {
+                                    done += pk
+                                    downloaded++
+                                    for (tag in contacts.follows()) {
+                                        tag.relayUri?.let { relayHints.getOrPut(tag.pubKey) { HashSet() }.add(it) }
+                                        if (discovered.add(tag.pubKey)) newUsers++
+                                    }
+                                } else {
+                                    val tries = (attempts[pk] ?: 0) + 1
+                                    attempts[pk] = tries
+                                    // Give up after retries: no contact list, or outbox unreachable.
+                                    if (tries >= MAX_OUTBOX_ATTEMPTS) done += pk
+                                }
+                            }
                         }
                     }
                     System.err.println(
@@ -478,31 +499,26 @@ object GrapeRankCommand {
     private suspend fun contentFallbackRelays(ctx: Context): Set<NormalizedRelayUrl> = ctx.bootstrapRelays() + Constants.eventFinderRelays
 
     /**
-     * Fetch kind:10002 relay lists for any frontier member we don't already know,
-     * so [routeByOutbox] can route their content query to their own write relays.
-     * Queries the relay-list discovery set (incl. indexers) plus each user's
-     * harvested relay [hints] — the CLI analog of the app's tiered
-     * `pickRelaysToLoadUsers`.
+     * Fetch kind:10002 relay lists for any [pubkeys] we don't already know, so
+     * [routeByOutbox] can route their content query to their own write relays.
+     * Queries the bounded relay-list discovery set (indexers + general defaults),
+     * which aggregate kind:10002 for the whole network — reliable in bulk, unlike
+     * fanning out to thousands of per-user outboxes.
      */
     private suspend fun ensureRelayLists(
         ctx: Context,
         pubkeys: Set<HexKey>,
-        hints: Map<HexKey, Set<NormalizedRelayUrl>>,
         timeoutMs: Long,
     ) {
         val missing = pubkeys.filter { ctx.relaysOf(it) == null }
         if (missing.isEmpty()) return
 
-        val base = relayListDiscoveryRelays(ctx)
-        val perRelay = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
-        for (pk in missing) {
-            for (relay in base + hints[pk].orEmpty()) perRelay.getOrPut(relay) { HashSet() }.add(pk)
-        }
-        if (perRelay.isEmpty()) return
+        val relays = relayListDiscoveryRelays(ctx)
+        if (relays.isEmpty()) return
 
         val filters =
-            perRelay.mapValues { (_, authors) ->
-                authors.chunked(AUTHORS_PER_FILTER).map { chunk ->
+            relays.associateWith {
+                missing.chunked(AUTHORS_PER_FILTER).map { chunk ->
                     Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = chunk)
                 }
             }
