@@ -36,7 +36,8 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 /**
  * `amy fetch [--kind …] [--author …] [--id …] [--tag …] [--since/--until TS]
- *            [--limit N] [--search TEXT] [--relay URL[,URL…]] [--timeout SECS]`
+ *            [--limit N] [--search TEXT] [--relay URL[,URL…]] [--timeout SECS]
+ *            [--paginate]`
  *
  *   amy fetch <nevent1…|naddr1…|nprofile1…|npub1…|note1…|name@domain>
  *
@@ -53,6 +54,12 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
  *
  * Results are deduplicated by id, sorted newest-first, capped at `--limit`
  * (default 100), and emitted as full event JSON under an `events` array.
+ *
+ * By default (filter mode) a single `REQ` is drained to EOSE, so a relay that
+ * caps its response (strfry's per-`REQ` `limit`, ~500) truncates the result.
+ * `--paginate` (alias `--all`) instead walks each relay page-by-page on `until`
+ * cursors up to `--limit`, fully draining sets larger than one `REQ` — the
+ * multi-relay [Context.drainAllPages] path. Code mode is always single-shot.
  */
 object FetchCommand {
     suspend fun run(
@@ -71,13 +78,22 @@ object FetchCommand {
         }
 
         val filter = RawEventSupport.buildFilter(args)
+        // --paginate/--all walks each relay past its per-REQ cap (strfry's ~500)
+        // by following `until` cursors, bounded by `limit`; default stops at the
+        // first EOSE like nak's `req`.
+        val paginate = args.bool("paginate") || args.bool("all")
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val relays = RawEventSupport.queryTargets(ctx, args)
             if (relays.isEmpty()) return Output.error("no_relays", "no relays available; pass --relay or run `amy relay add`")
 
-            val received = ctx.drain(relays.associateWith { listOf(filter) }, timeoutMs)
+            val received =
+                if (paginate) {
+                    ctx.drainAllPages(relays.associateWith { listOf(filter.copy(limit = limit)) }, timeoutMs)
+                } else {
+                    ctx.drain(relays.associateWith { listOf(filter) }, timeoutMs)
+                }
             val events =
                 received
                     .asSequence()

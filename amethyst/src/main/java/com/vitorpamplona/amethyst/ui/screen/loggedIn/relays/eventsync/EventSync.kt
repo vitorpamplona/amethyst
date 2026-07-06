@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync.
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
@@ -46,10 +46,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.supervisorScope
-import kotlinx.coroutines.sync.Semaphore
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -503,9 +500,10 @@ class EventSync(
         clientBuilder().use { client ->
             client.addConnectionListener(okListener)
             try {
-                client.downloadFromPool(
-                    relays = relaysToProcess,
+                client.fetchAllPagesFromPool(
                     filters = perRelayFilters,
+                    timeoutMs = RELAY_TIMEOUT_MS,
+                    maxConcurrentRelays = MAX_CONCURRENT_RELAYS,
                     onNewPage = { until, sourceRelay ->
                         _liveActivity.value.runningRelays[sourceRelay]
                             ?.pageUntil
@@ -564,7 +562,7 @@ class EventSync(
                             )
                         }
                     },
-                    onRelayComplete = { relay ->
+                    onRelayComplete = { relay, _ ->
                         _liveActivity.update {
                             val newCompleted = it.runningRelays[relay]
                             it.copy(
@@ -615,57 +613,4 @@ class EventSync(
             }
         }
     }
-
-    /**
-     * Maintains a sliding window of up to [MAX_CONCURRENT_RELAYS] active relay workers.
-     * As soon as one relay finishes (all pages exhausted), the next relay from [relays]
-     * starts immediately — no waiting for an entire batch to drain.
-     *
-     * [onEvent] receives the event and the URL of the relay it came from.
-     */
-    private suspend fun INostrClient.downloadFromPool(
-        relays: List<NormalizedRelayUrl>,
-        filters: Map<NormalizedRelayUrl, List<Filter>>,
-        onNewPage: (Long, NormalizedRelayUrl) -> Unit,
-        onEvent: (Event, NormalizedRelayUrl) -> Unit,
-        onRelayStart: (NormalizedRelayUrl) -> Unit,
-        onRelayComplete: (NormalizedRelayUrl) -> Unit,
-    ) {
-        val semaphore = Semaphore(MAX_CONCURRENT_RELAYS)
-        supervisorScope {
-            for (relay in relays) {
-                if (!isActive) break
-                semaphore.acquire()
-                launch {
-                    try {
-                        onRelayStart(relay)
-                        filters[relay]?.let { filtersForRelay ->
-                            downloadFromRelay(
-                                relay = relay,
-                                filters = filtersForRelay,
-                                onNewPage = { onNewPage(it, relay) },
-                                onEvent = { onEvent(it, relay) },
-                            )
-                        } ?: 0
-                        onRelayComplete(relay)
-                    } finally {
-                        semaphore.release()
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Fetches all pages from a single [relay] using paginated `until` cursors.
-     * Delegates to the Quartz [downloadFromRelay] extension.
-     *
-     * @return total number of events received across all pages.
-     */
-    private suspend fun INostrClient.downloadFromRelay(
-        relay: NormalizedRelayUrl,
-        filters: List<Filter>,
-        onNewPage: (Long) -> Unit,
-        onEvent: (Event) -> Unit,
-    ): Int = fetchAllPages(relay, filters, RELAY_TIMEOUT_MS, onNewPage, onEvent)
 }
