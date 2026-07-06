@@ -348,7 +348,7 @@ ensure_identity() {
 # goal here is tight, deterministic iteration.
 configure_relays() {
   banner "Configuring relays → $RELAY_URL"
-  amy_a relay add "$RELAY_URL" --type all >/dev/null
+  amy_a relay add "$RELAY_URL" >/dev/null
   for t in nip65 inbox key_package; do
     wn_b relays add --type "$t" "$RELAY_URL" 2>/dev/null || true
     wn_c relays add --type "$t" "$RELAY_URL" 2>/dev/null || true

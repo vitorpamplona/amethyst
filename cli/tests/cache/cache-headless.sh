@@ -116,7 +116,7 @@ start_local_relay
 # Identity A: full bootstrap so the shared store has kind:0 / 3 / 10002 / …
 ensure_identity_for A
 banner "Bootstrapping A's account (publishes kind:0 + bootstrap events)"
-amy_a relay add "$RELAY_URL" --type all >>"$LOG_FILE" 2>&1
+amy_a relay add "$RELAY_URL" >>"$LOG_FILE" 2>&1
 # `amy create` here would mint a *second* identity; A already exists from
 # `init`. Build the bootstrap events ourselves by publishing a minimal
 # kind:0 + the relay lists, all of which land in the shared store via
@@ -129,7 +129,7 @@ amy_a profile edit --name "AAA" --about "cache test subject" \
 # Identity B: same fake $HOME, separate per-account dir, but A and B
 # both read/write to $STATE_DIR/.amy/shared/events-store/.
 ensure_identity_for B
-amy_b relay add "$RELAY_URL" --type all >>"$LOG_FILE" 2>&1
+amy_b relay add "$RELAY_URL" >>"$LOG_FILE" 2>&1
 amy_b relay publish-lists >>"$LOG_FILE" 2>&1
 
 # ----------------------------------------------------------------------
@@ -211,26 +211,27 @@ assert_eq "$T4_NAME" "AAA" T4.name "A's profile metadata must be readable from B
 
 # ----------------------------------------------------------------------
 # 5. relay list reads URLs back from the local kind:10002 / 10050 / 10051.
+#    `relay add URL` fans out to the transport lists (nip65 both, dm, key-package).
 # ----------------------------------------------------------------------
 banner "T5 — relay list reads from store"
 T5=$(amy_a relay list)
 T5_NIP65=$(printf '%s' "$T5" | jq -r '.nip65 | length')
-T5_INBOX=$(printf '%s' "$T5" | jq -r '.inbox | length')
+T5_DM=$(printf '%s' "$T5" | jq -r '.dm | length')
 T5_KP=$(printf '%s' "$T5" | jq -r '.key_package | length')
 if [[ "$T5_NIP65" -ge 1 ]]; then
   record_result T5.nip65 pass "$T5_NIP65 nip65 url(s)"
 else
-  record_result T5.nip65 fail "nip65 bucket empty after relay add --type all"
+  record_result T5.nip65 fail "nip65 bucket empty after relay add"
 fi
-if [[ "$T5_INBOX" -ge 1 ]]; then
-  record_result T5.inbox pass "$T5_INBOX inbox url(s)"
+if [[ "$T5_DM" -ge 1 ]]; then
+  record_result T5.dm pass "$T5_DM dm url(s)"
 else
-  record_result T5.inbox fail "inbox bucket empty after relay add --type all"
+  record_result T5.dm fail "dm bucket empty after relay add"
 fi
 if [[ "$T5_KP" -ge 1 ]]; then
   record_result T5.key_package pass "$T5_KP key_package url(s)"
 else
-  record_result T5.key_package fail "key_package bucket empty after relay add --type all"
+  record_result T5.key_package fail "key_package bucket empty after relay add"
 fi
 
 # ----------------------------------------------------------------------
