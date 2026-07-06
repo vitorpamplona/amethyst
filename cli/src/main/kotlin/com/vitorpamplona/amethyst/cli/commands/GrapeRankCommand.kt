@@ -37,6 +37,11 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviders
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceType
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
 import kotlinx.coroutines.async
@@ -58,6 +63,13 @@ import kotlin.math.roundToInt
  * Prints a ranked list (text, or one JSON object under `--json`). With
  * `--publish`, results are also published as NIP-85 kind:30382 `ContactCardEvent`
  * trusted assertions (one per scored user, `rank = round(score*100)`).
+ *
+ * Sub-verbs complete the NIP-85 provider experience — the discovery layer that
+ * lets clients find and consume those assertions:
+ *  - `amy graperank register` — advertise a `30382:rank` provider in the
+ *    account's kind:10040 [TrustProviderListEvent] (defaults to self, so a
+ *    provider publishing ranks announces where to find them).
+ *  - `amy graperank providers [USER]` — list a user's trusted providers.
  */
 object GrapeRankCommand {
     // Authors per REQ filter — keeps individual subscriptions within relay limits.
@@ -65,6 +77,18 @@ object GrapeRankCommand {
 
     // Concurrent publishes when writing NIP-85 cards.
     private const val PUBLISH_CONCURRENCY = 16
+
+    suspend fun dispatch(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int =
+        // Sub-verbs are explicit words; anything else (npub / hex / nprofile /
+        // NIP-05, or nothing) is the OBSERVER positional for a score computation.
+        when (tail.firstOrNull()) {
+            "register" -> register(dataDir, tail.drop(1).toTypedArray())
+            "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
+            else -> run(dataDir, tail)
+        }
 
     suspend fun run(
         dataDir: DataDir,
@@ -196,6 +220,178 @@ object GrapeRankCommand {
             Output.emit(result)
             return 0
         }
+    }
+
+    /**
+     * `amy graperank register [PROVIDER] [--service KIND:TAG] [--relay URL] [--private]`
+     *
+     * Add a NIP-85 provider entry to the account's kind:10040
+     * [TrustProviderListEvent] — the declaration a client reads to discover which
+     * key publishes which assertion, and where. Defaults to declaring *self* as
+     * the `30382:rank` provider at the account's first outbox relay, which is the
+     * self-advertisement a GrapeRank provider makes so its followers can find the
+     * cards it publishes. Fetches the freshest list first so existing providers
+     * are preserved.
+     */
+    private suspend fun register(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val providerArg = args.positionalOrNull(0) ?: args.flag("provider")
+        val serviceArg = args.flag("service")
+        val relayArg = args.flag("relay")
+        val isPrivate = args.bool("private")
+        val timeoutMs = args.longFlag("timeout", 8L) * 1000
+
+        val service =
+            serviceArg?.let {
+                ServiceType.parse(it) ?: return Output.error("bad_args", "--service must be KIND:TAG, e.g. 30382:rank")
+            } ?: ProviderTypes.rank
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val self = ctx.identity.pubKeyHex
+            val provider = providerArg?.let { ctx.requireUserHex(it) } ?: self
+
+            val outbox = ctx.outboxRelays()
+            val relay =
+                relayArg?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+                    ?: outbox.firstOrNull()
+                    ?: return Output.error("no_relays", "no relay hint; pass --relay URL or configure outbox relays")
+
+            val latest = fetchLatestProviderList(ctx, self, outbox, timeoutMs)
+            val alreadyListed =
+                latest?.serviceProviders()?.any {
+                    it.service == service && it.pubkey == provider && it.relayUrl == relay
+                } ?: false
+
+            if (alreadyListed) {
+                Output.emit(
+                    mapOf(
+                        "service" to service.toValue(),
+                        "provider" to provider,
+                        "relay" to relay.url,
+                        "changed" to false,
+                        "based_on" to latest?.id,
+                    ),
+                )
+                return 0
+            }
+
+            val tag = ServiceProviderTag(service, provider, relay)
+            val event =
+                if (latest == null) {
+                    TrustProviderListEvent.create(tag, isPrivate = isPrivate, signer = ctx.signer)
+                } else {
+                    TrustProviderListEvent.add(latest, tag, isPrivate = isPrivate, signer = ctx.signer)
+                }
+
+            val ack = ctx.publish(event, outbox)
+            Output.emit(
+                mapOf(
+                    "service" to service.toValue(),
+                    "provider" to provider,
+                    "relay" to relay.url,
+                    "private" to isPrivate,
+                    "changed" to true,
+                    "event_id" to event.id,
+                    "based_on" to latest?.id,
+                    "published_to" to ack.filterValues { it }.keys.map { it.url },
+                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
+                ),
+            )
+            return 0
+        }
+    }
+
+    /**
+     * `amy graperank providers [USER] [--refresh] [--timeout SECS]`
+     *
+     * List the NIP-85 trusted providers a user declares in their kind:10040
+     * (default: the active account). Cache-first; falls back to a relay drain on
+     * a miss or with `--refresh`. For the active account, private (NIP-44)
+     * provider entries are decrypted and included too.
+     */
+    private suspend fun providers(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val userArg = args.positionalOrNull(0)
+        val refresh = args.bool("refresh")
+        val timeoutMs = args.longFlag("timeout", 8L) * 1000
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val user = userArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
+            val isSelf = user == ctx.identity.pubKeyHex
+
+            var event = if (refresh) null else providerListOf(ctx, user)
+            if (event == null) {
+                ctx.drain(
+                    (ctx.bootstrapRelays() + Constants.eventFinderRelays).associateWith {
+                        listOf(Filter(kinds = listOf(TrustProviderListEvent.KIND), authors = listOf(user), limit = 1))
+                    },
+                    timeoutMs,
+                )
+                event = providerListOf(ctx, user)
+            }
+
+            if (event == null) {
+                Output.emit(mapOf("user" to user, "found" to false, "providers" to emptyList<Any>()))
+                return 0
+            }
+
+            val public = event.serviceProviders()
+            val private = if (isSelf) event.privateTags(ctx.signer)?.serviceProviders().orEmpty() else emptyList()
+
+            fun render(
+                tag: ServiceProviderTag,
+                scope: String,
+            ) = mapOf(
+                "service" to tag.service.toValue(),
+                "provider" to tag.pubkey,
+                "relay" to tag.relayUrl.url,
+                "scope" to scope,
+            )
+
+            Output.emit(
+                mapOf(
+                    "user" to user,
+                    "found" to true,
+                    "event_id" to event.id,
+                    "created_at" to event.createdAt,
+                    "providers" to public.map { render(it, "public") } + private.map { render(it, "private") },
+                ),
+            )
+            return 0
+        }
+    }
+
+    /** Latest known kind:10040 provider list for [pubKey] from the local store. */
+    private suspend fun providerListOf(
+        ctx: Context,
+        pubKey: HexKey,
+    ): TrustProviderListEvent? =
+        ctx.store
+            .query<Event>(Filter(kinds = listOf(TrustProviderListEvent.KIND), authors = listOf(pubKey), limit = 1))
+            .firstOrNull() as? TrustProviderListEvent
+
+    /**
+     * Fetch the freshest kind:10040 for [pubKey] from [relays] so a register
+     * builds on top of the current provider set instead of clobbering it.
+     */
+    private suspend fun fetchLatestProviderList(
+        ctx: Context,
+        pubKey: HexKey,
+        relays: Set<NormalizedRelayUrl>,
+        timeoutMs: Long,
+    ): TrustProviderListEvent? {
+        if (relays.isEmpty()) return providerListOf(ctx, pubKey)
+        val filter = Filter(kinds = listOf(TrustProviderListEvent.KIND), authors = listOf(pubKey), limit = 1)
+        ctx.drain(relays.associateWith { listOf(filter) }, timeoutMs)
+        return providerListOf(ctx, pubKey)
     }
 
     /**

@@ -215,7 +215,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "store" -> StoreCommands.dispatch(dataDir, tail)
         "follow" -> FollowCommand.follow(dataDir, tail)
         "unfollow" -> FollowCommand.unfollow(dataDir, tail)
-        "graperank" -> GrapeRankCommand.run(dataDir, tail)
+        "graperank" -> GrapeRankCommand.dispatch(dataDir, tail)
         "search" -> SearchCommand.dispatch(dataDir, tail)
         "zap" -> ZapCommand.dispatch(dataDir, tail)
         "offer" -> OfferCommands.dispatch(dataDir, tail)
@@ -535,7 +535,12 @@ private fun printUsage() {
         |    [--publish] [--min-rank N]                the local store only. --publish writes NIP-85
         |    [--publish-limit N] [--publish-relay URL] kind:30382 trusted-assertion cards
         |                                              (rank = round(score*100)) for each user at or
-        |                                              above --min-rank.
+        |                                              above --min-rank (unchanged ranks are skipped).
+        |  graperank register [PROVIDER]              declare a NIP-85 provider in your kind:10040 so
+        |    [--service KIND:TAG] [--relay URL]        clients can discover it (default: self as the
+        |    [--private]                               30382:rank provider at your first outbox relay).
+        |  graperank providers [USER] [--refresh]     list a user's declared NIP-85 trusted providers
+        |    [--timeout SECS]                          (default: active account).
         |
         |Zaps (NIP-57):
         |  zap user USER SATS               build a profile zap-request, fetch a BOLT11
