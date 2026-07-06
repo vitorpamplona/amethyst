@@ -58,8 +58,10 @@ import kotlin.math.roundToInt
  * observer has full self-trust). It crawls the follow graph outward using the
  * outbox model — each user's kind:10002 write relays are located first, then
  * their kind:3 / kind:10000 / kind:1984 events are fetched from *their own*
- * relays — until no new users appear (typically ~8 hops), then runs the scoring
- * engine in `commons/wot`.
+ * relays. The crawl is exhaustive: it keeps going, with no user cap, until every
+ * discovered user's outbox has been checked and their contact list pulled (an
+ * unreachable outbox is retried up to `--max-attempts` times), then runs the
+ * scoring engine in `commons/wot`.
  *
  * Prints a ranked list (text, or one JSON object under `--json`). With
  * `--publish`, results are also published as NIP-85 kind:30382 `ContactCardEvent`
@@ -100,8 +102,11 @@ object GrapeRankCommand {
     ): Int {
         val args = Args(rest)
         val observerArg = args.positionalOrNull(0)
-        val maxDepth = args.intFlag("max-depth", 8)
-        val maxUsers = args.intFlag("max-users", 50_000)
+        // Crawl to full convergence by default (every reachable user's outbox
+        // checked). --max-rounds is only a safety backstop; --max-attempts bounds
+        // how many times we re-try an unreachable user's outbox before giving up.
+        val maxRounds = args.intFlag("max-rounds", Int.MAX_VALUE)
+        val maxAttempts = args.intFlag("max-attempts", 3)
         val limit = args.intFlag("limit", 100)
         val minScore = args.flag("min-score")?.toDoubleOrNull() ?: 0.0
         val offline = args.bool("offline")
@@ -123,7 +128,8 @@ object GrapeRankCommand {
 
             val graphKinds = listOf(ContactListEvent.KIND, MuteListEvent.KIND, ReportEvent.KIND)
 
-            var depthReached = 0
+            var rounds = 0
+            var relaysContactedCount = 0
             val events: List<Event>
 
             if (offline) {
@@ -132,60 +138,71 @@ object GrapeRankCommand {
             } else {
                 val collected = mutableListOf<Event>()
                 val discovered = hashSetOf(observer)
-                // Per-user relay hints harvested from the `p`-tag relay hints in
-                // the contact lists we crawl (A's follow of B says where B writes).
-                // A second discovery tier below each user's kind:10002 outbox.
+                // Per-user relay hints harvested from the `p`-tag relay hints in the
+                // contact lists we crawl (A's follow of B says where B writes) — a
+                // discovery tier below each user's kind:10002 outbox.
                 val relayHints = HashMap<HexKey, MutableSet<NormalizedRelayUrl>>()
-                var frontier: Set<HexKey> = setOf(observer)
+                // Users we're finished with: their outbox was queried and we either
+                // downloaded their kind:3 or ran out of retry attempts. Growing this
+                // set toward `discovered` is what drives the crawl to completion.
+                val done = hashSetOf<HexKey>()
+                val attempts = HashMap<HexKey, Int>()
+                // The pool of relays we actually route outbox queries to, grown as
+                // more users' kind:10002 outboxes are discovered.
+                val relaysContacted = hashSetOf<NormalizedRelayUrl>()
 
-                for (hop in 0 until maxDepth) {
-                    if (frontier.isEmpty()) break
-                    depthReached = hop + 1
+                // Loop until every discovered user has had their outbox checked and
+                // their kind:3/10000/1984 pulled from it — no user cap. A user whose
+                // outbox stays unreachable is dropped after --max-attempts tries so
+                // the crawl still terminates.
+                while (rounds < maxRounds) {
+                    val pending = discovered.filterNot { it in done }
+                    if (pending.isEmpty()) break
+                    rounds++
 
-                    // 1. Locate each frontier member's kind:10002 write relays.
-                    ensureRelayLists(ctx, frontier, relayHints, timeoutMs)
+                    // 1. Resolve kind:10002 outboxes for pending users missing them.
+                    ensureRelayLists(ctx, pending.toSet(), relayHints, timeoutMs)
 
-                    // 2. Fetch their follows/mutes/reports from those relays.
-                    val filters = routeByOutbox(ctx, frontier, relayHints, graphKinds)
+                    // 2. Pull kind:3/10000/1984 from each pending user's own outbox
+                    //    (hints + general relays only when the outbox is unknown).
+                    val before = collected.size
+                    val filters = routeByOutbox(ctx, pending.toSet(), relayHints, graphKinds)
+                    relaysContacted += filters.keys
                     collected += ctx.drain(filters, timeoutMs).map { it.second }
 
-                    // 3. Completeness retry: any member whose contact list still
-                    //    didn't arrive (no kind:10002, or its outbox was down) gets
-                    //    re-queried against its relay hints plus the general-purpose
-                    //    fallback relays. kind:3/10000/1984 live on the user's own
-                    //    outbox — NOT on indexers (those only aggregate kind:10002) —
-                    //    so this is best-effort recovery from general relays that may
-                    //    hold a copy, not a guaranteed find.
-                    val stillMissing = frontier.filter { ctx.contactsOf(it) == null }
-                    if (stillMissing.isNotEmpty()) {
-                        val retryRelays = contentFallbackRelays(ctx) + stillMissing.flatMap { relayHints[it].orEmpty() }
-                        val retry =
-                            retryRelays.associateWith {
-                                stillMissing.chunked(AUTHORS_PER_FILTER).map { chunk -> Filter(kinds = graphKinds, authors = chunk) }
+                    // 3. Mark done / retry, harvest hints, expand the follow graph.
+                    var downloaded = 0
+                    var newUsers = 0
+                    for (pk in pending) {
+                        val contacts = ctx.contactsOf(pk)
+                        if (contacts != null) {
+                            done += pk
+                            downloaded++
+                            for (tag in contacts.follows()) {
+                                tag.relayUri?.let { relayHints.getOrPut(tag.pubKey) { HashSet() }.add(it) }
+                                if (discovered.add(tag.pubKey)) newUsers++
                             }
-                        collected += ctx.drain(retry, timeoutMs).map { it.second }
-                    }
-
-                    // 4. Harvest relay hints + expand the follow frontier.
-                    val next = hashSetOf<HexKey>()
-                    for (pk in frontier) {
-                        val contacts = ctx.contactsOf(pk) ?: continue
-                        for (tag in contacts.follows()) {
-                            tag.relayUri?.let { relayHints.getOrPut(tag.pubKey) { HashSet() }.add(it) }
-                            if (discovered.size < maxUsers && discovered.add(tag.pubKey)) next += tag.pubKey
+                        } else {
+                            val tries = (attempts[pk] ?: 0) + 1
+                            attempts[pk] = tries
+                            // Give up once we've exhausted retries: either the user has
+                            // no contact list, or their outbox is unreachable.
+                            if (tries >= maxAttempts) done += pk
                         }
                     }
-                    val recovered = stillMissing.count { ctx.contactsOf(it) != null }
                     System.err.println(
-                        "[graperank] hop ${hop + 1}: frontier=${frontier.size}, recovered=$recovered/${stillMissing.size}, new=${next.size}, total=${discovered.size}",
+                        "[graperank] round $rounds: queried=${pending.size}, +events=${collected.size - before}, " +
+                            "downloaded=$downloaded, newUsers=$newUsers, discovered=${discovered.size}, done=${done.size}",
                     )
-
-                    if (discovered.size >= maxUsers) {
-                        System.err.println("[graperank] reached --max-users=$maxUsers cap; stopping crawl")
-                        break
-                    }
-                    frontier = next
                 }
+
+                relaysContactedCount = relaysContacted.size
+                val unreached = discovered.count { it !in done || ctx.contactsOf(it) == null }
+                System.err.println(
+                    "[graperank] crawl complete: ${discovered.size} users discovered, " +
+                        "${discovered.size - unreached} contact lists downloaded, $unreached without one, " +
+                        "$relaysContactedCount relays contacted, $rounds rounds",
+                )
                 events = collected
             }
 
@@ -215,7 +232,8 @@ object GrapeRankCommand {
             val result =
                 linkedMapOf<String, Any?>(
                     "observer" to observer,
-                    "depth_reached" to depthReached,
+                    "crawl_rounds" to rounds,
+                    "relays_contacted" to relaysContactedCount,
                     "graph_users" to graph.users.size,
                     "graph_edges" to graph.edgeCount(),
                     "users_scored" to scores.size,

@@ -87,11 +87,13 @@ It is **data**, not math:
    the observer's trust graph) contributes **zero**. Only follows/mutes/reports
    authored by users *inside* the follow graph move a score — and those are
    exactly the users our crawl discovers and whose kind 3/10000/1984 we fetch.
-   So the effective scoring input is the same, provided the crawl runs to
-   convergence (our default) rather than a shallow `--max-depth`.
-2. **Fringe users / crawl gaps.** Relay timeouts that drop a contact list, or a
-   `--max-users` cap, remove edges and shift nearby scores. The injector mitigates
-   this with a two-stage model mirroring the app's `pickRelaysToLoadUsers`:
+   So the effective scoring input is the same, as long as the crawl actually
+   checks every discovered user's outbox — which it now does exhaustively (no
+   user cap, retrying an unreachable outbox up to `--max-attempts` times).
+2. **Fringe users / crawl gaps.** A relay timeout that drops a contact list
+   removes edges and shifts nearby scores. The injector mitigates this with a
+   two-stage model mirroring the app's `pickRelaysToLoadUsers`, plus a
+   completeness loop that retries until every user's outbox has been checked:
    - **Relay-list discovery** (kind:10002) queries the account's relays +
      bootstrap + event-finder + **indexer relays** (purplepag.es, coracle, …).
      Indexers aggregate kind:10002 (and kind:0) for the whole network, so this is
@@ -101,9 +103,9 @@ It is **data**, not math:
      contact lists we crawl) and general-purpose relays as a best-effort fallback
      when the outbox is unknown/down. **Indexers are not used for content** — they
      don't serve those kinds; kind:3/mutes/reports live only on the user's outbox.
-   A per-hop **retry pass** re-queries any member whose contact list still didn't
-   arrive against that hint + general-relay set. Remaining mitigation levers: a
-   full crawl (default) and a generous `--timeout`.
+   The crawl loops round by round, retrying any member whose contact list still
+   didn't arrive (up to `--max-attempts`), until every discovered user's outbox
+   has been checked. Remaining mitigation lever: a generous `--timeout`.
 3. **Convergence precision.** Both stop at delta 0.0001; residual error is
    < ~0.0001 in influence ⇒ < ~0.01 rank points ⇒ identical integer `rank`.
 4. **Seeding.** Their hop-distance seed vs our zero seed — same fixed point, no
@@ -113,8 +115,9 @@ It is **data**, not math:
 
 - **Keep the current DEFAULT params** — they are byte-for-byte the Brainstorm
   DEFAULT preset. No change needed for parity.
-- **Crawl to convergence** (the default) rather than a small `--max-depth`; a
-  shallow crawl is the single biggest source of drift.
+- **The crawl is exhaustive by default** (no user cap; every reachable user's
+  outbox is checked, unreachable outboxes retried up to `--max-attempts`). An
+  incomplete crawl is the single biggest source of drift, so avoid capping it.
 - **Optional, for fuller parity (not required for close scores):**
   - Add `--preset default|permissive|restrictive`. DEFAULT is confirmed; the
     PERMISSIVE / RESTRICTIVE numbers are DB-seeded in `brainstorm_server` (an

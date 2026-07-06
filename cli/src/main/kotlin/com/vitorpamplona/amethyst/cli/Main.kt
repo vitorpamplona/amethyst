@@ -528,14 +528,16 @@ private fun printUsage() {
         |
         |Web of Trust (GrapeRank):
         |  graperank [OBSERVER]                       compute subjective trust scores (0..1) for every
-        |    [--max-depth N] [--max-users N]           user reachable in the follow/mute/report graph,
-        |    [--limit N] [--min-score X]               crawled via the outbox model until no new users
-        |    [--rigor X] [--attenuation X]             appear (OBSERVER: npub|nprofile|hex|name@domain,
-        |    [--offline] [--timeout SECS]              default: active account). --offline scores from
-        |    [--publish] [--min-rank N]                the local store only. --publish writes NIP-85
-        |    [--publish-limit N] [--publish-relay URL] kind:30382 trusted-assertion cards
-        |                                              (rank = round(score*100)) for each user at or
-        |                                              above --min-rank (unchanged ranks are skipped).
+        |    [--limit N] [--min-score X]               user reachable in the follow/mute/report graph.
+        |    [--rigor X] [--attenuation X]             Crawls each user's kind:10002 outbox for their
+        |    [--max-attempts N] [--max-rounds N]       latest kind:3/10000/1984 until every discovered
+        |    [--offline] [--timeout SECS]              user has been checked (no user cap; --max-attempts
+        |    [--publish] [--min-rank N]                bounds retries of an unreachable outbox, default 3).
+        |    [--publish-limit N] [--publish-relay URL] OBSERVER: npub|nprofile|hex|name@domain (default:
+        |                                              active account). --offline scores from the local
+        |                                              store only. --publish writes NIP-85 kind:30382
+        |                                              cards (rank = round(score*100)) for each user at
+        |                                              or above --min-rank (unchanged ranks skipped).
         |  graperank register [PROVIDER]              declare a NIP-85 provider in your kind:10040 so
         |    [--service KIND:TAG] [--relay URL]        clients can discover it (default: self as the
         |    [--private]                               30382:rank provider at your first outbox relay).
