@@ -462,7 +462,8 @@ event but do not broadcast — run `relay publish-lists` to push them.
 |---|---|
 | `amy relay add URL [--type T] [--marker read\|write\|both]` | Append URL to a bucket (default `all`). `--marker` sets the read/write role for `nip65` (default `both`). |
 | `amy relay remove URL [--type T]` | Drop URL from a bucket (default `all`). |
-| `amy relay set --type T [URL…] [--marker read\|write\|both]` | Replace a bucket's whole list. Passing no URLs clears it. |
+| `amy relay set --type T URL… [--marker read\|write\|both]` | Replace a bucket's whole list. |
+| `amy relay set --type T --clear` | Empty a bucket. Clearing is explicit — a bare `set` with no URLs is rejected (guards against a shell variable that expanded to nothing); `--clear` and URLs are mutually exclusive. |
 | `amy relay list [--type T]` | Print the configured relays for every bucket, or just `T`. |
 | `amy relay publish-lists` | Broadcast every configured relay list to the union of your relays. |
 

@@ -323,6 +323,14 @@ object RelayCommands {
         // dedupe, preserve order
         val relays = normalized.distinctBy { it.url }
 
+        // Clearing a bucket is destructive, so it must be explicit: `--clear`
+        // with no URLs. A bare `set` with no URLs is almost always a shell
+        // variable that expanded to nothing — reject it rather than silently
+        // wiping the list. (require → IllegalArgumentException → bad_args/exit 2.)
+        val clear = args.bool("clear")
+        require(relays.isNotEmpty() || clear) { "set needs at least one URL, or --clear to empty the $type list" }
+        require(relays.isEmpty() || !clear) { "--clear cannot be combined with relay URLs" }
+
         Context.open(dataDir).use { ctx ->
             val signed: Event =
                 if (type == NIP65) {

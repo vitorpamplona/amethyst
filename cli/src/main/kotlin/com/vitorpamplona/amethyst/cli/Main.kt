@@ -396,8 +396,8 @@ private fun printUsage() {
         |        [--marker read|write|both]  T=nip65|inbox|key_package|search|private|blocked|
         |                                    trusted|proxy|indexer|broadcast|feeds|all
         |  relay remove URL [--type T]   drop URL from a bucket (default all)
-        |  relay set --type T [URL…]     replace a bucket's whole list (no URLs clears it)
-        |        [--marker read|write|both]
+        |  relay set --type T URL… [--marker read|write|both]  replace a bucket's whole list
+        |  relay set --type T --clear    empty a bucket (URLs and --clear are mutually exclusive)
         |  relay list [--type T]         print configured relays (all buckets, or just T)
         |  relay publish-lists           broadcast every configured relay list
         |  relay info URL                fetch + print a relay's NIP-11 info document
