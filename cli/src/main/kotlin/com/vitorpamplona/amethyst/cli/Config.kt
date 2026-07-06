@@ -213,6 +213,15 @@ class DataDir(
     val groupsDir = File(marmotDir, "groups")
     val keyPackageBundleFile = File(marmotDir, "keypackages.bundle")
 
+    /**
+     * SQLite event-store DB file, a sibling of [eventsDir] under
+     * `<root>/shared/`. Used when the store backend is SQLite (the
+     * default — see [StoreFactory]); the FS backend uses [eventsDir]
+     * instead. Kept alongside the FS store so switching backends never
+     * clobbers the other's data.
+     */
+    val eventsDbFile: File = File(eventsDir.parentFile ?: root, "events.db")
+
     init {
         SecureFileIO.secureMkdirs(root)
         SecureFileIO.secureMkdirs(groupsDir)

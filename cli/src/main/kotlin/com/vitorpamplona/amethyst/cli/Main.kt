@@ -321,7 +321,8 @@ private fun printUsage() {
         |  All state lives under ~/.amy/. Per-account directories
         |  ~/.amy/<account>/ hold identity, cursors, MLS state, and
         |  aliases; every observed Nostr event lands in the shared
-        |  ~/.amy/shared/events-store/. ACCOUNT must match
+        |  store under ~/.amy/shared/ (a SQLite `events.db` by default, or
+        |  the `events-store/` tree when AMY_STORE=fs). ACCOUNT must match
         |  [a-zA-Z0-9_-]{1,64} (no spaces, no slashes).
         |
         |  Resolution order:
@@ -619,11 +620,15 @@ private fun printUsage() {
         |
         |  marmot reset [--yes]                       wipe all local MLS/KeyPackage state (destructive)
         |
-        |Local event store (`<data-dir>/events-store/`):
-        |  store stat                                 event count, kind histogram, disk usage
+        |Local event store (shared, under `<data-dir>/shared/`):
+        |  Backend selected by AMY_STORE: sqlite (default; `shared/events.db`)
+        |  or fs (`AMY_STORE=fs`; the `shared/events-store/` tree). SQLite is
+        |  far more compact at scale — the FS tree spends one file per index
+        |  posting, so large crawls balloon on disk.
+        |  store stat                                 event count + disk usage (kind histogram/mtime on fs)
         |  store sweep-expired                        delete events past their NIP-40 expiration
-        |  store scrub                                rebuild idx/ from canonical events (after edits / crashes)
-        |  store compact                              drop dangling idx entries (canonical gone)
+        |  store scrub                                fs: rebuild idx/ from canonical events; sqlite: no-op
+        |  store compact                              fs: drop dangling idx entries; sqlite: VACUUM
         |  store reindex-fts                          rebuild the NIP-50 search index (after a searchable-kinds change)
         """.trimMargin(),
     )

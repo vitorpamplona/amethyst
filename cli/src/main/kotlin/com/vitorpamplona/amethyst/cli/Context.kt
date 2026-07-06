@@ -39,7 +39,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
@@ -54,7 +53,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketF
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
-import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
@@ -94,9 +92,10 @@ import okhttp3.OkHttpClient
  * Every Nostr event Amy observes — whether received from a relay
  * subscription, unwrapped from a NIP-59 gift wrap, or generated locally
  * before publish — is verified (NIP-01 signature + id check via
- * [Event.verify]) and persisted to the file-backed [IEventStore] at
- * `<data-dir>/events-store/`. Malformed events are dropped before
- * reaching command code.
+ * [Event.verify]) and persisted to the shared [IEventStore] under
+ * `<data-dir>/shared/` (a SQLite DB by default, or the FS tree when
+ * `AMY_STORE=fs` — see [StoreFactory]). Malformed events are dropped
+ * before reaching command code.
  *
  * This makes [store] the authoritative cache of everything Amy has ever
  * seen: profile metadata, relay lists, contact lists, gift wraps,
@@ -159,23 +158,13 @@ class Context(
     private val messageStore = FileMarmotMessageStore(dataDir.groupsDir)
 
     /**
-     * Filesystem-backed Nostr event store, rooted at [DataDir.eventsDir].
-     * Lazy so commands that don't touch persistent event state pay zero
-     * open cost (no `.lock` file, no seed allocation). Closed by
-     * [close] when this Context shuts down.
-     *
-     * Files are written pretty-printed (not the compact NIP-01 canonical
-     * form) so `cat`, `jq`, `git diff` are useful out of the box —
-     * humans inspect these files. Verification always re-canonicalises,
-     * so the stored bytes never feed back into a signature check.
+     * Shared Nostr event store for this run, opened via [StoreFactory]
+     * (SQLite by default, or the FS tree when `AMY_STORE=fs`). Lazy so
+     * commands that don't touch persistent event state pay zero open cost
+     * (no DB file / `.lock`, no seed allocation). Closed by [close] when
+     * this Context shuts down.
      */
-    private val storeDelegate: Lazy<IEventStore> =
-        lazy {
-            FsEventStore(
-                root = dataDir.eventsDir.toPath(),
-                eventToJson = JacksonMapper::toJsonPretty,
-            )
-        }
+    private val storeDelegate: Lazy<IEventStore> = lazy { StoreFactory.open(dataDir) }
     val store: IEventStore by storeDelegate
 
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
