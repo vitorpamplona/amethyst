@@ -100,22 +100,23 @@ suspend fun INostrClient.fetchAllPages(
                 }
             }
 
-        // Only include filters that still need more events. A `search` filter is
-        // relevance-ranked, not `created_at`-ordered, so it is queried on the first
-        // page only (until == null) and dropped from every later page — paging it by
-        // `until` would corrupt its ordering and can never terminate.
-        val remainingFilters =
-            pagedFilters.filterIndexed { index, filter ->
-                val limit = filter.limit
-                val stillNeedsMore = limit == null || matchCountPerFilter[index] < limit
-                val pageable = until == null || filter.search == null
-                stillNeedsMore && pageable
+        // The filters actually queried this page, each kept with its index into
+        // matchCountPerFilter. A filter drops out once it has its limit's worth of
+        // events; a `search` filter additionally runs on the FIRST page only
+        // (until == null), because relevance-ranked results can't be paged by a
+        // created_at cursor. The listener below iterates this SAME list, so what we
+        // count always matches what we subscribed for.
+        val activeFilters =
+            pagedFilters.withIndex().filter { (index, filter) ->
+                val stillNeedsMore = filter.limit == null || matchCountPerFilter[index] < filter.limit
+                val pageableThisPage = until == null || filter.search == null
+                stillNeedsMore && pageableThisPage
             }
 
-        if (remainingFilters.isEmpty()) break
+        if (activeFilters.isEmpty()) break
 
         // Announce the page only now that we know it will actually be fetched: a
-        // search-only filter drops out of remainingFilters above and breaks with no
+        // search-only filter drops out of activeFilters above and breaks with no
         // REQ, so firing this earlier would report a page that never happens.
         if (until != null) onNewPage?.invoke(until)
 
@@ -133,18 +134,16 @@ suspend fun INostrClient.fetchAllPages(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        // Check if the relay is returning what we asked before moving forward
+                        // Count this event against every active filter it satisfies
+                        // (one event can match more than one). Only a non-search filter
+                        // may advance the `until` cursor: a search hit — possibly old,
+                        // relevance-ranked — must not drag the cursor back and make the
+                        // next page skip events a co-resident normal filter still needs.
                         var atLeastOne = false
-                        // Only a paginating (non-search) filter may advance the `until`
-                        // cursor. A search filter's hits — possibly old, relevance-ranked
-                        // — must not drag the cursor back, or the next page would skip
-                        // events a co-resident normal filter still needs.
                         var advancesCursor = false
-                        for (i in pagedFilters.indices) {
-                            val filter = pagedFilters[i]
-                            val limit = filter.limit
-                            if ((limit == null || matchCountPerFilter[i] < limit) && filter.match(event)) {
-                                matchCountPerFilter[i]++
+                        for ((index, filter) in activeFilters) {
+                            if (matchCountPerFilter[index] < (filter.limit ?: Int.MAX_VALUE) && filter.match(event)) {
+                                matchCountPerFilter[index]++
                                 atLeastOne = true
                                 if (filter.search == null) advancesCursor = true
                             }
@@ -182,7 +181,7 @@ suspend fun INostrClient.fetchAllPages(
                     }
                 }
 
-            subscribe(subId, mapOf(relay to remainingFilters), listener)
+            subscribe(subId, mapOf(relay to activeFilters.map { it.value }), listener)
 
             withTimeoutOrNull(timeoutMs) {
                 doneChannel.receive()
