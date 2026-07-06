@@ -201,6 +201,68 @@ object Hex {
     }
 
     /**
+     * Packs 16 hex chars starting at [offset] into a single [Long] (big-endian:
+     * the first char becomes the most-significant nibble). No allocations, no
+     * branches — just 16 table lookups and shifts.
+     *
+     * Assumes [hex] has at least `offset + 16` valid hex chars; it does not
+     * validate. Guard untrusted input with [isHex64] first, otherwise an invalid
+     * char (table value `-1`) corrupts the result.
+     */
+    fun readLong(
+        hex: String,
+        offset: Int,
+    ): Long =
+        (hexToByte[hex[offset].code].toLong() shl 60) or
+            (hexToByte[hex[offset + 1].code].toLong() shl 56) or
+            (hexToByte[hex[offset + 2].code].toLong() shl 52) or
+            (hexToByte[hex[offset + 3].code].toLong() shl 48) or
+            (hexToByte[hex[offset + 4].code].toLong() shl 44) or
+            (hexToByte[hex[offset + 5].code].toLong() shl 40) or
+            (hexToByte[hex[offset + 6].code].toLong() shl 36) or
+            (hexToByte[hex[offset + 7].code].toLong() shl 32) or
+            (hexToByte[hex[offset + 8].code].toLong() shl 28) or
+            (hexToByte[hex[offset + 9].code].toLong() shl 24) or
+            (hexToByte[hex[offset + 10].code].toLong() shl 20) or
+            (hexToByte[hex[offset + 11].code].toLong() shl 16) or
+            (hexToByte[hex[offset + 12].code].toLong() shl 12) or
+            (hexToByte[hex[offset + 13].code].toLong() shl 8) or
+            (hexToByte[hex[offset + 14].code].toLong() shl 4) or
+            hexToByte[hex[offset + 15].code].toLong()
+
+    /**
+     * Reads the first 64 bits (16 hex chars) of [hex] as a single [Long].
+     * Ideal as a cheap, collision-resistant map/set key or bucket hash for a
+     * 32-byte event id or pubkey. Assumes [hex] is at least 16 valid hex chars —
+     * see [readLong].
+     */
+    fun toLong64(hex: String): Long = readLong(hex, 0)
+
+    /**
+     * Reads the first 128 bits (32 hex chars) of [hex] as two [Long]s, most
+     * significant first. Assumes [hex] is at least 32 valid hex chars — see
+     * [readLong].
+     */
+    fun toLong128(hex: String): LongArray =
+        longArrayOf(
+            readLong(hex, 0),
+            readLong(hex, 16),
+        )
+
+    /**
+     * Reads a full 256-bit (64 hex char) id/pubkey/signature-half as four
+     * [Long]s, most significant first. Assumes [hex] is at least 64 valid hex
+     * chars — see [readLong].
+     */
+    fun toLong256(hex: String): LongArray =
+        longArrayOf(
+            readLong(hex, 0),
+            readLong(hex, 16),
+            readLong(hex, 32),
+            readLong(hex, 48),
+        )
+
+    /**
      * True when the hex string [id] encodes exactly the bytes [ourId], compared
      * without allocating a decode buffer. Handy for matching an incoming hex id
      * against bytes you already hold. Assumes [id] is at least `2 * ourId.size`
