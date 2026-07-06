@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.wot.GrapeRank
 import com.vitorpamplona.amethyst.commons.wot.GrapeRankParams
 import com.vitorpamplona.amethyst.commons.wot.TrustGraphBuilder
@@ -128,24 +129,51 @@ object GrapeRankCommand {
             } else {
                 val collected = mutableListOf<Event>()
                 val discovered = hashSetOf(observer)
+                // Per-user relay hints harvested from the `p`-tag relay hints in
+                // the contact lists we crawl (A's follow of B says where B writes).
+                // A second discovery tier below each user's kind:10002 outbox.
+                val relayHints = HashMap<HexKey, MutableSet<NormalizedRelayUrl>>()
                 var frontier: Set<HexKey> = setOf(observer)
 
                 for (hop in 0 until maxDepth) {
                     if (frontier.isEmpty()) break
                     depthReached = hop + 1
 
-                    ensureRelayLists(ctx, frontier, timeoutMs)
+                    // 1. Locate each frontier member's kind:10002 write relays.
+                    ensureRelayLists(ctx, frontier, relayHints, timeoutMs)
 
-                    val filters = routeByOutbox(ctx, frontier, graphKinds)
+                    // 2. Fetch their follows/mutes/reports from those relays.
+                    val filters = routeByOutbox(ctx, frontier, relayHints, graphKinds)
                     collected += ctx.drain(filters, timeoutMs).map { it.second }
 
+                    // 3. Completeness retry: any member whose contact list still
+                    //    didn't arrive (no kind:10002, or its outbox was down) gets
+                    //    re-queried against the broad indexer + hint set. Indexers
+                    //    like purplepag.es serve kind:3 for the whole network, so
+                    //    this recovers users the outbox model alone would miss.
+                    val stillMissing = frontier.filter { ctx.contactsOf(it) == null }
+                    if (stillMissing.isNotEmpty()) {
+                        val retryRelays = discoveryRelays(ctx) + stillMissing.flatMap { relayHints[it].orEmpty() }
+                        val retry =
+                            retryRelays.associateWith {
+                                stillMissing.chunked(AUTHORS_PER_FILTER).map { chunk -> Filter(kinds = graphKinds, authors = chunk) }
+                            }
+                        collected += ctx.drain(retry, timeoutMs).map { it.second }
+                    }
+
+                    // 4. Harvest relay hints + expand the follow frontier.
                     val next = hashSetOf<HexKey>()
                     for (pk in frontier) {
-                        ctx.contactsOf(pk)?.verifiedFollowKeySet()?.forEach { followed ->
-                            if (discovered.size < maxUsers && discovered.add(followed)) next += followed
+                        val contacts = ctx.contactsOf(pk) ?: continue
+                        for (tag in contacts.follows()) {
+                            tag.relayUri?.let { relayHints.getOrPut(tag.pubKey) { HashSet() }.add(it) }
+                            if (discovered.size < maxUsers && discovered.add(tag.pubKey)) next += tag.pubKey
                         }
                     }
-                    System.err.println("[graperank] hop ${hop + 1}: fetched frontier=${frontier.size}, new=${next.size}, total=${discovered.size}")
+                    val recovered = stillMissing.count { ctx.contactsOf(it) != null }
+                    System.err.println(
+                        "[graperank] hop ${hop + 1}: frontier=${frontier.size}, recovered=$recovered/${stillMissing.size}, new=${next.size}, total=${discovered.size}",
+                    )
 
                     if (discovered.size >= maxUsers) {
                         System.err.println("[graperank] reached --max-users=$maxUsers cap; stopping crawl")
@@ -395,25 +423,39 @@ object GrapeRankCommand {
     }
 
     /**
+     * The broad, network-wide discovery set: the account's own relays + Amethyst's
+     * bootstrap defaults + the event-finder relays + the **indexer relays**
+     * (purplepag.es, coracle, …). Indexers aggregate kind:0 / kind:3 / kind:10002
+     * for the whole network, so they are where a stranger's relay list and contact
+     * list are actually found — the single biggest lever on crawl completeness.
+     */
+    private suspend fun discoveryRelays(ctx: Context): Set<NormalizedRelayUrl> = ctx.bootstrapRelays() + Constants.eventFinderRelays + DefaultIndexerRelayList
+
+    /**
      * Fetch kind:10002 relay lists for any frontier member we don't already know,
      * so [routeByOutbox] can route their content query to their own write relays.
-     * Uses the broad bootstrap + event-finder relay set as the discovery seed —
-     * the CLI analog of the app's tiered outbox lookup.
+     * Queries the broad discovery set (incl. indexers) plus each user's harvested
+     * relay [hints] — the CLI analog of the app's tiered `pickRelaysToLoadUsers`.
      */
     private suspend fun ensureRelayLists(
         ctx: Context,
         pubkeys: Set<HexKey>,
+        hints: Map<HexKey, Set<NormalizedRelayUrl>>,
         timeoutMs: Long,
     ) {
         val missing = pubkeys.filter { ctx.relaysOf(it) == null }
         if (missing.isEmpty()) return
 
-        val seedRelays = ctx.bootstrapRelays() + Constants.eventFinderRelays
-        if (seedRelays.isEmpty()) return
+        val base = discoveryRelays(ctx)
+        val perRelay = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
+        for (pk in missing) {
+            for (relay in base + hints[pk].orEmpty()) perRelay.getOrPut(relay) { HashSet() }.add(pk)
+        }
+        if (perRelay.isEmpty()) return
 
         val filters =
-            seedRelays.associateWith {
-                missing.chunked(AUTHORS_PER_FILTER).map { chunk ->
+            perRelay.mapValues { (_, authors) ->
+                authors.chunked(AUTHORS_PER_FILTER).map { chunk ->
                     Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = chunk)
                 }
             }
@@ -422,21 +464,22 @@ object GrapeRankCommand {
 
     /**
      * Group [pubkeys] by the relays we should query for their events: each user's
-     * kind:10002 write relays (the outbox model), falling back to the broad
-     * event-finder set for users with no advertised relay list. Authors are
-     * chunked per relay to respect relay REQ limits.
+     * kind:10002 write relays (the outbox model); for users with no advertised
+     * relay list, their harvested relay [hints] plus the broad discovery set.
+     * Authors are chunked per relay to respect relay REQ limits.
      */
     private suspend fun routeByOutbox(
         ctx: Context,
         pubkeys: Set<HexKey>,
+        hints: Map<HexKey, Set<NormalizedRelayUrl>>,
         kinds: List<Int>,
     ): Map<NormalizedRelayUrl, List<Filter>> {
-        val fallback = ctx.bootstrapRelays() + Constants.eventFinderRelays
+        val fallback = discoveryRelays(ctx)
         val perRelay = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
 
         for (pk in pubkeys) {
             val write = ctx.relaysOf(pk)?.writeRelaysNorm()?.takeIf { it.isNotEmpty() }
-            val relays = write ?: fallback
+            val relays = write ?: (hints[pk].orEmpty() + fallback)
             for (relay in relays) perRelay.getOrPut(relay) { HashSet() }.add(pk)
         }
 

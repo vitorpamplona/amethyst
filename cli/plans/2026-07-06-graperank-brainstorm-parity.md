@@ -90,8 +90,16 @@ It is **data**, not math:
    So the effective scoring input is the same, provided the crawl runs to
    convergence (our default) rather than a shallow `--max-depth`.
 2. **Fringe users / crawl gaps.** Relay timeouts that drop a contact list, or a
-   `--max-users` cap, remove edges and shift nearby scores. Mitigate with a full
-   crawl and generous `--timeout`.
+   `--max-users` cap, remove edges and shift nearby scores. The injector now
+   mitigates this with a three-tier discovery model mirroring the app's
+   `pickRelaysToLoadUsers`: each user's kind:10002 **outbox**, then harvested
+   **relay hints** (from `p`-tag hints in the contact lists we crawl), then the
+   broad **discovery set** — bootstrap + event-finder + **indexer relays**
+   (purplepag.es, coracle, …) that serve kind:0/3/10002 for the whole network.
+   A per-hop **retry pass** re-queries any member whose contact list still didn't
+   arrive against that indexer + hint set, recovering users the outbox model
+   alone would miss. Remaining mitigation levers: a full crawl (default) and a
+   generous `--timeout`.
 3. **Convergence precision.** Both stop at delta 0.0001; residual error is
    < ~0.0001 in influence ⇒ < ~0.01 rank points ⇒ identical integer `rank`.
 4. **Seeding.** Their hop-distance seed vs our zero seed — same fixed point, no
