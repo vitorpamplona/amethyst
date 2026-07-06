@@ -164,6 +164,18 @@ class RelayLatencyTracker(
     /**
      * Expires pending entries older than the configured TTLs and records the TTL value as the
      * sample (per the brainstorm: "punish silent relays"). Idempotent and cheap.
+     *
+     * The per-relay pending maps are `Collections.synchronizedMap(LinkedHashMap)` — their
+     * individual reads and writes are thread-safe, but iteration is NOT: per
+     * `Collections.synchronizedMap` javadoc, the caller MUST hold the returned map's
+     * monitor while iterating. Directly iterating triggers a
+     * `ConcurrentModificationException` when a producer thread (network dispatcher)
+     * mutates the map while the sweep is walking it — reliably reproduced on macOS
+     * during any relay-add on Amethyst Desktop as of 2026-07-06.
+     *
+     * Fix: iterate under `synchronized(pending)` blocks so the network dispatcher
+     * waits until sweep releases the monitor. The sweep is O(pending), typically
+     * ~single-digit entries per relay, so the hold time is negligible.
      */
     override fun sweep(nowMs: Long) {
         // Per-relay pending maps are `Collections.synchronizedMap(LinkedHashMap)` — the
