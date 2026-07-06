@@ -96,20 +96,21 @@ object GrapeRankCommand {
     // Concurrent content drains. Bounded so total open connections stay sane.
     private const val DRAIN_CONCURRENCY = 8
 
-    // Broad relays that carry kind:10002 for many users — aggregators + big
-    // general relays — added to the discovery set to raise the odds of resolving
-    // a stranger's outbox quickly.
+    // Broad, big general relays that carry kind:10002 for many users, added to the
+    // discovery set to raise the odds of resolving a stranger's outbox. Every entry
+    // is NIP-11 liveness-checked — dead relays only add timeouts.
     private val EXTRA_DISCOVERY_RELAYS: Set<NormalizedRelayUrl> =
         listOf(
-            "wss://relay.nostr.band",
             "wss://relay.damus.io",
             "wss://relay.snort.social",
             "wss://offchain.pub",
-            "wss://relayable.org",
             "wss://nostr.land",
             "wss://eden.nostr.land",
-            "wss://relay.nostr.bg",
         ).mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
+
+    // How many of the most-used write relays (learned from everyone's kind:10002)
+    // to keep as the known-good backbone for retrying users we couldn't reach.
+    private const val BACKBONE_SIZE = 30
 
     suspend fun dispatch(
         dataDir: DataDir,
@@ -177,6 +178,12 @@ object GrapeRankCommand {
                 val done = hashSetOf<HexKey>()
                 val attempts = HashMap<HexKey, Int>()
                 val relaysContacted = hashSetOf<NormalizedRelayUrl>()
+                // Known-good relay pool, learned from the crawl itself: how often each
+                // relay appears as someone's write relay, and which relays actually
+                // delivered events (so we know they connect and work). The most-common
+                // live relays become the `backbone` we retry unreachable users against.
+                val writeRelayFreq = HashMap<NormalizedRelayUrl, Int>()
+                val liveRelays = hashSetOf<NormalizedRelayUrl>()
 
                 // Feed a user's contact list into the graph, harvest relay hints, stamp
                 // the hop distance of newly-seen follows, and add them to the frontier.
@@ -218,6 +225,19 @@ object GrapeRankCommand {
                     var gotList = 0
                     var newUsers = 0
 
+                    // The known-good backbone this round: the most-used write relays
+                    // that have actually delivered events. Retried / outbox-less users
+                    // are also queried here — these are relays we know work, learned
+                    // from everyone else's lists.
+                    val backbone =
+                        writeRelayFreq.entries
+                            .asSequence()
+                            .filter { it.key in liveRelays }
+                            .sortedByDescending { it.value }
+                            .take(BACKBONE_SIZE)
+                            .map { it.key }
+                            .toSet()
+
                     // Resolve kind:10002 outboxes in bulk (indexers aggregate them),
                     // then fetch content in small batches drained a few at a time — one
                     // giant drain over thousands of outbox relays saturates connections
@@ -226,19 +246,21 @@ object GrapeRankCommand {
                     // write lock.
                     ensureRelayLists(ctx, pending.toSet(), timeoutMs, diagnose)
                     for (group in pending.chunked(USER_BATCH).chunked(DRAIN_CONCURRENCY)) {
-                        val prepared = group.map { batch -> batch to routeByOutbox(ctx, batch.toSet(), relayHints, graphKinds) }
+                        val prepared = group.map { batch -> batch to routeByOutbox(ctx, batch.toSet(), relayHints, backbone, attempts, writeRelayFreq, graphKinds) }
                         val drained =
                             coroutineScope {
                                 prepared
                                     .map { (batch, filters) ->
                                         async {
-                                            ctx.drain(filters, timeoutMs, diagnose)
-                                            batch to filters.keys
+                                            val events = ctx.drain(filters, timeoutMs, diagnose)
+                                            Triple(batch, filters.keys, events)
                                         }
                                     }.awaitAll()
                             }
-                        for ((batch, relays) in drained) {
+                        for ((batch, relays, events) in drained) {
                             relaysContacted += relays
+                            // Any relay that gave us an event is proven live + useful.
+                            for ((relay, _) in events) liveRelays.add(relay)
                             for (pk in batch) {
                                 val contacts = ctx.contactsOf(pk)
                                 if (contacts != null) {
@@ -597,15 +619,24 @@ object GrapeRankCommand {
     }
 
     /**
-     * Group [pubkeys] by the relays we should query for their events: each user's
-     * kind:10002 write relays (the outbox model); for users with no advertised
-     * relay list, their harvested relay [hints] plus the broad discovery set.
-     * Authors are chunked per relay to respect relay REQ limits.
+     * Group [pubkeys] by the relays we should query for their events:
+     *  - first try: the user's own kind:10002 write relays (the outbox model);
+     *  - a retry (`attempts[pk] > 0`, its outbox already failed): outbox +
+     *    [backbone] — the known-good relays other people write to, which likely
+     *    hold a copy;
+     *  - no outbox at all: harvested [hints] + backbone + the general fallback.
+     *
+     * Also tallies each user's write relays into [writeRelayFreq] so the backbone
+     * can be learned from the crawl. Authors are chunked per relay to respect REQ
+     * limits.
      */
     private suspend fun routeByOutbox(
         ctx: Context,
         pubkeys: Set<HexKey>,
         hints: Map<HexKey, Set<NormalizedRelayUrl>>,
+        backbone: Set<NormalizedRelayUrl>,
+        attempts: Map<HexKey, Int>,
+        writeRelayFreq: MutableMap<NormalizedRelayUrl, Int>,
         kinds: List<Int>,
     ): Map<NormalizedRelayUrl, List<Filter>> {
         val fallback = contentFallbackRelays(ctx)
@@ -613,7 +644,13 @@ object GrapeRankCommand {
 
         for (pk in pubkeys) {
             val write = ctx.relaysOf(pk)?.writeRelaysNorm()?.takeIf { it.isNotEmpty() }
-            val relays = write ?: (hints[pk].orEmpty() + fallback)
+            write?.forEach { writeRelayFreq.merge(it, 1, Int::plus) }
+            val relays =
+                when {
+                    write == null -> hints[pk].orEmpty() + backbone + fallback
+                    (attempts[pk] ?: 0) > 0 -> write + backbone
+                    else -> write
+                }
             for (relay in relays) perRelay.getOrPut(relay) { HashSet() }.add(pk)
         }
 
