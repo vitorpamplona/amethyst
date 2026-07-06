@@ -140,94 +140,119 @@ object GrapeRankCommand {
 
             var rounds = 0
             var relaysContactedCount = 0
-            val events: List<Event>
+            var contactListsHeld = 0
 
-            if (offline) {
-                events = ctx.store.query(Filter(kinds = graphKinds))
-                System.err.println("[graperank] offline: ${events.size} events from local store")
-            } else {
-                val collected = mutableListOf<Event>()
+            if (!offline) {
                 val discovered = hashSetOf(observer)
                 // Per-user relay hints harvested from the `p`-tag relay hints in the
                 // contact lists we crawl (A's follow of B says where B writes) — a
                 // discovery tier below each user's kind:10002 outbox.
                 val relayHints = HashMap<HexKey, MutableSet<NormalizedRelayUrl>>()
-                // Users we're finished with: their outbox was queried and we either
-                // downloaded their kind:3 or ran out of retry attempts. Growing this
-                // set toward `discovered` is what drives the crawl to completion.
+                // Users we're finished with: we hold their kind:3 (cached or freshly
+                // downloaded), or ran out of retry attempts.
                 val done = hashSetOf<HexKey>()
                 val attempts = HashMap<HexKey, Int>()
-                // The pool of relays we actually route outbox queries to, grown as
-                // more users' kind:10002 outboxes are discovered.
+                // The pool of relays we actually route outbox queries to.
                 val relaysContacted = hashSetOf<NormalizedRelayUrl>()
 
-                // Loop until every discovered user has had their outbox checked and
-                // their kind:3/10000/1984 pulled from it — no user cap. A user whose
-                // outbox stays unreachable is dropped after MAX_OUTBOX_ATTEMPTS tries
-                // so the crawl still terminates.
+                // Harvest a contact list: record its relay hints and add its follows to
+                // the frontier. Returns the count of newly-discovered users.
+                fun expand(contacts: ContactListEvent): Int {
+                    var fresh = 0
+                    for (tag in contacts.follows()) {
+                        tag.relayUri?.let { relayHints.getOrPut(tag.pubKey) { HashSet() }.add(it) }
+                        if (discovered.add(tag.pubKey)) fresh++
+                    }
+                    return fresh
+                }
+
+                // Loop until every discovered user's contact list is in hand — no user
+                // cap, to full graph depth. We only DOWNLOAD lists we don't already
+                // have; a list already in the store is expanded from disk with no
+                // network (so re-runs and a warm shared store are cheap). An
+                // unreachable outbox is dropped after MAX_OUTBOX_ATTEMPTS tries so the
+                // crawl still terminates.
                 while (rounds < maxRounds) {
                     val pending = discovered.filterNot { it in done }
                     if (pending.isEmpty()) break
                     rounds++
 
-                    // 1. Resolve kind:10002 outboxes for pending users missing them,
-                    //    in bulk from the indexer set (they aggregate kind:10002).
-                    ensureRelayLists(ctx, pending.toSet(), timeoutMs)
-
-                    val before = collected.size
+                    var cached = 0
                     var downloaded = 0
                     var newUsers = 0
 
-                    // 2. Pull kind:3/10000/1984 from each user's own outbox, in small
-                    //    batches drained a few at a time. Routing (store reads) is done
-                    //    serially; only the drains run concurrently — inserts serialize
-                    //    on the store write lock, so that is safe. Processing each
-                    //    batch's results is serial.
-                    for (group in pending.chunked(USER_BATCH).chunked(DRAIN_CONCURRENCY)) {
-                        val prepared = group.map { batch -> batch to routeByOutbox(ctx, batch.toSet(), relayHints, graphKinds) }
-                        val drained =
-                            coroutineScope {
-                                prepared
-                                    .map { (batch, filters) ->
-                                        async { Triple(batch, filters.keys, ctx.drain(filters, timeoutMs).map { it.second }) }
-                                    }.awaitAll()
-                            }
-                        for ((batch, relays, ev) in drained) {
-                            relaysContacted += relays
-                            collected += ev
-                            for (pk in batch) {
-                                val contacts = ctx.contactsOf(pk)
-                                if (contacts != null) {
-                                    done += pk
-                                    downloaded++
-                                    for (tag in contacts.follows()) {
-                                        tag.relayUri?.let { relayHints.getOrPut(tag.pubKey) { HashSet() }.add(it) }
-                                        if (discovered.add(tag.pubKey)) newUsers++
+                    // 1. Users whose kind:3 is already in the store: expand, no network.
+                    val need = ArrayList<HexKey>()
+                    for (pk in pending) {
+                        val contacts = ctx.contactsOf(pk)
+                        if (contacts != null) {
+                            done += pk
+                            contactListsHeld++
+                            cached++
+                            newUsers += expand(contacts)
+                        } else {
+                            need += pk
+                        }
+                    }
+
+                    // 2. Download the rest from their own outboxes. Resolve kind:10002
+                    //    in bulk (indexers aggregate it), then fetch content in small
+                    //    batches drained a few at a time — one giant drain over
+                    //    thousands of outbox relays saturates connections and times out.
+                    //    Routing (store reads) is serial; only the drains run
+                    //    concurrently, which is safe: inserts serialize on the store
+                    //    write lock.
+                    if (need.isNotEmpty()) {
+                        ensureRelayLists(ctx, need.toSet(), timeoutMs)
+                        for (group in need.chunked(USER_BATCH).chunked(DRAIN_CONCURRENCY)) {
+                            val prepared = group.map { batch -> batch to routeByOutbox(ctx, batch.toSet(), relayHints, graphKinds) }
+                            val drained =
+                                coroutineScope {
+                                    prepared
+                                        .map { (batch, filters) ->
+                                            async {
+                                                ctx.drain(filters, timeoutMs)
+                                                batch to filters.keys
+                                            }
+                                        }.awaitAll()
+                                }
+                            for ((batch, relays) in drained) {
+                                relaysContacted += relays
+                                for (pk in batch) {
+                                    val contacts = ctx.contactsOf(pk)
+                                    if (contacts != null) {
+                                        done += pk
+                                        contactListsHeld++
+                                        downloaded++
+                                        newUsers += expand(contacts)
+                                    } else {
+                                        val tries = (attempts[pk] ?: 0) + 1
+                                        attempts[pk] = tries
+                                        // Give up after retries: no contact list, or outbox unreachable.
+                                        if (tries >= MAX_OUTBOX_ATTEMPTS) done += pk
                                     }
-                                } else {
-                                    val tries = (attempts[pk] ?: 0) + 1
-                                    attempts[pk] = tries
-                                    // Give up after retries: no contact list, or outbox unreachable.
-                                    if (tries >= MAX_OUTBOX_ATTEMPTS) done += pk
                                 }
                             }
                         }
                     }
+
                     System.err.println(
-                        "[graperank] round $rounds: queried=${pending.size}, +events=${collected.size - before}, " +
-                            "downloaded=$downloaded, newUsers=$newUsers, discovered=${discovered.size}, done=${done.size}",
+                        "[graperank] round $rounds: pending=${pending.size}, cached=$cached, downloaded=$downloaded, " +
+                            "newUsers=$newUsers, discovered=${discovered.size}, done=${done.size}",
                     )
                 }
 
                 relaysContactedCount = relaysContacted.size
-                val unreached = discovered.count { it !in done || ctx.contactsOf(it) == null }
                 System.err.println(
-                    "[graperank] crawl complete: ${discovered.size} users discovered, " +
-                        "${discovered.size - unreached} contact lists downloaded, $unreached without one, " +
+                    "[graperank] crawl complete: ${discovered.size} discovered, $contactListsHeld with a contact list, " +
                         "$relaysContactedCount relays contacted, $rounds rounds",
                 )
-                events = collected
             }
+
+            // Build the graph from the store so it includes BOTH freshly-downloaded and
+            // already-cached contact lists (and, offline, everything on disk).
+            val events = ctx.store.query<Event>(Filter(kinds = graphKinds))
+            if (offline) System.err.println("[graperank] offline: ${events.size} events from local store")
 
             val graph = TrustGraphBuilder.build(events)
             System.err.println(
