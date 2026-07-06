@@ -145,12 +145,18 @@ class DesktopAuthCoordinator(
     }
 
     private fun selfApprovedRelaysFor(pubKeyHex: String): Set<NormalizedRelayUrl> {
-        // Tier-1 = the user's own NIP-17 DM-inbox (kind:10050). Conservative
+        // Tier-1 = the user's own NIP-17 DM-inbox (kind:10050). Strict
         // by design — write/read relays (NIP-65 kind:10002) are NOT included,
         // because the user may have read-only relays they don't intend to
         // identify themselves to via AUTH.
+        //
+        // MUST use dmInboxRelaysStrict (kind:10050 only) rather than the
+        // lenient dmInboxRelays helper, which falls back to NIP-65 read
+        // relays and would silently expand tier-1 to include every relay
+        // in the user's outbox. That defeats the tier-2 prompt for any
+        // relay in the user's normal read set.
         val user = localCache.getOrCreateUser(pubKeyHex)
-        return user.dmInboxRelays()?.toSet() ?: emptySet()
+        return user.dmInboxRelaysStrict()?.toSet() ?: emptySet()
     }
 
     private suspend fun signWithPolicy(
