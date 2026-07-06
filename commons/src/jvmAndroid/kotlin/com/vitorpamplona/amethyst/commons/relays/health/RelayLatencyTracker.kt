@@ -166,31 +166,38 @@ class RelayLatencyTracker(
      * sample (per the brainstorm: "punish silent relays"). Idempotent and cheap.
      */
     override fun sweep(nowMs: Long) {
+        // Per-relay pending maps are `Collections.synchronizedMap(LinkedHashMap)` — the
+        // Javadoc requires holding the wrapper's monitor while iterating, or a concurrent
+        // put/remove from putPending/recordSent/recordIncoming/recordDisconnect throws CME.
         for ((relay, pending) in pendingEventId) {
-            val it = pending.entries.iterator()
-            while (it.hasNext()) {
-                val (_, sentAt) = it.next()
-                if (nowMs - sentAt >= okTtlMs) {
-                    ringFor(relay, LatencyMetric.OK_ACK).push(okTtlMs.toInt())
-                    it.remove()
+            synchronized(pending) {
+                val it = pending.entries.iterator()
+                while (it.hasNext()) {
+                    val (_, sentAt) = it.next()
+                    if (nowMs - sentAt >= okTtlMs) {
+                        ringFor(relay, LatencyMetric.OK_ACK).push(okTtlMs.toInt())
+                        it.remove()
+                    }
                 }
             }
         }
         for ((relay, pending) in pendingSubId) {
-            val it = pending.entries.iterator()
-            while (it.hasNext()) {
-                val entry = it.next()
-                val sentAt = entry.value
-                if (nowMs - sentAt >= reqTtlMs) {
-                    ringFor(relay, LatencyMetric.EOSE).push(reqTtlMs.toInt())
-                    // Record a FIRST_RESULT TTL sample only if the relay never emitted any
-                    // matching event for this sub-id.
-                    val seenSet = firstResultSeen[relay]
-                    if (seenSet == null || entry.key !in seenSet) {
-                        ringFor(relay, LatencyMetric.FIRST_RESULT).push(reqTtlMs.toInt())
+            synchronized(pending) {
+                val it = pending.entries.iterator()
+                while (it.hasNext()) {
+                    val entry = it.next()
+                    val sentAt = entry.value
+                    if (nowMs - sentAt >= reqTtlMs) {
+                        ringFor(relay, LatencyMetric.EOSE).push(reqTtlMs.toInt())
+                        // Record a FIRST_RESULT TTL sample only if the relay never emitted any
+                        // matching event for this sub-id.
+                        val seenSet = firstResultSeen[relay]
+                        if (seenSet == null || entry.key !in seenSet) {
+                            ringFor(relay, LatencyMetric.FIRST_RESULT).push(reqTtlMs.toInt())
+                        }
+                        seenSet?.remove(entry.key)
+                        it.remove()
                     }
-                    seenSet?.remove(entry.key)
-                    it.remove()
                 }
             }
         }
