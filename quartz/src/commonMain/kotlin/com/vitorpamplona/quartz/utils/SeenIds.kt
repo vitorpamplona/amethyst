@@ -36,8 +36,16 @@ package com.vitorpamplona.quartz.utils
  * Backed by one open-addressed [LongArray] (two longs per slot, `(0,0)` = empty), so
  * there are NO per-entry objects and the 64-char id [String] is never retained: tens
  * of millions of ids cost ~16 bytes each (~1 GB at 40M) instead of the ~6 GB a
- * `HashSet<String>` of 64-char hex would. [add] is O(1) and `@Synchronized`; the lock
- * is held for nanoseconds, so concurrent producers contend little.
+ * `HashSet<String>` of 64-char hex would. [add] is O(1).
+ *
+ * **Not thread-safe — single-writer.** [add] mutates the table (and may resize it) and
+ * [reset] replaces it, so every call must come from one thread. To dedup across many
+ * concurrent relay producers, funnel their events into a single consumer that owns the
+ * SeenIds (the one-consumer ingest pattern used elsewhere in this library): that keeps
+ * one global set while staying single-writer, and the resize never has to coordinate.
+ * Giving each producer its own instance is also lock-free, but then dedups only
+ * *within* that producer, not across them. If you truly need concurrent writers, guard
+ * it yourself.
  *
  * Not unbounded-safe on its own: call [reset] between passes (or whenever the working
  * set should be forgotten) so a long-running process can't grow the table forever.
@@ -68,7 +76,6 @@ class SeenIds(
      * it). A too-short/malformed id returns true — it flows through and downstream
      * verification drops it — rather than risk collapsing distinct ids.
      */
-    @Synchronized
     fun add(idHex: String): Boolean {
         // Slice the first 128 bits straight to two longs via Hex's table-lookup
         // reader — no hex text parsing, no allocation. A string too short to slice
@@ -116,13 +123,11 @@ class SeenIds(
         }
     }
 
-    @Synchronized
     fun reset() {
         allocate(1 shl INITIAL_POW2)
         zeroSeen = false
     }
 
-    @Synchronized
     fun size() = count + if (zeroSeen) 1 else 0
 
     // Ids are already uniform, but avalanche the two halves so the low bits used for
