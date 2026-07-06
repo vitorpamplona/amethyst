@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -82,6 +83,14 @@ fun SinglePaneLayout(
     val currentColumnType by singlePaneState.currentScreen.collectAsState()
     val navState = remember { ColumnNavigationState() }
     val currentOverlay = navState.current
+
+    // Sidebar taps must replace the detail overlay, not sit behind it. The
+    // sidebar destination lives in singlePaneState; the overlay stack lives
+    // here in navState. When the sidebar drives navigation, drain the overlay
+    // stack so the tapped destination is what the user actually sees.
+    LaunchedEffect(Unit) {
+        singlePaneState.clearOverlaySignal.collect { navState.clear() }
+    }
 
     // Sidebar is now provided by Main.kt (shared MainSidebar for both layout modes).
     // SinglePaneLayout only renders the content pane.

@@ -147,6 +147,7 @@ fun DeckLayout(
                         onNavigateToRelays = onNavigateToRelays,
                         onOpenNotificationSettings = onOpenNotificationSettings,
                         onOpenMessages = onOpenMessages,
+                        clearOverlaySignal = deckState.clearOverlaySignal,
                     )
                 }
             }

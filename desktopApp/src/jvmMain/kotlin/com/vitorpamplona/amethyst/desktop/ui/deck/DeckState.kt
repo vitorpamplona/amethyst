@@ -26,8 +26,11 @@ import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -40,6 +43,12 @@ class DeckState(
 
     private val _focusedColumnIndex = MutableStateFlow(0)
     val focusedColumnIndex: StateFlow<Int> = _focusedColumnIndex.asStateFlow()
+
+    // Emits the column ID whose detail overlay should be cleared. Fired when
+    // the sidebar focuses an existing column, so the tapped destination isn't
+    // hidden behind a leftover detail screen (including same-item taps).
+    private val _clearOverlaySignal = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    val clearOverlaySignal: SharedFlow<String> = _clearOverlaySignal.asSharedFlow()
 
     @Volatile
     private var lastKnownWidth: Float = 0f
@@ -75,7 +84,10 @@ class DeckState(
 
     fun focusExistingColumn(type: DeckColumnType) {
         val idx = _columns.value.indexOfFirst { it.type == type }
-        if (idx >= 0) focusColumn(idx)
+        if (idx >= 0) {
+            focusColumn(idx)
+            _columns.value.getOrNull(idx)?.let { _clearOverlaySignal.tryEmit(it.id) }
+        }
     }
 
     fun removeColumn(id: String) {
