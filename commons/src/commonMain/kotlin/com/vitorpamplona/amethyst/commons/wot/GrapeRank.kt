@@ -28,12 +28,8 @@ import kotlin.math.ln
 
 /**
  * Tunable GrapeRank parameters. Defaults mirror the reference implementation at
- * <https://github.com/vitorpamplona/graperank>.
- *
- * A follow from the observer themselves counts far more than a follow from a
- * stranger deep in the graph ([directFollowConfidence] vs
- * [indirectFollowConfidence]); mutes and reports are trusted more heavily than
- * an indirect follow because negative signals are rarer and more deliberate.
+ * <https://github.com/vitorpamplona/graperank> and NosFabrica's Brainstorm
+ * `DEFAULT` preset.
  */
 @Immutable
 data class GrapeRankParams(
@@ -48,105 +44,121 @@ data class GrapeRankParams(
 
 /**
  * GrapeRank — a subjective, observer-centric web-of-trust score in `[0, 1]` for
- * every user reachable from an observer in a [TrustGraph]. The observer has full
- * self-trust (`1.0`); trust decays by roughly the attenuation factor each hop,
- * so scores fall to ~0 within a handful of hops.
+ * every user reachable from an observer in a [TrustGraph]. See the algorithm
+ * notes in `TrustGraph`/`GrapeRankTest`; this is the single-observer worklist
+ * form, operating on the compact int-CSR graph so it scales to the whole network.
  *
- * This is a faithful single-observer port of the reference `v3TargetedBFS`
- * variant. Rather than the reactive per-edge propagation the reference uses (it
- * assumes edges stream in one at a time), this recomputes over a graph that is
- * already fully loaded, using a worklist that:
- *   1. seeds the observer at `1.0` and enqueues the users it attests about,
- *   2. dequeues a target, recomputes its score over *all* its incoming edges,
- *   3. re-enqueues that target's out-neighbours whenever its score moved by more
- *      than [GrapeRankParams.convergence].
- *
- * Attenuation makes the update a contraction, so the worklist reaches the same
- * fixed point a full sweep would — while only ever touching users reachable from
- * the observer. See `GrapeRankTest` for the full-sweep cross-check.
+ * [compute] returns a `DoubleArray` indexed by node id (`graph.idOf(pubkey)`),
+ * not a map — at millions of nodes a boxed map would dwarf the graph itself. The
+ * observer's own entry stays pinned at `1.0`; callers rank the others.
  */
 class GrapeRank(
     val params: GrapeRankParams = GrapeRankParams(),
 ) {
-    /** Confidence weight [source]→target contributes, from [observer]'s point of view. */
+    private val rigidity = -ln(params.rigor)
+
+    /** Exponential saturation turning accumulated weight into a confidence in `[0, 1)`. */
+    private fun weightToConfidence(weight: Double): Double = 1.0 - exp(-weight * rigidity)
+
     private fun confidence(
-        edge: TrustEdge,
-        observer: HexKey,
+        relationCode: Int,
+        sourceIsObserver: Boolean,
     ): Double =
-        when (edge.relation) {
-            TrustRelation.FOLLOW -> if (edge.source == observer) params.directFollowConfidence else params.indirectFollowConfidence
-            TrustRelation.MUTE -> params.muteConfidence
-            TrustRelation.REPORT -> params.reportConfidence
+        when (relationCode) {
+            TrustRelation.FOLLOW.code -> if (sourceIsObserver) params.directFollowConfidence else params.indirectFollowConfidence
+            TrustRelation.MUTE.code -> params.muteConfidence
+            else -> params.reportConfidence
         }
 
-    /** Exponential saturation curve turning accumulated weight into a confidence in `[0, 1)`. */
-    private fun weightToConfidence(weight: Double): Double = 1.0 - exp(-weight * -ln(params.rigor))
+    private fun rating(relationCode: Int): Double =
+        when (relationCode) {
+            TrustRelation.FOLLOW.code -> TrustRelation.FOLLOW.rating
+            TrustRelation.MUTE.code -> TrustRelation.MUTE.rating
+            else -> TrustRelation.REPORT.rating
+        }
 
     /**
-     * Score every user reachable from [observer]. The returned map excludes the
-     * observer itself (its score is a pinned `1.0` and not part of a ranking).
-     * Users with no positive path from the observer are absent (equivalently, 0).
-     *
-     * [onProgress] is invoked once per worklist visit with
-     * `(visited, scored, queued)` running counts, so a caller can report progress
-     * on a large graph; it defaults to a no-op.
+     * Score every node reachable from [observer]. Returns scores by node id, or an
+     * all-zero array if the observer isn't in the graph. [onProgress] fires once
+     * per worklist visit with `(visited, queued)` running counts.
      */
     fun compute(
         graph: TrustGraph,
         observer: HexKey,
-        onProgress: ((visited: Int, scored: Int, queued: Int) -> Unit)? = null,
-    ): Map<HexKey, Double> {
-        val scores = HashMap<HexKey, Double>()
-        scores[observer] = 1.0
+        onProgress: ((visited: Long, queued: Int) -> Unit)? = null,
+    ): DoubleArray {
+        val n = graph.nodeCount
+        val scores = DoubleArray(n)
+        val observerId = graph.idOf(observer)
+        if (observerId < 0) return scores
 
-        val queue = ArrayDeque<HexKey>()
-        val queued = HashSet<HexKey>()
+        scores[observerId] = 1.0
 
-        fun enqueue(user: HexKey) {
-            if (user != observer && queued.add(user)) queue.addLast(user)
+        val inQueue = BooleanArray(n)
+        val queue = IntArrayList(1024)
+
+        fun enqueue(node: Int) {
+            if (node != observerId && !inQueue[node]) {
+                inQueue[node] = true
+                queue.add(node)
+            }
         }
 
-        graph.outgoing[observer]?.forEach(::enqueue)
+        enqueueOutNeighbours(graph, observerId, ::enqueue)
 
-        var visited = 0
+        var visited = 0L
         while (queue.isNotEmpty()) {
-            val target = queue.removeFirst()
-            queued.remove(target)
+            val target = queue.removeLast()
+            inQueue[target] = false
 
-            val newScore = scoreOf(graph, scores, target, observer)
-            val oldScore = scores.put(target, newScore) ?: 0.0
+            var sumOfWeights = 0.0
+            var sumOfWeightedRatings = 0.0
+            var i = graph.inOffsets[target]
+            val end = graph.inOffsets[target + 1]
+            while (i < end) {
+                val packed = graph.inPacked[i]
+                val source = packed and TrustGraph.SOURCE_MASK
+                val sourceScore = scores[source]
+                if (sourceScore != 0.0) {
+                    val relationCode = packed ushr TrustGraph.SOURCE_BITS
+                    val weight = confidence(relationCode, source == observerId) * sourceScore * params.attenuation
+                    sumOfWeights += weight
+                    sumOfWeightedRatings += weight * rating(relationCode)
+                }
+                i++
+            }
 
+            val newScore =
+                if (abs(sumOfWeights) < 0.00001) {
+                    0.0
+                } else {
+                    val s = weightToConfidence(sumOfWeights) * sumOfWeightedRatings / sumOfWeights
+                    if (s > 0.0) s else 0.0
+                }
+
+            val oldScore = scores[target]
+            scores[target] = newScore
             if (abs(newScore - oldScore) > params.convergence) {
-                graph.outgoing[target]?.forEach(::enqueue)
+                enqueueOutNeighbours(graph, target, ::enqueue)
             }
 
             visited++
-            onProgress?.invoke(visited, scores.size, queue.size)
+            onProgress?.invoke(visited, queue.size)
         }
 
-        scores.remove(observer)
         return scores
     }
 
-    private fun scoreOf(
+    private inline fun enqueueOutNeighbours(
         graph: TrustGraph,
-        scores: Map<HexKey, Double>,
-        target: HexKey,
-        observer: HexKey,
-    ): Double {
-        var sumOfWeights = 0.0
-        var sumOfWeightedRatings = 0.0
-
-        val edges = graph.incoming[target] ?: return 0.0
-        for (edge in edges) {
-            val sourceScore = scores[edge.source] ?: continue
-            val weight = confidence(edge, observer) * sourceScore * params.attenuation
-            sumOfWeights += weight
-            sumOfWeightedRatings += weight * edge.relation.rating
+        node: Int,
+        enqueue: (Int) -> Unit,
+    ) {
+        var i = graph.outOffsets[node]
+        val end = graph.outOffsets[node + 1]
+        while (i < end) {
+            enqueue(graph.outTargets[i])
+            i++
         }
-
-        if (abs(sumOfWeights) < 0.00001) return 0.0
-        val score = weightToConfidence(sumOfWeights) * sumOfWeightedRatings / sumOfWeights
-        return if (score > 0.0) score else 0.0
     }
 }

@@ -28,111 +28,131 @@ import kotlin.math.max
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class GrapeRankTest {
     private val obs = "observer"
 
-    private fun graphOf(vararg edges: Triple<HexKey, HexKey, TrustRelation>): TrustGraph {
-        val incoming = HashMap<HexKey, MutableList<TrustEdge>>()
+    private fun graphOf(edges: List<Triple<HexKey, HexKey, TrustRelation>>): TrustGraph {
+        val b = TrustGraphBuilder()
         for ((source, target, relation) in edges) {
-            incoming.getOrPut(target) { mutableListOf() }.add(TrustEdge(source, relation))
+            when (relation) {
+                TrustRelation.FOLLOW -> b.addFollows(source, listOf(target))
+                TrustRelation.MUTE -> b.addMutes(source, listOf(target))
+                TrustRelation.REPORT -> b.addReports(source, listOf(target))
+            }
         }
-        return TrustGraph(incoming)
+        return b.build()
+    }
+
+    private fun graphOf(vararg edges: Triple<HexKey, HexKey, TrustRelation>) = graphOf(edges.toList())
+
+    /** Score for a pubkey (0.0 if absent from the graph). */
+    private fun DoubleArray.of(
+        graph: TrustGraph,
+        pubkey: HexKey,
+    ): Double {
+        val id = graph.idOf(pubkey)
+        return if (id < 0) 0.0 else this[id]
     }
 
     @Test
-    fun observerIsExcludedFromRanking() {
-        val scores = GrapeRank().compute(graphOf(Triple(obs, "a", TrustRelation.FOLLOW)), obs)
-        assertNull(scores[obs], "observer's pinned self-trust is not part of the ranking")
+    fun observerIsPinnedAtFullSelfTrust() {
+        val graph = graphOf(Triple(obs, "a", TrustRelation.FOLLOW))
+        val scores = GrapeRank().compute(graph, obs)
+        assertEquals(1.0, scores.of(graph, obs), 1e-12)
     }
 
     @Test
     fun directFollowMatchesHandComputedValue() {
-        val scores = GrapeRank().compute(graphOf(Triple(obs, "a", TrustRelation.FOLLOW)), obs)
-        // weight = 0.5 * 1.0 * 0.85 = 0.425 ; conf(0.425) = 1 - 2^-0.425
-        // score = conf * (0.425 / 0.425) = 0.2551612...
-        assertEquals(0.25516127, scores.getValue("a"), 1e-6)
+        val graph = graphOf(Triple(obs, "a", TrustRelation.FOLLOW))
+        val scores = GrapeRank().compute(graph, obs)
+        // weight = 0.5 * 1.0 * 0.85 = 0.425 ; score = conf(0.425) = 0.2551612...
+        assertEquals(0.25516127, scores.of(graph, "a"), 1e-6)
     }
 
     @Test
     fun trustDecaysSteeplyAcrossHops() {
-        val scores =
-            GrapeRank().compute(
-                graphOf(
-                    Triple(obs, "a", TrustRelation.FOLLOW),
-                    Triple("a", "b", TrustRelation.FOLLOW),
-                ),
-                obs,
+        val graph =
+            graphOf(
+                Triple(obs, "a", TrustRelation.FOLLOW),
+                Triple("a", "b", TrustRelation.FOLLOW),
             )
-        val a = scores.getValue("a")
-        val b = scores.getValue("b")
-        // Indirect follow from a (conf 0.03) two hops out: ~0.0045, an ~56x drop.
+        val scores = GrapeRank().compute(graph, obs)
+        val a = scores.of(graph, "a")
+        val b = scores.of(graph, "b")
         assertEquals(0.004499, b, 1e-5)
         assertTrue(b < a / 10.0, "two-hop trust should be far below one-hop trust")
     }
 
     @Test
     fun aMuteFromAnEndorsedUserLowersTheScore() {
-        val followOnly = GrapeRank().compute(graphOf(Triple(obs, "b", TrustRelation.FOLLOW)), obs)
-        val withMute =
-            GrapeRank().compute(
-                graphOf(
-                    Triple(obs, "a", TrustRelation.FOLLOW),
-                    Triple(obs, "b", TrustRelation.FOLLOW),
-                    Triple("a", "b", TrustRelation.MUTE),
-                ),
-                obs,
+        val followOnlyGraph = graphOf(Triple(obs, "b", TrustRelation.FOLLOW))
+        val followOnly = GrapeRank().compute(followOnlyGraph, obs).of(followOnlyGraph, "b")
+
+        val muteGraph =
+            graphOf(
+                Triple(obs, "a", TrustRelation.FOLLOW),
+                Triple(obs, "b", TrustRelation.FOLLOW),
+                Triple("a", "b", TrustRelation.MUTE),
             )
-        assertTrue(
-            withMute.getValue("b") < followOnly.getValue("b"),
-            "a mute from a trusted user should pull b's score below the follow-only baseline",
-        )
+        val withMute = GrapeRank().compute(muteGraph, obs).of(muteGraph, "b")
+
+        assertTrue(withMute < followOnly, "a mute from a trusted user should pull b below the follow-only baseline")
     }
 
     @Test
     fun purelyReportedUserFloorsAtZero() {
-        val scores =
-            GrapeRank().compute(
-                graphOf(
-                    Triple(obs, "a", TrustRelation.FOLLOW),
-                    Triple("a", "d", TrustRelation.REPORT),
-                ),
-                obs,
+        val graph =
+            graphOf(
+                Triple(obs, "a", TrustRelation.FOLLOW),
+                Triple("a", "d", TrustRelation.REPORT),
             )
-        assertEquals(0.0, scores.getValue("d"), 1e-9, "negative-only signals floor at zero")
+        val scores = GrapeRank().compute(graph, obs)
+        assertEquals(0.0, scores.of(graph, "d"), 1e-9)
     }
 
     @Test
     fun unreachableUsersAreNotScored() {
-        // x -> y exists but neither is reachable from the observer.
-        val scores =
-            GrapeRank().compute(
-                graphOf(
-                    Triple(obs, "a", TrustRelation.FOLLOW),
-                    Triple("x", "y", TrustRelation.FOLLOW),
-                ),
-                obs,
+        val graph =
+            graphOf(
+                Triple(obs, "a", TrustRelation.FOLLOW),
+                Triple("x", "y", TrustRelation.FOLLOW),
             )
-        assertTrue("a" in scores)
-        assertNull(scores["y"], "a user with no path from the observer is absent from the result")
+        val scores = GrapeRank().compute(graph, obs)
+        assertTrue(scores.of(graph, "a") > 0.0)
+        assertEquals(0.0, scores.of(graph, "y"), 1e-12, "a user with no path from the observer stays 0")
     }
 
     @Test
     fun cyclesConverge() {
-        // a<->b mutual follow plus observer->a. Must terminate at a fixed point.
-        val scores =
-            GrapeRank().compute(
-                graphOf(
-                    Triple(obs, "a", TrustRelation.FOLLOW),
-                    Triple("a", "b", TrustRelation.FOLLOW),
-                    Triple("b", "a", TrustRelation.FOLLOW),
-                ),
-                obs,
+        val graph =
+            graphOf(
+                Triple(obs, "a", TrustRelation.FOLLOW),
+                Triple("a", "b", TrustRelation.FOLLOW),
+                Triple("b", "a", TrustRelation.FOLLOW),
             )
-        assertTrue(scores.getValue("a") > 0.0)
-        assertTrue(scores.getValue("b") > 0.0)
+        val scores = GrapeRank().compute(graph, obs)
+        assertTrue(scores.of(graph, "a") > 0.0)
+        assertTrue(scores.of(graph, "b") > 0.0)
+    }
+
+    @Test
+    fun deduplicatesRepeatedReportEdges() {
+        // Two report edges a->d collapse to one; the score matches a single report.
+        val once = graphOf(Triple(obs, "a", TrustRelation.FOLLOW), Triple("a", "d", TrustRelation.REPORT))
+        val twice =
+            graphOf(
+                Triple(obs, "a", TrustRelation.FOLLOW),
+                Triple("a", "d", TrustRelation.REPORT),
+                Triple("a", "d", TrustRelation.REPORT),
+            )
+        assertEquals(2, twice.edgeCount(), "duplicate report edge should be dropped")
+        assertEquals(
+            GrapeRank().compute(once, obs).of(once, "d"),
+            GrapeRank().compute(twice, obs).of(twice, "d"),
+            1e-12,
+        )
     }
 
     /**
@@ -141,9 +161,6 @@ class GrapeRankTest {
      */
     @Test
     fun worklistMatchesFullSweepOnRandomGraphs() {
-        // Tight convergence so both methods settle onto essentially the same
-        // fixed point (attenuation < 1 makes the update a contraction), leaving
-        // only floating-point slop to compare against.
         val params = GrapeRankParams(convergence = 1e-10)
         val engine = GrapeRank(params)
         repeat(50) { seed ->
@@ -165,33 +182,43 @@ class GrapeRankTest {
                     }
                 }
             }
-            val graph = graphOf(*edges.toTypedArray())
             val observer = nodes.first()
+            val graph = graphOf(edges)
+            val scores = engine.compute(graph, observer)
+            val reference = fullSweep(edges, nodes, observer, params)
 
-            val worklist = engine.compute(graph, observer)
-            val fullSweep = fullSweep(graph, observer, params)
-
-            for (node in graph.users) {
-                if (node == observer) continue
-                val a = worklist[node] ?: 0.0
-                val b = fullSweep[node] ?: 0.0
+            for (node in nodes) {
+                if (node == observer) continue // observer self-trust is not part of a ranking
+                val a = scores.of(graph, node)
+                val b = reference[node] ?: 0.0
                 assertEquals(b, a, 1e-5, "seed=$seed node=$node worklist=$a fullSweep=$b")
             }
         }
     }
 
-    // Reference implementation: blind full sweep over every user until nothing changes.
+    // Reference: blind full sweep over every user until nothing changes.
     private fun fullSweep(
-        graph: TrustGraph,
+        edges: List<Triple<HexKey, HexKey, TrustRelation>>,
+        nodes: List<HexKey>,
         observer: HexKey,
         params: GrapeRankParams,
     ): Map<HexKey, Double> {
-        fun confidence(edge: TrustEdge): Double =
-            when (edge.relation) {
-                TrustRelation.FOLLOW -> if (edge.source == observer) params.directFollowConfidence else params.indirectFollowConfidence
-                TrustRelation.MUTE -> params.muteConfidence
-                TrustRelation.REPORT -> params.reportConfidence
-            }
+        // Dedup identical edges (mirrors the builder: report edges dedup; follow/mute
+        // sets are unique per source anyway).
+        val incoming = HashMap<HexKey, MutableSet<Pair<HexKey, TrustRelation>>>()
+        for ((s, t, r) in edges) {
+            if (s == t) continue
+            incoming.getOrPut(t) { LinkedHashSet() }.add(s to r)
+        }
+
+        fun confidence(
+            r: TrustRelation,
+            source: HexKey,
+        ) = when (r) {
+            TrustRelation.FOLLOW -> if (source == observer) params.directFollowConfidence else params.indirectFollowConfidence
+            TrustRelation.MUTE -> params.muteConfidence
+            TrustRelation.REPORT -> params.reportConfidence
+        }
 
         fun weightToConfidence(w: Double) = 1.0 - exp(-w * -ln(params.rigor))
 
@@ -199,22 +226,21 @@ class GrapeRankTest {
         scores[observer] = 1.0
         do {
             var changed = false
-            for (target in graph.users) {
+            for (target in nodes) {
                 if (target == observer) continue
                 var sumW = 0.0
                 var sumWR = 0.0
-                for (edge in graph.incoming[target] ?: emptyList()) {
-                    val s = scores[edge.source] ?: continue
-                    val w = confidence(edge) * s * params.attenuation
+                for ((source, r) in incoming[target] ?: emptySet()) {
+                    val s = scores[source] ?: continue
+                    val w = confidence(r, source) * s * params.attenuation
                     sumW += w
-                    sumWR += w * edge.relation.rating
+                    sumWR += w * r.rating
                 }
                 val newScore = if (abs(sumW) < 0.00001) 0.0 else max(weightToConfidence(sumW) * sumWR / sumW, 0.0)
                 val old = scores.put(target, newScore) ?: 0.0
                 changed = changed || abs(newScore - old) > params.convergence
             }
         } while (changed)
-        scores.remove(observer)
         return scores
     }
 }

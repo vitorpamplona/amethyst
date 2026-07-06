@@ -138,9 +138,13 @@ object GrapeRankCommand {
 
             val graphKinds = listOf(ContactListEvent.KIND, MuteListEvent.KIND, ReportEvent.KIND)
 
+            // The graph is built incrementally: contact lists stream straight into a
+            // compact int-CSR structure and the Event is discarded, so the whole
+            // network fits in memory without holding millions of kind:3 objects.
+            val builder = TrustGraphBuilder()
             var rounds = 0
             var relaysContactedCount = 0
-            var contactListsHeld = 0
+            var contactListsFed = 0
 
             if (!offline) {
                 val discovered = hashSetOf(observer)
@@ -148,146 +152,146 @@ object GrapeRankCommand {
                 // contact lists we crawl (A's follow of B says where B writes) — a
                 // discovery tier below each user's kind:10002 outbox.
                 val relayHints = HashMap<HexKey, MutableSet<NormalizedRelayUrl>>()
-                // Users we're finished with: we hold their kind:3 (cached or freshly
-                // downloaded), or ran out of retry attempts.
+                // Users we're finished with this run: we fed their latest kind:3, or
+                // ran out of retry attempts on an unreachable outbox.
                 val done = hashSetOf<HexKey>()
                 val attempts = HashMap<HexKey, Int>()
-                // The pool of relays we actually route outbox queries to.
                 val relaysContacted = hashSetOf<NormalizedRelayUrl>()
 
-                // Harvest a contact list: record its relay hints and add its follows to
-                // the frontier. Returns the count of newly-discovered users.
-                fun expand(contacts: ContactListEvent): Int {
+                // Feed a user's contact list into the graph, harvest relay hints, and
+                // add its follows to the frontier. Called once per user (guarded by
+                // `done`). Returns the count of newly-discovered users.
+                fun ingest(
+                    source: HexKey,
+                    contacts: ContactListEvent,
+                ): Int {
+                    val follows = ArrayList<HexKey>()
                     var fresh = 0
                     for (tag in contacts.follows()) {
+                        follows.add(tag.pubKey)
                         tag.relayUri?.let { relayHints.getOrPut(tag.pubKey) { HashSet() }.add(it) }
                         if (discovered.add(tag.pubKey)) fresh++
                     }
+                    builder.addFollows(source, follows)
+                    contactListsFed++
                     return fresh
                 }
 
-                // Loop until every discovered user's contact list is in hand — no user
-                // cap, to full graph depth. We only DOWNLOAD lists we don't already
-                // have; a list already in the store is expanded from disk with no
-                // network (so re-runs and a warm shared store are cheap). An
-                // unreachable outbox is dropped after MAX_OUTBOX_ATTEMPTS tries so the
-                // crawl still terminates.
+                // Crawl to full graph depth (no user cap). Each run fetches every
+                // discovered user's LATEST kind:3/10000/1984 once from their outbox
+                // (a freshness pass — grouped by write relay in routeByOutbox), unless
+                // we already fetched it this run (`done`). An unreachable outbox is
+                // retried up to MAX_OUTBOX_ATTEMPTS then dropped so the crawl terminates.
                 while (rounds < maxRounds) {
                     val pending = discovered.filterNot { it in done }
                     if (pending.isEmpty()) break
                     rounds++
 
-                    var cached = 0
-                    var downloaded = 0
+                    var gotList = 0
                     var newUsers = 0
 
-                    // 1. Users whose kind:3 is already in the store: expand, no network.
-                    val need = ArrayList<HexKey>()
-                    for (pk in pending) {
-                        val contacts = ctx.contactsOf(pk)
-                        if (contacts != null) {
-                            done += pk
-                            contactListsHeld++
-                            cached++
-                            newUsers += expand(contacts)
-                        } else {
-                            need += pk
-                        }
-                    }
-
-                    // 2. Download the rest from their own outboxes. Resolve kind:10002
-                    //    in bulk (indexers aggregate it), then fetch content in small
-                    //    batches drained a few at a time — one giant drain over
-                    //    thousands of outbox relays saturates connections and times out.
-                    //    Routing (store reads) is serial; only the drains run
-                    //    concurrently, which is safe: inserts serialize on the store
-                    //    write lock.
-                    if (need.isNotEmpty()) {
-                        ensureRelayLists(ctx, need.toSet(), timeoutMs)
-                        for (group in need.chunked(USER_BATCH).chunked(DRAIN_CONCURRENCY)) {
-                            val prepared = group.map { batch -> batch to routeByOutbox(ctx, batch.toSet(), relayHints, graphKinds) }
-                            val drained =
-                                coroutineScope {
-                                    prepared
-                                        .map { (batch, filters) ->
-                                            async {
-                                                ctx.drain(filters, timeoutMs)
-                                                batch to filters.keys
-                                            }
-                                        }.awaitAll()
-                                }
-                            for ((batch, relays) in drained) {
-                                relaysContacted += relays
-                                for (pk in batch) {
-                                    val contacts = ctx.contactsOf(pk)
-                                    if (contacts != null) {
-                                        done += pk
-                                        contactListsHeld++
-                                        downloaded++
-                                        newUsers += expand(contacts)
-                                    } else {
-                                        val tries = (attempts[pk] ?: 0) + 1
-                                        attempts[pk] = tries
-                                        // Give up after retries: no contact list, or outbox unreachable.
-                                        if (tries >= MAX_OUTBOX_ATTEMPTS) done += pk
-                                    }
+                    // Resolve kind:10002 outboxes in bulk (indexers aggregate them),
+                    // then fetch content in small batches drained a few at a time — one
+                    // giant drain over thousands of outbox relays saturates connections
+                    // and times out. Routing (store reads) is serial; only the drains
+                    // run concurrently, which is safe: inserts serialize on the store
+                    // write lock.
+                    ensureRelayLists(ctx, pending.toSet(), timeoutMs)
+                    for (group in pending.chunked(USER_BATCH).chunked(DRAIN_CONCURRENCY)) {
+                        val prepared = group.map { batch -> batch to routeByOutbox(ctx, batch.toSet(), relayHints, graphKinds) }
+                        val drained =
+                            coroutineScope {
+                                prepared
+                                    .map { (batch, filters) ->
+                                        async {
+                                            ctx.drain(filters, timeoutMs)
+                                            batch to filters.keys
+                                        }
+                                    }.awaitAll()
+                            }
+                        for ((batch, relays) in drained) {
+                            relaysContacted += relays
+                            for (pk in batch) {
+                                val contacts = ctx.contactsOf(pk)
+                                if (contacts != null) {
+                                    done += pk
+                                    gotList++
+                                    newUsers += ingest(pk, contacts)
+                                } else {
+                                    val tries = (attempts[pk] ?: 0) + 1
+                                    attempts[pk] = tries
+                                    if (tries >= MAX_OUTBOX_ATTEMPTS) done += pk
                                 }
                             }
                         }
                     }
 
                     System.err.println(
-                        "[graperank] round $rounds: pending=${pending.size}, cached=$cached, downloaded=$downloaded, " +
+                        "[graperank] round $rounds: fetched=${pending.size}, gotList=$gotList, " +
                             "newUsers=$newUsers, discovered=${discovered.size}, done=${done.size}",
                     )
                 }
 
                 relaysContactedCount = relaysContacted.size
                 System.err.println(
-                    "[graperank] crawl complete: ${discovered.size} discovered, $contactListsHeld with a contact list, " +
+                    "[graperank] crawl complete: ${discovered.size} discovered, $contactListsFed contact lists fed, " +
                         "$relaysContactedCount relays contacted, $rounds rounds",
                 )
-            }
-
-            // Build the graph from the store so it includes BOTH freshly-downloaded and
-            // already-cached contact lists (and, offline, everything on disk).
-            val events = ctx.store.query<Event>(Filter(kinds = graphKinds))
-            if (offline) System.err.println("[graperank] offline: ${events.size} events from local store")
-
-            val graph = TrustGraphBuilder.build(events)
-            System.err.println(
-                "[graperank] graph built: ${graph.users.size} users, ${graph.edgeCount()} edges from ${events.size} events; scoring…",
-            )
-
-            // Live scoring progress: the worklist visits each reachable user once
-            // per relaxation; report every PROGRESS_STEP visits so a large graph
-            // shows movement instead of hanging silently.
-            val scores =
-                GrapeRank(params).compute(graph, observer) { visited, scored, queued ->
-                    if (visited % SCORE_PROGRESS_STEP == 0) {
-                        System.err.println("[graperank] scoring: $visited visited, $scored scored, $queued queued")
+            } else {
+                // Offline: stream contact lists from the local store into the graph.
+                for (event in ctx.store.query<Event>(Filter(kinds = listOf(ContactListEvent.KIND)))) {
+                    if (event is ContactListEvent) {
+                        builder.addFollows(event.pubKey, event.verifiedFollowKeySet())
+                        contactListsFed++
                     }
                 }
-            System.err.println("[graperank] scored ${scores.size} users")
+                System.err.println("[graperank] offline: $contactListsFed contact lists from local store")
+            }
+
+            // Mutes + reports come from the store (both paths). Far fewer than contact
+            // lists, so materialising them is cheap.
+            for (event in ctx.store.query<Event>(Filter(kinds = listOf(MuteListEvent.KIND)))) {
+                if (event is MuteListEvent) builder.addMutes(event.pubKey, event.linkedPubKeys())
+            }
+            for (event in ctx.store.query<Event>(Filter(kinds = listOf(ReportEvent.KIND)))) {
+                if (event is ReportEvent) builder.addReports(event.pubKey, event.reportedAuthor().map { it.pubkey })
+            }
+
+            val graph = builder.build()
+            System.err.println("[graperank] graph built: ${graph.nodeCount} users, ${graph.edgeCount()} edges; scoring…")
+
+            // Live scoring progress: the worklist visits each reachable user once per
+            // relaxation; report every SCORE_PROGRESS_STEP visits so a large graph shows
+            // movement instead of hanging silently.
+            val scores =
+                GrapeRank(params).compute(graph, observer) { visited, queued ->
+                    if (visited % SCORE_PROGRESS_STEP == 0L) {
+                        System.err.println("[graperank] scoring: $visited visited, $queued queued")
+                    }
+                }
 
             fun rankOf(score: Double) = (score * 100).roundToInt()
 
-            val ranked =
-                scores.entries
-                    .filter { it.value >= minScore }
-                    .sortedByDescending { it.value }
+            val observerId = graph.idOf(observer)
+            // Reachable users with positive trust at or above --min-score, high→low.
+            val rankedIds = ArrayList<Int>()
+            for (id in 0 until graph.nodeCount) {
+                if (id != observerId && scores[id] > 0.0 && scores[id] >= minScore) rankedIds.add(id)
+            }
+            rankedIds.sortByDescending { scores[it] }
+            System.err.println("[graperank] scored ${rankedIds.size} users")
 
             val result =
                 linkedMapOf<String, Any?>(
                     "observer" to observer,
                     "crawl_rounds" to rounds,
                     "relays_contacted" to relaysContactedCount,
-                    "graph_users" to graph.users.size,
+                    "graph_users" to graph.nodeCount,
                     "graph_edges" to graph.edgeCount(),
-                    "users_scored" to scores.size,
+                    "users_scored" to rankedIds.size,
                     "scores" to
-                        ranked.take(limit).map {
-                            mapOf("pubkey" to it.key, "score" to it.value, "rank" to rankOf(it.value))
+                        rankedIds.take(limit).map {
+                            mapOf("pubkey" to graph.pubkeyOf(it), "score" to scores[it], "rank" to rankOf(scores[it]))
                         },
                 )
 
@@ -306,9 +310,9 @@ object GrapeRankCommand {
                 val publishedRanks = publishedCardRanks(ctx)
 
                 val candidates =
-                    ranked
-                        .filter { rankOf(it.value) >= minRank }
-                        .map { it.key to rankOf(it.value) }
+                    rankedIds
+                        .filter { rankOf(scores[it]) >= minRank }
+                        .map { graph.pubkeyOf(it) to rankOf(scores[it]) }
                 val changed = candidates.filter { (target, rank) -> publishedRanks[target] != rank }
                 val toPublish = changed.take(publishLimit)
 

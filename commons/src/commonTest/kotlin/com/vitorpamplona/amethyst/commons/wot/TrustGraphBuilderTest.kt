@@ -21,118 +21,87 @@
 package com.vitorpamplona.amethyst.commons.wot
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class TrustGraphBuilderTest {
-    // Distinct valid 64-hex pubkeys.
-    private fun pk(n: Int): HexKey = n.toString(16).padStart(64, '0')
+    private val alice = "alice"
+    private val bob = "bob"
+    private val carol = "carol"
+    private val dave = "dave"
 
-    private val alice = pk(0xA1)
-    private val bob = pk(0xB0)
-    private val carol = pk(0xC0)
-    private val dave = pk(0xD0)
-
-    private val dummySig = "0".repeat(128)
-
-    private fun contactList(
-        author: HexKey,
-        follows: List<HexKey>,
-        createdAt: Long = 1000,
-    ) = ContactListEvent(
-        id = pk(author.hashCode() xor createdAt.toInt()),
-        pubKey = author,
-        createdAt = createdAt,
-        tags = follows.map { arrayOf("p", it) }.toTypedArray(),
-        content = "",
-        sig = dummySig,
-    )
-
-    private fun muteList(
-        author: HexKey,
-        mutes: List<HexKey>,
-        createdAt: Long = 1000,
-    ) = MuteListEvent(
-        id = pk(author.hashCode() xor createdAt.toInt() xor 0x5555),
-        pubKey = author,
-        createdAt = createdAt,
-        tags = mutes.map { arrayOf("p", it) }.toTypedArray(),
-        content = "",
-        sig = dummySig,
-    )
-
-    private fun report(
-        author: HexKey,
-        reported: HexKey,
-        createdAt: Long = 1000,
-    ) = ReportEvent(
-        id = pk(author.hashCode() xor reported.hashCode() xor createdAt.toInt()),
-        pubKey = author,
-        createdAt = createdAt,
-        tags = arrayOf(arrayOf("p", reported, "spam")),
-        content = "",
-        sig = dummySig,
-    )
+    /** Decode a node's incoming edges back to (source, relation) pairs from the CSR. */
+    private fun TrustGraph.incomingOf(pubkey: HexKey): Set<Pair<HexKey, TrustRelation>> {
+        val t = idOf(pubkey)
+        if (t < 0) return emptySet()
+        val out = HashSet<Pair<HexKey, TrustRelation>>()
+        var i = inOffsets[t]
+        val end = inOffsets[t + 1]
+        while (i < end) {
+            val packed = inPacked[i]
+            val source = pubkeyOf(packed and TrustGraph.SOURCE_MASK)
+            val relation = TrustRelation.entries.first { it.code == (packed ushr TrustGraph.SOURCE_BITS) }
+            out.add(source to relation)
+            i++
+        }
+        return out
+    }
 
     @Test
     fun buildsFollowMuteAndReportEdges() {
-        val graph =
-            TrustGraphBuilder.build(
-                listOf(
-                    contactList(alice, listOf(bob, carol)),
-                    muteList(bob, listOf(dave)),
-                    report(carol, dave),
-                ),
-            )
+        val b = TrustGraphBuilder()
+        b.addFollows(alice, listOf(bob, carol))
+        b.addMutes(bob, listOf(dave))
+        b.addReports(carol, listOf(dave))
+        val graph = b.build()
 
+        assertEquals(setOf(alice to TrustRelation.FOLLOW), graph.incomingOf(bob))
+        assertEquals(setOf(alice to TrustRelation.FOLLOW), graph.incomingOf(carol))
         assertEquals(
-            setOf(TrustEdge(alice, TrustRelation.FOLLOW)),
-            graph.incoming[bob]?.toSet(),
+            setOf(bob to TrustRelation.MUTE, carol to TrustRelation.REPORT),
+            graph.incomingOf(dave),
         )
-        assertEquals(
-            setOf(TrustEdge(alice, TrustRelation.FOLLOW)),
-            graph.incoming[carol]?.toSet(),
-        )
-        assertEquals(
-            setOf(TrustEdge(bob, TrustRelation.MUTE), TrustEdge(carol, TrustRelation.REPORT)),
-            graph.incoming[dave]?.toSet(),
-        )
-    }
-
-    @Test
-    fun keepsOnlyLatestReplaceablePerAuthor() {
-        val graph =
-            TrustGraphBuilder.build(
-                listOf(
-                    contactList(alice, listOf(bob), createdAt = 1000),
-                    contactList(alice, listOf(carol), createdAt = 2000),
-                ),
-            )
-        // The newer list (follows carol) wins; the stale bob follow is gone.
-        assertTrue(graph.incoming[bob].isNullOrEmpty())
-        assertEquals(setOf(TrustEdge(alice, TrustRelation.FOLLOW)), graph.incoming[carol]?.toSet())
-    }
-
-    @Test
-    fun dedupesRepeatedReports() {
-        val graph =
-            TrustGraphBuilder.build(
-                listOf(
-                    report(alice, dave, createdAt = 1000),
-                    report(alice, dave, createdAt = 2000),
-                ),
-            )
-        assertEquals(listOf(TrustEdge(alice, TrustRelation.REPORT)), graph.incoming[dave])
     }
 
     @Test
     fun dropsSelfEdges() {
-        val graph = TrustGraphBuilder.build(listOf(contactList(alice, listOf(alice, bob))))
-        assertTrue(graph.incoming[alice].isNullOrEmpty(), "a self-follow must not become an edge")
-        assertEquals(setOf(TrustEdge(alice, TrustRelation.FOLLOW)), graph.incoming[bob]?.toSet())
+        val b = TrustGraphBuilder()
+        b.addFollows(alice, listOf(alice, bob))
+        val graph = b.build()
+        assertTrue(graph.incomingOf(alice).isEmpty(), "a self-follow must not become an edge")
+        assertEquals(setOf(alice to TrustRelation.FOLLOW), graph.incomingOf(bob))
+    }
+
+    @Test
+    fun dedupesRepeatedReports() {
+        val b = TrustGraphBuilder()
+        b.addReports(alice, listOf(dave))
+        b.addReports(alice, listOf(dave))
+        val graph = b.build()
+        assertEquals(1, graph.edgeCount())
+        assertEquals(setOf(alice to TrustRelation.REPORT), graph.incomingOf(dave))
+    }
+
+    @Test
+    fun keepsFollowAndMuteFromSameSourceAsDistinctEdges() {
+        val b = TrustGraphBuilder()
+        b.addFollows(alice, listOf(bob))
+        b.addMutes(alice, listOf(bob))
+        val graph = b.build()
+        assertEquals(
+            setOf(alice to TrustRelation.FOLLOW, alice to TrustRelation.MUTE),
+            graph.incomingOf(bob),
+        )
+    }
+
+    @Test
+    fun internsEachPubkeyOnce() {
+        val b = TrustGraphBuilder()
+        b.addFollows(alice, listOf(bob, carol))
+        b.addFollows(bob, listOf(carol))
+        val graph = b.build()
+        assertEquals(3, graph.nodeCount, "alice, bob, carol interned once each")
+        assertEquals(3, graph.edgeCount())
     }
 }
