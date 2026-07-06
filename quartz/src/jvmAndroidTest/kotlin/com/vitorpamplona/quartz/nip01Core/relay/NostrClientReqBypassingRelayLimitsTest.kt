@@ -174,4 +174,69 @@ class NostrClientReqBypassingRelayLimitsTest : RelayClientTest() {
                 cappedHub.close()
             }
         }
+
+    /**
+     * A page boundary that lands *inside* a `created_at` second must not drop the
+     * straddled events. 6 events, 2 per second at t=100/99/98, relay cap 3 — no
+     * second exceeds the cap, but the 3rd slot splits the t=99 second. Exclusive
+     * `until = oldest - 1` used to skip the sibling; the inclusive re-fetch + dedup
+     * must retrieve all 6, once each.
+     */
+    @Test
+    fun boundaryStraddlingASecondIsFullyRetrieved() =
+        runBlocking {
+            val hub = InProcessRelays(defaultPolicy = { LimitsPolicy(RelayLimits(maxLimit = 3, defaultLimit = 3)) })
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            val client = NostrClient(hub, scope)
+            try {
+                hub.getOrCreate(defaultRelayUrl).preload(
+                    listOf(100L, 100L, 99L, 99L, 98L, 98L).mapIndexed { i, ts ->
+                        SyntheticEvents.fakeEvent(idSeed = i + 1, createdAt = ts)
+                    },
+                )
+                val got = mutableListOf<Event>()
+                client.fetchAllPages(defaultRelayUrl, listOf(Filter(kinds = listOf(1)))) { got.add(it) }
+                assertEquals(6, got.size, "every event must be retrieved despite a boundary inside a second")
+                assertEquals(6, got.map { it.id }.toSet().size, "no duplicate deliveries")
+            } finally {
+                client.disconnect()
+                scope.cancel()
+                hub.close()
+            }
+        }
+
+    /**
+     * A single second denser than the relay's page cap can't be fully drained (its
+     * tail is unreachable — no client-side fix). Paging MUST still step strictly
+     * past it, delivering the events newer and older than it, and MUST terminate
+     * rather than spin re-fetching the same page. Cap 2; A(1000), four events at
+     * t=999, F(998).
+     */
+    @Test
+    fun denseSecondBeyondCapIsSteppedPastWithoutStalling() =
+        runBlocking {
+            val hub = InProcessRelays(defaultPolicy = { LimitsPolicy(RelayLimits(maxLimit = 2, defaultLimit = 2)) })
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            val client = NostrClient(hub, scope)
+            try {
+                val a = SyntheticEvents.fakeEvent(idSeed = 1, createdAt = 1000L)
+                val dense = (2..5).map { SyntheticEvents.fakeEvent(idSeed = it, createdAt = 999L) }
+                val f = SyntheticEvents.fakeEvent(idSeed = 6, createdAt = 998L)
+                hub.getOrCreate(defaultRelayUrl).preload(listOf(a) + dense + listOf(f))
+
+                val got = mutableListOf<Event>()
+                client.fetchAllPages(defaultRelayUrl, listOf(Filter(kinds = listOf(1)))) { got.add(it) }
+
+                val ids = got.map { it.id }.toSet()
+                assertEquals(ids.size, got.size, "no duplicate deliveries")
+                assertTrue(a.id in ids, "the event newer than the dense second must be retrieved")
+                assertTrue(f.id in ids, "the event older than the dense second must be retrieved (stepped past)")
+                assertEquals(2, got.count { it.createdAt == 999L }, "exactly the relay cap of the dense second is reachable")
+                assertEquals(4, got.size, "A + 2-of-4 dense + F")
+            } finally {
+                client.disconnect()
+                scope.cancel()
+                hub.close()
+            }
+        }
 }
