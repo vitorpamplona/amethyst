@@ -253,7 +253,7 @@ object GrapeRankCommand {
                     // and times out. Routing (store reads) is serial; only the drains
                     // run concurrently, which is safe: inserts serialize on the store
                     // write lock.
-                    ensureRelayLists(ctx, pending.toSet(), timeoutMs, diagnose)
+                    ensureRelayLists(ctx, pending.toSet(), backbone, timeoutMs, diagnose)
                     for (group in pending.chunked(USER_BATCH).chunked(DRAIN_CONCURRENCY)) {
                         val prepared = group.map { batch -> batch to routeByOutbox(ctx, batch.toSet(), relayHints, backbone, attempts, writeRelayFreq, graphKinds) }
                         val drained =
@@ -669,29 +669,51 @@ object GrapeRankCommand {
     /**
      * Fetch kind:10002 relay lists for any [pubkeys] we don't already know, so
      * [routeByOutbox] can route their content query to their own write relays.
-     * Queries the bounded relay-list discovery set (indexers + general defaults),
-     * which aggregate kind:10002 for the whole network — reliable in bulk, unlike
-     * fanning out to thousands of per-user outboxes.
+     *
+     * Tier 1 queries the bounded relay-list discovery set (indexers + general
+     * defaults), which aggregate kind:10002 for the whole network — reliable in
+     * bulk, unlike fanning out to thousands of per-user outboxes.
+     *
+     * Tier 2 is a completeness net for the stragglers the indexers don't cover:
+     * a user publishes their own kind:10002 to their own write relays, and those
+     * relays overlap heavily with [fallbackRelays] — the known-good backbone we
+     * learned from the `r` tags in *everyone else's* 10002s. So after tier 1,
+     * any pubkey still without a relay list is retried against that learned pool
+     * (minus the tier-1 relays we already asked). Early rounds skip tier 2
+     * harmlessly because the backbone is still empty; it kicks in once the crawl
+     * has learned which relays actually carry 10002s.
      */
     private suspend fun ensureRelayLists(
         ctx: Context,
         pubkeys: Set<HexKey>,
+        fallbackRelays: Set<NormalizedRelayUrl>,
         timeoutMs: Long,
         diagnose: Boolean,
     ) {
         val missing = pubkeys.filter { ctx.relaysOf(it) == null }
         if (missing.isEmpty()) return
 
-        val relays = relayListDiscoveryRelays(ctx)
-        if (relays.isEmpty()) return
-
-        val filters =
-            relays.associateWith {
-                missing.chunked(AUTHORS_PER_FILTER).map { chunk ->
-                    Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = chunk)
+        suspend fun query(
+            authors: List<HexKey>,
+            relays: Set<NormalizedRelayUrl>,
+        ) {
+            if (relays.isEmpty() || authors.isEmpty()) return
+            val filters =
+                relays.associateWith {
+                    authors.chunked(AUTHORS_PER_FILTER).map { chunk ->
+                        Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = chunk)
+                    }
                 }
-            }
-        ctx.drain(filters, timeoutMs, diagnose)
+            ctx.drain(filters, timeoutMs, diagnose)
+        }
+
+        val discovery = relayListDiscoveryRelays(ctx)
+        query(missing, discovery)
+
+        // Tier 2: whoever the aggregators still don't have, ask the relays the
+        // rest of the graph actually writes to.
+        val stillMissing = missing.filter { ctx.relaysOf(it) == null }
+        query(stillMissing, fallbackRelays - discovery)
     }
 
     /**
