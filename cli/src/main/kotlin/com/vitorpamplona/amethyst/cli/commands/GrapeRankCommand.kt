@@ -183,9 +183,15 @@ object GrapeRankCommand {
             // is the real pre-scoring cost — the int-CSR build afterwards is a
             // cheap in-memory pack.
             var storeLoadMs: Long? = null
+            // Wall time to crawl + download the whole graph off the relays
+            // (online path only) — rounds + last-mile sweep, i.e. everything up
+            // to the point the graph is fully fetched. This is network-bound and
+            // dominates a from-scratch run.
+            var downloadMs: Long? = null
 
             val hopOf = HashMap<HexKey, Int>()
             if (!offline) {
+                val crawlStart = System.nanoTime()
                 val discovered = hashSetOf(observer)
                 hopOf[observer] = 0
                 // Per-user relay hints harvested from the `p`-tag relay hints in the
@@ -368,9 +374,10 @@ object GrapeRankCommand {
                         .groupingBy { it }
                         .eachCount()
                         .toSortedMap()
+                downloadMs = (System.nanoTime() - crawlStart) / 1_000_000
                 System.err.println(
                     "[graperank] crawl complete: ${discovered.size} discovered, $contactListsFed contact lists fed, " +
-                        "$relaysContactedCount relays contacted, $rounds rounds; " +
+                        "$relaysContactedCount relays contacted, $rounds rounds in $downloadMs ms; " +
                         "by hop: " + perHop.entries.joinToString(" ") { "${it.key}=${it.value}" },
                 )
             } else {
@@ -439,6 +446,7 @@ object GrapeRankCommand {
                     "graph_users" to graph.nodeCount,
                     "graph_edges" to graph.edgeCount(),
                     "users_scored" to rankedIds.size,
+                    "download_ms" to downloadMs,
                     "store_load_ms" to storeLoadMs,
                     "graph_build_ms" to buildMs,
                     "scoring_ms" to scoringMs,
