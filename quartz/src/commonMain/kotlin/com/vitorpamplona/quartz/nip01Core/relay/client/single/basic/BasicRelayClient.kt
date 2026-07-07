@@ -160,8 +160,10 @@ open class BasicRelayClient(
                 listener.onIncomingMessage(this@BasicRelayClient, text, msg)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
-                // doesn't expose parsing errors to lib users as errors
-                Log.e("BasicRelayClient", "Failure to parse message from ${url.url}: $text", e)
+                // A frame we can't parse is a relay-side quirk (non-standard framing, an
+                // unknown command, malformed JSON), not an Amethyst error. Drop it and log
+                // at WARN so it doesn't surface as an app error to lib users.
+                Log.w("BasicRelayClient", "Failure to parse message from ${url.url}: $text", e)
             }
         }
 
