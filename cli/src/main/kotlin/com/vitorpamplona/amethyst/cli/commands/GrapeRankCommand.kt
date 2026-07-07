@@ -94,16 +94,17 @@ object GrapeRankCommand {
     // (empirically ~250 users/drain succeeds, ~17k fails); keep the fan-out small.
     private const val USER_BATCH = 256
 
-    // Concurrent content drains. Each drain opens exactly ONE subscription per
-    // relay it touches (one REQ per relay under the drain's subId), so this IS
-    // the per-relay concurrency cap: a popular relay shared by many pending users
-    // receives at most this many concurrent subs from us — while the fan-out
-    // across *different* relays stays fully parallel (each drain hits ~100 distinct
-    // outboxes). RelayDiagnostics showed 24 blew past typical relay limits
-    // (rate-limited=1433, "too many concurrent REQs"=1286, "too many
-    // subscriptions"=710). Target ~20 subs/relay; 18 leaves room for the 1
-    // persistent warm-pool sub so the peak stays ~19, just under the common cap.
-    private const val DRAIN_CONCURRENCY = 18
+    // Global content-drain fan-out — how many outbox batches we drain at once.
+    // This is now purely a GLOBAL bound (memory / open sockets); the per-relay
+    // concurrency limit is enforced separately and adaptively by
+    // [AdaptiveRelayLimiter] (drains run with gatePerRelay=true), which starts
+    // every relay at 100 concurrent subs and demotes only the ones that complain
+    // (100 → 20 → 10). Because a hot relay can no longer be flooded regardless of
+    // this number, we can fan out widely across the many well-behaved relays for
+    // throughput. RelayDiagnostics previously showed a blunt 24 caused
+    // rate-limited=1433 / "too many concurrent REQs"=1286; the adaptive cap
+    // targets exactly those relays instead of throttling everyone uniformly.
+    private const val DRAIN_CONCURRENCY = 48
 
     // Sharded backbone sweep: instead of asking every popular relay for the
     // same full author list (N× redundant), split the still-missing authors
@@ -337,7 +338,7 @@ object GrapeRankCommand {
                                                 val dead = hashSetOf<NormalizedRelayUrl>()
                                                 val filters =
                                                     mapOf(relay to shard.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = graphKinds, authors = it) })
-                                                ctx.drain(filters, timeoutMs, diagnose, dead) to dead
+                                                ctx.drain(filters, timeoutMs, diagnose, dead, gatePerRelay = true) to dead
                                             }
                                         }
                                     }.awaitAll()
@@ -363,7 +364,7 @@ object GrapeRankCommand {
                             val dead = hashSetOf<NormalizedRelayUrl>()
                             val filters =
                                 live.associateWith { missing.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = graphKinds, authors = it) } }
-                            val events = ctx.drain(filters, timeoutMs, diagnose, dead)
+                            val events = ctx.drain(filters, timeoutMs, diagnose, dead, gatePerRelay = true)
                             recordDead(dead)
                             relaysContacted += live
                             for ((relay, _) in events) liveRelays.add(relay)
@@ -417,7 +418,7 @@ object GrapeRankCommand {
                                         .map { (batch, filters) ->
                                             async {
                                                 val dead = hashSetOf<NormalizedRelayUrl>()
-                                                val events = ctx.drain(filters, timeoutMs, diagnose, dead)
+                                                val events = ctx.drain(filters, timeoutMs, diagnose, dead, gatePerRelay = true)
                                                 recordDead(dead)
                                                 Triple(batch, filters.keys, events)
                                             }
@@ -472,6 +473,9 @@ object GrapeRankCommand {
                 )
                 if (ctx.relayDiagnostics.hadFeedback()) {
                     System.err.println("[graperank] relay feedback: ${ctx.relayDiagnostics.snapshot()}")
+                }
+                if (ctx.relayLimiter.hadThrottling()) {
+                    System.err.println("[graperank] relay throttling: ${ctx.relayLimiter.snapshot()}")
                 }
             } else {
                 // Offline: stream contact lists from the local store into the graph.
@@ -530,6 +534,7 @@ object GrapeRankCommand {
                     "crawl_rounds" to rounds,
                     "relays_contacted" to relaysContactedCount,
                     "relay_feedback" to if (ctx.relayDiagnostics.hadFeedback()) ctx.relayDiagnostics.snapshot() else null,
+                    "relay_throttling" to if (ctx.relayLimiter.hadThrottling()) ctx.relayLimiter.snapshot() else null,
                     "max_hop_reached" to (hopOf.values.maxOrNull() ?: 0),
                     "users_by_hop" to
                         hopOf.values
@@ -870,7 +875,7 @@ object GrapeRankCommand {
                         Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = chunk)
                     }
                 }
-            ctx.drain(filters, timeoutMs, diagnose)
+            ctx.drain(filters, timeoutMs, diagnose, gatePerRelay = true)
         }
 
         val discovery = relayListDiscoveryRelays(ctx)

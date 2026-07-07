@@ -74,10 +74,12 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Per-invocation wiring. Each CLI run constructs a Context, does its work,
@@ -153,6 +155,16 @@ class Context(
      * Registered on [client] for the life of this run.
      */
     val relayDiagnostics: RelayDiagnostics = RelayDiagnostics().also { client.addConnectionListener(it) }
+
+    /**
+     * Adaptive per-relay concurrent-subscription cap. Starts every relay
+     * generous (100) and demotes only the ones that complain about concurrency
+     * (100 → 20 → 10), driven straight off the NOTICE/CLOSED frames it observes
+     * as a connection listener. [drain]'s `gatePerRelay` path holds a relay's
+     * permit for the life of that relay's subscription, so we never exceed the
+     * cap the relay itself asked for. Idle for commands that don't opt in.
+     */
+    val relayLimiter: AdaptiveRelayLimiter = AdaptiveRelayLimiter().also { client.addConnectionListener(it) }
 
     /**
      * NIP-42 responder: answers a relay's AUTH challenge by signing with the
@@ -441,8 +453,10 @@ class Context(
         timeoutMs: Long = 8_000,
         diagnoseSlow: Boolean = false,
         deadOut: MutableSet<NormalizedRelayUrl>? = null,
+        gatePerRelay: Boolean = false,
     ): List<Pair<NormalizedRelayUrl, Event>> {
         if (filters.isEmpty()) return emptyList()
+        if (gatePerRelay) return drainGated(filters, timeoutMs, diagnoseSlow, deadOut)
         val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
         // Carries the terminal reason per relay so a timeout can distinguish a slow
         // relay (never terminal) from a connect failure / CLOSED.
@@ -516,6 +530,107 @@ class Context(
             client.unsubscribe(subId)
             eventChannel.close()
             doneChannel.close()
+        }
+        deadOut?.let { out ->
+            for ((relay, reason) in doneReasons) {
+                if (reason.startsWith("cannot")) out.add(relay)
+            }
+        }
+        return collected
+    }
+
+    /**
+     * Per-relay-gated variant of [drain] used by the crawl. Instead of one
+     * subscription spanning every relay, each relay gets its own subscription
+     * held behind [relayLimiter], so we never exceed the relay's adaptive
+     * concurrent-subscription cap. A relay whose cap is full simply waits for one
+     * of our other subscriptions on it to finish before its REQ goes out; relays
+     * we haven't upset run at the full starting cap and never wait.
+     *
+     * Semantics match [drain] otherwise: verify+store on a single consumer
+     * (so store writes stay serialized), return events tagged by relay, and
+     * report hard connect failures into [deadOut].
+     */
+    private suspend fun drainGated(
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
+        timeoutMs: Long,
+        diagnoseSlow: Boolean,
+        deadOut: MutableSet<NormalizedRelayUrl>?,
+    ): List<Pair<NormalizedRelayUrl, Event>> {
+        val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
+        // One relay per subId, so the relay alone identifies which subscription a
+        // callback is for. First terminal frame wins; a timeout leaves it unset.
+        val relayDone = ConcurrentHashMap<NormalizedRelayUrl, CompletableDeferred<String>>()
+        for (r in filters.keys) relayDone[r] = CompletableDeferred()
+        val doneReasons = ConcurrentHashMap<NormalizedRelayUrl, String>()
+        val listener =
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    eventChannel.trySend(relay to event)
+                }
+
+                override fun onEose(
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    relayDone[relay]?.complete("eose")
+                }
+
+                override fun onClosed(
+                    message: String,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    relayDone[relay]?.complete("closed:$message")
+                }
+
+                override fun onCannotConnect(
+                    relay: NormalizedRelayUrl,
+                    message: String,
+                    forFilters: List<Filter>?,
+                ) {
+                    relayDone[relay]?.complete("cannot:$message")
+                }
+            }
+        val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
+        coroutineScope {
+            // Single consumer: verify+store serially, exactly like drain().
+            val consumer =
+                launch {
+                    for ((relay, event) in eventChannel) {
+                        if (verifyAndStore(event)) collected.add(relay to event)
+                    }
+                }
+            // One gated subscription per relay. The permit is held for the whole
+            // life of the relay's REQ, so concurrent subs on it never exceed its cap.
+            filters
+                .map { (relay, relayFilters) ->
+                    launch {
+                        relayLimiter.withPermit(relay) {
+                            val subId = newSubId()
+                            client.subscribe(subId, mapOf(relay to relayFilters), listener)
+                            try {
+                                val reason = withTimeoutOrNull(timeoutMs) { relayDone[relay]!!.await() }
+                                doneReasons[relay] = reason ?: "timeout"
+                            } finally {
+                                client.unsubscribe(subId)
+                            }
+                        }
+                    }
+                }.joinAll()
+            // All subscriptions are torn down; no more events can arrive. Close the
+            // channel so the consumer drains what's buffered and completes.
+            eventChannel.close()
+            consumer.join()
+        }
+        if (diagnoseSlow) {
+            val stalled = filters.keys.filter { (doneReasons[it] ?: "timeout") == "timeout" }.toSet()
+            if (stalled.isNotEmpty()) logSlowDrain(timeoutMs, stalled, doneReasons, collected)
         }
         deadOut?.let { out ->
             for ((relay, reason) in doneReasons) {
