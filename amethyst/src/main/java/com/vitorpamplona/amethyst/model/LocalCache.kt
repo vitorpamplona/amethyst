@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtIdHexComparator
 import com.vitorpamplona.amethyst.commons.model.observables.EventListMatchingFilter
@@ -152,6 +153,9 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.groupId
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.nip31Alts.AltTag
@@ -334,6 +338,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     val publicChatChannels = LargeCache<HexKey, PublicChatChannel>()
     val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
     val ephemeralChannels = LargeCache<RoomId, EphemeralChatChannel>()
+    val relayGroupChannels = LargeCache<GroupId, RelayGroupChannel>()
 
     val paymentTracker = NwcPaymentTracker()
 
@@ -607,6 +612,8 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getEphemeralChatChannelIfExists(key: RoomId): EphemeralChatChannel? = ephemeralChannels.get(key)
 
+    fun getRelayGroupChannelIfExists(key: GroupId): RelayGroupChannel? = relayGroupChannels.get(key)
+
     fun getLiveActivityChannelIfExists(key: Address): LiveActivitiesChannel? = liveChatChannels.get(key)
 
     fun getNoteIfExists(event: Event): Note? =
@@ -694,6 +701,8 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun getOrCreateLiveChannel(key: Address): LiveActivitiesChannel = liveChatChannels.getOrCreate(key) { LiveActivitiesChannel(key) }
 
     fun getOrCreateEphemeralChannel(key: RoomId): EphemeralChatChannel = ephemeralChannels.getOrCreate(key) { EphemeralChatChannel(key) }
+
+    fun getOrCreateRelayGroupChannel(key: GroupId): RelayGroupChannel = relayGroupChannels.getOrCreate(key) { RelayGroupChannel(key) }
 
     fun checkGetOrCreatePublicChatChannel(key: String): PublicChatChannel? {
         if (isValidHex(key)) {
@@ -1720,6 +1729,47 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
         return new
+    }
+
+    /**
+     * NIP-29 relay-signed group metadata (kind 39000). Stored as an addressable
+     * note and used to populate the [RelayGroupChannel]'s name/picture/about/
+     * flags. The group is keyed by (host relay + group id): unlike NIP-C7, a
+     * NIP-29 event does not carry its host relay in a tag — the host is the relay
+     * that served it — so the channel can only be associated when we know the
+     * serving relay (provenance). With no relay we still store the metadata.
+     */
+    fun consume(
+        event: GroupMetadataEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+
+        if (relay != null) {
+            val note = getOrCreateAddressableNote(event.address())
+            val channel = getOrCreateRelayGroupChannel(GroupId(event.groupId(), relay))
+            (note.event as? GroupMetadataEvent)?.let { channel.updateGroupInfo(it, note) }
+        }
+
+        return new
+    }
+
+    /**
+     * Attach a group-scoped content event (a kind-9 chat, kind-1068 poll, …
+     * carrying an `h` tag) to its [RelayGroupChannel]. NIP-29 reuses the generic
+     * content kinds and scopes them with `h`, so the note is consumed normally
+     * and then, when it belongs to a group and we know the serving relay, added
+     * to that group's channel timeline.
+     */
+    private fun attachToRelayGroupIfScoped(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+    ) {
+        val groupId = event.groupId() ?: return
+        if (relay == null) return
+        val channel = getOrCreateRelayGroupChannel(GroupId(groupId, relay))
+        channel.addNote(getOrCreateNote(event.id), relay)
     }
 
     fun consume(
@@ -3543,6 +3593,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 
+                is GroupMetadataEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
                 is ExternalIdentitiesEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
@@ -3897,11 +3951,15 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is ChatEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
+                    consumeRegularEvent(event, relay, wasVerified).also {
+                        if (it) attachToRelayGroupIfScoped(event, relay)
+                    }
                 }
 
                 is PollEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
+                    consumeRegularEvent(event, relay, wasVerified).also {
+                        if (it) attachToRelayGroupIfScoped(event, relay)
+                    }
                 }
 
                 is PollResponseEvent -> {
