@@ -559,7 +559,17 @@ class Context(
         try {
             store.insert(event)
         } catch (t: Throwable) {
-            System.err.println("[cli] store insert failed for ${event.id.take(8)}: ${t.message}")
+            // A UNIQUE-constraint rejection is normal, not a failure: the
+            // store already holds this id, or a newer version of a
+            // replaceable (kind 0/3/10000-19999). The outbox model routinely
+            // delivers the same event from several of a user's write relays,
+            // so a crawl produces these by the hundred-thousand. Only surface
+            // genuine persistence failures (I/O, full disk, corruption). The
+            // FS backend no-ops on such duplicates; this keeps the SQLite
+            // backend just as quiet.
+            if (t.message?.contains("UNIQUE constraint", ignoreCase = true) != true) {
+                System.err.println("[cli] store insert failed for ${event.id.take(8)}: ${t.message}")
+            }
         }
         return true
     }
