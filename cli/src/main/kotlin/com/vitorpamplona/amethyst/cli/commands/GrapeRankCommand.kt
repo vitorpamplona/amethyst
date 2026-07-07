@@ -383,12 +383,15 @@ object GrapeRankCommand {
                 if (event is ReportEvent) builder.addReports(event.pubKey, event.reportedAuthor().map { it.pubkey })
             }
 
+            val buildStart = System.nanoTime()
             val graph = builder.build()
-            System.err.println("[graperank] graph built: ${graph.nodeCount} users, ${graph.edgeCount()} edges; scoring…")
+            val buildMs = (System.nanoTime() - buildStart) / 1_000_000
+            System.err.println("[graperank] graph built: ${graph.nodeCount} users, ${graph.edgeCount()} edges in $buildMs ms; scoring…")
 
             // Live scoring progress: the worklist visits each reachable user once per
             // relaxation; report every SCORE_PROGRESS_STEP visits so a large graph shows
             // movement instead of hanging silently.
+            val scoreStart = System.nanoTime()
             val scores =
                 GrapeRank(params).compute(graph, observer) { visited, queued ->
                     if (visited % SCORE_PROGRESS_STEP == 0L) {
@@ -405,7 +408,8 @@ object GrapeRankCommand {
                 if (id != observerId && scores[id] > 0.0 && scores[id] >= minScore) rankedIds.add(id)
             }
             rankedIds.sortByDescending { scores[it] }
-            System.err.println("[graperank] scored ${rankedIds.size} users")
+            val scoringMs = (System.nanoTime() - scoreStart) / 1_000_000
+            System.err.println("[graperank] scored ${rankedIds.size} users in $scoringMs ms")
 
             val result =
                 linkedMapOf<String, Any?>(
@@ -422,6 +426,8 @@ object GrapeRankCommand {
                     "graph_users" to graph.nodeCount,
                     "graph_edges" to graph.edgeCount(),
                     "users_scored" to rankedIds.size,
+                    "graph_build_ms" to buildMs,
+                    "scoring_ms" to scoringMs,
                     "scores" to
                         rankedIds.take(limit).map {
                             mapOf("pubkey" to graph.pubkeyOf(it), "score" to scores[it], "rank" to rankOf(scores[it]))
