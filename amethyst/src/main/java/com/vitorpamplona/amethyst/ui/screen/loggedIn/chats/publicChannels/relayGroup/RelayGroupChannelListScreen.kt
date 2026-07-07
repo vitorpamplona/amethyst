@@ -26,14 +26,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,6 +64,8 @@ fun RelayGroupChannelListScreen(
     nav: INav,
 ) {
     val relay = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) } ?: return
+
+    var showCreate by remember { mutableStateOf(false) }
 
     RelayGroupDirectorySubscription(relay, accountViewModel.dataSources().relayGroupDirectory, accountViewModel)
 
@@ -90,6 +95,11 @@ fun RelayGroupChannelListScreen(
                 popBack = nav::popBack,
             )
         },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showCreate = true }) {
+                Text("+", style = MaterialTheme.typography.headlineMedium)
+            }
+        },
     ) { padding ->
         LazyColumn(modifier = Modifier.padding(padding)) {
             items(channels, key = { it.groupId.id }) { channel ->
@@ -97,6 +107,10 @@ fun RelayGroupChannelListScreen(
                 HorizontalDivider(thickness = 0.25.dp)
             }
         }
+    }
+
+    if (showCreate) {
+        CreateRelayGroupDialog(relay, accountViewModel, nav) { showCreate = false }
     }
 }
 

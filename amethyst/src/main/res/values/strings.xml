@@ -1931,6 +1931,16 @@
     <string name="messages_create_public_private_chat_description">New Public or Private Group</string>
     <string name="relay_group_view_inline">Inline</string>
     <string name="relay_group_view_grouped">By relay</string>
+    <string name="relay_group_create_title">Create a channel</string>
+    <string name="relay_group_create_name">Channel name</string>
+    <string name="relay_group_create_topic">Topic (optional)</string>
+    <string name="relay_group_create_private">Private (members-only read)</string>
+    <string name="relay_group_create_invite_only">Invite only</string>
+    <string name="relay_group_create_confirm">Create</string>
+    <string name="relay_group_invite_title">Invite people</string>
+    <string name="relay_group_invite_description">Share this code so people can join this channel.</string>
+    <string name="relay_group_invite_generating">Creating an invite…</string>
+    <string name="relay_group_invite_copied">Invite code copied</string>
     <string name="messages_new_message">Private</string>
     <string name="messages_new_message_to">To</string>
     <string name="messages_new_message_subject">Subject</string>

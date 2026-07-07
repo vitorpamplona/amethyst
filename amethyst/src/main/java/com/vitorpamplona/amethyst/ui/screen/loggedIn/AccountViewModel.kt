@@ -1431,6 +1431,27 @@ class AccountViewModel(
 
     fun unfollow(channel: EphemeralChatChannel) = launchSigner { account.unfollow(channel) }
 
+    fun joinRelayGroup(
+        channel: RelayGroupChannel,
+        code: String? = null,
+    ) = launchSigner { account.joinRelayGroup(channel, code) }
+
+    fun leaveRelayGroup(channel: RelayGroupChannel) = launchSigner { account.leaveRelayGroup(channel) }
+
+    fun createRelayGroup(
+        relay: NormalizedRelayUrl,
+        groupId: String,
+        name: String,
+        about: String?,
+        isPrivate: Boolean,
+        isClosed: Boolean,
+    ) = launchSigner { account.createRelayGroup(relay, groupId, name, about, isPrivate, isClosed) }
+
+    fun createRelayGroupInvite(
+        channel: RelayGroupChannel,
+        code: String,
+    ) = launchSigner { account.createRelayGroupInvite(channel, code) }
+
     fun follow(users: List<User>) = launchSigner { account.follow(users) }
 
     fun follow(user: User) = launchSigner { account.follow(user) }

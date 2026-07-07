@@ -21,17 +21,28 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 @Composable
 fun RelayGroupTopBar(
@@ -42,6 +53,17 @@ fun RelayGroupTopBar(
     // Recompose the title when the relay-signed metadata (name) arrives/changes.
     val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? RelayGroupChannel ?: baseChannel
+
+    val joinedGroups by accountViewModel.account.relayGroupList.liveRelayGroupList
+        .collectAsStateWithLifecycle()
+    val isJoined =
+        joinedGroups.any {
+            it.groupId == channel.groupId.id &&
+                RelayUrlNormalizer.normalizeOrNull(it.relayUrl) == channel.groupId.relayUrl
+        }
+
+    var menuOpen by remember { mutableStateOf(false) }
+    var showInvite by remember { mutableStateOf(false) }
 
     TopBarExtensibleWithBackButton(
         title = {
@@ -61,6 +83,37 @@ fun RelayGroupTopBar(
                 )
             }
         },
+        actions = {
+            if (!isJoined) {
+                FilledTonalButton(onClick = { accountViewModel.joinRelayGroup(channel) }) {
+                    Text(stringRes(R.string.join))
+                }
+            } else {
+                IconButton(onClick = { menuOpen = true }) {
+                    Text("⋮", style = MaterialTheme.typography.titleLarge)
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringRes(R.string.relay_group_invite_title)) },
+                        onClick = {
+                            menuOpen = false
+                            showInvite = true
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringRes(R.string.leave)) },
+                        onClick = {
+                            menuOpen = false
+                            accountViewModel.leaveRelayGroup(channel)
+                        },
+                    )
+                }
+            }
+        },
         popBack = nav::popBack,
     )
+
+    if (showInvite) {
+        InviteRelayGroupDialog(channel, accountViewModel) { showInvite = false }
+    }
 }

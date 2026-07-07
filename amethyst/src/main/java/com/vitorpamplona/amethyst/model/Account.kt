@@ -202,6 +202,13 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
@@ -1454,6 +1461,65 @@ class Account(
     suspend fun follow(channel: RelayGroupChannel) = sendMyPublicAndPrivateOutbox(relayGroupList.follow(channel))
 
     suspend fun unfollow(channel: RelayGroupChannel) = sendMyPublicAndPrivateOutbox(relayGroupList.unfollow(channel))
+
+    // ── NIP-29 relay-group actions ───────────────────────────────────────────
+    // All group commands are published ONLY to the group's host relay, where
+    // relay29 authorizes them. The relay is the source of truth; the kind-10009
+    // list is our own cross-device bookkeeping of what we joined.
+
+    /** Send a kind 9021 join request to the group's host relay and remember it. */
+    suspend fun joinRelayGroup(
+        channel: RelayGroupChannel,
+        code: String? = null,
+    ) {
+        val template = JoinRequestEvent.build(channel.groupId.id, inviteCode = code)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+        follow(channel)
+    }
+
+    /** Send a kind 9022 leave request to the host relay and drop it from our list. */
+    suspend fun leaveRelayGroup(channel: RelayGroupChannel) {
+        val template = LeaveRequestEvent.build(channel.groupId.id)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+        unfollow(channel)
+    }
+
+    /**
+     * Create a new group on [relay]: kind 9007 (create-group) then kind 9002
+     * (edit-metadata) with the chosen name/visibility, then remember it. Returns
+     * the new group's id.
+     */
+    suspend fun createRelayGroup(
+        relay: NormalizedRelayUrl,
+        groupId: String,
+        name: String,
+        about: String? = null,
+        isPrivate: Boolean = false,
+        isClosed: Boolean = false,
+    ): GroupId {
+        signAndSendPrivatelyOrBroadcast(CreateGroupEvent.build(groupId)) { listOf(relay) }
+
+        val status =
+            buildSet {
+                add(if (isPrivate) GroupMetadataEvent.GroupStatus.PRIVATE else GroupMetadataEvent.GroupStatus.PUBLIC)
+                add(if (isClosed) GroupMetadataEvent.GroupStatus.CLOSED else GroupMetadataEvent.GroupStatus.OPEN)
+            }
+        val edit = EditMetadataEvent.build(groupId, name = name, about = about, status = status)
+        signAndSendPrivatelyOrBroadcast(edit) { listOf(relay) }
+
+        val id = GroupId(groupId, relay)
+        follow(LocalCache.getOrCreateRelayGroupChannel(id))
+        return id
+    }
+
+    /** Mint a kind 9009 invite code for the group (admin/moderator only). */
+    suspend fun createRelayGroupInvite(
+        channel: RelayGroupChannel,
+        code: String,
+    ) {
+        val template = CreateInviteEvent.build(channel.groupId.id, code)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
 
     suspend fun follow(community: AddressableNote) = sendMyPublicAndPrivateOutbox(communityList.follow(community))
 
