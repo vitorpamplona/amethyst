@@ -196,6 +196,13 @@ class GrapeRankDataCrawler(
         // (valid id, bad signature) delivered first can't suppress the genuine one.
         val seenIds = ConcurrentSet<HexKey>()
 
+        // Per-user relays that answered (EOSE'd) without holding this user's kind:3,
+        // so re-querying them for this user is guaranteed-empty waste. routeByOutbox
+        // subtracts these from a user's candidate relays, so a straggler is retried
+        // only against relays that could plausibly still have it (never-asked, or
+        // ones that timed out — which unlike a clean EOSE might just be slow).
+        val askedEmpty = ConcurrentMap<HexKey, ConcurrentSet<NormalizedRelayUrl>>()
+
         var rounds = 0
         var contactListsFed = 0
 
@@ -456,9 +463,15 @@ class GrapeRankDataCrawler(
                         (attempts[pk] ?: 0) > 0 -> write + backbone
                         else -> write
                     }
-                // Skip relays already proven dead — routing to them only burns the
-                // drain timeout.
-                for (relay in relays) if (relay !in deadRelays) perRelay.getOrPut(relay) { HashSet() }.add(pk)
+                // Skip relays proven dead (routing to them only burns the drain
+                // timeout) and relays that already EOSE'd without this user's list
+                // (re-querying them for this user is guaranteed-empty waste).
+                val emptied = askedEmpty[pk]
+                for (relay in relays) {
+                    if (relay in deadRelays) continue
+                    if (emptied != null && relay in emptied) continue
+                    perRelay.getOrPut(relay) { HashSet() }.add(pk)
+                }
             }
 
             return perRelay.mapValues { (_, authors) ->
@@ -515,7 +528,7 @@ class GrapeRankDataCrawler(
                     // only on the consumer (keeps done/builder/hopOf serial), now
                     // overlapped with draining instead of blocked behind each batch.
                     val routed = Channel<Pair<List<HexKey>, Map<NormalizedRelayUrl, List<Filter>>>>(DRAIN_CONCURRENCY * 2)
-                    val drainedOut = Channel<Triple<List<HexKey>, Set<NormalizedRelayUrl>, List<Pair<NormalizedRelayUrl, Event>>>>(Channel.UNLIMITED)
+                    val drainedOut = Channel<DrainedBatch>(Channel.UNLIMITED)
                     coroutineScope {
                         // Producer: route each batch by outbox (serial), backpressured
                         // by the bounded `routed` channel.
@@ -528,26 +541,44 @@ class GrapeRankDataCrawler(
                                 routed.close()
                             }
                         // Drain workers: pure network, no shared graph-state writes
-                        // except recordDead (concurrent-safe).
+                        // except recordDead (concurrent-safe). Each captures the relays
+                        // that cleanly EOSE'd, so the consumer can tell "answered empty"
+                        // from "timed out" per user.
                         val workers =
                             List(DRAIN_CONCURRENCY) {
                                 launch {
                                     for ((batch, filters) in routed) {
                                         val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
-                                        val events = drainGated(filters, dead, seenIds)
+                                        val answered = HashSet<NormalizedRelayUrl>()
+                                        val events = drainGated(filters, dead, seenIds, answered)
                                         recordDead(dead)
-                                        drainedOut.send(Triple(batch, filters.keys, events))
+                                        drainedOut.send(DrainedBatch(batch, filters, answered, events))
                                     }
                                 }
                             }
                         // Consumer: single-writer ingest, overlapped with draining.
                         val consumer =
                             launch {
-                                for ((batch, relays, events) in drainedOut) {
-                                    relaysContacted += relays
+                                for (d in drainedOut) {
+                                    relaysContacted += d.filters.keys
                                     // Any relay that gave us an event is proven live + useful.
-                                    for ((relay, _) in events) liveRelays.add(relay)
-                                    for (pk in batch) {
+                                    for ((relay, _) in d.events) liveRelays.add(relay)
+
+                                    // Per user, record relays that answered (EOSE'd) but did
+                                    // not return their kind:3, so they aren't re-queried there.
+                                    val returnedByRelay = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
+                                    for ((relay, ev) in d.events) {
+                                        if (ev is ContactListEvent) returnedByRelay.getOrPut(relay) { HashSet() }.add(ev.pubKey)
+                                    }
+                                    for (relay in d.answered) {
+                                        val asked = d.filters[relay]?.flatMapTo(HashSet()) { it.authors.orEmpty() } ?: continue
+                                        val returned = returnedByRelay[relay].orEmpty()
+                                        for (pk in asked) {
+                                            if (pk !in returned) askedEmpty.getOrPut(pk) { ConcurrentSet() }.add(relay)
+                                        }
+                                    }
+
+                                    for (pk in d.batch) {
                                         if (pk in done) continue
                                         val contacts = contactsOf(pk)
                                         if (contacts != null) {
@@ -620,6 +651,19 @@ class GrapeRankDataCrawler(
     }
 
     /**
+     * One Phase-B batch after draining: the users asked for, the relay->filters map
+     * they were routed through, the relays that cleanly EOSE'd ([answered]), and the
+     * fresh events. Carries enough for the consumer to attribute "answered but
+     * empty" per user without re-deriving the routing.
+     */
+    private class DrainedBatch(
+        val batch: List<HexKey>,
+        val filters: Map<NormalizedRelayUrl, List<Filter>>,
+        val answered: Set<NormalizedRelayUrl>,
+        val events: List<Pair<NormalizedRelayUrl, Event>>,
+    )
+
+    /**
      * Subscribe each relay to its filters behind [limiter], drain until every
      * relay's subscription is terminal or the timeout elapses, verify+store the
      * events, and return them tagged by relay. Each relay gets its own gated
@@ -634,6 +678,7 @@ class GrapeRankDataCrawler(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>?,
         seen: ConcurrentSet<HexKey>,
+        answeredOut: MutableSet<NormalizedRelayUrl>? = null,
     ): List<Pair<NormalizedRelayUrl, Event>> {
         if (filters.isEmpty()) return emptyList()
         val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(Channel.UNLIMITED)
@@ -664,6 +709,10 @@ class GrapeRankDataCrawler(
         // relay's several REQ-groups; plus which relays stalled to a timeout.
         val failures = ConcurrentMap<NormalizedRelayUrl, DrainFailure>()
         val timedOut = ConcurrentSet<NormalizedRelayUrl>()
+        // Relays that did NOT cleanly EOSE every group (timed out, closed, or
+        // couldn't connect). A relay absent from this set answered definitively —
+        // so an author it was asked for but didn't return is one it simply lacks.
+        val notAnswered = ConcurrentSet<NormalizedRelayUrl>()
 
         val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
         coroutineScope {
@@ -754,6 +803,7 @@ class GrapeRankDataCrawler(
                             try {
                                 val reason = withTimeoutOrNull(config.timeoutMs) { done.await() } ?: "timeout"
                                 if (reason == "timeout") timedOut.add(subRelay)
+                                if (reason != "eose") notAnswered.add(subRelay)
                                 classifyDrainFailure(reason)?.let { kind ->
                                     failures.merge(subRelay, kind) { a, b ->
                                         if (a == DrainFailure.HARD || b == DrainFailure.HARD) DrainFailure.HARD else DrainFailure.TRANSIENT
@@ -777,6 +827,7 @@ class GrapeRankDataCrawler(
             log("[drain] timeout ${config.timeoutMs}ms: ${stalled.size} slow(no EOSE)" + (if (detail.isNotEmpty()) " | slow: $detail" else ""))
         }
         deadOut?.putAll(failures.snapshot())
+        answeredOut?.addAll(filters.keys.filter { it !in notAnswered })
         return collected
     }
 
