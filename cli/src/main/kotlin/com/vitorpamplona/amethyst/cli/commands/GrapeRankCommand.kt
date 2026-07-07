@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRank
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankDataCrawler
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankParams
+import com.vitorpamplona.quartz.experimental.graperank.GrapeRankPublisher
 import com.vitorpamplona.quartz.experimental.graperank.TrustGraphBuilder
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -82,15 +83,6 @@ import kotlin.math.roundToInt
  *  - `amy graperank providers [USER]` — list a user's trusted providers.
  */
 object GrapeRankCommand {
-    // Concurrent publishes when writing NIP-85 cards.
-    private const val PUBLISH_CONCURRENCY = 16
-
-    // Addressable coordinates cited per kind:5 retraction. Each `a` tag is
-    // ~130 bytes (30382:<64hex>:<64hex>), so 400 keeps the whole event ~52KB —
-    // under the 64KB *event* size many relays cap at (stricter than the 256KB
-    // message cap).
-    private const val DELETE_PER_EVENT = 400
-
     // Broad, big general relays that carry kind:10002 for many users, added to the
     // crawler's discovery set to raise the odds of resolving a stranger's outbox.
     private val EXTRA_DISCOVERY_RELAYS: Set<NormalizedRelayUrl> =
@@ -308,42 +300,31 @@ object GrapeRankCommand {
                     result["published"] = 0
                     result["publish_error"] = "no operator relay configured — run `amy graperank operator relay <url>` or pass --publish-relay"
                 } else {
-                    // Reconcile what the algorithm says should exist against what
-                    // this provider key has already published (newest card per
-                    // target, read back from the store).
-                    val existing = existingCards(ctx, providerPubkey)
-
+                    // The scorer's desired card set: every user at or above the rank
+                    // cutoff, as (target, rank). GrapeRankPublisher reconciles this
+                    // against what this provider key already published and upserts /
+                    // retracts the difference.
                     val publishable =
                         rankedIds
                             .filter { rankOf(scores[it]) >= minRank }
                             .map { graph.pubkeyOf(it) to rankOf(scores[it]) }
-                    val publishableTargets = publishable.mapTo(HashSet()) { it.first }
 
-                    // Upsert: publishable targets whose rank tag STRING would change
-                    // (or that have no card yet). RankTag.assemble writes
-                    // rank.toString(), so we diff that exact string — an unchanged
-                    // score is skipped, so clients only sync ranks that moved.
-                    val changed = publishable.filter { (target, rank) -> existing[target]?.let(::rankTagValue) != rank.toString() }
-                    val toUpsert = changed.take(publishLimit)
+                    val publisher = GrapeRankPublisher(ctx.store) { event, to -> ctx.publish(event, to) }
+                    val pub =
+                        publisher.reconcileAndPublish(
+                            providerSigner = serviceSigner,
+                            providerPubkey = providerPubkey,
+                            scored = publishable,
+                            relays = relays,
+                            publishLimit = publishLimit,
+                        )
 
-                    // Delete: existing cards whose target is no longer publishable —
-                    // it dropped out of the graph, or fell below the cutoff (e.g. a
-                    // rank-0/1 card we would no longer publish). We won't leave a
-                    // stale assertion standing, so we retract it with a kind:5.
-                    val toDelete = existing.filterKeys { it !in publishableTargets }.values.toList()
-
-                    result["skipped_unchanged"] = publishable.size - changed.size
-                    if (changed.size > toUpsert.size) {
-                        result["publish_truncated"] = changed.size - toUpsert.size
-                    }
-
-                    val (ok, rejected) = publishCards(ctx, serviceSigner, toUpsert, relays)
-                    val (deleted, deleteRejected) = publishDeletions(ctx, serviceSigner, toDelete, relays)
-
-                    result["published"] = ok
-                    result["publish_rejected"] = rejected
-                    result["deleted"] = deleted
-                    result["delete_rejected"] = deleteRejected
+                    result["skipped_unchanged"] = pub.skippedUnchanged
+                    if (pub.truncated > 0) result["publish_truncated"] = pub.truncated
+                    result["published"] = pub.published
+                    result["publish_rejected"] = pub.publishRejected
+                    result["deleted"] = pub.deleted
+                    result["delete_rejected"] = pub.deleteRejected
                     result["published_kind"] = ContactCardEvent.KIND
                     result["published_to"] = relays.map { it.url }
 
@@ -668,98 +649,6 @@ object GrapeRankCommand {
         }
         if (dropped > 0) System.err.println("[graperank] dropped $dropped retracted reports (NIP-09 deletions)")
         return dropped
-    }
-
-    /**
-     * The exact `rank` tag VALUE STRING we last published for each target, read
-     * from the active account's own kind:30382 cards in the local store (newest
-     * card wins per target). `ctx.publish` stores every card it sends, so on
-     * repeat runs this reflects what's already out there.
-     *
-     * We key on the raw tag string, not a re-parsed Int, because that string is
-     * exactly what a client diffs: creating a new signature (a new event id) is
-     * only worth it when the written value actually changes. Our cards carry ONLY
-     * a `rank` tag (plus the d-tag target), so this single tag's value fully
-     * decides whether the event would differ — see the publish gate.
-     */
-    private suspend fun existingCards(
-        ctx: Context,
-        providerPubkey: HexKey,
-    ): Map<HexKey, ContactCardEvent> =
-        ctx.store
-            .query<Event>(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(providerPubkey)))
-            .filterIsInstance<ContactCardEvent>()
-            .groupBy { it.aboutUser() }
-            .mapNotNull { (target, cards) ->
-                val t = target ?: return@mapNotNull null
-                t to (cards.maxByOrNull { it.createdAt } ?: return@mapNotNull null)
-            }.toMap()
-
-    /**
-     * The raw `rank` tag value string on a card — what a client diffs. We compare
-     * this against `rank.toString()` (what RankTag.assemble writes) so an unchanged
-     * score never produces a new signature. Our cards carry only a `rank` tag (plus
-     * the d-tag target), so this one value decides whether the event would differ.
-     */
-    private fun rankTagValue(card: ContactCardEvent): String? =
-        card.tags.firstNotNullOfOrNull { tag ->
-            if (tag.size > 1 && tag[0] == RankTag.TAG_NAME) tag[1] else null
-        }
-
-    /** Build + publish one NIP-85 kind:30382 card per user, bounded-concurrently, signed by [signer]. */
-    private suspend fun publishCards(
-        ctx: Context,
-        signer: NostrSigner,
-        cards: List<Pair<HexKey, Int>>,
-        relays: Set<NormalizedRelayUrl>,
-    ): Pair<Int, Int> {
-        var published = 0
-        var rejected = 0
-        for (batch in cards.chunked(PUBLISH_CONCURRENCY)) {
-            val acks =
-                coroutineScope {
-                    batch
-                        .map { (pubkey, rank) ->
-                            async {
-                                val card =
-                                    ContactCardEvent.create(
-                                        targetUser = pubkey,
-                                        signer = signer,
-                                        publicInitializer = { add(RankTag.assemble(rank)) },
-                                    )
-                                ctx.publish(card, relays)
-                            }
-                        }.awaitAll()
-                }
-            for (ack in acks) {
-                if (ack.values.any { it }) published++ else rejected++
-            }
-        }
-        return published to rejected
-    }
-
-    /**
-     * Retract stale cards with NIP-09 kind:5 deletions signed by [signer] (the same
-     * service key that signed the cards). Batches several addressable coordinates
-     * per deletion — chunked so the kind:5 frame stays under the relay message cap —
-     * and each carries the card's `a` tag (30382:provider:target), so re-publishing
-     * a newer version later isn't blocked. Returns (deleted, rejected) card counts.
-     */
-    private suspend fun publishDeletions(
-        ctx: Context,
-        signer: NostrSigner,
-        cards: List<ContactCardEvent>,
-        relays: Set<NormalizedRelayUrl>,
-    ): Pair<Int, Int> {
-        if (cards.isEmpty()) return 0 to 0
-        var deleted = 0
-        var rejected = 0
-        for (chunk in cards.chunked(DELETE_PER_EVENT)) {
-            val event = signer.sign(DeletionEvent.build(chunk))
-            val ack = ctx.publish(event, relays)
-            if (ack.values.any { it }) deleted += chunk.size else rejected += chunk.size
-        }
-        return deleted to rejected
     }
 
     /**
