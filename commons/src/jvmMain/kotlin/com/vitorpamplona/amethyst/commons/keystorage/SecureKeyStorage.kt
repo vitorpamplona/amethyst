@@ -324,7 +324,7 @@ actual class SecureKeyStorage private actual constructor() {
                 } else {
                     // Fallback for non-interactive environments (testing, etc.)
                     print("Enter master password: ")
-                    readLine() ?: throw SecureStorageException("Password required for fallback storage")
+                    readlnOrNull() ?: throw SecureStorageException("Password required for fallback storage")
                 }
         }
         return fallbackPassword!!
