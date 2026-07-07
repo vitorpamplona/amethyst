@@ -75,6 +75,16 @@ import kotlin.math.roundToInt
  * `--publish`, results are also published as NIP-85 kind:30382 `ContactCardEvent`
  * trusted assertions (one per scored user, `rank = round(score*100)`).
  *
+ * The crawl and the computation are separable, because the crawl persists every
+ * event it fetches to the store and the score is a pure function over it:
+ *  - `amy graperank sync [OBSERVER]` — network only: crawl the reachable graph's
+ *    kind 3/10000/1984/10002 into the local store. Idempotent and cumulative, so
+ *    run it a few times to make sure everything is loaded. Scores nothing.
+ *  - `amy graperank score [OBSERVER]` — local only: build the graph from the store
+ *    and score (same as bare `--offline`). Instant and param-tunable; repeat with
+ *    different `--rigor`/`--attenuation`/cutoffs without re-crawling.
+ *  - bare `amy graperank [OBSERVER]` — the convenience combo: sync then score.
+ *
  * Sub-verbs complete the NIP-85 provider experience — the discovery layer that
  * lets clients find and consume those assertions:
  *  - `amy graperank register` — advertise a `30382:rank` provider in the
@@ -104,40 +114,31 @@ object GrapeRankCommand {
             "register" -> register(dataDir, tail.drop(1).toTypedArray())
             "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
             "operator" -> operator(dataDir, tail.drop(1).toTypedArray())
+            "sync" -> sync(dataDir, tail.drop(1).toTypedArray())
+            "score" -> run(dataDir, tail.drop(1).toTypedArray(), forceOffline = true)
             else -> run(dataDir, tail)
         }
 
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
+        forceOffline: Boolean = false,
     ): Int {
         val args = Args(rest)
         val observerArg = args.positionalOrNull(0)
         // Crawl to full convergence by default (every reachable user's outbox
         // checked). --max-rounds is only a safety backstop; --max-hops bounds the
         // follow-graph distance from the observer that we crawl (Brainstorm uses 8).
-        val maxRounds = args.intFlag("max-rounds", Int.MAX_VALUE)
-        val maxHops = args.intFlag("max-hops", Int.MAX_VALUE)
         val limit = args.intFlag("limit", 100)
         val minScore = args.flag("min-score")?.toDoubleOrNull() ?: 0.0
-        val offline = args.bool("offline")
-        val diagnose = args.bool("diagnose")
-        val timeoutMs = args.longFlag("timeout", 10L) * 1000
-        // A relay still streaming when --timeout elapses is PARKED, not cut: it keeps
-        // delivering for up to --park-timeout more while the round moves on, and its
-        // late contact lists fold into a later round. This is how the crawl waits for
-        // slow-but-alive relays for completeness without paying that wait per round.
-        // Set <= --timeout to disable parking (old cut-at-timeout behaviour).
+        // `graperank score` forces the local (no-network) path; `--offline` does the
+        // same on the bare command. Either way we build + score from the store only.
+        val offline = forceOffline || args.bool("offline")
+        // Crawl tuning (--max-rounds/--max-hops/--timeout/--diagnose/--drain-concurrency)
+        // is read straight from args by [newCrawler]; only these two are surfaced in
+        // the result JSON, so keep local copies for that.
         val parkTimeoutMs = args.longFlag("park-timeout", 40L) * 1000
-        // How many verified events the crawler group-commits per store write. 1
-        // forces the per-event insert path (baseline); higher amortizes the SQLite
-        // transaction + writer-mutex cost across the batch.
         val insertBatch = args.intFlag("insert-batch", 500)
-        // How many outbox batches drain in parallel (the worker-pool size). 24 is the
-        // validated default; higher fan-out re-floods busy hubs faster than the
-        // per-relay demotion catches up (an A/B at 64 was ~2x slower with MORE dead
-        // relays), so raise it only to probe specific slow relays.
-        val drainConcurrency = args.intFlag("drain-concurrency", 24)
         val doPublish = args.bool("publish")
         // Publish cutoff: only cards with rank >= this are published; existing
         // cards for targets below it (or gone from the graph) are retracted. Rank
@@ -174,42 +175,10 @@ object GrapeRankCommand {
             var crawlStats: GrapeRankDataCrawler.Stats? = null
 
             if (!offline) {
-                // Relay policy for the crawler — where a stranger's kind:10002 is
-                // found (index/discovery aggregators + general defaults that carry
-                // kind:10002 for most of the network) and the best-effort general
-                // relays that might hold content when an outbox is unknown. These
-                // defaults live in app code, so the quartz crawler takes them injected.
-                val discoveryRelays =
-                    ctx.bootstrapRelays() + Constants.eventFinderRelays + DefaultIndexerRelayList + EXTRA_DISCOVERY_RELAYS
-                val contentFallback = ctx.bootstrapRelays() + Constants.eventFinderRelays
-                val crawler =
-                    GrapeRankDataCrawler(
-                        client = ctx.client,
-                        store = ctx.store,
-                        limiter = ctx.relayLimiter,
-                        config =
-                            GrapeRankDataCrawler.Config(
-                                relayListDiscoveryRelays = discoveryRelays,
-                                contentFallbackRelays = contentFallback,
-                                maxRounds = maxRounds,
-                                maxHops = maxHops,
-                                timeoutMs = timeoutMs,
-                                parkTimeoutMs = parkTimeoutMs,
-                                diagnose = diagnose,
-                                insertBatchSize = insertBatch,
-                                drainConcurrency = drainConcurrency,
-                            ),
-                        log = { System.err.println(it) },
-                    )
-                val stats = crawler.crawl(observer, builder)
+                val stats = newCrawler(ctx, args).crawl(observer, builder)
                 crawlStats = stats
                 contactListsFed = stats.contactListsFed
-                if (ctx.relayDiagnostics.hadFeedback()) {
-                    System.err.println("[graperank] relay feedback: ${ctx.relayDiagnostics.snapshot()}")
-                }
-                if (ctx.relayLimiter.hadThrottling()) {
-                    System.err.println("[graperank] relay throttling: ${ctx.relayLimiter.snapshot()}")
-                }
+                reportRelayFeedback(ctx)
             } else {
                 // Offline: stream contact lists from the local store into the graph.
                 val loadStart = System.nanoTime()
@@ -371,6 +340,91 @@ object GrapeRankCommand {
             Output.emit(result)
             return 0
         }
+    }
+
+    /**
+     * Configure the outbox-model crawler from the crawl flags on [args] plus the
+     * account's relay policy. Shared by the bare command and `graperank sync`.
+     * Relay policy — where a stranger's kind:10002 is found (index/discovery
+     * aggregators + general defaults) and best-effort general relays that might
+     * hold content when an outbox is unknown — lives in app code, so the quartz
+     * crawler takes it injected.
+     */
+    private suspend fun newCrawler(
+        ctx: Context,
+        args: Args,
+    ): GrapeRankDataCrawler {
+        val discoveryRelays =
+            ctx.bootstrapRelays() + Constants.eventFinderRelays + DefaultIndexerRelayList + EXTRA_DISCOVERY_RELAYS
+        val contentFallback = ctx.bootstrapRelays() + Constants.eventFinderRelays
+        return GrapeRankDataCrawler(
+            client = ctx.client,
+            store = ctx.store,
+            limiter = ctx.relayLimiter,
+            config =
+                GrapeRankDataCrawler.Config(
+                    relayListDiscoveryRelays = discoveryRelays,
+                    contentFallbackRelays = contentFallback,
+                    maxRounds = args.intFlag("max-rounds", Int.MAX_VALUE),
+                    maxHops = args.intFlag("max-hops", Int.MAX_VALUE),
+                    timeoutMs = args.longFlag("timeout", 10L) * 1000,
+                    parkTimeoutMs = args.longFlag("park-timeout", 40L) * 1000,
+                    diagnose = args.bool("diagnose"),
+                    insertBatchSize = args.intFlag("insert-batch", 500),
+                    drainConcurrency = args.intFlag("drain-concurrency", 24),
+                ),
+            log = { System.err.println(it) },
+        )
+    }
+
+    /** Echo any relay NOTICE/CLOSED feedback + adaptive throttling the crawl saw. */
+    private fun reportRelayFeedback(ctx: Context) {
+        if (ctx.relayDiagnostics.hadFeedback()) {
+            System.err.println("[graperank] relay feedback: ${ctx.relayDiagnostics.snapshot()}")
+        }
+        if (ctx.relayLimiter.hadThrottling()) {
+            System.err.println("[graperank] relay throttling: ${ctx.relayLimiter.snapshot()}")
+        }
+    }
+
+    /**
+     * `amy graperank sync [OBSERVER]` — network-only WoT data sync. Crawls the
+     * reachable follow/mute/report graph into the local store (kind 3/10000/1984/
+     * 10002) and reports what it loaded, WITHOUT scoring. Idempotent + cumulative:
+     * run it a few times to make sure everything is loaded, then `graperank score`.
+     */
+    private suspend fun sync(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val observerArg = args.positionalOrNull(0)
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val observer = observerArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
+            // Persist-only crawl: no in-memory graph (null builder); every event
+            // still lands in the store for a later `score`.
+            val stats = newCrawler(ctx, args).crawl(observer, null)
+            reportRelayFeedback(ctx)
+            Output.emit(
+                linkedMapOf<String, Any?>(
+                    "observer" to observer,
+                    "crawl_rounds" to stats.rounds,
+                    "relays_contacted" to stats.relaysContacted,
+                    "relay_feedback" to if (ctx.relayDiagnostics.hadFeedback()) ctx.relayDiagnostics.snapshot() else null,
+                    "relay_throttling" to if (ctx.relayLimiter.hadThrottling()) ctx.relayLimiter.snapshot() else null,
+                    "max_hop_reached" to (stats.hopHistogram.keys.maxOrNull() ?: 0),
+                    "users_by_hop" to stats.hopHistogram.mapKeys { it.key.toString() },
+                    "users_discovered" to stats.hopHistogram.values.sum(),
+                    "contact_lists_fed" to stats.contactListsFed,
+                    "download_ms" to stats.downloadMs,
+                    "verify_ms" to stats.verifyMs,
+                    "insert_ms" to stats.insertMs,
+                    "events_stored" to stats.eventsStored,
+                ),
+            )
+        }
+        return 0
     }
 
     /**
