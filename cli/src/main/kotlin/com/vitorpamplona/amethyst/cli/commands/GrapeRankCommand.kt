@@ -98,9 +98,10 @@ object GrapeRankCommand {
     private const val PUBLISH_CONCURRENCY = 16
 
     // Addressable coordinates cited per kind:5 retraction. Each `a` tag is
-    // ~130 bytes (30382:<64hex>:<64hex>), so 500 keeps the deletion frame well
-    // under the common 256KB relay message cap.
-    private const val DELETE_PER_EVENT = 500
+    // ~130 bytes (30382:<64hex>:<64hex>), so 400 keeps the whole event ~52KB —
+    // under the 64KB *event* size many relays cap at (stricter than the 256KB
+    // message cap).
+    private const val DELETE_PER_EVENT = 400
 
     // Times we re-query an unreachable user's outbox before giving up on it, so
     // the crawl still terminates on a finite graph.
