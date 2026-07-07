@@ -647,16 +647,20 @@ object GrapeRankCommand {
                         ?.takeIf { it.isNotEmpty() }
                         ?: ctx.outboxRelays()
 
-                // Ranks we've already published (read back from the store, which
-                // holds our own prior cards) — keyed by target, newest per target.
-                // Lets us leave an unchanged card alone instead of churning it.
-                val publishedRanks = publishedCardRanks(ctx)
+                // The rank tag string already published for each target (read back
+                // from the store, which holds our own prior cards), newest per target.
+                val publishedRankValues = publishedRankTagValues(ctx)
 
                 val candidates =
                     rankedIds
                         .filter { rankOf(scores[it]) >= minRank }
                         .map { graph.pubkeyOf(it) to rankOf(scores[it]) }
-                val changed = candidates.filter { (target, rank) -> publishedRanks[target] != rank }
+                // Only sign a new card when the rank TAG VALUE STRING would change.
+                // `RankTag.assemble(rank)` writes `rank.toString()`, so we diff that
+                // exact string against the one on the newest stored card. Unchanged
+                // scores are skipped — no new event id — so clients that sync by id
+                // only ever download the ranks that actually moved.
+                val changed = candidates.filter { (target, rank) -> publishedRankValues[target] != rank.toString() }
                 val toPublish = changed.take(publishLimit)
 
                 result["skipped_unchanged"] = candidates.size - changed.size
@@ -1026,12 +1030,18 @@ object GrapeRankCommand {
     }
 
     /**
-     * The rank we last published for each target, read from the active account's
-     * own kind:30382 cards in the local store (newest card wins per target).
-     * `ctx.publish` stores every card it sends, so on repeat runs this reflects
-     * what's already out there and lets us skip targets whose rank is unchanged.
+     * The exact `rank` tag VALUE STRING we last published for each target, read
+     * from the active account's own kind:30382 cards in the local store (newest
+     * card wins per target). `ctx.publish` stores every card it sends, so on
+     * repeat runs this reflects what's already out there.
+     *
+     * We key on the raw tag string, not a re-parsed Int, because that string is
+     * exactly what a client diffs: creating a new signature (a new event id) is
+     * only worth it when the written value actually changes. Our cards carry ONLY
+     * a `rank` tag (plus the d-tag target), so this single tag's value fully
+     * decides whether the event would differ — see the publish gate.
      */
-    private suspend fun publishedCardRanks(ctx: Context): Map<HexKey, Int> {
+    private suspend fun publishedRankTagValues(ctx: Context): Map<HexKey, String> {
         val self = ctx.identity.pubKeyHex
         return ctx.store
             .query<Event>(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(self)))
@@ -1039,8 +1049,12 @@ object GrapeRankCommand {
             .groupBy { it.aboutUser() }
             .mapNotNull { (target, cards) ->
                 val t = target ?: return@mapNotNull null
-                val rank = cards.maxByOrNull { it.createdAt }?.rank() ?: return@mapNotNull null
-                t to rank
+                val newest = cards.maxByOrNull { it.createdAt } ?: return@mapNotNull null
+                val rankValue =
+                    newest.tags.firstNotNullOfOrNull { tag ->
+                        if (tag.size > 1 && tag[0] == RankTag.TAG_NAME) tag[1] else null
+                    } ?: return@mapNotNull null
+                t to rankValue
             }.toMap()
     }
 
