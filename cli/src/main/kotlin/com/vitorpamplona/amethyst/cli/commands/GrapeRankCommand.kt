@@ -442,9 +442,12 @@ object GrapeRankCommand {
                 downloadMs = (System.nanoTime() - crawlStart) / 1_000_000
                 System.err.println(
                     "[graperank] crawl complete: ${discovered.size} discovered, $contactListsFed contact lists fed, " +
-                        "$relaysContactedCount relays contacted, $rounds rounds in $downloadMs ms; " +
+                        "$relaysContactedCount relays contacted, ${deadRelays.size} dead, $rounds rounds in $downloadMs ms; " +
                         "by hop: " + perHop.entries.joinToString(" ") { "${it.key}=${it.value}" },
                 )
+                if (ctx.relayDiagnostics.hadFeedback()) {
+                    System.err.println("[graperank] relay feedback: ${ctx.relayDiagnostics.snapshot()}")
+                }
             } else {
                 // Offline: stream contact lists from the local store into the graph.
                 val loadStart = System.nanoTime()
@@ -501,6 +504,7 @@ object GrapeRankCommand {
                     "observer" to observer,
                     "crawl_rounds" to rounds,
                     "relays_contacted" to relaysContactedCount,
+                    "relay_feedback" to if (ctx.relayDiagnostics.hadFeedback()) ctx.relayDiagnostics.snapshot() else null,
                     "max_hop_reached" to (hopOf.values.maxOrNull() ?: 0),
                     "users_by_hop" to
                         hopOf.values

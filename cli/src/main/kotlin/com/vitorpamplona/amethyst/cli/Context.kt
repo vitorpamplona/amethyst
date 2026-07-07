@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
@@ -144,6 +145,34 @@ class Context(
                 onAuthUrl = { url -> System.err.println("[nip46] authorize this request in a browser, then it will continue:\n  $url") },
             )
         } ?: NostrSignerInternal(identity.keyPair())
+
+    /**
+     * Client-wide tally of relay feedback — NOTICE frames, CLOSED reasons
+     * (auth-required / rate-limited / restricted / …), and NIP-42 AUTH
+     * challenges — so a failed REQ can be explained instead of guessed at.
+     * Registered on [client] for the life of this run.
+     */
+    val relayDiagnostics: RelayDiagnostics = RelayDiagnostics().also { client.addConnectionListener(it) }
+
+    /**
+     * NIP-42 responder: answers a relay's AUTH challenge by signing with the
+     * account key, so auth-gated relays serve our reads instead of CLOSing the
+     * subscription. Constructing it registers its own listener on [client].
+     * Only a local key auto-signs — a remote bunker signer is skipped, since a
+     * per-relay remote round-trip during a crawl would stall it (and signing an
+     * auth event with any key still unlocks relays that just want *some* auth).
+     */
+    private val relayAuth: RelayAuthenticator =
+        RelayAuthenticator(
+            client = client,
+            signWithAllLoggedInUsers = { _, template ->
+                if (signer is NostrSignerInternal) {
+                    runCatching { listOf(signer.sign(template)) }.getOrElse { emptyList() }
+                } else {
+                    emptyList()
+                }
+            },
+        )
 
     /**
      * NIP-05 resolver for turning `alice@damus.io`-style identifiers into pubkeys.
