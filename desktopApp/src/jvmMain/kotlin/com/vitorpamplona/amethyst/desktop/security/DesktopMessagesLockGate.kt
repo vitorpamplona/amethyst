@@ -51,8 +51,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState
+import com.vitorpamplona.amethyst.commons.privacylock.LockScope
 import com.vitorpamplona.amethyst.commons.privacylock.LockState
+import com.vitorpamplona.amethyst.commons.privacylock.lockStateFor
 import kotlinx.coroutines.delay
 
 /**
@@ -72,7 +73,7 @@ import kotlinx.coroutines.delay
  */
 @Composable
 fun DesktopMessagesLockGate(content: @Composable () -> Unit) {
-    val lockState = LocalMessagesLockState.current
+    val lockState = lockStateFor(LockScope.Messages)
     val current by lockState.state.collectAsState()
 
     DisposableEffect(lockState) {
@@ -87,7 +88,7 @@ fun DesktopMessagesLockGate(content: @Composable () -> Unit) {
 
 @Composable
 private fun DesktopLockScreen() {
-    val lockState = LocalMessagesLockState.current
+    val lockState = lockStateFor(LockScope.Messages)
     val settings = LocalPrivacyLockSettings.current
     val stored by settings.passwordHashed.collectAsState()
     val lockedUntil by settings.lockedUntilEpochMs.collectAsState()

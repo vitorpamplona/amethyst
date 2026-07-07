@@ -220,7 +220,7 @@ private fun InactivityCard(settings: PrivacyLockSettings) {
 @Composable
 private fun RedactionCard(settings: PrivacyLockSettings) {
     val enabled by settings.lockEnabled.collectAsState()
-    val level by settings.redactionLevel.collectAsState()
+    val level by settings.dmRedactionLevel.collectAsState()
     if (!enabled) return
 
     SettingsCard(title = "DM notification preview") {
@@ -245,7 +245,7 @@ private fun RedactionCard(settings: PrivacyLockSettings) {
                     DropdownMenuItem(
                         text = { Text(entry.label()) },
                         onClick = {
-                            settings.setRedactionLevel(entry)
+                            settings.setDmRedactionLevel(entry)
                             expanded = false
                         },
                     )

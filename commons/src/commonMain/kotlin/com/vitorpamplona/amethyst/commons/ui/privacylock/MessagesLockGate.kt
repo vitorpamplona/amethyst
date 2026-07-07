@@ -43,8 +43,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState
+import com.vitorpamplona.amethyst.commons.privacylock.LockScope
 import com.vitorpamplona.amethyst.commons.privacylock.LockState
+import com.vitorpamplona.amethyst.commons.privacylock.lockStateFor
 import kotlinx.coroutines.launch
 
 /**
@@ -61,12 +62,12 @@ import kotlinx.coroutines.launch
  * `rememberSaveable` survive a lock cycle (SavedStateRegistry-backed).
  * For plain `remember` state, drafts are cleared — accept this trade-off.
  *
- * The gate also fires [MessagesLockState.onLeaveRoute] from its
+ * The gate also fires [PrivacyLockState.onLeaveRoute] from its
  * [DisposableEffect.onDispose] block, so navigating away locks immediately.
  */
 @Composable
 fun MessagesLockGate(content: @Composable () -> Unit) {
-    val lockState = LocalMessagesLockState.current
+    val lockState = lockStateFor(LockScope.Messages)
     val current by lockState.state.collectAsState()
 
     DisposableEffect(lockState) {
@@ -81,7 +82,7 @@ fun MessagesLockGate(content: @Composable () -> Unit) {
 
 @Composable
 private fun LockScreen() {
-    val lockState = LocalMessagesLockState.current
+    val lockState = lockStateFor(LockScope.Messages)
     val prompter = LocalCredentialPrompter.current
     val scope = rememberCoroutineScope()
 

@@ -18,29 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.privacylock
-
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
-import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockState
+package com.vitorpamplona.amethyst.commons.privacylock
 
 /**
- * Observes pointer events on the Initial pass — does NOT consume them, so
- * underlying scroll / click handlers behave normally. Every gesture resets
- * the idle timer in [state]. Apply ONCE at the route root to avoid scattering
- * reset calls across every child composable (per architecture review).
+ * Routes gated by the privacy lock.
  *
- * Incoming DM events (background flow updates) DO NOT trigger this modifier
- * since they're not user input — preserves the "walked-away-from-desk"
- * protection per brainstorm resolved Q.
+ * A single master `PrivacyLockSettings.lockEnabled` flag protects all scopes
+ * together, but each scope keeps its own [PrivacyLockState] so that unlock,
+ * idle-timer, and leave-route transitions apply independently per route.
  */
-fun Modifier.resetIdleOnInteraction(state: PrivacyLockState): Modifier =
-    this.pointerInput(state) {
-        awaitPointerEventScope {
-            while (true) {
-                awaitPointerEvent(PointerEventPass.Initial)
-                state.onUserInteraction()
-            }
-        }
-    }
+enum class LockScope { Messages, Wallet }
