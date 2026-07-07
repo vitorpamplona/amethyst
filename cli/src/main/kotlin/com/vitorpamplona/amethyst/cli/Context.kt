@@ -139,6 +139,22 @@ fun classifyDrainFailure(reason: String): DrainFailure? {
 }
 
 /**
+ * Max total "entries" (authors + ids + tag values) allowed in a single REQ frame.
+ * A REQ carries all of a subscription's filters at once, and each entry is a
+ * ~67-byte JSON hex string, so 2500 entries ≈ 167KB — comfortably under the 256KB
+ * message cap most relays enforce (and reject a frame over, dropping every author
+ * in it). [Context.drainGated] groups a relay's filters to stay within this.
+ */
+private const val MAX_REQ_ENTRIES = 2500
+
+/** Count the size-driving entries in a filter: authors, ids, and tag values. */
+fun filterEntries(f: Filter): Int =
+    (f.authors?.size ?: 0) +
+        (f.ids?.size ?: 0) +
+        (f.tags?.values?.sumOf { it.size } ?: 0) +
+        (f.tagsAll?.values?.sumOf { it.size } ?: 0)
+
+/**
  * Per-invocation wiring. Each CLI run constructs a Context, does its work,
  * and then closes it — no daemon.
  *
@@ -639,54 +655,43 @@ class Context(
         deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>?,
     ): List<Pair<NormalizedRelayUrl, Event>> {
         val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
-        // One relay per subId, so the relay alone identifies which subscription a
-        // callback is for. First terminal frame wins; a timeout leaves it unset.
-        val relayDone = ConcurrentHashMap<NormalizedRelayUrl, CompletableDeferred<String>>()
-        for (r in filters.keys) relayDone[r] = CompletableDeferred()
-        val doneReasons = ConcurrentHashMap<NormalizedRelayUrl, String>()
-        val listener =
-            object : SubscriptionListener {
-                override fun onEvent(
-                    event: Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    eventChannel.trySend(relay to event)
-                }
 
-                override fun onEose(
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    relayDone[relay]?.complete("eose")
+        // Split each relay's filters into REQ-sized groups. A REQ frame carries ALL
+        // its filters at once, so a popular relay routed thousands of authors would
+        // otherwise produce a multi-MB frame that most relays reject outright
+        // ("message too large") — silently dropping every author in it. Grouping by
+        // total entry count keeps each REQ well under the common 256KB cap; a relay
+        // with more authors just gets several smaller REQs, each its own gated sub.
+        val units = ArrayList<Pair<NormalizedRelayUrl, List<Filter>>>()
+        for ((relay, relayFilters) in filters) {
+            var group = ArrayList<Filter>()
+            var entries = 0
+            for (f in relayFilters) {
+                val fe = filterEntries(f)
+                if (group.isNotEmpty() && entries + fe > MAX_REQ_ENTRIES) {
+                    units.add(relay to group)
+                    group = ArrayList()
+                    entries = 0
                 }
-
-                override fun onClosed(
-                    message: String,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    relayDone[relay]?.complete("closed:$message")
-                }
-
-                override fun onCannotConnect(
-                    relay: NormalizedRelayUrl,
-                    message: String,
-                    forFilters: List<Filter>?,
-                ) {
-                    relayDone[relay]?.complete("cannot:$message")
-                }
+                group.add(f)
+                entries += fe
             }
+            if (group.isNotEmpty()) units.add(relay to group)
+        }
+
+        // Per-relay failure classification, HARD winning over TRANSIENT across a
+        // relay's several REQ-groups; plus which relays stalled to a timeout.
+        val failures = ConcurrentHashMap<NormalizedRelayUrl, DrainFailure>()
+        val timedOut = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
+
         val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
         coroutineScope {
-            // Single consumer: verify+store serially, exactly like drain(). One
-            // writer, so SeenIds' single-writer contract holds. The outbox model
-            // (and especially the wide relay-list broadcast) delivers the SAME event
-            // from many relays at once; skip a duplicate BEFORE the expensive
-            // Schnorr verify+store. An id is marked seen only after it verifies, so a
-            // forged copy (valid id, bad signature) delivered first can't suppress
-            // the genuine one that follows.
+            // Single consumer: verify+store serially. One writer, so SeenIds'
+            // single-writer contract holds. The outbox model (and the wide relay-
+            // list broadcast) delivers the SAME event from many relays at once; skip
+            // a duplicate BEFORE the expensive Schnorr verify+store. An id is marked
+            // seen only after it verifies, so a forged copy (valid id, bad signature)
+            // delivered first can't suppress the genuine one that follows.
             val consumer =
                 launch {
                     val seen = SeenIds(initialSlotsPow2 = 12)
@@ -698,17 +703,60 @@ class Context(
                         }
                     }
                 }
-            // One gated subscription per relay. The permit is held for the whole
-            // life of the relay's REQ, so concurrent subs on it never exceed its cap.
-            filters
-                .map { (relay, relayFilters) ->
+            // One gated subscription per (relay, REQ-group). The permit is held for
+            // the group's whole life, so concurrent subs on a relay never exceed its
+            // adaptive cap. Each group carries its own subId, listener, and terminal
+            // signal (relay + subId together identify a group, but a per-group
+            // listener is simplest).
+            units
+                .map { (relay, groupFilters) ->
                     launch {
                         relayLimiter.withPermit(relay) {
                             val subId = newSubId()
-                            client.subscribe(subId, mapOf(relay to relayFilters), listener)
+                            val done = CompletableDeferred<String>()
+                            val groupListener =
+                                object : SubscriptionListener {
+                                    override fun onEvent(
+                                        event: Event,
+                                        isLive: Boolean,
+                                        r: NormalizedRelayUrl,
+                                        forFilters: List<Filter>?,
+                                    ) {
+                                        eventChannel.trySend(r to event)
+                                    }
+
+                                    override fun onEose(
+                                        r: NormalizedRelayUrl,
+                                        forFilters: List<Filter>?,
+                                    ) {
+                                        done.complete("eose")
+                                    }
+
+                                    override fun onClosed(
+                                        message: String,
+                                        r: NormalizedRelayUrl,
+                                        forFilters: List<Filter>?,
+                                    ) {
+                                        done.complete("closed:$message")
+                                    }
+
+                                    override fun onCannotConnect(
+                                        r: NormalizedRelayUrl,
+                                        message: String,
+                                        forFilters: List<Filter>?,
+                                    ) {
+                                        done.complete("cannot:$message")
+                                    }
+                                }
+                            client.subscribe(subId, mapOf(relay to groupFilters), groupListener)
                             try {
-                                val reason = withTimeoutOrNull(timeoutMs) { relayDone[relay]!!.await() }
-                                doneReasons[relay] = reason ?: "timeout"
+                                val reason = withTimeoutOrNull(timeoutMs) { done.await() } ?: "timeout"
+                                if (reason == "timeout") timedOut.add(relay)
+                                classifyDrainFailure(reason)?.let { kind ->
+                                    failures.merge(relay, kind) { a, b ->
+                                        if (a == DrainFailure.HARD || b == DrainFailure.HARD) DrainFailure.HARD else DrainFailure.TRANSIENT
+                                    }
+                                }
                             } finally {
                                 client.unsubscribe(subId)
                             }
@@ -720,15 +768,10 @@ class Context(
             eventChannel.close()
             consumer.join()
         }
-        if (diagnoseSlow) {
-            val stalled = filters.keys.filter { (doneReasons[it] ?: "timeout") == "timeout" }.toSet()
-            if (stalled.isNotEmpty()) logSlowDrain(timeoutMs, stalled, doneReasons, collected)
+        if (diagnoseSlow && timedOut.isNotEmpty()) {
+            logSlowDrain(timeoutMs, timedOut, emptyMap(), collected)
         }
-        deadOut?.let { out ->
-            for ((relay, reason) in doneReasons) {
-                classifyDrainFailure(reason)?.let { out[relay] = it }
-            }
-        }
+        deadOut?.putAll(failures)
         return collected
     }
 
