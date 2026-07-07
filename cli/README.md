@@ -374,6 +374,7 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy login KEY [--password X]` | Import an existing identity (`nsec`/`ncryptsec`/mnemonic/`npub`/`nprofile`/hex/NIP-05). |
 | `amy whoami` | Print the active account's name + npub. |
 | `amy use NAME` / `--clear` / no-arg | Pin / clear / inspect the active account. |
+| `amy status` | Read-only overview of everything under `~/.amy/`: every account, which one is current, each signer type (local keychain/ncryptsec/plaintext, NIP-46 bunker, or read-only) and whether it can sign, the local Marmot / Cashu / alias / sync-cursor footprint per account, and the shared event store's size. Built for the returning user. No keychain prompt, no network. |
 | `amy logoff [--yes] [--keep-events]` | Log off an account: delete its key + backend secret, the whole `~/.amy/<account>/` directory (run-state, aliases, cashu counters, Marmot state), the `current` pin if it points here, and the account's events (authored + `#p`-addressed) in the shared store. `--keep-events` leaves the shared cache alone. Destructive and irreversible — requires `--yes`; without it, prints a dry run and exits 2. |
 
 ### Social

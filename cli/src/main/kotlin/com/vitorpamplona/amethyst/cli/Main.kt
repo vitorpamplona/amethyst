@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.cli.commands.PublishCommand
 import com.vitorpamplona.amethyst.cli.commands.RelayCommands
 import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.ServeCommand
+import com.vitorpamplona.amethyst.cli.commands.StatusCommand
 import com.vitorpamplona.amethyst.cli.commands.StoreCommands
 import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
 import com.vitorpamplona.amethyst.cli.commands.SyncCommand
@@ -168,6 +169,14 @@ private suspend fun dispatch(argv: Array<String>): Int {
     // DataDir.resolve. Other commands fall through to the normal path.
     if (head == "use") {
         return UseCommand.run(tail)
+    }
+
+    // `status` is a cross-account, read-only overview of everything on
+    // disk under ~/.amy/. Like `use`, it must work regardless of how many
+    // accounts exist (zero, one, or many), so it dispatches before account
+    // resolution rather than through the single-account DataDir path.
+    if (head == "status") {
+        return StatusCommand.run(tail)
     }
 
     // Stateless local primitives (nak-style army-knife verbs). They operate
@@ -336,6 +345,9 @@ private fun printUsage() {
         |  use NAME                                  pin NAME as the active account
         |  use --clear                                remove the pin
         |  use                                        print current pin + available accounts
+        |  status                                     read-only overview of every account, signer
+        |                                              type, local Marmot/Cashu state, and the shared
+        |                                              event store (no keychain prompt, no network)
         |
         |Output:
         |  Default: human-readable text on stdout.
