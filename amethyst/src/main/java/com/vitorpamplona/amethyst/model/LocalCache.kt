@@ -155,6 +155,8 @@ import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
@@ -1755,6 +1757,34 @@ object LocalCache : ILocalCache, ICacheProvider {
             (note.event as? GroupMetadataEvent)?.let { channel.updateGroupInfo(it, note) }
         }
 
+        return new
+    }
+
+    /** NIP-29 relay-signed member list (kind 39002) → the group's roster. */
+    fun consume(
+        event: GroupMembersEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (relay != null) {
+            val latest = getOrCreateAddressableNote(event.address()).event as? GroupMembersEvent
+            latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updateMembers(it) }
+        }
+        return new
+    }
+
+    /** NIP-29 relay-signed admin list (kind 39001) → the group's roster. */
+    fun consume(
+        event: GroupAdminsEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (relay != null) {
+            val latest = getOrCreateAddressableNote(event.address()).event as? GroupAdminsEvent
+            latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updateAdmins(it) }
+        }
         return new
     }
 
@@ -3597,6 +3627,14 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is GroupMetadataEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is GroupMembersEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is GroupAdminsEvent -> {
                     consume(event, relay, wasVerified)
                 }
 

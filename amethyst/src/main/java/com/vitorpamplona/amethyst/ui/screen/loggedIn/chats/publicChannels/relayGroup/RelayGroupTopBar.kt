@@ -28,21 +28,23 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 @Composable
 fun RelayGroupTopBar(
@@ -50,17 +52,21 @@ fun RelayGroupTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // Recompose the title when the relay-signed metadata (name) arrives/changes.
+    // Recompose when the relay-signed metadata / roster changes.
     val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? RelayGroupChannel ?: baseChannel
 
-    val joinedGroups by accountViewModel.account.relayGroupList.liveRelayGroupList
-        .collectAsStateWithLifecycle()
-    val isJoined =
-        joinedGroups.any {
-            it.groupId == channel.groupId.id &&
-                RelayUrlNormalizer.normalizeOrNull(it.relayUrl) == channel.groupId.relayUrl
-        }
+    val myPubkey = accountViewModel.userProfile().pubkeyHex
+    val membership = channel.membershipOf(myPubkey)
+    val memberCount = channel.memberCount()
+
+    // Optimistic "requested" state: set on Join, cleared once the relay's roster
+    // shows us as a member. Never persisted — a fresh visit reads the relay truth.
+    var requested by remember(channel.groupId) { mutableStateOf(false) }
+    LaunchedEffect(membership) {
+        if (membership.isMember()) requested = false
+    }
+    val displayMembership = if (!membership.isMember() && requested) RelayGroupMembership.PENDING else membership
 
     var menuOpen by remember { mutableStateOf(false) }
     var showInvite by remember { mutableStateOf(false) }
@@ -75,7 +81,7 @@ fun RelayGroupTopBar(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = channel.groupId.relayUrl.url,
+                    text = subtitle(channel.groupId.relayUrl.displayUrl(), memberCount, displayMembership),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -84,29 +90,46 @@ fun RelayGroupTopBar(
             }
         },
         actions = {
-            if (!isJoined) {
-                FilledTonalButton(onClick = { accountViewModel.joinRelayGroup(channel) }) {
-                    Text(stringRes(R.string.join))
-                }
-            } else {
-                IconButton(onClick = { menuOpen = true }) {
-                    Text("⋮", style = MaterialTheme.typography.titleLarge)
-                }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    DropdownMenuItem(
-                        text = { Text(stringRes(R.string.relay_group_invite_title)) },
-                        onClick = {
-                            menuOpen = false
-                            showInvite = true
-                        },
+            when {
+                displayMembership == RelayGroupMembership.PENDING -> {
+                    Text(
+                        text = stringRes(R.string.relay_group_pending),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    DropdownMenuItem(
-                        text = { Text(stringRes(R.string.leave)) },
-                        onClick = {
-                            menuOpen = false
-                            accountViewModel.leaveRelayGroup(channel)
-                        },
-                    )
+                }
+
+                !displayMembership.isMember() -> {
+                    FilledTonalButton(onClick = {
+                        requested = true
+                        accountViewModel.joinRelayGroup(channel)
+                    }) {
+                        Text(stringRes(R.string.join))
+                    }
+                }
+
+                else -> {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Text("⋮", style = MaterialTheme.typography.titleLarge)
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        if (displayMembership.canModerate()) {
+                            DropdownMenuItem(
+                                text = { Text(stringRes(R.string.relay_group_invite_title)) },
+                                onClick = {
+                                    menuOpen = false
+                                    showInvite = true
+                                },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.leave)) },
+                            onClick = {
+                                menuOpen = false
+                                accountViewModel.leaveRelayGroup(channel)
+                            },
+                        )
+                    }
                 }
             }
         },
@@ -116,4 +139,24 @@ fun RelayGroupTopBar(
     if (showInvite) {
         InviteRelayGroupDialog(channel, accountViewModel) { showInvite = false }
     }
+}
+
+@Composable
+private fun subtitle(
+    relayHost: String,
+    memberCount: Int,
+    membership: RelayGroupMembership,
+): String {
+    val parts = mutableListOf(relayHost)
+    if (memberCount > 0) parts.add(pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount))
+    val role =
+        when (membership) {
+            RelayGroupMembership.ADMIN -> stringRes(R.string.relay_group_role_admin)
+            RelayGroupMembership.MODERATOR -> stringRes(R.string.relay_group_role_moderator)
+            RelayGroupMembership.MEMBER -> stringRes(R.string.relay_group_role_member)
+            RelayGroupMembership.PENDING -> stringRes(R.string.relay_group_pending)
+            RelayGroupMembership.NONE -> null
+        }
+    role?.let { parts.add(it) }
+    return parts.joinToString(" · ")
 }

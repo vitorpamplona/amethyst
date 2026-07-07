@@ -23,8 +23,12 @@ package com.vitorpamplona.amethyst.commons.model.nip29RelayGroups
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupAdminTag
 
 /**
  * A NIP-29 relay-based group ("channel" in Discord terms). Unlike a NIP-C7
@@ -48,6 +52,16 @@ class RelayGroupChannel(
     var metadataNote: Note? = null
 
     var updatedMetadataAt: Long = 0
+
+    /** Relay-signed member pubkeys (kind 39002). */
+    var members: Set<HexKey> = emptySet()
+        private set
+    private var membersUpdatedAt: Long = 0
+
+    /** Relay-signed admins with their roles (kind 39001). */
+    var admins: List<GroupAdminTag> = emptyList()
+        private set
+    private var adminsUpdatedAt: Long = 0
 
     /** A relay group lives on exactly one relay: its host. */
     override fun relays() = setOf(groupId.relayUrl)
@@ -78,6 +92,40 @@ class RelayGroupChannel(
         this.metadataNote = eventNote
         this.updatedMetadataAt = event.createdAt
         updateChannelInfo()
+    }
+
+    fun updateMembers(event: GroupMembersEvent) {
+        if (event.createdAt < membersUpdatedAt) return
+        members = event.members().toSet()
+        membersUpdatedAt = event.createdAt
+        updateChannelInfo()
+    }
+
+    fun updateAdmins(event: GroupAdminsEvent) {
+        if (event.createdAt < adminsUpdatedAt) return
+        admins = event.admins()
+        adminsUpdatedAt = event.createdAt
+        updateChannelInfo()
+    }
+
+    /** Number of known members (admins are members too). */
+    fun memberCount(): Int = (members + admins.map { it.pubKey }).size
+
+    /**
+     * The relay's view of [pubkey]'s membership, from the signed admin/member
+     * lists. Returns [RelayGroupMembership.NONE] when not in either list (or when
+     * the lists haven't loaded yet).
+     */
+    fun membershipOf(pubkey: HexKey): RelayGroupMembership {
+        val admin = admins.firstOrNull { it.pubKey == pubkey }
+        if (admin != null) {
+            return when {
+                admin.roles.any { it.equals(RelayGroupMembership.ROLE_ADMIN, true) } -> RelayGroupMembership.ADMIN
+                admin.roles.any { it.equals(RelayGroupMembership.ROLE_MODERATOR, true) } -> RelayGroupMembership.MODERATOR
+                else -> RelayGroupMembership.MEMBER
+            }
+        }
+        return if (pubkey in members) RelayGroupMembership.MEMBER else RelayGroupMembership.NONE
     }
 
     fun anyNameStartsWith(prefix: String): Boolean =

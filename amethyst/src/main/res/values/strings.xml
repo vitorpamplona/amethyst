@@ -1941,6 +1941,14 @@
     <string name="relay_group_invite_description">Share this code so people can join this channel.</string>
     <string name="relay_group_invite_generating">Creating an invite…</string>
     <string name="relay_group_invite_copied">Invite code copied</string>
+    <string name="relay_group_pending">Requested</string>
+    <string name="relay_group_role_admin">Admin</string>
+    <string name="relay_group_role_moderator">Moderator</string>
+    <string name="relay_group_role_member">Member</string>
+    <plurals name="relay_group_member_count">
+        <item quantity="one">%1$d member</item>
+        <item quantity="other">%1$d members</item>
+    </plurals>
     <string name="messages_new_message">Private</string>
     <string name="messages_new_message_to">To</string>
     <string name="messages_new_message_subject">Subject</string>
