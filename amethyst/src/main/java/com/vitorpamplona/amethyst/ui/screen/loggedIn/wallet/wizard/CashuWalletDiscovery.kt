@@ -177,8 +177,9 @@ class CashuWalletDiscovery(
 
     /**
      * Sliding-window relay crawl: keeps up to [MAX_CONCURRENT_RELAYS] relays
-     * paginating at once, starting the next as soon as one finishes. Mirrors
-     * EventSync.downloadFromPool but only collects (no republish).
+     * paginating at once, starting the next as soon as one finishes. Same shape as
+     * the shared `fetchAllPagesFromPool` accessory, but with one filter list for
+     * every relay and collect-only (no per-relay tagging, no republish).
      */
     private suspend fun INostrClient.crawlPool(
         relays: List<NormalizedRelayUrl>,
