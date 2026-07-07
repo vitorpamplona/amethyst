@@ -94,8 +94,26 @@ object GrapeRankCommand {
     // (empirically ~250 users/drain succeeds, ~17k fails); keep the fan-out small.
     private const val USER_BATCH = 256
 
-    // Concurrent content drains. Bounded so total open connections stay sane.
-    private const val DRAIN_CONCURRENCY = 8
+    // Concurrent content drains. Higher fan-out is safe now that proven-dead
+    // relays are pruned from routing (see deadRelays) — most of what a wave
+    // used to wait on was dead outboxes, so we no longer just pile up stalled
+    // connections.
+    private const val DRAIN_CONCURRENCY = 24
+
+    // Sharded backbone sweep: instead of asking every popular relay for the
+    // same full author list (N× redundant), split the still-missing authors
+    // into SHARD_RELAYS lists and send each to ONE of the top relays. Authors a
+    // relay doesn't have rotate onto a different relay next pass, up to
+    // SHARD_ROTATIONS times, so over a few passes each author is tried on
+    // several popular relays. Once the remaining set drops below
+    // SHARD_BROADCAST_THRESHOLD it's cheap to just ask them all at once.
+    private const val SHARD_RELAYS = 10
+    private const val SHARD_ROTATIONS = 6
+    private const val SHARD_BROADCAST_THRESHOLD = 2000
+
+    // A relay that fails to CONNECT this many times is treated as dead and
+    // dropped from routing, so we stop paying the drain timeout on it.
+    private const val MAX_DEAD_STRIKES = 2
 
     // Broad, big general relays that carry kind:10002 for many users, added to the
     // discovery set to raise the odds of resolving a stranger's outbox. Every entry
@@ -112,15 +130,6 @@ object GrapeRankCommand {
     // How many of the most-used write relays (learned from everyone's kind:10002)
     // to keep as the known-good backbone for retrying users we couldn't reach.
     private const val BACKBONE_SIZE = 30
-
-    // Last-mile sweep: after the outbox crawl gives up on the users whose own
-    // relays never answered, we take one more run at them against the WHOLE
-    // known-good relay pool — the busiest live relays we learned from everyone
-    // else's lists (they include the big aggregators). LAST_MILE_RELAYS caps that
-    // pool; LAST_MILE_PASSES bounds how many times we re-sweep as recovered lists
-    // reveal a few more reachable users.
-    private const val LAST_MILE_RELAYS = 80
-    private const val LAST_MILE_PASSES = 2
 
     suspend fun dispatch(
         dataDir: DataDir,
@@ -209,6 +218,26 @@ object GrapeRankCommand {
                 // live relays become the `backbone` we retry unreachable users against.
                 val writeRelayFreq = HashMap<NormalizedRelayUrl, Int>()
                 val liveRelays = hashSetOf<NormalizedRelayUrl>()
+                // Relays that failed to connect MAX_DEAD_STRIKES times — dropped
+                // from all routing so a wave stops eating the timeout on them.
+                val deadRelays = hashSetOf<NormalizedRelayUrl>()
+                val relayStrikes = HashMap<NormalizedRelayUrl, Int>()
+
+                fun recordDead(failed: Set<NormalizedRelayUrl>) {
+                    for (r in failed) {
+                        if (relayStrikes.merge(r, 1, Int::plus)!! >= MAX_DEAD_STRIKES) deadRelays.add(r)
+                    }
+                }
+
+                // The busiest live relays we've learned, excluding the dead ones.
+                fun topLiveRelays(cap: Int): List<NormalizedRelayUrl> =
+                    writeRelayFreq.entries
+                        .asSequence()
+                        .filter { it.key in liveRelays && it.key !in deadRelays }
+                        .sortedByDescending { it.value }
+                        .take(cap)
+                        .map { it.key }
+                        .toList()
 
                 // Feed a user's contact list into the graph, harvest relay hints, stamp
                 // the hop distance of newly-seen follows, and add them to the frontier.
@@ -234,6 +263,91 @@ object GrapeRankCommand {
                     return fresh
                 }
 
+                // Feed into the graph the contact lists a drain just returned
+                // (deduped by author; the store's canonical latest wins), marking
+                // fed authors done. Only the authors we actually received are
+                // touched — no scan over the whole still-missing set. Returns the
+                // count newly fed.
+                suspend fun harvest(events: List<Pair<NormalizedRelayUrl, Event>>): Int {
+                    var got = 0
+                    for ((_, ev) in events) {
+                        if (ev !is ContactListEvent) continue
+                        val pk = ev.pubKey
+                        if (pk in done) continue
+                        val contacts = ctx.contactsOf(pk) ?: continue
+                        done += pk
+                        ingest(pk, contacts)
+                        got++
+                    }
+                    return got
+                }
+
+                // Sharded backbone sweep (see SHARD_RELAYS). Splits the missing
+                // authors across the top live relays — one shard per relay, so no
+                // relay gets the same list twice — drains all shards concurrently,
+                // then rotates whoever's still missing onto a different relay for up
+                // to SHARD_ROTATIONS passes. Once the remainder is small it's cheap
+                // to broadcast it to every top relay at once. Returns lists fed.
+                suspend fun shardedSweep(authors: Collection<HexKey>): Int {
+                    val top = topLiveRelays(SHARD_RELAYS)
+                    if (top.isEmpty()) return 0
+                    val n = top.size
+                    var missing = authors.filter { it !in done && ctx.contactsOf(it) == null }
+                    var got = 0
+                    var rotation = 0
+                    while (missing.size > SHARD_BROADCAST_THRESHOLD && rotation < SHARD_ROTATIONS) {
+                        val shards = Array(n) { ArrayList<HexKey>() }
+                        for (pk in missing) {
+                            val base = ((pk.hashCode() % n) + n) % n
+                            shards[(base + rotation) % n].add(pk)
+                        }
+                        val results =
+                            coroutineScope {
+                                top
+                                    .mapIndexedNotNull { i, relay ->
+                                        val shard = shards[i]
+                                        if (shard.isEmpty()) {
+                                            null
+                                        } else {
+                                            // Each drain gets its own dead-set — the concurrent
+                                            // drains must not share a mutable HashSet.
+                                            async {
+                                                val dead = hashSetOf<NormalizedRelayUrl>()
+                                                val filters =
+                                                    mapOf(relay to shard.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = graphKinds, authors = it) })
+                                                ctx.drain(filters, timeoutMs, diagnose, dead) to dead
+                                            }
+                                        }
+                                    }.awaitAll()
+                            }
+                        for ((_, dead) in results) recordDead(dead)
+                        relaysContacted += top
+                        val flat = results.flatMap { it.first }
+                        for ((relay, _) in flat) liveRelays.add(relay)
+                        got += harvest(flat)
+                        missing = missing.filter { it !in done }
+                        rotation++
+                    }
+                    // Once the remainder is small it's cheap to ask every top relay
+                    // for it at once. If the rotations bailed with a still-large set,
+                    // those authors just aren't on the popular relays — leave them to
+                    // the caller's outbox pass rather than broadcast a huge list.
+                    if (missing.isNotEmpty() && missing.size <= SHARD_BROADCAST_THRESHOLD) {
+                        val live = top.filter { it !in deadRelays }
+                        if (live.isNotEmpty()) {
+                            val dead = hashSetOf<NormalizedRelayUrl>()
+                            val filters =
+                                live.associateWith { missing.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = graphKinds, authors = it) } }
+                            val events = ctx.drain(filters, timeoutMs, diagnose, dead)
+                            recordDead(dead)
+                            relaysContacted += live
+                            for ((relay, _) in events) liveRelays.add(relay)
+                            got += harvest(events)
+                        }
+                    }
+                    return got
+                }
+
                 // Crawl to full graph depth (no user cap; --max-hops bounds the follow
                 // distance). Each run fetches every discovered user's LATEST
                 // kind:3/10000/1984 once from their outbox (a freshness pass — grouped
@@ -247,126 +361,67 @@ object GrapeRankCommand {
                     if (pending.isEmpty()) break
                     rounds++
 
-                    var gotList = 0
-                    var newUsers = 0
+                    val discoveredBefore = discovered.size
+                    val fedBefore = contactListsFed
 
-                    // The known-good backbone this round: the most-used write relays
-                    // that have actually delivered events. Retried / outbox-less users
-                    // are also queried here — these are relays we know work, learned
-                    // from everyone else's lists.
-                    val backbone =
-                        writeRelayFreq.entries
-                            .asSequence()
-                            .filter { it.key in liveRelays }
-                            .sortedByDescending { it.value }
-                            .take(BACKBONE_SIZE)
-                            .map { it.key }
-                            .toSet()
+                    // Phase A — bulk-fetch from the busiest relays via the sharded
+                    // sweep. Most users' kind:3 lives on the big popular relays, so
+                    // this clears the majority cheaply, without asking every relay for
+                    // the same authors (early rounds no-op until a backbone is learned).
+                    shardedSweep(pending)
 
-                    // Resolve kind:10002 outboxes in bulk (indexers aggregate them),
-                    // then fetch content in small batches drained a few at a time — one
-                    // giant drain over thousands of outbox relays saturates connections
-                    // and times out. Routing (store reads) is serial; only the drains
-                    // run concurrently, which is safe: inserts serialize on the store
-                    // write lock.
-                    ensureRelayLists(ctx, pending.toSet(), backbone, timeoutMs, diagnose)
-                    for (group in pending.chunked(USER_BATCH).chunked(DRAIN_CONCURRENCY)) {
-                        val prepared = group.map { batch -> batch to routeByOutbox(ctx, batch.toSet(), relayHints, backbone, attempts, writeRelayFreq, graphKinds) }
-                        val drained =
-                            coroutineScope {
-                                prepared
-                                    .map { (batch, filters) ->
-                                        async {
-                                            val events = ctx.drain(filters, timeoutMs, diagnose)
-                                            Triple(batch, filters.keys, events)
-                                        }
-                                    }.awaitAll()
-                            }
-                        for ((batch, relays, events) in drained) {
-                            relaysContacted += relays
-                            // Any relay that gave us an event is proven live + useful.
-                            for ((relay, _) in events) liveRelays.add(relay)
-                            for (pk in batch) {
-                                val contacts = ctx.contactsOf(pk)
-                                if (contacts != null) {
-                                    done += pk
-                                    gotList++
-                                    newUsers += ingest(pk, contacts)
-                                } else {
-                                    val tries = (attempts[pk] ?: 0) + 1
-                                    attempts[pk] = tries
-                                    if (tries >= MAX_OUTBOX_ATTEMPTS) done += pk
+                    // Phase B — whoever the popular relays didn't have (niche
+                    // outboxes): resolve their kind:10002, then fetch from their own
+                    // write relays, drained a few at a time and skipping dead relays.
+                    val stragglers = pending.filter { it !in done }
+                    if (stragglers.isNotEmpty()) {
+                        val backbone = topLiveRelays(BACKBONE_SIZE).toSet()
+                        ensureRelayLists(ctx, stragglers.toSet(), backbone, timeoutMs, diagnose)
+                        for (group in stragglers.chunked(USER_BATCH).chunked(DRAIN_CONCURRENCY)) {
+                            val prepared = group.map { batch -> batch to routeByOutbox(ctx, batch.toSet(), relayHints, backbone, attempts, writeRelayFreq, graphKinds, deadRelays) }
+                            val drained =
+                                coroutineScope {
+                                    prepared
+                                        .map { (batch, filters) ->
+                                            async {
+                                                val dead = hashSetOf<NormalizedRelayUrl>()
+                                                val events = ctx.drain(filters, timeoutMs, diagnose, dead)
+                                                recordDead(dead)
+                                                Triple(batch, filters.keys, events)
+                                            }
+                                        }.awaitAll()
+                                }
+                            for ((batch, relays, events) in drained) {
+                                relaysContacted += relays
+                                // Any relay that gave us an event is proven live + useful.
+                                for ((relay, _) in events) liveRelays.add(relay)
+                                for (pk in batch) {
+                                    if (pk in done) continue
+                                    val contacts = ctx.contactsOf(pk)
+                                    if (contacts != null) {
+                                        done += pk
+                                        ingest(pk, contacts)
+                                    } else {
+                                        val tries = (attempts[pk] ?: 0) + 1
+                                        attempts[pk] = tries
+                                        if (tries >= MAX_OUTBOX_ATTEMPTS) done += pk
+                                    }
                                 }
                             }
                         }
                     }
 
                     System.err.println(
-                        "[graperank] round $rounds: fetched=${pending.size}, gotList=$gotList, " +
-                            "newUsers=$newUsers, discovered=${discovered.size}, done=${done.size}",
+                        "[graperank] round $rounds: pending=${pending.size}, " +
+                            "gotList=${contactListsFed - fedBefore}, newUsers=${discovered.size - discoveredBefore}, " +
+                            "discovered=${discovered.size}, done=${done.size}, dead=${deadRelays.size}",
                     )
                 }
 
-                // Last-mile sweep. The outbox crawl leaves a tail of users whose own
-                // relays never answered (dead/misconfigured outboxes). Their contact
-                // lists very likely still exist — on the big aggregators and busy
-                // relays everyone else writes to. So instead of asking each straggler's
-                // broken outbox again, ask the WHOLE known-good pool at once: the
-                // busiest live relays learned from the crawl, plus the discovery set.
-                val goodPool =
-                    (
-                        writeRelayFreq.entries
-                            .asSequence()
-                            .filter { it.key in liveRelays }
-                            .sortedByDescending { it.value }
-                            .take(LAST_MILE_RELAYS)
-                            .map { it.key }
-                            .toSet() + relayListDiscoveryRelays(ctx)
-                    ).toList()
-                if (goodPool.isNotEmpty()) {
-                    for (pass in 1..LAST_MILE_PASSES) {
-                        val missing = discovered.filter { (hopOf[it] ?: 0) < maxHops && ctx.contactsOf(it) == null }
-                        if (missing.isEmpty()) break
-
-                        var recovered = 0
-                        var newUsers = 0
-                        for (group in missing.chunked(USER_BATCH).chunked(DRAIN_CONCURRENCY)) {
-                            val drained =
-                                coroutineScope {
-                                    group
-                                        .map { batch ->
-                                            val filters =
-                                                goodPool.associateWith {
-                                                    batch.chunked(AUTHORS_PER_FILTER).map { chunk ->
-                                                        Filter(kinds = graphKinds, authors = chunk)
-                                                    }
-                                                }
-                                            async {
-                                                val events = ctx.drain(filters, timeoutMs, diagnose)
-                                                batch to events
-                                            }
-                                        }.awaitAll()
-                                }
-                            for ((batch, events) in drained) {
-                                relaysContacted += goodPool
-                                for ((relay, _) in events) liveRelays.add(relay)
-                                for (pk in batch) {
-                                    val contacts = ctx.contactsOf(pk)
-                                    if (contacts != null) {
-                                        recovered++
-                                        done += pk
-                                        newUsers += ingest(pk, contacts)
-                                    }
-                                }
-                            }
-                        }
-                        System.err.println(
-                            "[graperank] last-mile pass $pass: swept=${missing.size}, recovered=$recovered, " +
-                                "newUsers=$newUsers, discovered=${discovered.size}, still-missing=${discovered.count { (hopOf[it] ?: 0) < maxHops && ctx.contactsOf(it) == null }}",
-                        )
-                        if (recovered == 0) break
-                    }
-                }
+                // No separate last-mile pass: the per-round sharded sweep already
+                // broadcasts the small remaining set to every top relay once it drops
+                // below SHARD_BROADCAST_THRESHOLD, and the round loop only exits when
+                // every reachable user within the hop budget is done.
 
                 relaysContactedCount = relaysContacted.size
                 val perHop =
@@ -808,6 +863,7 @@ object GrapeRankCommand {
         attempts: Map<HexKey, Int>,
         writeRelayFreq: MutableMap<NormalizedRelayUrl, Int>,
         kinds: List<Int>,
+        deadRelays: Set<NormalizedRelayUrl>,
     ): Map<NormalizedRelayUrl, List<Filter>> {
         val fallback = contentFallbackRelays(ctx)
         val perRelay = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
@@ -821,7 +877,9 @@ object GrapeRankCommand {
                     (attempts[pk] ?: 0) > 0 -> write + backbone
                     else -> write
                 }
-            for (relay in relays) perRelay.getOrPut(relay) { HashSet() }.add(pk)
+            // Skip relays already proven dead — routing to them only burns the
+            // drain timeout.
+            for (relay in relays) if (relay !in deadRelays) perRelay.getOrPut(relay) { HashSet() }.add(pk)
         }
 
         return perRelay.mapValues { (_, authors) ->

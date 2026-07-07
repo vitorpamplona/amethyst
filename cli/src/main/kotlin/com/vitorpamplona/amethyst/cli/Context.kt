@@ -400,11 +400,18 @@ class Context(
      * Subscribe to the given filters across the given relays, drain all events
      * until either every relay has sent EOSE or the timeout elapses, and
      * return them. Used for one-shot catch-up queries — not live subscriptions.
+     *
+     * When [deadOut] is provided, every relay that reported it could not be
+     * connected to (`onCannotConnect`) is added to it, so callers can prune
+     * proven-dead relays from future routing instead of paying the full
+     * [timeoutMs] on them again. Slow-but-connected relays are NOT reported —
+     * only hard connect failures, so a temporarily-busy relay isn't discarded.
      */
     suspend fun drain(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         timeoutMs: Long = 8_000,
         diagnoseSlow: Boolean = false,
+        deadOut: MutableSet<NormalizedRelayUrl>? = null,
     ): List<Pair<NormalizedRelayUrl, Event>> {
         if (filters.isEmpty()) return emptyList()
         val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
@@ -480,6 +487,11 @@ class Context(
             client.unsubscribe(subId)
             eventChannel.close()
             doneChannel.close()
+        }
+        deadOut?.let { out ->
+            for ((relay, reason) in doneReasons) {
+                if (reason.startsWith("cannot")) out.add(relay)
+            }
         }
         return collected
     }
