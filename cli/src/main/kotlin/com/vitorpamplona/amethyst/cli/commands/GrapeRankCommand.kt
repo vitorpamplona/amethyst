@@ -138,6 +138,16 @@ object GrapeRankCommand {
     // to keep as the known-good backbone for retrying users we couldn't reach.
     private const val BACKBONE_SIZE = 30
 
+    // Warm pool: hold a persistent, do-nothing subscription open to the busiest
+    // WARM_POOL_SIZE relays for the whole crawl, so the connections we reuse
+    // every round survive the between-round routing gaps (and niche-relay churn)
+    // instead of being dropped ~300ms after a wave ends and reconnected next
+    // round. The filter matches an impossible event id, so the relay EOSEs
+    // immediately and streams nothing — it only keeps the socket warm.
+    private const val WARM_POOL_SIZE = 20
+    private const val WARM_SUB_ID = "graperank-warm"
+    private val WARM_FILTERS = listOf(Filter(ids = listOf("0".repeat(64))))
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -371,6 +381,13 @@ object GrapeRankCommand {
                     if (pending.isEmpty()) break
                     rounds++
 
+                    // Refresh the warm pool to this round's busiest relays and keep
+                    // that subscription open — reusing the same subId just updates the
+                    // desired-relay set, so these sockets stay up across the round.
+                    topLiveRelays(WARM_POOL_SIZE).takeIf { it.isNotEmpty() }?.let { warm ->
+                        ctx.client.subscribe(WARM_SUB_ID, warm.associateWith { WARM_FILTERS }, null)
+                    }
+
                     val discoveredBefore = discovered.size
                     val fedBefore = contactListsFed
 
@@ -427,6 +444,9 @@ object GrapeRankCommand {
                             "discovered=${discovered.size}, done=${done.size}, dead=${deadRelays.size}",
                     )
                 }
+
+                // Crawl done — drop the warm pool.
+                ctx.client.unsubscribe(WARM_SUB_ID)
 
                 // No separate last-mile pass: the per-round sharded sweep already
                 // broadcasts the small remaining set to every top relay once it drops
