@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
@@ -106,6 +107,16 @@ class RelayGroupChannel(
         admins = event.admins()
         adminsUpdatedAt = event.createdAt
         updateChannelInfo()
+    }
+
+    /**
+     * The shareable NIP-19 `naddr` coordinate for this group's metadata (kind
+     * 39000, authored by the relay's own key, with the host relay as a hint), or
+     * null until the relay-signed metadata has loaded (we need its author key).
+     */
+    fun toNAddr(): String? {
+        val relaySelf = event?.pubKey ?: return null
+        return NAddress.create(GroupMetadataEvent.KIND, relaySelf, groupId.id, groupId.relayUrl)
     }
 
     /** Number of known members (admins are members too). */

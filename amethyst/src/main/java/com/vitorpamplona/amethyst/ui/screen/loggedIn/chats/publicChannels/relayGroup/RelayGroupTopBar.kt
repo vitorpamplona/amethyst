@@ -70,6 +70,7 @@ fun RelayGroupTopBar(
 
     var menuOpen by remember { mutableStateOf(false) }
     var showInvite by remember { mutableStateOf(false) }
+    var showJoinCode by remember { mutableStateOf(false) }
 
     TopBarExtensibleWithBackButton(
         title = {
@@ -101,8 +102,13 @@ fun RelayGroupTopBar(
 
                 !displayMembership.isMember() -> {
                     FilledTonalButton(onClick = {
-                        requested = true
-                        accountViewModel.joinRelayGroup(channel)
+                        // Closed groups need an invite code; open groups join directly.
+                        if (channel.isClosed()) {
+                            showJoinCode = true
+                        } else {
+                            requested = true
+                            accountViewModel.joinRelayGroup(channel)
+                        }
                     }) {
                         Text(stringRes(R.string.join))
                     }
@@ -138,6 +144,15 @@ fun RelayGroupTopBar(
 
     if (showInvite) {
         InviteRelayGroupDialog(channel, accountViewModel) { showInvite = false }
+    }
+
+    if (showJoinCode) {
+        JoinRelayGroupDialog(
+            channel = channel,
+            accountViewModel = accountViewModel,
+            onJoined = { requested = true },
+            onDismiss = { showJoinCode = false },
+        )
     }
 }
 

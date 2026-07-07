@@ -1941,6 +1941,11 @@
     <string name="relay_group_invite_description">Share this code so people can join this channel.</string>
     <string name="relay_group_invite_generating">Creating an invite…</string>
     <string name="relay_group_invite_copied">Invite code copied</string>
+    <string name="relay_group_invite_code_label">Invite code (for this invite-only channel):</string>
+    <string name="relay_group_join_title">Join channel</string>
+    <string name="relay_group_join_code_label">Invite code</string>
+    <string name="relay_group_join_code_hint">This channel is invite-only. Enter the code you were given.</string>
+    <string name="relay_group_join_confirm">Join</string>
     <string name="relay_group_pending">Requested</string>
     <string name="relay_group_role_admin">Admin</string>
     <string name="relay_group_role_moderator">Moderator</string>

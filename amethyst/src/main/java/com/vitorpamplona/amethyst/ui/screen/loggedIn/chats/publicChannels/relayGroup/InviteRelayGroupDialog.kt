@@ -59,23 +59,46 @@ fun InviteRelayGroupDialog(
         accountViewModel.createRelayGroupInvite(channel, code)
     }
 
+    // A shareable, cross-client coordinate for the group (opens the chat in any
+    // NIP-29 client). Null until the relay-signed metadata has loaded.
+    val nAddr = channel.toNAddr()?.let { "nostr:$it" }
+    val isClosed = channel.isClosed()
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringRes(R.string.relay_group_invite_title)) },
         text = {
             Column {
                 Text(stringRes(R.string.relay_group_invite_description))
-                Text(
-                    text = code,
-                    fontFamily = FontFamily.Monospace,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+
+                nAddr?.let {
+                    Text(
+                        text = it,
+                        fontFamily = FontFamily.Monospace,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 2,
+                    )
+                }
+
+                // Closed groups additionally need a one-time code to join.
+                if (isClosed) {
+                    Text(stringRes(R.string.relay_group_invite_code_label))
+                    Text(
+                        text = code,
+                        fontFamily = FontFamily.Monospace,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(onClick = {
-                clipboard.setText(AnnotatedString(code))
+                // Copy the most useful thing: the group link, plus the code when
+                // the group is closed (so a recipient has both to join).
+                val toCopy = listOfNotNull(nAddr, if (isClosed) code else null).joinToString("\n")
+                clipboard.setText(AnnotatedString(toCopy.ifBlank { code }))
                 onDismiss()
             }) {
                 Text(stringRes(R.string.copy))
