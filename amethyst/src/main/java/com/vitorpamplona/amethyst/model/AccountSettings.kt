@@ -290,6 +290,13 @@ class AccountSettings(
 
     fun isWriteable(): Boolean = keyPair.privKey != null || externalSignerPackageName != null
 
+    fun updateRelayGroupViewMode(mode: RelayGroupViewMode) {
+        if (relayGroupViewMode.value != mode) {
+            relayGroupViewMode.tryEmit(mode)
+            saveAccountSettings()
+        }
+    }
+
     // ---
     // Always-on Notification Service
     // ---

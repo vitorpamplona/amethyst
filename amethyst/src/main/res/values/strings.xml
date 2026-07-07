@@ -1929,6 +1929,8 @@
     <string name="messages_create_public_chat">Public</string>
     <string name="messages_create_group">Group</string>
     <string name="messages_create_public_private_chat_description">New Public or Private Group</string>
+    <string name="relay_group_view_inline">Inline</string>
+    <string name="relay_group_view_grouped">By relay</string>
     <string name="messages_new_message">Private</string>
     <string name="messages_new_message_to">To</string>
     <string name="messages_new_message_subject">Subject</string>

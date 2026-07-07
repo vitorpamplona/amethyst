@@ -119,12 +119,13 @@ fun MessagesPager(
     tabs: List<MessagesTabItem>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    modifier: Modifier = Modifier,
 ) {
     HorizontalPager(
         state = pagerState,
         userScrollEnabled = true,
         modifier =
-            Modifier.zonedDrawerSwipe(
+            modifier.zonedDrawerSwipe(
                 pagerState = pagerState,
                 openDrawer = nav::openDrawer,
             ),
