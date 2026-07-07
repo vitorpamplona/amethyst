@@ -26,9 +26,9 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
-import com.vitorpamplona.amethyst.commons.wot.GrapeRank
-import com.vitorpamplona.amethyst.commons.wot.GrapeRankParams
-import com.vitorpamplona.amethyst.commons.wot.TrustGraphBuilder
+import com.vitorpamplona.quartz.experimental.graperank.GrapeRank
+import com.vitorpamplona.quartz.experimental.graperank.GrapeRankParams
+import com.vitorpamplona.quartz.experimental.graperank.TrustGraphBuilder
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
