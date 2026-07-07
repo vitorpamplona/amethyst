@@ -554,7 +554,18 @@ matches that:
 
 1. If `~/.amy/current` is set, use it.
 2. Else if exactly one account exists, use it (silent auto-pick).
-3. Else error and list the candidates so you can disambiguate.
+3. Else — for a **read-only** verb, run **anonymously**; for a **signing**
+   verb, error and list the candidates so you can disambiguate.
+
+**No account? Reads still work.** Verbs that only query relays or the shared
+event store — `fetch`, `subscribe`, `count`, `publish` (broadcasts a
+pre-signed event), `outbox`, `search`, `sync`, `store …`, the read halves of
+`profile`/`notes`/`git`/`podcast`/`podcast20`, `nsite`/`napplet` fetch/serve/
+list, `blossom download`/`check`, `offer`/`debit info`, and every stateless
+primitive — run against an empty `~/.amy/` with a throwaway key. They read
+fine; they just can't authenticate. Only verbs that **sign or encrypt with
+your key** (post, edit, follow, dm, marmot, zap, relay-list edits, blossom
+upload/list/delete, cashu, …) require an account — and say so.
 
 `amy use NAME` writes `~/.amy/current`; `amy use --clear` removes it.
 For one-off override, prepend `--account NAME` to any command.
@@ -620,11 +631,12 @@ Inside the amy process there's no test mode — it just sees a fresh
 
 ## Troubleshooting
 
-- **`no account at ~/.amy`** — you haven't created one yet. Run
+- **`no account configured` / `multiple accounts in ~/.amy (alice, bob)`** —
+  only **signing** verbs raise these; reads run anonymously instead (see
+  "No account? Reads still work" above). Create one with
   `amy --account NAME init` (bare keypair) or `amy --account NAME create`
-  (full Amethyst-style bootstrap).
-- **`multiple accounts in ~/.amy (alice, bob)`** — pin one with
-  `amy use NAME` or pass `--account NAME` per command.
+  (full Amethyst-style bootstrap), or pin/select one with `amy use NAME` /
+  `--account NAME`.
 - **`current pins 'X' but ~/.amy/X doesn't exist`** — the active-account
   marker is stale. Rewrite with `amy use OTHER` or `amy use --clear`.
 - **`no_dm_relays`** — recipient hasn't published a kind:10050 inbox.

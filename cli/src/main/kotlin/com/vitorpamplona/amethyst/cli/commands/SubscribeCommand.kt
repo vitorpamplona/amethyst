@@ -53,7 +53,7 @@ object SubscribeCommand {
         val timeoutMs = args.flag("timeout")?.toLongOrNull()?.let { it * 1000 }
         val filter = RawEventSupport.buildFilter(args)
 
-        Context.open(dataDir).use { ctx ->
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val relays = RawEventSupport.queryTargets(ctx, args)
             if (relays.isEmpty()) return Output.error("no_relays", "no relays available; pass --relay or run `amy relay add`")

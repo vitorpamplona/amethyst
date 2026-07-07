@@ -145,7 +145,7 @@ object SearchCommand {
         timeoutMs: Long,
         render: (List<Event>) -> List<Map<String, Any?>>,
     ): Int {
-        Context.open(dataDir).use { ctx ->
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val relays =
                 SearchActions.resolveSearchRelays(

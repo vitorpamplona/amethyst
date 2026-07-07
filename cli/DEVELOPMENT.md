@@ -38,6 +38,15 @@ What every caller — user, script, agent, CI — can rely on:
   copy to move. Tests isolate by overriding `$HOME` for the amy
   subprocess (`HOME=/tmp/run.123 amy --account alice …`) — same
   convention `git`, `gpg`, and `npm` use.
+- **An account is only required to _sign_.** Read-only verbs (relay
+  queries, the shared `store`, `offer`/`debit info`, and the stateless
+  primitives) run against an empty `~/.amy/` — `DataDir.resolveOptional`
+  hands them an accountless dir (its `hasAccount = false`) pointing only at
+  the shared event store, and `Context.openOrAnonymous` gives them an
+  ephemeral key-less identity (they read fine, they just can't
+  authenticate). Signing verbs go through `Context.open`, which re-asserts
+  the account requirement — `init`/`create`/`login`/`logoff`/`whoami`
+  resolve strictly, since they operate on the account dir itself.
 
 Only the `--json` shape and the exit codes are public API. The default
 text format is allowed to change between releases. The five design

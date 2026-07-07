@@ -60,7 +60,7 @@ object DebitCommands {
         )
 
     /** Local decode of an `ndebit` pointer — no network, no account needed. */
-    private fun info(rest: Array<String>): Int {
+    internal fun info(rest: Array<String>): Int {
         val args = Args(rest)
         val debit =
             ClinkPointerParser.parse(args.positional(0, "ndebit").trim()) as? NDebit

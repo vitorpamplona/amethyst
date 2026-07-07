@@ -109,7 +109,7 @@ object OfferCommands {
     }
 
     /** Local decode of a `noffer` pointer — no network, no account needed. */
-    private fun info(rest: Array<String>): Int {
+    internal fun info(rest: Array<String>): Int {
         val args = Args(rest)
         val offer =
             ClinkPointerParser.parse(args.positional(0, "noffer").trim()) as? NOffer

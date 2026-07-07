@@ -129,6 +129,16 @@ class AwaitTimeout(
     message: String,
 ) : RuntimeException(message)
 
+/**
+ * Verbs that create, select, or delete the account/identity on disk. They
+ * write to (or read) the per-account directory directly rather than through
+ * `Context.open`, so they need a concrete account and must resolve strictly —
+ * an accountless run has nowhere to put a new identity. Every other verb
+ * resolves via [DataDir.resolveOptional] and either runs anonymously (reads)
+ * or re-asserts the requirement inside `Context.open` (signing).
+ */
+private val STRICT_ACCOUNT_VERBS = setOf("init", "create", "login", "logoff", "whoami")
+
 private suspend fun dispatch(argv: Array<String>): Int {
     if (argv.isEmpty() || argv[0] == "--help" || argv[0] == "-h") {
         printUsage()
@@ -197,8 +207,27 @@ private suspend fun dispatch(argv: Array<String>): Int {
         return CashuMintCommands.dispatch(tail.drop(1).toTypedArray())
     }
 
+    // `offer info NOFFER` / `debit info NDEBIT` decode a CLINK pointer locally —
+    // no network, no account. The rest of `offer`/`debit` operates on the account.
+    if (head == "offer" && tail.firstOrNull() == "info") {
+        return OfferCommands.info(tail.drop(1).toTypedArray())
+    }
+    if (head == "debit" && tail.firstOrNull() == "info") {
+        return DebitCommands.info(tail.drop(1).toTypedArray())
+    }
+
     val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
-    val dataDir = DataDir.resolve(accountFlag = accountFlag, secrets = secrets)
+    // Identity-lifecycle verbs create / select / delete the account itself, so
+    // they need a concrete account and resolve strictly (helpful ambiguity
+    // errors). Everything else resolves optionally: read-only verbs then run
+    // anonymously when there is no account, while signing verbs re-assert the
+    // requirement through `Context.open`.
+    val dataDir =
+        if (head in STRICT_ACCOUNT_VERBS) {
+            DataDir.resolve(accountFlag = accountFlag, secrets = secrets)
+        } else {
+            DataDir.resolveOptional(accountFlag = accountFlag, secrets = secrets)
+        }
 
     return when (head) {
         "init" -> InitCommands.init(dataDir, Args(tail))
@@ -328,7 +357,12 @@ private fun printUsage() {
         |    1. --account X if given.
         |    2. ~/.amy/current marker (set by `amy use X`).
         |    3. Sole subdirectory of ~/.amy/ other than shared/.
-        |    4. Error — disambiguate with --account or `amy use`.
+        |    4. Read-only verbs (fetch, subscribe, count, publish, outbox,
+        |       search, sync, store, profile/git/podcast reads, nsite/napplet
+        |       fetch, decode/encode/… primitives, offer/debit info) run
+        |       ANONYMOUSLY — they query relays and the shared store with no
+        |       account, they just can't sign. Signing verbs error here:
+        |       disambiguate with --account or `amy use`.
         |
         |  Test harnesses isolate by overriding ${'$'}HOME for the amy
         |  subprocess (`HOME=/tmp/run.123 amy --account alice ...`).

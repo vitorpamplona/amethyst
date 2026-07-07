@@ -115,6 +115,14 @@ class Context(
     val dataDir: DataDir,
     val identity: Identity,
     val state: RunState,
+    /**
+     * Anonymous read-only run: no account on disk, [identity] is an ephemeral
+     * key-less identity (see [Identity.anonymous]). Marmot state is not
+     * restored and run-state is not persisted — the run only reads relays and
+     * the shared event store. Signing verbs never take this path; they go
+     * through [Companion.open], which requires a real account.
+     */
+    val anonymous: Boolean = false,
 ) : AutoCloseable {
     private val okhttp = OkHttpClient.Builder().socketFactory(TcpNoDelaySocketFactory).build()
 
@@ -158,9 +166,12 @@ class Context(
                     .OkHttpNip05Fetcher { _ -> okhttp },
         )
 
-    private val mlsStore = FileMlsGroupStateStore(dataDir.groupsDir)
-    private val keyPackageStore = FileKeyPackageBundleStore(dataDir.keyPackageBundleFile)
-    private val messageStore = FileMarmotMessageStore(dataDir.groupsDir)
+    // Lazy so an anonymous read (no account dir) never materialises the
+    // per-account marmot stores — constructing them would `mkdir` group dirs
+    // under the shared root. Real accounts build them on first marmot use.
+    private val mlsStore by lazy { FileMlsGroupStateStore(dataDir.groupsDir) }
+    private val keyPackageStore by lazy { FileKeyPackageBundleStore(dataDir.keyPackageBundleFile) }
+    private val messageStore by lazy { FileMarmotMessageStore(dataDir.groupsDir) }
 
     /**
      * Filesystem-backed Nostr event store, rooted at [DataDir.eventsDir].
@@ -183,7 +194,7 @@ class Context(
     val store: IEventStore by storeDelegate
 
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
-    val marmot: MarmotManager = MarmotManager(signer, mlsStore, messageStore, keyPackageStore)
+    val marmot: MarmotManager by lazy { MarmotManager(signer, mlsStore, messageStore, keyPackageStore) }
 
     // ------------------------------------------------------------------
     // Cashu (NIP-60 / NIP-61) — shared wallet code from commons
@@ -302,7 +313,9 @@ class Context(
      */
     suspend fun prepare() {
         if (prepared) return
-        marmot.restoreAll()
+        // Anonymous runs have no account and therefore no marmot state to
+        // restore (and touching `marmot` would allocate the per-account stores).
+        if (!anonymous) marmot.restoreAll()
         client.connect()
         // A bunker account must open its NIP-46 response subscription and run
         // the connect handshake before any signing/encryption call.
@@ -852,7 +865,8 @@ class Context(
     }
 
     override fun close() {
-        dataDir.saveRunState(state)
+        // Nothing to persist for an anonymous run (no account dir to write into).
+        if (!anonymous) dataDir.saveRunState(state)
         (signer as? NostrSignerRemote)?.let {
             try {
                 it.closeSubscription()
@@ -881,12 +895,21 @@ class Context(
          */
         private const val GIFT_WRAP_LOOKBACK_SECS: Long = 2L * 24 * 60 * 60
 
-        /** Build a Context but require an identity to already exist — most commands can't run without one. */
+        /**
+         * Build a Context but require an account with a usable identity —
+         * signing verbs can't run without one. Throws [IllegalArgumentException]
+         * (→ exit 2) when no account was resolvable, carrying the "which
+         * account?" hint from [DataDir.resolveOptional]; throws
+         * [IllegalStateException] when the account exists but has no identity.
+         */
         fun open(dataDir: DataDir): Context {
+            require(dataDir.hasAccount) {
+                dataDir.noAccountDetail ?: "no account selected; pass --account <name> or run `amy use <name>`"
+            }
             val identity =
                 dataDir.loadIdentityOrNull()
                     ?: run {
-                        System.err.println("No identity found at ${dataDir.identityFile}. Run `amethyst-cli init` first.")
+                        System.err.println("No identity found at ${dataDir.identityFile}. Run `amy --account ${dataDir.accountName} init` first.")
                         throw IllegalStateException("no identity")
                     }
             return Context(
@@ -895,5 +918,24 @@ class Context(
                 state = dataDir.loadRunState(),
             )
         }
+
+        /**
+         * Context for read-only verbs: use the resolved account when one is
+         * present, otherwise run anonymously (ephemeral key-less identity, no
+         * persisted state). Lets `fetch`/`subscribe`/`count`/`publish`/`outbox`/
+         * … query relays and the shared store with no account on disk — they
+         * read fine, they just can't sign.
+         */
+        fun openOrAnonymous(dataDir: DataDir): Context =
+            if (dataDir.hasAccount && dataDir.identityExists()) {
+                open(dataDir)
+            } else {
+                Context(
+                    dataDir = dataDir,
+                    identity = Identity.anonymous(),
+                    state = RunState(),
+                    anonymous = true,
+                )
+            }
     }
 }

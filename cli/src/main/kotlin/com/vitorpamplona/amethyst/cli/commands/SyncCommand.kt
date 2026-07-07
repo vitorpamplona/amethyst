@@ -95,7 +95,7 @@ object SyncCommand {
         val down = args.bool("down") || !up
         val filter = RawEventSupport.buildFilter(args)
 
-        Context.open(dataDir).use { ctx ->
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val localEvents = ctx.store.query<Event>(filter)
             val localById = localEvents.associateBy { it.id }
