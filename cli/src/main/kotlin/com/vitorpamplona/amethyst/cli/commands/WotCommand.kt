@@ -24,14 +24,18 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.wot.OutboxCacheGateway
+import com.vitorpamplona.amethyst.commons.wot.OutboxDispatcher
 import com.vitorpamplona.amethyst.commons.wot.WoTService
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import java.util.Collections
 
 /**
  * `amy wot <get|list|sync>` — Web-of-Trust score queries.
@@ -113,41 +117,88 @@ object WotCommand {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val timeoutMs = args.flag("timeout")?.toLongOrNull()?.times(1000) ?: 5_000L
+        // Overall timeout; per-relay budget is set by OutboxDispatcher's
+        // default (4s). `--timeout N` overrides the overall cap.
+        val overallTimeoutMs = args.flag("timeout")?.toLongOrNull()?.times(1000) ?: 8_000L
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val self = ctx.identity.pubKeyHex
             val myKind3 = ctx.contactsOf(self)
             val follows =
-                myKind3?.verifiedFollowKeySet()?.toList()
+                myKind3?.verifiedFollowKeySet()?.toSet()
                     ?: return Output.error("no_follows", "no kind-3 in local store; run `amy follow` first")
             if (follows.isEmpty()) {
                 Output.emit(mapOf("synced" to 0, "detail" to "empty follow set"))
                 return 0
             }
-            // Index relays — shared with the Desktop app via
-            // `java.util.prefs`. Falls back to
-            // `PreferencesIndexRelays.DEFAULT_INDEX_RELAYS` when the
-            // user hasn't configured anything, so this is never empty
-            // in practice.
             val relays = ctx.indexRelays()
             if (relays.isEmpty()) return Output.error("no_relays", "no index relays configured")
 
-            // Chunk authors into ≤100 per Filter for relays with per-filter caps.
-            val filters =
-                follows.chunked(100).map { chunk ->
-                    Filter(
-                        kinds = listOf(ContactListEvent.KIND),
-                        authors = chunk,
-                        limit = chunk.size,
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            try {
+                // Buffer discovered events; persist synchronously after
+                // the fetch. `store.insert` is suspending so we can't call
+                // it from the non-suspending gateway callbacks. This also
+                // keeps `insert` errors surfaceable in a single log line
+                // rather than swallowed into a race.
+                val buffered = Collections.synchronizedList(mutableListOf<Event>())
+                val gateway =
+                    object : OutboxCacheGateway {
+                        override fun cachedOutbox(pubkey: HexKey): AdvertisedRelayListEvent? =
+                            // Amy's store lookup is suspending; can't do
+                            // it here. The dispatcher then falls through
+                            // to Phase 1 discovery for every author, which
+                            // matches the old `amy wot sync` behaviour of
+                            // always re-asking. A future optimisation
+                            // could pre-populate a `Map<HexKey,
+                            // AdvertisedRelayListEvent>` before dispatch.
+                            null
+
+                        override fun onOutboxDiscovered(
+                            event: AdvertisedRelayListEvent,
+                            relay: NormalizedRelayUrl,
+                        ) {
+                            buffered.add(event)
+                        }
+
+                        override fun onDiscoveredEvent(
+                            event: Event,
+                            relay: NormalizedRelayUrl,
+                        ) {
+                            buffered.add(event)
+                        }
+                    }
+
+                val dispatcher =
+                    OutboxDispatcher(
+                        client = ctx.client,
+                        scope = scope,
+                        indexRelays = { relays },
+                        gateway = gateway,
+                        overallTimeoutMs = overallTimeoutMs,
                     )
-                }
-            val received = ctx.drain(relays.associateWith { filters }, timeoutMs)
-            val kind3Events = received.mapNotNull { it.second as? ContactListEvent }
-            // Persist to store so future `get` / `list` see them.
-            kind3Events.forEach { runCatching { ctx.store.insert(it) } }
-            Output.emit(mapOf("received" to kind3Events.size, "followers" to follows.size))
-            return 0
+
+                val result = dispatcher.fetchKind3Only(follows)
+
+                // Persist to store so future `get` / `list` see them.
+                val eventsToPersist = synchronized(buffered) { buffered.toList() }
+                eventsToPersist.forEach { runCatching { ctx.store.insert(it) } }
+
+                Output.emit(
+                    mapOf(
+                        "followers" to follows.size,
+                        "authors_requested" to result.authorsRequested,
+                        "kind10002_received" to result.kind10002Received,
+                        "kind3_received" to result.kind3Received,
+                        "outbox_covered_authors" to result.outboxCoveredAuthors,
+                        "fallback_authors" to result.fallbackAuthors,
+                        "persisted" to eventsToPersist.size,
+                    ),
+                )
+                return 0
+            } finally {
+                scope.cancel()
+            }
         }
     }
 

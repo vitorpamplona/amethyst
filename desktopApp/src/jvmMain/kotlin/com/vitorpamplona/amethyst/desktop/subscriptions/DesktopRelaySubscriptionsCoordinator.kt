@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.assemblers.FeedMetadataCoo
 import com.vitorpamplona.amethyst.commons.relayClient.preload.MetadataPreloader
 import com.vitorpamplona.amethyst.commons.relayClient.preload.MetadataRateLimiter
 import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
+import com.vitorpamplona.amethyst.commons.wot.OutboxCacheGateway
+import com.vitorpamplona.amethyst.commons.wot.OutboxDispatcher
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -33,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -96,6 +99,51 @@ class DesktopRelaySubscriptionsCoordinator(
                 // Route all fetched events (metadata, boosted notes, etc.) into cache
                 localCache.consume(event, relay)
             },
+        )
+
+    /**
+     * Bridges [OutboxDispatcher] to [DesktopLocalCache]. Every event the
+     * dispatcher receives goes through [DesktopLocalCache.consume] so it
+     * lands in the same code path as events arriving from feed
+     * subscriptions — kind-10002 caches into `addressableNotes`; kind-0
+     * updates the user metadata; kind-3 fans out through
+     * `_contactListEvents` for the WoT service.
+     */
+    private val outboxGateway =
+        object : OutboxCacheGateway {
+            override fun cachedOutbox(pubkey: HexKey): AdvertisedRelayListEvent? = localCache.cachedAdvertisedRelayList(pubkey)
+
+            override fun onOutboxDiscovered(
+                event: AdvertisedRelayListEvent,
+                relay: NormalizedRelayUrl,
+            ) {
+                localCache.consume(event, relay)
+            }
+
+            override fun onDiscoveredEvent(
+                event: Event,
+                relay: NormalizedRelayUrl,
+            ) {
+                localCache.consume(event, relay)
+            }
+        }
+
+    /**
+     * NIP-65 outbox model for kind-0 and kind-3 fetching. Per PR #3483
+     * review directive from Vitor: index relays discover each author's
+     * write-relay list, then kind-0/kind-3 REQs go to that author's
+     * declared write relays. See [OutboxDispatcher] for the pipeline.
+     *
+     * Kept as a val (not lazy) because [clear] must reset its dedup
+     * markers on account switch. The dispatcher itself is stateless
+     * across accounts as long as `clear()` is called.
+     */
+    val outboxDispatcher =
+        OutboxDispatcher(
+            client = client,
+            scope = scope,
+            indexRelays = { indexRelays },
+            gateway = outboxGateway,
         )
 
     // Event bundler: batches consumed notes before emitting to SharedFlow
@@ -387,9 +435,19 @@ class DesktopRelaySubscriptionsCoordinator(
 
         unsubscribeFromDms()
         feedMetadata.clear()
+        outboxDispatcher.clear()
         rateLimiter.reset()
         cleanupJob?.cancel()
     }
+
+    /**
+     * Fetch kind-3 (follow lists) for [pubkeys] via each author's outbox
+     * relay per NIP-65 (see [OutboxDispatcher]). Suspends until every
+     * phase EOSEs or times out. Callers typically launch this on a
+     * scope-owned coroutine and mark the WoT service ready in the
+     * continuation. Returns per-phase counters for observability.
+     */
+    suspend fun loadKind3ViaOutbox(pubkeys: Set<HexKey>): OutboxDispatcher.Result = outboxDispatcher.fetchKind3Only(pubkeys)
 
     // ----- Memory Cleanup -----
 

@@ -1576,16 +1576,32 @@ fun MainContent(
                 iAccount.wotService.applyKind3(evt.pubKey, evt.verifiedFollowKeySet())
             }
         }
-        // React to changes in the active user's follow set.
+        // React to changes in the active user's follow set. Under the
+        // outbox model (PR #3483 review directive from Vitor) kind-3
+        // fetch goes to each author's declared write relays instead of a
+        // static index-relay broadcast — the OutboxDispatcher does the
+        // NIP-65 discovery, transposes with RelayListRecommendationProcessor
+        // and issues per-outbox-relay REQs. Falls back to index relays
+        // for authors that never returned a 10002.
         launch {
             localCache.followedUsers.collect { follows ->
                 iAccount.wotService.onFollowSetChange(follows, account.pubKeyHex)
-                if (follows.isNotEmpty()) {
-                    subscriptionsCoordinator.loadKind3Batched(follows) {
+                when {
+                    iAccount.wotService.isDisabled.value -> {
+                        // Guardrail — mega-follow accounts skip WoT
+                        // entirely so we don't dispatch a batch that
+                        // would be discarded anyway.
                         iAccount.wotService.markReadyOnce()
                     }
-                } else {
-                    iAccount.wotService.markReadyOnce()
+                    follows.isEmpty() -> {
+                        iAccount.wotService.markReadyOnce()
+                    }
+                    else -> {
+                        launch {
+                            subscriptionsCoordinator.loadKind3ViaOutbox(follows)
+                            iAccount.wotService.markReadyOnce()
+                        }
+                    }
                 }
             }
         }
