@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.cli.commands.KeyCommands
 import com.vitorpamplona.amethyst.cli.commands.KeyPackageCommands
 import com.vitorpamplona.amethyst.cli.commands.KindCommand
 import com.vitorpamplona.amethyst.cli.commands.LoginCommand
+import com.vitorpamplona.amethyst.cli.commands.LogoffCommand
 import com.vitorpamplona.amethyst.cli.commands.MarmotResetCommand
 import com.vitorpamplona.amethyst.cli.commands.MessageCommands
 import com.vitorpamplona.amethyst.cli.commands.NamecoinCommand
@@ -203,6 +204,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "init" -> InitCommands.init(dataDir, Args(tail))
         "create" -> CreateCommand.run(dataDir, tail)
         "login" -> LoginCommand.run(dataDir, tail)
+        "logoff" -> LogoffCommand.run(dataDir, tail)
         "whoami" -> InitCommands.whoami(dataDir)
         "relay" -> RelayCommands.dispatch(dataDir, tail)
         "marmot" -> marmotDispatch(dataDir, tail)
@@ -380,6 +382,9 @@ private fun printUsage() {
         |  create [--name NAME]            provision a full Amethyst-style account + publish bootstrap events
         |  login KEY [--password X]     import (nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05|bunker://)
         |  whoami                       print current identity
+        |  logoff [--yes] [--keep-events]   log off: delete this account's key, per-account state,
+        |                                and its events in the shared store (--keep-events skips the
+        |                                cache purge). Requires --yes; without it, prints a dry run.
         |
         |Remote signing (NIP-46):
         |  bunker [--relay URL[,URL…]]  run a remote signer for this (local-key) account; prints a
