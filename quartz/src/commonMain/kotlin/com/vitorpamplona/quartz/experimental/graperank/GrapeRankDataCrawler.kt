@@ -50,6 +50,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -560,6 +561,34 @@ class GrapeRankDataCrawler(
         }
 
         /**
+         * Wait for a subscription's terminal ([done]: EOSE/CLOSED/cannot), resetting
+         * the [idleMs] window every time an event pings [activity]. So the wait ends
+         * with "timeout" only after [idleMs] of actual SILENCE — a relay that keeps
+         * streaming (however long its result set) is never cut mid-flight; only a
+         * genuinely stalled one is. Used for the patient park window.
+         */
+        private suspend fun awaitTerminalOrIdle(
+            done: CompletableDeferred<String>,
+            activity: Channel<Unit>,
+            idleMs: Long,
+        ): String {
+            while (true) {
+                val r =
+                    withTimeoutOrNull(idleMs) {
+                        select {
+                            done.onAwait { it }
+                            activity.onReceive { ACTIVITY }
+                        }
+                    }
+                when (r) {
+                    null -> return "timeout" // idleMs elapsed with no event and no terminal
+                    ACTIVITY -> Unit // an event arrived — reset the idle window and keep waiting
+                    else -> return r // terminal reason
+                }
+            }
+        }
+
+        /**
          * Fold one late-delivered event from a parked relay into the graph. Only the
          * round loop calls this (directly or via [foldLateHarvest]), so graph state
          * stays single-writer. Returns true if it fed a new contact list.
@@ -677,6 +706,10 @@ class GrapeRankDataCrawler(
                                     val subId = newSubId()
                                     val done = CompletableDeferred<String>()
                                     val unitEvents = Channel<Pair<NormalizedRelayUrl, Event>>(Channel.UNLIMITED)
+                                    // Liveness signal for the parked idle timeout: every event pings
+                                    // this (conflated, so bursts collapse to one) and resets the park
+                                    // window, so a relay actively streaming is never cut mid-flight.
+                                    val activity = Channel<Unit>(Channel.CONFLATED)
                                     val listener =
                                         object : SubscriptionListener {
                                             override fun onEvent(
@@ -686,6 +719,7 @@ class GrapeRankDataCrawler(
                                                 forFilters: List<Filter>?,
                                             ) {
                                                 unitEvents.trySend(relay to event)
+                                                activity.trySend(Unit)
                                             }
 
                                             override fun onEose(
@@ -732,7 +766,10 @@ class GrapeRankDataCrawler(
                                             parkedInFlight.addAndFetch(1)
                                             scope.launch {
                                                 try {
-                                                    val late = withTimeoutOrNull(config.parkTimeoutMs) { done.await() } ?: "timeout"
+                                                    // Idle timeout, not absolute: only cut after parkTimeoutMs
+                                                    // of SILENCE (no event, no terminal), so a relay still
+                                                    // streaming a large result set is never chopped mid-flight.
+                                                    val late = awaitTerminalOrIdle(done, activity, config.parkTimeoutMs)
                                                     logSlow(subRelay, "parked→$late", mark.elapsedNow().inWholeMilliseconds, groupFilters)
                                                     // A parked relay that ends in a hard/transient failure (not a
                                                     // clean EOSE) is reported dead the same way a fast one would be.
@@ -996,6 +1033,11 @@ class GrapeRankDataCrawler(
         // Once the frontier is empty but parked relays are still streaming, how long
         // to block waiting for one of them to deliver before re-checking convergence.
         private const val PARK_POLL_MS = 2000L
+
+        // Sentinel returned by the park idle-wait's select when an event arrived
+        // (resets the window). A control string that can't collide with a relay's
+        // CLOSED/cannot message, which are the only other select results.
+        private const val ACTIVITY = " activity"
 
         // Times we re-query an unreachable user's outbox before giving up, so the
         // crawl still terminates on a finite graph.
