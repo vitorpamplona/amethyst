@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -1042,9 +1043,11 @@ object GrapeRankCommand {
 
     /**
      * Feed reports into [builder], dropping any that a valid NIP-09 deletion has
-     * retracted. A report id counts as deleted only when a kind:5 in the store
-     * cites it AND is signed by the report's own author (NIP-09: a deletion is
-     * only authoritative from the event's author). Returns how many were dropped.
+     * retracted. Uses quartz's [DeletionIndex] — the same indexer the Android
+     * app's LocalCache runs — which keys each deletion under the DELETER's pubkey,
+     * so `hasBeenDeleted(report)` is true only when the report's own author
+     * deleted it (NIP-09: a deletion is authoritative only from the event's
+     * author). It also honours created_at ordering. Returns how many were dropped.
      */
     private suspend fun materializeReports(
         ctx: Context,
@@ -1053,20 +1056,16 @@ object GrapeRankCommand {
         val reports = ctx.store.query<Event>(Filter(kinds = listOf(ReportEvent.KIND))).filterIsInstance<ReportEvent>()
         if (reports.isEmpty()) return 0
 
-        val authorByReportId = HashMap<HexKey, HexKey>()
-        for (r in reports) authorByReportId[r.id] = r.pubKey
-
-        val deletedReportIds = HashSet<HexKey>()
+        // Everything in the store already passed verifyAndStore, so mark the
+        // deletions as verified and skip the redundant signature check.
+        val deletions = DeletionIndex()
         for (ev in ctx.store.query<Event>(Filter(kinds = listOf(DeletionEvent.KIND)))) {
-            val del = ev as? DeletionEvent ?: continue
-            for (id in del.deleteEventIds()) {
-                if (authorByReportId[id] == del.pubKey) deletedReportIds.add(id)
-            }
+            if (ev is DeletionEvent) deletions.add(ev, wasVerified = true)
         }
 
         var dropped = 0
         for (r in reports) {
-            if (r.id in deletedReportIds) {
+            if (deletions.hasBeenDeleted(r)) {
                 dropped++
                 continue
             }
