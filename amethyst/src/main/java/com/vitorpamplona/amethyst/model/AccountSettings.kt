@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupRepository
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
@@ -272,6 +273,7 @@ class AccountSettings(
     var callMaxBitrateBps: Int = 1_500_000,
     val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.IF_IN_MY_LIST),
+    val relayGroupViewMode: MutableStateFlow<RelayGroupViewMode> = MutableStateFlow(RelayGroupViewMode.DEFAULT),
 ) : EphemeralChatRepository,
     RelayGroupRepository,
     PublicChatListRepository {

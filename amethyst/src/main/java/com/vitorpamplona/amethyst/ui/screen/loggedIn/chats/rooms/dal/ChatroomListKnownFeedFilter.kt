@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal
 
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -29,11 +30,13 @@ import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
 class ChatroomListKnownFeedFilter(
     val account: Account,
@@ -89,7 +92,26 @@ class ChatroomListKnownFeedFilter(
                 }
             }
 
-        return sort((privateMessages + publicChannels + ephemeralChats + marmotGroups).toSet())
+        // NIP-29 relay groups the user joined (kind 10009) appear inline in the
+        // Messages list (the "inline" view mode), each row tagged with its host
+        // relay. In the "grouped" mode they're reached via relay rows instead, so
+        // they're excluded from this flat feed.
+        val relayGroups =
+            if (account.settings.relayGroupViewMode.value == RelayGroupViewMode.INLINE) {
+                account.relayGroupList.liveRelayGroupList.value.mapNotNull { groupTag ->
+                    val relay = RelayUrlNormalizer.normalizeOrNull(groupTag.relayUrl) ?: return@mapNotNull null
+                    LocalCache
+                        .getOrCreateRelayGroupChannel(GroupId(groupTag.groupId, relay))
+                        .notes
+                        .filter { _, it -> account.isAcceptable(it) && it.event != null }
+                        .sortedByDefaultFeedOrder()
+                        .firstOrNull()
+                }
+            } else {
+                emptyList()
+            }
+
+        return sort((privateMessages + publicChannels + ephemeralChats + marmotGroups + relayGroups).toSet())
     }
 
     override fun updateListWith(

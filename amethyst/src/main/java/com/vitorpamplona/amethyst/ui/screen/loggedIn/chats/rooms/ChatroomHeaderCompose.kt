@@ -20,12 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -40,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -47,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -80,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.newItemBubbleModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -135,6 +145,12 @@ private fun ChatroomEntry(
     val marmotGroup = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
     if (marmotGroup != null) {
         MarmotGroupRoomCompose(lastMessage, marmotGroup, accountViewModel, nav)
+        return
+    }
+
+    val relayGroup = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }
+    if (relayGroup != null) {
+        RelayGroupRoomCompose(lastMessage, relayGroup, accountViewModel, nav)
         return
     }
 
@@ -297,6 +313,80 @@ private fun MarmotGroupRoomCompose(
                 .value,
         onClick = { nav.nav(Route.MarmotGroupChat(chatroom.nostrGroupId)) },
     )
+}
+
+@Composable
+private fun RelayGroupRoomCompose(
+    lastMessage: Note,
+    baseChannel: RelayGroupChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val channelState by observeChannel(baseChannel, accountViewModel)
+    val channel = channelState?.channel as? RelayGroupChannel ?: baseChannel
+
+    val author = lastMessage.author
+    val noteEvent = lastMessage.event
+    val lastContent =
+        if (author != null && noteEvent != null) {
+            val authorName by observeUserName(author, accountViewModel)
+            "$authorName: ${noteEvent.content.take(200)}"
+        } else {
+            ""
+        }
+
+    ChannelName(
+        channelIdHex = channel.groupId.id,
+        channelPicture = channel.profilePicture(),
+        channelTitle = { modifier ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
+                Text(
+                    text = channel.toBestDisplayName(),
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(6.dp))
+                RelayNameChip(
+                    label = channel.groupId.relayUrl.displayUrl(),
+                    onClick = { nav.nav(Route.RelayGroupServer(channel.groupId.relayUrl.url)) },
+                )
+            }
+        },
+        channelLastTime = lastMessage.createdAt(),
+        channelLastContent = lastContent,
+        hasNewMessages = false,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
+        onClick = { nav.nav(Route.RelayGroup(channel.groupId.id, channel.groupId.relayUrl.url)) },
+    )
+}
+
+/** A small tappable chip naming the relay a channel is hosted on. */
+@Composable
+private fun RelayNameChip(
+    label: String,
+    onClick: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.clickable(onClick = onClick),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+        )
+    }
 }
 
 @Composable
