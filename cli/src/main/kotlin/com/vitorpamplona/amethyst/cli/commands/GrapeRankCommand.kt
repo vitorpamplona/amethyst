@@ -51,7 +51,11 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
 
 /**
@@ -230,12 +234,17 @@ object GrapeRankCommand {
                 hopOf[observer] = 0
                 // Per-user relay hints harvested from the `p`-tag relay hints in the
                 // contact lists we crawl (A's follow of B says where B writes) — a
-                // discovery tier below each user's kind:10002 outbox.
-                val relayHints = HashMap<HexKey, MutableSet<NormalizedRelayUrl>>()
+                // discovery tier below each user's kind:10002 outbox. Concurrent:
+                // the Phase-B producer reads these while the consumer's ingest writes
+                // them (see the worker-pool below), so both map and inner sets are
+                // thread-safe.
+                val relayHints = ConcurrentHashMap<HexKey, MutableSet<NormalizedRelayUrl>>()
                 // Users we're finished with this run: we fed their latest kind:3, or
                 // ran out of retry attempts on an unreachable outbox.
                 val done = hashSetOf<HexKey>()
-                val attempts = HashMap<HexKey, Int>()
+                // Outbox retry counts. Concurrent: the producer reads (to widen a
+                // retry's routing) while the consumer increments.
+                val attempts = ConcurrentHashMap<HexKey, Int>()
                 val relaysContacted = hashSetOf<NormalizedRelayUrl>()
                 // Known-good relay pool, learned from the crawl itself: how often each
                 // relay appears as someone's write relay, and which relays actually
@@ -245,8 +254,10 @@ object GrapeRankCommand {
                 val liveRelays = hashSetOf<NormalizedRelayUrl>()
                 // Relays that failed to connect MAX_DEAD_STRIKES times — dropped
                 // from all routing so a wave stops eating the timeout on them.
-                val deadRelays = hashSetOf<NormalizedRelayUrl>()
-                val relayStrikes = HashMap<NormalizedRelayUrl, Int>()
+                // Concurrent: drain workers strike relays while the producer reads
+                // deadRelays to prune routing.
+                val deadRelays = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
+                val relayStrikes = ConcurrentHashMap<NormalizedRelayUrl, Int>()
 
                 fun recordDead(failed: Set<NormalizedRelayUrl>) {
                     for (r in failed) {
@@ -277,7 +288,7 @@ object GrapeRankCommand {
                     var fresh = 0
                     for (tag in contacts.follows()) {
                         follows.add(tag.pubKey)
-                        tag.relayUri?.let { relayHints.getOrPut(tag.pubKey) { HashSet() }.add(it) }
+                        tag.relayUri?.let { relayHints.getOrPut(tag.pubKey) { ConcurrentHashMap.newKeySet() }.add(it) }
                         if (discovered.add(tag.pubKey)) {
                             hopOf[tag.pubKey] = nextHop
                             fresh++
@@ -412,37 +423,71 @@ object GrapeRankCommand {
                     if (stragglers.isNotEmpty()) {
                         val backbone = topLiveRelays(BACKBONE_SIZE).toSet()
                         ensureRelayLists(ctx, stragglers.toSet(), backbone, timeoutMs, diagnose)
-                        for (group in stragglers.chunked(USER_BATCH).chunked(DRAIN_CONCURRENCY)) {
-                            val prepared = group.map { batch -> batch to routeByOutbox(ctx, batch.toSet(), relayHints, backbone, attempts, writeRelayFreq, graphKinds, deadRelays) }
-                            val drained =
-                                coroutineScope {
-                                    prepared
-                                        .map { (batch, filters) ->
-                                            async {
-                                                val dead = hashSetOf<NormalizedRelayUrl>()
-                                                val events = ctx.drain(filters, timeoutMs, diagnose, dead, gatePerRelay = true)
-                                                recordDead(dead)
-                                                Triple(batch, filters.keys, events)
-                                            }
-                                        }.awaitAll()
+
+                        // Continuous worker pool instead of chunked awaitAll barriers.
+                        // The old shape drained DRAIN_CONCURRENCY batches, waited for the
+                        // SLOWEST (a dead relay's full timeout), ingested, then started
+                        // the next group — so every batch's tail idled the whole pool.
+                        // Here a fixed set of DRAIN_CONCURRENCY workers pulls batches off
+                        // a queue and grabs the next the instant a drain returns, so no
+                        // worker waits on a slow sibling and hot relays stay connected
+                        // (some worker is always subscribed). Shared graph state stays
+                        // single-writer: routeByOutbox runs only on the producer (keeps
+                        // writeRelayFreq serial) and ingest runs only on the consumer
+                        // (keeps discovered/done/builder/hopOf serial), now overlapped
+                        // with draining instead of blocked behind each batch.
+                        val routed = Channel<Pair<List<HexKey>, Map<NormalizedRelayUrl, List<Filter>>>>(DRAIN_CONCURRENCY * 2)
+                        val drainedOut = Channel<Triple<List<HexKey>, Set<NormalizedRelayUrl>, List<Pair<NormalizedRelayUrl, Event>>>>(Channel.UNLIMITED)
+                        coroutineScope {
+                            // Producer: route each batch by outbox (serial), backpressured
+                            // by the bounded `routed` channel so we don't precompute every
+                            // filter map at once.
+                            val producer =
+                                launch {
+                                    for (batch in stragglers.chunked(USER_BATCH)) {
+                                        val filters = routeByOutbox(ctx, batch.toSet(), relayHints, backbone, attempts, writeRelayFreq, graphKinds, deadRelays)
+                                        routed.send(batch to filters)
+                                    }
+                                    routed.close()
                                 }
-                            for ((batch, relays, events) in drained) {
-                                relaysContacted += relays
-                                // Any relay that gave us an event is proven live + useful.
-                                for ((relay, _) in events) liveRelays.add(relay)
-                                for (pk in batch) {
-                                    if (pk in done) continue
-                                    val contacts = ctx.contactsOf(pk)
-                                    if (contacts != null) {
-                                        done += pk
-                                        ingest(pk, contacts)
-                                    } else {
-                                        val tries = (attempts[pk] ?: 0) + 1
-                                        attempts[pk] = tries
-                                        if (tries >= MAX_OUTBOX_ATTEMPTS) done += pk
+                            // Drain workers: pure network, no shared graph-state writes
+                            // except recordDead (concurrent-safe now).
+                            val workers =
+                                List(DRAIN_CONCURRENCY) {
+                                    launch {
+                                        for ((batch, filters) in routed) {
+                                            val dead = hashSetOf<NormalizedRelayUrl>()
+                                            val events = ctx.drain(filters, timeoutMs, diagnose, dead, gatePerRelay = true)
+                                            recordDead(dead)
+                                            drainedOut.send(Triple(batch, filters.keys, events))
+                                        }
                                     }
                                 }
-                            }
+                            // Consumer: single-writer ingest, overlapped with draining.
+                            val consumer =
+                                launch {
+                                    for ((batch, relays, events) in drainedOut) {
+                                        relaysContacted += relays
+                                        // Any relay that gave us an event is proven live + useful.
+                                        for ((relay, _) in events) liveRelays.add(relay)
+                                        for (pk in batch) {
+                                            if (pk in done) continue
+                                            val contacts = ctx.contactsOf(pk)
+                                            if (contacts != null) {
+                                                done += pk
+                                                ingest(pk, contacts)
+                                            } else {
+                                                val tries = (attempts[pk] ?: 0) + 1
+                                                attempts[pk] = tries
+                                                if (tries >= MAX_OUTBOX_ATTEMPTS) done += pk
+                                            }
+                                        }
+                                    }
+                                }
+                            producer.join()
+                            workers.joinAll()
+                            drainedOut.close()
+                            consumer.join()
                         }
                     }
 
