@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -536,6 +537,13 @@ object GrapeRankCommand {
                 ctx.client.unsubscribe(WARM_SUB_ID)
                 bgScope.cancel()
 
+                // Reports can be retracted. Ask each reporter's outbox for NIP-09
+                // kind:5 deletions that cite the reports we gathered (#e-filtered to
+                // our report ids — not every deletion the user ever made). A report
+                // the author has since deleted must not count as a negative edge;
+                // [materializeReports] drops those below.
+                fetchReportDeletions(ctx, topLiveRelays(BACKBONE_SIZE).toSet(), deadRelays, timeoutMs, diagnose)
+
                 // No separate last-mile pass: the per-round sharded sweep already
                 // broadcasts the small remaining set to every top relay once it drops
                 // below SHARD_BROADCAST_THRESHOLD, and the round loop only exits when
@@ -577,9 +585,7 @@ object GrapeRankCommand {
             for (event in ctx.store.query<Event>(Filter(kinds = listOf(MuteListEvent.KIND)))) {
                 if (event is MuteListEvent) builder.addMutes(event.pubKey, event.linkedPubKeys())
             }
-            for (event in ctx.store.query<Event>(Filter(kinds = listOf(ReportEvent.KIND)))) {
-                if (event is ReportEvent) builder.addReports(event.pubKey, event.reportedAuthor().map { it.pubkey })
-            }
+            val reportsDeleted = materializeReports(ctx, builder)
 
             val buildStart = System.nanoTime()
             val graph = builder.build()
@@ -626,6 +632,7 @@ object GrapeRankCommand {
                             .mapKeys { it.key.toString() },
                     "graph_users" to graph.nodeCount,
                     "graph_edges" to graph.edgeCount(),
+                    "reports_deleted" to reportsDeleted,
                     "users_scored" to rankedIds.size,
                     "download_ms" to downloadMs,
                     "store_load_ms" to storeLoadMs,
@@ -981,6 +988,92 @@ object GrapeRankCommand {
         if (stillMissing.isNotEmpty() && wide.isNotEmpty()) {
             bgScope.launch { query(stillMissing, wide) }
         }
+    }
+
+    /**
+     * Fetch NIP-09 kind:5 deletion requests that retract any report we gathered.
+     *
+     * A reporter can delete their own kind:1984 report. That deletion is valid
+     * only if it comes from the reporter's own key, and it's published to the
+     * reporter's outbox — so we group report ids by their author and ask each
+     * author's write relays for kind:5 events that cite those ids (`#e`). That
+     * `#e` filter is the point: we pull only the deletions that touch our reports,
+     * not every deletion the user has ever made. The events land in the store;
+     * [materializeReports] decides which reports they actually retract.
+     */
+    private suspend fun fetchReportDeletions(
+        ctx: Context,
+        backbone: Set<NormalizedRelayUrl>,
+        deadRelays: Set<NormalizedRelayUrl>,
+        timeoutMs: Long,
+        diagnose: Boolean,
+    ) {
+        val idsByAuthor = HashMap<HexKey, MutableList<HexKey>>()
+        for (ev in ctx.store.query<Event>(Filter(kinds = listOf(ReportEvent.KIND)))) {
+            if (ev is ReportEvent) idsByAuthor.getOrPut(ev.pubKey) { ArrayList() }.add(ev.id)
+        }
+        if (idsByAuthor.isEmpty()) return
+
+        // Route each reporter to their own write relays (fallback: backbone).
+        val perRelayAuthors = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
+        for (author in idsByAuthor.keys) {
+            val write = ctx.relaysOf(author)?.writeRelaysNorm()?.takeIf { it.isNotEmpty() } ?: backbone
+            for (relay in write) if (relay !in deadRelays) perRelayAuthors.getOrPut(relay) { HashSet() }.add(author)
+        }
+        if (perRelayAuthors.isEmpty()) return
+
+        val filters =
+            perRelayAuthors.mapValues { (_, authors) ->
+                buildList {
+                    for (authorChunk in authors.chunked(AUTHORS_PER_FILTER)) {
+                        // Scope #e to this author-chunk's own report ids, chunked to
+                        // respect REQ limits. Any over-match (a filter pairing an
+                        // author with another author's id) is harmless — the
+                        // deleter-must-be-author check in materializeReports rejects it.
+                        val chunkIds = authorChunk.flatMap { idsByAuthor[it].orEmpty() }
+                        for (idChunk in chunkIds.chunked(AUTHORS_PER_FILTER)) {
+                            add(Filter(kinds = listOf(DeletionEvent.KIND), authors = authorChunk, tags = mapOf("e" to idChunk)))
+                        }
+                    }
+                }
+            }
+        ctx.drain(filters, timeoutMs, diagnose, gatePerRelay = true)
+    }
+
+    /**
+     * Feed reports into [builder], dropping any that a valid NIP-09 deletion has
+     * retracted. A report id counts as deleted only when a kind:5 in the store
+     * cites it AND is signed by the report's own author (NIP-09: a deletion is
+     * only authoritative from the event's author). Returns how many were dropped.
+     */
+    private suspend fun materializeReports(
+        ctx: Context,
+        builder: TrustGraphBuilder,
+    ): Int {
+        val reports = ctx.store.query<Event>(Filter(kinds = listOf(ReportEvent.KIND))).filterIsInstance<ReportEvent>()
+        if (reports.isEmpty()) return 0
+
+        val authorByReportId = HashMap<HexKey, HexKey>()
+        for (r in reports) authorByReportId[r.id] = r.pubKey
+
+        val deletedReportIds = HashSet<HexKey>()
+        for (ev in ctx.store.query<Event>(Filter(kinds = listOf(DeletionEvent.KIND)))) {
+            val del = ev as? DeletionEvent ?: continue
+            for (id in del.deleteEventIds()) {
+                if (authorByReportId[id] == del.pubKey) deletedReportIds.add(id)
+            }
+        }
+
+        var dropped = 0
+        for (r in reports) {
+            if (r.id in deletedReportIds) {
+                dropped++
+                continue
+            }
+            builder.addReports(r.pubKey, r.reportedAuthor().map { it.pubkey })
+        }
+        if (dropped > 0) System.err.println("[graperank] dropped $dropped retracted reports (NIP-09 deletions)")
+        return dropped
     }
 
     /**
