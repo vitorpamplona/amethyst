@@ -222,6 +222,13 @@ class DataDir(
      */
     val eventsDbFile: File = File(eventsDir.parentFile ?: root, "events.db")
 
+    /**
+     * Machine-level operator keys for GrapeRank trusted-assertion publishing,
+     * rooted at `~/.amy/operator/` (the account root's parent) so a single
+     * operator master is shared across accounts. See [OperatorKeys].
+     */
+    fun operatorKeys(): OperatorKeys = OperatorKeys(root.parentFile ?: root, secrets)
+
     init {
         SecureFileIO.secureMkdirs(root)
         SecureFileIO.secureMkdirs(groupsDir)
