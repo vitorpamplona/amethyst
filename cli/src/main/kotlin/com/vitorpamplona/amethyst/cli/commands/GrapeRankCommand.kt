@@ -131,6 +131,10 @@ object GrapeRankCommand {
         val offline = args.bool("offline")
         val diagnose = args.bool("diagnose")
         val timeoutMs = args.longFlag("timeout", 10L) * 1000
+        // How many verified events the crawler group-commits per store write. 1
+        // forces the per-event insert path (baseline); higher amortizes the SQLite
+        // transaction + writer-mutex cost across the batch.
+        val insertBatch = args.intFlag("insert-batch", 500)
         val doPublish = args.bool("publish")
         // Publish cutoff: only cards with rank >= this are published; existing
         // cards for targets below it (or gone from the graph) are retracted. Rank
@@ -188,6 +192,7 @@ object GrapeRankCommand {
                                 maxHops = maxHops,
                                 timeoutMs = timeoutMs,
                                 diagnose = diagnose,
+                                insertBatchSize = insertBatch,
                             ),
                         log = { System.err.println(it) },
                     )
@@ -264,6 +269,10 @@ object GrapeRankCommand {
                     "reports_deleted" to reportsDeleted,
                     "users_scored" to rankedIds.size,
                     "download_ms" to crawlStats?.downloadMs,
+                    "verify_ms" to crawlStats?.verifyMs,
+                    "insert_ms" to crawlStats?.insertMs,
+                    "events_stored" to crawlStats?.eventsStored,
+                    "insert_batch" to insertBatch,
                     "store_load_ms" to storeLoadMs,
                     "graph_build_ms" to buildMs,
                     "scoring_ms" to scoringMs,

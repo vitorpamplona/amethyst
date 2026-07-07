@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.experimental.graperank
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DrainFailure
@@ -31,13 +32,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
-import com.vitorpamplona.quartz.nip01Core.store.verifyAndInsert
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.utils.SeenIds
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
 import kotlinx.coroutines.CompletableDeferred
@@ -51,6 +51,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.coroutineContext
 import kotlin.time.TimeSource
 
@@ -81,6 +83,7 @@ import kotlin.time.TimeSource
  * defaults live in application code, not the protocol library. Operator progress
  * is emitted through [log]; a headless caller routes it to stderr, a UI ignores it.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class GrapeRankDataCrawler(
     private val client: NostrClient,
     private val store: IEventStore,
@@ -88,6 +91,15 @@ class GrapeRankDataCrawler(
     private val config: Config,
     private val log: (String) -> Unit = {},
 ) {
+    // Crawl-wide timing, accumulated across every drainGated consumer (24 run at
+    // once). Nanoseconds spent verifying signatures vs. spent in the store write,
+    // plus how many verified events reached the store. Surfaced in [Stats] so a
+    // caller can see whether a from-scratch crawl is verify-, write-, or (by
+    // subtraction from wall time) network-bound. Reset at the top of each [crawl].
+    private val verifyNanos = AtomicLong(0)
+    private val insertNanos = AtomicLong(0)
+    private val eventsStored = AtomicLong(0)
+
     /**
      * Relay policy + crawl bounds. The relay sets come from the caller because the
      * aggregator/bootstrap defaults live outside quartz.
@@ -101,6 +113,10 @@ class GrapeRankDataCrawler(
      * @param maxHops follow-graph distance from the observer to crawl (Brainstorm uses 8).
      * @param timeoutMs per-drain timeout.
      * @param diagnose log a breakdown of slow/unreachable relays on each drain timeout.
+     * @param insertBatchSize how many verified events to group-commit per
+     *   [IEventStore.batchInsert]. The outbox model streams the same events from
+     *   many relays through a single SQLite writer, so batching amortizes the
+     *   per-transaction + writer-mutex cost across the batch (coerced to `>= 1`).
      */
     class Config(
         val relayListDiscoveryRelays: Set<NormalizedRelayUrl>,
@@ -109,6 +125,7 @@ class GrapeRankDataCrawler(
         val maxHops: Int = Int.MAX_VALUE,
         val timeoutMs: Long = 10_000,
         val diagnose: Boolean = false,
+        val insertBatchSize: Int = 500,
     )
 
     /** What the crawl fetched — the counters the caller reports and the graph is built from. */
@@ -119,6 +136,12 @@ class GrapeRankDataCrawler(
         /** Users bucketed by follow-graph distance from the observer (hop -> count), ascending. */
         val hopHistogram: Map<Int, Int>,
         val downloadMs: Long,
+        /** Wall time verifying signatures, summed across the concurrent consumers. */
+        val verifyMs: Long,
+        /** Wall time in the store write path, summed across the concurrent consumers. */
+        val insertMs: Long,
+        /** Verified events handed to the store (duplicates included — the write path dedups). */
+        val eventsStored: Long,
     )
 
     /**
@@ -129,7 +152,12 @@ class GrapeRankDataCrawler(
     suspend fun crawl(
         observer: HexKey,
         builder: TrustGraphBuilder,
-    ): Stats = CrawlRun(observer, builder).run()
+    ): Stats {
+        verifyNanos.store(0)
+        insertNanos.store(0)
+        eventsStored.store(0)
+        return CrawlRun(observer, builder).run()
+    }
 
     /**
      * Holds all per-crawl mutable state. Graph state (done/hopOf/builder/
@@ -158,6 +186,15 @@ class GrapeRankDataCrawler(
         val attempts = ConcurrentMap<HexKey, Int>()
         val deadRelays = ConcurrentSet<NormalizedRelayUrl>()
         val relayStrikes = ConcurrentMap<NormalizedRelayUrl, Int>()
+
+        // Crawl-wide dedup of event ids, shared across all concurrent drains and
+        // every round. The outbox model mirrors the SAME event (especially kind:10002
+        // relay lists) across many relays, indexers, and rounds; a per-drain set only
+        // catches the copies within one drain, so without this the majority of events
+        // would be re-verified + re-inserted (hitting the store's UNIQUE constraint)
+        // in a later drain. An id is added only AFTER it verifies, so a forged copy
+        // (valid id, bad signature) delivered first can't suppress the genuine one.
+        val seenIds = ConcurrentSet<HexKey>()
 
         var rounds = 0
         var contactListsFed = 0
@@ -270,7 +307,7 @@ class GrapeRankDataCrawler(
                                         val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
                                         val filters =
                                             mapOf(relay to shard.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = FETCH_KINDS, authors = it) })
-                                        drainGated(filters, dead) to dead
+                                        drainGated(filters, dead, seenIds) to dead
                                     }
                                 }
                             }.awaitAll()
@@ -296,7 +333,7 @@ class GrapeRankDataCrawler(
                     val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
                     val filters =
                         live.associateWith { missing.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = FETCH_KINDS, authors = it) } }
-                    val events = drainGated(filters, dead)
+                    val events = drainGated(filters, dead, seenIds)
                     recordDead(dead)
                     relaysContacted += live
                     for ((relay, _) in events) liveRelays.add(relay)
@@ -339,7 +376,7 @@ class GrapeRankDataCrawler(
                             Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = chunk)
                         }
                     }
-                drainGated(filters, null)
+                drainGated(filters, null, seenIds)
             }
 
             val discovery = config.relayListDiscoveryRelays
@@ -390,7 +427,7 @@ class GrapeRankDataCrawler(
                         }
                     }
                 }
-            drainGated(filters, null)
+            drainGated(filters, null, seenIds)
         }
 
         /**
@@ -497,7 +534,7 @@ class GrapeRankDataCrawler(
                                 launch {
                                     for ((batch, filters) in routed) {
                                         val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
-                                        val events = drainGated(filters, dead)
+                                        val events = drainGated(filters, dead, seenIds)
                                         recordDead(dead)
                                         drainedOut.send(Triple(batch, filters.keys, events))
                                     }
@@ -557,10 +594,17 @@ class GrapeRankDataCrawler(
                     .sortedBy { it.first }
                     .toMap()
             val downloadMs = crawlMark.elapsedNow().inWholeMilliseconds
+            val verifyMs = verifyNanos.load() / 1_000_000
+            val insertMs = insertNanos.load() / 1_000_000
+            val stored = eventsStored.load()
             log(
                 "[graperank] crawl complete: ${hopOf.size} discovered, $contactListsFed contact lists fed, " +
                     "${relaysContacted.size} relays contacted, ${deadRelays.size()} dead, $rounds rounds in $downloadMs ms; " +
                     "by hop: " + hopHistogram.entries.joinToString(" ") { "${it.key}=${it.value}" },
+            )
+            log(
+                "[graperank] write path: $stored events stored, verify ${verifyMs}ms + insert ${insertMs}ms " +
+                    "(summed across ${DRAIN_CONCURRENCY} consumers, batch=${config.insertBatchSize})",
             )
             return Stats(
                 rounds = rounds,
@@ -568,6 +612,9 @@ class GrapeRankDataCrawler(
                 relaysContacted = relaysContacted.size,
                 hopHistogram = hopHistogram,
                 downloadMs = downloadMs,
+                verifyMs = verifyMs,
+                insertMs = insertMs,
+                eventsStored = stored,
             )
         }
     }
@@ -579,11 +626,14 @@ class GrapeRankDataCrawler(
      * subscription so we never exceed its adaptive concurrent-subscription cap; a
      * relay's filters are split into REQ-sized groups so a popular relay routed
      * thousands of authors doesn't produce a multi-MB frame that most relays
-     * reject outright. Hard connect failures are reported into [deadOut].
+     * reject outright. Hard connect failures are reported into [deadOut]. Events
+     * whose id is already in the crawl-wide [seen] set are dropped before the
+     * expensive verify+store; verified ids are added to it so later drains skip them.
      */
     private suspend fun drainGated(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>?,
+        seen: ConcurrentSet<HexKey>,
     ): List<Pair<NormalizedRelayUrl, Event>> {
         if (filters.isEmpty()) return emptyList()
         val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(Channel.UNLIMITED)
@@ -617,22 +667,45 @@ class GrapeRankDataCrawler(
 
         val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
         coroutineScope {
-            // Single consumer: verify+store serially. One writer, so SeenIds'
-            // single-writer contract holds. The outbox model delivers the SAME event
-            // from many relays at once; skip a duplicate BEFORE the expensive Schnorr
-            // verify+store. An id is marked seen only after it verifies, so a forged
-            // copy (valid id, bad signature) delivered first can't suppress the
-            // genuine one that follows.
+            // Single consumer per drain: dedup against the crawl-wide [seen] set,
+            // verify, and group-commit to the store. Duplicates (the same event from
+            // another relay, drain, or round) are skipped BEFORE the expensive Schnorr
+            // verify + store write. An id is added to [seen] only after it verifies, so
+            // a forged copy (valid id, bad signature) delivered first can't suppress
+            // the genuine one. Verified events are buffered and flushed via batchInsert
+            // so the per-transaction + writer-mutex cost is paid once per
+            // [insertBatchSize], not once per event. (A relay whose every event was
+            // already seen won't be credited into `liveRelays` by this drain — that's
+            // fine: it's a redundant mirror that added nothing new.)
             val consumer =
                 launch {
-                    val seen = SeenIds(initialSlotsPow2 = 12)
-                    for ((relay, event) in eventChannel) {
-                        if (seen.contains(event.id)) continue
-                        if (store.verifyAndInsert(event)) {
-                            seen.add(event.id)
-                            collected.add(relay to event)
-                        }
+                    val flushAt = config.insertBatchSize.coerceAtLeast(1)
+                    val buffer = ArrayList<Event>(flushAt)
+
+                    suspend fun flush() {
+                        if (buffer.isEmpty()) return
+                        val mark = TimeSource.Monotonic.markNow()
+                        store.batchInsert(buffer)
+                        insertNanos.addAndFetch(mark.elapsedNow().inWholeNanoseconds)
+                        eventsStored.addAndFetch(buffer.size.toLong())
+                        buffer.clear()
                     }
+
+                    for ((relay, event) in eventChannel) {
+                        if (event.id in seen) continue
+                        val vMark = TimeSource.Monotonic.markNow()
+                        val ok = event.verify()
+                        verifyNanos.addAndFetch(vMark.elapsedNow().inWholeNanoseconds)
+                        if (!ok) {
+                            Log.w("GrapeRankDataCrawler") { "dropped event ${event.id.take(8)} kind=${event.kind} — bad signature" }
+                            continue
+                        }
+                        seen.add(event.id)
+                        collected.add(relay to event)
+                        buffer.add(event)
+                        if (buffer.size >= flushAt) flush()
+                    }
+                    flush()
                 }
             // One gated subscription per (relay, REQ-group). The permit is held for
             // the group's whole life, so concurrent subs on a relay never exceed its
