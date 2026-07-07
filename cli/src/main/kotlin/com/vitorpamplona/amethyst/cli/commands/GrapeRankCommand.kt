@@ -127,6 +127,11 @@ object GrapeRankCommand {
         // forces the per-event insert path (baseline); higher amortizes the SQLite
         // transaction + writer-mutex cost across the batch.
         val insertBatch = args.intFlag("insert-batch", 500)
+        // How many outbox batches drain in parallel (the worker-pool size). 24 is the
+        // validated default; higher fan-out re-floods busy hubs faster than the
+        // per-relay demotion catches up (an A/B at 64 was ~2x slower with MORE dead
+        // relays), so raise it only to probe specific slow relays.
+        val drainConcurrency = args.intFlag("drain-concurrency", 24)
         val doPublish = args.bool("publish")
         // Publish cutoff: only cards with rank >= this are published; existing
         // cards for targets below it (or gone from the graph) are retracted. Rank
@@ -185,6 +190,7 @@ object GrapeRankCommand {
                                 timeoutMs = timeoutMs,
                                 diagnose = diagnose,
                                 insertBatchSize = insertBatch,
+                                drainConcurrency = drainConcurrency,
                             ),
                         log = { System.err.println(it) },
                     )

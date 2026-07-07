@@ -117,6 +117,12 @@ class GrapeRankDataCrawler(
      *   [IEventStore.batchInsert]. The outbox model streams the same events from
      *   many relays through a single SQLite writer, so batching amortizes the
      *   per-transaction + writer-mutex cost across the batch (coerced to `>= 1`).
+     * @param drainConcurrency how many outbox batches drain at once (the worker
+     *   pool size). A GLOBAL bound (memory / open sockets); the per-relay
+     *   concurrent-sub cap is enforced separately by [AdaptiveRelayLimiter]. Keep it
+     *   moderate: a higher global fan-out re-floods busy hubs faster than demotion
+     *   catches up (an A/B at 64 ran ~2x slower with more dead relays), so 24 is the
+     *   validated default and raising it is a probe, not a speedup.
      */
     class Config(
         val relayListDiscoveryRelays: Set<NormalizedRelayUrl>,
@@ -126,6 +132,7 @@ class GrapeRankDataCrawler(
         val timeoutMs: Long = 10_000,
         val diagnose: Boolean = false,
         val insertBatchSize: Int = 500,
+        val drainConcurrency: Int = 24,
     )
 
     /** What the crawl fetched — the counters the caller reports and the graph is built from. */
@@ -527,7 +534,7 @@ class GrapeRankDataCrawler(
                     // on the producer (keeps writeRelayFreq serial) and ingest runs
                     // only on the consumer (keeps done/builder/hopOf serial), now
                     // overlapped with draining instead of blocked behind each batch.
-                    val routed = Channel<Pair<List<HexKey>, Map<NormalizedRelayUrl, List<Filter>>>>(DRAIN_CONCURRENCY * 2)
+                    val routed = Channel<Pair<List<HexKey>, Map<NormalizedRelayUrl, List<Filter>>>>(config.drainConcurrency * 2)
                     val drainedOut = Channel<DrainedBatch>(Channel.UNLIMITED)
                     coroutineScope {
                         // Producer: route each batch by outbox (serial), backpressured
@@ -545,7 +552,7 @@ class GrapeRankDataCrawler(
                         // that cleanly EOSE'd, so the consumer can tell "answered empty"
                         // from "timed out" per user.
                         val workers =
-                            List(DRAIN_CONCURRENCY) {
+                            List(config.drainConcurrency) {
                                 launch {
                                     for ((batch, filters) in routed) {
                                         val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
@@ -635,7 +642,7 @@ class GrapeRankDataCrawler(
             )
             log(
                 "[graperank] write path: $stored events stored, verify ${verifyMs}ms + insert ${insertMs}ms " +
-                    "(summed across ${DRAIN_CONCURRENCY} consumers, batch=${config.insertBatchSize})",
+                    "(summed across ${config.drainConcurrency} consumers, batch=${config.insertBatchSize})",
             )
             return Stats(
                 rounds = rounds,
@@ -713,6 +720,10 @@ class GrapeRankDataCrawler(
         // couldn't connect). A relay absent from this set answered definitively —
         // so an author it was asked for but didn't return is one it simply lacks.
         val notAnswered = ConcurrentSet<NormalizedRelayUrl>()
+        // --diagnose: which relays were slow (or timed out) and on which query, so a
+        // human can replay that exact REQ later to understand the slowness. Null when
+        // diagnosis is off (no per-group timing/collection overhead).
+        val slowDrains = if (config.diagnose) ConcurrentSet<String>() else null
 
         val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
         coroutineScope {
@@ -801,13 +812,25 @@ class GrapeRankDataCrawler(
                                 }
                             client.subscribe(subId, mapOf(subRelay to groupFilters), groupListener)
                             try {
+                                val gMark = TimeSource.Monotonic.markNow()
                                 val reason = withTimeoutOrNull(config.timeoutMs) { done.await() } ?: "timeout"
+                                val elapsedMs = gMark.elapsedNow().inWholeMilliseconds
                                 if (reason == "timeout") timedOut.add(subRelay)
                                 if (reason != "eose") notAnswered.add(subRelay)
                                 classifyDrainFailure(reason)?.let { kind ->
                                     failures.merge(subRelay, kind) { a, b ->
                                         if (a == DrainFailure.HARD || b == DrainFailure.HARD) DrainFailure.HARD else DrainFailure.TRANSIENT
                                     }
+                                }
+                                // Record slow/timed-out REQs with their exact query so a
+                                // human can replay them later and see why the relay lags.
+                                if (slowDrains != null && (reason == "timeout" || elapsedMs > SLOW_DRAIN_LOG_MS)) {
+                                    val authors = groupFilters.flatMap { it.authors.orEmpty() }
+                                    val kinds = groupFilters.flatMap { it.kinds.orEmpty() }.distinct()
+                                    slowDrains.add(
+                                        "[slow-relay] ${subRelay.url} $reason in ${elapsedMs}ms | kinds=$kinds authors=${authors.size}: " +
+                                            authors.take(30).joinToString(",") + (if (authors.size > 30) ",…" else ""),
+                                    )
                                 }
                             } finally {
                                 client.unsubscribe(subId)
@@ -826,6 +849,7 @@ class GrapeRankDataCrawler(
             val detail = stalled.take(12).joinToString(", ") { "${it.url}(${eventsPer[it] ?: 0}ev)" }
             log("[drain] timeout ${config.timeoutMs}ms: ${stalled.size} slow(no EOSE)" + (if (detail.isNotEmpty()) " | slow: $detail" else ""))
         }
+        slowDrains?.snapshot()?.forEach { log(it) }
         deadOut?.putAll(failures.snapshot())
         answeredOut?.addAll(filters.keys.filter { it !in notAnswered })
         return collected
@@ -852,6 +876,10 @@ class GrapeRankDataCrawler(
         // message cap most relays enforce. drainGated groups filters to stay within.
         private const val MAX_REQ_ENTRIES = 2500
 
+        // --diagnose: a REQ that takes longer than this to reach a terminal (EOSE or
+        // timeout) is logged with its relay + filter, so slow relays can be replayed.
+        private const val SLOW_DRAIN_LOG_MS = 4000L
+
         // Times we re-query an unreachable user's outbox before giving up, so the
         // crawl still terminates on a finite graph.
         private const val MAX_OUTBOX_ATTEMPTS = 3
@@ -860,12 +888,6 @@ class GrapeRankDataCrawler(
         // distinct outbox relays at once saturates connections and times out
         // (~250/drain succeeds, ~17k fails); keep the fan-out small.
         private const val USER_BATCH = 256
-
-        // Global content-drain fan-out — how many outbox batches we drain at once. A
-        // GLOBAL bound (memory / open sockets); the per-relay concurrency limit is
-        // enforced separately by AdaptiveRelayLimiter. A higher global fan-out
-        // re-floods busy hubs faster than demotion catches up, so keep it moderate.
-        private const val DRAIN_CONCURRENCY = 24
 
         // Sharded backbone sweep: split the still-missing authors into SHARD_RELAYS
         // lists, one per top relay, rotating up to SHARD_ROTATIONS times; once the
