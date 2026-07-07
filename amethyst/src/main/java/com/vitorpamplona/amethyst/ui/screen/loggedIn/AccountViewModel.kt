@@ -1710,6 +1710,8 @@ class AccountViewModel(
 
     fun getRelayGroupChannelIfExists(key: GroupId) = LocalCache.getRelayGroupChannelIfExists(key)
 
+    fun getRelayGroupChannelsOnRelay(relay: NormalizedRelayUrl) = LocalCache.getRelayGroupChannelsOnRelay(relay)
+
     fun getLiveActivityChannelIfExists(key: Address) = LocalCache.getLiveActivityChannelIfExists(key)
 
     fun <T : PubKeyReferenceTag> loadParticipants(

@@ -644,6 +644,10 @@ sealed class Route {
         val replyTo: HexKey? = null,
     ) : Route()
 
+    @Serializable data class RelayGroupServer(
+        val relayUrl: String,
+    ) : Route()
+
     @Serializable data class ChannelMetadataEdit(
         val id: String? = null,
     ) : Route()
