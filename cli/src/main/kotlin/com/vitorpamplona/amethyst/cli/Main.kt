@@ -71,6 +71,8 @@ import com.vitorpamplona.amethyst.cli.commands.cashu.CashuCommands
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuMintCommands
 import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.runBlocking
 import kotlin.system.exitProcess
 
@@ -103,6 +105,12 @@ fun main(argv: Array<String>) {
     // also sets this via applicationDefaultJvmArgs; this is a belt-and-
     // braces guard for invocations that bypass the launcher scripts.
     System.setProperty("java.awt.headless", "true")
+
+    // Quiet quartz's internal DEBUG chatter (relay auth, MLS restore, URL
+    // rejection, throttle notices) by default so it doesn't drown a command's
+    // own output; --verbose / -v restores full DEBUG. Set before dispatch so
+    // even startup logging is gated.
+    Log.minLevel = if (argv.any { it == "--verbose" || it == "-v" }) LogLevel.DEBUG else LogLevel.WARN
 
     // Set output mode before dispatch so even argument-parsing errors
     // honour --json.
@@ -150,6 +158,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
             GlobalFlag.SECRET_BACKEND -> secretBackendFlag = consumed.value
             GlobalFlag.PASSPHRASE_FILE -> passphraseFileFlag = consumed.value
             GlobalFlag.JSON -> Output.mode = Output.Mode.JSON
+            GlobalFlag.VERBOSE -> Unit // level already applied in main(); just strip it here
             null -> filteredArgs.add(a)
         }
         i += consumed.tokensConsumed
@@ -267,11 +276,13 @@ private suspend fun marmotDispatch(
 private enum class GlobalFlag(
     val long: String,
     val takesValue: Boolean = true,
+    val short: String? = null,
 ) {
     ACCOUNT("--account"),
     SECRET_BACKEND("--secret-backend"),
     PASSPHRASE_FILE("--passphrase-file"),
     JSON("--json", takesValue = false),
+    VERBOSE("--verbose", takesValue = false, short = "-v"),
 }
 
 private data class ConsumedFlag(
@@ -290,7 +301,7 @@ private fun extractGlobalFlag(
     idx: Int,
 ): Pair<GlobalFlag?, ConsumedFlag> {
     for (flag in GlobalFlag.values()) {
-        if (token == flag.long) {
+        if (token == flag.long || token == flag.short) {
             return if (flag.takesValue) {
                 flag to ConsumedFlag(argv.getOrNull(idx + 1), 2)
             } else {
@@ -315,6 +326,7 @@ private fun printUsage() {
         |      [--secret-backend auto|keychain|ncryptsec|plaintext]
         |      [--passphrase-file PATH]
         |      [--json]
+        |      [--verbose|-v]
         |      <cmd> [args...]
         |
         |Account selection:
