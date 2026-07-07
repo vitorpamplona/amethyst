@@ -1598,7 +1598,14 @@ fun MainContent(
                     }
                     else -> {
                         launch {
-                            subscriptionsCoordinator.loadKind3ViaOutbox(follows)
+                            val result = subscriptionsCoordinator.loadKind3ViaOutbox(follows)
+                            Log.d("WotOutbox") {
+                                "fetchKind3Only authors=${result.authorsRequested} " +
+                                    "covered=${result.outboxCoveredAuthors} " +
+                                    "fallback=${result.fallbackAuthors} " +
+                                    "kind10002=${result.kind10002Received} " +
+                                    "kind3=${result.kind3Received}"
+                            }
                             iAccount.wotService.markReadyOnce()
                         }
                     }
