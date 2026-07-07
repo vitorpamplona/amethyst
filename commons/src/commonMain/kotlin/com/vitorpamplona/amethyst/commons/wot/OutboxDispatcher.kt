@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.RelayListRecommendationProcessor
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -78,7 +79,7 @@ class OutboxDispatcher(
     private val indexRelays: () -> Set<NormalizedRelayUrl>,
     private val gateway: OutboxCacheGateway,
     private val perRelayTimeoutMs: Long = 4_000L,
-    private val overallTimeoutMs: Long = 8_000L,
+    private val overallTimeoutMs: Long = 20_000L,
     @Suppress("UNUSED_PARAMETER") maxOutboxRelaysPerAuthor: Int = 5,
 ) {
     /**
@@ -164,15 +165,25 @@ class OutboxDispatcher(
         val newForKind0 =
             if (includeKind0) authors.filter { it !in kind0Succeeded && it !in kind0InFlight }.toSet() else emptySet()
 
-        if (newForKind3.isEmpty() && newForKind0.isEmpty()) return zeroResult(authors.size)
+        if (newForKind3.isEmpty() && newForKind0.isEmpty()) {
+            Log.d("OutboxDispatcher") { "skip: all authors deduped (succeeded or in-flight)" }
+            return zeroResult(authors.size)
+        }
 
         kind3InFlight.addAll(newForKind3)
         kind0InFlight.addAll(newForKind0)
 
         return try {
-            withTimeoutOrNull(overallTimeoutMs) {
-                doRun(authors, newForKind3, newForKind0, includeKind0, includeKind3)
-            } ?: zeroResult(authors.size)
+            val result =
+                withTimeoutOrNull(overallTimeoutMs) {
+                    doRun(authors, newForKind3, newForKind0, includeKind0, includeKind3)
+                }
+            if (result == null) {
+                Log.w("OutboxDispatcher") { "overall timeout ${overallTimeoutMs}ms exceeded — returning zero result" }
+                zeroResult(authors.size)
+            } else {
+                result
+            }
         } finally {
             kind3InFlight.removeAll(newForKind3)
             kind0InFlight.removeAll(newForKind0)
@@ -203,12 +214,18 @@ class OutboxDispatcher(
             if (write.isNotEmpty()) cachedOutbox[author] = write else toDiscover.add(author)
         }
 
+        Log.d("OutboxDispatcher") {
+            "start authors=${allAuthors.size} newKind3=${newForKind3.size} newKind0=${newForKind0.size} " +
+                "cachedOutbox=${cachedOutbox.size} toDiscover=${toDiscover.size} " +
+                "indexRelays=${relaysConfigured.size}"
+        }
+
         // Phase 1 — discover kind-10002 on the index relays. runPhase1
         // returns pubkey → list of (event, relay) so we can pick the
         // newest event (some relays return outdated 10002s).
         val discovered = mutableMapOf<HexKey, Set<NormalizedRelayUrl>>()
         if (toDiscover.isNotEmpty() && relaysConfigured.isNotEmpty()) {
-            val (phase1Events, _) = runPhase1(toDiscover, relaysConfigured)
+            val (phase1Events, phase1EosedCount) = runPhase1(toDiscover, relaysConfigured)
             phase1Events.forEach { (pubkey, results) ->
                 val newest = results.maxByOrNull { it.first.createdAt } ?: return@forEach
                 gateway.onOutboxDiscovered(newest.first, newest.second)
@@ -220,43 +237,67 @@ class OutboxDispatcher(
                 if (write.isNotEmpty()) discovered[pubkey] = write
             }
             relayCounts.kind10002 += phase1Events.values.sumOf { it.size }
+            Log.d("OutboxDispatcher") {
+                "phase1 done eosed=$phase1EosedCount/${relaysConfigured.size} " +
+                    "10002-events=${relayCounts.kind10002} discovered=${discovered.size}"
+            }
         }
 
         val outboxMap = cachedOutbox + discovered
         val authorsWithOutbox = outboxMap.keys
         val fallbackAuthors = newTargets - authorsWithOutbox
 
-        // Phase 2 — per-outbox-relay REQ, kind-3 and/or kind-0.
+        // Phase 2 — per-outbox-relay REQ, kind-3 and/or kind-0. All
+        // recommended relays are subscribed in a single call so the pool
+        // fans out in parallel; a per-relay 4 s timeout bounds the wait
+        // regardless of how many relays the recommendation set contains.
+        val kind3BeforePhase2 = relayCounts.kind3
+        val kind0BeforePhase2 = relayCounts.kind0
         if (outboxMap.isNotEmpty() && (includeKind0 || includeKind3)) {
             val recommendations = RelayListRecommendationProcessor.reliableRelaySetFor(outboxMap)
-            recommendations.forEach { rec ->
-                val authorsForThisRelay =
-                    rec.users.intersect(
-                        if (includeKind0 && includeKind3) {
-                            newTargets
-                        } else if (includeKind3) {
-                            newForKind3
-                        } else {
-                            newForKind0
-                        },
-                    )
-                if (authorsForThisRelay.isEmpty()) return@forEach
-                val kinds =
-                    buildList {
-                        if (includeKind0 && authorsForThisRelay.any { it in newForKind0 }) add(MetadataEvent.KIND)
-                        if (includeKind3 && authorsForThisRelay.any { it in newForKind3 }) add(ContactListEvent.KIND)
-                    }
-                if (kinds.isEmpty()) return@forEach
-                runPhase2Or3(
-                    setOf(rec.relay),
-                    kinds = kinds,
-                    authors = authorsForThisRelay,
-                    counters = relayCounts,
-                )
+            val phase2FilterMap =
+                recommendations
+                    .mapNotNull { rec ->
+                        val authorsForThisRelay =
+                            rec.users.intersect(
+                                if (includeKind0 && includeKind3) {
+                                    newTargets
+                                } else if (includeKind3) {
+                                    newForKind3
+                                } else {
+                                    newForKind0
+                                },
+                            )
+                        if (authorsForThisRelay.isEmpty()) return@mapNotNull null
+                        val kinds =
+                            buildList {
+                                if (includeKind0 && authorsForThisRelay.any { it in newForKind0 }) add(MetadataEvent.KIND)
+                                if (includeKind3 && authorsForThisRelay.any { it in newForKind3 }) add(ContactListEvent.KIND)
+                            }
+                        if (kinds.isEmpty()) return@mapNotNull null
+                        rec.relay to
+                            authorsForThisRelay.chunked(100).map { chunk ->
+                                Filter(
+                                    kinds = kinds,
+                                    authors = chunk,
+                                    limit = chunk.size * kinds.size,
+                                )
+                            }
+                    }.toMap()
+
+            Log.d("OutboxDispatcher") { "phase2 recommendations=${recommendations.size} relays-with-work=${phase2FilterMap.size}" }
+            if (phase2FilterMap.isNotEmpty()) {
+                runPhase2Or3(phase2FilterMap, counters = relayCounts)
             }
         }
 
+        Log.d("OutboxDispatcher") {
+            "phase2 done kind3=${relayCounts.kind3 - kind3BeforePhase2} kind0=${relayCounts.kind0 - kind0BeforePhase2}"
+        }
+
         // Phase 3 — index-relay fallback for authors with no 10002.
+        val kind3BeforePhase3 = relayCounts.kind3
+        val kind0BeforePhase3 = relayCounts.kind0
         if (fallbackAuthors.isNotEmpty() && relaysConfigured.isNotEmpty()) {
             val kinds =
                 buildList {
@@ -264,12 +305,20 @@ class OutboxDispatcher(
                     if (includeKind3 && fallbackAuthors.any { it in newForKind3 }) add(ContactListEvent.KIND)
                 }
             if (kinds.isNotEmpty()) {
-                runPhase2Or3(
-                    relaysConfigured,
-                    kinds = kinds,
-                    authors = fallbackAuthors,
-                    counters = relayCounts,
-                )
+                Log.d("OutboxDispatcher") { "phase3 fallback authors=${fallbackAuthors.size} kinds=$kinds relays=${relaysConfigured.size}" }
+                val filters =
+                    fallbackAuthors.chunked(100).map { chunk ->
+                        Filter(
+                            kinds = kinds,
+                            authors = chunk,
+                            limit = chunk.size * kinds.size,
+                        )
+                    }
+                val phase3FilterMap = relaysConfigured.associateWith { filters }
+                runPhase2Or3(phase3FilterMap, counters = relayCounts)
+                Log.d("OutboxDispatcher") {
+                    "phase3 done kind3=${relayCounts.kind3 - kind3BeforePhase3} kind0=${relayCounts.kind0 - kind0BeforePhase3}"
+                }
             }
         }
 
@@ -351,26 +400,17 @@ class OutboxDispatcher(
     }
 
     /**
-     * Phase 2 or Phase 3 helper. Opens a subscription on [relays] for the
-     * given [kinds] and [authors]. Blocks until every relay EOSEs or the
-     * per-relay timeout fires. Events flow through the gateway callback.
+     * Phase 2 or Phase 3 helper. Opens a single subscription that
+     * fans out to every relay in [filterMap] (Phase 2 uses per-outbox-
+     * relay filters; Phase 3 uses the index-relay set with a shared
+     * fallback filter). All relays are subscribed in parallel — the
+     * per-relay timeout bounds the total wait regardless of relay count.
      */
     private suspend fun runPhase2Or3(
-        relays: Set<NormalizedRelayUrl>,
-        kinds: List<Int>,
-        authors: Set<HexKey>,
+        filterMap: Map<NormalizedRelayUrl, List<Filter>>,
         counters: FetchCounters,
     ) {
-        val filters =
-            authors.chunked(100).map { chunk ->
-                Filter(
-                    kinds = kinds,
-                    authors = chunk,
-                    limit = chunk.size * kinds.size,
-                )
-            }
-        val filterMap = relays.associateWith { filters }
-        val gate = BatchEoseGate(scope, target = relays.size)
+        val gate = BatchEoseGate(scope, target = filterMap.size)
 
         val listener =
             object : SubscriptionListener {
