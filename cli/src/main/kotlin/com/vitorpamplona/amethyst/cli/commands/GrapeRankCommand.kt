@@ -111,9 +111,16 @@ object GrapeRankCommand {
     private const val SHARD_ROTATIONS = 6
     private const val SHARD_BROADCAST_THRESHOLD = 2000
 
+    // The small-remainder broadcast (once a sweep is under the threshold) goes to
+    // this many top live relays, not just the SHARD_RELAYS the rotation used —
+    // a user's kind:3 is often mirrored on a busy relay ranked below the top 10,
+    // which is where the old last-mile pass found its stragglers.
+    private const val BROADCAST_RELAYS = 60
+
     // A relay that fails to CONNECT this many times is treated as dead and
-    // dropped from routing, so we stop paying the drain timeout on it.
-    private const val MAX_DEAD_STRIKES = 2
+    // dropped from routing, so we stop paying the drain timeout on it. Kept above
+    // 1 so a single transient connect blip doesn't evict a relay for the run.
+    private const val MAX_DEAD_STRIKES = 3
 
     // Broad, big general relays that carry kind:10002 for many users, added to the
     // discovery set to raise the odds of resolving a stranger's outbox. Every entry
@@ -333,7 +340,10 @@ object GrapeRankCommand {
                     // those authors just aren't on the popular relays — leave them to
                     // the caller's outbox pass rather than broadcast a huge list.
                     if (missing.isNotEmpty() && missing.size <= SHARD_BROADCAST_THRESHOLD) {
-                        val live = top.filter { it !in deadRelays }
+                        // Broadcast the small remainder to a wider set of busy relays
+                        // than the rotation used — recovers users whose list is only
+                        // on a relay ranked below the top SHARD_RELAYS.
+                        val live = topLiveRelays(BROADCAST_RELAYS)
                         if (live.isNotEmpty()) {
                             val dead = hashSetOf<NormalizedRelayUrl>()
                             val filters =
