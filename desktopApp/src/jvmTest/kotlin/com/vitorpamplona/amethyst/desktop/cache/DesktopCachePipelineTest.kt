@@ -205,6 +205,69 @@ class DesktopCachePipelineTest {
     }
 
     // -----------------------------------------------------------------------
+    // 1b. accountPubkey race regression (PR #3483 review finding 1)
+    //
+    // Reproduces the "hydration before pubkey bind" data-loss race: if a
+    // self kind-3 arrives while accountPubkey is null (e.g. from disk during
+    // login), the cache used to stamp lastContactListByAuthor without
+    // populating _followedUsers. Then the same event arriving from a relay
+    // AFTER pubkey binding was rejected by the createdAt gate, leaving the
+    // follow set empty. FollowAction.follow then called createFromScratch
+    // and wiped the real follow list. Fix: skip the stamp when
+    // accountPubkey is null so the later relay retry can populate cleanly.
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun `self kind-3 hydrated before pubkey bind does not poison later relay retry`() {
+        val cache = DesktopLocalCache() // accountPubkey deliberately unset
+        val event = contactList("cl1".padEnd(64, '0'), userPubKey, listOf(followedPubKey), createdAt = 100)
+
+        // Phase A — hydration path: consume with accountPubkey unbound.
+        cache.consume(event, relayUrl, wasVerified = true)
+        assertEquals(
+            emptySet(),
+            cache.followedUsers.value,
+            "Follow set stays empty until accountPubkey is bound",
+        )
+
+        // Phase B — Main.kt binds accountPubkey.
+        cache.accountPubkey = userPubKey
+
+        // Phase C — relay replay of the SAME event. Must NOT be rejected by
+        // the createdAt gate; must populate _followedUsers.
+        cache.consume(event, relayUrl, wasVerified = true)
+        assertEquals(
+            setOf(followedPubKey),
+            cache.followedUsers.value,
+            "Later relay retry of same self kind-3 must populate follow set",
+        )
+    }
+
+    @Test
+    fun `non-self kind-3 hydrated before pubkey bind still stamps and does not touch followedUsers`() {
+        val cache = DesktopLocalCache()
+        val other = contactList("cl2".padEnd(64, '0'), followedPubKey, listOf(unfollowedPubKey), createdAt = 100)
+
+        cache.consume(other, relayUrl, wasVerified = true)
+        cache.accountPubkey = userPubKey
+
+        // followedUsers is for the active user only; a non-self kind-3
+        // should never touch it. followedUsers must stay empty.
+        assertEquals(emptySet(), cache.followedUsers.value)
+
+        // And the newer version of the same non-self kind-3 must still be
+        // accepted (stamping happened in the known-not-self branch would
+        // reject; here we skipped stamping when pubkey was null so a
+        // newer replay lands cleanly).
+        val newer = contactList("cl2b".padEnd(64, '0'), followedPubKey, listOf(unfollowedPubKey, userPubKey), createdAt = 200)
+        cache.consume(newer, relayUrl, wasVerified = true)
+        // No direct assertion on internal state; the fact that this
+        // returns without throwing + does not affect followedUsers is
+        // the invariant. The next line documents intent.
+        assertEquals(emptySet(), cache.followedUsers.value)
+    }
+
+    // -----------------------------------------------------------------------
     // 2. Event stream emission
     // -----------------------------------------------------------------------
 

@@ -871,6 +871,7 @@ fun App(
         when (val state = accountState) {
             is AccountState.LoggedOut -> {
                 subscriptionsCoordinator.clear()
+                localCache.accountPubkey = null
                 localCache.clear()
                 localRelayMaintenance.stop()
                 localRelayStore.close()
@@ -882,11 +883,23 @@ fun App(
                 if (previousAccountPubKey != null && previousAccountPubKey != currentPubKey) {
                     // Account switched — clear old data so new feed loads fresh
                     subscriptionsCoordinator.clear()
+                    localCache.accountPubkey = null
                     localCache.clear()
                     localRelayMaintenance.stop()
                     localRelayStore.close()
                     subscriptionsCoordinator.start()
                 }
+                // Bind the active-user pubkey BEFORE hydration launches. The
+                // hydration coroutine below reads the local relay store on
+                // Dispatchers.IO and calls consumeContactList; without this
+                // ordering, a cached self kind-3 would be stamped without
+                // updating _followedUsers, and a later relay retry of the
+                // same event would be rejected by the createdAt gate,
+                // leaving the follow list empty and FollowAction.follow
+                // publishing a fresh kind-3 that wipes the real one.
+                // See commons/plans/2026-07-06-fix-wot-outbox-model-and-review-fixes-plan.md
+                // (Fix 1).
+                localCache.accountPubkey = currentPubKey
                 // Open local relay store for the current account and hydrate cache
                 localRelayStore.openForAccount(currentPubKey)
                 localRelayMaintenance.start()
@@ -1534,10 +1547,11 @@ fun MainContent(
         relayHealthStore.scanNow()
     }
 
-    // Web-of-Trust: bind the active user's pubkey so the cache guards
-    // active-user state against other users' kind-3 events, then feed all
-    // incoming kind-3 events to the WoT service and fetch the follow lists
-    // of every account the user follows.
+    // Web-of-Trust: pubkey is already bound by the outer LaunchedEffect
+    // that also gates hydration ordering (see the LoggedIn branch above).
+    // This effect re-asserts the binding to cover the (rare) case where
+    // MainContent's `account` diverges from the outer accountState mid-
+    // recomposition; it's idempotent when they already match.
     LaunchedEffect(localCache, account.pubKeyHex) {
         localCache.accountPubkey = account.pubKeyHex
     }

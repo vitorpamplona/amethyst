@@ -507,14 +507,33 @@ class DesktopLocalCache : ICacheProvider {
         private set
 
     private fun consumeContactList(event: ContactListEvent): Boolean {
-        // Replaceable event — only accept newer contact lists per author
+        // Replaceable event — only accept newer contact lists per author.
         val prev = lastContactListByAuthor[event.pubKey] ?: 0L
         if (event.createdAt <= prev) return false
-        lastContactListByAuthor[event.pubKey] = event.createdAt
 
-        if (event.pubKey == accountPubkey) {
-            lastContactListEvent = event
-            _followedUsers.value = event.verifiedFollowKeySet()
+        // Stamp lastContactListByAuthor *only* on branches where we know
+        // whether this event is the active user's own kind-3. If accountPubkey
+        // hasn't been bound yet (login/hydration ordering window), skip the
+        // stamp entirely so a later relay retry — after Main.kt binds
+        // accountPubkey — is not rejected by the createdAt gate. The
+        // _followedUsers state remains untouched in that case; downstream
+        // consumers still get the fan-out via _contactListEvents (WoT etc).
+        val currentAccountPubkey = accountPubkey
+        when {
+            event.pubKey == currentAccountPubkey -> {
+                lastContactListEvent = event
+                _followedUsers.value = event.verifiedFollowKeySet()
+                lastContactListByAuthor[event.pubKey] = event.createdAt
+            }
+            currentAccountPubkey != null -> {
+                // Known-not-self: safe to stamp.
+                lastContactListByAuthor[event.pubKey] = event.createdAt
+            }
+            else -> {
+                // accountPubkey not bound yet — cannot tell if this is self.
+                // Defer stamping so the relay retry that arrives after bind
+                // will still populate _followedUsers.
+            }
         }
 
         // Store in addressableNotes too — Kind3FollowListState.getFollowListEvent
