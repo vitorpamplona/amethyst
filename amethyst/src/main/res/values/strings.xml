@@ -1964,6 +1964,12 @@
     <string name="relay_group_edit_confirm">Save</string>
     <string name="relay_group_menu_members">Members</string>
     <string name="relay_group_menu_edit">Edit channel</string>
+    <string name="relay_group_browse_title">Find channels</string>
+    <string name="relay_group_browse_description">Browse the channels hosted on a group relay. Paste a relay address, or pick one below.</string>
+    <string name="relay_group_browse_relay_label">Relay address</string>
+    <string name="relay_group_browse_go">Browse</string>
+    <string name="relay_group_browse_your_relays">Relays you\'re on</string>
+    <string name="relay_group_browse_popular">Popular relays</string>
     <plurals name="relay_group_member_count">
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>

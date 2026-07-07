@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemC
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveActivityChannelScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupBrowseScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupChannelListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupMembersScreen
@@ -581,6 +582,13 @@ fun BuildNavigation(
             RelayGroupMembersScreen(
                 id = it.id,
                 relayUrl = it.relayUrl,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.RelayGroupBrowse> {
+            RelayGroupBrowseScreen(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -230,10 +231,11 @@ fun uriToRoute(
                 }
 
                 is NAddress -> {
-                    routeFor(
-                        note = LocalCache.getOrCreateAddressableNote(nip19.address()),
-                        loggedIn = account,
-                    ) ?: calendarDirectRoute(nip19) ?: Route.EventRedirect(nip19.aTag())
+                    relayGroupDirectRoute(nip19)
+                        ?: routeFor(
+                            note = LocalCache.getOrCreateAddressableNote(nip19.address()),
+                            loggedIn = account,
+                        ) ?: calendarDirectRoute(nip19) ?: Route.EventRedirect(nip19.aTag())
                 }
 
                 is NEmbed -> {
@@ -311,3 +313,15 @@ private fun calendarDirectRoute(nip19: NAddress): Route? =
         -> Route.CalendarEventDetail(nip19.kind, nip19.author, nip19.dTag)
         else -> null
     }
+
+/**
+ * Direct route for a NIP-29 group `naddr` (kind 39000) shared as a link. The group
+ * only exists on its host relay, so the naddr's relay hint is mandatory — the group
+ * id alone can't be resolved. With a hint we open the group chat straight away
+ * (cold start included); without one there's nowhere to look, so fall through.
+ */
+private fun relayGroupDirectRoute(nip19: NAddress): Route? {
+    if (nip19.kind != GroupMetadataEvent.KIND) return null
+    val relay = nip19.relay.firstOrNull() ?: return null
+    return Route.RelayGroup(nip19.dTag, relay.url)
+}

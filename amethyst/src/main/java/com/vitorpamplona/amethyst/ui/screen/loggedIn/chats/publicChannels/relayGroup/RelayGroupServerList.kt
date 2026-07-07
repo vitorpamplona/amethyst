@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -45,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
@@ -62,18 +64,47 @@ fun RelayGroupServerList(
     val servers by accountViewModel.account.relayGroupList.liveRelayGroupServers
         .collectAsStateWithLifecycle()
 
-    if (servers.isEmpty()) return
-
     Column(Modifier.fillMaxWidth()) {
         servers.sorted().forEach { server ->
-            RelayServerRow(server, accountViewModel) { nav.nav(Route.RelayGroupServer(server)) }
+            RelayGroupServerRow(server, accountViewModel) { nav.nav(Route.RelayGroupServer(server)) }
             HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
         }
+
+        // Always offer a discovery entry, so a user with no groups yet still has
+        // somewhere to start.
+        FindChannelsRow { nav.nav(Route.RelayGroupBrowse) }
+        HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 
 @Composable
-private fun RelayServerRow(
+private fun FindChannelsRow(onClick: () -> Unit) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Add,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp),
+        )
+        Text(
+            text = stringRes(R.string.relay_group_browse_title),
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+/** One relay row: NIP-11 avatar + name, used by the grouped list and the browse screen. */
+@Composable
+fun RelayGroupServerRow(
     relayUrl: String,
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,

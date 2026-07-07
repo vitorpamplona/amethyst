@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,6 +56,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -137,6 +141,17 @@ fun RelayGroupTopBar(
             }
         },
         actions = {
+            val naddr = channel.toNAddr()
+            if (naddr != null) {
+                val context = LocalContext.current
+                IconButton(onClick = { shareRelayGroup(context, naddr) }) {
+                    Icon(
+                        symbol = MaterialSymbols.Share,
+                        contentDescription = stringRes(R.string.quick_action_share),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
             when {
                 displayMembership == RelayGroupMembership.PENDING -> {
                     Text(
@@ -224,6 +239,21 @@ fun RelayGroupTopBar(
             onDismiss = { showJoinCode = false },
         )
     }
+}
+
+/** Fire the system share sheet with a njump web link to the group's naddr. */
+private fun shareRelayGroup(
+    context: Context,
+    naddr: String,
+) {
+    val sendIntent =
+        Intent().apply {
+            action = Intent.ACTION_SEND
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, njumpLink(naddr))
+            putExtra(Intent.EXTRA_TITLE, stringRes(context, R.string.quick_action_share_browser_link))
+        }
+    context.startActivity(Intent.createChooser(sendIntent, stringRes(context, R.string.quick_action_share)))
 }
 
 /** A small colored pill naming the user's role/status in the group. */
