@@ -20,12 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,10 +39,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -75,19 +85,53 @@ fun RelayGroupTopBar(
     TopBarExtensibleWithBackButton(
         title = {
             Column {
-                Text(
-                    text = channel.toBestDisplayName(),
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = subtitle(channel.groupId.relayUrl.displayUrl(), memberCount, displayMembership),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        text = channel.toBestDisplayName(),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    RoleBadge(displayMembership)
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    if (channel.isPrivate()) {
+                        Icon(
+                            symbol = MaterialSymbols.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(12.dp),
+                        )
+                    }
+                    Text(
+                        text = channel.groupId.relayUrl.displayUrl(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (memberCount > 0) {
+                        Icon(
+                            symbol = MaterialSymbols.Group,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(12.dp),
+                        )
+                        Text(
+                            text = "$memberCount",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         },
         actions = {
@@ -116,7 +160,11 @@ fun RelayGroupTopBar(
 
                 else -> {
                     IconButton(onClick = { menuOpen = true }) {
-                        Text("⋮", style = MaterialTheme.typography.titleLarge)
+                        Icon(
+                            symbol = MaterialSymbols.MoreVert,
+                            contentDescription = stringRes(R.string.more_options),
+                            modifier = Modifier.size(22.dp),
+                        )
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         if (displayMembership.canModerate()) {
@@ -156,22 +204,37 @@ fun RelayGroupTopBar(
     }
 }
 
+/** A small colored pill naming the user's role/status in the group. */
 @Composable
-private fun subtitle(
-    relayHost: String,
-    memberCount: Int,
-    membership: RelayGroupMembership,
-): String {
-    val parts = mutableListOf(relayHost)
-    if (memberCount > 0) parts.add(pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount))
-    val role =
+private fun RoleBadge(membership: RelayGroupMembership) {
+    val label =
         when (membership) {
             RelayGroupMembership.ADMIN -> stringRes(R.string.relay_group_role_admin)
             RelayGroupMembership.MODERATOR -> stringRes(R.string.relay_group_role_moderator)
-            RelayGroupMembership.MEMBER -> stringRes(R.string.relay_group_role_member)
             RelayGroupMembership.PENDING -> stringRes(R.string.relay_group_pending)
-            RelayGroupMembership.NONE -> null
+            // A plain member needs no badge; the lack of a Join button already says it.
+            RelayGroupMembership.MEMBER, RelayGroupMembership.NONE -> return
         }
-    role?.let { parts.add(it) }
-    return parts.joinToString(" · ")
+
+    val container =
+        if (membership == RelayGroupMembership.ADMIN || membership == RelayGroupMembership.MODERATOR) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.secondaryContainer
+        }
+    val content =
+        if (membership == RelayGroupMembership.ADMIN || membership == RelayGroupMembership.MODERATOR) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSecondaryContainer
+        }
+
+    Surface(shape = RoundedCornerShape(6.dp), color = container) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = content,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+        )
+    }
 }

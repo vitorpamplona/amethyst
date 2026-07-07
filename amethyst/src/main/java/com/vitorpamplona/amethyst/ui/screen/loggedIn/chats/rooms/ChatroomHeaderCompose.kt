@@ -21,10 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
@@ -378,14 +380,25 @@ private fun RelayNameChip(
         color = MaterialTheme.colorScheme.secondaryContainer,
         modifier = Modifier.clickable(onClick = onClick),
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-        )
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Dns,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size(11.dp),
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

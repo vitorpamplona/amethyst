@@ -21,11 +21,16 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -37,16 +42,25 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupDirectorySubscription
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.coroutines.delay
@@ -97,14 +111,19 @@ fun RelayGroupChannelListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showCreate = true }) {
-                Text("+", style = MaterialTheme.typography.headlineMedium)
+                Icon(
+                    symbol = MaterialSymbols.Add,
+                    contentDescription = stringRes(R.string.relay_group_create_title),
+                    modifier = Modifier.size(24.dp),
+                )
             }
         },
     ) { padding ->
+        val myPubkey = accountViewModel.userProfile().pubkeyHex
         LazyColumn(modifier = Modifier.padding(padding)) {
             items(channels, key = { it.groupId.id }) { channel ->
-                RelayGroupChannelRow(channel) { nav.nav(routeFor(channel)) }
-                HorizontalDivider(thickness = 0.25.dp)
+                RelayGroupChannelRow(channel, myPubkey, accountViewModel) { nav.nav(routeFor(channel)) }
+                HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
             }
         }
     }
@@ -117,29 +136,77 @@ fun RelayGroupChannelListScreen(
 @Composable
 private fun RelayGroupChannelRow(
     channel: RelayGroupChannel,
+    myPubkey: String,
+    accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
-    Column(
+    val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
+    val joined = channel.membershipOf(myPubkey).isMember()
+    val memberCount = channel.memberCount()
+
+    Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            text = "# " + channel.toBestDisplayName(),
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+        RobohashFallbackAsyncImage(
+            robot = channel.groupId.id,
+            model = channel.profilePicture(),
+            contentDescription = channel.toBestDisplayName(),
+            modifier = Modifier.size(40.dp).clip(CircleShape),
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            autoPlayGif = autoPlayGif,
         )
-        channel.summary()?.takeIf { it.isNotBlank() }?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (channel.isPrivate()) {
+                    Icon(
+                        symbol = MaterialSymbols.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+                Text(
+                    text = channel.toBestDisplayName(),
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            val subtitle =
+                channel.summary()?.takeIf { it.isNotBlank() }
+                    ?: if (memberCount > 0) {
+                        pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount)
+                    } else {
+                        null
+                    }
+            subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        if (joined) {
+            Box(Modifier.size(20.dp).clip(CircleShape)) {
+                Icon(
+                    symbol = MaterialSymbols.Check,
+                    contentDescription = stringRes(R.string.relay_group_role_member),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }

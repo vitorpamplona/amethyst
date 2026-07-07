@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,16 +38,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 /**
  * The "grouped" Messages view: one row per host relay of the user's joined NIP-29
- * groups. Tapping a relay opens its channel list. Rendered above the DM feed only
- * in [com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode.GROUPED].
+ * groups, each with the relay's NIP-11 avatar and name. Tapping a relay opens its
+ * channel list. Rendered above the DM feed only in
+ * [com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode.GROUPED].
  */
 @Composable
 fun RelayGroupServerList(
@@ -60,8 +66,8 @@ fun RelayGroupServerList(
 
     Column(Modifier.fillMaxWidth()) {
         servers.sorted().forEach { server ->
-            RelayServerRow(server) { nav.nav(Route.RelayGroupServer(server)) }
-            HorizontalDivider(thickness = 0.25.dp)
+            RelayServerRow(server, accountViewModel) { nav.nav(Route.RelayGroupServer(server)) }
+            HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
         }
     }
 }
@@ -69,29 +75,52 @@ fun RelayGroupServerList(
 @Composable
 private fun RelayServerRow(
     relayUrl: String,
+    accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
-    val label = RelayUrlNormalizer.normalizeOrNull(relayUrl)?.displayUrl() ?: relayUrl
+    val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl)
+    val host = relay?.displayUrl() ?: relayUrl
+    val info = relay?.let { loadRelayInfo(it) }
+    val name = info?.value?.name?.takeIf { it.isNotBlank() } ?: host
 
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            text = label,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
+        RenderRelayIcon(
+            displayUrl = host,
+            iconUrl = info?.value?.icon,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            pingInMs = 0,
         )
-        Text(
-            text = "›",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = name,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (name != host) {
+                Text(
+                    text = host,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Icon(
+            symbol = MaterialSymbols.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
         )
     }
 }
