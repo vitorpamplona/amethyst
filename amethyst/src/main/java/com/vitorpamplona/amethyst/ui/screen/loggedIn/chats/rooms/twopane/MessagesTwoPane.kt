@@ -21,21 +21,26 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.adaptive.FoldAwareConfiguration
 import com.google.accompanist.adaptive.HorizontalTwoPaneStrategy
 import com.google.accompanist.adaptive.TwoPane
 import com.google.accompanist.adaptive.calculateDisplayFeatures
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -46,6 +51,8 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupServerList
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupViewModeToggle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 
@@ -92,12 +99,23 @@ fun MessagesTwoPane(
         TwoPane(
             first = {
                 Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.BottomEnd) {
-                    ChatroomList(
-                        knownFeedContentState,
-                        newFeedContentState,
-                        accountViewModel,
-                        twoPaneNav,
-                    )
+                    val viewMode by accountViewModel.account.settings.relayGroupViewMode
+                        .collectAsStateWithLifecycle()
+
+                    Column(Modifier.fillMaxSize()) {
+                        RelayGroupViewModeToggle(accountViewModel)
+                        if (viewMode == RelayGroupViewMode.GROUPED) {
+                            RelayGroupServerList(accountViewModel, nav)
+                        }
+                        Box(Modifier.weight(1f).fillMaxWidth()) {
+                            ChatroomList(
+                                knownFeedContentState,
+                                newFeedContentState,
+                                accountViewModel,
+                                twoPaneNav,
+                            )
+                        }
+                    }
 
                     Box(Modifier.padding(Size20dp), contentAlignment = Alignment.Center) {
                         ChannelFabColumn(nav)
