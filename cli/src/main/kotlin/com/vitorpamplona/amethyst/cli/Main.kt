@@ -537,9 +537,15 @@ private fun printUsage() {
         |                                              --diagnose logs slow/failed relays on timeout).
         |    [--publish] [--min-rank N]                OBSERVER: npub|nprofile|hex|name@domain (default:
         |    [--publish-limit N] [--publish-relay URL] active account). --offline scores from the local
-        |                                              store only. --publish writes NIP-85 kind:30382
-        |                                              cards (rank = round(score*100)) for each user at
-        |                                              or above --min-rank (unchanged ranks skipped).
+        |                                              store only. --publish reconciles NIP-85 kind:30382
+        |                                              cards signed by a per-observer service key: sends
+        |                                              new/changed ranks >= --min-rank (default 2), skips
+        |                                              unchanged, and retracts (kind:5) any card whose
+        |                                              target left the graph or fell below the cutoff.
+        |  graperank operator [status|relay <url>…    manage the machine's operator keys (~/.amy/operator/,
+        |    |providers]                               independent of accounts): relay sets where cards +
+        |                                              retractions publish; status shows master + relays;
+        |                                              providers lists observer -> service-pubkey.
         |  graperank register [PROVIDER]              declare a NIP-85 provider in your kind:10040 so
         |    [--service KIND:TAG] [--relay URL]        clients can discover it (default: self as the
         |    [--private]                               30382:rank provider at your first outbox relay).
