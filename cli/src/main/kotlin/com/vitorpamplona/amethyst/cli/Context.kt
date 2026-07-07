@@ -78,8 +78,10 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 /**
  * Per-invocation wiring. Each CLI run constructs a Context, does its work,
@@ -118,7 +120,28 @@ class Context(
     val identity: Identity,
     val state: RunState,
 ) : AutoCloseable {
-    private val okhttp = OkHttpClient.Builder().socketFactory(TcpNoDelaySocketFactory).build()
+    private val okhttp =
+        OkHttpClient
+            .Builder()
+            .socketFactory(TcpNoDelaySocketFactory)
+            // The crawl opens WebSockets to thousands of relays. Each WS-upgrade
+            // handshake is an async call through OkHttp's shared Dispatcher, whose
+            // default cap (maxRequests=64) throttles the connection ramp — worse,
+            // a dead relay holds a slot for the whole connectTimeout, starving live
+            // relays queued behind it. Widen the dispatcher so handshakes fan out,
+            // and tighten connectTimeout so an unreachable relay frees its slot
+            // fast. This is orthogonal to REQ concurrency (that runs on already-open
+            // sockets, bounded by AdaptiveRelayLimiter), so it can't trip a relay's
+            // REQ rate-limit — it only speeds connection setup. The executor thread
+            // pool is unbounded on demand, so raising maxRequests just lets more of
+            // those short-lived handshakes proceed at once.
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .dispatcher(
+                Dispatcher().apply {
+                    maxRequests = 256
+                    maxRequestsPerHost = 16
+                },
+            ).build()
 
     val client: NostrClient =
         NostrClient(
