@@ -680,11 +680,22 @@ class Context(
             }
         val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
         coroutineScope {
-            // Single consumer: verify+store serially, exactly like drain().
+            // Single consumer: verify+store serially, exactly like drain(). One
+            // writer, so SeenIds' single-writer contract holds. The outbox model
+            // (and especially the wide relay-list broadcast) delivers the SAME event
+            // from many relays at once; skip a duplicate BEFORE the expensive
+            // Schnorr verify+store. An id is marked seen only after it verifies, so a
+            // forged copy (valid id, bad signature) delivered first can't suppress
+            // the genuine one that follows.
             val consumer =
                 launch {
+                    val seen = SeenIds(initialSlotsPow2 = 12)
                     for ((relay, event) in eventChannel) {
-                        if (verifyAndStore(event)) collected.add(relay to event)
+                        if (seen.contains(event.id)) continue
+                        if (verifyAndStore(event)) {
+                            seen.add(event.id)
+                            collected.add(relay to event)
+                        }
                     }
                 }
             // One gated subscription per relay. The permit is held for the whole
