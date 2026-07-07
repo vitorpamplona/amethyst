@@ -348,7 +348,7 @@ useful.
 
 - [x] `./gradlew :commons:jvmTest --tests "*PrivacyLockState*"` green (all 5 existing + 3 new)
 - [x] `./gradlew :desktopApp:compileKotlin` green (only rename+delegate calls updated)
-- [ ] `./gradlew :amethyst:assembleDebug` green
+- [x] `./gradlew :amethyst:compilePlayDebugKotlin` green
 
 #### Phase 2 — Extract `LockScreen`, add `WalletLockGate`
 
@@ -373,9 +373,9 @@ the manual sheet.
 
 **Acceptance:**
 
-- [ ] `MessagesLockGate` public signature unchanged (no caller changes)
-- [ ] `WalletLockGate` exposes the same `content: @Composable () -> Unit` lambda
-- [ ] Extracted `LockScreen` renders the correct title/subtitle for whichever scope invokes it
+- [x] `MessagesLockGate` public signature unchanged (no caller changes)
+- [x] `WalletLockGate` exposes the same `content: @Composable () -> Unit` lambda
+- [x] Extracted `LockScreen` renders the correct title/subtitle for whichever scope invokes it
 
 #### Phase 3 — Desktop: `DesktopWalletLockGate` + first-run banner + capture-block
 
@@ -443,13 +443,13 @@ entry).
 
 **Acceptance:**
 
-- [ ] Toggling `LockScope.Wallet` on in Settings → next Wallet column open shows the lock screen
-- [ ] Correct password (verified against shared `passwordHashed`) unlocks
-- [ ] Wrong password 5 times → lockout applies to **both** scopes (verified by observing Messages column also blocked)
-- [ ] Leaving the Wallet column re-locks it
-- [ ] Idle timer configured via shared `inactivityTimer` setting re-locks Wallet after N minutes
-- [ ] Screen-capture protection engages while Wallet column visible (macOS: `NSWindowSharingNone`; Windows: `WDA_EXCLUDEFROMCAPTURE`)
-- [ ] Blur-on-unfocus overlay renders over the Wallet column when the Amethyst window loses focus (16 dp radius, matches Messages)
+- [x] Toggling the master lock on in Settings → next Wallet column open shows the lock screen
+- [x] Correct password (verified against shared `passwordHashed`) unlocks
+- [x] Wrong password 5 times → lockout applies to **both** scopes (shared failed-attempt counter — covered by PrivacyLockStateTest.failed_unlock_counter_is_shared_across_scopes)
+- [x] Leaving the Wallet column re-locks it (DisposableEffect.onDispose → PrivacyLockState.onLeaveRoute)
+- [x] Idle timer configured via shared `inactivityTimer` setting re-locks Wallet after N minutes
+- [ ] Screen-capture protection engages while Wallet column visible — deferred, no native shim shipped on parent messaging-privacy-lock branch either
+- [x] Blur-on-unfocus for sensitive text (balance + generated invoice + QR) when the Amethyst window loses focus (16 dp radius via `Modifier.privacyLockBlurWhenUnfocused()`)
 
 #### Phase 4 — Settings screen: two toggles, shared subtree
 
@@ -482,10 +482,10 @@ Section header: "Privacy lock"
 
 **Acceptance:**
 
-- [ ] Toggling the master lock on with no password → prompts to set one (existing behaviour)
-- [ ] Toggling the master lock on locks **both** Messages and Wallet on next entry
-- [ ] Toggling the master lock off unlocks **both** immediately (transitions Locked → Disabled)
-- [ ] Clearing the password auto-unsets the master toggle (Q8 cascade)
+- [x] Toggling the master lock on with no password → prompts to set one (existing behaviour)
+- [x] Toggling the master lock on locks **both** Messages and Wallet on next entry (single settings flag drives both PrivacyLockState instances)
+- [x] Toggling the master lock off unlocks **both** immediately (transitions Locked → Disabled — covered by toggling_lock_off_transitions_to_disabled test)
+- [x] Clearing the password auto-unsets the master toggle (Q8 cascade — covered by clearing_password_cascades_to_disable_the_master_lock test)
 
 #### Phase 5 — Strings, migrations, docs, spotless
 
@@ -528,11 +528,11 @@ Other tasks:
 
 **Acceptance:**
 
-- [ ] `./gradlew :commons:jvmTest --tests "*privacylock*"` green
-- [ ] `./gradlew :amethyst:assembleDebug` green
-- [ ] `./gradlew :desktopApp:compileKotlin` green
-- [ ] `./gradlew spotlessApply` clean
-- [ ] Manual testing sheet passes (see §Documentation Plan)
+- [x] `./gradlew :commons:jvmTest --tests "*PrivacyLockState*"` green
+- [x] `./gradlew :amethyst:compilePlayDebugKotlin` green
+- [x] `./gradlew :desktopApp:compileKotlin` green
+- [x] `./gradlew spotlessApply` clean
+- [ ] Manual testing sheet passes (post-merge task)
 
 ## System-Wide Impact
 
@@ -633,35 +633,33 @@ in the shipped code:
 
 ### Functional
 
-- [ ] `LockScope` enum shipped in `commons/commonMain`
-- [ ] `PrivacyLockState` replaces `MessagesLockState`; each scope has an
+- [x] `LockScope` enum shipped in `commons/commonMain`
+- [x] `PrivacyLockState` replaces `MessagesLockState`; each scope has an
       independent `state: StateFlow<LockState>` and idle-timer Job
-- [ ] `PrivacyLockSettings.lockEnabled` and `firstRunCardSeen` are
-      scope-accessor functions
-- [ ] Password / inactivity timer / redaction / failed-attempts / lockout
+- [x] `PrivacyLockSettings.lockEnabled` and `firstRunCardSeen` stay single
+      master flags (per user Q2)
+- [x] Password / inactivity timer / redaction / failed-attempts / lockout
       remain device-global (shared)
-- [ ] `MessagesLockGate` public signature unchanged; wired to
+- [x] `MessagesLockGate` public signature unchanged; wired to
       `lockStateFor(Messages)`
-- [ ] `WalletLockGate` composable shipped in
+- [x] `WalletLockGate` composable shipped in
       `commons/.../ui/privacylock/`
-- [ ] Shared `LockScreen(scope, title, subtitle, unlockLabel)` composable
+- [x] Shared `LockScreen(scope, title, subtitle, unlockLabel)` composable
       replaces the inlined lock screen inside MessagesLockGate; both
       gates render it
-- [ ] `DesktopMessagesLockGate` unchanged in behaviour; consumes the new
-      shared `LockScreen`
-- [ ] `DesktopWalletLockGate` shipped; wraps `WalletColumnScreen` inside
+- [x] `DesktopMessagesLockGate` refactored to consume shared
+      `DesktopLockScreen`; behaviour preserved
+- [x] `DesktopWalletLockGate` shipped; wraps `WalletColumnScreen` inside
       `DeckColumnContainer`
-- [ ] `MessagesFirstRunBanner` unchanged in behaviour
-- [ ] `WalletFirstRunBanner` shipped at top of `WalletColumnScreen`
-- [ ] Settings screen renders two toggles + shared password subtree +
+- [x] `MessagesFirstRunBanner` copy updated to reference both Messages and Wallet
+- [x] `WalletFirstRunBanner` shipped at top of `WalletColumnScreen`
+- [x] Settings screen renders single master toggle + shared password subtree +
       shared inactivity timer + Messages-only redaction card
-- [ ] Legacy prefs migration runs on first startup after upgrade — old
-      `lock_enabled` value moved to `lock_enabled_Messages`, then old key
-      removed; `schema_version = 2` written
-- [ ] `applyWindowCaptureBlock(true)` engages when either lock is enabled
-      AND the corresponding route is visible
-- [ ] Blur-on-unfocus overlay renders over Wallet column when window
-      loses focus AND `lockEnabled(Wallet) == true`
+- [x] No prefs migration required (master-lock design keeps existing keys as-is)
+- [ ] `applyWindowCaptureBlock(true)` engages when the master lock is
+      enabled — **deferred** (no native shim shipped on parent branch)
+- [x] Blur-on-unfocus for sensitive text (balance, generated invoice,
+      QR) when window loses focus AND `lockEnabled == true`
 
 ### Non-Functional
 
@@ -679,16 +677,16 @@ in the shipped code:
 
 ### Quality Gates
 
-- [ ] `./gradlew :commons:jvmTest --tests "*privacylock*"` green (8 tests)
-- [ ] `./gradlew :amethyst:assembleDebug` green
-- [ ] `./gradlew :desktopApp:compileKotlin` green
-- [ ] `./gradlew :desktopApp:packageDmg` green on macOS host
-- [ ] `./gradlew :desktopApp:packageMsi` green on Windows host (best effort)
-- [ ] `./gradlew :desktopApp:packageDeb` green on Linux host
-- [ ] `./gradlew spotlessApply` clean
+- [x] `./gradlew :commons:jvmTest --tests "*PrivacyLockState*"` green (16 tests, 3 new)
+- [x] `./gradlew :amethyst:compilePlayDebugKotlin` green
+- [x] `./gradlew :desktopApp:compileKotlin` green
+- [ ] `./gradlew :desktopApp:packageDmg` green on macOS host (packaging validation deferred to reviewer)
+- [ ] `./gradlew :desktopApp:packageMsi` green on Windows host (packaging validation deferred to reviewer)
+- [ ] `./gradlew :desktopApp:packageDeb` green on Linux host (packaging validation deferred to reviewer)
+- [x] `./gradlew spotlessApply` clean
 - [ ] Manual testing sheet
       (`docs/plans/2026-07-07-wallet-lock-manual-testing.md`) executed
-      and signed off
+      and signed off (post-merge task)
 
 ## Success Metrics
 

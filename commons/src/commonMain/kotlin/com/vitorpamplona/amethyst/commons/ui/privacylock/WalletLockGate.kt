@@ -29,27 +29,19 @@ import com.vitorpamplona.amethyst.commons.privacylock.LockState
 import com.vitorpamplona.amethyst.commons.privacylock.lockStateFor
 
 /**
- * Wraps the Messages route and gates entry behind the credential prompt.
+ * Wraps the Wallet route and gates entry behind the credential prompt.
  *
- * Branch selection happens SYNCHRONOUSLY in composition — no
- * [androidx.compose.runtime.LaunchedEffect] guard — so the chat content
- * composable never enters composition while [LockState.Locked]. Closes the
- * deep-link race (plan §Security Hardening H1).
+ * Behaviour mirrors [MessagesLockGate] — see that composable's KDoc for the
+ * deep-link race, draft persistence, and leave-route semantics. Only the
+ * [LockScope] and the lock-screen copy differ.
  *
- * The gate is an overlay, NOT a wrapper that disposes content. While
- * locked, the [content] lambda is not invoked at all; on unlock, the
- * lambda is invoked fresh. This means TextField drafts that use
- * `rememberSaveable` survive a lock cycle (SavedStateRegistry-backed).
- * For plain `remember` state, drafts are cleared — accept this trade-off.
- *
- * The gate also fires
- * [com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockState.onLeaveRoute]
- * from its [DisposableEffect.onDispose] block, so navigating away locks
- * immediately.
+ * Desktop apps use the platform-specific `DesktopWalletLockGate` (password
+ * input inline, no async CredentialPrompter round-trip); Android + iOS
+ * front ends use this composable directly.
  */
 @Composable
-fun MessagesLockGate(content: @Composable () -> Unit) {
-    val lockState = lockStateFor(LockScope.Messages)
+fun WalletLockGate(content: @Composable () -> Unit) {
+    val lockState = lockStateFor(LockScope.Wallet)
     val current by lockState.state.collectAsState()
 
     DisposableEffect(lockState) {
@@ -59,9 +51,9 @@ fun MessagesLockGate(content: @Composable () -> Unit) {
     when (current) {
         is LockState.Locked ->
             LockScreen(
-                scope = LockScope.Messages,
-                title = "Messages locked",
-                subtitle = "Unlock to read or send messages.",
+                scope = LockScope.Wallet,
+                title = "Wallet locked",
+                subtitle = "Unlock to see your balance and send or receive sats.",
                 unlockLabel = "Unlock",
             )
         else -> content()

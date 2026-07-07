@@ -51,21 +51,19 @@ import com.vitorpamplona.amethyst.commons.privacylock.LockScope
 import com.vitorpamplona.amethyst.commons.privacylock.lockStateFor
 
 /**
- * One-time discovery banner at the top of the Desktop Messages column.
- * Nudges users who haven't enabled the privacy lock yet. Modeled on
- * `OfflineBanner.kt` (AnimatedVisibility + Surface + Row).
+ * One-time discovery banner at the top of the Desktop Wallet column.
+ * Mirrors [MessagesFirstRunBanner] — same state (`firstRunCardSeen`) and
+ * same enable-with-password flow, only the visual anchor changes so users
+ * who never open the Messages tab still learn about the feature.
  *
- * Visibility: `!lockEnabled && !firstRunCardSeen`. Dismissal is sticky
- * per the `firstRunCardSeen` flag — the banner does NOT reappear if
- * the user later disables the lock.
- *
- * Renders nothing when the gate is Locked (implicit — the gate replaces
- * content, so this composable never composes in that case).
+ * Because the master `firstRunCardSeen` flag is shared, dismissing this
+ * banner also hides the Messages banner (and vice versa). Enabling the
+ * lock from either banner locks both routes.
  */
 @Composable
-fun MessagesFirstRunBanner(onSaved: (String) -> Unit = {}) {
+fun WalletFirstRunBanner(onSaved: (String) -> Unit = {}) {
     val settings = LocalPrivacyLockSettings.current
-    val lockState = lockStateFor(LockScope.Messages)
+    val lockState = lockStateFor(LockScope.Wallet)
     val enabled by settings.lockEnabled.collectAsState()
     val seen by settings.firstRunCardSeen.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
@@ -93,12 +91,12 @@ fun MessagesFirstRunBanner(onSaved: (String) -> Unit = {}) {
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Lock Messages and Wallet?",
+                        text = "Lock the Wallet and Messages?",
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Text(
                         text =
-                            "Require your password before the Messages and Wallet columns show. " +
+                            "Require your password before the Wallet and Messages columns show. " +
                                 "Feed, profile, and search stay open.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

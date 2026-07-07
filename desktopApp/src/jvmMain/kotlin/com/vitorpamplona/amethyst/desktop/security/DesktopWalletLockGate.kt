@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.privacylock
+package com.vitorpamplona.amethyst.desktop.security
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -29,27 +29,27 @@ import com.vitorpamplona.amethyst.commons.privacylock.LockState
 import com.vitorpamplona.amethyst.commons.privacylock.lockStateFor
 
 /**
- * Wraps the Messages route and gates entry behind the credential prompt.
+ * Desktop equivalent of `WalletLockGate`. Mirrors [DesktopMessagesLockGate]
+ * behaviour with wallet-scoped copy.
  *
- * Branch selection happens SYNCHRONOUSLY in composition — no
- * [androidx.compose.runtime.LaunchedEffect] guard — so the chat content
- * composable never enters composition while [LockState.Locked]. Closes the
- * deep-link race (plan §Security Hardening H1).
+ * Reads its lock state from `lockStateFor(LockScope.Wallet)` — a separate
+ * instance from Messages, so an unlocked Messages session does NOT
+ * auto-unlock the Wallet, and vice-versa. Both scopes share the same
+ * password, failed-attempt counter, and lockout schedule via the
+ * ambient [PrivacyLockSettings].
  *
- * The gate is an overlay, NOT a wrapper that disposes content. While
- * locked, the [content] lambda is not invoked at all; on unlock, the
- * lambda is invoked fresh. This means TextField drafts that use
- * `rememberSaveable` survive a lock cycle (SavedStateRegistry-backed).
- * For plain `remember` state, drafts are cleared — accept this trade-off.
- *
- * The gate also fires
- * [com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockState.onLeaveRoute]
- * from its [DisposableEffect.onDispose] block, so navigating away locks
- * immediately.
+ * @param onOpenSettings optional deep-link into the Settings screen used
+ *   when the user cleared the master password while the Wallet lock was
+ *   still toggled on. Per plan Q5: prefer deep-link over the plain
+ *   "Disable lock" fallback so the user can immediately set a new
+ *   password rather than blindly disabling the feature.
  */
 @Composable
-fun MessagesLockGate(content: @Composable () -> Unit) {
-    val lockState = lockStateFor(LockScope.Messages)
+fun DesktopWalletLockGate(
+    onOpenSettings: (() -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    val lockState = lockStateFor(LockScope.Wallet)
     val current by lockState.state.collectAsState()
 
     DisposableEffect(lockState) {
@@ -58,11 +58,11 @@ fun MessagesLockGate(content: @Composable () -> Unit) {
 
     when (current) {
         is LockState.Locked ->
-            LockScreen(
-                scope = LockScope.Messages,
-                title = "Messages locked",
-                subtitle = "Unlock to read or send messages.",
-                unlockLabel = "Unlock",
+            DesktopLockScreen(
+                scope = LockScope.Wallet,
+                title = "Wallet locked",
+                subtitle = "Enter your privacy-lock password to view the wallet.",
+                onNoPasswordAction = onOpenSettings,
             )
         else -> content()
     }
