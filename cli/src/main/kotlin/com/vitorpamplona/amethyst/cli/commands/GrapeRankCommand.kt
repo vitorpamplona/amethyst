@@ -94,11 +94,16 @@ object GrapeRankCommand {
     // (empirically ~250 users/drain succeeds, ~17k fails); keep the fan-out small.
     private const val USER_BATCH = 256
 
-    // Concurrent content drains. Higher fan-out is safe now that proven-dead
-    // relays are pruned from routing (see deadRelays) — most of what a wave
-    // used to wait on was dead outboxes, so we no longer just pile up stalled
-    // connections.
-    private const val DRAIN_CONCURRENCY = 24
+    // Concurrent content drains. Each drain opens exactly ONE subscription per
+    // relay it touches (one REQ per relay under the drain's subId), so this IS
+    // the per-relay concurrency cap: a popular relay shared by many pending users
+    // receives at most this many concurrent subs from us — while the fan-out
+    // across *different* relays stays fully parallel (each drain hits ~100 distinct
+    // outboxes). RelayDiagnostics showed 24 blew past typical relay limits
+    // (rate-limited=1433, "too many concurrent REQs"=1286, "too many
+    // subscriptions"=710). Target ~20 subs/relay; 18 leaves room for the 1
+    // persistent warm-pool sub so the peak stays ~19, just under the common cap.
+    private const val DRAIN_CONCURRENCY = 18
 
     // Sharded backbone sweep: instead of asking every popular relay for the
     // same full author list (N× redundant), split the still-missing authors
