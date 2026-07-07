@@ -173,6 +173,11 @@ object GrapeRankCommand {
             var rounds = 0
             var relaysContactedCount = 0
             var contactListsFed = 0
+            // Wall time to read + deserialize the contact lists out of the store
+            // (offline path only; online streams them in during the crawl). This
+            // is the real pre-scoring cost — the int-CSR build afterwards is a
+            // cheap in-memory pack.
+            var storeLoadMs: Long? = null
 
             val hopOf = HashMap<HexKey, Int>()
             if (!offline) {
@@ -365,13 +370,15 @@ object GrapeRankCommand {
                 )
             } else {
                 // Offline: stream contact lists from the local store into the graph.
+                val loadStart = System.nanoTime()
                 for (event in ctx.store.query<Event>(Filter(kinds = listOf(ContactListEvent.KIND)))) {
                     if (event is ContactListEvent) {
                         builder.addFollows(event.pubKey, event.verifiedFollowKeySet())
                         contactListsFed++
                     }
                 }
-                System.err.println("[graperank] offline: $contactListsFed contact lists from local store")
+                storeLoadMs = (System.nanoTime() - loadStart) / 1_000_000
+                System.err.println("[graperank] offline: $contactListsFed contact lists from local store in $storeLoadMs ms")
             }
 
             // Mutes + reports come from the store (both paths). Far fewer than contact
@@ -426,6 +433,7 @@ object GrapeRankCommand {
                     "graph_users" to graph.nodeCount,
                     "graph_edges" to graph.edgeCount(),
                     "users_scored" to rankedIds.size,
+                    "store_load_ms" to storeLoadMs,
                     "graph_build_ms" to buildMs,
                     "scoring_ms" to scoringMs,
                     "scores" to
