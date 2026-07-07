@@ -173,6 +173,73 @@ class WoTServiceTest {
         drain()
         assertEquals(emptyMap<String, Int>(), svc.scoresSnapshot())
         assertTrue(runBlocking { svc.isReady.first() })
+        assertTrue(runBlocking { svc.isDisabled.first() })
+    }
+
+    /**
+     * Regression for PR #3483 review finding 2: even after the guardrail
+     * trips, applyKind3 for a follower in the huge follow set used to
+     * repopulate reverseIndex/_scores because myFollows had already been
+     * assigned. Fix clears myFollows AND sets a disabled flag; both gate
+     * handleKind3 so the guardrail actually holds under sustained pump.
+     */
+    @Test
+    fun guardrailIgnoresApplyKind3AfterTrip() {
+        val huge = (0..WoTService.MAX_FOLLOWS + 1).map { fakePubkey(it) }.toSet()
+        svc.onFollowSetChange(huge, me)
+        drain()
+
+        val anyFollower = huge.first()
+        svc.applyKind3(anyFollower, setOf(c, d, e))
+        drain()
+
+        assertEquals(
+            "Guardrail must block score repopulation via applyKind3",
+            emptyMap<String, Int>(),
+            svc.scoresSnapshot(),
+        )
+    }
+
+    @Test
+    fun guardrailReleasesWhenFollowSetShrinksBack() {
+        val huge = (0..WoTService.MAX_FOLLOWS + 1).map { fakePubkey(it) }.toSet()
+        svc.onFollowSetChange(huge, me)
+        drain()
+        assertTrue(runBlocking { svc.isDisabled.first() })
+
+        // User trims their follow list — dispatcher should re-engage.
+        svc.onFollowSetChange(setOf(a, b), me)
+        drain()
+        assertFalse(runBlocking { svc.isDisabled.first() })
+
+        // And WoT scoring resumes normally.
+        svc.applyKind3(a, setOf(c, d))
+        drain()
+        assertEquals(1, svc.scoresSnapshot()[c])
+    }
+
+    @Test
+    fun closeStopsAcceptingOps() {
+        svc.onFollowSetChange(setOf(a), me)
+        svc.applyKind3(a, setOf(c))
+        drain()
+        assertEquals(1, svc.scoresSnapshot()[c])
+
+        svc.close()
+        drain()
+
+        // Post-close writes are dropped silently.
+        svc.applyKind3(a, setOf(d))
+        drain()
+        assertEquals(null, svc.scoresSnapshot()[d])
+        // State observed before close remains readable.
+        assertEquals(1, svc.scoresSnapshot()[c])
+    }
+
+    @Test
+    fun closeIsIdempotent() {
+        svc.close()
+        svc.close() // should not throw
     }
 
     @Test

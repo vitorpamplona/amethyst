@@ -39,21 +39,39 @@ import kotlinx.coroutines.launch
  * graph. For every pubkey X the score is the count of accounts in the
  * active user's follow set who also follow X.
  *
- * Scores are exposed via a Compose-observable [SnapshotStateMap] with
- * per-key subscriber isolation — only avatars whose specific pubkey
- * scored differently recompose when the map mutates.
+ * ## Reactivity model
+ *
+ * Scores are exposed via a Compose-observable [SnapshotStateMap]. Consumers
+ * that read a **single key** (`scores[pubkey]`) recompose only when that
+ * key changes — this is `SnapshotStateMap`'s built-in per-key observation
+ * and applies whether or not the writer wraps in a snapshot block.
+ * Consumers that iterate the map or read `size` recompose on **any**
+ * mutation.
+ *
+ * The writer wraps each op in [Snapshot.withMutableSnapshot] to *coalesce*
+ * an op's writes into a single Compose commit — so a Kind3 op that
+ * touches N reverse-index targets emits one invalidation, not N. It does
+ * not confer additional per-key isolation on top of `SnapshotStateMap`'s
+ * own semantics.
+ *
+ * ## Concurrency
  *
  * All internal state is mutated from a single writer coroutine
- * ([writerLoop]) on [Dispatchers.Default], so concurrent
- * [applyKind3] / [onFollowSetChange] / [markReadyOnce] calls from
- * different threads are serialized without extra locking.
+ * ([writerLoop]) on [writerDispatcher] (default [Dispatchers.Default]), so
+ * concurrent [applyKind3] / [onFollowSetChange] / [markReadyOnce] calls
+ * from different threads are serialized without extra locking.
+ *
+ * ## Lifecycle
+ *
+ * Call [close] on account switch / logout so the writer coroutine exits
+ * and the ops channel is released. Post-close ops are silently dropped.
  */
 @Stable
 class WoTService(
     private val scope: CoroutineScope,
     /** Dispatcher for the internal writer coroutine. Tests override with `Dispatchers.Unconfined` for synchronous behavior. */
     private val writerDispatcher: CoroutineDispatcher = Dispatchers.Default,
-) {
+) : AutoCloseable {
     /**
      * Sparse per-pubkey score map. Entries with count 0 are removed
      * (not stored as 0) to keep the Compose subscriber tracking tight.
@@ -72,9 +90,21 @@ class WoTService(
     private var myFollows: Set<HexKey> = emptySet()
     private var selfPubkey: HexKey? = null
     private var readyMarked = false
+    private var disabled = false
 
     private val _isReady = MutableStateFlow(false)
     val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
+
+    private val _isDisabled = MutableStateFlow(false)
+
+    /**
+     * True when the active user's follow set exceeds [MAX_FOLLOWS] and WoT
+     * scoring has been shut off. Callers that dispatch the batch kind-3
+     * REQ must gate on this — a disabled service silently accepts and
+     * ignores all subsequent [applyKind3] calls, so a caller that keeps
+     * flooding kind-3s wastes bandwidth for nothing.
+     */
+    val isDisabled: StateFlow<Boolean> = _isDisabled.asStateFlow()
 
     private val ops = Channel<Op>(capacity = Channel.UNLIMITED)
 
@@ -163,17 +193,32 @@ class WoTService(
         newFollows: Set<HexKey>,
         newSelf: HexKey?,
     ) {
-        val removed = myFollows - newFollows
-        myFollows = newFollows
-        selfPubkey = newSelf
-
         // Guardrail — massive follow lists don't produce a useful WoT signal.
-        if (myFollows.size > MAX_FOLLOWS) {
+        // Do this BEFORE assigning myFollows so applyKind3's `follower in
+        // myFollows` gate doesn't accidentally credit anyone once the
+        // caller keeps pumping kind-3s in (a caller that fails to gate on
+        // isDisabled would otherwise fully repopulate reverseIndex/_scores
+        // and defeat the guardrail — see PR #3483 review finding 2).
+        if (newFollows.size > MAX_FOLLOWS) {
             reverseIndex.clear()
             perFollowerSnapshot.clear()
             _scores.clear()
+            myFollows = emptySet()
+            selfPubkey = newSelf
+            disabled = true
+            _isDisabled.value = true
             handleMarkReady()
             return
+        }
+
+        val removed = myFollows - newFollows
+        myFollows = newFollows
+        selfPubkey = newSelf
+        // Follow set is back within limits (or was already) — re-enable if
+        // we had previously flipped disabled=true.
+        if (disabled) {
+            disabled = false
+            _isDisabled.value = false
         }
 
         // Uncredit any follower we're no longer following.
@@ -193,6 +238,7 @@ class WoTService(
         follower: HexKey,
         follows: Set<HexKey>,
     ) {
+        if (disabled) return
         if (follower !in myFollows) return
 
         val old = perFollowerSnapshot[follower] ?: emptySet()
@@ -229,6 +275,20 @@ class WoTService(
         selfPubkey = null
         readyMarked = false
         _isReady.value = false
+        disabled = false
+        _isDisabled.value = false
+    }
+
+    /**
+     * Cancel the writer coroutine and release the ops channel. Call from
+     * account-switch / logout paths. Post-close [applyKind3] / [onFollowSetChange]
+     * / [markReadyOnce] / [clear] calls are silently dropped (the `trySend`
+     * on a closed [Channel] fails without throwing).
+     *
+     * Idempotent; safe to call multiple times.
+     */
+    override fun close() {
+        ops.close()
     }
 
     private fun updateScore(target: HexKey) {

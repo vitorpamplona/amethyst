@@ -1283,6 +1283,14 @@ fun MainContent(
             DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays)
         }
 
+    // When iAccount is replaced (account switch), the previous WoTService's
+    // internal writer coroutine + ops Channel would otherwise leak — the
+    // outer `scope` lives for the whole session. Close the previous
+    // instance on dispose so account-switch is a clean teardown.
+    DisposableEffect(iAccount) {
+        onDispose { iAccount.wotService.close() }
+    }
+
     // Follow Packs state — single per-account holder for Discover + sidebar + naddr cards
     val followPacksState =
         remember(iAccount, localCache, relayManager, scope) {
