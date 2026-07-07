@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.cli.commands.KeyCommands
 import com.vitorpamplona.amethyst.cli.commands.KeyPackageCommands
 import com.vitorpamplona.amethyst.cli.commands.KindCommand
 import com.vitorpamplona.amethyst.cli.commands.LoginCommand
+import com.vitorpamplona.amethyst.cli.commands.LogoffCommand
 import com.vitorpamplona.amethyst.cli.commands.MarmotResetCommand
 import com.vitorpamplona.amethyst.cli.commands.MessageCommands
 import com.vitorpamplona.amethyst.cli.commands.NamecoinCommand
@@ -61,6 +62,7 @@ import com.vitorpamplona.amethyst.cli.commands.PublishCommand
 import com.vitorpamplona.amethyst.cli.commands.RelayCommands
 import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.ServeCommand
+import com.vitorpamplona.amethyst.cli.commands.StatusCommand
 import com.vitorpamplona.amethyst.cli.commands.StoreCommands
 import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
 import com.vitorpamplona.amethyst.cli.commands.SyncCommand
@@ -137,6 +139,16 @@ class AwaitTimeout(
     message: String,
 ) : RuntimeException(message)
 
+/**
+ * Verbs that create, select, or delete the account/identity on disk. They
+ * write to (or read) the per-account directory directly rather than through
+ * `Context.open`, so they need a concrete account and must resolve strictly —
+ * an accountless run has nowhere to put a new identity. Every other verb
+ * resolves via [DataDir.resolveOptional] and either runs anonymously (reads)
+ * or re-asserts the requirement inside `Context.open` (signing).
+ */
+private val STRICT_ACCOUNT_VERBS = setOf("init", "create", "login", "logoff", "whoami")
+
 private suspend fun dispatch(argv: Array<String>): Int {
     if (argv.isEmpty() || argv[0] == "--help" || argv[0] == "-h") {
         printUsage()
@@ -179,6 +191,14 @@ private suspend fun dispatch(argv: Array<String>): Int {
         return UseCommand.run(tail)
     }
 
+    // `status` is a cross-account, read-only overview of everything on
+    // disk under ~/.amy/. Like `use`, it must work regardless of how many
+    // accounts exist (zero, one, or many), so it dispatches before account
+    // resolution rather than through the single-account DataDir path.
+    if (head == "status") {
+        return StatusCommand.run(tail)
+    }
+
     // Stateless local primitives (nak-style army-knife verbs). They operate
     // purely on their arguments — no identity, no relays, no `~/.amy/` — so
     // they dispatch before account resolution and work with zero state.
@@ -206,13 +226,33 @@ private suspend fun dispatch(argv: Array<String>): Int {
         return CashuMintCommands.dispatch(tail.drop(1).toTypedArray())
     }
 
+    // `offer info NOFFER` / `debit info NDEBIT` decode a CLINK pointer locally —
+    // no network, no account. The rest of `offer`/`debit` operates on the account.
+    if (head == "offer" && tail.firstOrNull() == "info") {
+        return OfferCommands.info(tail.drop(1).toTypedArray())
+    }
+    if (head == "debit" && tail.firstOrNull() == "info") {
+        return DebitCommands.info(tail.drop(1).toTypedArray())
+    }
+
     val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
-    val dataDir = DataDir.resolve(accountFlag = accountFlag, secrets = secrets)
+    // Identity-lifecycle verbs create / select / delete the account itself, so
+    // they need a concrete account and resolve strictly (helpful ambiguity
+    // errors). Everything else resolves optionally: read-only verbs then run
+    // anonymously when there is no account, while signing verbs re-assert the
+    // requirement through `Context.open`.
+    val dataDir =
+        if (head in STRICT_ACCOUNT_VERBS) {
+            DataDir.resolve(accountFlag = accountFlag, secrets = secrets)
+        } else {
+            DataDir.resolveOptional(accountFlag = accountFlag, secrets = secrets)
+        }
 
     return when (head) {
         "init" -> InitCommands.init(dataDir, Args(tail))
         "create" -> CreateCommand.run(dataDir, tail)
         "login" -> LoginCommand.run(dataDir, tail)
+        "logoff" -> LogoffCommand.run(dataDir, tail)
         "whoami" -> InitCommands.whoami(dataDir)
         "relay" -> RelayCommands.dispatch(dataDir, tail)
         "marmot" -> marmotDispatch(dataDir, tail)
@@ -341,7 +381,12 @@ private fun printUsage() {
         |    1. --account X if given.
         |    2. ~/.amy/current marker (set by `amy use X`).
         |    3. Sole subdirectory of ~/.amy/ other than shared/.
-        |    4. Error — disambiguate with --account or `amy use`.
+        |    4. Read-only verbs (fetch, subscribe, count, publish, outbox,
+        |       search, sync, store, profile/git/podcast reads, nsite/napplet
+        |       fetch, decode/encode/… primitives, offer/debit info) run
+        |       ANONYMOUSLY — they query relays and the shared store with no
+        |       account, they just can't sign. Signing verbs error here:
+        |       disambiguate with --account or `amy use`.
         |
         |  Test harnesses isolate by overriding ${'$'}HOME for the amy
         |  subprocess (`HOME=/tmp/run.123 amy --account alice ...`).
@@ -349,6 +394,9 @@ private fun printUsage() {
         |  use NAME                                  pin NAME as the active account
         |  use --clear                                remove the pin
         |  use                                        print current pin + available accounts
+        |  status                                     read-only overview of every account, signer
+        |                                              type, local Marmot/Cashu state, and the shared
+        |                                              event store (no keychain prompt, no network)
         |
         |Output:
         |  Default: human-readable text on stdout.
@@ -395,6 +443,9 @@ private fun printUsage() {
         |  create [--name NAME]            provision a full Amethyst-style account + publish bootstrap events
         |  login KEY [--password X]     import (nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05|bunker://)
         |  whoami                       print current identity
+        |  logoff [--yes] [--keep-events]   log off: delete this account's key, per-account state,
+        |                                and its events in the shared store (--keep-events skips the
+        |                                cache purge). Requires --yes; without it, prints a dry run.
         |
         |Remote signing (NIP-46):
         |  bunker [--relay URL[,URL…]]  run a remote signer for this (local-key) account; prints a

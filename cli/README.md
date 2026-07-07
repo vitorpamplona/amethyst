@@ -374,6 +374,8 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy login KEY [--password X]` | Import an existing identity (`nsec`/`ncryptsec`/mnemonic/`npub`/`nprofile`/hex/NIP-05). |
 | `amy whoami` | Print the active account's name + npub. |
 | `amy use NAME` / `--clear` / no-arg | Pin / clear / inspect the active account. |
+| `amy status` | Read-only overview of everything under `~/.amy/`: every account, which one is current, each signer type (local keychain/ncryptsec/plaintext, NIP-46 bunker, or read-only) and whether it can sign, the local Marmot / Cashu / alias / sync-cursor footprint per account, and the shared event store's size. Built for the returning user. No keychain prompt, no network. |
+| `amy logoff [--yes] [--keep-events]` | Log off an account: delete its key + backend secret, the whole `~/.amy/<account>/` directory (run-state, aliases, cashu counters, Marmot state), the `current` pin if it points here, and the account's events (authored + `#p`-addressed) in the shared store. `--keep-events` leaves the shared cache alone. Destructive and irreversible — requires `--yes`; without it, prints a dry run and exits 2. |
 
 ### Social
 
@@ -588,7 +590,18 @@ matches that:
 
 1. If `~/.amy/current` is set, use it.
 2. Else if exactly one account exists, use it (silent auto-pick).
-3. Else error and list the candidates so you can disambiguate.
+3. Else — for a **read-only** verb, run **anonymously**; for a **signing**
+   verb, error and list the candidates so you can disambiguate.
+
+**No account? Reads still work.** Verbs that only query relays or the shared
+event store — `fetch`, `subscribe`, `count`, `publish` (broadcasts a
+pre-signed event), `outbox`, `search`, `sync`, `store …`, the read halves of
+`profile`/`notes`/`git`/`podcast`/`podcast20`, `nsite`/`napplet` fetch/serve/
+list, `blossom download`/`check`, `offer`/`debit info`, and every stateless
+primitive — run against an empty `~/.amy/` with a throwaway key. They read
+fine; they just can't authenticate. Only verbs that **sign or encrypt with
+your key** (post, edit, follow, dm, marmot, zap, relay-list edits, blossom
+upload/list/delete, cashu, …) require an account — and say so.
 
 `amy use NAME` writes `~/.amy/current`; `amy use --clear` removes it.
 For one-off override, prepend `--account NAME` to any command.
@@ -654,11 +667,12 @@ Inside the amy process there's no test mode — it just sees a fresh
 
 ## Troubleshooting
 
-- **`no account at ~/.amy`** — you haven't created one yet. Run
+- **`no account configured` / `multiple accounts in ~/.amy (alice, bob)`** —
+  only **signing** verbs raise these; reads run anonymously instead (see
+  "No account? Reads still work" above). Create one with
   `amy --account NAME init` (bare keypair) or `amy --account NAME create`
-  (full Amethyst-style bootstrap).
-- **`multiple accounts in ~/.amy (alice, bob)`** — pin one with
-  `amy use NAME` or pass `--account NAME` per command.
+  (full Amethyst-style bootstrap), or pin/select one with `amy use NAME` /
+  `--account NAME`.
 - **`current pins 'X' but ~/.amy/X doesn't exist`** — the active-account
   marker is stale. Rewrite with `amy use OTHER` or `amy use --clear`.
 - **`no_dm_relays`** — recipient hasn't published a kind:10050 inbox.

@@ -63,7 +63,9 @@ object ProfileCommands {
         val args = Args(rest)
         val refresh = args.bool("refresh")
         val timeoutSecs = args.longFlag("timeout", 8L)
-        Context.open(dataDir).use { ctx ->
+        // Read-only: runs anonymously when there is no account (an explicit
+        // USER is then required, since there is no "own" profile to default to).
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val pubKey =
                 args.positionalOrNull(0)?.let { ctx.requireUserHex(it) }

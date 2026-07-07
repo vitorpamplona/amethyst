@@ -144,6 +144,16 @@ data class Identity(
             )
 
         /**
+         * Ephemeral, key-less identity for anonymous read-only runs (no
+         * account on disk). It mints a throwaway public key so the
+         * relay-list fallbacks (`outboxRelays()` etc.) resolve to the
+         * built-in defaults, and it carries no private key, so any attempt
+         * to sign/encrypt fails loudly — "you can read, you just can't
+         * auth". Used by [com.vitorpamplona.amethyst.cli.Context.openOrAnonymous].
+         */
+        fun anonymous(): Identity = fromPublicKeyHex(KeyPair().pubKey.toHexKey())
+
+        /**
          * Rebuild an in-memory identity after a load. Accepts the public
          * parts that live on disk and a private key resolved from the
          * backend (or null for read-only accounts). Re-derives `nsec` so
@@ -204,6 +214,17 @@ class DataDir(
     val eventsDir: File,
     val accountName: String,
     val secrets: SecretStore,
+    /**
+     * Whether this points at a concrete account. `false` for the
+     * accountless directory [resolveOptional] hands back when `~/.amy/`
+     * has no unambiguous account — [root] then points at the shared
+     * sibling and only [eventsDir] (the cross-account event store) is
+     * meaningful. Read-only verbs run anonymously against it; signing
+     * verbs get [noAccountDetail] via `Context.open`.
+     */
+    val hasAccount: Boolean = true,
+    /** Human-readable reason there is no account, for the signing-verb error. */
+    val noAccountDetail: String? = null,
 ) {
     val identityFile = File(root, "identity.json")
     val stateFile = File(root, "state.json")
@@ -231,12 +252,16 @@ class DataDir(
 
     init {
         SecureFileIO.secureMkdirs(root)
-        SecureFileIO.secureMkdirs(groupsDir)
-        // Tighten perms on any data already on disk from an older, unhardened CLI.
-        SecureFileIO.tighten(identityFile)
-        SecureFileIO.tighten(stateFile)
-        SecureFileIO.tighten(marmotDir)
-        SecureFileIO.tighten(keyPackageBundleFile)
+        // The accountless dir only ever exposes the shared event store; don't
+        // seed per-account marmot dirs / tighten identity files under it.
+        if (hasAccount) {
+            SecureFileIO.secureMkdirs(groupsDir)
+            // Tighten perms on any data already on disk from an older, unhardened CLI.
+            SecureFileIO.tighten(identityFile)
+            SecureFileIO.tighten(stateFile)
+            SecureFileIO.tighten(marmotDir)
+            SecureFileIO.tighten(keyPackageBundleFile)
+        }
     }
 
     /**
@@ -389,6 +414,69 @@ class DataDir(
                 accountName = name,
                 secrets = secrets,
             )
+        }
+
+        /**
+         * Like [resolve], but never throws when there is no account: read-only
+         * verbs can run without one. When `--account` is given it is honoured;
+         * otherwise the pin / sole-account are used if unambiguous. Failing
+         * that, returns an *accountless* [DataDir] (`hasAccount = false`) whose
+         * [root] is the shared sibling and whose [eventsDir] is still the
+         * cross-account event store — enough for anonymous relay queries and
+         * `store` maintenance. The reason no account was chosen is carried in
+         * [DataDir.noAccountDetail] so a signing verb can surface it.
+         */
+        fun resolveOptional(
+            accountFlag: String?,
+            secrets: SecretStore,
+        ): DataDir {
+            val rootBase = DEFAULT_ROOT
+            val sharedEvents = File(rootBase, "$SHARED_DIR_NAME/events-store").absoluteFile
+            if (accountFlag != null) {
+                val name = validateName(accountFlag)
+                return DataDir(File(rootBase, name).absoluteFile, sharedEvents, name, secrets)
+            }
+            val picked = pickAccountOptional(rootBase)
+            return if (picked.name != null) {
+                DataDir(File(rootBase, picked.name).absoluteFile, sharedEvents, picked.name, secrets)
+            } else {
+                DataDir(
+                    root = File(rootBase, SHARED_DIR_NAME).absoluteFile,
+                    eventsDir = sharedEvents,
+                    accountName = SHARED_DIR_NAME,
+                    secrets = secrets,
+                    hasAccount = false,
+                    noAccountDetail = picked.detail,
+                )
+            }
+        }
+
+        /** Result of [pickAccountOptional]: an account [name], or null plus a [detail] reason. */
+        private data class OptionalPick(
+            val name: String?,
+            val detail: String?,
+        )
+
+        /** Non-throwing sibling of [pickAccount]: null [name] with a [detail] when 0 / ambiguous. */
+        private fun pickAccountOptional(rootBase: File): OptionalPick {
+            val current = File(rootBase, CURRENT_MARKER_NAME)
+            if (current.isFile) {
+                val pinned = current.readText().trim()
+                if (pinned.isNotEmpty() && File(rootBase, pinned).isDirectory) {
+                    return OptionalPick(pinned, null)
+                }
+            }
+            val accounts = listAccounts(rootBase)
+            return when (accounts.size) {
+                0 -> OptionalPick(null, "no account configured (create one with `amy --account <name> init`)")
+                1 -> OptionalPick(accounts.single(), null)
+                else ->
+                    OptionalPick(
+                        null,
+                        "multiple accounts in ${rootBase.absolutePath} (${accounts.joinToString(", ")}); " +
+                            "pick one with --account <name> or `amy use <name>`",
+                    )
+            }
         }
 
         /**

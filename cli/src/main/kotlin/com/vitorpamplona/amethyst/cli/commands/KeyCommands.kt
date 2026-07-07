@@ -77,7 +77,7 @@ object KeyCommands {
             Output.emit(mapOf("valid" to false))
             return 0
         }
-        val npub = hex!!.hexToByteArray().toNpub()
+        val npub = hex.hexToByteArray().toNpub()
         Output.emit(mapOf("valid" to true, "pubkey" to hex, "npub" to npub))
         return 0
     }

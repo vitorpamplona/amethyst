@@ -79,7 +79,7 @@ object NsiteCommands {
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
         val timeoutSecs = args.longFlag("timeout", 8L)
 
-        Context.open(dataDir).use { ctx ->
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val authorHex = ctx.requireUserHex(author)
             val relays =
@@ -145,7 +145,7 @@ object NsiteCommands {
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
         val timeoutSecs = args.longFlag("timeout", 8L)
 
-        Context.open(dataDir).use { ctx ->
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val authorHex = ctx.requireUserHex(author)
             val relays =
@@ -203,7 +203,7 @@ object NsiteCommands {
         val extraServers = StaticSiteFetch.commaList(args.flag("server"))
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
 
-        Context.open(dataDir).use { ctx ->
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val authorHex = ctx.requireUserHex(author)
 
