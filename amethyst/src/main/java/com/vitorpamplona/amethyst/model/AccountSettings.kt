@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupRepository
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
@@ -58,6 +59,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -242,6 +244,7 @@ class AccountSettings(
     var backupFavoriteAlgoFeedsList: FavoriteAlgoFeedsListEvent? = null,
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
+    var backupRelayGroupList: SimpleGroupListEvent? = null,
     var backupTrustProviderList: TrustProviderListEvent? = null,
     var backupCashuWallet: CashuWalletEvent? = null,
     var backupNutzapInfo: NutzapInfoEvent? = null,
@@ -270,6 +273,7 @@ class AccountSettings(
     val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.IF_IN_MY_LIST),
 ) : EphemeralChatRepository,
+    RelayGroupRepository,
     PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
     val syncedSettings: AccountSyncedSettings = AccountSyncedSettings(AccountSyncedSettingsInternal())
@@ -1209,6 +1213,20 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupEphemeralChatList?.id != newEphemeralChatList.id) {
             backupEphemeralChatList = newEphemeralChatList
+            saveAccountSettings()
+        }
+    }
+
+    override fun relayGroupList() = backupRelayGroupList
+
+    override fun updateRelayGroupListTo(newRelayGroupList: SimpleGroupListEvent?) {
+        // Joined groups can live in the NIP-44 private items (encrypted content),
+        // so an empty `tags` is NOT an empty list — guard only on null.
+        if (newRelayGroupList == null) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupRelayGroupList?.id != newRelayGroupList.id) {
+            backupRelayGroupList = newRelayGroupList
             saveAccountSettings()
         }
     }

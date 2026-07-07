@@ -34,6 +34,9 @@ import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListState
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
@@ -364,6 +367,9 @@ class Account(
 
     val ephemeralChatListDecryptionCache = EphemeralChatListDecryptionCache(signer)
     val ephemeralChatList = EphemeralChatListState(signer, cache, ephemeralChatListDecryptionCache, scope, settings)
+
+    val relayGroupListDecryptionCache = RelayGroupListDecryptionCache(signer)
+    val relayGroupList = RelayGroupListState(signer, cache, relayGroupListDecryptionCache, scope, settings)
 
     val publicChatListDecryptionCache = PublicChatListDecryptionCache(signer)
     val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
@@ -1444,6 +1450,10 @@ class Account(
     suspend fun follow(channel: EphemeralChatChannel) = sendMyPublicAndPrivateOutbox(ephemeralChatList.follow(channel))
 
     suspend fun unfollow(channel: EphemeralChatChannel) = sendMyPublicAndPrivateOutbox(ephemeralChatList.unfollow(channel))
+
+    suspend fun follow(channel: RelayGroupChannel) = sendMyPublicAndPrivateOutbox(relayGroupList.follow(channel))
+
+    suspend fun unfollow(channel: RelayGroupChannel) = sendMyPublicAndPrivateOutbox(relayGroupList.unfollow(channel))
 
     suspend fun follow(community: AddressableNote) = sendMyPublicAndPrivateOutbox(communityList.follow(community))
 
