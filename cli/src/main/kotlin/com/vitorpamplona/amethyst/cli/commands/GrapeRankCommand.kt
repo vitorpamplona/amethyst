@@ -95,16 +95,18 @@ object GrapeRankCommand {
     private const val USER_BATCH = 256
 
     // Global content-drain fan-out — how many outbox batches we drain at once.
-    // This is now purely a GLOBAL bound (memory / open sockets); the per-relay
-    // concurrency limit is enforced separately and adaptively by
-    // [AdaptiveRelayLimiter] (drains run with gatePerRelay=true), which starts
-    // every relay at 100 concurrent subs and demotes only the ones that complain
-    // (100 → 20 → 10). Because a hot relay can no longer be flooded regardless of
-    // this number, we can fan out widely across the many well-behaved relays for
-    // throughput. RelayDiagnostics previously showed a blunt 24 caused
-    // rate-limited=1433 / "too many concurrent REQs"=1286; the adaptive cap
-    // targets exactly those relays instead of throttling everyone uniformly.
-    private const val DRAIN_CONCURRENCY = 48
+    // This is a GLOBAL bound (memory / open sockets); the per-relay concurrency
+    // limit is enforced separately and adaptively by [AdaptiveRelayLimiter]
+    // (drains run with gatePerRelay=true), which starts every relay at 100
+    // concurrent subs and demotes only the ones that complain (100 → 20 → 10).
+    // The two compose: at fan-out 24 a well-behaved relay runs at up to 24
+    // concurrent subs, while a relay that pushes back is cut to 20 then 10 —
+    // below the global bound, so the ladder actually bites. A higher global
+    // fan-out (measured at 48) *re-floods* the busy hubs faster than demotion
+    // catches up ("max concurrent subscription count reached" spikes) and
+    // regressed wall-time, so keep the global bound moderate and let the
+    // per-relay cap do the targeting.
+    private const val DRAIN_CONCURRENCY = 24
 
     // Sharded backbone sweep: instead of asking every popular relay for the
     // same full author list (N× redundant), split the still-missing authors
