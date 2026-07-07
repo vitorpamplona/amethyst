@@ -22,14 +22,12 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.cli.StoreStats
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
-import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit
-import kotlin.io.path.exists
 
 /**
  * `amy store <stat|sweep-expired|scrub|compact>` — direct introspection
@@ -69,70 +67,15 @@ object StoreCommands {
         )
 
     private fun stat(dataDir: DataDir): Int {
-        val storeRoot = dataDir.eventsDir.toPath()
-        if (!storeRoot.exists()) {
-            Output.emit(
-                mapOf(
-                    "events" to 0,
-                    "by_kind" to emptyMap<String, Long>(),
-                    "disk_bytes" to 0L,
-                    "oldest_at" to null,
-                    "newest_at" to null,
-                    "root" to storeRoot.toAbsolutePath().toString(),
-                ),
-            )
-            return 0
-        }
-
-        val eventsRoot = storeRoot.resolve("events")
-        var count = 0L
-        var oldest: Long? = null
-        var newest: Long? = null
-        if (Files.isDirectory(eventsRoot)) {
-            Files.walk(eventsRoot).use { stream ->
-                for (p in stream) {
-                    if (!Files.isRegularFile(p)) continue
-                    if (!p.fileName.toString().endsWith(".json")) continue
-                    count++
-                    val mt =
-                        try {
-                            Files.getLastModifiedTime(p).to(TimeUnit.SECONDS)
-                        } catch (_: IOException) {
-                            continue
-                        }
-                    val o = oldest
-                    if (o == null || mt < o) oldest = mt
-                    val n = newest
-                    if (n == null || mt > n) newest = mt
-                }
-            }
-        }
-
-        // Histogram from idx/kind/<k>/ — for a healthy store this is
-        // exactly one entry per (kind, event), so summing matches `count`.
-        // Mismatch points at index drift; run `amy store scrub` to fix.
-        val kindRoot = storeRoot.resolve("idx/kind")
-        val byKind = sortedMapOf<String, Long>()
-        if (Files.isDirectory(kindRoot)) {
-            Files.list(kindRoot).use { stream ->
-                for (kindDir in stream) {
-                    if (!Files.isDirectory(kindDir)) continue
-                    val n = Files.list(kindDir).use { it.count() }
-                    byKind[kindDir.fileName.toString()] = n
-                }
-            }
-        }
-
-        val diskBytes = walkSize(storeRoot)
-
+        val stats = StoreStats.of(dataDir.eventsDir.toPath())
         Output.emit(
             mapOf(
-                "events" to count,
-                "by_kind" to byKind,
-                "disk_bytes" to diskBytes,
-                "oldest_at" to oldest,
-                "newest_at" to newest,
-                "root" to storeRoot.toAbsolutePath().toString(),
+                "events" to stats.events,
+                "by_kind" to stats.byKind,
+                "disk_bytes" to stats.diskBytes,
+                "oldest_at" to stats.oldestAt,
+                "newest_at" to stats.newestAt,
+                "root" to stats.root.toString(),
             ),
         )
         return 0
@@ -218,23 +161,6 @@ object StoreCommands {
         } finally {
             store.close()
         }
-    }
-
-    private fun walkSize(root: Path): Long {
-        if (!Files.exists(root)) return 0L
-        var total = 0L
-        Files.walk(root).use { stream ->
-            for (p in stream) {
-                if (!Files.isRegularFile(p)) continue
-                total +=
-                    try {
-                        Files.size(p)
-                    } catch (_: IOException) {
-                        0L
-                    }
-            }
-        }
-        return total
     }
 
     private fun countEntries(dir: Path): Long {
