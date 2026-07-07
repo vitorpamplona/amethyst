@@ -55,7 +55,7 @@ object PublishCommand {
             return Output.error("invalid_event", "event id/signature does not verify — refusing to publish")
         }
 
-        Context.open(dataDir).use { ctx ->
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val targets = RawEventSupport.publishTargets(ctx, args)
             if (targets.isEmpty()) {

@@ -85,7 +85,8 @@ object BlossomCommands {
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
 
-        Context.open(dataDir).use { _ ->
+        // Read-only HEAD probe — no auth, so it runs anonymously without an account.
+        Context.openOrAnonymous(dataDir).use { _ ->
             val http = OkHttpClient()
             val results =
                 hashes.map { hash ->
@@ -188,7 +189,8 @@ object BlossomCommands {
         val server = args.flag("server")
         val url = if (server != null && !target.startsWith("http")) BlossomServerUrl.blob(server, target) else target
 
-        Context.open(dataDir).use { ctx ->
+        // Public download — no auth, so it runs anonymously without an account.
+        Context.openOrAnonymous(dataDir).use { ctx ->
             val bytes =
                 BlossomClient().download(url)
                     ?: return Output.error("not_found", "server returned no blob for $url")

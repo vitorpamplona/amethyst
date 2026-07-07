@@ -61,7 +61,10 @@ object FeedCommand {
         val until = args.flag("until")?.toLongOrNull()
         val timeoutSecs = args.longFlag("timeout", 8L)
 
-        Context.open(dataDir).use { ctx ->
+        // Read-only: runs anonymously when there is no account. `--author` /
+        // `--following` still work; the bare "self" feed just has no self to
+        // resolve without an account.
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
 
             val (authors, mode) =
