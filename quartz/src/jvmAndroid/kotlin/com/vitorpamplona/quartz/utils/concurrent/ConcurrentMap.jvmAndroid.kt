@@ -37,7 +37,11 @@ actual class ConcurrentMap<K : Any, V : Any> {
     actual fun getOrPut(
         key: K,
         defaultValue: () -> V,
-    ): V = map.computeIfAbsent(key) { defaultValue() }
+    ): V =
+        // Fast-path the present-key hit (the common case in the crawl's hot
+        // relay-hint accumulation) so it never allocates the mapping-function
+        // closure; only an absent key pays for the atomic computeIfAbsent.
+        map[key] ?: map.computeIfAbsent(key) { defaultValue() }
 
     actual fun merge(
         key: K,

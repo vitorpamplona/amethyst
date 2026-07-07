@@ -249,6 +249,7 @@ object GrapeRankCommand {
             val scoringMs = (System.nanoTime() - scoreStart) / 1_000_000
             System.err.println("[graperank] scored ${rankedIds.size} users in $scoringMs ms")
 
+            val hopHistogram = crawlStats?.hopHistogram.orEmpty()
             val result =
                 linkedMapOf<String, Any?>(
                     "observer" to observer,
@@ -256,8 +257,8 @@ object GrapeRankCommand {
                     "relays_contacted" to (crawlStats?.relaysContacted ?: 0),
                     "relay_feedback" to if (ctx.relayDiagnostics.hadFeedback()) ctx.relayDiagnostics.snapshot() else null,
                     "relay_throttling" to if (ctx.relayLimiter.hadThrottling()) ctx.relayLimiter.snapshot() else null,
-                    "max_hop_reached" to (crawlStats?.hopHistogram?.keys?.maxOrNull() ?: 0),
-                    "users_by_hop" to (crawlStats?.hopHistogram?.mapKeys { it.key.toString() } ?: emptyMap<String, Int>()),
+                    "max_hop_reached" to (hopHistogram.keys.maxOrNull() ?: 0),
+                    "users_by_hop" to hopHistogram.mapKeys { it.key.toString() },
                     "graph_users" to graph.nodeCount,
                     "graph_edges" to graph.edgeCount(),
                     "reports_deleted" to reportsDeleted,

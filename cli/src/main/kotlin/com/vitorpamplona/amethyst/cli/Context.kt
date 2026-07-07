@@ -38,7 +38,6 @@ import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
@@ -58,6 +57,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketF
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.verifyAndInsert
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
@@ -688,36 +688,17 @@ class Context(
     }
 
     /**
-     * Verify [event]'s NIP-01 id+signature and, if valid, persist it
-     * to [store]. Returns `true` when the event was accepted (and
-     * therefore should be surfaced to callers). Persistence failures
-     * (I/O errors, full disk) are logged but do not propagate.
+     * Verify [event]'s NIP-01 id+signature and, if valid, persist it to [store].
+     * Returns `true` when the event was accepted (and therefore should be surfaced
+     * to callers). Persistence failures (I/O errors, full disk) are logged but do
+     * not propagate; a UNIQUE-constraint rejection is normal and swallowed quietly.
      *
-     * Every event-arrival path in the CLI funnels through this method
-     * so that [store] is the authoritative cache of what Amy has seen.
+     * Every event-arrival path in the CLI funnels through this so that [store] is
+     * the authoritative cache of what Amy has seen. Delegates to the shared quartz
+     * [verifyAndInsert] sink so the CLI and the GrapeRank crawler apply the exact
+     * same verify-then-store policy.
      */
-    suspend fun verifyAndStore(event: Event): Boolean {
-        if (!event.verify()) {
-            System.err.println("[cli] dropped event ${event.id.take(8)} kind=${event.kind} — bad signature")
-            return false
-        }
-        try {
-            store.insert(event)
-        } catch (t: Throwable) {
-            // A UNIQUE-constraint rejection is normal, not a failure: the
-            // store already holds this id, or a newer version of a
-            // replaceable (kind 0/3/10000-19999). The outbox model routinely
-            // delivers the same event from several of a user's write relays,
-            // so a crawl produces these by the hundred-thousand. Only surface
-            // genuine persistence failures (I/O, full disk, corruption). The
-            // FS backend no-ops on such duplicates; this keeps the SQLite
-            // backend just as quiet.
-            if (t.message?.contains("UNIQUE constraint", ignoreCase = true) != true) {
-                System.err.println("[cli] store insert failed for ${event.id.take(8)}: ${t.message}")
-            }
-        }
-        return true
-    }
+    suspend fun verifyAndStore(event: Event): Boolean = store.verifyAndInsert(event)
 
     // ------------------------------------------------------------------
     // Cache-first reads from [store]

@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.experimental.graperank
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DrainFailure
@@ -32,12 +31,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.verifyAndInsert
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.SeenIds
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
@@ -115,10 +114,8 @@ class GrapeRankDataCrawler(
     /** What the crawl fetched — the counters the caller reports and the graph is built from. */
     class Stats(
         val rounds: Int,
-        val discovered: Int,
         val contactListsFed: Int,
         val relaysContacted: Int,
-        val deadRelays: Int,
         /** Users bucketed by follow-graph distance from the observer (hop -> count), ascending. */
         val hopHistogram: Map<Int, Int>,
         val downloadMs: Long,
@@ -135,20 +132,22 @@ class GrapeRankDataCrawler(
     ): Stats = CrawlRun(observer, builder).run()
 
     /**
-     * Holds all per-crawl mutable state. Graph state (discovered/done/hopOf/
-     * builder/writeRelayFreq/liveRelays/relaysContacted) is single-writer by
-     * construction — Phase A and the Phase-B consumer never run concurrently, and
-     * routeByOutbox (the only Phase-B producer write, to writeRelayFreq) touches a
-     * disjoint field — so those stay plain collections. Only the state genuinely
-     * shared across the producer / consumer / drain-worker coroutines is concurrent:
-     * relayHints, attempts, deadRelays, relayStrikes.
+     * Holds all per-crawl mutable state. Graph state (done/hopOf/builder/
+     * writeRelayFreq/liveRelays/relaysContacted) is single-writer by construction
+     * — Phase A and the Phase-B consumer never run concurrently, and routeByOutbox
+     * (the only Phase-B producer write, to writeRelayFreq) touches a disjoint field
+     * — so those stay plain collections. The frontier IS [hopOf]'s key set: a user
+     * is "discovered" iff it has a hop stamp. Only the state genuinely shared across
+     * the producer / consumer / drain-worker coroutines is concurrent: relayHints,
+     * attempts, deadRelays, relayStrikes.
      */
     private inner class CrawlRun(
         val observer: HexKey,
         val builder: TrustGraphBuilder,
     ) {
-        val hopOf = HashMap<HexKey, Int>()
-        val discovered = hashSetOf(observer)
+        // hop distance per discovered user; the observer seeds it at 0. Its key set
+        // is the discovered frontier — no separate `discovered` set to keep in sync.
+        val hopOf = hashMapOf(observer to 0)
         val done = hashSetOf<HexKey>()
         val relaysContacted = hashSetOf<NormalizedRelayUrl>()
         val writeRelayFreq = HashMap<NormalizedRelayUrl, Int>()
@@ -206,7 +205,7 @@ class GrapeRankDataCrawler(
             for (tag in contacts.follows()) {
                 follows.add(tag.pubKey)
                 tag.relayUri?.let { relayHints.getOrPut(tag.pubKey) { ConcurrentSet() }.add(it) }
-                if (discovered.add(tag.pubKey)) {
+                if (tag.pubKey !in hopOf) {
                     hopOf[tag.pubKey] = nextHop
                     fresh++
                 }
@@ -438,12 +437,11 @@ class GrapeRankDataCrawler(
             // Tier 2). SupervisorJob so one failing sweep never cancels the others;
             // cancelled when the crawl finishes.
             val bgScope = CoroutineScope(coroutineContext + SupervisorJob())
-            hopOf[observer] = 0
 
             while (rounds < config.maxRounds) {
                 // Only crawl users within the hop budget; deeper users still appear
                 // in the graph as follow targets, we just don't fetch their lists.
-                val pending = discovered.filter { it !in done && (hopOf[it] ?: 0) < config.maxHops }
+                val pending = hopOf.keys.filter { it !in done && (hopOf[it] ?: 0) < config.maxHops }
                 if (pending.isEmpty()) break
                 rounds++
 
@@ -454,7 +452,7 @@ class GrapeRankDataCrawler(
                     client.subscribe(WARM_SUB_ID, warm.associateWith { WARM_FILTERS }, null)
                 }
 
-                val discoveredBefore = discovered.size
+                val discoveredBefore = hopOf.size
                 val fedBefore = contactListsFed
 
                 // Phase A — bulk-fetch from the busiest relays via the sharded sweep.
@@ -477,8 +475,8 @@ class GrapeRankDataCrawler(
                     // no worker waits on a slow sibling and hot relays stay connected.
                     // Shared graph state stays single-writer: routeByOutbox runs only
                     // on the producer (keeps writeRelayFreq serial) and ingest runs
-                    // only on the consumer (keeps discovered/done/builder/hopOf serial),
-                    // now overlapped with draining instead of blocked behind each batch.
+                    // only on the consumer (keeps done/builder/hopOf serial), now
+                    // overlapped with draining instead of blocked behind each batch.
                     val routed = Channel<Pair<List<HexKey>, Map<NormalizedRelayUrl, List<Filter>>>>(DRAIN_CONCURRENCY * 2)
                     val drainedOut = Channel<Triple<List<HexKey>, Set<NormalizedRelayUrl>, List<Pair<NormalizedRelayUrl, Event>>>>(Channel.UNLIMITED)
                     coroutineScope {
@@ -535,8 +533,8 @@ class GrapeRankDataCrawler(
 
                 log(
                     "[graperank] round $rounds: pending=${pending.size}, " +
-                        "gotList=${contactListsFed - fedBefore}, newUsers=${discovered.size - discoveredBefore}, " +
-                        "discovered=${discovered.size}, done=${done.size}, dead=${deadRelays.size()}",
+                        "gotList=${contactListsFed - fedBefore}, newUsers=${hopOf.size - discoveredBefore}, " +
+                        "discovered=${hopOf.size}, done=${done.size}, dead=${deadRelays.size()}",
                 )
             }
 
@@ -560,16 +558,14 @@ class GrapeRankDataCrawler(
                     .toMap()
             val downloadMs = crawlMark.elapsedNow().inWholeMilliseconds
             log(
-                "[graperank] crawl complete: ${discovered.size} discovered, $contactListsFed contact lists fed, " +
+                "[graperank] crawl complete: ${hopOf.size} discovered, $contactListsFed contact lists fed, " +
                     "${relaysContacted.size} relays contacted, ${deadRelays.size()} dead, $rounds rounds in $downloadMs ms; " +
                     "by hop: " + hopHistogram.entries.joinToString(" ") { "${it.key}=${it.value}" },
             )
             return Stats(
                 rounds = rounds,
-                discovered = discovered.size,
                 contactListsFed = contactListsFed,
                 relaysContacted = relaysContacted.size,
-                deadRelays = deadRelays.size(),
                 hopHistogram = hopHistogram,
                 downloadMs = downloadMs,
             )
@@ -632,7 +628,7 @@ class GrapeRankDataCrawler(
                     val seen = SeenIds(initialSlotsPow2 = 12)
                     for ((relay, event) in eventChannel) {
                         if (seen.contains(event.id)) continue
-                        if (verifyAndStore(event)) {
+                        if (store.verifyAndInsert(event)) {
                             seen.add(event.id)
                             collected.add(relay to event)
                         }
@@ -709,28 +705,6 @@ class GrapeRankDataCrawler(
         }
         deadOut?.putAll(failures.snapshot())
         return collected
-    }
-
-    /**
-     * Verify [event]'s NIP-01 id+signature and, if valid, persist it to [store].
-     * Returns true when the event was accepted. A UNIQUE-constraint rejection is
-     * normal (the store already holds this id, or a newer replaceable) — the outbox
-     * model delivers the same event from several relays, so a crawl produces these
-     * by the hundred-thousand — so only genuine persistence failures are logged.
-     */
-    private suspend fun verifyAndStore(event: Event): Boolean {
-        if (!event.verify()) {
-            Log.w("GrapeRankDataCrawler") { "dropped event ${event.id.take(8)} kind=${event.kind} — bad signature" }
-            return false
-        }
-        try {
-            store.insert(event)
-        } catch (t: Throwable) {
-            if (t.message?.contains("UNIQUE constraint", ignoreCase = true) != true) {
-                Log.w("GrapeRankDataCrawler") { "store insert failed for ${event.id.take(8)}: ${t.message}" }
-            }
-        }
-        return true
     }
 
     /** Latest known kind:3 contact list for [pubKey] from the local store, or null. */
