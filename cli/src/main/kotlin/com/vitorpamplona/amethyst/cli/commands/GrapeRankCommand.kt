@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.experimental.graperank.GrapeRankParams
 import com.vitorpamplona.quartz.experimental.graperank.TrustGraphBuilder
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -95,6 +96,11 @@ object GrapeRankCommand {
 
     // Concurrent publishes when writing NIP-85 cards.
     private const val PUBLISH_CONCURRENCY = 16
+
+    // Addressable coordinates cited per kind:5 retraction. Each `a` tag is
+    // ~130 bytes (30382:<64hex>:<64hex>), so 500 keeps the deletion frame well
+    // under the common 256KB relay message cap.
+    private const val DELETE_PER_EVENT = 500
 
     // Times we re-query an unreachable user's outbox before giving up on it, so
     // the crawl still terminates on a finite graph.
@@ -176,6 +182,7 @@ object GrapeRankCommand {
         when (tail.firstOrNull()) {
             "register" -> register(dataDir, tail.drop(1).toTypedArray())
             "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
+            "operator" -> operator(dataDir, tail.drop(1).toTypedArray())
             else -> run(dataDir, tail)
         }
 
@@ -196,7 +203,10 @@ object GrapeRankCommand {
         val diagnose = args.bool("diagnose")
         val timeoutMs = args.longFlag("timeout", 10L) * 1000
         val doPublish = args.bool("publish")
-        val minRank = args.intFlag("min-rank", 1)
+        // Publish cutoff: only cards with rank >= this are published; existing
+        // cards for targets below it (or gone from the graph) are retracted. Rank
+        // is round(score*100), so 2 drops the ~0.015-and-below barely-trusted tail.
+        val minRank = args.intFlag("min-rank", 2)
         val publishLimit = args.intFlag("publish-limit", 500)
         val publishRelaysArg = args.flag("publish-relay")
         // Benchmark: build + sign one kind:30382 card per scored user (rank >=
@@ -647,44 +657,75 @@ object GrapeRankCommand {
                 )
 
             if (doPublish) {
+                // The cards for THIS observer are signed by a dedicated, stable
+                // per-observer service key derived from the machine's operator
+                // master (see OperatorKeys) — not the account key. Same key across
+                // runs means re-signing a card replaces the addressable prior one.
+                val opKeys = ctx.dataDir.operatorKeys()
+                val serviceKey = opKeys.serviceKey(observer)
+                val serviceSigner = NostrSignerInternal(serviceKey)
+                val providerPubkey = serviceKey.pubKey.toHexKey()
+                result["provider_pubkey"] = providerPubkey
+
+                // Cards go to the operator's own relay(s), where the whole
+                // trusted-assertion set lives; --publish-relay overrides.
                 val relays =
                     publishRelaysArg
                         ?.split(",")
                         ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
                         ?.toSet()
                         ?.takeIf { it.isNotEmpty() }
-                        ?: ctx.outboxRelays()
-
-                // The rank tag string already published for each target (read back
-                // from the store, which holds our own prior cards), newest per target.
-                val publishedRankValues = publishedRankTagValues(ctx)
-
-                val candidates =
-                    rankedIds
-                        .filter { rankOf(scores[it]) >= minRank }
-                        .map { graph.pubkeyOf(it) to rankOf(scores[it]) }
-                // Only sign a new card when the rank TAG VALUE STRING would change.
-                // `RankTag.assemble(rank)` writes `rank.toString()`, so we diff that
-                // exact string against the one on the newest stored card. Unchanged
-                // scores are skipped — no new event id — so clients that sync by id
-                // only ever download the ranks that actually moved.
-                val changed = candidates.filter { (target, rank) -> publishedRankValues[target] != rank.toString() }
-                val toPublish = changed.take(publishLimit)
-
-                result["skipped_unchanged"] = candidates.size - changed.size
-                if (changed.size > toPublish.size) {
-                    result["publish_truncated"] = changed.size - toPublish.size
-                }
+                        ?: opKeys.operatorRelays()
 
                 if (relays.isEmpty()) {
                     result["published"] = 0
-                    result["publish_error"] = "no publish relays configured"
+                    result["publish_error"] = "no operator relay configured — run `amy graperank operator relay <url>` or pass --publish-relay"
                 } else {
-                    val (ok, rejected) = publishCards(ctx, toPublish, relays)
+                    // Reconcile what the algorithm says should exist against what
+                    // this provider key has already published (newest card per
+                    // target, read back from the store).
+                    val existing = existingCards(ctx, providerPubkey)
+
+                    val publishable =
+                        rankedIds
+                            .filter { rankOf(scores[it]) >= minRank }
+                            .map { graph.pubkeyOf(it) to rankOf(scores[it]) }
+                    val publishableTargets = publishable.mapTo(HashSet()) { it.first }
+
+                    // Upsert: publishable targets whose rank tag STRING would change
+                    // (or that have no card yet). RankTag.assemble writes
+                    // rank.toString(), so we diff that exact string — an unchanged
+                    // score is skipped, so clients only sync ranks that moved.
+                    val changed = publishable.filter { (target, rank) -> existing[target]?.let(::rankTagValue) != rank.toString() }
+                    val toUpsert = changed.take(publishLimit)
+
+                    // Delete: existing cards whose target is no longer publishable —
+                    // it dropped out of the graph, or fell below the cutoff (e.g. a
+                    // rank-0/1 card we would no longer publish). We won't leave a
+                    // stale assertion standing, so we retract it with a kind:5.
+                    val toDelete = existing.filterKeys { it !in publishableTargets }.values.toList()
+
+                    result["skipped_unchanged"] = publishable.size - changed.size
+                    if (changed.size > toUpsert.size) {
+                        result["publish_truncated"] = changed.size - toUpsert.size
+                    }
+
+                    val (ok, rejected) = publishCards(ctx, serviceSigner, toUpsert, relays)
+                    val (deleted, deleteRejected) = publishDeletions(ctx, serviceSigner, toDelete, relays)
+
                     result["published"] = ok
                     result["publish_rejected"] = rejected
+                    result["deleted"] = deleted
+                    result["delete_rejected"] = deleteRejected
                     result["published_kind"] = ContactCardEvent.KIND
                     result["published_to"] = relays.map { it.url }
+
+                    // Help the observer point clients at this provider: publish their
+                    // kind:10040 (30382:rank -> providerPubkey @ operator relay) to
+                    // their outbox — but only when we actually hold their key.
+                    maybePublishObserverProviderList(ctx, observer, providerPubkey, relays.first())?.let {
+                        result["observer_10040"] = it
+                    }
                 }
             }
 
@@ -739,6 +780,60 @@ object GrapeRankCommand {
                     }
                 }.awaitAll()
                 .sum()
+        }
+    }
+
+    /**
+     * `amy graperank operator [status | relay <url>… | providers]`
+     *
+     * Manage the machine's operator keys used to sign trusted-assertion cards.
+     *  - `status` (default): master pubkey, configured relay(s), provider count.
+     *  - `relay <url>…`: set the operator relay(s) the cards + retractions publish
+     *    to; creates the operator master on first use.
+     *  - `providers`: the observer -> provider-pubkey mapping learned so far.
+     */
+    private fun operator(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val opKeys = dataDir.operatorKeys()
+        return when (rest.firstOrNull()) {
+            "relay" -> {
+                val urls = rest.drop(1).filter { it.isNotBlank() }
+                val normalized = urls.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                if (normalized.isEmpty()) return Output.error("bad_args", "usage: amy graperank operator relay <wss://…> [<wss://…> …]")
+                opKeys.setRelays(urls)
+                Output.emit(mapOf("master_pubkey" to opKeys.masterPubKey(), "relays" to normalized.map { it.url }))
+                0
+            }
+
+            "providers" -> {
+                Output.emit(
+                    mapOf(
+                        "master_pubkey" to if (opKeys.exists()) opKeys.masterPubKey() else null,
+                        "providers" to opKeys.providers().map { (observer, rec) -> mapOf("observer" to observer, "provider_pubkey" to rec.providerPubKey) },
+                    ),
+                )
+                0
+            }
+
+            null, "status" -> {
+                if (!opKeys.exists()) {
+                    Output.emit(mapOf("initialized" to false))
+                } else {
+                    Output.emit(
+                        mapOf(
+                            "initialized" to true,
+                            "master_pubkey" to opKeys.masterPubKey(),
+                            "relays" to opKeys.operatorRelays().map { it.url },
+                            "providers" to opKeys.providers().size,
+                        ),
+                    )
+                }
+                0
+            }
+
+            else -> Output.error("bad_args", "unknown operator subcommand '${rest.first()}' (status | relay | providers)")
         }
     }
 
@@ -1133,26 +1228,34 @@ object GrapeRankCommand {
      * a `rank` tag (plus the d-tag target), so this single tag's value fully
      * decides whether the event would differ — see the publish gate.
      */
-    private suspend fun publishedRankTagValues(ctx: Context): Map<HexKey, String> {
-        val self = ctx.identity.pubKeyHex
-        return ctx.store
-            .query<Event>(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(self)))
+    private suspend fun existingCards(
+        ctx: Context,
+        providerPubkey: HexKey,
+    ): Map<HexKey, ContactCardEvent> =
+        ctx.store
+            .query<Event>(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(providerPubkey)))
             .filterIsInstance<ContactCardEvent>()
             .groupBy { it.aboutUser() }
             .mapNotNull { (target, cards) ->
                 val t = target ?: return@mapNotNull null
-                val newest = cards.maxByOrNull { it.createdAt } ?: return@mapNotNull null
-                val rankValue =
-                    newest.tags.firstNotNullOfOrNull { tag ->
-                        if (tag.size > 1 && tag[0] == RankTag.TAG_NAME) tag[1] else null
-                    } ?: return@mapNotNull null
-                t to rankValue
+                t to (cards.maxByOrNull { it.createdAt } ?: return@mapNotNull null)
             }.toMap()
-    }
 
-    /** Build + publish one NIP-85 kind:30382 card per user, bounded-concurrently. */
+    /**
+     * The raw `rank` tag value string on a card — what a client diffs. We compare
+     * this against `rank.toString()` (what RankTag.assemble writes) so an unchanged
+     * score never produces a new signature. Our cards carry only a `rank` tag (plus
+     * the d-tag target), so this one value decides whether the event would differ.
+     */
+    private fun rankTagValue(card: ContactCardEvent): String? =
+        card.tags.firstNotNullOfOrNull { tag ->
+            if (tag.size > 1 && tag[0] == RankTag.TAG_NAME) tag[1] else null
+        }
+
+    /** Build + publish one NIP-85 kind:30382 card per user, bounded-concurrently, signed by [signer]. */
     private suspend fun publishCards(
         ctx: Context,
+        signer: NostrSigner,
         cards: List<Pair<HexKey, Int>>,
         relays: Set<NormalizedRelayUrl>,
     ): Pair<Int, Int> {
@@ -1167,7 +1270,7 @@ object GrapeRankCommand {
                                 val card =
                                     ContactCardEvent.create(
                                         targetUser = pubkey,
-                                        signer = ctx.signer,
+                                        signer = signer,
                                         publicInitializer = { add(RankTag.assemble(rank)) },
                                     )
                                 ctx.publish(card, relays)
@@ -1179,5 +1282,63 @@ object GrapeRankCommand {
             }
         }
         return published to rejected
+    }
+
+    /**
+     * Retract stale cards with NIP-09 kind:5 deletions signed by [signer] (the same
+     * service key that signed the cards). Batches several addressable coordinates
+     * per deletion — chunked so the kind:5 frame stays under the relay message cap —
+     * and each carries the card's `a` tag (30382:provider:target), so re-publishing
+     * a newer version later isn't blocked. Returns (deleted, rejected) card counts.
+     */
+    private suspend fun publishDeletions(
+        ctx: Context,
+        signer: NostrSigner,
+        cards: List<ContactCardEvent>,
+        relays: Set<NormalizedRelayUrl>,
+    ): Pair<Int, Int> {
+        if (cards.isEmpty()) return 0 to 0
+        var deleted = 0
+        var rejected = 0
+        for (chunk in cards.chunked(DELETE_PER_EVENT)) {
+            val event = signer.sign(DeletionEvent.build(chunk))
+            val ack = ctx.publish(event, relays)
+            if (ack.values.any { it }) deleted += chunk.size else rejected += chunk.size
+        }
+        return deleted to rejected
+    }
+
+    /**
+     * If the active account IS the observer (so we hold their key), publish/refresh
+     * their kind:10040 declaring `30382:rank` -> [providerPubkey] at [relay], to
+     * their own outbox relays — the NIP-85 pointer a client follows to find these
+     * cards. Returns the 10040 event id, or null when we don't hold the key (a
+     * third-party observer must add the provider to their 10040 out-of-band).
+     */
+    private suspend fun maybePublishObserverProviderList(
+        ctx: Context,
+        observer: HexKey,
+        providerPubkey: HexKey,
+        relay: NormalizedRelayUrl,
+    ): String? {
+        if (observer != ctx.identity.pubKeyHex) return null
+        val service = ProviderTypes.rank
+        val outbox = ctx.outboxRelays()
+        val latest = fetchLatestProviderList(ctx, observer, outbox, 8_000)
+        val alreadyListed =
+            latest?.serviceProviders()?.any {
+                it.service == service && it.pubkey == providerPubkey && it.relayUrl == relay
+            } ?: false
+        if (alreadyListed) return latest?.id
+
+        val tag = ServiceProviderTag(service, providerPubkey, relay)
+        val event =
+            if (latest == null) {
+                TrustProviderListEvent.create(tag, isPrivate = false, signer = ctx.signer)
+            } else {
+                TrustProviderListEvent.add(latest, tag, isPrivate = false, signer = ctx.signer)
+            }
+        ctx.publish(event, outbox)
+        return event.id
     }
 }
