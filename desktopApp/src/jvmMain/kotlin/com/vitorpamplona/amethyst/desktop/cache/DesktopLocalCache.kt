@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -303,10 +304,42 @@ class DesktopLocalCache : ICacheProvider {
                 consumeComment(event, relay)
             }
 
+            is AdvertisedRelayListEvent -> {
+                consumeAdvertisedRelayList(event, relay)
+            }
+
             else -> {
                 false
             }
         }
+
+    /**
+     * Consumes a kind 10002 (NIP-65) advertised relay list event. Stores
+     * the newest per-author copy in [addressableNotes] so the outbox
+     * dispatcher can look up each follow's declared write relays without
+     * a fresh REQ. Emits nothing to the event stream — the UI doesn't
+     * render kind 10002s directly.
+     */
+    private fun consumeAdvertisedRelayList(
+        event: AdvertisedRelayListEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val addressableNote = getOrCreateAddressableNote(event.address())
+        val existing = addressableNote.event
+        if (existing != null && existing.createdAt >= event.createdAt) return false
+        val author = getOrCreateUser(event.pubKey)
+        addressableNote.loadEvent(event, author, emptyList())
+        relay?.let { addressableNote.addRelay(it) }
+        return false
+    }
+
+    /**
+     * Returns the cached kind-10002 event for [pubkey], if any. Used by the
+     * outbox dispatcher to skip a Phase-1 REQ for authors whose write-relay
+     * list is already in the store (from a previous session's local relay
+     * hydration or an in-session discovery).
+     */
+    fun cachedAdvertisedRelayList(pubkey: HexKey): AdvertisedRelayListEvent? = addressableNotes.get(AdvertisedRelayListEvent.createAddress(pubkey).toValue())?.event as? AdvertisedRelayListEvent
 
     /**
      * Consumes a kind 1 text note event.
