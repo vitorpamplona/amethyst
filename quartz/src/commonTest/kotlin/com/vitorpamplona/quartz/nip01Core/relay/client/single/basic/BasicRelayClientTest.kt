@@ -72,13 +72,15 @@ class BasicRelayClientTest {
     }
 
     @Test
-    fun onFailureWithMessageKeepsExistingFormat() {
+    fun onFailureWithMessageAppendsExceptionClassName() {
         val (socket, listener) = connectAndCapture()
 
         socket.onFailure(Exception("Connection reset"), null, null)
 
+        // The exception type is appended so listeners can classify the failure by
+        // its stable class name rather than by localized message text.
         assertEquals(
-            listOf("WebSocket Failure: Connection reset"),
+            listOf("WebSocket Failure: Connection reset (Exception)"),
             listener.cannotConnectMessages,
         )
     }
