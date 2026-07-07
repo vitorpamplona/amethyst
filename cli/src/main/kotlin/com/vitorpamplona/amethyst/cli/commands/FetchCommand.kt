@@ -36,7 +36,8 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 /**
  * `amy fetch [--kind …] [--author …] [--id …] [--tag …] [--since/--until TS]
- *            [--limit N] [--search TEXT] [--relay URL[,URL…]] [--timeout SECS]`
+ *            [--limit N] [--search TEXT] [--relay URL[,URL…]] [--timeout SECS]
+ *            [--paginate]`
  *
  *   amy fetch <nevent1…|naddr1…|nprofile1…|npub1…|note1…|name@domain>
  *
@@ -51,40 +52,69 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
  *    NIP-65 write relays, exactly how the app downloads an event/profile from
  *    a shared link. This is nak's `fetch` (nip19-hint resolution).
  *
- * Results are deduplicated by id, sorted newest-first, capped at `--limit`
- * (default 100), and emitted as full event JSON under an `events` array.
+ * Results are deduplicated by id, sorted newest-first, capped at `--limit` (default
+ * 100 — the SAME on both paths), and emitted as full event JSON under an `events`
+ * array. `--limit 0` removes the cap entirely.
+ *
+ * By default (filter mode) a single `REQ` is drained to EOSE — so a relay that caps
+ * its response (strfry's per-`REQ` `limit`, ~500) truncates the result. `--paginate`
+ * (alias `--all`) instead walks each relay page-by-page on `until` cursors via the
+ * multi-relay [Context.drainAllPages] path, fully draining sets larger than one
+ * `REQ`. Both honor the same limit: `--limit N` returns the newest N, absent is 100,
+ * and `--limit 0` is unbounded — combined with `--paginate` that drains the entire
+ * filter, so mind broad filters. Code mode is always single-shot.
  */
 object FetchCommand {
+    /** Output/paging cap for a fetch (either path) when `--limit` is omitted. */
+    private const val DEFAULT_LIMIT = 100
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val limit = args.flag("limit")?.toIntOrNull() ?: 100
-        if (limit <= 0) return Output.error("bad_args", "--limit must be > 0")
+        // `--limit`: omitted → DEFAULT_LIMIT on BOTH the plain and --paginate paths;
+        // `0` → unbounded (drain everything — only useful with --paginate); negative
+        // → error. `effectiveLimit == null` means "no cap".
+        val explicitLimit = args.flag("limit")?.toIntOrNull()
+        if (explicitLimit != null && explicitLimit < 0) return Output.error("bad_args", "--limit must be >= 0 (0 = unbounded)")
+        val effectiveLimit: Int? = if (explicitLimit == 0) null else (explicitLimit ?: DEFAULT_LIMIT)
         val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 8L) * 1000
 
         // Code mode: a nip19/nip05 positional resolves its own relays via the
-        // outbox model rather than using a hand-built filter.
+        // outbox model rather than using a hand-built filter. It fetches a single
+        // entity, so it just uses the (positive) default cap.
         args.positionalOrNull(0)?.takeIf { looksLikeCode(it) }?.let {
-            return fetchByCode(dataDir, it, limit, timeoutMs)
+            return fetchByCode(dataDir, it, effectiveLimit ?: DEFAULT_LIMIT, timeoutMs)
         }
 
-        val filter = RawEventSupport.buildFilter(args)
+        // Carry the effective limit on the filter so both paths agree: --paginate
+        // pages each relay up to it (or fully drains the filter when unbounded) and a
+        // plain fetch asks the relay for that many.
+        val filter = RawEventSupport.buildFilter(args).copy(limit = effectiveLimit)
+        val paginate = args.bool("paginate") || args.bool("all")
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val relays = RawEventSupport.queryTargets(ctx, args)
             if (relays.isEmpty()) return Output.error("no_relays", "no relays available; pass --relay or run `amy relay add`")
 
-            val received = ctx.drain(relays.associateWith { listOf(filter) }, timeoutMs)
-            val events =
+            val received =
+                if (paginate) {
+                    ctx.drainAllPages(relays.associateWith { listOf(filter) }, timeoutMs)
+                } else {
+                    ctx.drain(relays.associateWith { listOf(filter) }, timeoutMs)
+                }
+            val ordered =
                 received
                     .asSequence()
                     .map { it.second }
                     .distinctBy { it.id }
                     .sortedByDescending { it.createdAt }
-                    .take(limit)
+            // effectiveLimit caps the output on both paths; null (--limit 0) is uncapped.
+            val capped = if (effectiveLimit != null) ordered.take(effectiveLimit) else ordered
+            val events =
+                capped
                     .map { Output.mapper.readTree(it.toJson()) }
                     .toList()
 

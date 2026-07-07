@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -69,9 +70,12 @@ import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
+import com.vitorpamplona.quartz.utils.SeenIds
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
@@ -475,6 +479,67 @@ class Context(
             client.unsubscribe(subId)
             eventChannel.close()
             doneChannel.close()
+        }
+        return collected
+    }
+
+    /**
+     * Like [drain], but paginates every relay to completion via
+     * [fetchAllPagesFromPool] instead of stopping at the first EOSE — so a query
+     * larger than a relay's per-`REQ` cap (strfry's `limit`, ~500) is fully
+     * retrieved instead of silently truncated. Each relay is walked on its own
+     * `until` cursor, up to [maxConcurrentRelays] at once, and every event funnels
+     * through [verifyAndStore]; the result is tagged by the relay that first
+     * delivered it. Unlike [drain], it IS deduped across relays: the same
+     * widely-mirrored event arrives once per relay, and the repeats are dropped by a
+     * [SeenIds] filter BEFORE the expensive verify+store — an id is marked seen only
+     * after it verifies, so a forged copy (valid id, bad signature) delivered first
+     * can't suppress the genuine one from another relay.
+     *
+     * Bound the work with the filters' `limit`: each relay pages until it reaches
+     * the limit, so an unbounded filter pages that relay's entire matching history.
+     * A `search` filter is fetched as a single relevance-ranked page (see
+     * [com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages]).
+     */
+    suspend fun drainAllPages(
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
+        timeoutMs: Long = 30_000,
+        maxConcurrentRelays: Int = 8,
+    ): List<Pair<NormalizedRelayUrl, Event>> {
+        if (filters.isEmpty()) return emptyList()
+        val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
+        // fetchAllPages' onEvent can't suspend, but verifyAndStore does — bridge
+        // through a channel and verify+store single-threaded in one consumer so the
+        // store writes stay serialized (same shape as `drain`).
+        val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
+        coroutineScope {
+            val consumer =
+                launch {
+                    // One writer → SeenIds' single-writer contract holds. Skip a
+                    // cross-relay duplicate before verifying it; mark it seen only once
+                    // it verifies so a bad-sig copy can't pre-empt a good one. Start
+                    // small (CLI fetches are typically hundreds of events); it grows if
+                    // an unbounded drain needs it, rather than eagerly taking the
+                    // large-walk default table.
+                    val seen = SeenIds(initialSlotsPow2 = 12)
+                    for ((relay, event) in eventChannel) {
+                        if (seen.contains(event.id)) continue
+                        if (verifyAndStore(event)) {
+                            seen.add(event.id)
+                            collected.add(relay to event)
+                        }
+                    }
+                }
+            try {
+                client.fetchAllPagesFromPool(
+                    filters = filters,
+                    timeoutMs = timeoutMs,
+                    maxConcurrentRelays = maxConcurrentRelays,
+                ) { event, relay -> eventChannel.trySend(relay to event) }
+            } finally {
+                eventChannel.close()
+            }
+            consumer.join()
         }
         return collected
     }
