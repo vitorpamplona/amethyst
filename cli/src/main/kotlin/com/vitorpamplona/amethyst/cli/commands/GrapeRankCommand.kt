@@ -81,9 +81,6 @@ object GrapeRankCommand {
     // Concurrent publishes when writing NIP-85 cards.
     private const val PUBLISH_CONCURRENCY = 16
 
-    // Emit a scoring-progress line every this many worklist visits.
-    private const val SCORE_PROGRESS_STEP = 5_000
-
     // Times we re-query an unreachable user's outbox before giving up on it, so
     // the crawl still terminates on a finite graph.
     private const val MAX_OUTBOX_ATTEMPTS = 3
@@ -395,15 +392,16 @@ object GrapeRankCommand {
             val buildMs = (System.nanoTime() - buildStart) / 1_000_000
             System.err.println("[graperank] graph built: ${graph.nodeCount} users, ${graph.edgeCount()} edges in $buildMs ms; scoring…")
 
-            // Live scoring progress: the worklist visits each reachable user once per
-            // relaxation; report every SCORE_PROGRESS_STEP visits so a large graph shows
-            // movement instead of hanging silently.
+            // Live scoring progress: fires once per Gauss-Seidel sweep with the
+            // running node-update count and how many nodes still moved more than the
+            // convergence delta this sweep — that second number trends to 0, so a
+            // large graph shows convergence instead of hanging silently.
             val scoreStart = System.nanoTime()
+            var sweeps = 0
             val scores =
-                GrapeRank(params).compute(graph, observer) { visited, queued ->
-                    if (visited % SCORE_PROGRESS_STEP == 0L) {
-                        System.err.println("[graperank] scoring: $visited visited, $queued queued")
-                    }
+                GrapeRank(params).compute(graph, observer) { visited, stillMoving ->
+                    sweeps++
+                    System.err.println("[graperank] scoring sweep $sweeps: $visited node-updates, $stillMoving still moving")
                 }
 
             fun rankOf(score: Double) = (score * 100).roundToInt()
@@ -436,6 +434,7 @@ object GrapeRankCommand {
                     "store_load_ms" to storeLoadMs,
                     "graph_build_ms" to buildMs,
                     "scoring_ms" to scoringMs,
+                    "scoring_sweeps" to sweeps,
                     "scores" to
                         rankedIds.take(limit).map {
                             mapOf("pubkey" to graph.pubkeyOf(it), "score" to scores[it], "rank" to rankOf(scores[it]))
