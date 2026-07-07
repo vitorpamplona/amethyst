@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemC
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveActivityChannelScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.share.ShareToDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
@@ -546,6 +547,17 @@ fun BuildNavigation(
 
         composableFromEndArgs<Route.EphemeralChat> {
             EphemeralChatScreen(
+                id = it.id,
+                relayUrl = it.relayUrl,
+                draftId = it.draftId,
+                replyToId = it.replyTo,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.RelayGroup> {
+            RelayGroupChatScreen(
                 id = it.id,
                 relayUrl = it.relayUrl,
                 draftId = it.draftId,

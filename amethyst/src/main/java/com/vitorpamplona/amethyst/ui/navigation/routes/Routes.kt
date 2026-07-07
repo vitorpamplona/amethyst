@@ -637,6 +637,13 @@ sealed class Route {
 
     @Serializable object NewEphemeralChat : Route()
 
+    @Serializable data class RelayGroup(
+        val id: String,
+        val relayUrl: String,
+        val draftId: HexKey? = null,
+        val replyTo: HexKey? = null,
+    ) : Route()
+
     @Serializable data class ChannelMetadataEdit(
         val id: String? = null,
     ) : Route()

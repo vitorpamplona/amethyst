@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
@@ -84,6 +85,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip28PublicChat.base.notify
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
@@ -98,6 +100,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip92IMeta.imetas
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
@@ -532,6 +535,24 @@ open class ChannelNewMessageViewModel :
                     channel.roomId.relayUrl,
                     channel.roomId.id,
                 ) {
+                    hashtags(findHashtags(tagger.message))
+                    references(findURLs(tagger.message))
+                    quotes(findNostrUris(tagger.message))
+                    contentWarningReason?.let { contentWarning(it) }
+                    localExpirationDate?.let { expiration(it) }
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                }
+            }
+
+            channel is RelayGroupChannel -> {
+                // NIP-29 group message: a kind-9 chat scoped to the group with an
+                // `h` tag. The event is published only to the group's host relay
+                // (channel.relays()), where relay29 authorizes and routes it.
+                ChatEvent.build(tagger.message) {
+                    hTag(channel.groupId.id)
+
                     hashtags(findHashtags(tagger.message))
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))

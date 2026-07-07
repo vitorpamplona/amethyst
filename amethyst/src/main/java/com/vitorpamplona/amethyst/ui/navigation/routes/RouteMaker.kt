@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.navigation.routes
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -44,6 +45,7 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
@@ -256,6 +258,10 @@ fun routeFor(note: PublicChatChannel): Route = Route.PublicChatChannel(note.idHe
 fun routeFor(note: LiveActivitiesChannel): Route = Route.LiveActivityChannel(note.address.kind, note.address.pubKeyHex, note.address.dTag)
 
 fun routeFor(roomId: RoomId): Route = Route.EphemeralChat(roomId.id, roomId.relayUrl.url)
+
+fun routeFor(note: RelayGroupChannel): Route = Route.RelayGroup(note.groupId.id, note.groupId.relayUrl.url)
+
+fun routeFor(groupId: GroupId): Route = Route.RelayGroup(groupId.id, groupId.relayUrl.url)
 
 fun routeFor(user: User): Route.Profile = Route.Profile(user.pubkeyHex)
 
