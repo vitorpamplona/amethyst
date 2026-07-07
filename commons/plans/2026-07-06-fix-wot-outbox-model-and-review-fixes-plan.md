@@ -1,7 +1,7 @@
 ---
 title: WoT fetch via outbox model + PR #3483 review fixes
 type: fix
-status: active
+status: completed
 date: 2026-07-06
 origin: PR https://github.com/vitorpamplona/amethyst/pull/3483 review comments (Vitor Pamplona, davotoula)
 ---
