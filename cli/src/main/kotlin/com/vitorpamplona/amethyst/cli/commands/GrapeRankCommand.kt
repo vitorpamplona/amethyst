@@ -123,6 +123,12 @@ object GrapeRankCommand {
         val offline = args.bool("offline")
         val diagnose = args.bool("diagnose")
         val timeoutMs = args.longFlag("timeout", 10L) * 1000
+        // A relay still streaming when --timeout elapses is PARKED, not cut: it keeps
+        // delivering for up to --park-timeout more while the round moves on, and its
+        // late contact lists fold into a later round. This is how the crawl waits for
+        // slow-but-alive relays for completeness without paying that wait per round.
+        // Set <= --timeout to disable parking (old cut-at-timeout behaviour).
+        val parkTimeoutMs = args.longFlag("park-timeout", 40L) * 1000
         // How many verified events the crawler group-commits per store write. 1
         // forces the per-event insert path (baseline); higher amortizes the SQLite
         // transaction + writer-mutex cost across the batch.
@@ -188,6 +194,7 @@ object GrapeRankCommand {
                                 maxRounds = maxRounds,
                                 maxHops = maxHops,
                                 timeoutMs = timeoutMs,
+                                parkTimeoutMs = parkTimeoutMs,
                                 diagnose = diagnose,
                                 insertBatchSize = insertBatch,
                                 drainConcurrency = drainConcurrency,
@@ -271,6 +278,7 @@ object GrapeRankCommand {
                     "insert_ms" to crawlStats?.insertMs,
                     "events_stored" to crawlStats?.eventsStored,
                     "insert_batch" to insertBatch,
+                    "park_timeout_ms" to parkTimeoutMs,
                     "store_load_ms" to storeLoadMs,
                     "graph_build_ms" to buildMs,
                     "scoring_ms" to scoringMs,

@@ -111,7 +111,16 @@ class GrapeRankDataCrawler(
      *   user's kind:3/10000/1984 when their outbox is unknown or unreachable.
      * @param maxRounds safety backstop on freshness passes (default: run to convergence).
      * @param maxHops follow-graph distance from the observer to crawl (Brainstorm uses 8).
-     * @param timeoutMs per-drain timeout.
+     * @param timeoutMs the FAST per-drain timeout that gates a round's progression.
+     *   A relay that reaches EOSE/CLOSED inside it resolves its authors this round;
+     *   one still streaming is not cut but PARKED (see [parkTimeoutMs]) so the round
+     *   moves on without waiting for it. Keep this short — it is the round cadence.
+     * @param parkTimeoutMs how long a parked (slow-but-alive) relay is allowed to
+     *   keep delivering after it blew [timeoutMs]. Its late events are persisted and
+     *   its late contact lists folded into the graph in a later round, so the crawl
+     *   waits for slow relays for completeness WITHOUT paying that wait in the
+     *   round's wall-clock. Parked sockets are bounded by the slow-relay population,
+     *   not the whole fan-out. Set `<= timeoutMs` to disable parking.
      * @param diagnose log a breakdown of slow/unreachable relays on each drain timeout.
      * @param insertBatchSize how many verified events to group-commit per
      *   [IEventStore.batchInsert]. The outbox model streams the same events from
@@ -130,6 +139,7 @@ class GrapeRankDataCrawler(
         val maxRounds: Int = Int.MAX_VALUE,
         val maxHops: Int = Int.MAX_VALUE,
         val timeoutMs: Long = 10_000,
+        val parkTimeoutMs: Long = 40_000,
         val diagnose: Boolean = false,
         val insertBatchSize: Int = 500,
         val drainConcurrency: Int = 24,
@@ -209,6 +219,24 @@ class GrapeRankDataCrawler(
         // only against relays that could plausibly still have it (never-asked, or
         // ones that timed out — which unlike a clean EOSE might just be slow).
         val askedEmpty = ConcurrentMap<HexKey, ConcurrentSet<NormalizedRelayUrl>>()
+
+        // Contact lists delivered LATE by parked (slow-but-alive) relays. A parked
+        // unit persists its events, then pushes any kind:3 it found here; the round
+        // loop (the single graph-writer) folds these into hopOf/done/builder between
+        // rounds, so a slow relay's follows still expand the frontier — just a round
+        // or two later than the fast ones. Unbounded: parked delivery must never
+        // block on the round loop draining it.
+        val lateHarvest = Channel<Pair<NormalizedRelayUrl, Event>>(Channel.UNLIMITED)
+
+        // Parked units still streaming. The crawl isn't done until this hits 0 (and
+        // the frontier is empty), so we wait for slow relays' completeness without
+        // gating each round on them. Incremented when a unit parks, decremented when
+        // it finishes (or its park window elapses).
+        val parkedInFlight = AtomicLong(0)
+
+        // Background scope owning the parked subscriptions (and Tier-2 relay-list
+        // sweeps). Set in [run]; cancelled once the crawl converges.
+        var bgScope: CoroutineScope? = null
 
         var rounds = 0
         var contactListsFed = 0
@@ -321,7 +349,7 @@ class GrapeRankDataCrawler(
                                         val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
                                         val filters =
                                             mapOf(relay to shard.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = FETCH_KINDS, authors = it) })
-                                        drainGated(filters, dead, seenIds) to dead
+                                        drainGated(filters, dead) to dead
                                     }
                                 }
                             }.awaitAll()
@@ -347,7 +375,7 @@ class GrapeRankDataCrawler(
                     val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
                     val filters =
                         live.associateWith { missing.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = FETCH_KINDS, authors = it) } }
-                    val events = drainGated(filters, dead, seenIds)
+                    val events = drainGated(filters, dead)
                     recordDead(dead)
                     relaysContacted += live
                     for ((relay, _) in events) liveRelays.add(relay)
@@ -390,7 +418,7 @@ class GrapeRankDataCrawler(
                             Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = chunk)
                         }
                     }
-                drainGated(filters, null, seenIds)
+                drainGated(filters, null)
             }
 
             val discovery = config.relayListDiscoveryRelays
@@ -441,7 +469,7 @@ class GrapeRankDataCrawler(
                         }
                     }
                 }
-            drainGated(filters, null, seenIds)
+            drainGated(filters, null)
         }
 
         /**
@@ -488,18 +516,285 @@ class GrapeRankDataCrawler(
             }
         }
 
+        /**
+         * Dedup (crawl-wide [seenIds]), verify, and group-commit a unit's events,
+         * returning the newly-stored ones tagged by relay. Safe to call concurrently
+         * from many fast drain units AND parked coroutines: an id is added to
+         * [seenIds] only AFTER a good signature (so a forged copy delivered first
+         * can't suppress the genuine one), and [ConcurrentSet.add] is an atomic
+         * test-and-set — two relays mirroring the same event race on it and only the
+         * winner stores it, so a duplicate never reaches the store's UNIQUE constraint.
+         * The store serializes the actual writes behind its own single-writer mutex.
+         */
+        private suspend fun persist(events: List<Pair<NormalizedRelayUrl, Event>>): List<Pair<NormalizedRelayUrl, Event>> {
+            if (events.isEmpty()) return emptyList()
+            val flushAt = config.insertBatchSize.coerceAtLeast(1)
+            val fresh = ArrayList<Pair<NormalizedRelayUrl, Event>>()
+            val buffer = ArrayList<Event>(flushAt)
+
+            suspend fun flush() {
+                if (buffer.isEmpty()) return
+                val mark = TimeSource.Monotonic.markNow()
+                store.batchInsert(buffer)
+                insertNanos.addAndFetch(mark.elapsedNow().inWholeNanoseconds)
+                eventsStored.addAndFetch(buffer.size.toLong())
+                buffer.clear()
+            }
+
+            for ((relay, event) in events) {
+                if (event.id in seenIds) continue
+                val vMark = TimeSource.Monotonic.markNow()
+                val ok = event.verify()
+                verifyNanos.addAndFetch(vMark.elapsedNow().inWholeNanoseconds)
+                if (!ok) {
+                    Log.w("GrapeRankDataCrawler") { "dropped event ${event.id.take(8)} kind=${event.kind} — bad signature" }
+                    continue
+                }
+                if (!seenIds.add(event.id)) continue // lost the race to a mirror; it stores it
+                fresh.add(relay to event)
+                buffer.add(event)
+                if (buffer.size >= flushAt) flush()
+            }
+            flush()
+            return fresh
+        }
+
+        /**
+         * Fold one late-delivered event from a parked relay into the graph. Only the
+         * round loop calls this (directly or via [foldLateHarvest]), so graph state
+         * stays single-writer. Returns true if it fed a new contact list.
+         */
+        private suspend fun ingestLate(
+            relay: NormalizedRelayUrl,
+            ev: Event,
+        ): Boolean {
+            liveRelays.add(relay)
+            if (ev !is ContactListEvent) return false
+            val pk = ev.pubKey
+            // Only authors we actually crawled (in hopOf) and haven't fed yet. A late
+            // list for an unknown author would get a wrong hop stamp from ingest.
+            if (pk in done || pk !in hopOf) return false
+            val contacts = contactsOf(pk) ?: return false
+            done += pk
+            ingest(pk, contacts)
+            return true
+        }
+
+        /** Drain whatever parked relays have delivered so far. Returns lists fed. */
+        private suspend fun foldLateHarvest(): Int {
+            var got = 0
+            while (true) {
+                val (relay, ev) = lateHarvest.tryReceive().getOrNull() ?: break
+                if (ingestLate(relay, ev)) got++
+            }
+            return got
+        }
+
+        /**
+         * Subscribe each relay to its filters behind [limiter] and drain them. A relay
+         * that reaches a terminal (EOSE/CLOSED/cannot-connect) within the FAST
+         * [Config.timeoutMs] has its events persisted and returned so this round can
+         * resolve the authors it was asked for. A relay still streaming when the fast
+         * timeout elapses is not cut but PARKED: it hands its open subscription to
+         * [bgScope] (releasing its limiter permit so the fast pool moves on) and keeps
+         * receiving for up to [Config.parkTimeoutMs] more; whatever it eventually
+         * delivers is persisted and its contact lists pushed to [lateHarvest] for the
+         * round loop to fold in — so slow relays add completeness without holding up
+         * the round. Each relay's filters are split into REQ-sized groups so a popular
+         * relay routed thousands of authors doesn't emit a frame most relays reject.
+         * Hard connect failures (fast into [deadOut], parked straight to [recordDead])
+         * are marked dead. Returns only the FAST events, tagged by relay.
+         */
+        private suspend fun drainGated(
+            filters: Map<NormalizedRelayUrl, List<Filter>>,
+            deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>?,
+            answeredOut: MutableSet<NormalizedRelayUrl>? = null,
+        ): List<Pair<NormalizedRelayUrl, Event>> {
+            if (filters.isEmpty()) return emptyList()
+
+            // Split each relay's filters into REQ-sized groups. A REQ frame carries ALL
+            // its filters at once, so a popular relay routed thousands of authors would
+            // otherwise produce a multi-MB frame that most relays reject ("message too
+            // large"). Grouping by total entry count keeps each REQ under the 256KB cap.
+            val units = ArrayList<Pair<NormalizedRelayUrl, List<Filter>>>()
+            for ((relay, relayFilters) in filters) {
+                var group = ArrayList<Filter>()
+                var entries = 0
+                for (f in relayFilters) {
+                    val fe = filterEntries(f)
+                    if (group.isNotEmpty() && entries + fe > MAX_REQ_ENTRIES) {
+                        units.add(relay to group)
+                        group = ArrayList()
+                        entries = 0
+                    }
+                    group.add(f)
+                    entries += fe
+                }
+                if (group.isNotEmpty()) units.add(relay to group)
+            }
+
+            // Per-relay failure classification (HARD wins over TRANSIENT); which relays
+            // stalled past the fast window; and which did NOT cleanly EOSE (timed out,
+            // parked, closed, or couldn't connect) — a relay absent from that set
+            // answered definitively, so an author it didn't return is one it lacks.
+            val failures = ConcurrentMap<NormalizedRelayUrl, DrainFailure>()
+            val timedOut = ConcurrentSet<NormalizedRelayUrl>()
+            val notAnswered = ConcurrentSet<NormalizedRelayUrl>()
+
+            fun classify(
+                reason: String,
+                relay: NormalizedRelayUrl,
+                into: ConcurrentMap<NormalizedRelayUrl, DrainFailure>,
+            ) {
+                classifyDrainFailure(reason)?.let { kind ->
+                    into.merge(relay, kind) { a, b ->
+                        if (a == DrainFailure.HARD || b == DrainFailure.HARD) DrainFailure.HARD else DrainFailure.TRANSIENT
+                    }
+                }
+            }
+
+            fun logSlow(
+                relay: NormalizedRelayUrl,
+                reason: String,
+                elapsedMs: Long,
+                groupFilters: List<Filter>,
+            ) {
+                if (!config.diagnose) return
+                val authors = groupFilters.flatMap { it.authors.orEmpty() }
+                val kinds = groupFilters.flatMap { it.kinds.orEmpty() }.distinct()
+                log(
+                    "[slow-relay] ${relay.url} $reason in ${elapsedMs}ms | kinds=$kinds authors=${authors.size}: " +
+                        authors.take(30).joinToString(",") + (if (authors.size > 30) ",…" else ""),
+                )
+            }
+
+            val fast =
+                coroutineScope {
+                    units
+                        .map { (subRelay, groupFilters) ->
+                            async {
+                                limiter.withPermit(subRelay) {
+                                    val subId = newSubId()
+                                    val done = CompletableDeferred<String>()
+                                    val unitEvents = Channel<Pair<NormalizedRelayUrl, Event>>(Channel.UNLIMITED)
+                                    val listener =
+                                        object : SubscriptionListener {
+                                            override fun onEvent(
+                                                event: Event,
+                                                isLive: Boolean,
+                                                relay: NormalizedRelayUrl,
+                                                forFilters: List<Filter>?,
+                                            ) {
+                                                unitEvents.trySend(relay to event)
+                                            }
+
+                                            override fun onEose(
+                                                relay: NormalizedRelayUrl,
+                                                forFilters: List<Filter>?,
+                                            ) {
+                                                done.complete("eose")
+                                            }
+
+                                            override fun onClosed(
+                                                message: String,
+                                                relay: NormalizedRelayUrl,
+                                                forFilters: List<Filter>?,
+                                            ) {
+                                                done.complete("closed:$message")
+                                            }
+
+                                            override fun onCannotConnect(
+                                                relay: NormalizedRelayUrl,
+                                                message: String,
+                                                forFilters: List<Filter>?,
+                                            ) {
+                                                done.complete("cannot:$message")
+                                            }
+                                        }
+                                    client.subscribe(subId, mapOf(subRelay to groupFilters), listener)
+                                    val mark = TimeSource.Monotonic.markNow()
+                                    val reason = withTimeoutOrNull(config.timeoutMs) { done.await() }
+                                    if (reason != null) {
+                                        // Terminal within the fast window — resolve this round.
+                                        val elapsedMs = mark.elapsedNow().inWholeMilliseconds
+                                        if (reason != "eose") notAnswered.add(subRelay)
+                                        classify(reason, subRelay, failures)
+                                        if (elapsedMs > SLOW_DRAIN_LOG_MS) logSlow(subRelay, reason, elapsedMs, groupFilters)
+                                        unitEvents.close()
+                                        client.unsubscribe(subId)
+                                        persist(buildList { for (e in unitEvents) add(e) })
+                                    } else {
+                                        // Still streaming — hand off and let the round move on.
+                                        notAnswered.add(subRelay)
+                                        timedOut.add(subRelay)
+                                        val scope = bgScope
+                                        if (scope != null && config.parkTimeoutMs > config.timeoutMs) {
+                                            parkedInFlight.addAndFetch(1)
+                                            scope.launch {
+                                                try {
+                                                    val late = withTimeoutOrNull(config.parkTimeoutMs) { done.await() } ?: "timeout"
+                                                    logSlow(subRelay, "parked→$late", mark.elapsedNow().inWholeMilliseconds, groupFilters)
+                                                    // A parked relay that ends in a hard/transient failure (not a
+                                                    // clean EOSE) is reported dead the same way a fast one would be.
+                                                    val lateDead = ConcurrentMap<NormalizedRelayUrl, DrainFailure>()
+                                                    classify(late, subRelay, lateDead)
+                                                    recordDead(lateDead.snapshot())
+                                                    unitEvents.close()
+                                                    for (pair in persist(buildList { for (e in unitEvents) add(e) })) lateHarvest.trySend(pair)
+                                                } finally {
+                                                    client.unsubscribe(subId)
+                                                    parkedInFlight.addAndFetch(-1)
+                                                }
+                                            }
+                                        } else {
+                                            logSlow(subRelay, "timeout", mark.elapsedNow().inWholeMilliseconds, groupFilters)
+                                            unitEvents.close()
+                                            client.unsubscribe(subId)
+                                        }
+                                        emptyList()
+                                    }
+                                }
+                            }
+                        }.awaitAll()
+                        .flatten()
+                }
+
+            if (config.diagnose && timedOut.size() > 0) {
+                log("[drain] parked ${timedOut.size()} slow relay(s) past ${config.timeoutMs}ms")
+            }
+            deadOut?.putAll(failures.snapshot())
+            answeredOut?.addAll(filters.keys.filter { it !in notAnswered })
+            return fast
+        }
+
         suspend fun run(): Stats {
             val crawlMark = TimeSource.Monotonic.markNow()
-            // Scope for fire-and-forget relay-list discovery (see ensureRelayLists
-            // Tier 2). SupervisorJob so one failing sweep never cancels the others;
-            // cancelled when the crawl finishes.
-            val bgScope = CoroutineScope(coroutineContext + SupervisorJob())
+            // Scope owning parked (slow-relay) subscriptions and the fire-and-forget
+            // Tier-2 relay-list sweeps. SupervisorJob so one failure never cancels the
+            // others; cancelled once the crawl converges. Published to [bgScope] so
+            // drainGated can hand slow subs to it.
+            val scope = CoroutineScope(coroutineContext + SupervisorJob())
+            bgScope = scope
 
             while (rounds < config.maxRounds) {
+                // Fold in whatever the parked (slow-but-alive) relays have delivered
+                // since the last round — their late contact lists expand the frontier
+                // a round or two behind the fast ones (single-writer: only here).
+                foldLateHarvest()
+
                 // Only crawl users within the hop budget; deeper users still appear
                 // in the graph as follow targets, we just don't fetch their lists.
                 val pending = hopOf.keys.filter { it !in done && (hopOf[it] ?: 0) < config.maxHops }
-                if (pending.isEmpty()) break
+                if (pending.isEmpty()) {
+                    // Frontier drained. If no slow relay is still streaming, a final
+                    // fold catches any last-moment delivery and we're done; otherwise
+                    // wait for a parked relay to deliver (completeness) and loop.
+                    if (parkedInFlight.load() == 0L) {
+                        if (foldLateHarvest() == 0) break else continue
+                    }
+                    withTimeoutOrNull(PARK_POLL_MS) { lateHarvest.receive() }?.let { ingestLate(it.first, it.second) }
+                    continue
+                }
                 rounds++
 
                 // Refresh the warm pool to this round's busiest relays and keep that
@@ -526,7 +821,7 @@ class GrapeRankDataCrawler(
                     // Snapshot of every relay we've seen work, for the wide Tier-2
                     // sweep (taken now, before the Phase-B workers mutate liveRelays).
                     val allLive = liveRelays.filterTo(HashSet()) { it !in deadRelays }
-                    ensureRelayLists(stragglers.toSet(), allLive, bgScope)
+                    ensureRelayLists(stragglers.toSet(), allLive, scope)
 
                     // Continuous worker pool instead of chunked awaitAll barriers, so
                     // no worker waits on a slow sibling and hot relays stay connected.
@@ -557,7 +852,7 @@ class GrapeRankDataCrawler(
                                     for ((batch, filters) in routed) {
                                         val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
                                         val answered = HashSet<NormalizedRelayUrl>()
-                                        val events = drainGated(filters, dead, seenIds, answered)
+                                        val events = drainGated(filters, dead, answered)
                                         recordDead(dead)
                                         drainedOut.send(DrainedBatch(batch, filters, answered, events))
                                     }
@@ -613,16 +908,19 @@ class GrapeRankDataCrawler(
                 )
             }
 
-            // Crawl done — drop the warm pool and stop any background relay-list
-            // sweeps still in flight (their results are already in the store).
+            // Crawl done — drop the warm pool.
             client.unsubscribe(WARM_SUB_ID)
-            bgScope.cancel()
 
             // Reports can be retracted. Ask each reporter's outbox for NIP-09 kind:5
             // deletions that cite the reports we gathered (#e-filtered to our report
             // ids). The events land in the store; the caller decides which reports
-            // they actually retract.
+            // they actually retract. Run before cancelling [scope] so it can still
+            // park slow relays.
             fetchReportDeletions(topLiveRelays(BACKBONE_SIZE).toSet())
+
+            // Stop any parked subscriptions + Tier-2 relay-list sweeps still in flight
+            // (whatever they fetched already landed in the store).
+            scope.cancel()
 
             val hopHistogram =
                 hopOf.values
@@ -642,7 +940,7 @@ class GrapeRankDataCrawler(
             )
             log(
                 "[graperank] write path: $stored events stored, verify ${verifyMs}ms + insert ${insertMs}ms " +
-                    "(summed across ${config.drainConcurrency} consumers, batch=${config.insertBatchSize})",
+                    "(summed across all drains, batch=${config.insertBatchSize})",
             )
             return Stats(
                 rounds = rounds,
@@ -670,191 +968,6 @@ class GrapeRankDataCrawler(
         val events: List<Pair<NormalizedRelayUrl, Event>>,
     )
 
-    /**
-     * Subscribe each relay to its filters behind [limiter], drain until every
-     * relay's subscription is terminal or the timeout elapses, verify+store the
-     * events, and return them tagged by relay. Each relay gets its own gated
-     * subscription so we never exceed its adaptive concurrent-subscription cap; a
-     * relay's filters are split into REQ-sized groups so a popular relay routed
-     * thousands of authors doesn't produce a multi-MB frame that most relays
-     * reject outright. Hard connect failures are reported into [deadOut]. Events
-     * whose id is already in the crawl-wide [seen] set are dropped before the
-     * expensive verify+store; verified ids are added to it so later drains skip them.
-     */
-    private suspend fun drainGated(
-        filters: Map<NormalizedRelayUrl, List<Filter>>,
-        deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>?,
-        seen: ConcurrentSet<HexKey>,
-        answeredOut: MutableSet<NormalizedRelayUrl>? = null,
-    ): List<Pair<NormalizedRelayUrl, Event>> {
-        if (filters.isEmpty()) return emptyList()
-        val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(Channel.UNLIMITED)
-
-        // Split each relay's filters into REQ-sized groups. A REQ frame carries ALL
-        // its filters at once, so a popular relay routed thousands of authors would
-        // otherwise produce a multi-MB frame that most relays reject ("message too
-        // large") — silently dropping every author in it. Grouping by total entry
-        // count keeps each REQ well under the common 256KB cap.
-        val units = ArrayList<Pair<NormalizedRelayUrl, List<Filter>>>()
-        for ((relay, relayFilters) in filters) {
-            var group = ArrayList<Filter>()
-            var entries = 0
-            for (f in relayFilters) {
-                val fe = filterEntries(f)
-                if (group.isNotEmpty() && entries + fe > MAX_REQ_ENTRIES) {
-                    units.add(relay to group)
-                    group = ArrayList()
-                    entries = 0
-                }
-                group.add(f)
-                entries += fe
-            }
-            if (group.isNotEmpty()) units.add(relay to group)
-        }
-
-        // Per-relay failure classification, HARD winning over TRANSIENT across a
-        // relay's several REQ-groups; plus which relays stalled to a timeout.
-        val failures = ConcurrentMap<NormalizedRelayUrl, DrainFailure>()
-        val timedOut = ConcurrentSet<NormalizedRelayUrl>()
-        // Relays that did NOT cleanly EOSE every group (timed out, closed, or
-        // couldn't connect). A relay absent from this set answered definitively —
-        // so an author it was asked for but didn't return is one it simply lacks.
-        val notAnswered = ConcurrentSet<NormalizedRelayUrl>()
-        // --diagnose: which relays were slow (or timed out) and on which query, so a
-        // human can replay that exact REQ later to understand the slowness. Null when
-        // diagnosis is off (no per-group timing/collection overhead).
-        val slowDrains = if (config.diagnose) ConcurrentSet<String>() else null
-
-        val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
-        coroutineScope {
-            // Single consumer per drain: dedup against the crawl-wide [seen] set,
-            // verify, and group-commit to the store. Duplicates (the same event from
-            // another relay, drain, or round) are skipped BEFORE the expensive Schnorr
-            // verify + store write. An id is added to [seen] only after it verifies, so
-            // a forged copy (valid id, bad signature) delivered first can't suppress
-            // the genuine one. Verified events are buffered and flushed via batchInsert
-            // so the per-transaction + writer-mutex cost is paid once per
-            // [insertBatchSize], not once per event. (A relay whose every event was
-            // already seen won't be credited into `liveRelays` by this drain — that's
-            // fine: it's a redundant mirror that added nothing new.)
-            val consumer =
-                launch {
-                    val flushAt = config.insertBatchSize.coerceAtLeast(1)
-                    val buffer = ArrayList<Event>(flushAt)
-
-                    suspend fun flush() {
-                        if (buffer.isEmpty()) return
-                        val mark = TimeSource.Monotonic.markNow()
-                        store.batchInsert(buffer)
-                        insertNanos.addAndFetch(mark.elapsedNow().inWholeNanoseconds)
-                        eventsStored.addAndFetch(buffer.size.toLong())
-                        buffer.clear()
-                    }
-
-                    for ((relay, event) in eventChannel) {
-                        if (event.id in seen) continue
-                        val vMark = TimeSource.Monotonic.markNow()
-                        val ok = event.verify()
-                        verifyNanos.addAndFetch(vMark.elapsedNow().inWholeNanoseconds)
-                        if (!ok) {
-                            Log.w("GrapeRankDataCrawler") { "dropped event ${event.id.take(8)} kind=${event.kind} — bad signature" }
-                            continue
-                        }
-                        seen.add(event.id)
-                        collected.add(relay to event)
-                        buffer.add(event)
-                        if (buffer.size >= flushAt) flush()
-                    }
-                    flush()
-                }
-            // One gated subscription per (relay, REQ-group). The permit is held for
-            // the group's whole life, so concurrent subs on a relay never exceed its
-            // adaptive cap.
-            units
-                .map { (subRelay, groupFilters) ->
-                    launch {
-                        limiter.withPermit(subRelay) {
-                            val subId = newSubId()
-                            val done = CompletableDeferred<String>()
-                            val groupListener =
-                                object : SubscriptionListener {
-                                    override fun onEvent(
-                                        event: Event,
-                                        isLive: Boolean,
-                                        relay: NormalizedRelayUrl,
-                                        forFilters: List<Filter>?,
-                                    ) {
-                                        eventChannel.trySend(relay to event)
-                                    }
-
-                                    override fun onEose(
-                                        relay: NormalizedRelayUrl,
-                                        forFilters: List<Filter>?,
-                                    ) {
-                                        done.complete("eose")
-                                    }
-
-                                    override fun onClosed(
-                                        message: String,
-                                        relay: NormalizedRelayUrl,
-                                        forFilters: List<Filter>?,
-                                    ) {
-                                        done.complete("closed:$message")
-                                    }
-
-                                    override fun onCannotConnect(
-                                        relay: NormalizedRelayUrl,
-                                        message: String,
-                                        forFilters: List<Filter>?,
-                                    ) {
-                                        done.complete("cannot:$message")
-                                    }
-                                }
-                            client.subscribe(subId, mapOf(subRelay to groupFilters), groupListener)
-                            try {
-                                val gMark = TimeSource.Monotonic.markNow()
-                                val reason = withTimeoutOrNull(config.timeoutMs) { done.await() } ?: "timeout"
-                                val elapsedMs = gMark.elapsedNow().inWholeMilliseconds
-                                if (reason == "timeout") timedOut.add(subRelay)
-                                if (reason != "eose") notAnswered.add(subRelay)
-                                classifyDrainFailure(reason)?.let { kind ->
-                                    failures.merge(subRelay, kind) { a, b ->
-                                        if (a == DrainFailure.HARD || b == DrainFailure.HARD) DrainFailure.HARD else DrainFailure.TRANSIENT
-                                    }
-                                }
-                                // Record slow/timed-out REQs with their exact query so a
-                                // human can replay them later and see why the relay lags.
-                                if (slowDrains != null && (reason == "timeout" || elapsedMs > SLOW_DRAIN_LOG_MS)) {
-                                    val authors = groupFilters.flatMap { it.authors.orEmpty() }
-                                    val kinds = groupFilters.flatMap { it.kinds.orEmpty() }.distinct()
-                                    slowDrains.add(
-                                        "[slow-relay] ${subRelay.url} $reason in ${elapsedMs}ms | kinds=$kinds authors=${authors.size}: " +
-                                            authors.take(30).joinToString(",") + (if (authors.size > 30) ",…" else ""),
-                                    )
-                                }
-                            } finally {
-                                client.unsubscribe(subId)
-                            }
-                        }
-                    }
-                }.joinAll()
-            // All subscriptions are torn down; no more events can arrive. Close the
-            // channel so the consumer drains what's buffered and completes.
-            eventChannel.close()
-            consumer.join()
-        }
-        if (config.diagnose && timedOut.size() > 0) {
-            val stalled = timedOut.snapshot()
-            val eventsPer = collected.groupingBy { it.first }.eachCount()
-            val detail = stalled.take(12).joinToString(", ") { "${it.url}(${eventsPer[it] ?: 0}ev)" }
-            log("[drain] timeout ${config.timeoutMs}ms: ${stalled.size} slow(no EOSE)" + (if (detail.isNotEmpty()) " | slow: $detail" else ""))
-        }
-        slowDrains?.snapshot()?.forEach { log(it) }
-        deadOut?.putAll(failures.snapshot())
-        answeredOut?.addAll(filters.keys.filter { it !in notAnswered })
-        return collected
-    }
-
     /** Latest known kind:3 contact list for [pubKey] from the local store, or null. */
     private suspend fun contactsOf(pubKey: HexKey): ContactListEvent? =
         store
@@ -879,6 +992,10 @@ class GrapeRankDataCrawler(
         // --diagnose: a REQ that takes longer than this to reach a terminal (EOSE or
         // timeout) is logged with its relay + filter, so slow relays can be replayed.
         private const val SLOW_DRAIN_LOG_MS = 4000L
+
+        // Once the frontier is empty but parked relays are still streaming, how long
+        // to block waiting for one of them to deliver before re-checking convergence.
+        private const val PARK_POLL_MS = 2000L
 
         // Times we re-query an unreachable user's outbox before giving up, so the
         // crawl still terminates on a finite graph.
