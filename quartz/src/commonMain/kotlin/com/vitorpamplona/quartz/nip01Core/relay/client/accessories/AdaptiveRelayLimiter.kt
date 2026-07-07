@@ -150,7 +150,7 @@ class AdaptiveRelayLimiter(
         val cap = subLadder[(step - 1).coerceIn(0, subLadder.size - 1)]
         gate(relay).lower(cap)
         if (step <= subLadder.size) {
-            Log.w("AdaptiveRelayLimiter") { "${relay.url} concurrency capped at $cap subs (sub-limit #$step)" }
+            Log.d("AdaptiveRelayLimiter") { "${relay.url} concurrency capped at $cap subs (sub-limit #$step)" }
         }
     }
 
@@ -161,7 +161,7 @@ class AdaptiveRelayLimiter(
         val d = rateLadder[(step - 1).coerceIn(0, rateLadder.size - 1)]
         rateDelayMs[relay] = d
         if (step <= rateLadder.size) {
-            Log.w("AdaptiveRelayLimiter") { "${relay.url} rate-throttled to 1 REQ / ${d}ms (rate-limit #$step)" }
+            Log.d("AdaptiveRelayLimiter") { "${relay.url} rate-throttled to 1 REQ / ${d}ms (rate-limit #$step)" }
         }
     }
 

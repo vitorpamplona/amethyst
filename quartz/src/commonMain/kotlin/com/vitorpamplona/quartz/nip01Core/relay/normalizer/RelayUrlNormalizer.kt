@@ -156,7 +156,7 @@ class RelayUrlNormalizer {
 
             if (trimmed.contains("://")) {
                 // some other scheme we cannot connect to.
-                Log.w("RelayUrlNormalizer") { "Rejected $url" }
+                Log.d("RelayUrlNormalizer") { "Rejected $url" }
                 return null
             }
 
@@ -189,14 +189,14 @@ class RelayUrlNormalizer {
                     normalizedUrls.put(url, NormalizationResult.Success(normalized))
                     normalized
                 } else {
-                    Log.w("NormalizedRelayUrl") { "Rejected $url" }
+                    Log.d("NormalizedRelayUrl") { "Rejected $url" }
                     normalizedUrls.put(url, NormalizationResult.Error)
                     null
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 normalizedUrls.put(url, NormalizationResult.Error)
-                Log.w("NormalizedRelayUrl") { "Rejected $url" }
+                Log.d("NormalizedRelayUrl") { "Rejected $url" }
                 null
             }
         }
