@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -81,6 +82,7 @@ fun RelayGroupTopBar(
     var menuOpen by remember { mutableStateOf(false) }
     var showInvite by remember { mutableStateOf(false) }
     var showJoinCode by remember { mutableStateOf(false) }
+    var showEdit by remember { mutableStateOf(false) }
 
     TopBarExtensibleWithBackButton(
         title = {
@@ -167,6 +169,22 @@ fun RelayGroupTopBar(
                         )
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.relay_group_menu_members)) },
+                            onClick = {
+                                menuOpen = false
+                                nav.nav(Route.RelayGroupMembers(channel.groupId.id, channel.groupId.relayUrl.url))
+                            },
+                        )
+                        if (displayMembership == RelayGroupMembership.ADMIN) {
+                            DropdownMenuItem(
+                                text = { Text(stringRes(R.string.relay_group_menu_edit)) },
+                                onClick = {
+                                    menuOpen = false
+                                    showEdit = true
+                                },
+                            )
+                        }
                         if (displayMembership.canModerate()) {
                             DropdownMenuItem(
                                 text = { Text(stringRes(R.string.relay_group_invite_title)) },
@@ -192,6 +210,10 @@ fun RelayGroupTopBar(
 
     if (showInvite) {
         InviteRelayGroupDialog(channel, accountViewModel) { showInvite = false }
+    }
+
+    if (showEdit) {
+        EditRelayGroupDialog(channel, accountViewModel) { showEdit = false }
     }
 
     if (showJoinCode) {

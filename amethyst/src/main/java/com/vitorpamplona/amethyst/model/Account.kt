@@ -207,6 +207,8 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
@@ -1518,6 +1520,45 @@ class Account(
         code: String,
     ) {
         val template = CreateInviteEvent.build(channel.groupId.id, code)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /** Kick [pubkey] out of the group with a kind 9001 remove-user event (moderator only). */
+    suspend fun removeRelayGroupUser(
+        channel: RelayGroupChannel,
+        pubkey: HexKey,
+    ) {
+        val template = RemoveUserEvent.build(channel.groupId.id, listOf(pubkey))
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /**
+     * Add [pubkey] to the group (or change its roles) with a kind 9000 put-user
+     * event (moderator only). Pass an empty [roles] list for a plain member.
+     */
+    suspend fun putRelayGroupUser(
+        channel: RelayGroupChannel,
+        pubkey: HexKey,
+        roles: List<String>,
+    ) {
+        val template = PutUserEvent.build(channel.groupId.id, listOf(pubkey to roles))
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /** Edit the group's relay-signed metadata with a kind 9002 event (admin only). */
+    suspend fun editRelayGroupMetadata(
+        channel: RelayGroupChannel,
+        name: String?,
+        about: String?,
+        isPrivate: Boolean,
+        isClosed: Boolean,
+    ) {
+        val status =
+            buildSet {
+                add(if (isPrivate) GroupMetadataEvent.GroupStatus.PRIVATE else GroupMetadataEvent.GroupStatus.PUBLIC)
+                add(if (isClosed) GroupMetadataEvent.GroupStatus.CLOSED else GroupMetadataEvent.GroupStatus.OPEN)
+            }
+        val template = EditMetadataEvent.build(channel.groupId.id, name = name, about = about, status = status)
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 

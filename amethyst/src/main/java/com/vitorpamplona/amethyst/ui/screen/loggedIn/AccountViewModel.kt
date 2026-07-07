@@ -1452,6 +1452,25 @@ class AccountViewModel(
         code: String,
     ) = launchSigner { account.createRelayGroupInvite(channel, code) }
 
+    fun removeRelayGroupUser(
+        channel: RelayGroupChannel,
+        pubkey: HexKey,
+    ) = launchSigner { account.removeRelayGroupUser(channel, pubkey) }
+
+    fun putRelayGroupUser(
+        channel: RelayGroupChannel,
+        pubkey: HexKey,
+        roles: List<String>,
+    ) = launchSigner { account.putRelayGroupUser(channel, pubkey, roles) }
+
+    fun editRelayGroupMetadata(
+        channel: RelayGroupChannel,
+        name: String?,
+        about: String?,
+        isPrivate: Boolean,
+        isClosed: Boolean,
+    ) = launchSigner { account.editRelayGroupMetadata(channel, name, about, isPrivate, isClosed) }
+
     fun follow(users: List<User>) = launchSigner { account.follow(users) }
 
     fun follow(user: User) = launchSigner { account.follow(user) }
