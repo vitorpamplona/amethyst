@@ -96,6 +96,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupParticipantsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
@@ -611,6 +612,7 @@ object KindNames {
             GroupAdminsEvent.KIND to KindName("Group Admins", "29"),
             GroupMembersEvent.KIND to KindName("Group Members", "29"),
             SupportedRolesEvent.KIND to KindName("Group Roles", "29"),
+            GroupParticipantsEvent.KIND to KindName("Group Participants", "29"),
             MediaStarterPackEvent.KIND to KindName("Media Starter Pack", "51"),
         )
 

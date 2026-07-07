@@ -98,6 +98,13 @@ fun TagArray.anyTagWithValueStartingWith(
 fun TagArray.hasTagWithContent(tagName: String) = this.fastAny { it.size > 1 && it[0] == tagName }
 
 /**
+ * Returns `true` if at least one tag has the given name, regardless of whether it
+ * carries a value. Use this for presence/flag tags like `["private"]` or `["closed"]`
+ * (NIP-29 status flags) where the tag name alone is the signal.
+ */
+fun TagArray.hasTagName(tagName: String) = this.fastAny { it.isNotEmpty() && it[0] == tagName }
+
+/**
  * Returns a list containing only the non-null results of applying the tag value to the given [transform] function
  * to each tag that matches the [tagName]
  */

@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
-import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
+import com.vitorpamplona.quartz.nip01Core.core.hasTagName
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -51,18 +51,35 @@ class GroupMetadataEvent(
 
     fun picture() = tags.firstTagValue("picture")
 
-    fun isPrivate() = tags.hasTagWithContent("private") || !tags.hasTagWithContent("public")
+    /** Only members can read. Presence of the `private` flag; absent = public read. */
+    fun isPrivate() = tags.hasTagName("private")
 
-    fun isRestricted() = tags.hasTagWithContent("closed") || !tags.hasTagWithContent("open")
+    /** Only members can write. Presence of the `restricted` flag; absent = open write. */
+    fun isRestricted() = tags.hasTagName("restricted")
 
-    fun isHidden() = tags.hasTagWithContent("private")
+    /** Metadata hidden from non-members. Presence of the `hidden` flag. */
+    fun isHidden() = tags.hasTagName("hidden")
 
-    fun isClosed() = tags.hasTagWithContent("closed")
+    /** Join requests are ignored (invite-only). Presence of the `closed` flag; absent = open join. */
+    fun isClosed() = tags.hasTagName("closed")
+
+    /** Group supports LiveKit-powered live audio/video. Presence of the `livekit` flag. */
+    fun hasLivekit() = tags.hasTagName("livekit")
+
+    /**
+     * The kinds this group accepts, when constrained, e.g. `["supported_kinds", "9", "11"]`.
+     * `null` (tag absent) means all kinds are accepted.
+     */
+    fun supportedKinds(): List<Int>? =
+        tags
+            .firstOrNull { it.isNotEmpty() && it[0] == "supported_kinds" }
+            ?.drop(1)
+            ?.mapNotNull { it.toIntOrNull() }
 
     fun statusTags(): Set<GroupStatus> {
         val statuses = mutableSetOf<GroupStatus>()
         GroupStatus.entries.forEach { status ->
-            if (tags.hasTagWithContent(status.code)) {
+            if (tags.hasTagName(status.code)) {
                 statuses.add(status)
             }
         }
@@ -74,8 +91,11 @@ class GroupMetadataEvent(
     ) {
         PRIVATE("private"),
         PUBLIC("public"),
+        RESTRICTED("restricted"),
         OPEN("open"),
         CLOSED("closed"),
+        HIDDEN("hidden"),
+        LIVEKIT("livekit"),
     }
 
     companion object {
@@ -87,6 +107,7 @@ class GroupMetadataEvent(
             about: String? = null,
             picture: String? = null,
             status: Set<GroupStatus> = emptySet(),
+            supportedKinds: List<Int>? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GroupMetadataEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
@@ -95,6 +116,9 @@ class GroupMetadataEvent(
             about?.let { add(arrayOf("about", it)) }
             picture?.let { add(arrayOf("picture", it)) }
             status.forEach { add(arrayOf(it.code)) }
+            supportedKinds?.let { kinds ->
+                add((listOf("supported_kinds") + kinds.map { it.toString() }).toTypedArray())
+            }
             initializer()
         }
     }
