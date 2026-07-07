@@ -31,9 +31,12 @@ import com.vitorpamplona.amethyst.commons.wot.GrapeRankParams
 import com.vitorpamplona.amethyst.commons.wot.TrustGraphBuilder
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
@@ -45,6 +48,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProvider
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceType
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -150,6 +154,10 @@ object GrapeRankCommand {
         val minRank = args.intFlag("min-rank", 1)
         val publishLimit = args.intFlag("publish-limit", 500)
         val publishRelaysArg = args.flag("publish-relay")
+        // Benchmark: build + sign one kind:30382 card per scored user (rank >=
+        // --min-rank) with a throwaway key and time it, WITHOUT publishing.
+        // Measures the id-hash + Schnorr-sign cost of emitting the full card set.
+        val benchSign = args.bool("bench-sign")
 
         val params =
             GrapeRankParams(
@@ -479,8 +487,57 @@ object GrapeRankCommand {
                 }
             }
 
+            if (benchSign) {
+                // Throwaway key — these cards are for timing only and never leave
+                // the process, so no real identity signs them.
+                val tempSigner = NostrSignerInternal(KeyPair())
+                val cards =
+                    rankedIds
+                        .filter { rankOf(scores[it]) >= minRank }
+                        .map { graph.pubkeyOf(it) to rankOf(scores[it]) }
+                val signStart = System.nanoTime()
+                val signed = signCards(cards, tempSigner)
+                val signMs = (System.nanoTime() - signStart) / 1_000_000
+                val perSec = if (signMs > 0) signed * 1000L / signMs else 0
+                System.err.println("[graperank] signed $signed kind:30382 cards in $signMs ms ($perSec/s, temp key, not published)")
+                result["bench_signed"] = signed
+                result["bench_sign_ms"] = signMs
+            }
+
             Output.emit(result)
             return 0
+        }
+    }
+
+    /**
+     * Build + sign one kind:30382 [ContactCardEvent] per (target, rank), fanned
+     * out across CPU cores (id-hash + Schnorr sign is CPU-bound). The signed
+     * events are discarded — this only exists to time card generation. Returns
+     * the number signed.
+     */
+    private suspend fun signCards(
+        cards: List<Pair<HexKey, Int>>,
+        signer: NostrSigner,
+    ): Int {
+        if (cards.isEmpty()) return 0
+        val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
+        val chunkSize = ((cards.size + cores - 1) / cores).coerceAtLeast(1)
+        return coroutineScope {
+            cards
+                .chunked(chunkSize)
+                .map { chunk ->
+                    async(Dispatchers.Default) {
+                        for ((target, rank) in chunk) {
+                            ContactCardEvent.create(
+                                targetUser = target,
+                                signer = signer,
+                                publicInitializer = { add(RankTag.assemble(rank)) },
+                            )
+                        }
+                        chunk.size
+                    }
+                }.awaitAll()
+                .sum()
         }
     }
 
