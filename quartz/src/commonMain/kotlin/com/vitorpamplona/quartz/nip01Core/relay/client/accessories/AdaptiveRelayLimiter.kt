@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.cli
+package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -26,13 +26,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Adaptive per-relay back-pressure with TWO independent controls, because relays
@@ -60,26 +63,27 @@ import java.util.concurrent.atomic.AtomicLong
  * Registered as a [RelayConnectionListener] on the shared client, so both signals
  * are driven straight off the incoming NOTICE/CLOSED frames (which fire on the
  * per-relay socket threads — all state here is concurrent). Drains gate through
- * [withPermit]; [Context.drain]'s `gatePerRelay` path holds a relay's permit for
- * the lifetime of that relay's subscription, and passes the rate gate before it
- * opens, so we respect both limits at once.
+ * [withPermit]: the gated-drain path holds a relay's permit for the lifetime of
+ * that relay's subscription, and passes the rate gate before it opens, so we
+ * respect both limits at once.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class AdaptiveRelayLimiter(
     private val startCap: Int = 100,
     private val subLadder: List<Int> = listOf(20, 10),
     private val rateLadder: List<Long> = listOf(250L, 500L, 1000L, 2000L),
 ) : RelayConnectionListener {
-    private val gates = ConcurrentHashMap<NormalizedRelayUrl, Gate>()
+    private val gates = ConcurrentMap<NormalizedRelayUrl, Gate>()
 
     // Concurrency-cap demotions per relay (== index+1 into subLadder). Capped at
     // subLadder.size: past the floor we stop demoting.
-    private val subDemotions = ConcurrentHashMap<NormalizedRelayUrl, Int>()
+    private val subDemotions = ConcurrentMap<NormalizedRelayUrl, Int>()
 
     // Rate-limit state per relay: how far down rateLadder we've stepped, the
     // current min interval between opens, and the next epoch-ms an open may fire.
-    private val rateSteps = ConcurrentHashMap<NormalizedRelayUrl, Int>()
-    private val rateDelayMs = ConcurrentHashMap<NormalizedRelayUrl, Long>()
-    private val nextAllowedAtMs = ConcurrentHashMap<NormalizedRelayUrl, AtomicLong>()
+    private val rateSteps = ConcurrentMap<NormalizedRelayUrl, Int>()
+    private val rateDelayMs = ConcurrentMap<NormalizedRelayUrl, Long>()
+    private val nextAllowedAtMs = ConcurrentMap<NormalizedRelayUrl, AtomicLong>()
 
     private fun gate(relay: NormalizedRelayUrl): Gate = gates.getOrPut(relay) { Gate(startCap) }
 
@@ -106,14 +110,14 @@ class AdaptiveRelayLimiter(
     private suspend fun rateGate(relay: NormalizedRelayUrl) {
         val delayMs = rateDelayMs[relay] ?: return
         if (delayMs <= 0L) return
-        val now = System.currentTimeMillis()
+        val now = TimeUtils.nowMillis()
         // Atomically claim the next slot: my turn is max(prevSlot, now); the next
         // caller can't fire until delayMs after me. Serializes opens to this relay
         // at one per delayMs, in arrival order.
         val slot = nextAllowedAtMs.getOrPut(relay) { AtomicLong(now) }
         var myTurn: Long
         while (true) {
-            val prev = slot.get()
+            val prev = slot.load()
             myTurn = maxOf(prev, now)
             if (slot.compareAndSet(prev, myTurn + delayMs)) break
         }
@@ -142,49 +146,51 @@ class AdaptiveRelayLimiter(
     /** Step [relay] one rung down the concurrency-cap ladder, unless already at the floor. */
     private fun demoteConcurrency(relay: NormalizedRelayUrl) {
         if ((subDemotions[relay] ?: 0) >= subLadder.size) return
-        val step = subDemotions.merge(relay, 1, Int::plus)!!
+        val step = subDemotions.merge(relay, 1) { a, b -> a + b }
         val cap = subLadder[(step - 1).coerceIn(0, subLadder.size - 1)]
         gate(relay).lower(cap)
         if (step <= subLadder.size) {
-            System.err.println("[limiter] ${relay.url} concurrency capped at $cap subs (sub-limit #$step)")
+            Log.w("AdaptiveRelayLimiter") { "${relay.url} concurrency capped at $cap subs (sub-limit #$step)" }
         }
     }
 
     /** Step [relay] one rung down the rate ladder, unless already at the slowest. */
     private fun throttleRate(relay: NormalizedRelayUrl) {
         if ((rateSteps[relay] ?: 0) >= rateLadder.size) return
-        val step = rateSteps.merge(relay, 1, Int::plus)!!
+        val step = rateSteps.merge(relay, 1) { a, b -> a + b }
         val d = rateLadder[(step - 1).coerceIn(0, rateLadder.size - 1)]
         rateDelayMs[relay] = d
         if (step <= rateLadder.size) {
-            System.err.println("[limiter] ${relay.url} rate-throttled to 1 REQ / ${d}ms (rate-limit #$step)")
+            Log.w("AdaptiveRelayLimiter") { "${relay.url} rate-throttled to 1 REQ / ${d}ms (rate-limit #$step)" }
         }
     }
 
     /** JSON-friendly view of which relays we throttled, in which dimension, how far. */
     fun snapshot(): Map<String, Any?> {
-        val cappedAt = sortedMapOf<Int, Int>()
-        for ((_, step) in subDemotions) {
+        val capCounts = HashMap<Int, Int>()
+        for ((_, step) in subDemotions.snapshot()) {
             val cap = subLadder[(step - 1).coerceIn(0, subLadder.size - 1)]
-            cappedAt.merge(cap, 1, Int::plus)
+            capCounts[cap] = (capCounts[cap] ?: 0) + 1
         }
-        val rateAt = sortedMapOf<Long, Int>()
-        for ((_, step) in rateSteps) {
+        val cappedAt = capCounts.toList().sortedBy { it.first }.toMap()
+        val rateCounts = HashMap<Long, Int>()
+        for ((_, step) in rateSteps.snapshot()) {
             val d = rateLadder[(step - 1).coerceIn(0, rateLadder.size - 1)]
-            rateAt.merge(d, 1, Int::plus)
+            rateCounts[d] = (rateCounts[d] ?: 0) + 1
         }
+        val rateAt = rateCounts.toList().sortedBy { it.first }.toMap()
         return mapOf(
             "start_cap" to startCap,
             "sub_ladder" to subLadder,
             "rate_ladder_ms" to rateLadder,
-            "concurrency_capped_relays" to subDemotions.size,
+            "concurrency_capped_relays" to subDemotions.size(),
             "concurrency_capped_at" to cappedAt,
-            "rate_limited_relays" to rateSteps.size,
+            "rate_limited_relays" to rateSteps.size(),
             "rate_limited_at_ms" to rateAt,
         )
     }
 
-    fun hadThrottling(): Boolean = subDemotions.isNotEmpty() || rateSteps.isNotEmpty()
+    fun hadThrottling(): Boolean = subDemotions.size() > 0 || rateSteps.size() > 0
 
     /**
      * A bounded-concurrency gate whose limit can only ever be *lowered* (relays
@@ -197,7 +203,7 @@ class AdaptiveRelayLimiter(
     private class Gate(
         initialLimit: Int,
     ) {
-        private val limit = AtomicInteger(initialLimit)
+        private val limit = AtomicInt(initialLimit)
         private val mutex = Mutex()
         private var inUse = 0
         private val waiters = ArrayDeque<CompletableDeferred<Unit>>()
@@ -205,7 +211,7 @@ class AdaptiveRelayLimiter(
         suspend fun acquire() {
             val wait =
                 mutex.withLock {
-                    if (inUse < limit.get()) {
+                    if (inUse < limit.load()) {
                         inUse++
                         null
                     } else {
@@ -218,7 +224,7 @@ class AdaptiveRelayLimiter(
         suspend fun release() {
             mutex.withLock {
                 inUse--
-                while (inUse < limit.get() && waiters.isNotEmpty()) {
+                while (inUse < limit.load() && waiters.isNotEmpty()) {
                     waiters.removeFirst().complete(Unit)
                     inUse++
                 }
@@ -227,7 +233,11 @@ class AdaptiveRelayLimiter(
 
         /** Monotonically shrink the cap. Safe to call from any thread. */
         fun lower(newLimit: Int) {
-            limit.updateAndGet { if (newLimit < it) newLimit else it }
+            while (true) {
+                val cur = limit.load()
+                if (newLimit >= cur) return
+                if (limit.compareAndSet(cur, newLimit)) return
+            }
         }
     }
 

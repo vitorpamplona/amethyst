@@ -41,6 +41,9 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DrainFailure
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.classifyDrainFailure
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
@@ -74,85 +77,12 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
-
-/**
- * Why a relay could not be used for a drain — when the reason is worth acting on.
- *
- *  - [HARD]: the relay answered wrong, or cannot exist. A bad HTTP upgrade (not a
- *    websocket / dead status code), an unresolvable domain, or a TLS misconfig.
- *    This will not fix itself, so one strike is enough to drop it.
- *  - [TRANSIENT]: a failure that might clear — connection refused / reset, host
- *    unreachable, or a temporary 429/5xx on the upgrade. Struck a few times
- *    before we give up.
- *
- * A pure connect **timeout** is neither. The relay is most likely just busy, so
- * we retry it and never mark it dead — [classifyDrainFailure] returns null for
- * it (and for any non-failure terminal reason).
- */
-enum class DrainFailure { HARD, TRANSIENT }
-
-/**
- * Classify a [Context.drain] per-relay terminal reason. Returns null when the
- * relay should simply be retried (a timeout, or a non-failure like eose/closed).
- * The reason shape is `cannot:<message>` for a connect failure (see
- * `BasicRelayClient.onCannotConnect`), or `eose` / `closed:…` / `timeout`.
- */
-fun classifyDrainFailure(reason: String): DrainFailure? {
-    if (!reason.startsWith("cannot")) return null
-    val m = reason.removePrefix("cannot:").lowercase()
-    // The message now carries the exception class name (see BasicRelayClient), so
-    // we can key on the stable *type* rather than localized message text.
-    // Busy, not dead: a connect/read timeout means the handshake just didn't
-    // finish in time. Retry it — the relay is probably fine, only slow or loaded.
-    if ("timeout" in m || "timed out" in m) return null // SocketTimeoutException, etc.
-    // Cannot ever work: unresolvable domain (DNS) or a TLS misconfiguration.
-    // Dead for good — one strike is enough.
-    if ("unknownhost" in m || // UnknownHostException
-        "unable to resolve host" in m ||
-        "no address associated" in m ||
-        "nodename nor servname" in m ||
-        "sslhandshake" in m || // SSLHandshakeException
-        "sslpeerunverified" in m ||
-        "sslexception" in m ||
-        "certificate" in m || // CertificateException
-        "trust anchor" in m ||
-        "certpath" in m
-    ) {
-        return DrainFailure.HARD
-    }
-    // Wrong HTTP upgrade. Usually a misconfigured endpoint (not a relay), but
-    // 429 / 5xx mean "busy, come back later", so those stay transient.
-    if ("server misconfigured" in m || "not a websocket" in m || "expected http 101" in m) {
-        val transientCode = Regex("response: (429|500|502|503|504)").containsMatchIn(m)
-        return if (transientCode) DrainFailure.TRANSIENT else DrainFailure.HARD
-    }
-    // Refused / reset / unreachable / anything else: might clear — retry a few times.
-    return DrainFailure.TRANSIENT
-}
-
-/**
- * Max total "entries" (authors + ids + tag values) allowed in a single REQ frame.
- * A REQ carries all of a subscription's filters at once, and each entry is a
- * ~67-byte JSON hex string, so 2500 entries ≈ 167KB — comfortably under the 256KB
- * message cap most relays enforce (and reject a frame over, dropping every author
- * in it). [Context.drainGated] groups a relay's filters to stay within this.
- */
-private const val MAX_REQ_ENTRIES = 2500
-
-/** Count the size-driving entries in a filter: authors, ids, and tag values. */
-fun filterEntries(f: Filter): Int =
-    (f.authors?.size ?: 0) +
-        (f.ids?.size ?: 0) +
-        (f.tags?.values?.sumOf { it.size } ?: 0) +
-        (f.tagsAll?.values?.sumOf { it.size } ?: 0)
 
 /**
  * Per-invocation wiring. Each CLI run constructs a Context, does its work,
@@ -550,10 +480,8 @@ class Context(
         timeoutMs: Long = 8_000,
         diagnoseSlow: Boolean = false,
         deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
-        gatePerRelay: Boolean = false,
     ): List<Pair<NormalizedRelayUrl, Event>> {
         if (filters.isEmpty()) return emptyList()
-        if (gatePerRelay) return drainGated(filters, timeoutMs, diagnoseSlow, deadOut)
         val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
         // Carries the terminal reason per relay so a timeout can distinguish a slow
         // relay (never terminal) from a connect failure / CLOSED.
@@ -633,145 +561,6 @@ class Context(
                 classifyDrainFailure(reason)?.let { out[relay] = it }
             }
         }
-        return collected
-    }
-
-    /**
-     * Per-relay-gated variant of [drain] used by the crawl. Instead of one
-     * subscription spanning every relay, each relay gets its own subscription
-     * held behind [relayLimiter], so we never exceed the relay's adaptive
-     * concurrent-subscription cap. A relay whose cap is full simply waits for one
-     * of our other subscriptions on it to finish before its REQ goes out; relays
-     * we haven't upset run at the full starting cap and never wait.
-     *
-     * Semantics match [drain] otherwise: verify+store on a single consumer
-     * (so store writes stay serialized), return events tagged by relay, and
-     * report hard connect failures into [deadOut].
-     */
-    private suspend fun drainGated(
-        filters: Map<NormalizedRelayUrl, List<Filter>>,
-        timeoutMs: Long,
-        diagnoseSlow: Boolean,
-        deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>?,
-    ): List<Pair<NormalizedRelayUrl, Event>> {
-        val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
-
-        // Split each relay's filters into REQ-sized groups. A REQ frame carries ALL
-        // its filters at once, so a popular relay routed thousands of authors would
-        // otherwise produce a multi-MB frame that most relays reject outright
-        // ("message too large") — silently dropping every author in it. Grouping by
-        // total entry count keeps each REQ well under the common 256KB cap; a relay
-        // with more authors just gets several smaller REQs, each its own gated sub.
-        val units = ArrayList<Pair<NormalizedRelayUrl, List<Filter>>>()
-        for ((relay, relayFilters) in filters) {
-            var group = ArrayList<Filter>()
-            var entries = 0
-            for (f in relayFilters) {
-                val fe = filterEntries(f)
-                if (group.isNotEmpty() && entries + fe > MAX_REQ_ENTRIES) {
-                    units.add(relay to group)
-                    group = ArrayList()
-                    entries = 0
-                }
-                group.add(f)
-                entries += fe
-            }
-            if (group.isNotEmpty()) units.add(relay to group)
-        }
-
-        // Per-relay failure classification, HARD winning over TRANSIENT across a
-        // relay's several REQ-groups; plus which relays stalled to a timeout.
-        val failures = ConcurrentHashMap<NormalizedRelayUrl, DrainFailure>()
-        val timedOut = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
-
-        val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
-        coroutineScope {
-            // Single consumer: verify+store serially. One writer, so SeenIds'
-            // single-writer contract holds. The outbox model (and the wide relay-
-            // list broadcast) delivers the SAME event from many relays at once; skip
-            // a duplicate BEFORE the expensive Schnorr verify+store. An id is marked
-            // seen only after it verifies, so a forged copy (valid id, bad signature)
-            // delivered first can't suppress the genuine one that follows.
-            val consumer =
-                launch {
-                    val seen = SeenIds(initialSlotsPow2 = 12)
-                    for ((relay, event) in eventChannel) {
-                        if (seen.contains(event.id)) continue
-                        if (verifyAndStore(event)) {
-                            seen.add(event.id)
-                            collected.add(relay to event)
-                        }
-                    }
-                }
-            // One gated subscription per (relay, REQ-group). The permit is held for
-            // the group's whole life, so concurrent subs on a relay never exceed its
-            // adaptive cap. Each group carries its own subId, listener, and terminal
-            // signal (relay + subId together identify a group, but a per-group
-            // listener is simplest).
-            units
-                .map { (relay, groupFilters) ->
-                    launch {
-                        relayLimiter.withPermit(relay) {
-                            val subId = newSubId()
-                            val done = CompletableDeferred<String>()
-                            val groupListener =
-                                object : SubscriptionListener {
-                                    override fun onEvent(
-                                        event: Event,
-                                        isLive: Boolean,
-                                        r: NormalizedRelayUrl,
-                                        forFilters: List<Filter>?,
-                                    ) {
-                                        eventChannel.trySend(r to event)
-                                    }
-
-                                    override fun onEose(
-                                        r: NormalizedRelayUrl,
-                                        forFilters: List<Filter>?,
-                                    ) {
-                                        done.complete("eose")
-                                    }
-
-                                    override fun onClosed(
-                                        message: String,
-                                        r: NormalizedRelayUrl,
-                                        forFilters: List<Filter>?,
-                                    ) {
-                                        done.complete("closed:$message")
-                                    }
-
-                                    override fun onCannotConnect(
-                                        r: NormalizedRelayUrl,
-                                        message: String,
-                                        forFilters: List<Filter>?,
-                                    ) {
-                                        done.complete("cannot:$message")
-                                    }
-                                }
-                            client.subscribe(subId, mapOf(relay to groupFilters), groupListener)
-                            try {
-                                val reason = withTimeoutOrNull(timeoutMs) { done.await() } ?: "timeout"
-                                if (reason == "timeout") timedOut.add(relay)
-                                classifyDrainFailure(reason)?.let { kind ->
-                                    failures.merge(relay, kind) { a, b ->
-                                        if (a == DrainFailure.HARD || b == DrainFailure.HARD) DrainFailure.HARD else DrainFailure.TRANSIENT
-                                    }
-                                }
-                            } finally {
-                                client.unsubscribe(subId)
-                            }
-                        }
-                    }
-                }.joinAll()
-            // All subscriptions are torn down; no more events can arrive. Close the
-            // channel so the consumer drains what's buffered and completes.
-            eventChannel.close()
-            consumer.join()
-        }
-        if (diagnoseSlow && timedOut.isNotEmpty()) {
-            logSlowDrain(timeoutMs, timedOut, emptyMap(), collected)
-        }
-        deadOut?.putAll(failures)
         return collected
     }
 
