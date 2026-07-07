@@ -852,9 +852,7 @@ private fun dispatchFrames(
                 // peer knows it just violated the spec instead of
                 // having its bytes silently dropped.
                 when (stream.receive.insert(frame.offset, frame.data, frame.fin)) {
-                    com.vitorpamplona.quic.stream.ReceiveBuffer.InsertResult.OK -> {
-                        Unit
-                    }
+                    com.vitorpamplona.quic.stream.ReceiveBuffer.InsertResult.OK -> {}
 
                     com.vitorpamplona.quic.stream.ReceiveBuffer.InsertResult.OFFSET_PAST_FIN -> {
                         conn.markClosedExternally(

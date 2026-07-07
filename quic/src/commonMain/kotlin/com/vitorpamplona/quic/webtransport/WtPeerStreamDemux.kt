@@ -491,9 +491,7 @@ class WtPeerStreamDemux(
                 }
 
                 // no new requests; we don't enforce yet
-                else -> {
-                    Unit
-                }
+                else -> {}
             }
         }
     }

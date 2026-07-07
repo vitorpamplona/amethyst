@@ -2523,9 +2523,7 @@ class QuicConnection(
             PathValidator.RecordResult.Stored,
             PathValidator.RecordResult.Duplicate,
             PathValidator.RecordResult.AlreadyRetired,
-            -> {
-                Unit
-            }
+            -> {}
 
             PathValidator.RecordResult.PoolFull -> {
                 // Peer over-issued past its own advertised
@@ -2573,11 +2571,9 @@ class QuicConnection(
         // same path before the next outbound packet (which would
         // otherwise stamp a now-retired CID).
         when (val rotation = pathValidator.forceRotateToHigherSequence()) {
-            null -> {
-                Unit
-            }
-
             // active CID is still valid; nothing to do.
+            null -> {}
+
             PathValidator.ForcedRotationResult.NoSpareCid -> {
                 // Watermark forced retirement of the active CID but
                 // the pool is empty — we have nothing valid to use.
@@ -2613,9 +2609,7 @@ class QuicConnection(
         when (val outcome = pathValidator.applyPathResponse(payload)) {
             PathValidator.ValidationOutcome.NotValidating,
             PathValidator.ValidationOutcome.PayloadMismatch,
-            -> {
-                Unit
-            }
+            -> {}
 
             is PathValidator.ValidationOutcome.Validated -> {
                 // Bug-7 fix: a valid PATH_RESPONSE proves the peer
