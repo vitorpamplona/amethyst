@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
+import com.vitorpamplona.amethyst.cli.DrainFailure
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
@@ -48,14 +49,18 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProvider
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceType
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.coroutineContext
 import kotlin.math.roundToInt
 
 /**
@@ -208,6 +213,14 @@ object GrapeRankCommand {
             val observer = observerArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
 
             val graphKinds = listOf(ContactListEvent.KIND, MuteListEvent.KIND, ReportEvent.KIND)
+            // Kinds requested from relays during the crawl: the graph edges PLUS the
+            // user's own kind:10002. A user's outbox holds the freshest copy of their
+            // relay list, so folding 10002 into the same query we send their outbox
+            // keeps our routing current instead of trusting a possibly-stale indexer
+            // copy. Safe to also pull from popular relays in the sweep — the store
+            // keeps newest-by-created_at for the replaceable 10002, so the freshest
+            // always wins regardless of which relay delivered it.
+            val fetchKinds = graphKinds + AdvertisedRelayListEvent.KIND
 
             // The graph is built incrementally: contact lists stream straight into a
             // compact int-CSR structure and the Event is discarded, so the whole
@@ -230,6 +243,12 @@ object GrapeRankCommand {
             val hopOf = HashMap<HexKey, Int>()
             if (!offline) {
                 val crawlStart = System.nanoTime()
+                // Scope for fire-and-forget relay-list discovery: the wide Tier-2
+                // sweep (ensureRelayLists) casts kind:10002 queries across every relay
+                // we know, but we don't block the crawl on it — its results just
+                // enrich routing for later rounds. SupervisorJob so one failing sweep
+                // never cancels the others; cancelled when the crawl finishes.
+                val bgScope = CoroutineScope(coroutineContext + SupervisorJob())
                 val discovered = hashSetOf(observer)
                 hopOf[observer] = 0
                 // Per-user relay hints harvested from the `p`-tag relay hints in the
@@ -259,9 +278,19 @@ object GrapeRankCommand {
                 val deadRelays = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
                 val relayStrikes = ConcurrentHashMap<NormalizedRelayUrl, Int>()
 
-                fun recordDead(failed: Set<NormalizedRelayUrl>) {
-                    for (r in failed) {
-                        if (relayStrikes.merge(r, 1, Int::plus)!! >= MAX_DEAD_STRIKES) deadRelays.add(r)
+                // A relay that HARD-failed (bad domain, TLS misconfig, dead HTTP
+                // code — see DrainFailure) is dropped on the first strike: it will
+                // not fix itself. A TRANSIENT failure (refused/reset/unreachable,
+                // or a 429/5xx) might clear, so it takes MAX_DEAD_STRIKES before we
+                // give up. Pure timeouts never reach here — the drain treats them as
+                // busy-retry and does not report them dead at all.
+                fun recordDead(failed: Map<NormalizedRelayUrl, DrainFailure>) {
+                    for ((r, kind) in failed) {
+                        when (kind) {
+                            DrainFailure.HARD -> deadRelays.add(r)
+                            DrainFailure.TRANSIENT ->
+                                if (relayStrikes.merge(r, 1, Int::plus)!! >= MAX_DEAD_STRIKES) deadRelays.add(r)
+                        }
                     }
                 }
 
@@ -348,9 +377,9 @@ object GrapeRankCommand {
                                             // Each drain gets its own dead-set — the concurrent
                                             // drains must not share a mutable HashSet.
                                             async {
-                                                val dead = hashSetOf<NormalizedRelayUrl>()
+                                                val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
                                                 val filters =
-                                                    mapOf(relay to shard.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = graphKinds, authors = it) })
+                                                    mapOf(relay to shard.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = fetchKinds, authors = it) })
                                                 ctx.drain(filters, timeoutMs, diagnose, dead, gatePerRelay = true) to dead
                                             }
                                         }
@@ -374,9 +403,9 @@ object GrapeRankCommand {
                         // on a relay ranked below the top SHARD_RELAYS.
                         val live = topLiveRelays(BROADCAST_RELAYS)
                         if (live.isNotEmpty()) {
-                            val dead = hashSetOf<NormalizedRelayUrl>()
+                            val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
                             val filters =
-                                live.associateWith { missing.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = graphKinds, authors = it) } }
+                                live.associateWith { missing.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = fetchKinds, authors = it) } }
                             val events = ctx.drain(filters, timeoutMs, diagnose, dead, gatePerRelay = true)
                             recordDead(dead)
                             relaysContacted += live
@@ -422,7 +451,11 @@ object GrapeRankCommand {
                     val stragglers = pending.filter { it !in done }
                     if (stragglers.isNotEmpty()) {
                         val backbone = topLiveRelays(BACKBONE_SIZE).toSet()
-                        ensureRelayLists(ctx, stragglers.toSet(), backbone, timeoutMs, diagnose)
+                        // Snapshot of every relay we've seen work, for the wide Tier-2
+                        // sweep (taken now, on this single coroutine, before the Phase-B
+                        // workers start mutating liveRelays).
+                        val allLive = (liveRelays - deadRelays).toSet()
+                        ensureRelayLists(ctx, stragglers.toSet(), allLive, bgScope, timeoutMs, diagnose)
 
                         // Continuous worker pool instead of chunked awaitAll barriers.
                         // The old shape drained DRAIN_CONCURRENCY batches, waited for the
@@ -445,7 +478,7 @@ object GrapeRankCommand {
                             val producer =
                                 launch {
                                     for (batch in stragglers.chunked(USER_BATCH)) {
-                                        val filters = routeByOutbox(ctx, batch.toSet(), relayHints, backbone, attempts, writeRelayFreq, graphKinds, deadRelays)
+                                        val filters = routeByOutbox(ctx, batch.toSet(), relayHints, backbone, attempts, writeRelayFreq, fetchKinds, deadRelays)
                                         routed.send(batch to filters)
                                     }
                                     routed.close()
@@ -456,7 +489,7 @@ object GrapeRankCommand {
                                 List(DRAIN_CONCURRENCY) {
                                     launch {
                                         for ((batch, filters) in routed) {
-                                            val dead = hashSetOf<NormalizedRelayUrl>()
+                                            val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
                                             val events = ctx.drain(filters, timeoutMs, diagnose, dead, gatePerRelay = true)
                                             recordDead(dead)
                                             drainedOut.send(Triple(batch, filters.keys, events))
@@ -498,8 +531,10 @@ object GrapeRankCommand {
                     )
                 }
 
-                // Crawl done — drop the warm pool.
+                // Crawl done — drop the warm pool and stop any background relay-list
+                // sweeps still in flight (their results are already in the store).
                 ctx.client.unsubscribe(WARM_SUB_ID)
+                bgScope.cancel()
 
                 // No separate last-mile pass: the per-round sharded sweep already
                 // broadcasts the small remaining set to every top relay once it drops
@@ -904,7 +939,8 @@ object GrapeRankCommand {
     private suspend fun ensureRelayLists(
         ctx: Context,
         pubkeys: Set<HexKey>,
-        fallbackRelays: Set<NormalizedRelayUrl>,
+        allLiveRelays: Set<NormalizedRelayUrl>,
+        bgScope: CoroutineScope,
         timeoutMs: Long,
         diagnose: Boolean,
     ) {
@@ -925,13 +961,22 @@ object GrapeRankCommand {
             ctx.drain(filters, timeoutMs, diagnose, gatePerRelay = true)
         }
 
+        // Tier 1: the index/discovery aggregators, which carry kind:10002 for most
+        // of the network. Blocking, because this round's routing needs the result.
         val discovery = relayListDiscoveryRelays(ctx)
         query(missing, discovery)
 
-        // Tier 2: whoever the aggregators still don't have, ask the relays the
-        // rest of the graph actually writes to.
+        // Tier 2: whoever the aggregators still don't have, cast the widest net —
+        // ask EVERY relay we've seen deliver events, not just the backbone. Fired
+        // fire-and-forget on [bgScope]: a stray 10002 might sit on any one relay, so
+        // we don't want to skip any, but we also can't block the crawl on a fan-out
+        // that large. The results land in the store and improve routing for later
+        // rounds; anyone still unresolved is handled by fallback routing meanwhile.
         val stillMissing = missing.filter { ctx.relaysOf(it) == null }
-        query(stillMissing, fallbackRelays - discovery)
+        val wide = allLiveRelays - discovery
+        if (stillMissing.isNotEmpty() && wide.isNotEmpty()) {
+            bgScope.launch { query(stillMissing, wide) }
+        }
     }
 
     /**

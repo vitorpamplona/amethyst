@@ -84,6 +84,61 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 /**
+ * Why a relay could not be used for a drain — when the reason is worth acting on.
+ *
+ *  - [HARD]: the relay answered wrong, or cannot exist. A bad HTTP upgrade (not a
+ *    websocket / dead status code), an unresolvable domain, or a TLS misconfig.
+ *    This will not fix itself, so one strike is enough to drop it.
+ *  - [TRANSIENT]: a failure that might clear — connection refused / reset, host
+ *    unreachable, or a temporary 429/5xx on the upgrade. Struck a few times
+ *    before we give up.
+ *
+ * A pure connect **timeout** is neither. The relay is most likely just busy, so
+ * we retry it and never mark it dead — [classifyDrainFailure] returns null for
+ * it (and for any non-failure terminal reason).
+ */
+enum class DrainFailure { HARD, TRANSIENT }
+
+/**
+ * Classify a [Context.drain] per-relay terminal reason. Returns null when the
+ * relay should simply be retried (a timeout, or a non-failure like eose/closed).
+ * The reason shape is `cannot:<message>` for a connect failure (see
+ * `BasicRelayClient.onCannotConnect`), or `eose` / `closed:…` / `timeout`.
+ */
+fun classifyDrainFailure(reason: String): DrainFailure? {
+    if (!reason.startsWith("cannot")) return null
+    val m = reason.removePrefix("cannot:").lowercase()
+    // The message now carries the exception class name (see BasicRelayClient), so
+    // we can key on the stable *type* rather than localized message text.
+    // Busy, not dead: a connect/read timeout means the handshake just didn't
+    // finish in time. Retry it — the relay is probably fine, only slow or loaded.
+    if ("timeout" in m || "timed out" in m) return null // SocketTimeoutException, etc.
+    // Cannot ever work: unresolvable domain (DNS) or a TLS misconfiguration.
+    // Dead for good — one strike is enough.
+    if ("unknownhost" in m || // UnknownHostException
+        "unable to resolve host" in m ||
+        "no address associated" in m ||
+        "nodename nor servname" in m ||
+        "sslhandshake" in m || // SSLHandshakeException
+        "sslpeerunverified" in m ||
+        "sslexception" in m ||
+        "certificate" in m || // CertificateException
+        "trust anchor" in m ||
+        "certpath" in m
+    ) {
+        return DrainFailure.HARD
+    }
+    // Wrong HTTP upgrade. Usually a misconfigured endpoint (not a relay), but
+    // 429 / 5xx mean "busy, come back later", so those stay transient.
+    if ("server misconfigured" in m || "not a websocket" in m || "expected http 101" in m) {
+        val transientCode = Regex("response: (429|500|502|503|504)").containsMatchIn(m)
+        return if (transientCode) DrainFailure.TRANSIENT else DrainFailure.HARD
+    }
+    // Refused / reset / unreachable / anything else: might clear — retry a few times.
+    return DrainFailure.TRANSIENT
+}
+
+/**
  * Per-invocation wiring. Each CLI run constructs a Context, does its work,
  * and then closes it — no daemon.
  *
@@ -129,13 +184,16 @@ class Context(
             // default cap (maxRequests=64) throttles the connection ramp — worse,
             // a dead relay holds a slot for the whole connectTimeout, starving live
             // relays queued behind it. Widen the dispatcher so handshakes fan out,
-            // and tighten connectTimeout so an unreachable relay frees its slot
-            // fast. This is orthogonal to REQ concurrency (that runs on already-open
-            // sockets, bounded by AdaptiveRelayLimiter), so it can't trip a relay's
-            // REQ rate-limit — it only speeds connection setup. The executor thread
-            // pool is unbounded on demand, so raising maxRequests just lets more of
-            // those short-lived handshakes proceed at once.
-            .connectTimeout(5, TimeUnit.SECONDS)
+            // and keep connectTimeout tight-ish so an unreachable relay frees its
+            // slot fast. This is orthogonal to REQ concurrency (that runs on
+            // already-open sockets, bounded by AdaptiveRelayLimiter), so it can't
+            // trip a relay's REQ rate-limit — it only speeds connection setup. The
+            // executor thread pool is unbounded on demand, so raising maxRequests
+            // just lets more of those short-lived handshakes proceed at once. 7s
+            // (not 5s): a 5s cap struck too many merely-busy relays as connect
+            // failures — the crawl treats a connect *timeout* as retryable anyway,
+            // but the extra headroom lets slow-but-alive relays finish the handshake.
+            .connectTimeout(7, TimeUnit.SECONDS)
             .dispatcher(
                 Dispatcher().apply {
                     maxRequests = 256
@@ -475,7 +533,7 @@ class Context(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         timeoutMs: Long = 8_000,
         diagnoseSlow: Boolean = false,
-        deadOut: MutableSet<NormalizedRelayUrl>? = null,
+        deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
         gatePerRelay: Boolean = false,
     ): List<Pair<NormalizedRelayUrl, Event>> {
         if (filters.isEmpty()) return emptyList()
@@ -556,7 +614,7 @@ class Context(
         }
         deadOut?.let { out ->
             for ((relay, reason) in doneReasons) {
-                if (reason.startsWith("cannot")) out.add(relay)
+                classifyDrainFailure(reason)?.let { out[relay] = it }
             }
         }
         return collected
@@ -578,7 +636,7 @@ class Context(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         timeoutMs: Long,
         diagnoseSlow: Boolean,
-        deadOut: MutableSet<NormalizedRelayUrl>?,
+        deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>?,
     ): List<Pair<NormalizedRelayUrl, Event>> {
         val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
         // One relay per subId, so the relay alone identifies which subscription a
@@ -657,7 +715,7 @@ class Context(
         }
         deadOut?.let { out ->
             for ((relay, reason) in doneReasons) {
-                if (reason.startsWith("cannot")) out.add(relay)
+                classifyDrainFailure(reason)?.let { out[relay] = it }
             }
         }
         return collected
