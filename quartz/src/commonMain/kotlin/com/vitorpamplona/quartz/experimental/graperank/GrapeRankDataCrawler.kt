@@ -48,6 +48,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
@@ -165,11 +166,13 @@ class GrapeRankDataCrawler(
     /**
      * Crawl from [observer], streaming discovered contact lists into [builder]
      * (follows only — mutes/reports land in the store for the caller to
-     * materialize). Returns the crawl [Stats].
+     * materialize). Pass `null` for a persist-only *sync*: every event still lands
+     * in the store, the frontier still expands off each contact list, but no graph
+     * is assembled in memory (the caller scores later from the store). Returns [Stats].
      */
     suspend fun crawl(
         observer: HexKey,
-        builder: TrustGraphBuilder,
+        builder: TrustGraphBuilder?,
     ): Stats {
         verifyNanos.store(0)
         insertNanos.store(0)
@@ -189,7 +192,7 @@ class GrapeRankDataCrawler(
      */
     private inner class CrawlRun(
         val observer: HexKey,
-        val builder: TrustGraphBuilder,
+        val builder: TrustGraphBuilder?,
     ) {
         // hop distance per discovered user; the observer seeds it at 0. Its key set
         // is the discovered frontier — no separate `discovered` set to keep in sync.
@@ -242,6 +245,15 @@ class GrapeRankDataCrawler(
         var rounds = 0
         var contactListsFed = 0
 
+        // Live-progress context the heartbeat ticker reads (plain vars set only by the
+        // single round-loop coroutine; the ticker's reads are benign racy int/bool
+        // reads — a stale value just shows in one progress line). progTarget/progBase
+        // frame the CURRENT round so the ticker can show a real "X of Y (Z%)" for it.
+        var progRound = 0
+        var progTarget = 0
+        var progBaseDone = 0
+        var progConverging = false
+
         /**
          * A relay that HARD-failed (bad domain, TLS misconfig, dead HTTP code) is
          * dropped on the first strike: it will not fix itself. A TRANSIENT failure
@@ -290,7 +302,7 @@ class GrapeRankDataCrawler(
                     fresh++
                 }
             }
-            builder.addFollows(source, follows)
+            builder?.addFollows(source, follows)
             contactListsFed++
             return fresh
         }
@@ -620,6 +632,46 @@ class GrapeRankDataCrawler(
         }
 
         /**
+         * Heartbeat so a long round never goes silent: every [PROGRESS_INTERVAL_MS]
+         * emit a one-liner with the CURRENT round's completion (a real X/Y % — the
+         * round's pending set is a known target), a rolling fetch rate + rough ETA for
+         * it, and live counts (events stored, slow relays parked, live/dead relays).
+         * Runs for the whole crawl on the background scope; cancelled when it ends.
+         */
+        private suspend fun progressTicker() {
+            var lastFed = 0
+            var lastMark = TimeSource.Monotonic.markNow()
+            while (true) {
+                delay(PROGRESS_INTERVAL_MS)
+                val nowMark = TimeSource.Monotonic.markNow()
+                val dtMs = (nowMark - lastMark).inWholeMilliseconds.coerceAtLeast(1)
+                lastMark = nowMark
+                val fed = contactListsFed
+                val rate = (fed - lastFed) * 1000L / dtMs // lists/sec over this interval
+                lastFed = fed
+                val events = eventsStored.load()
+                val parked = parkedInFlight.load()
+                when {
+                    progConverging ->
+                        log(
+                            "[graperank] finishing · ${human(fed.toLong())} lists · ${human(events)} events" +
+                                (if (parked > 0) " · $parked slow relay(s) still delivering" else " · draining"),
+                        )
+                    progTarget > 0 -> {
+                        val roundDone = (done.size - progBaseDone).coerceAtLeast(0)
+                        val pct = (100L * roundDone / progTarget).coerceIn(0, 100)
+                        val remaining = (progTarget - roundDone).coerceAtLeast(0)
+                        val eta = if (rate > 0) etaFmt(remaining / rate) else "…"
+                        log(
+                            "[graperank] round $progRound · ${human(roundDone.toLong())}/${human(progTarget.toLong())} ($pct%)" +
+                                " · $rate/s · ~$eta · ${human(events)} ev · $parked slow · ${deadRelays.size()} dead",
+                        )
+                    }
+                }
+            }
+        }
+
+        /**
          * Subscribe each relay to its filters behind [limiter] and drain them. A relay
          * that reaches a terminal (EOSE/CLOSED/cannot-connect) within the FAST
          * [Config.timeoutMs] has its events persisted and returned so this round can
@@ -813,6 +865,10 @@ class GrapeRankDataCrawler(
             val scope = CoroutineScope(coroutineContext + SupervisorJob())
             bgScope = scope
 
+            // Heartbeat: keeps a long, silent round feeling alive with live % + ETA.
+            // Runs on [scope], so scope.cancel() at crawl end stops it.
+            scope.launch { progressTicker() }
+
             while (rounds < config.maxRounds) {
                 // Fold in whatever the parked (slow-but-alive) relays have delivered
                 // since the last round — their late contact lists expand the frontier
@@ -826,6 +882,7 @@ class GrapeRankDataCrawler(
                     // Frontier drained. If no slow relay is still streaming, a final
                     // fold catches any last-moment delivery and we're done; otherwise
                     // wait for a parked relay to deliver (completeness) and loop.
+                    progConverging = true
                     if (parkedInFlight.load() == 0L) {
                         if (foldLateHarvest() == 0) break else continue
                     }
@@ -833,6 +890,12 @@ class GrapeRankDataCrawler(
                     continue
                 }
                 rounds++
+                // Frame this round for the heartbeat ticker: its target is the pending
+                // set, its baseline is how many users were already done going in.
+                progRound = rounds
+                progTarget = pending.size
+                progBaseDone = done.size
+                progConverging = false
 
                 // Refresh the warm pool to this round's busiest relays and keep that
                 // subscription open — reusing the same subId just updates the
@@ -1033,6 +1096,20 @@ class GrapeRankDataCrawler(
         // Once the frontier is empty but parked relays are still streaming, how long
         // to block waiting for one of them to deliver before re-checking convergence.
         private const val PARK_POLL_MS = 2000L
+
+        // How often the heartbeat ticker emits a live-progress line.
+        private const val PROGRESS_INTERVAL_MS = 3000L
+
+        /** Compact human count: 1234 -> "1.2k", 1_500_000 -> "1.5M". */
+        private fun human(n: Long): String =
+            when {
+                n >= 1_000_000 -> "${n / 1_000_000}.${(n % 1_000_000) / 100_000}M"
+                n >= 1_000 -> "${n / 1_000}.${(n % 1_000) / 100}k"
+                else -> n.toString()
+            }
+
+        /** Seconds as "45s" or "3m20s". */
+        private fun etaFmt(secs: Long): String = if (secs >= 60) "${secs / 60}m${secs % 60}s" else "${secs}s"
 
         // Sentinel returned by the park idle-wait's select when an event arrived
         // (resets the window). A control string that can't collide with a relay's
