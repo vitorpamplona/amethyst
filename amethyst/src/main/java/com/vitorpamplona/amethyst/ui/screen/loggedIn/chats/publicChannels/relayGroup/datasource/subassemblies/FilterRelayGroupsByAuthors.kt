@@ -20,14 +20,85 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies
 
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 
-// Authors can't be pushed into the REQ (a group's 39000 is signed by its relay, never a follow),
-// so an author filter contributes only its RELAY set; the directory is pulled per relay and the
-// dal keeps the groups whose relay-key/admins/members intersect the selected authors.
+/**
+ * A group's kind-39000 is relay-signed, so a follow shows up in three distinct ways, and each is a
+ * real relay-side REQ (not a broad "pull everything" pass):
+ *  1. the follow IS the relay signing key → `{kinds:[39000], authors:<follows>}` (metadata included);
+ *  2. a follow is an admin/member → `{kinds:[39001,39002], #p:<follows>}` (standard p-tag filter);
+ *  3. metadata backfill for the groups (2) surfaced → `{kinds:[39000], #d:<their group-ids>}`, read
+ *     from the rosters already in cache (empty on the first pass, filled once (2)'s events land and
+ *     the sub-assembler re-invalidates).
+ */
+fun filterRelayGroupsByAuthors(
+    relay: NormalizedRelayUrl,
+    authors: Set<HexKey>,
+    since: Long? = null,
+): List<RelayBasedFilter> {
+    if (authors.isEmpty()) return emptyList()
+    val authorList = authors.sorted()
+
+    val filters =
+        mutableListOf(
+            // (1) groups whose relay signing-key is a follow
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        authors = authorList,
+                        kinds = listOf(GroupMetadataEvent.KIND),
+                        limit = 200,
+                        since = since,
+                    ),
+            ),
+            // (2) groups where a follow is an admin (39001) or member (39002)
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = listOf(GroupAdminsEvent.KIND, GroupMembersEvent.KIND),
+                        tags = mapOf(PTag.TAG_NAME to authorList),
+                        limit = 200,
+                        since = since,
+                    ),
+            ),
+        )
+
+    // (3) backfill 39000 metadata for the roster-discovered groups already known on this relay.
+    val rosterGroupIds =
+        LocalCache
+            .getRelayGroupChannelsOnRelay(relay)
+            .filter { channel -> channel.admins.any { it.pubKey in authors } || channel.members.any { it in authors } }
+            .map { it.groupId.id }
+    if (rosterGroupIds.isNotEmpty()) {
+        filters +=
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = listOf(GroupMetadataEvent.KIND),
+                        tags = mapOf(DTag.TAG_NAME to rosterGroupIds),
+                        limit = 200,
+                        since = since,
+                    ),
+            )
+    }
+
+    return filters
+}
 
 fun filterRelayGroupsByAuthors(
     authorSet: AuthorsTopNavPerRelayFilterSet,
@@ -37,8 +108,9 @@ fun filterRelayGroupsByAuthors(
     if (authorSet.set.isEmpty()) return emptyList()
 
     return authorSet.set.flatMap {
-        filterRelayGroupsDirectory(
+        filterRelayGroupsByAuthors(
             relay = it.key,
+            authors = it.value.authors,
             since = since?.get(it.key)?.time ?: defaultSince,
         )
     }
@@ -52,8 +124,9 @@ fun filterRelayGroupsByMutedAuthors(
     if (authorSet.set.isEmpty()) return emptyList()
 
     return authorSet.set.flatMap {
-        filterRelayGroupsDirectory(
+        filterRelayGroupsByAuthors(
             relay = it.key,
+            authors = it.value.authors,
             since = since?.get(it.key)?.time ?: defaultSince,
         )
     }

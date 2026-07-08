@@ -24,9 +24,9 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavP
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
-// A follows filter pulls the whole directory (metadata + rosters) from each relay the follow set
-// routes to; the dal keeps groups where a follow is the relay key, an admin, or a member, and any
-// topic/geo groups the AllFollows big-OR also selects (all present in the directory pull).
+// A follows filter routes to each relay the follow set uses and asks, per relay, for the three
+// ways a follow surfaces in a relay-signed group: the relay signing-key is a follow, or a follow
+// is an admin (39001) or a member (39002). See [filterRelayGroupsByAuthors].
 fun filterRelayGroupsByFollows(
     followsSet: AllFollowsTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
@@ -35,9 +35,9 @@ fun filterRelayGroupsByFollows(
     if (followsSet.set.isEmpty()) return emptyList()
 
     return followsSet.set.flatMap {
-        filterRelayGroupsDirectory(
-            relay = it.key,
-            since = since?.get(it.key)?.time ?: defaultSince,
-        )
+        val relaySince = since?.get(it.key)?.time ?: defaultSince
+        it.value.authors?.let { authors ->
+            filterRelayGroupsByAuthors(it.key, authors, relaySince)
+        } ?: emptyList()
     }
 }
