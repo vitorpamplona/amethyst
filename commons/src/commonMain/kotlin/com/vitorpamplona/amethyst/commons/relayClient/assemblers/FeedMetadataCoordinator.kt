@@ -42,6 +42,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.concurrent.Volatile
 
 /**
  * Coordinates metadata and reactions loading for feed items.

@@ -37,6 +37,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.concurrent.Volatile
 
 /**
  * Fetches kind-0 (profile metadata) and kind-3 (contact list) events for a
