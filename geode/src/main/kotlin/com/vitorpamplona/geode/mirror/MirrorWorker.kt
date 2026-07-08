@@ -23,11 +23,8 @@ package com.vitorpamplona.geode.mirror
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.deletionSideChannelFilter
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.excludesDeletionKinds
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcile
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySyncOrFetch
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.shouldPropagateDeletionUp
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
@@ -242,16 +239,9 @@ class MirrorWorker(
         val listener: SubscriptionListener,
         initialSince: Long,
         val watermark: AtomicLong,
-        // The deletion side-channel filter (kinds 5/62), when the operator scope
-        // excludes them. Carried here so it rides every re-subscribe too — else a
-        // reconnect would silently drop live deletions.
-        val deletionScope: Filter?,
     ) {
         @Volatile
         var issuedSince: Long = initialSince
-
-        /** Content scope plus, when in force, the deletion side-channel — both at [since]. */
-        fun filtersFrom(since: Long): List<Filter> = listOfNotNull(scopedBase.copy(since = since), deletionScope?.copy(since = since))
 
         fun advanceSinceOnReconnect() {
             val candidate = watermark.get() - WATERMARK_OVERLAP_SECS
@@ -259,7 +249,7 @@ class MirrorWorker(
                 issuedSince = candidate
                 client.subscribe(
                     subId = subId,
-                    filters = mapOf(up.url to filtersFrom(candidate)),
+                    filters = mapOf(up.url to listOf(scopedBase.copy(since = candidate))),
                     listener = listener,
                 )
                 sinceAdvances.incrementAndGet()
@@ -340,15 +330,6 @@ class MirrorWorker(
             val scopedBase = (up.filter ?: Filter()).copy(since = null, limit = null)
             val initialSince = since - up.backfillSeconds
 
-            // Deletion side-channel scope. NIP-77 (and the live REQ) reconcile by
-            // id over the operator filter, so a kind-scoped mirror (`kinds:[1]`)
-            // would drop the kind-5/62 that deletes one of those notes — the
-            // deletion would never reach the other side. When the operator filter
-            // excludes 5/62, mirror them on their own (same authors), in the
-            // mirror's configured direction. `null` when the filter already covers
-            // deletions (unscoped, or 5/62 explicitly listed) — nothing extra to do.
-            val deletionScope = up.filter?.takeIf { it.excludesDeletionKinds() }?.deletionSideChannelFilter()
-
             // strfry's two-phase model, both directions (`strfry sync --dir
             // both` + the live router): a one-shot NIP-77 "sync" closes the
             // historical [initialSince, now] gap — down pulls what the upstream
@@ -363,16 +344,16 @@ class MirrorWorker(
             val upLiveSince = if (catchUpUp) since else initialSince
 
             if (up.direction != MirrorDirection.UP) {
-                downSubs += startDown(i, up, scopedBase, downLiveSince, exchanged, deletionScope)
+                downSubs += startDown(i, up, scopedBase, downLiveSince, exchanged)
             }
             if (up.direction != MirrorDirection.DOWN) {
-                startUp(up, scopedBase.copy(since = upLiveSince), exchanged, deletionScope?.copy(since = upLiveSince))
+                startUp(up, scopedBase.copy(since = upLiveSince), exchanged)
             }
             if (catchUpDown) {
-                scope.launch { runCatchUpDown(up, scopedBase, initialSince, since, deletionScope) }
+                scope.launch { runCatchUpDown(up, scopedBase, initialSince, since) }
             }
             if (catchUpUp) {
-                scope.launch { runCatchUpUp(up, scopedBase, initialSince, since, exchanged, deletionScope) }
+                scope.launch { runCatchUpUp(up, scopedBase, initialSince, since, exchanged) }
             }
         }
         client.connect()
@@ -430,14 +411,12 @@ class MirrorWorker(
         scopedBase: Filter,
         initialSince: Long,
         until: Long,
-        deletionScope: Filter?,
     ) {
         val catchUpFilter = scopedBase.copy(since = initialSince, until = until)
-
-        // Even a trusted upstream may only inject events inside the declared
-        // scope — plus the deletion side-channel scope when one is in force, so a
-        // kind-scoped mirror still accepts the kind-5/62 that apply to it.
-        fun inScope(event: Event): Boolean = up.filter == null || up.filter.match(event) || deletionScope?.match(event) == true
+        // Reconcile against what we already hold in this window → download only
+        // the diff (like `strfry sync`). No store wired → empty local set → the
+        // whole window is downloaded and the store's unique-id constraint dedups.
+        val localEntries = store?.snapshotIdsForNegentropy(listOf(catchUpFilter)) ?: emptyList()
 
         // Bounded hand-off → one ingest consumer. `onEvent` can't suspend, so it
         // blocks here when the sink falls behind; because negentropySyncOrFetch's
@@ -463,34 +442,26 @@ class MirrorWorker(
                 }
             }
 
-        // Reconciles one filter against what we already hold → downloads only the
-        // diff (like `strfry sync`). No store wired → empty local set → the whole
-        // set is downloaded and the store's unique-id constraint dedups.
-        suspend fun pull(filter: Filter) {
-            val localEntries = store?.snapshotIdsForNegentropy(listOf(filter)) ?: emptyList()
+        try {
             val result =
                 client.negentropySyncOrFetch(
                     relay = up.url,
-                    filter = filter,
+                    filter = catchUpFilter,
                     localEntries = localEntries,
                     onEvent = { event ->
-                        if (inScope(event)) handoff.trySendBlocking(event) else filtered.incrementAndGet()
+                        // Same containment as the live path: even a trusted
+                        // upstream may only inject events inside the declared scope.
+                        if (up.filter == null || up.filter.match(event)) {
+                            handoff.trySendBlocking(event)
+                        } else {
+                            filtered.incrementAndGet()
+                        }
                     },
                 )
             Log.i("MirrorWorker") {
                 val how = if (result.pagedFallback) "paged REQ (upstream has no NIP-77)" else "negentropy"
                 "catch-up from ${up.url.url}: ${result.downloaded} events via $how"
             }
-        }
-
-        try {
-            // Deletions first, so a deletion already lands (or the reject-trigger
-            // is armed) before the content pull can add its target — no
-            // add-then-delete churn. They carry no time window: a deletion's
-            // created_at is when it was issued, not when its target was, so the
-            // whole deletion set for the scope is reconciled, not the window.
-            if (deletionScope != null) pull(deletionScope)
-            pull(catchUpFilter)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
@@ -518,80 +489,65 @@ class MirrorWorker(
         initialSince: Long,
         until: Long,
         exchanged: RecentIds?,
-        deletionScope: Filter?,
     ) {
         val localStore = store ?: return
         val catchUpFilter = scopedBase.copy(since = initialSince, until = until)
-
-        // Reconcile [filter] against the upstream and PUSH the events we hold that
-        // it lacks (the `have` ids), re-reconciling each round until the diff is
-        // empty — the reconcile is the delivery check, so the push converges to
-        // lossless. [publishable] gates which local events actually go: scope
-        // containment for content, and per-relay vanish targeting for kind-62 (a
-        // vanish is only sent to a relay it names).
-        suspend fun pushUp(
-            filter: Filter,
-            label: String,
-            publishable: (Event) -> Boolean,
-        ) {
-            // Our local set for this window is fixed; each round reconciles it
-            // against the upstream, which grows as we push, so the diff shrinks.
-            val localEntries = localStore.snapshotIdsForNegentropy(listOf(filter))
+        // Our local set for this window is fixed; each round reconciles it
+        // against the upstream, which grows as we push, so the `have` diff
+        // shrinks to zero.
+        val localEntries = localStore.snapshotIdsForNegentropy(listOf(catchUpFilter))
+        try {
             var round = 0
             while (round < MAX_UP_SYNC_ROUNDS) {
-                // Stream the `have` batches and publish as they arrive — never
-                // materialising the full diff. Publishing suspends the round, so
-                // the relay is back-pressured. The `need` direction is the down
-                // catch-up's job, so its ids are discarded here.
+                // Reconcile and PUBLISH the `have` ids (events we hold the
+                // upstream lacks) as each batch streams in — never materialising
+                // the full diff. On a large window the id list is millions of
+                // entries; the streaming reconcile keeps memory at one batch and
+                // still back-pressures the relay because publishing suspends the
+                // round. The `need` direction is the down catch-up's job, so its
+                // ids are discarded (not accumulated) here.
                 var haveCount = 0
                 var pushed = 0
                 client.negentropyReconcile(
                     relay = up.url,
-                    filter = filter,
+                    filter = catchUpFilter,
                     localEntries = localEntries,
                     batchSize = HAVE_FETCH_BATCH,
                     onHaveIds = { batch ->
                         haveCount += batch.size
                         for (event in localStore.query<Event>(Filter(ids = batch))) {
-                            if (!publishable(event)) continue
-                            // Echo suppression: record the id so a BOTH mirror
-                            // doesn't re-ingest its own push on the down sub (but
-                            // always re-publish — a straggler stays in `exchanged`
-                            // yet still needs delivering).
+                            // Scope containment: a scoped upstream only receives
+                            // in-scope events. Echo suppression: record the id so
+                            // a BOTH mirror doesn't re-ingest its own push on the
+                            // down sub (but always re-publish — a straggler stays
+                            // in `exchanged` yet still needs delivering).
+                            if (up.filter != null && !up.filter.match(event)) continue
                             exchanged?.add(event.id)
                             client.publish(event, setOf(up.url))
                             pushed++
                         }
-                        delay(UP_PUBLISH_PACING_MS) // pace the outbox
+                        // Pace the outbox so a batch drains before the next.
+                        delay(UP_PUBLISH_PACING_MS)
                     },
                     onNeedIds = { },
                 )
-                // Converge when nothing PUBLISHABLE remains to push — not on raw
-                // haveCount. A diff that is all un-publishable (e.g. a kind-62 vanish
-                // for a relay this upstream isn't, which shouldPropagateDeletionUp
-                // rightly refuses) would otherwise report a non-zero haveCount every
-                // round and burn all MAX_UP_SYNC_ROUNDS on every startup.
-                if (pushed == 0) {
-                    val how = if (haveCount == 0) "converged" else "converged ($haveCount un-publishable left)"
-                    Log.i("MirrorWorker") { "up catch-up ($label) to ${up.url.url}: $how after $round round(s)" }
+                if (haveCount == 0) {
+                    Log.i("MirrorWorker") { "up catch-up to ${up.url.url}: converged after $round round(s)" }
                     return
                 }
+                // `client.publish`'s outbox is best-effort under a bulk burst
+                // (each publish also churns a reconnect), so instead of trusting
+                // one pass we re-reconcile next round and re-push only what didn't
+                // land — the reconcile is the delivery check, so the push
+                // converges to lossless.
                 sentUp.addAndGet(pushed.toLong())
-                Log.i("MirrorWorker") { "up catch-up ($label) to ${up.url.url}: round $round pushed $pushed (had $haveCount to go)" }
+                Log.i("MirrorWorker") { "up catch-up to ${up.url.url}: round $round pushed $pushed (had $haveCount to go)" }
                 round++
-                delay(UP_SYNC_SETTLE_MS) // let the upstream ingest + OK before re-checking
+                // Let the upstream ingest + OK before the next reconcile, so the
+                // diff reflects what actually landed rather than what's in flight.
+                delay(UP_SYNC_SETTLE_MS)
             }
-            Log.w("MirrorWorker") { "up catch-up ($label) to ${up.url.url}: did not fully converge in $MAX_UP_SYNC_ROUNDS rounds (live push continues)" }
-        }
-
-        try {
-            // Deletions first: push a deletion up before its target, so the
-            // upstream's reject-trigger blocks the target instead of ingesting
-            // then deleting it.
-            if (deletionScope != null) {
-                pushUp(deletionScope, "deletions") { event -> shouldPropagateDeletionUp(event, up.url) }
-            }
-            pushUp(catchUpFilter, "content") { event -> up.filter == null || up.filter.match(event) }
+            Log.w("MirrorWorker") { "up catch-up to ${up.url.url}: did not fully converge in $MAX_UP_SYNC_ROUNDS rounds (live push continues)" }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
@@ -606,7 +562,6 @@ class MirrorWorker(
         scopedBase: Filter,
         initialSince: Long,
         exchanged: RecentIds?,
-        deletionScope: Filter?,
     ): DownSub {
         // watermark tracks the newest created_at ingested from this
         // upstream; seeded at initialSince so a still-catching-up
@@ -638,7 +593,7 @@ class MirrorWorker(
                     // upstream can only inject events the operator
                     // declared — the REQ shapes what we ask for, this
                     // shapes what we accept.
-                    if (up.filter != null && !up.filter.match(event) && deletionScope?.match(event) != true) {
+                    if (up.filter != null && !up.filter.match(event)) {
                         filtered.incrementAndGet()
                         Log.d("MirrorWorker") { "out-of-scope from ${relay.url}: ${event.id}" }
                         return
@@ -661,13 +616,12 @@ class MirrorWorker(
                 }
             }
         val subId = "geode-mirror-$index"
-        val downSub = DownSub(subId, up, scopedBase, listener, initialSince, watermark, deletionScope)
         client.subscribe(
             subId = subId,
-            filters = mapOf(up.url to downSub.filtersFrom(initialSince)),
+            filters = mapOf(up.url to listOf(scopedBase.copy(since = initialSince))),
             listener = listener,
         )
-        return downSub
+        return DownSub(subId, up, scopedBase, listener, initialSince, watermark)
     }
 
     /**
@@ -684,7 +638,6 @@ class MirrorWorker(
         up: MirrorUpstream,
         scopedFilter: Filter,
         exchanged: RecentIds?,
-        deletionScope: Filter?,
     ) {
         val session =
             server.connect { json ->
@@ -692,9 +645,6 @@ class MirrorWorker(
                 val event =
                     runCatching { (OptimizedJsonMapper.fromJsonToMessage(json) as? EventMessage)?.event }
                         .getOrNull() ?: return@connect
-                // A kind-62 vanish only goes to a relay it targets; kind-5 always
-                // goes. Content events are already scoped by the session's REQ.
-                if (!shouldPropagateDeletionUp(event, up.url)) return@connect
                 // BOTH: don't push back what we just pulled down.
                 if (exchanged?.contains(event.id) == true) return@connect
                 exchanged?.add(event.id)
@@ -702,9 +652,8 @@ class MirrorWorker(
                 sentUp.incrementAndGet()
             }
         upSessions += AutoCloseable { session.close() }
-        val reqFilters = listOfNotNull(scopedFilter, deletionScope)
         scope.launch {
-            session.receive(OptimizedJsonMapper.toJson(ReqCmd("geode-mirror-up", reqFilters)))
+            session.receive(OptimizedJsonMapper.toJson(ReqCmd("geode-mirror-up", listOf(scopedFilter))))
         }
     }
 

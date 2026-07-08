@@ -24,37 +24,30 @@ import com.vitorpamplona.geode.testing.RelayClientTest
 import com.vitorpamplona.geode.testing.preload
 import com.vitorpamplona.geode.testing.publish
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.deletionSideChannelFilter
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.excludesDeletionKinds
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyPropagateDeletions
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.shouldPropagateDeletionUp
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcileIds
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * A NIP-77 sync reconciles by id over the content filter, so a scoped sync
- * (`--kind 1`) never carries the kind-5/62 that would delete one of those notes
- * — the deletion is stuck on whichever side issued it. The deletion side-channel
- * ([negentropyPropagateDeletions]) closes that gap by reconciling kinds 5 & 62
- * on their own, both directions, independent of the content filter.
+ * The `amy sync` deletion rule, end-to-end: for the ids the relay HAS that we LACK
+ * (the negentropy need set), if we hold a kind-5 deletion targeting one of them,
+ * publish that deletion up so the relay deletes it too — instead of re-downloading a
+ * note we deleted. Only these ids, only kind-5, up only; nothing is pulled down or
+ * applied locally, so the personal store can never be over-deleted.
  *
- * Scenario under test (the user's "Relay A has a deletion, Relay B doesn't"):
- * the note lives on both sides; a kind-5 deleting it lives on only one. After the
- * side-channel runs, the deletion has reached the other side and the note is gone
- * there too.
+ * This exercises the exact wiring `SyncCommand` uses (reconcile → look up the local
+ * kind-5 by its `e` tag for the need ids → publish), which the CLI itself has no test
+ * harness for.
  */
 class DeletionSyncTest : RelayClientTest() {
     private val signer = NostrSignerSync(KeyPair())
@@ -63,159 +56,74 @@ class DeletionSyncTest : RelayClientTest() {
 
     private fun deletionOf(target: Event): Event = signer.sign(DeletionEvent.build(listOf(target), createdAt = target.createdAt + 1))
 
-    // ---- filter helpers (pure) --------------------------------------------
-
-    @Test
-    fun excludesDeletionKindsChecksEachKindIndependently() {
-        // No kinds constraint already matches every deletion kind.
-        assertFalse(Filter().excludesDeletionKinds())
-        // Listing ONE deletion kind does NOT cover the other — the reconcile
-        // carries only the kinds actually listed.
-        assertTrue(Filter(kinds = listOf(1, 5)).excludesDeletionKinds(), "kind 5 listed, kind 62 still missing")
-        assertTrue(Filter(kinds = listOf(62)).excludesDeletionKinds(), "kind 62 listed, kind 5 still missing")
-        assertTrue(Filter(kinds = listOf(1)).excludesDeletionKinds(), "kind-1-only misses both")
-        // Both listed → nothing missing.
-        assertFalse(Filter(kinds = listOf(5, 62)).excludesDeletionKinds(), "both deletion kinds covered")
-        // With a restricted deletionKinds set, only kind 5 matters.
-        assertFalse(Filter(kinds = listOf(1, 5)).excludesDeletionKinds(listOf(DeletionEvent.KIND)))
-    }
-
-    @Test
-    fun sideChannelFilterCarriesMissingKindsScopedAuthorsNoWindow() {
-        val authored = Filter(kinds = listOf(1, 5), authors = listOf("aa", "bb"), since = 100, until = 200)
-        val side = authored.deletionSideChannelFilter(authors = listOf("aa", "bb"))
-
-        assertEquals(listOf(RequestToVanishEvent.KIND), side.kinds, "kind 5 already covered → only 62 missing")
-        assertEquals(listOf("aa", "bb"), side.authors, "explicit author scope")
-        assertNull(side.since, "no time window: a deletion's created_at is not its target's")
-        assertNull(side.until)
-    }
-
-    @Test
-    fun vanishGateHonorsDeclaredTargets() {
-        val here = defaultRelayUrl
-        val elsewhere = RelayUrlNormalizer.normalize("wss://elsewhere.example/")
-
-        val delete = deletionOf(note("x"))
-        val vanishHere = signer.sign(RequestToVanishEvent.build(here))
-        val vanishElsewhere = signer.sign(RequestToVanishEvent.build(elsewhere))
-        val vanishEverywhere = signer.sign(RequestToVanishEvent.buildVanishFromEverywhere())
-
-        assertTrue(shouldPropagateDeletionUp(delete, elsewhere), "kind-5 is always safe to propagate")
-        assertTrue(shouldPropagateDeletionUp(vanishHere, here), "vanish targeting this relay goes")
-        assertFalse(shouldPropagateDeletionUp(vanishElsewhere, here), "vanish for another relay does not")
-        assertTrue(shouldPropagateDeletionUp(vanishEverywhere, here), "ALL_RELAYS vanish goes anywhere")
-    }
-
-    @Test
-    fun noOpWhenAllKindsCoveredOrScopeEmpty() =
-        runBlocking {
-            val d = deletionOf(note("x"))
-            // All deletion kinds already covered by content → skip.
-            assertNull(
-                withTimeout(20_000) {
-                    client.negentropyPropagateDeletions(
-                        relay = defaultRelayUrl,
-                        contentFilter = Filter(kinds = listOf(5, 62)),
-                        localDeletions = listOf(d),
-                        scopeAuthors = listOf(signer.pubKey),
-                        download = { error("must not download") },
-                        upload = { error("must not upload") },
-                    )
-                },
-                "a filter that already covers 5 AND 62 skips the side-channel",
-            )
-            // Author-less scope → skip rather than reconcile the relay's whole history.
-            assertNull(
-                withTimeout(20_000) {
-                    client.negentropyPropagateDeletions(
-                        relay = defaultRelayUrl,
-                        contentFilter = Filter(kinds = listOf(1)),
-                        localDeletions = listOf(d),
-                        scopeAuthors = emptyList(),
-                        download = { error("must not download") },
-                        upload = { error("must not upload") },
-                    )
-                },
-                "an empty author scope disables the side-channel (no relay-wide pull)",
-            )
+    /** The SyncCommand step under test: publish local kind-5 deletions targeting [needIds]. */
+    private suspend fun sendDeletionsFor(
+        local: com.vitorpamplona.geode.RelayEngine,
+        needIds: List<String>,
+    ): Int {
+        var sent = 0
+        val mine = local.store.query<Event>(Filter(kinds = listOf(DeletionEvent.KIND), tags = mapOf("e" to needIds)))
+        for (del in mine) {
+            defaultRelay.publish(del)
+            sent++
         }
-
-    // ---- up: local has the deletion, relay does not -----------------------
+        return sent
+    }
 
     @Test
-    fun pushesLocalDeletionUpSoRelayRemovesTarget() =
+    fun sendsDeletionForANeedIdWeDeleted() =
         runBlocking {
             val note = note("delete me")
             val deletion = deletionOf(note)
 
-            // Relay B: has the note, no deletion.
+            // Relay has the note (no deletion).
             defaultRelay.preload(listOf(note))
             assertEquals(1, defaultRelay.store.query<Event>(Filter(ids = listOf(note.id))).size)
 
-            // Local side (Relay A) already applied the deletion, so it holds only
-            // the kind-5. A content sync over kind 1 would never carry it.
-            val uploaded = mutableListOf<Event>()
-            withTimeout(20_000) {
-                client.negentropyPropagateDeletions(
-                    relay = defaultRelayUrl,
-                    contentFilter = Filter(kinds = listOf(1)),
-                    localDeletions = listOf(deletion),
-                    scopeAuthors = listOf(signer.pubKey),
-                    download = { error("relay has no deletions to pull") },
-                    upload = { event ->
-                        uploaded += event
-                        defaultRelay.publish(event)
-                    },
-                )
-            }
+            // Local already applied the deletion → it holds only the kind-5, so the
+            // note is a "need" (relay has it, we lack it).
+            val local = hub.getOrCreate(RelayUrlNormalizer.normalize("ws://local/"))
+            local.preload(listOf(note, deletion))
+            assertTrue(local.store.query<Event>(Filter(ids = listOf(note.id))).isEmpty(), "local deleted the note")
 
-            assertEquals(listOf(deletion.id), uploaded.map { it.id }, "the deletion was pushed up")
+            val localKind1 = local.store.query<Event>(Filter(kinds = listOf(1))).map { IdAndTime(it.createdAt, it.id) }
+            val diff =
+                withTimeout(20_000) {
+                    client.negentropyReconcileIds(relay = defaultRelayUrl, filter = Filter(kinds = listOf(1)), localEntries = localKind1)
+                }
+            assertEquals(setOf(note.id), diff.needIds.toSet(), "the deleted note is the only need id")
+
+            val sent = sendDeletionsFor(local, diff.needIds)
+
+            assertEquals(1, sent, "the deletion targeting the need id was sent")
             assertTrue(
                 defaultRelay.store.query<Event>(Filter(ids = listOf(note.id))).isEmpty(),
                 "relay applied the pushed deletion and removed the note",
             )
         }
 
-    // ---- down: relay has the deletion, local does not ---------------------
-
     @Test
-    fun pullsRelayDeletionDownSoLocalRemovesTarget() =
+    fun sendsNothingForANeedIdWeNeverHad() =
         runBlocking {
-            val note = note("delete me too")
-            val deletion = deletionOf(note)
+            // Relay has a note we simply never had and never deleted — a plain download,
+            // no deletion to send.
+            val other = note("just never had this")
+            defaultRelay.preload(listOf(other))
 
-            // Remote relay already applied the deletion → holds only the kind-5.
-            defaultRelay.preload(listOf(note, deletion))
-            assertTrue(
-                defaultRelay.store.query<Event>(Filter(ids = listOf(note.id))).isEmpty(),
-                "precondition: relay removed the note when it ingested the deletion",
-            )
+            val local = hub.getOrCreate(RelayUrlNormalizer.normalize("ws://local2/"))
+            // Local holds an unrelated deletion (targets a different note) — must NOT be
+            // sent for `other`.
+            local.preload(listOf(deletionOf(note("unrelated"))))
 
-            // Local side: a second store still holding the note, no deletion.
-            val localUrl = RelayUrlNormalizer.normalize("ws://local-a/")
-            val local = hub.getOrCreate(localUrl)
-            local.preload(listOf(note))
-            assertEquals(1, local.store.query<Event>(Filter(ids = listOf(note.id))).size)
+            val diff =
+                withTimeout(20_000) {
+                    client.negentropyReconcileIds(relay = defaultRelayUrl, filter = Filter(kinds = listOf(1)), localEntries = emptyList())
+                }
+            assertTrue(other.id in diff.needIds, "the note is a need id")
 
-            withTimeout(20_000) {
-                client.negentropyPropagateDeletions(
-                    relay = defaultRelayUrl,
-                    contentFilter = Filter(kinds = listOf(1)),
-                    localDeletions = emptyList(),
-                    scopeAuthors = listOf(signer.pubKey),
-                    download = { ids: List<HexKey> ->
-                        // Stand-in for REQ-by-id + verify + store: pull from the
-                        // remote in-process store and ingest into the local one.
-                        defaultRelay.store.query<Event>(Filter(ids = ids)).forEach { local.store.insert(it) }
-                    },
-                    upload = { error("local has no deletions to push") },
-                )
-            }
+            val sent = sendDeletionsFor(local, diff.needIds)
 
-            assertTrue(
-                local.store.query<Event>(Filter(ids = listOf(note.id))).isEmpty(),
-                "local store applied the pulled deletion and removed the note",
-            )
+            assertEquals(0, sent, "no deletion targets the need id, so nothing is sent")
+            assertEquals(1, defaultRelay.store.query<Event>(Filter(ids = listOf(other.id))).size, "the note is untouched on the relay")
         }
 }
