@@ -109,6 +109,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupChannelListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupMembersScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupsHomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.share.ShareToDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
@@ -371,6 +372,7 @@ fun BuildNavigation(
         composableFromEnd<Route.Products> { ProductsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Shorts> { ShortsScreen(accountViewModel, nav) }
         composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.RelayGroups> { RelayGroupsHomeScreen(accountViewModel, nav) }
         composableFromEnd<Route.FollowPacks> { FollowPacksScreen(accountViewModel, nav) }
         composableFromEnd<Route.LiveStreams> { LiveStreamsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }

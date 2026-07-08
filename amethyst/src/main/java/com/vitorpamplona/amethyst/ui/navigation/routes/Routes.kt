@@ -653,6 +653,8 @@ sealed class Route {
         val relayUrl: String,
     ) : Route()
 
+    @Serializable object RelayGroups : Route()
+
     @Serializable object RelayGroupBrowse : Route()
 
     @Serializable data class ChannelMetadataEdit(

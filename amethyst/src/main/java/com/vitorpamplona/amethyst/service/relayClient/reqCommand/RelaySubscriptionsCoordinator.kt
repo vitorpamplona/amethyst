@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.Calend
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupDirectoryFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupRosterFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource.CommunityFilterAssembler
@@ -115,6 +116,7 @@ class RelaySubscriptionsCoordinator(
     // active depending on the screen.
     val channel = ChannelFilterAssembler(client)
     val relayGroupDirectory = RelayGroupDirectoryFilterAssembler(client)
+    val relayGroupRoster = RelayGroupRosterFilterAssembler(client)
     val chatroom = ChatroomFilterAssembler(client)
     val community = CommunityFilterAssembler(client)
     val gitRepository = RepositoryFilterAssembler(client)
@@ -177,6 +179,7 @@ class RelaySubscriptionsCoordinator(
     val all =
         listOf(
             relayGroupDirectory,
+            relayGroupRoster,
             account,
             accountForeground,
             home,
