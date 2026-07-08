@@ -1,0 +1,157 @@
+name: Bump Homebrew Formula (amy CLI)
+
+# Sibling of bump-homebrew.yml, but for a DIFFERENT Homebrew artifact:
+#   - bump-homebrew.yml  -> Cask   `amethyst-nostr`  (the desktop GUI app / DMG)
+#   - this workflow      -> Formula `amy`            (the headless CLI jar bundle)
+#
+# What it does today: after a stable release, download the published
+# `amy-<version>-jvm.tar.gz` bundle, compute its sha256, and open a PR that
+# syncs `cli/packaging/homebrew/amy.rb`'s url + sha256 to that release. That is
+# exactly the manual step the formula header calls out ("replace the version in
+# the url and the sha256 with the values for the actual published release
+# asset"), so keeping the in-repo reference formula accurate makes the eventual
+# homebrew-core submission a copy-paste.
+#
+# What it does NOT do yet: open a PR against Homebrew/homebrew-core. `brew
+# bump-formula-pr` can only bump a formula that already EXISTS in homebrew-core,
+# and `amy` has never been submitted there — that first submission is a manual,
+# human-reviewed new-formula PR (the one-time bootstrap). Once it lands, wire the
+# auto-bump here (symmetric to the cask action in bump-homebrew.yml) — see the
+# "TODO(bootstrap)" note at the bottom of this file.
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to sync (for manual recovery)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  # The "Report failure" step opens a [release-ops] issue via
+  # github.rest.issues.create, which needs issues:write.
+  issues: write
+
+concurrency:
+  # Serialize per tag; do not cancel in-progress runs.
+  group: bump-homebrew-formula-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  sync-formula:
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Re-assert stable release
+        uses: ./.github/actions/assert-stable-release
+        with:
+          tag: ${{ github.event.release.tag_name || inputs.tag }}
+          is_prerelease: ${{ github.event.release.prerelease || 'false' }}
+          is_draft: ${{ github.event.release.draft || 'false' }}
+
+      - name: Resolve version
+        id: ver
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          VER="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Download jvm bundle and compute sha256
+        id: asset
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.ver.outputs.tag }}"
+          VER="${{ steps.ver.outputs.ver }}"
+          URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/amy-${VER}-jvm.tar.gz"
+          echo "Fetching $URL"
+          # The `released` event can fire a hair before every matrix leg finishes
+          # uploading; retry with backoff (mirrors the repo's push/pull retry ethos).
+          ok=0
+          for i in 1 2 3 4 5; do
+            if curl -fsSL -o amy-jvm.tar.gz "$URL"; then ok=1; break; fi
+            wait=$(( 2 ** i ))
+            echo "attempt $i failed; retrying in ${wait}s"
+            sleep "$wait"
+          done
+          [[ "$ok" == 1 ]] || { echo "::error::could not download $URL"; exit 1; }
+          test -s amy-jvm.tar.gz
+          SHA=$(shasum -a 256 amy-jvm.tar.gz | awk '{print $1}')
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "amy-${VER}-jvm.tar.gz -> $SHA"
+
+      - name: Update reference formula
+        run: |
+          set -euo pipefail
+          FORMULA=cli/packaging/homebrew/amy.rb
+          URL="${{ steps.asset.outputs.url }}"
+          SHA="${{ steps.asset.outputs.sha256 }}"
+          # Rewrite the two indented lines in the formula block. Anchoring on the
+          # 2-space indent avoids touching the header comment's example curl url.
+          sed -i -E "s|^(  url ).*|\1\"${URL}\"|" "$FORMULA"
+          sed -i -E "s|^(  sha256 ).*|\1\"${SHA}\"|" "$FORMULA"
+          echo "----- $FORMULA -----"
+          grep -E "^  (url|sha256) " "$FORMULA"
+
+      - name: Open or update the formula-sync PR
+        # peter-evans/create-pull-request is MIT-licensed CI-only tooling (not
+        # linked into any shipped artifact). It no-ops when there is no diff.
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: main
+          branch: chore/bump-amy-formula-${{ steps.ver.outputs.tag }}
+          add-paths: cli/packaging/homebrew/amy.rb
+          commit-message: 'chore: sync amy Homebrew formula to ${{ steps.ver.outputs.tag }}'
+          title: 'chore: sync amy Homebrew formula to ${{ steps.ver.outputs.tag }}'
+          body: |
+            Auto-synced `cli/packaging/homebrew/amy.rb` to the
+            `${{ steps.ver.outputs.tag }}` release:
+
+            - `url`    -> `${{ steps.asset.outputs.url }}`
+            - `sha256` -> `${{ steps.asset.outputs.sha256 }}`
+
+            Opened by `.github/workflows/bump-homebrew-formula.yml`. Merge to keep
+            the reference formula ready for the homebrew-core submission/bump.
+
+      # TODO(bootstrap): once `amy` is accepted into Homebrew/homebrew-core, add a
+      # step here that opens the homebrew-core bump PR automatically — symmetric to
+      # the cask bump in bump-homebrew.yml (a pinned macauley/action-homebrew-bump-
+      # formula, or `brew bump-formula-pr amy --url=<url> --sha256=<sha>` with a
+      # HOMEBREW_TOKEN). It is intentionally omitted until then because
+      # bump-formula-pr errors on a formula that is not yet in the tap.
+
+      - name: Report failure
+        if: failure()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const tag = context.payload.release?.tag_name || context.payload.inputs?.tag || 'unknown';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[release-ops] bump-homebrew-formula failed for ${tag}`,
+              body: [
+                `amy Homebrew formula sync failed for release \`${tag}\`.`,
+                ``,
+                `- Run: ${runUrl}`,
+                `- Channel: Homebrew Formula (\`amy\` CLI)`,
+                ``,
+                `Recovery options:`,
+                `1. Re-run the workflow once the underlying issue is fixed`,
+                `2. Manually update \`cli/packaging/homebrew/amy.rb\` (url + sha256) from the release asset`,
+                `3. Check the release actually published \`amy-${tag.replace(/^v/, '')}-jvm.tar.gz\``
+              ].join('\n'),
+              labels: ['release-ops', 'bug']
+            });

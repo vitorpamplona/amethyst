@@ -12,6 +12,10 @@ on:
 
 permissions:
   contents: read
+  # The "Report failure" step below opens a [release-ops] issue via
+  # github.rest.issues.create; that needs issues:write. Without it the failure
+  # reporter itself 403s and no alert is ever filed.
+  issues: write
 
 concurrency:
   group: bump-winget-${{ github.event.release.tag_name || inputs.tag }}
