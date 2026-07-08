@@ -1666,7 +1666,7 @@ class GrapeRankDataCrawler(
         // Concurrent TCP reachability probes in the background culler. Raw sockets are
         // cheap and short-lived; the per-relay WS limiter is unaffected (this never
         // opens a REQ), so this only bounds file descriptors during the cull.
-        private const val PROBE_CONCURRENCY = 256
+        private const val PROBE_CONCURRENCY = 128
 
         // Re-scan interval for the culler when it has probed everything learned so far
         // and is waiting for new relays to be discovered.

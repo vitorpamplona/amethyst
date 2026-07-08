@@ -54,6 +54,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -61,6 +62,7 @@ import kotlinx.coroutines.withContext
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URI
+import java.util.concurrent.Executors
 import kotlin.math.roundToInt
 
 /**
@@ -129,6 +131,15 @@ object GrapeRankCommand {
 
     private const val PROBE_TIMEOUT_MS = 2000
 
+    // The probe does BLOCKING DNS + TCP connect, and dead-domain DNS lookups can hang
+    // far past the connect timeout. On the shared Dispatchers.IO those hanging lookups
+    // starve the crawl's own IO — measured +462s on the finishing drain at hop-3. Run
+    // them on a dedicated, isolated daemon pool instead so the crawl's IO is untouched.
+    private val probeDispatcher =
+        Executors
+            .newFixedThreadPool(128) { r -> Thread(r, "relay-probe").apply { isDaemon = true } }
+            .asCoroutineDispatcher()
+
     /**
      * Cheap reachability pre-probe: a raw TCP connect (one round trip) with a tight
      * timeout. Returns false only when the port won't even accept a socket — a dead
@@ -139,7 +150,7 @@ object GrapeRankCommand {
      * so an odd URL is never culled on a parse quirk — let the WS decide.
      */
     private suspend fun tcpReachable(relay: NormalizedRelayUrl): Boolean =
-        withContext(Dispatchers.IO) {
+        withContext(probeDispatcher) {
             val hostPort = relayHostPort(relay) ?: return@withContext true
             try {
                 Socket().use { it.connect(InetSocketAddress(hostPort.first, hostPort.second), PROBE_TIMEOUT_MS) }
