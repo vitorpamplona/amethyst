@@ -572,7 +572,7 @@ private fun RenderWordWithPreview(
         is RegularTextSegment -> Text(word.segmentText)
         is Base64Segment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
-        is RelayGroupLinkSegment -> ClickableRelayGroupLink(word.segmentText, nav)
+        is RelayGroupLinkSegment -> RelayGroupCard(word.segmentText, accountViewModel, nav)
         is BlossomUriSegment -> BlossomUriRenderer(word.segmentText, state, callbackUri, accountViewModel)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
     }
