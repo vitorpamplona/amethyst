@@ -114,25 +114,17 @@ class Sync2BootstrapTest {
         }
 
     @Test
-    fun watermarkKeepsNewestVersionPerAuthorAndKind() =
+    fun contactListSeedsWatermarkAndSinceFloor() =
         runTest {
-            // Two stored kind:3 for author 1; the newer (200) is the floor, and BFS
-            // must expand off the newer follow set ({2}), not the stale one ({9}).
+            // The store holds one (replaceable) kind:3 per author; its created_at is
+            // the watermark, and the since floor is created_at + 1.
             val state =
                 bootstrap(
                     observer = 1,
-                    events =
-                        listOf(
-                            contactList(1, listOf(9), createdAt = 100),
-                            contactList(1, listOf(2), createdAt = 200),
-                        ),
+                    events = listOf(contactList(1, listOf(2), createdAt = 200)),
                 )
             assertEquals(200, state.watermarkFor(pk(1))?.newest(ContactListEvent.KIND))
-            // since floor is newest + 1.
             assertEquals(201, state.watermarkFor(pk(1))?.sinceFor(ContactListEvent.KIND))
-            // Newer list wins: 2 is discovered, stale 9 is not.
-            assertEquals(1, state.hopOf[pk(2)])
-            assertNull(state.hopOf[pk(9)])
         }
 
     @Test

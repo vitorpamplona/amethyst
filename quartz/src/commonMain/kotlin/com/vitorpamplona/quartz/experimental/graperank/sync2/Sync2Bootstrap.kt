@@ -119,41 +119,25 @@ class Sync2Bootstrap(
     private val store: IEventStore,
 ) {
     suspend fun load(observer: HexKey): BootstrapState {
-        // Newest created_at per (author, kind); folded with max so a store that
-        // (unlike SQLite) keeps multiple versions of a replaceable event still
-        // yields the freshest floor.
-        val newestByAuthorKind = HashMap<HexKey, HashMap<Kind, Long>>()
+        // The store keeps only the newest version of a replaceable event, and both
+        // crawl kinds (3 and 10002) are replaceable, so each query returns at most
+        // one event per author — its created_at is the watermark directly, no fold.
+        val watermarks = HashMap<HexKey, HashMap<Kind, Long>>()
 
-        fun bump(
-            pubkey: HexKey,
-            kind: Kind,
-            createdAt: Long,
-        ) {
-            val byKind = newestByAuthorKind.getOrPut(pubkey) { HashMap() }
-            val cur = byKind[kind]
-            if (cur == null || createdAt > cur) byKind[kind] = createdAt
-        }
-
-        // kind:3 — adjacency (newest list per author) AND the kind:3 watermark.
-        val newestContacts = HashMap<HexKey, ContactListEvent>()
+        // kind:3 — the follow lists we BFS over, plus the kind:3 watermark.
+        val contacts = HashMap<HexKey, ContactListEvent>()
         for (e in store.query<Event>(Filter(kinds = listOf(ContactListEvent.KIND)))) {
             if (e !is ContactListEvent) continue
-            bump(e.pubKey, ContactListEvent.KIND, e.createdAt)
-            val cur = newestContacts[e.pubKey]
-            if (cur == null || e.createdAt > cur.createdAt) newestContacts[e.pubKey] = e
+            contacts[e.pubKey] = e
+            watermarks.getOrPut(e.pubKey) { HashMap() }[ContactListEvent.KIND] = e.createdAt
         }
 
-        // kind:10002 — watermark AND the last-known write-relay set (newest per author).
-        val newestRelayList = HashMap<HexKey, AdvertisedRelayListEvent>()
+        // kind:10002 — watermark AND the last-known write-relay set.
+        val knownOutbox = HashMap<HexKey, Set<NormalizedRelayUrl>>()
         for (e in store.query<Event>(Filter(kinds = listOf(AdvertisedRelayListEvent.KIND)))) {
             if (e !is AdvertisedRelayListEvent) continue
-            bump(e.pubKey, AdvertisedRelayListEvent.KIND, e.createdAt)
-            val cur = newestRelayList[e.pubKey]
-            if (cur == null || e.createdAt > cur.createdAt) newestRelayList[e.pubKey] = e
-        }
-        val knownOutbox = HashMap<HexKey, Set<NormalizedRelayUrl>>()
-        for ((pk, ev) in newestRelayList) {
-            ev.writeRelaysNorm()?.let { knownOutbox[pk] = it.toHashSet() }
+            watermarks.getOrPut(e.pubKey) { HashMap() }[AdvertisedRelayListEvent.KIND] = e.createdAt
+            e.writeRelaysNorm()?.let { knownOutbox[e.pubKey] = it.toHashSet() }
         }
 
         // BFS the follow graph from the observer over the stored contact lists.
@@ -165,8 +149,8 @@ class Sync2Bootstrap(
         while (queue.isNotEmpty()) {
             val user = queue.removeFirst()
             val hop = hopOf.getValue(user)
-            val contacts = newestContacts[user] ?: continue
-            for (follow in contacts.verifiedFollowKeySet()) {
+            val list = contacts[user] ?: continue
+            for (follow in list.verifiedFollowKeySet()) {
                 if (follow !in hopOf) {
                     hopOf[follow] = hop + 1
                     queue.addLast(follow)
@@ -174,8 +158,7 @@ class Sync2Bootstrap(
             }
         }
 
-        val watermarks = newestByAuthorKind.mapValues { Watermarks(it.value) }
-        return BootstrapState(observer, hopOf, watermarks, knownOutbox)
+        return BootstrapState(observer, hopOf, watermarks.mapValues { Watermarks(it.value) }, knownOutbox)
     }
 
     companion object {
