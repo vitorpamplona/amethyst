@@ -27,103 +27,131 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcileIds
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
+import com.vitorpamplona.quartz.nip01Core.store.deletionsCovering
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * The `amy sync` deletion rule, end-to-end: for the ids the relay HAS that we LACK
- * (the negentropy need set), if we hold a kind-5 deletion targeting one of them,
- * publish that deletion up so the relay deletes it too — instead of re-downloading a
- * note we deleted. Only these ids, only kind-5, up only; nothing is pulled down or
- * applied locally, so the personal store can never be over-deleted.
- *
- * This exercises the exact wiring `SyncCommand` uses (reconcile → look up the local
- * kind-5 by its `e` tag for the need ids → publish), which the CLI itself has no test
- * harness for.
+ * The `amy sync` deletion rule: for the events the relay HAS that we LACK (the
+ * negentropy need set), publish the local deletions that would make the relay remove
+ * them — and only those. [deletionsCovering] is the core: it maps a set of server-held
+ * events to the local deletions that cover them, across id-based (NIP-09 `e`),
+ * address-based (NIP-09 `a`, cutoff-checked) and NIP-62 vanish (relay-targeted, cutoff).
  */
 class DeletionSyncTest : RelayClientTest() {
     private val signer = NostrSignerSync(KeyPair())
+    private val here: NormalizedRelayUrl get() = defaultRelayUrl
+    private val elsewhere = RelayUrlNormalizer.normalize("wss://elsewhere.example/")
+
+    private val store = EventStore(null)
+
+    @AfterTest fun closeStore() = store.close()
 
     private fun note(text: String): Event = signer.sign(TextNoteEvent.build(text))
 
-    private fun deletionOf(target: Event): Event = signer.sign(DeletionEvent.build(listOf(target), createdAt = target.createdAt + 1))
-
-    /** The SyncCommand step under test: publish local kind-5 deletions targeting [needIds]. */
-    private suspend fun sendDeletionsFor(
-        local: com.vitorpamplona.geode.RelayEngine,
-        needIds: List<String>,
-    ): Int {
-        var sent = 0
-        val mine = local.store.query<Event>(Filter(kinds = listOf(DeletionEvent.KIND), tags = mapOf("e" to needIds)))
-        for (del in mine) {
-            defaultRelay.publish(del)
-            sent++
-        }
-        return sent
-    }
+    // ---- deletionsCovering: the three coverage forms --------------------------
 
     @Test
-    fun sendsDeletionForANeedIdWeDeleted() =
+    fun idBasedDeletionCoversByETag() =
         runBlocking {
-            val note = note("delete me")
-            val deletion = deletionOf(note)
+            val target = note("delete me")
+            val deletion = signer.sign(DeletionEvent.build(listOf(target), createdAt = target.createdAt + 1))
+            store.insert(deletion)
 
-            // Relay has the note (no deletion).
-            defaultRelay.preload(listOf(note))
-            assertEquals(1, defaultRelay.store.query<Event>(Filter(ids = listOf(note.id))).size)
+            assertEquals(listOf(deletion.id), store.deletionsCovering(listOf(target), here).map { it.id })
+            // A different note the deletion doesn't name is not covered.
+            assertTrue(store.deletionsCovering(listOf(note("unrelated")), here).isEmpty())
+        }
 
-            // Local already applied the deletion → it holds only the kind-5, so the
-            // note is a "need" (relay has it, we lack it).
+    @Test
+    fun addressBasedDeletionCoversByATagWithCutoff() =
+        runBlocking {
+            val contacts = ContactListEvent.createFromScratch(emptyList(), null, signer)
+            // Address-only deletion (no `e` tag) → only the `a`-tag path can match it.
+            val delAddr = signer.sign(DeletionEvent.buildAddressOnly(listOf(contacts), createdAt = contacts.createdAt + 1))
+            store.insert(delAddr)
+
+            assertEquals(
+                listOf(delAddr.id),
+                store.deletionsCovering(listOf(contacts), here).map { it.id },
+                "a replaceable event is covered by an address deletion at/after it",
+            )
+
+            // NIP-09 cutoff: a deletion OLDER than the event does not delete it.
+            val stale = EventStore(null)
+            stale.insert(signer.sign(DeletionEvent.buildAddressOnly(listOf(contacts), createdAt = contacts.createdAt - 1)))
+            assertTrue(stale.deletionsCovering(listOf(contacts), here).isEmpty(), "an older address deletion does not cover")
+            stale.close()
+        }
+
+    @Test
+    fun vanishCoversAuthorsEventsWhenTargetedAndNewer() =
+        runBlocking {
+            val old = note("before the vanish")
+            val vanishHere = signer.sign(RequestToVanishEvent.build(here, createdAt = old.createdAt + 1))
+            store.insert(vanishHere)
+
+            assertEquals(
+                listOf(vanishHere.id),
+                store.deletionsCovering(listOf(old), here).map { it.id },
+                "a relay-targeted vanish issued after the event covers it",
+            )
+
+            // Not targeting this relay → not sent here.
+            val otherStore = EventStore(null)
+            otherStore.insert(signer.sign(RequestToVanishEvent.build(elsewhere, createdAt = old.createdAt + 1)))
+            assertTrue(otherStore.deletionsCovering(listOf(old), here).isEmpty(), "a vanish for another relay is not sent")
+
+            // A newer event (created after the vanish) is NOT deleted by it.
+            val newer = signer.sign(TextNoteEvent.build("after", createdAt = vanishHere.createdAt + 10))
+            assertTrue(store.deletionsCovering(listOf(newer), here).isEmpty(), "the vanish does not cover a later event")
+            otherStore.close()
+        }
+
+    // ---- end-to-end through the relay ----------------------------------------
+
+    @Test
+    fun sendsCoveringDeletionSoRelayRemovesTheNote() =
+        runBlocking {
+            val target = note("delete me e2e")
+            val deletion = signer.sign(DeletionEvent.build(listOf(target), createdAt = target.createdAt + 1))
+
+            // Relay holds the note; we already deleted it locally (hold only the kind-5).
+            defaultRelay.preload(listOf(target))
             val local = hub.getOrCreate(RelayUrlNormalizer.normalize("ws://local/"))
-            local.preload(listOf(note, deletion))
-            assertTrue(local.store.query<Event>(Filter(ids = listOf(note.id))).isEmpty(), "local deleted the note")
+            local.preload(listOf(target, deletion))
+            assertTrue(local.store.query<Event>(Filter(ids = listOf(target.id))).isEmpty(), "local deleted the note")
 
-            val localKind1 = local.store.query<Event>(Filter(kinds = listOf(1))).map { IdAndTime(it.createdAt, it.id) }
+            // Reconcile → the note is a need id. (No local kind-1 remains.)
             val diff =
                 withTimeout(20_000) {
-                    client.negentropyReconcileIds(relay = defaultRelayUrl, filter = Filter(kinds = listOf(1)), localEntries = localKind1)
+                    client.negentropyReconcileIds(relay = defaultRelayUrl, filter = Filter(kinds = listOf(1)), localEntries = emptyList<IdAndTime>())
                 }
-            assertEquals(setOf(note.id), diff.needIds.toSet(), "the deleted note is the only need id")
+            assertEquals(setOf(target.id), diff.needIds.toSet())
 
-            val sent = sendDeletionsFor(local, diff.needIds)
+            // What SyncCommand does: fetch the need events, ask the local store which of
+            // our deletions cover them, publish those.
+            val serverEvents = defaultRelay.store.query<Event>(Filter(ids = diff.needIds))
+            val covering = local.store.deletionsCovering(serverEvents, defaultRelayUrl)
+            assertEquals(listOf(deletion.id), covering.map { it.id })
+            covering.forEach { defaultRelay.publish(it) }
 
-            assertEquals(1, sent, "the deletion targeting the need id was sent")
             assertTrue(
-                defaultRelay.store.query<Event>(Filter(ids = listOf(note.id))).isEmpty(),
+                defaultRelay.store.query<Event>(Filter(ids = listOf(target.id))).isEmpty(),
                 "relay applied the pushed deletion and removed the note",
             )
-        }
-
-    @Test
-    fun sendsNothingForANeedIdWeNeverHad() =
-        runBlocking {
-            // Relay has a note we simply never had and never deleted — a plain download,
-            // no deletion to send.
-            val other = note("just never had this")
-            defaultRelay.preload(listOf(other))
-
-            val local = hub.getOrCreate(RelayUrlNormalizer.normalize("ws://local2/"))
-            // Local holds an unrelated deletion (targets a different note) — must NOT be
-            // sent for `other`.
-            local.preload(listOf(deletionOf(note("unrelated"))))
-
-            val diff =
-                withTimeout(20_000) {
-                    client.negentropyReconcileIds(relay = defaultRelayUrl, filter = Filter(kinds = listOf(1)), localEntries = emptyList())
-                }
-            assertTrue(other.id in diff.needIds, "the note is a need id")
-
-            val sent = sendDeletionsFor(local, diff.needIds)
-
-            assertEquals(0, sent, "no deletion targets the need id, so nothing is sent")
-            assertEquals(1, defaultRelay.store.query<Event>(Filter(ids = listOf(other.id))).size, "the note is untouched on the relay")
         }
 }

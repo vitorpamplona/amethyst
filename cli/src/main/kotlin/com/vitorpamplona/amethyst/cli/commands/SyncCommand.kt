@@ -31,11 +31,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyRec
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip01Core.store.deletionsCovering
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -56,12 +57,14 @@ import java.util.concurrent.atomic.AtomicInteger
  * `fetch`/`subscribe`; an empty filter reconciles the whole store.
  *
  * Deletion propagation is deliberately narrow (on by default; disable with
- * `--no-sync-deletions`): for each id the relay HAS that we LACK — the reconcile's
- * need set — if we hold a **kind-5** deletion that targets it, that deletion is
- * published up, so a note we deleted is deleted on the relay too instead of being
- * re-downloaded. That is the whole feature: only the need ids, only kind-5, up
- * only. Nothing is pulled down or applied locally, so it can never over-delete this
- * store, and it needs no author scoping (the need set already bounds it).
+ * `--no-sync-deletions`): for the events the relay HAS that we LACK — the reconcile's
+ * need set — we publish up the local deletions that would make the relay remove them,
+ * and only those. That covers a NIP-09 kind-5 targeting the event by id (`e` tag) or
+ * by address (`a` tag, cutoff-checked), and a NIP-62 kind-62 vanish for the event's
+ * author that targets this relay. The need events are fetched only for their metadata
+ * (author/address/created_at); nothing is pulled down or applied locally, so it can
+ * never over-delete this store, and the need set already bounds it (no author scoping).
+ * See [com.vitorpamplona.quartz.nip01Core.store.deletionsCovering].
  *
  * Both directions are pipelined with the reconcile: need-id batches feed
  * [DOWNLOAD_WORKERS] concurrent by-id REQ drains and have-ids feed a single
@@ -103,11 +106,14 @@ object SyncCommand {
         val up = args.bool("up")
         val down = args.bool("down") || !up
         // Deletion propagation (on by default; --no-sync-deletions disables). Scope is
-        // exactly: for the ids the relay HAS that we LACK (the reconcile's need set), if
-        // we hold a kind-5 deletion targeting one of them, publish that deletion up so
-        // the relay deletes it too — instead of re-downloading a note we deleted. That
-        // is the whole feature: only these ids, only kind-5, up only. Nothing is pulled
-        // down or applied locally, so it can never over-delete this store.
+        // exactly: for the events the relay HAS that we LACK (the reconcile's need set),
+        // publish the local deletions that would make the relay remove them — an id- or
+        // address-based kind-5, or a kind-62 vanish that targets this relay. Only those
+        // deletions, nothing else (not other deletions by the same author). We fetch the
+        // need events (not to keep — [Context.fetchRaw] neither verifies nor stores) only
+        // to learn their author/address/created_at so [deletionsCovering] can tell which
+        // of our deletions actually apply. Nothing is pulled down or applied locally, so
+        // this can never over-delete the local store.
         val syncDeletions = !args.bool("no-sync-deletions")
         val filter = RawEventSupport.buildFilter(args)
 
@@ -120,26 +126,40 @@ object SyncCommand {
             val downloaded = AtomicInteger(0)
             val uploaded = AtomicInteger(0)
             val deletionsSent = AtomicInteger(0)
+            // Deduplicate published deletions across the concurrent need workers: one
+            // deletion often covers several need events.
+            val sentDeletions = ConcurrentHashMap.newKeySet<HexKey>()
 
             val result =
                 try {
                     coroutineScope {
                         // needIds = relay has, we lack; haveIds = we have, relay lacks.
-                        // Bounded so a slow download back-pressures the reconcile
-                        // rounds instead of piling ids up in memory.
+                        // Bounded so a slow worker back-pressures the reconcile rounds
+                        // instead of piling ids up in memory.
                         val needBatches = Channel<List<HexKey>>(DOWNLOAD_WORKERS * 2)
                         // Unbounded is fine here: have-ids reference events we already
                         // hold locally, so memory is bounded by the local set.
                         val haveBatches = Channel<List<HexKey>>(Channel.UNLIMITED)
-                        // need-ids routed to the deletion sender (bounded → back-pressure).
-                        val delBatches = Channel<List<HexKey>>(DOWNLOAD_WORKERS * 2)
 
-                        val downloaders =
+                        val needWorkers =
                             List(DOWNLOAD_WORKERS) {
                                 launch {
                                     for (batch in needBatches) {
-                                        val got = ctx.drain(mapOf(relay to listOf(Filter(ids = batch))), timeoutMs)
-                                        downloaded.addAndGet(got.size)
+                                        // Fetch the need events once (raw — no verify/store).
+                                        val events = ctx.fetchRaw(mapOf(relay to listOf(Filter(ids = batch))), timeoutMs)
+                                        // Push up the deletions that would remove them from the relay.
+                                        if (syncDeletions) {
+                                            for (del in ctx.store.deletionsCovering(events, relay)) {
+                                                if (sentDeletions.add(del.id) && ctx.publish(del, setOf(relay)).values.any { it }) {
+                                                    deletionsSent.incrementAndGet()
+                                                }
+                                            }
+                                        }
+                                        // Download the rest into the local store; anything we
+                                        // deleted is rejected by the store's own tombstone.
+                                        if (down) {
+                                            for (event in events) if (ctx.verifyAndStore(event)) downloaded.incrementAndGet()
+                                        }
                                     }
                                 }
                             }
@@ -149,23 +169,6 @@ object SyncCommand {
                                     for (id in batch) {
                                         val ev = localById[id] ?: continue
                                         if (ctx.publish(ev, setOf(relay)).values.any { it }) uploaded.incrementAndGet()
-                                    }
-                                }
-                            }
-                        // For each id the relay has that we lack, publish any local kind-5
-                        // deletion that targets it (queried by its `e` tag). A note we
-                        // deleted then gets deleted on the relay too, instead of being
-                        // re-downloaded. Most need-ids have no such deletion, so the query
-                        // usually returns empty and nothing is sent.
-                        val deletionSender =
-                            launch {
-                                for (batch in delBatches) {
-                                    val mine =
-                                        ctx.store.query<Event>(
-                                            Filter(kinds = listOf(DeletionEvent.KIND), tags = mapOf("e" to batch)),
-                                        )
-                                    for (del in mine) {
-                                        if (ctx.publish(del, setOf(relay)).values.any { it }) deletionsSent.incrementAndGet()
                                     }
                                 }
                             }
@@ -180,20 +183,17 @@ object SyncCommand {
                                     idleTimeoutMs = timeoutMs,
                                     reconcileConcurrency = RECONCILE_CONCURRENCY,
                                     onHaveIds = if (up) { batch -> haveBatches.send(batch) } else null,
-                                    onNeedIds = { batch ->
-                                        if (down) needBatches.send(batch)
-                                        if (syncDeletions) delBatches.send(batch)
-                                    },
+                                    // Fetch need events when we either download them or need
+                                    // their metadata to decide which deletions to send.
+                                    onNeedIds = { batch -> if (down || syncDeletions) needBatches.send(batch) },
                                 )
                             } finally {
                                 needBatches.close()
                                 haveBatches.close()
-                                delBatches.close()
                             }
 
-                        downloaders.joinAll()
+                        needWorkers.joinAll()
                         uploader.join()
-                        deletionSender.join()
                         reconcile
                     }
                 } catch (e: NegentropySyncException) {

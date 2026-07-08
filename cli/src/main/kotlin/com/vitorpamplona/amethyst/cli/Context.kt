@@ -484,6 +484,79 @@ class Context(
     }
 
     /**
+     * Like [drain] but does NOT verify or store — collects the raw events until every
+     * relay EOSEs or the timeout elapses and returns them. Used when the caller needs
+     * an event's metadata to make a decision (e.g. which local deletion covers it)
+     * rather than to keep it. Verification/storage, if wanted, is the caller's job.
+     */
+    suspend fun fetchRaw(
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
+        timeoutMs: Long = 8_000,
+    ): List<Event> {
+        if (filters.isEmpty()) return emptyList()
+        val eventChannel = Channel<Event>(UNLIMITED)
+        val doneChannel = Channel<NormalizedRelayUrl>(UNLIMITED)
+        val remaining = filters.keys.toMutableSet()
+        val subId = newSubId()
+        val listener =
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    eventChannel.trySend(event)
+                }
+
+                override fun onEose(
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    doneChannel.trySend(relay)
+                }
+
+                override fun onClosed(
+                    message: String,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    doneChannel.trySend(relay)
+                }
+
+                override fun onCannotConnect(
+                    relay: NormalizedRelayUrl,
+                    message: String,
+                    forFilters: List<Filter>?,
+                ) {
+                    doneChannel.trySend(relay)
+                }
+            }
+        val collected = mutableListOf<Event>()
+        try {
+            client.subscribe(subId, filters, listener)
+            withTimeoutOrNull(timeoutMs) {
+                while (remaining.isNotEmpty()) {
+                    select {
+                        eventChannel.onReceive { collected.add(it) }
+                        doneChannel.onReceive { r -> remaining.remove(r) }
+                    }
+                }
+                while (true) {
+                    val r = eventChannel.tryReceive()
+                    if (!r.isSuccess) break
+                    collected.add(r.getOrThrow())
+                }
+            }
+        } finally {
+            client.unsubscribe(subId)
+            eventChannel.close()
+            doneChannel.close()
+        }
+        return collected
+    }
+
+    /**
      * Like [drain], but paginates every relay to completion via
      * [fetchAllPagesFromPool] instead of stopping at the first EOSE — so a query
      * larger than a relay's per-`REQ` cap (strfry's `limit`, ~500) is fully
