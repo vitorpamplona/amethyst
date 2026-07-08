@@ -566,8 +566,14 @@ class MirrorWorker(
                     },
                     onNeedIds = { },
                 )
-                if (haveCount == 0) {
-                    Log.i("MirrorWorker") { "up catch-up ($label) to ${up.url.url}: converged after $round round(s)" }
+                // Converge when nothing PUBLISHABLE remains to push — not on raw
+                // haveCount. A diff that is all un-publishable (e.g. a kind-62 vanish
+                // for a relay this upstream isn't, which shouldPropagateDeletionUp
+                // rightly refuses) would otherwise report a non-zero haveCount every
+                // round and burn all MAX_UP_SYNC_ROUNDS on every startup.
+                if (pushed == 0) {
+                    val how = if (haveCount == 0) "converged" else "converged ($haveCount un-publishable left)"
+                    Log.i("MirrorWorker") { "up catch-up ($label) to ${up.url.url}: $how after $round round(s)" }
                     return
                 }
                 sentUp.addAndGet(pushed.toLong())

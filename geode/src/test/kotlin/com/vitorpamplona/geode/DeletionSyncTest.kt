@@ -66,20 +66,27 @@ class DeletionSyncTest : RelayClientTest() {
     // ---- filter helpers (pure) --------------------------------------------
 
     @Test
-    fun unscopedFilterNeedsNoSideChannel() {
-        assertFalse(Filter().excludesDeletionKinds(), "no kinds constraint already matches deletions")
-        assertFalse(Filter(kinds = listOf(1, 5)).excludesDeletionKinds(), "explicit kind 5 is covered")
-        assertFalse(Filter(kinds = listOf(62)).excludesDeletionKinds(), "explicit kind 62 is covered")
-        assertTrue(Filter(kinds = listOf(1)).excludesDeletionKinds(), "kind-1-only drops deletions")
+    fun excludesDeletionKindsChecksEachKindIndependently() {
+        // No kinds constraint already matches every deletion kind.
+        assertFalse(Filter().excludesDeletionKinds())
+        // Listing ONE deletion kind does NOT cover the other — the reconcile
+        // carries only the kinds actually listed.
+        assertTrue(Filter(kinds = listOf(1, 5)).excludesDeletionKinds(), "kind 5 listed, kind 62 still missing")
+        assertTrue(Filter(kinds = listOf(62)).excludesDeletionKinds(), "kind 62 listed, kind 5 still missing")
+        assertTrue(Filter(kinds = listOf(1)).excludesDeletionKinds(), "kind-1-only misses both")
+        // Both listed → nothing missing.
+        assertFalse(Filter(kinds = listOf(5, 62)).excludesDeletionKinds(), "both deletion kinds covered")
+        // With a restricted deletionKinds set, only kind 5 matters.
+        assertFalse(Filter(kinds = listOf(1, 5)).excludesDeletionKinds(listOf(DeletionEvent.KIND)))
     }
 
     @Test
-    fun sideChannelFilterCarriesAuthorsNotWindow() {
-        val authored = Filter(kinds = listOf(1), authors = listOf("aa", "bb"), since = 100, until = 200)
-        val side = authored.deletionSideChannelFilter()
+    fun sideChannelFilterCarriesMissingKindsScopedAuthorsNoWindow() {
+        val authored = Filter(kinds = listOf(1, 5), authors = listOf("aa", "bb"), since = 100, until = 200)
+        val side = authored.deletionSideChannelFilter(authors = listOf("aa", "bb"))
 
-        assertEquals(listOf(DeletionEvent.KIND, RequestToVanishEvent.KIND), side.kinds)
-        assertEquals(listOf("aa", "bb"), side.authors, "author scope is inherited")
+        assertEquals(listOf(RequestToVanishEvent.KIND), side.kinds, "kind 5 already covered → only 62 missing")
+        assertEquals(listOf("aa", "bb"), side.authors, "explicit author scope")
         assertNull(side.since, "no time window: a deletion's created_at is not its target's")
         assertNull(side.until)
     }
@@ -101,19 +108,37 @@ class DeletionSyncTest : RelayClientTest() {
     }
 
     @Test
-    fun noOpWhenFilterAlreadyCoversDeletions() =
+    fun noOpWhenAllKindsCoveredOrScopeEmpty() =
         runBlocking {
-            val result =
+            val d = deletionOf(note("x"))
+            // All deletion kinds already covered by content → skip.
+            assertNull(
                 withTimeout(20_000) {
                     client.negentropyPropagateDeletions(
                         relay = defaultRelayUrl,
-                        contentFilter = Filter(kinds = listOf(1, 5)),
-                        localDeletions = listOf(deletionOf(note("x"))),
+                        contentFilter = Filter(kinds = listOf(5, 62)),
+                        localDeletions = listOf(d),
+                        scopeAuthors = listOf(signer.pubKey),
                         download = { error("must not download") },
                         upload = { error("must not upload") },
                     )
-                }
-            assertNull(result, "a filter that already covers 5/62 skips the side-channel")
+                },
+                "a filter that already covers 5 AND 62 skips the side-channel",
+            )
+            // Author-less scope → skip rather than reconcile the relay's whole history.
+            assertNull(
+                withTimeout(20_000) {
+                    client.negentropyPropagateDeletions(
+                        relay = defaultRelayUrl,
+                        contentFilter = Filter(kinds = listOf(1)),
+                        localDeletions = listOf(d),
+                        scopeAuthors = emptyList(),
+                        download = { error("must not download") },
+                        upload = { error("must not upload") },
+                    )
+                },
+                "an empty author scope disables the side-channel (no relay-wide pull)",
+            )
         }
 
     // ---- up: local has the deletion, relay does not -----------------------
@@ -136,6 +161,7 @@ class DeletionSyncTest : RelayClientTest() {
                     relay = defaultRelayUrl,
                     contentFilter = Filter(kinds = listOf(1)),
                     localDeletions = listOf(deletion),
+                    scopeAuthors = listOf(signer.pubKey),
                     download = { error("relay has no deletions to pull") },
                     upload = { event ->
                         uploaded += event
@@ -177,6 +203,7 @@ class DeletionSyncTest : RelayClientTest() {
                     relay = defaultRelayUrl,
                     contentFilter = Filter(kinds = listOf(1)),
                     localDeletions = emptyList(),
+                    scopeAuthors = listOf(signer.pubKey),
                     download = { ids: List<HexKey> ->
                         // Stand-in for REQ-by-id + verify + store: pull from the
                         // remote in-process store and ingest into the local one.

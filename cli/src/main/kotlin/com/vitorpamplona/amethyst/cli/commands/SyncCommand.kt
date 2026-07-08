@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyRec
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
@@ -59,24 +60,27 @@ import java.util.concurrent.atomic.AtomicInteger
  * Pass both for a full bidirectional sync. The filter flags are the same as
  * `fetch`/`subscribe`; an empty filter reconciles the whole store.
  *
- * Deletions ride a side-channel, and run in three phases so both sides fully
- * reflect each other. NIP-77 reconciles by id over the content filter, so a
- * scoped sync (`--kind 1`) would never carry the kind-5/62 that deletes one of
- * those notes — the deletion would be stuck on whichever side issued it.
+ * Deletions ride a side-channel, in three phases, so both sides reflect each
+ * other. NIP-77 reconciles by id over the content filter, so a scoped sync
+ * (`--kind 1`) would never carry the kind-5 that deletes one of those notes —
+ * the deletion would be stuck on whichever side issued it.
  *
- *   1. Whenever the filter pins `kinds` and excludes 5/62, reconcile
- *      `{kinds:[5,62], authors:<same>}` **both directions regardless of
- *      --up/--down** ([negentropyPropagateDeletions]) — FIRST, before content,
- *      so every deletion is applied on both sides before the content diff is
- *      taken. Local deletions are pushed up (a kind-62 vanish only to a relay it
- *      targets); the relay's deletions are pulled down and applied locally.
+ *   1. Reconcile the missing deletion kinds — FIRST, before content, so every
+ *      deletion is applied on both sides before the content diff is taken. The
+ *      reconcile is **bounded to the authors we hold content for** (the filter's
+ *      authors ∪ our local matched set's authors), never the relay's whole
+ *      population — an author-less pull would otherwise import the relay's entire
+ *      deletion history and mass-delete this local store. Skipped when we hold
+ *      nothing in scope. Best-effort: a failure here never aborts the sync.
  *   2. Content reconcile, over a local snapshot taken AFTER phase 1 so it never
  *      re-offers (and cannot resurrect on the relay) an event just deleted.
  *   3. Backstop: if the relay rejected a content push — usually because it holds
- *      a deletion we lack — pull that author's kind-5/62 and apply it locally so
- *      we stop re-offering the dead event.
+ *      a deletion we lack — pull that author's deletions and apply them locally.
+ *      This is the down-convergence path for author-less syncs (phase 1 skipped).
  *
- * Pass `--no-sync-deletions` to opt out of all three.
+ * Kind-5 (precise, owner-scoped) propagates by default. Kind-62 Request-to-Vanish
+ * mass-deletes ALL of a pubkey's events, so it is opt-in via `--sync-vanish`.
+ * Pass `--no-sync-deletions` to disable deletion propagation entirely.
  *
  * Both directions are pipelined with the reconcile: need-id batches feed
  * [DOWNLOAD_WORKERS] concurrent by-id REQ drains and have-ids feed a single
@@ -118,6 +122,10 @@ object SyncCommand {
         val up = args.bool("up")
         val down = args.bool("down") || !up
         val syncDeletions = !args.bool("no-sync-deletions")
+        // Which deletion kinds the side-channel carries. Kind-5 (precise, owner-scoped)
+        // by default; kind-62 Request-to-Vanish is opt-in because it mass-deletes ALL of
+        // a pubkey's events, a blast radius that always exceeds a content sync's scope.
+        val deletionKinds = if (args.bool("sync-vanish")) DELETION_PROPAGATION_KINDS else listOf(DeletionEvent.KIND)
         val filter = RawEventSupport.buildFilter(args)
 
         Context.open(dataDir).use { ctx ->
@@ -125,23 +133,46 @@ object SyncCommand {
 
             val deletionsDown = AtomicInteger(0)
             val deletionsUp = AtomicInteger(0)
+            var deletionsError: String? = null
 
             // ── Phase 1: deletions first, both directions ────────────────────
-            // Propagate kind 5/62 before content so both stores have applied every
+            // Propagate deletions before content so both stores have applied every
             // deletion by the time content is diffed. Ordering is load-bearing: a
-            // deletion pulled down here removes a local event, so the content
-            // snapshot MUST be taken AFTER this phase — a snapshot taken before
-            // would still list the just-deleted event and re-offer it up, which the
-            // relay would either reject or (if it also lacks the deletion) resurrect.
-            // No-op (returns null) when the content filter already covers 5/62.
+            // deletion pulled down here removes a local event, so the content snapshot
+            // MUST be taken AFTER this phase — a snapshot taken before would still list
+            // the just-deleted event and re-offer it up, resurrecting it on a relay
+            // that also lacks the deletion.
+            //
+            // SCOPE. The reconcile is bounded to the authors we actually hold content
+            // for (the content filter's authors ∪ the authors in our local matched
+            // set) — NEVER the relay's whole population. An author-less filter against a
+            // public relay would otherwise pull the relay's entire deletion history and
+            // apply it to this personal store, mass-deleting cached events far outside
+            // the sync's scope. When we hold nothing in scope there is nothing to
+            // reconcile, so the side-channel is skipped and Phase 3 covers the rest.
+            // Only compute the scope (a store read) when a side-channel could actually
+            // run — a whole-store sync already carries deletions and must not pay a
+            // full-store scan here.
+            val runSideChannel = syncDeletions && filter.excludesDeletionKinds(deletionKinds)
+            val scopeAuthors =
+                if (runSideChannel) {
+                    ((filter.authors ?: emptyList()) + ctx.store.query<Event>(filter).map { it.pubKey }).distinct()
+                } else {
+                    emptyList()
+                }
             val deletionResult =
-                if (syncDeletions && filter.excludesDeletionKinds()) {
+                if (runSideChannel && scopeAuthors.isNotEmpty()) {
+                    // Best-effort: a deletion-reconcile failure must NEVER abort the
+                    // primary content sync (matches geode's mirror policy). Record it
+                    // and fall through to content + the Phase-3 backstop.
                     try {
-                        val localDeletions = ctx.store.query<Event>(filter.deletionSideChannelFilter())
+                        val localDeletions = ctx.store.query<Event>(filter.deletionSideChannelFilter(scopeAuthors, deletionKinds))
                         ctx.client.negentropyPropagateDeletions(
                             relay = relay,
                             contentFilter = filter,
                             localDeletions = localDeletions,
+                            scopeAuthors = scopeAuthors,
+                            deletionKinds = deletionKinds,
                             idleTimeoutMs = timeoutMs,
                             download = { batch ->
                                 deletionsDown.addAndGet(ctx.drain(mapOf(relay to listOf(Filter(ids = batch))), timeoutMs).size)
@@ -151,7 +182,8 @@ object SyncCommand {
                             },
                         )
                     } catch (e: NegentropySyncException) {
-                        return Output.error("sync_error", e.message ?: "deletion sync failed")
+                        deletionsError = e.message ?: "deletion sync failed"
+                        null
                     }
                 } else {
                     null
@@ -236,13 +268,14 @@ object SyncCommand {
             // ── Phase 3: reject-reaction backstop ────────────────────────────
             // A content push the relay blocked usually means the relay deleted that
             // id and holds the deletion we lack. Pull that author's deletions and
-            // ingest them locally so we stop re-offering the dead event. Cheap —
-            // only fires on an actual rejection, and verify-by-fetch: only a real
-            // kind-5/62 that the store accepts has any effect. Rarely triggers once
-            // Phase 1 ran, but it is the net when deletions are otherwise skipped.
-            if (blockedAuthors.isNotEmpty()) {
+            // ingest them locally so we stop re-offering the dead event. Cheap and
+            // precisely bounded — only fires on an actual rejection, only for the
+            // rejected authors, and verify-by-fetch: only a real deletion the store
+            // accepts has any effect. This is the primary down-convergence path for
+            // author-less syncs (where Phase 1 is intentionally skipped).
+            if (syncDeletions && blockedAuthors.isNotEmpty()) {
                 ctx.drain(
-                    mapOf(relay to listOf(Filter(kinds = DELETION_PROPAGATION_KINDS, authors = blockedAuthors.toList()))),
+                    mapOf(relay to listOf(Filter(kinds = deletionKinds, authors = blockedAuthors.toList()))),
                     timeoutMs,
                 )
             }
@@ -260,6 +293,7 @@ object SyncCommand {
                     "deletions_have" to (deletionResult?.haveCount ?: 0),
                     "deletions_downloaded" to deletionsDown.get(),
                     "deletions_uploaded" to deletionsUp.get(),
+                    "deletions_error" to (deletionsError ?: ""),
                 ),
             )
             return 0

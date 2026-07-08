@@ -39,26 +39,41 @@ import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 val DELETION_PROPAGATION_KINDS = listOf(DeletionEvent.KIND, RequestToVanishEvent.KIND)
 
 /**
- * Whether this content [Filter] would *exclude* the deletion kinds — i.e. it pins
- * `kinds` and none of them is 5/62. A filter with no `kinds` constraint already
- * matches deletions, so it needs no side-channel. Anything else (a scoped `kinds`
- * list without 5/62) would silently drop deletions and wants
- * [deletionSideChannelFilter].
+ * The deletion kinds in [deletionKinds] that this content [Filter] does NOT already
+ * carry — i.e. the ones a side-channel still needs to reconcile. Empty when the filter
+ * has no `kinds` constraint (it already matches every deletion kind) or already lists
+ * all of them. NIP-77 reconciles strictly by the filter's `kinds`, so listing kind 5
+ * does NOT cover kind 62: each is checked independently.
  */
-fun Filter.excludesDeletionKinds(): Boolean {
-    val k = kinds ?: return false
-    return DELETION_PROPAGATION_KINDS.none { it in k }
+fun Filter.missingDeletionKinds(deletionKinds: List<Int> = DELETION_PROPAGATION_KINDS): List<Int> {
+    val k = kinds ?: return emptyList()
+    return deletionKinds.filter { it !in k }
 }
 
 /**
- * The companion "deletion side-channel" filter for a content [Filter]: kinds 5/62,
- * scoped to the same `authors`. A kind-5/62 only affects its own author's events, so
- * when the content sync is author-scoped the deletions worth reconciling are exactly
- * those authors'. Carries **no** `since`/`until`: a deletion's `created_at` is when it
- * was issued, not when its target was created, so inheriting the content window would
- * drop a recent deletion of an old event (or an old deletion synced late).
+ * Whether the content [Filter] would *exclude* at least one [deletionKinds], so a
+ * side-channel is needed. A filter with no `kinds` constraint matches every deletion
+ * kind (returns false); a scoped filter that omits kind 5 and/or 62 returns true.
  */
-fun Filter.deletionSideChannelFilter(): Filter = Filter(kinds = DELETION_PROPAGATION_KINDS, authors = authors)
+fun Filter.excludesDeletionKinds(deletionKinds: List<Int> = DELETION_PROPAGATION_KINDS): Boolean = missingDeletionKinds(deletionKinds).isNotEmpty()
+
+/**
+ * The companion "deletion side-channel" filter for a content [Filter]: the deletion
+ * kinds the filter doesn't already carry, scoped to [authors]. A kind-5/62 only affects
+ * its own author's events, so the deletions worth reconciling are exactly those
+ * authors' — and [authors] MUST be bounded (the content filter's authors, or, for a
+ * personal store, the authors actually held locally). An empty/`null` [authors] here
+ * means "every author on the relay", which for a personal store would pull the relay's
+ * ENTIRE deletion history and apply it locally — callers must not do that.
+ *
+ * Carries **no** `since`/`until`: a deletion's `created_at` is when it was issued, not
+ * when its target was created, so inheriting the content window would drop a recent
+ * deletion of an old event (or an old deletion synced late).
+ */
+fun Filter.deletionSideChannelFilter(
+    authors: List<HexKey>? = this.authors,
+    deletionKinds: List<Int> = DELETION_PROPAGATION_KINDS,
+): Filter = Filter(kinds = missingDeletionKinds(deletionKinds), authors = authors)
 
 /**
  * Whether a local deletion-family [event] may be pushed UP to [relay].
@@ -91,35 +106,46 @@ fun shouldPropagateDeletionUp(
  *    them makes the relay apply the deletion. Kind-62 vanishes are gated by
  *    [shouldPropagateDeletionUp] so one is only sent to a relay it targets.
  *
- * A no-op returning `null` when [contentFilter] already covers kinds 5/62 (an
- * unscoped or already-deletion-including sync carries them itself). Otherwise runs one
- * extra [negentropyReconcile] over [deletionSideChannelFilter]; the set is tiny on any
- * real store, so the cost is a single short reconcile, not a second full sync.
+ * A no-op returning `null` when [contentFilter] already covers every [deletionKinds],
+ * or when [scopeAuthors] is empty (nothing to scope — an unscopeable deletion set must
+ * not be reconciled, or it would pull the relay's entire deletion history).
+ *
+ * **Scope is the caller's responsibility.** [scopeAuthors] bounds the reconcile — it
+ * MUST be a bounded author set (the content filter's authors, or the authors actually
+ * held locally). It defaults to `contentFilter.authors`, so an author-less content
+ * filter yields an EMPTY scope → this returns null rather than reconcile everything.
  *
  * The caller owns I/O: [download] fetches + ingests the given ids however it fetches
  * content (REQ-by-id, verify, store), and [upload] publishes one local event. Both
  * suspend the reconcile round that produced them, so the relay is back-pressured.
  *
- * @param localDeletions the local kind-5/62 events — both the reconcile set and the
- *   source the `have` ids resolve against for [upload].
+ * @param localDeletions the local deletion events (in [deletionKinds]) — both the
+ *   reconcile set and the source the `have` ids resolve against for [upload].
+ * @param scopeAuthors   the authors to bound the deletion reconcile to. Empty/`null`
+ *   disables the side-channel (see above).
+ * @param deletionKinds  which deletion kinds to propagate (default 5 & 62). Pass `[5]`
+ *   to propagate only precise NIP-09 deletions and skip account-wide NIP-62 vanishes.
  */
 suspend fun INostrClient.negentropyPropagateDeletions(
     relay: NormalizedRelayUrl,
     contentFilter: Filter,
     localDeletions: List<Event>,
+    scopeAuthors: List<HexKey>? = contentFilter.authors,
+    deletionKinds: List<Int> = DELETION_PROPAGATION_KINDS,
     batchSize: Int = 500,
     idleTimeoutMs: Long = 120_000L,
     download: suspend (List<HexKey>) -> Unit,
     upload: suspend (Event) -> Unit,
 ): NegentropyReconcileResult? {
-    if (!contentFilter.excludesDeletionKinds()) return null
+    if (scopeAuthors.isNullOrEmpty()) return null
+    if (!contentFilter.excludesDeletionKinds(deletionKinds)) return null
 
     val byId = localDeletions.associateBy { it.id }
     val localEntries = localDeletions.map { IdAndTime(it.createdAt, it.id) }
 
     return negentropyReconcile(
         relay = relay,
-        filter = contentFilter.deletionSideChannelFilter(),
+        filter = contentFilter.deletionSideChannelFilter(authors = scopeAuthors, deletionKinds = deletionKinds),
         localEntries = localEntries,
         batchSize = batchSize,
         idleTimeoutMs = idleTimeoutMs,
