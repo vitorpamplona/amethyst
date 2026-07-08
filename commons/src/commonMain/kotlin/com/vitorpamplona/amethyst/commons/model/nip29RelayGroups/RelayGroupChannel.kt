@@ -30,6 +30,9 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupAdminTag
+import com.vitorpamplona.quartz.utils.cache.LargeCache
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * A NIP-29 relay-based group ("channel" in Discord terms). Unlike a NIP-C7
@@ -64,6 +67,31 @@ class RelayGroupChannel(
     var admins: List<GroupAdminTag> = emptyList()
         private set
     private var adminsUpdatedAt: Long = 0
+
+    /**
+     * Kind-11 threads (forum-style posts) scoped to this group, kept apart from the
+     * kind-9 chat [Channel.notes] so the chat feed stays clean. Surfaced through the
+     * group's "Threads" view; each thread's own comment tree (kind 1111) is loaded
+     * on demand by the thread-detail screen.
+     */
+    private val threadNotes = LargeCache<HexKey, Note>()
+    private val _threads = MutableStateFlow<List<Note>>(emptyList())
+    val threads: StateFlow<List<Note>> = _threads
+
+    /** Add a kind-11 thread note; newest-first snapshot is re-published to [threads]. */
+    fun addThread(note: Note) {
+        if (threadNotes.containsKey(note.idHex)) return
+        threadNotes.put(note.idHex, note)
+        _threads.value = threadNotes.values().sortedByDescending { it.createdAt() ?: 0L }
+    }
+
+    fun removeThread(note: Note) {
+        if (!threadNotes.containsKey(note.idHex)) return
+        threadNotes.remove(note.idHex)
+        _threads.value = threadNotes.values().sortedByDescending { it.createdAt() ?: 0L }
+    }
+
+    fun threadCount(): Int = threadNotes.size()
 
     /** A relay group lives on exactly one relay: its host. */
     override fun relays() = setOf(groupId.relayUrl)

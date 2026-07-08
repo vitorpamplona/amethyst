@@ -1452,6 +1452,12 @@ class AccountViewModel(
         code: String,
     ) = launchSigner { account.createRelayGroupInvite(channel, code) }
 
+    fun postRelayGroupThread(
+        channel: RelayGroupChannel,
+        title: String,
+        body: String,
+    ) = launchSigner { account.postRelayGroupThread(channel, title, body) }
+
     fun removeRelayGroupUser(
         channel: RelayGroupChannel,
         pubkey: HexKey,

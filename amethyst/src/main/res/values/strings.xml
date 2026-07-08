@@ -1965,6 +1965,13 @@
     <string name="relay_group_edit_confirm">Save</string>
     <string name="relay_group_menu_members">Members</string>
     <string name="relay_group_menu_edit">Edit group</string>
+    <string name="relay_group_threads_title">Threads</string>
+    <string name="relay_group_threads_empty">No threads yet. Start one with the + button.</string>
+    <string name="relay_group_thread_new">New thread</string>
+    <string name="relay_group_thread_untitled">Untitled</string>
+    <string name="relay_group_thread_title_label">Title</string>
+    <string name="relay_group_thread_body_label">Write something…</string>
+    <string name="relay_group_thread_post">Post</string>
     <string name="relay_group_browse_title">Find groups</string>
     <string name="relay_group_browse_description">Browse the groups hosted on a relay. Paste a relay address, or pick one below.</string>
     <string name="relay_group_browse_relay_label">Relay address</string>

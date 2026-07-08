@@ -259,6 +259,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
@@ -1818,6 +1819,26 @@ object LocalCache : ILocalCache, ICacheProvider {
             // message appears immediately. Don't fabricate a channel from a guessed
             // relay; the host relay's later echo attaches it to the canonical key.
             relayGroupChannels.filter { key, _ -> key.id == groupId }.forEach { it.addNote(note, null) }
+        }
+    }
+
+    /**
+     * Same routing as [attachToRelayGroupIfScoped] but for kind-11 threads, which
+     * are kept in a separate collection from the chat timeline so the two content
+     * types don't mix in one feed.
+     */
+    private fun attachThreadToRelayGroupIfScoped(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+    ) {
+        val groupId = event.groupId() ?: return
+        val note = getOrCreateNote(event.id)
+        if (note.event == null) return
+
+        if (relay != null) {
+            getOrCreateRelayGroupChannel(GroupId(groupId, relay)).addThread(note)
+        } else {
+            relayGroupChannels.filter { key, _ -> key.id == groupId }.forEach { it.addThread(note) }
         }
     }
 
@@ -4028,6 +4049,12 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is PollEvent -> {
                     consumeRegularEvent(event, relay, wasVerified).also {
                         attachToRelayGroupIfScoped(event, relay)
+                    }
+                }
+
+                is ThreadEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified).also {
+                        attachThreadToRelayGroupIfScoped(event, relay)
                     }
                 }
 

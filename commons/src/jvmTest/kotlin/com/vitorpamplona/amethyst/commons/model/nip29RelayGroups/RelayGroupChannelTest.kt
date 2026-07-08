@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip29RelayGroups
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
@@ -177,5 +178,24 @@ class RelayGroupChannelTest {
     @Test
     fun displayNameFallsBackToGroupIdWithoutMetadata() {
         assertEquals(gid, channel().toBestDisplayName())
+    }
+
+    @Test
+    fun threadsDedupePublishToFlowAndRemove() {
+        val c = channel()
+        val t1 = Note("11".repeat(32))
+        val t2 = Note("22".repeat(32))
+
+        c.addThread(t1)
+        c.addThread(t2)
+        c.addThread(t1) // duplicate id — must not double-count
+
+        assertEquals(2, c.threadCount())
+        assertEquals(2, c.threads.value.size)
+        assertTrue(c.threads.value.any { it.idHex == t1.idHex })
+
+        c.removeThread(t1)
+        assertEquals(1, c.threadCount())
+        assertTrue(c.threads.value.none { it.idHex == t1.idHex })
     }
 }

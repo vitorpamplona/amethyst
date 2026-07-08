@@ -141,6 +141,16 @@ fun RelayGroupTopBar(
             }
         },
         actions = {
+            IconButton(onClick = {
+                nav.nav(Route.RelayGroupThreads(channel.groupId.id, channel.groupId.relayUrl.url))
+            }) {
+                Icon(
+                    symbol = MaterialSymbols.Forum,
+                    contentDescription = stringRes(R.string.relay_group_threads_title),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+
             val naddr = channel.toNAddr()
             if (naddr != null) {
                 val context = LocalContext.current

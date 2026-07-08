@@ -203,6 +203,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
@@ -262,6 +263,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
@@ -1514,6 +1516,16 @@ class Account(
         val id = GroupId(groupId, relay)
         follow(LocalCache.getOrCreateRelayGroupChannel(id))
         return id
+    }
+
+    /** Post a kind 11 thread (forum-style) to the group, scoped by its `h` tag. */
+    suspend fun postRelayGroupThread(
+        channel: RelayGroupChannel,
+        title: String,
+        body: String,
+    ) {
+        val template = ThreadEvent.build(body, title) { hTag(channel.groupId.id) }
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
     /** Mint a kind 9009 invite code for the group (admin/moderator only). */
