@@ -111,14 +111,15 @@ class GrapeRankDataCrawler(
      *   defaults that carry kind:10002 for most of the network.
      * @param contentFallbackRelays best-effort general relays that *might* hold a
      *   user's kind:3/10000/1984 when their outbox is unknown or unreachable.
-     * @param contentAggregatorRelays index/aggregator relays queried for a STRAGGLER's
-     *   kind:3 content (not just their kind:10002). The outbox model asks "where does
-     *   this user write?" — but a large tail of users have no kind:3 on their own
-     *   advertised outbox (or it's dead), while a network-wide aggregator (kindpag.es,
-     *   …) scraped and holds it. Those aggregators are queried only for kind:10002 in
-     *   [ensureRelayLists]; folding them in here, for users whose outbox already
-     *   failed ([attempts] > 0) or is unknown, recovers contact lists the pure outbox
-     *   model structurally cannot. Empty disables the behaviour.
+     * @param contentAggregatorRelays index/aggregator relays that hold a network-wide
+     *   copy of kind:3, mined for stragglers by [recoverStragglersFromAggregators]
+     *   after the crawl converges. The outbox model asks "where does this user write?"
+     *   — but a large tail of users have no kind:3 on their own advertised outbox (it's
+     *   dead, or they never published one there), while a network-wide aggregator
+     *   (kindpag.es, …) scraped and holds it. Those aggregators are queried only for
+     *   kind:10002 in [ensureRelayLists]; the dedicated recovery pass asks them for the
+     *   kind:3 itself — patiently and kind:3-only, since a multi-kind filter makes the
+     *   big aggregators time out. Empty disables the pass.
      * @param maxRounds safety backstop on freshness passes (default: run to convergence).
      * @param maxHops follow-graph distance from the observer to crawl (Brainstorm uses 8).
      * @param timeoutMs the FAST per-drain timeout that gates a round's progression.
@@ -599,12 +600,13 @@ class GrapeRankDataCrawler(
          * Group [pubkeys] by the relays we should query for their events:
          *  - first try: the user's own kind:10002 write relays (the outbox model);
          *  - a retry (`attempts[pk] > 0`, its outbox already failed): outbox +
-         *    [backbone] — the known-good relays other people write to — PLUS the
-         *    content aggregators (kindpag.es, …), because a large tail of users have
-         *    no kind:3 on their own outbox and only a network-wide aggregator holds it;
-         *  - no outbox at all: harvested hints + backbone + the general fallback +
-         *    the aggregators (same reason — their outbox is unknown, so the aggregator
-         *    that scraped their kind:3 is often the only place to find it).
+         *    [backbone] — the known-good relays other people write to;
+         *  - no outbox at all: harvested hints + backbone + the general fallback.
+         *
+         * The content aggregators are deliberately NOT mixed in here: they only serve
+         * kind:3 to a kind:3-only filter and time out on this path's multi-kind
+         * [FETCH_KINDS] query, so recovering from them is done separately, once and
+         * patiently, in [recoverStragglersFromAggregators].
          *
          * Also tallies each user's write relays into [writeRelayFreq] so the
          * backbone can be learned from the crawl. Authors are chunked per relay.
@@ -614,7 +616,6 @@ class GrapeRankDataCrawler(
             backbone: Set<NormalizedRelayUrl>,
         ): Map<NormalizedRelayUrl, List<Filter>> {
             val fallback = config.contentFallbackRelays
-            val aggregators = config.contentAggregatorRelays
             val perRelay = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
 
             for (pk in pubkeys) {
@@ -622,8 +623,8 @@ class GrapeRankDataCrawler(
                 write?.forEach { writeRelayFreq[it] = (writeRelayFreq[it] ?: 0) + 1 }
                 val relays =
                     when {
-                        write == null -> relayHints[pk]?.snapshot().orEmpty() + backbone + fallback + aggregators
-                        (attempts[pk] ?: 0) > 0 -> write + backbone + aggregators
+                        write == null -> relayHints[pk]?.snapshot().orEmpty() + backbone + fallback
+                        (attempts[pk] ?: 0) > 0 -> write + backbone
                         else -> write
                     }
                 // Skip relays proven dead (routing to them only burns the drain
@@ -642,6 +643,84 @@ class GrapeRankDataCrawler(
                     Filter(kinds = FETCH_KINDS, authors = chunk)
                 }
             }
+        }
+
+        /**
+         * Final patient pass for the stragglers the outbox model couldn't resolve.
+         * A large tail of reachable users have no kind:3 on their own advertised
+         * outbox — it's dead, or they never published one there — while a
+         * network-wide aggregator ([Config.contentAggregatorRelays], e.g.
+         * kindpag.es) scraped and holds it. Mixing those aggregators into the
+         * competitive Phase-B fan-out doesn't work: there they'd be asked for the
+         * multi-kind [FETCH_KINDS] filter (which times them out) and would race
+         * thousands of outbox sockets, getting cut before a big aggregator finishes.
+         * So once the frontier is drained we ask the aggregators for the remaining
+         * stragglers' kind:3 ALONE: a handful of relays drained kind:3-only with the
+         * patient park window, not competing with the fan-out. Recovered contact
+         * lists are folded into the graph and persisted for a later `score`.
+         */
+        private suspend fun recoverStragglersFromAggregators() {
+            // Query EVERY configured aggregator, even ones the main crawl evicted.
+            // During the competitive crawl an indexer like user.kindpag.es is only ever
+            // asked for kind:10002 in bulk and kind:[3,10000,1984,10002] one author at a
+            // time; the latter parks and times out (60–80s each), striking the host until
+            // it's timeout-evicted (isDead). It is never asked for a clean bulk kind:3 —
+            // the one thing it actually serves fast (≈19 lists per 300 authors in a few
+            // seconds). This deliberate patient pass IS that clean query, so eviction from
+            // the fan-out must not disqualify it here. [drainGated] subscribes to whatever
+            // filter map we hand it (it does not re-check isDead), and a genuinely dead
+            // endpoint just costs one shared park window since the units run concurrently.
+            val aggregators = config.contentAggregatorRelays.toHashSet()
+            if (aggregators.isEmpty()) return
+            // Wipe any timeout strikes the fan-out accrued so a partially-struck host
+            // starts this pass clean and a fast EOSE here keeps it healthy.
+            for (agg in aggregators) clearTimeoutStrikes(agg)
+            // Stragglers = crawled users we still have no kind:3 for. Most are already
+            // in `done` (their outbox attempts were exhausted), which is exactly why
+            // [harvest]/[ingestLate] can't be reused — they skip `done` users — so we
+            // fold these directly.
+            val stragglers = hopOf.keys.filterTo(HashSet()) { (hopOf[it] ?: 0) < config.maxHops && contactsOf(it) == null }
+            if (stragglers.isEmpty()) return
+            val before = contactListsFed
+            log("[graperank] aggregator recovery: ${stragglers.size} stragglers via ${aggregators.size} aggregators")
+
+            // Build the query against the full straggler set BEFORE any folding (the
+            // filter lists are materialized here, so later mutation of `stragglers` is
+            // safe). Ask ONLY for kind:3 — the contact list we're missing. A multi-kind
+            // filter breaks the big aggregators: user.kindpag.es serves kind:3 in a few
+            // seconds when asked for it alone, but times out returning nothing when the
+            // same authors are requested with kinds=[3,10000,1984,10002]. Mutes/reports
+            // still come from the outbox model; the aggregator's job here is the lists.
+            val filters =
+                aggregators.associateWith {
+                    stragglers.chunked(AUTHORS_PER_FILTER).map { chunk -> Filter(kinds = listOf(ContactListEvent.KIND), authors = chunk) }
+                }
+
+            // Fold one delivered contact list per straggler, exactly once.
+            suspend fun foldAgg(events: List<Pair<NormalizedRelayUrl, Event>>) {
+                for ((relay, ev) in events) {
+                    liveRelays.add(relay)
+                    if (ev !is ContactListEvent) continue
+                    val pk = ev.pubKey
+                    if (pk !in stragglers) continue
+                    val contacts = contactsOf(pk) ?: continue
+                    stragglers.remove(pk)
+                    done += pk
+                    ingest(pk, contacts)
+                }
+            }
+
+            relaysContacted += aggregators
+            // Fast deliveries fold immediately; a slow aggregator parks and its late
+            // kind:3 arrives on [lateHarvest], which we drain until the parked units
+            // finish — so a big aggregator that can't answer within the fast window is
+            // still fully harvested here instead of being abandoned.
+            foldAgg(drainGated(filters, null))
+            while (parkedInFlight.load() > 0L) {
+                withTimeoutOrNull(PARK_POLL_MS) { lateHarvest.receive() }?.let { foldAgg(listOf(it)) }
+            }
+            while (true) foldAgg(listOf(lateHarvest.tryReceive().getOrNull() ?: break))
+            log("[graperank] aggregator recovery: +${contactListsFed - before} contact lists")
         }
 
         /**
@@ -1205,6 +1284,12 @@ class GrapeRankDataCrawler(
 
             // Crawl done — drop the warm pool.
             client.unsubscribe(WARM_SUB_ID)
+
+            // Patient final pass: recover the stragglers the outbox model couldn't
+            // resolve by asking the content aggregators for their kind:3 ALONE, no
+            // longer racing the full fan-out (which cut the aggregators short during
+            // the rounds). Runs before [scope] is cancelled so slow aggregators park.
+            recoverStragglersFromAggregators()
 
             // Reports can be retracted. Ask each reporter's outbox for NIP-09 kind:5
             // deletions that cite the reports we gathered (#e-filtered to our report
