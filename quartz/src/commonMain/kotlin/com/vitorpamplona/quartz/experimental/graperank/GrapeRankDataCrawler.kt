@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DrainFailure
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.classifyDrainFailure
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -870,6 +871,40 @@ class GrapeRankDataCrawler(
         }
 
         /**
+         * A drain unit's page came back at the [FULL_PAGE_THRESHOLD] — it may have been
+         * truncated by the relay's per-REQ cap. Continue the SAME query in the
+         * background with `until` cursors ([fetchAllPages], starting at the page's
+         * oldest event, inclusive) to drain whatever the cap hid, streaming the extra
+         * events to [lateHarvest] just like a parked slow relay. Tracked by
+         * [parkedInFlight] so the round waits for it; gated by [limiter] and dropped if
+         * we have no [bgScope]. The boundary second is re-fetched and its already-seen
+         * events are dropped by [persist]'s crawl-wide dedup, so nothing double-counts.
+         * A no-op unless the page hit the threshold, so only dense units pay for it.
+         */
+        private fun paginateIfCapped(
+            relay: NormalizedRelayUrl,
+            groupFilters: List<Filter>,
+            page: List<Pair<NormalizedRelayUrl, Event>>,
+        ) {
+            if (page.size < FULL_PAGE_THRESHOLD) return
+            val scope = bgScope ?: return
+            val oldest = page.minOf { it.second.createdAt }
+            val contFilters = groupFilters.map { it.copy(until = oldest) }
+            parkedInFlight.addAndFetch(1)
+            scope.launch {
+                try {
+                    val more = ArrayList<Pair<NormalizedRelayUrl, Event>>()
+                    limiter.withPermit(relay) {
+                        client.fetchAllPages(relay, contFilters, config.parkTimeoutMs) { ev -> more.add(relay to ev) }
+                    }
+                    for (pair in persist(more)) lateHarvest.trySend(pair)
+                } finally {
+                    parkedInFlight.addAndFetch(-1)
+                }
+            }
+        }
+
+        /**
          * Subscribe each relay to its filters behind [limiter] and drain them. A relay
          * that reaches a terminal (EOSE/CLOSED/cannot-connect) within the FAST
          * [Config.timeoutMs] has its events persisted and returned so this round can
@@ -1009,6 +1044,9 @@ class GrapeRankDataCrawler(
                                         val drained = buildList { for (e in unitEvents) add(e) }
                                         telemetry.record(subRelay, RelayTelemetry.outcomeOf(reason, parked = false), elapsedMs, authorsIn(groupFilters), drained.size)
                                         val persisted = persist(drained)
+                                        // A full page from a clean EOSE may be the relay's cap, not the
+                                        // whole answer — background-paginate the remainder into lateHarvest.
+                                        if (reason == "eose") paginateIfCapped(subRelay, groupFilters, drained)
                                         // Alive if it EOSE'd or handed us anything; a connect-timeout that
                                         // gave nothing (classifyDrainFailure leaves it retryable forever)
                                         // earns a strike toward eviction instead.
@@ -1042,6 +1080,9 @@ class GrapeRankDataCrawler(
                                                     val lateDrained = buildList { for (e in unitEvents) add(e) }
                                                     telemetry.record(subRelay, RelayTelemetry.outcomeOf(late, parked = true), lateMs, authorsIn(groupFilters), lateDrained.size)
                                                     for (pair in persist(lateDrained)) lateHarvest.trySend(pair)
+                                                    // A full parked page from a clean EOSE may also be capped —
+                                                    // paginate its remainder in the background, same as the fast path.
+                                                    if (late == "eose") paginateIfCapped(subRelay, groupFilters, lateDrained)
                                                     // Same liveness rule as the fast path: a park that ended
                                                     // in a clean EOSE or delivered anything clears the relay;
                                                     // one that idle-cut ("timeout") with nothing strikes it.
@@ -1541,6 +1582,15 @@ class GrapeRankDataCrawler(
     companion object {
         // Authors per REQ filter — keeps individual subscriptions within relay limits.
         private const val AUTHORS_PER_FILTER = 300
+
+        // A single REQ can match up to authors×kinds events; a relay that caps its
+        // response below that silently drops the tail (measured: user.kindpag.es
+        // returns at most ~100 events per REQ and ignores our limit). Any page that
+        // comes back with at least this many events is treated as possibly-capped and
+        // paginated with `until` cursors to drain the rest. Set at the smallest page
+        // cap we've observed, so it catches every relay that caps at or above it while
+        // sparing the common under-cap page an extra REQ.
+        private const val FULL_PAGE_THRESHOLD = 100
 
         // Max total "entries" (authors + ids + tag values) in a single REQ frame.
         // Each entry is a ~67-byte hex string, so 2500 ≈ 167KB — under the 256KB
