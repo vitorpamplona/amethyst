@@ -111,6 +111,10 @@ private fun RelayGroupCardContent(
             relayLabel
         }
 
+    // Description is reserved at a fixed two lines so it fills in when the metadata
+    // arrives without changing the card's height (empty for groups with no about).
+    val description = channel.summary()?.takeIf { it.isNotBlank() } ?: ""
+
     OutlinedCard(
         onClick = {
             nav.nav(
@@ -119,56 +123,68 @@ private fun RelayGroupCardContent(
         },
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            RobohashFallbackAsyncImage(
-                robot = channel.groupId.id,
-                model = channel.profilePicture(),
-                contentDescription = channel.toBestDisplayName(),
-                modifier = Modifier.size(48.dp).clip(CircleShape),
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-                autoPlayGif = autoPlayGif,
-            )
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                RobohashFallbackAsyncImage(
+                    robot = channel.groupId.id,
+                    model = channel.profilePicture(),
+                    contentDescription = channel.toBestDisplayName(),
+                    modifier = Modifier.size(48.dp).clip(CircleShape),
+                    loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                    loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                    autoPlayGif = autoPlayGif,
+                )
 
-            Column(Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    if (channel.isPrivate()) {
-                        Icon(
-                            symbol = MaterialSymbols.Lock,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp),
+                Column(Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        if (channel.isPrivate()) {
+                            Icon(
+                                symbol = MaterialSymbols.Lock,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(14.dp),
+                            )
+                        }
+                        Text(
+                            text = channel.toBestDisplayName(),
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
                         )
                     }
                     Text(
-                        text = channel.toBestDisplayName(),
-                        fontWeight = FontWeight.SemiBold,
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
                     )
                 }
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+
+                Icon(
+                    symbol = MaterialSymbols.ChevronRight,
+                    contentDescription = stringRes(R.string.relay_group_open),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
                 )
             }
 
-            Icon(
-                symbol = MaterialSymbols.ChevronRight,
-                contentDescription = stringRes(R.string.relay_group_open),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                minLines = 2,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
         }
     }
