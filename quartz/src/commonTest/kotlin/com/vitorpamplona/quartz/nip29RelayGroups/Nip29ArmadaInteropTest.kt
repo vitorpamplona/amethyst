@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.nip29RelayGroups
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
@@ -330,6 +332,27 @@ class Nip29ArmadaInteropTest {
 
         // relay29 forks are avoided by NOT emitting `previous` when none provided.
         assertFalse(put.any { it[0] == "previous" })
+    }
+
+    @Test
+    fun buildsGroupThreadReplyWithHTagAndRootReference() {
+        // A reply to a kind-11 group thread must be a 1111 comment that BOTH roots
+        // at the thread AND carries the group `h` tag — the exact composition the
+        // Android composer builds (CommentEvent.replyBuilder { hTag(...) }).
+        val thread =
+            parse(
+                ThreadEvent.KIND,
+                arrayOf(arrayOf("h", gid), arrayOf("title", "T")),
+                content = "body",
+                pubKey = alice,
+            ) as ThreadEvent
+
+        val reply = CommentEvent.replyBuilder("nice", EventHintBundle(thread)) { hTag(gid) }
+
+        assertEquals(CommentEvent.KIND, reply.kind)
+        assertEquals(gid, reply.tags.hTag())
+        // References the thread it replies to (NIP-22 root scope carries the id).
+        assertTrue(reply.tags.any { it.size > 1 && it[1] == thread.id })
     }
 
     @Test

@@ -91,6 +91,9 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
+import com.vitorpamplona.quartz.nip29RelayGroups.groupId
+import com.vitorpamplona.quartz.nip29RelayGroups.hTag
+import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
@@ -520,8 +523,20 @@ open class CommentPostViewModel :
         val anonymous = wantsAnonymousPost
         cancel()
 
+        // A reply within a NIP-29 group is group content: pin it to the group's
+        // host relay (the relay the thread was seen on) instead of the author's
+        // outbox, so it reaches the group and — for a private/closed group — is
+        // never leaked to unrelated relays.
+        val groupHostRelays =
+            replyingTo
+                ?.takeIf { it.event?.isGroupScoped() == true }
+                ?.relays
+                ?.takeIf { it.isNotEmpty() }
+
         if (anonymous) {
             accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonymousSigner())
+        } else if (groupHostRelays != null) {
+            accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) { groupHostRelays }
         } else {
             accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
         }
@@ -577,6 +592,12 @@ open class CommentPostViewModel :
                     msg = tagger.message,
                     replyingTo = eventHint,
                 ) {
+                    // A reply inside a NIP-29 group thread must carry the group's `h`
+                    // tag, or the host relay won't accept it and no other member (or
+                    // other NIP-29 client, e.g. Flotilla) will see it. Inherit it from
+                    // the event being replied to; a no-op for non-group comments.
+                    replyingToEvent?.groupId()?.let { hTag(it) }
+
                     val notifyPTags = tagger.pTags?.let { pTagList -> pTagList.map { it.toPTag() } } ?: emptyList()
 
                     val extraNotificationAuthors =
