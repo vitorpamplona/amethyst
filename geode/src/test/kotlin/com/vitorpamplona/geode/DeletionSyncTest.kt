@@ -26,6 +26,7 @@ import com.vitorpamplona.geode.testing.publish
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcileIds
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySettleDeletions
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -195,5 +196,72 @@ class DeletionSyncTest : RelayClientTest() {
                 local.store.query<Event>(Filter(ids = listOf(target.id))).isEmpty(),
                 "local applied the pulled deletion and removed the note",
             )
+        }
+
+    // ---- the full accessory loop (negentropySettleDeletions) -----------------
+
+    // sendUp: local holds the deletion, relay still has the note → the loop pushes it
+    // up and the relay converges to gone.
+    @Test
+    fun settleSendsOurDeletionUp() =
+        runBlocking {
+            val target = note("settle up")
+            val deletion = signer.sign(DeletionEvent.build(listOf(target), createdAt = target.createdAt + 1))
+            val localStore = EventStore(null)
+            localStore.insert(target)
+            localStore.insert(deletion) // deletes target locally, keeps the kind-5
+            defaultRelay.preload(listOf(target))
+
+            val res =
+                withTimeout(30_000) {
+                    client.negentropySettleDeletions(
+                        relay = defaultRelayUrl,
+                        filter = Filter(kinds = listOf(1)),
+                        store = localStore,
+                        sendUp = true,
+                        applyDown = false,
+                        idleTimeoutMs = 20_000,
+                    )
+                }
+
+            assertEquals(1, res.sentUp)
+            assertEquals(0, res.appliedDown)
+            assertTrue(
+                defaultRelay.store.query<Event>(Filter(ids = listOf(target.id))).isEmpty(),
+                "relay converged: the deleted note is gone",
+            )
+            localStore.close()
+        }
+
+    // applyDown: relay deleted the note (holds only the kind-5), local still has it →
+    // the loop pulls the relay's deletion down and local converges to gone.
+    @Test
+    fun settleAppliesRelayDeletionDown() =
+        runBlocking {
+            val target = note("settle down")
+            val deletion = signer.sign(DeletionEvent.build(listOf(target), createdAt = target.createdAt + 1))
+            defaultRelay.preload(listOf(target, deletion)) // relay deletes target, keeps the kind-5
+            val localStore = EventStore(null)
+            localStore.insert(target)
+
+            val res =
+                withTimeout(30_000) {
+                    client.negentropySettleDeletions(
+                        relay = defaultRelayUrl,
+                        filter = Filter(kinds = listOf(1)),
+                        store = localStore,
+                        sendUp = false,
+                        applyDown = true,
+                        idleTimeoutMs = 20_000,
+                    )
+                }
+
+            assertEquals(0, res.sentUp)
+            assertEquals(1, res.appliedDown)
+            assertTrue(
+                localStore.query<Event>(Filter(ids = listOf(target.id))).isEmpty(),
+                "local converged: the relay-deleted note is gone",
+            )
+            localStore.close()
         }
 }

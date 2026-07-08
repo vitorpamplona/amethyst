@@ -52,6 +52,7 @@ Import as `com.vitorpamplona.quartz.nip01Core.relay.client.accessories.<name>` (
 | `negentropySyncEvents` / `negentropySyncOrFetchEvents` | `NostrClientNegentropySyncEventsExt` | The two above as an O(1)-memory `Flow<Event>`. |
 | `negentropyReconcile(relay, filter, localEntries, onNeedIds, onHaveIds)` | `NostrClientNegentropySyncExt` | **Pure diff, no I/O** — streams the two directions (`need` = relay has & we lack; `have` = we have & relay lacks) to callbacks. Compose your own download/upload on top. |
 | `negentropyReconcileIds(relay, filter, localEntries)` | `NostrClientNegentropySyncExt` | Same diff, materialized into `needIds` / `haveIds` lists (small sets only). |
+| `negentropySettleDeletions(relay, filter, store, sendUp, applyDown)` | `NostrClientNegentropyDeletionSettleExt` | Second pass of a two-pass sync: after a content sync settles, re-reconcile and resolve only the residual — send our covering deletions up (`sendUp`) and/or apply the relay's kind-5 down (`applyDown`), looping until stable. Cost is O(residual), not O(db). Pairs with `IEventStore.deletionsCovering`. |
 
 `fetchByIds`, `reconcileStreaming`, `syncPipeline` in `NostrClientNegentropySyncExt`
 are `internal` implementation details — not part of the public surface.

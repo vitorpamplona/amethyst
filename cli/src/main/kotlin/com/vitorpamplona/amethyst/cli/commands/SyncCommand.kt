@@ -26,15 +26,13 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DeletionSettleResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncException
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcile
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcileIds
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySettleDeletions
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
-import com.vitorpamplona.quartz.nip01Core.store.deletionsCovering
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
@@ -186,74 +184,27 @@ object SyncCommand {
                     return Output.error("sync_error", e.message ?: "negentropy sync failed")
                 }
 
-            // ── Pass 2+: deletion settle. After the content pass, a re-reconcile's
-            // residual is (barring races) exactly the events a deletion kept from moving:
-            //  - a residual NEED (relay has it, we still lack it after trying to download)
-            //    = we deleted it → publish OUR covering deletion up so the relay drops it;
-            //  - a residual HAVE (we have it, relay still lacks it after trying to upload)
-            //    = the relay deleted it → pull the relay's covering kind-5 down and apply.
-            // The residual is tiny (only real deletion mismatches), so this is cheap no
-            // matter how large the database is — we only fetch metadata for the residual,
-            // never the whole need set. Loop until a round resolves nothing (converged) or
-            // we hit the round cap. Best-effort: a failed reconcile here never fails the
-            // command — the content sync already succeeded.
-            var deletionsUp = 0
-            var deletionsDown = 0
-            var deletionRounds = 0
-            if (syncDeletions && (down || up)) {
-                val sentUp = HashSet<HexKey>()
-                val appliedDown = HashSet<HexKey>()
-                try {
-                    while (deletionRounds < MAX_DELETION_ROUNDS) {
-                        deletionRounds++
-                        val diff =
-                            ctx.client.negentropyReconcileIds(
-                                relay = relay,
-                                filter = filter,
-                                localEntries = ctx.store.snapshotIdsForNegentropy(listOf(filter)),
-                                batchSize = ID_CHUNK,
-                                idleTimeoutMs = timeoutMs,
-                                reconcileConcurrency = RECONCILE_CONCURRENCY,
-                            )
-                        var resolved = 0
-
-                        // residual needs → send our deletions up (bounded: --down settled
-                        // every need we don't have a deletion for).
-                        if (down) {
-                            for (chunk in diff.needIds.chunked(ID_CHUNK)) {
-                                val events = ctx.client.fetchAll(relay, Filter(ids = chunk), timeoutMs)
-                                for (del in ctx.store.deletionsCovering(events, relay)) {
-                                    if (sentUp.add(del.id) && ctx.publish(del, setOf(relay)).values.any { it }) {
-                                        deletionsUp++
-                                        resolved++
-                                    }
-                                }
-                            }
-                        }
-
-                        // residual haves → apply the relay's deletions locally (bounded:
-                        // --up settled every have the relay didn't delete). Only precise
-                        // kind-5 deletions are pulled down; a kind-62 vanish is NOT
-                        // auto-applied (its blast radius is the whole account).
-                        if (up) {
-                            for (chunk in diff.haveIds.chunked(ID_CHUNK)) {
-                                val ourEvents = ctx.store.query<Event>(Filter(ids = chunk))
-                                val relayDeletions = deletionsCovering(ourEvents, relay) { f -> ctx.client.fetchAll(relay, f, timeoutMs) }
-                                for (del in relayDeletions.filterIsInstance<DeletionEvent>()) {
-                                    if (appliedDown.add(del.id) && ctx.verifyAndStore(del)) {
-                                        deletionsDown++
-                                        resolved++
-                                    }
-                                }
-                            }
-                        }
-
-                        if (resolved == 0) break
-                    }
-                } catch (e: NegentropySyncException) {
-                    // content already synced; deletion convergence is best-effort.
+            // ── Pass 2+: deletion settle. The reusable quartz accessory re-reconciles
+            // and resolves only the residual — send our deletions up for what we deleted
+            // (bounded by --down), apply the relay's kind-5 down for what it deleted
+            // (bounded by --up) — looping until stable. Cheap regardless of database size
+            // (see negentropySettleDeletions), and best-effort so it can't fail the sync.
+            val deletions =
+                if (syncDeletions) {
+                    ctx.client.negentropySettleDeletions(
+                        relay = relay,
+                        filter = filter,
+                        store = ctx.store,
+                        sendUp = down,
+                        applyDown = up,
+                        batchSize = ID_CHUNK,
+                        idleTimeoutMs = timeoutMs,
+                        maxRounds = MAX_DELETION_ROUNDS,
+                        reconcileConcurrency = RECONCILE_CONCURRENCY,
+                    )
+                } else {
+                    DeletionSettleResult(0, 0, 0)
                 }
-            }
 
             Output.emit(
                 mapOf(
@@ -264,9 +215,9 @@ object SyncCommand {
                     "have" to result.haveCount,
                     "downloaded" to downloaded.get(),
                     "uploaded" to uploaded.get(),
-                    "deletions_sent_up" to deletionsUp,
-                    "deletions_applied_down" to deletionsDown,
-                    "deletion_rounds" to deletionRounds,
+                    "deletions_sent_up" to deletions.sentUp,
+                    "deletions_applied_down" to deletions.appliedDown,
+                    "deletion_rounds" to deletions.rounds,
                 ),
             )
             return 0
