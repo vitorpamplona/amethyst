@@ -215,6 +215,10 @@ class MlsGroup private constructor(
             encryptionPrivateKey = encryptionPrivateKey,
             interimTranscriptHash = interimTranscriptHash,
             encryptionSecret = epochSecrets.encryptionSecret,
+            // Preserve the SecretTree ratchet positions so a restore doesn't
+            // rewind our own generation counter to 0 and reuse an AEAD
+            // key+nonce within this epoch (RFC 9420 §9).
+            senderRatchetStates = secretTree.exportSenderStates(),
         )
     }
 
@@ -3501,15 +3505,23 @@ class MlsGroup private constructor(
         /**
          * Restore a group from a previously saved [MlsGroupState].
          *
-         * The SecretTree is reconstructed from the stored encryption_secret.
-         * Note: SecretTree ratchet state (per-sender generation counters) is
-         * NOT preserved — messages sent/received before the save point cannot
-         * be re-decrypted, which is acceptable because they would already
-         * have been processed.
+         * The SecretTree is reconstructed from the stored encryption_secret,
+         * then seeded with the persisted per-sender ratchet positions
+         * ([MlsGroupState.senderRatchetStates]). Seeding is what keeps the
+         * local member's generation counter monotonic across a restart — a
+         * fresh SecretTree would restart every sender at generation 0, so our
+         * next send would reuse generation 0's AEAD key+nonce within the same
+         * epoch and be rejected by strict receivers (openmls / MDK /
+         * Whitenoise) that forbid generation reuse.
+         *
+         * Receive-only ratchets that weren't persisted (STATE_VERSION 1 blobs,
+         * or senders we never decrypted) simply re-derive from generation 0 on
+         * first use — safe, because those messages were already processed.
          */
         fun restore(state: MlsGroupState): MlsGroup {
             val tree = RatchetTree.decodeTls(TlsReader(state.treeBytes))
             val secretTree = SecretTree(state.encryptionSecret, tree.leafCount)
+            secretTree.importSenderStates(state.senderRatchetStates)
 
             return MlsGroup(
                 groupContext = state.groupContext,

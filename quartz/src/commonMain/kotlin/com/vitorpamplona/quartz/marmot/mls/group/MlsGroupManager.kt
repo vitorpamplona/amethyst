@@ -348,13 +348,23 @@ class MlsGroupManager(
     /**
      * Encrypt an application message.
      * Synchronized to prevent nonce reuse from concurrent encryption.
+     *
+     * The group state is persisted after every send. Encrypting advances the
+     * SecretTree ratchet (RFC 9420 §9) but does not change the epoch, so
+     * without this save a restart between two messages would reload the
+     * pre-send ratchet position and re-emit an already-used generation —
+     * reusing the AEAD key+nonce and getting rejected by strict receivers.
+     * State was previously persisted only at commits, which left every
+     * inter-commit send unprotected.
      */
     suspend fun encrypt(
         nostrGroupId: HexKey,
         plaintext: ByteArray,
     ): ByteArray =
         mutex.withLock {
-            requireGroup(nostrGroupId).encrypt(plaintext)
+            val ciphertext = requireGroup(nostrGroupId).encrypt(plaintext)
+            persistGroup(nostrGroupId)
+            ciphertext
         }
 
     /**

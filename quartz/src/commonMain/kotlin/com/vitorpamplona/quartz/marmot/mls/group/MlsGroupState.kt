@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.messages.GroupContext
 import com.vitorpamplona.quartz.marmot.mls.schedule.EpochSecrets
+import com.vitorpamplona.quartz.marmot.mls.schedule.SenderRatchetState
 
 /**
  * Serializable snapshot of an MLS group's complete state.
@@ -40,6 +41,13 @@ import com.vitorpamplona.quartz.marmot.mls.schedule.EpochSecrets
  *
  * Security: This blob contains secret key material (signing key, encryption key,
  * epoch secrets). It MUST be stored in encrypted local storage.
+ *
+ * [senderRatchetStates] carries each sender's live SecretTree ratchet position
+ * (RFC 9420 §9). Preserving it is what stops the restored local member from
+ * re-emitting an already-used generation within the same epoch — see
+ * [com.vitorpamplona.quartz.marmot.mls.schedule.SecretTree.exportSenderStates].
+ * It is optional (empty for STATE_VERSION 1 blobs) so older persisted state
+ * still decodes.
  */
 data class MlsGroupState(
     val groupContext: GroupContext,
@@ -51,6 +59,7 @@ data class MlsGroupState(
     val encryptionPrivateKey: ByteArray,
     val interimTranscriptHash: ByteArray,
     val encryptionSecret: ByteArray,
+    val senderRatchetStates: Map<Int, SenderRatchetState> = emptyMap(),
 ) {
     fun encodeTls(): ByteArray {
         val writer = TlsWriter()
@@ -94,6 +103,18 @@ data class MlsGroupState(
         // Encryption secret for SecretTree reconstruction
         writer.putOpaqueVarInt(encryptionSecret)
 
+        // Per-sender SecretTree ratchet positions (STATE_VERSION 2+).
+        // Preserving the local sender's generation counter is what prevents
+        // AEAD key+nonce reuse (and strict-receiver rejection) after a restore.
+        writer.putUint32(senderRatchetStates.size.toLong())
+        for ((leafIndex, ratchet) in senderRatchetStates) {
+            writer.putUint32(leafIndex.toLong())
+            writer.putOpaqueVarInt(ratchet.handshakeSecret)
+            writer.putUint32(ratchet.handshakeGeneration.toLong())
+            writer.putOpaqueVarInt(ratchet.applicationSecret)
+            writer.putUint32(ratchet.applicationGeneration.toLong())
+        }
+
         return writer.toByteArray()
     }
 
@@ -110,13 +131,18 @@ data class MlsGroupState(
     }
 
     companion object {
-        private const val STATE_VERSION = 1
+        /**
+         * v1: original layout (no SecretTree ratchet positions).
+         * v2: appends [senderRatchetStates] so restores don't reset the
+         *     ratchet to generation 0. v1 blobs still decode (empty map).
+         */
+        private const val STATE_VERSION = 2
 
         fun decodeTls(data: ByteArray): MlsGroupState {
             val reader = TlsReader(data)
 
             val version = reader.readUint16()
-            require(version == STATE_VERSION) { "Unsupported state version: $version" }
+            require(version in 1..STATE_VERSION) { "Unsupported state version: $version" }
 
             val groupContext = GroupContext.decodeTls(reader)
             val treeBytes = reader.readOpaqueVarInt()
@@ -144,6 +170,33 @@ data class MlsGroupState(
             val interimTranscriptHash = reader.readOpaqueVarInt()
             val encryptionSecret = reader.readOpaqueVarInt()
 
+            // v2+: per-sender SecretTree ratchet positions. Absent (or an
+            // empty count) for v1 blobs, which restore at generation 0.
+            val senderRatchetStates =
+                if (version >= 2 && reader.hasRemaining) {
+                    val count = reader.readUint32().toInt()
+                    buildMap {
+                        repeat(count) {
+                            val leafIndex = reader.readUint32().toInt()
+                            val handshakeSecret = reader.readOpaqueVarInt()
+                            val handshakeGeneration = reader.readUint32().toInt()
+                            val applicationSecret = reader.readOpaqueVarInt()
+                            val applicationGeneration = reader.readUint32().toInt()
+                            put(
+                                leafIndex,
+                                SenderRatchetState(
+                                    handshakeSecret = handshakeSecret,
+                                    handshakeGeneration = handshakeGeneration,
+                                    applicationSecret = applicationSecret,
+                                    applicationGeneration = applicationGeneration,
+                                ),
+                            )
+                        }
+                    }
+                } else {
+                    emptyMap()
+                }
+
             return MlsGroupState(
                 groupContext = groupContext,
                 treeBytes = treeBytes,
@@ -154,6 +207,7 @@ data class MlsGroupState(
                 encryptionPrivateKey = encryptionPrivateKey,
                 interimTranscriptHash = interimTranscriptHash,
                 encryptionSecret = encryptionSecret,
+                senderRatchetStates = senderRatchetStates,
             )
         }
     }

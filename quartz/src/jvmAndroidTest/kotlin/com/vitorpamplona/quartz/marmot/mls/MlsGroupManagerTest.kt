@@ -123,6 +123,46 @@ class MlsGroupManagerTest {
         }
     }
 
+    /**
+     * Regression: [MlsGroupManager.encrypt] must persist the advanced ratchet
+     * position, not just commits. A group state persists only at commits was
+     * the second half of the generation-reuse bug: sends between two commits
+     * advanced the SecretTree in memory but never hit the store, so a restart
+     * reloaded the pre-send ratchet and re-emitted an already-used generation.
+     *
+     * Alice and Bob share a group. Alice sends one message (Bob consumes
+     * generation 0), Alice "restarts" from the store WITHOUT any intervening
+     * commit, and her next send must be a fresh generation Bob accepts.
+     */
+    @Test
+    fun testEncryptPersistsRatchetPositionBetweenCommits() {
+        runBlocking {
+            val aliceStore = InMemoryGroupStateStore()
+            val alice = MlsGroupManager(aliceStore)
+            val aliceGroup = alice.createGroup(groupId, "alice".encodeToByteArray())
+
+            // Bob joins as a low-level MlsGroup — a strict peer that tracks
+            // consumed generations. (The manager's processWelcome requires a
+            // NostrGroupData extension we don't set up here; the low-level
+            // group is enough to observe the ratchet behavior.)
+            val bobBundle = aliceGroup.createKeyPackage("bob".encodeToByteArray(), ByteArray(0))
+            val addResult = alice.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
+            val bob = MlsGroup.processWelcome(addResult.welcomeBytes!!, bobBundle)
+
+            // Alice sends generation 0 (no commit); Bob consumes it.
+            val ct0 = alice.encrypt(groupId, "msg0".encodeToByteArray())
+            assertContentEquals("msg0".encodeToByteArray(), bob.decrypt(ct0).content)
+
+            // Alice restarts from the store — only encrypt() has run since the
+            // last commit, so this proves encrypt persisted the ratchet.
+            val aliceRestarted = MlsGroupManager(aliceStore)
+            aliceRestarted.restoreAll()
+
+            val ct1 = aliceRestarted.encrypt(groupId, "msg1".encodeToByteArray())
+            assertContentEquals("msg1".encodeToByteArray(), bob.decrypt(ct1).content)
+        }
+    }
+
     @Test
     fun testAddMemberPersistsState() {
         runBlocking {
