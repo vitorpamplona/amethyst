@@ -163,7 +163,7 @@ class GrapeRankDataCrawler(
         val parkTimeoutMs: Long = 40_000,
         val diagnose: Boolean = false,
         val insertBatchSize: Int = 500,
-        val drainConcurrency: Int = 4096,
+        val drainConcurrency: Int = 1024,
         val timeoutEvictStrikes: Int = 3,
         /**
          * Also skip proven-dead relays in the kind:10002 discovery sweep
