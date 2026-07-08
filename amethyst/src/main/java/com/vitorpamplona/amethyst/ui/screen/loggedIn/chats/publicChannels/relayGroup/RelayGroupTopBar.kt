@@ -64,6 +64,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 @Composable
 fun RelayGroupTopBar(
     baseChannel: RelayGroupChannel,
+    inviteCode: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -80,6 +81,19 @@ fun RelayGroupTopBar(
     var requested by remember(channel.groupId) { mutableStateOf(false) }
     LaunchedEffect(membership) {
         if (membership.isMember()) requested = false
+    }
+
+    // Arrived via an invite link carrying a join code (`wss://relay'id?code=…`): the
+    // user already opted in by tapping it, so fire the kind-9021 join once (with the
+    // code) instead of making them re-enter it. Guarded to exactly once and skipped if
+    // the roster already shows us as a member.
+    var autoJoined by remember(channel.groupId) { mutableStateOf(false) }
+    LaunchedEffect(channel.groupId, inviteCode, membership) {
+        if (inviteCode != null && !autoJoined && !membership.isMember()) {
+            autoJoined = true
+            requested = true
+            accountViewModel.joinRelayGroup(channel, inviteCode)
+        }
     }
     val displayMembership = if (!membership.isMember() && requested) RelayGroupMembership.PENDING else membership
 

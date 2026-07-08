@@ -568,6 +568,7 @@ fun BuildNavigation(
                 relayUrl = it.relayUrl,
                 draftId = it.draftId,
                 replyToId = it.replyTo,
+                inviteCode = it.inviteCode,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

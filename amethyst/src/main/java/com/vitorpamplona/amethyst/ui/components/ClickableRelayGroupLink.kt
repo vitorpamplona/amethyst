@@ -65,7 +65,7 @@ fun ClickableRelayGroupLink(
                         }
                     },
                     onClick = {
-                        nav.nav(Route.RelayGroup(invite.groupId, invite.relayUrl.url))
+                        nav.nav(Route.RelayGroup(invite.groupId, invite.relayUrl.url, inviteCode = invite.code))
                     },
                 )
         }

@@ -337,5 +337,5 @@ private fun relayGroupDirectRoute(nip19: NAddress): Route? {
  */
 private fun relayGroupInviteRoute(uri: String): Route? {
     val link = GroupInviteLink.parse(uri.removePrefix(NOSTR_URI_PREFIX)) ?: return null
-    return Route.RelayGroup(link.groupId, link.relayUrl.url)
+    return Route.RelayGroup(link.groupId, link.relayUrl.url, inviteCode = link.code)
 }

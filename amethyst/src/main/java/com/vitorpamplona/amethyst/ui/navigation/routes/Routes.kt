@@ -642,6 +642,9 @@ sealed class Route {
         val relayUrl: String,
         val draftId: HexKey? = null,
         val replyTo: HexKey? = null,
+        // NIP-29 invite code from a `wss://relay'id?code=…` link — auto-joins a closed
+        // group when the screen opens. Null for a plain (view-only) group link.
+        val inviteCode: String? = null,
     ) : Route()
 
     @Serializable data class RelayGroupServer(

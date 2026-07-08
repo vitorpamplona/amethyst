@@ -46,7 +46,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.LoadRelayGroupChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupPreviewSubscription
@@ -78,13 +78,14 @@ fun RelayGroupCard(
     val groupId = remember(invite) { invite.toGroupId() }
 
     LoadRelayGroupChannel(groupId, accountViewModel) { channel ->
-        RelayGroupCardContent(channel, accountViewModel, nav)
+        RelayGroupCardContent(channel, invite.code, accountViewModel, nav)
     }
 }
 
 @Composable
 private fun RelayGroupCardContent(
     baseChannel: RelayGroupChannel,
+    inviteCode: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -111,7 +112,11 @@ private fun RelayGroupCardContent(
         }
 
     OutlinedCard(
-        onClick = { nav.nav(routeFor(channel)) },
+        onClick = {
+            nav.nav(
+                Route.RelayGroup(channel.groupId.id, channel.groupId.relayUrl.url, inviteCode = inviteCode),
+            )
+        },
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
         Row(

@@ -38,6 +38,7 @@ fun RelayGroupChatScreen(
     relayUrl: String,
     draftId: HexKey? = null,
     replyToId: HexKey? = null,
+    inviteCode: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -50,7 +51,7 @@ fun RelayGroupChatScreen(
         isInvertedLayout = true,
         topBar = {
             LoadRelayGroupChannel(channelId, accountViewModel) {
-                RelayGroupTopBar(it, accountViewModel, nav)
+                RelayGroupTopBar(it, inviteCode, accountViewModel, nav)
             }
         },
         accountViewModel = accountViewModel,
