@@ -484,11 +484,13 @@ class MirrorWorker(
         }
 
         try {
-            pull(catchUpFilter)
-            // Deletions carry no time window: a deletion's created_at is when it
-            // was issued, not when its target was, so the whole deletion set for
-            // the scope is reconciled rather than the [initialSince, until] window.
+            // Deletions first, so a deletion already lands (or the reject-trigger
+            // is armed) before the content pull can add its target — no
+            // add-then-delete churn. They carry no time window: a deletion's
+            // created_at is when it was issued, not when its target was, so the
+            // whole deletion set for the scope is reconciled, not the window.
             if (deletionScope != null) pull(deletionScope)
+            pull(catchUpFilter)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
@@ -577,10 +579,13 @@ class MirrorWorker(
         }
 
         try {
-            pushUp(catchUpFilter, "content") { event -> up.filter == null || up.filter.match(event) }
+            // Deletions first: push a deletion up before its target, so the
+            // upstream's reject-trigger blocks the target instead of ingesting
+            // then deleting it.
             if (deletionScope != null) {
                 pushUp(deletionScope, "deletions") { event -> shouldPropagateDeletionUp(event, up.url) }
             }
+            pushUp(catchUpFilter, "content") { event -> up.filter == null || up.filter.match(event) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {

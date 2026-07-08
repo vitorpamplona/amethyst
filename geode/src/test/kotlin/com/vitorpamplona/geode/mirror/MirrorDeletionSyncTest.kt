@@ -111,4 +111,58 @@ class MirrorDeletionSyncTest {
                 "mirror ingested the deletion event itself",
             )
         }
+
+    /**
+     * The authoritative-push case: the local relay holds the deletion (its note
+     * already removed), the remote still holds the note, and a scoped `dir = up`
+     * mirror must push the kind-5 up so the remote reflects the local state.
+     */
+    @Test
+    fun scopedUpMirrorPushesDeletion() =
+        runBlocking {
+            val signer = NostrSignerSync(KeyPair())
+            val note = signer.sign(TextNoteEvent.build("delete me"))
+            val deletion = signer.sign(DeletionEvent.build(listOf(note), createdAt = note.createdAt + 1))
+
+            // Local (downstream) is authoritative: it already applied the deletion.
+            downstreamStore.insert(note)
+            downstreamStore.insert(deletion)
+            assertEquals(0, downstreamStore.count(Filter(ids = listOf(note.id))), "local removed its note")
+
+            // Remote (upstream, the sink geode dials) still holds the note.
+            upstreamStore.insert(note)
+            assertEquals(1, upstreamStore.count(Filter(ids = listOf(note.id))), "remote still has the note")
+
+            server = KtorRelay(upstream, host = "127.0.0.1", port = 7896).start()
+
+            worker =
+                MirrorWorker(
+                    upstreams =
+                        listOf(
+                            MirrorUpstream(
+                                url = "ws://127.0.0.1:7896/".normalizeRelayUrl(),
+                                trusted = false,
+                                backfillSeconds = 86_400,
+                                direction = MirrorDirection.UP,
+                                filter = Filter(kinds = listOf(1)),
+                            ),
+                        ),
+                    server = downstream.server,
+                    store = downstreamStore,
+                    negentropyBackfill = true,
+                ).also { it.start() }
+
+            val gone =
+                withTimeoutOrNull(30_000) {
+                    while (upstreamStore.count(Filter(ids = listOf(note.id))) > 0) delay(200)
+                    true
+                }
+
+            assertTrue(gone == true, "scoped up mirror did not push the deletion to the remote")
+            assertEquals(
+                1,
+                upstreamStore.count(Filter(kinds = listOf(DeletionEvent.KIND))),
+                "remote received the deletion event",
+            )
+        }
 }
