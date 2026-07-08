@@ -106,16 +106,20 @@ object GrapeRankCommand {
 
     // Network-wide aggregators that scrape and hold kind:3 for users whose own
     // outbox lacks it. The crawler queries these for a straggler's CONTENT (kind:3),
-    // not just their kind:10002 relay list. Measured on observer 460c25e6: querying
-    // user.kindpag.es for kind:3 alone recovers ~180 stragglers the pure outbox model
-    // never finds. The profile indexers (kindpag/purplepag/coracle/yabu/nostr1) plus
-    // the ActivityPub bridges (ditto/momostr/mostr, which host bridged users' lists).
+    // not just their kind:10002 relay list. Measured on observer 460c25e6, the distinct
+    // missing authors whose kind:3 each holds: kindpag.es 369, yabu 126, oxtr.dev 76,
+    // nos.lol 72, ditto 56, nostr1 29, momostr 11, mostr 3. So beyond the profile
+    // indexers (kindpag/purplepag/coracle/yabu/nostr1) and the ActivityPub bridges
+    // (ditto/momostr/mostr, which host bridged users' lists), two big general relays --
+    // nostr.oxtr.dev and nos.lol -- carry ~150 more that no indexer has.
     private val CONTENT_AGGREGATOR_RELAYS: Set<NormalizedRelayUrl> =
         DefaultIndexerRelayList +
             listOf(
                 "wss://relay.ditto.pub",
                 "wss://relay.momostr.pink",
                 "wss://relay.mostr.pub",
+                "wss://nostr.oxtr.dev",
+                "wss://nos.lol",
             ).mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
 
     suspend fun dispatch(
