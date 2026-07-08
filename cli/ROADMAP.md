@@ -120,10 +120,10 @@ nak has 34 functional commands (introspected from `nak --help`). Coverage:
 - **Partial / adapted (3):** `key` (no `expand`/`combine`(MuSig2)/`default`),
   `git` (NIP-34 events only — no packfile transport), `outbox` (NIP-65 model vs
   nak's local hints DB).
-- **Missing (7):** `dekey` (NIP-4E), `mcp`, `curl` (NIP-98), `fs` (FUSE),
-  `spell` (MuSig2/FROST), `validate` (event-schema validation), and
-  `group`/`nip29` (NIP-29 — amy ships MLS/Marmot instead, an intentional
-  divergence rather than a gap).
+- **Missing (6):** `dekey` (NIP-4E), `mcp`, `curl` (NIP-98), `fs` (FUSE),
+  `spell` (MuSig2/FROST), and `validate` (event-schema validation).
+  `relaygroup` (NIP-29) now ships alongside MLS/Marmot — the two group models
+  are offered side by side rather than one substituting for the other.
 
 **Design differences (not gaps):** amy is a *stateful client* (accounts,
 `~/.amy/`, shared event store) with a stable JSON contract; nak is a *stateless*
