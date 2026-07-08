@@ -166,7 +166,9 @@ class PlaybackService : MediaSessionService() {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
+        // Since API 34 the OS only delivers UI_HIDDEN and BACKGROUND; BACKGROUND (process on
+        // the system LRU list) is the real reclaim-pressure signal, so release the warm pool then.
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
             poolNoProxy?.exoPlayerPool?.releaseWarmPool()
             poolWithProxy?.exoPlayerPool?.releaseWarmPool()
         }

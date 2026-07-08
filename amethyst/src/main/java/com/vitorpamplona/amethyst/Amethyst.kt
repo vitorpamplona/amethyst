@@ -155,13 +155,11 @@ class Amethyst : Application() {
         if (isNappletSandbox) return
         instance.trim(level)
         // Drop warm embedded tab sessions under genuine memory pressure (decision: keep warm until the
-        // user or Android reclaims them). Deliberately NOT on UI_HIDDEN/BACKGROUND — those fire on every
-        // backgrounding, and a pinned tab should survive that. Only on real pressure levels, R+ only.
-        val pressure =
-            level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW ||
-                level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
-                level == ComponentCallbacks2.TRIM_MEMORY_MODERATE ||
-                level == ComponentCallbacks2.TRIM_MEMORY_COMPLETE
+        // user or Android reclaims them). Since API 34 the OS only delivers UI_HIDDEN and BACKGROUND:
+        // BACKGROUND means the process is on the system LRU list (real reclaim pressure), while UI_HIDDEN
+        // fires on every app switch — so evict only at BACKGROUND and above, letting a pinned tab survive
+        // a plain backgrounding. R+ only.
+        val pressure = level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND
         if (pressure && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             EmbeddedTabHost.evictAll()
         }
