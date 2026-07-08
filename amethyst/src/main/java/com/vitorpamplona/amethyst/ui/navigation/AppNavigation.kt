@@ -108,7 +108,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53L
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupBrowseScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupChannelListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupChatScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupCreateScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupEditScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupMembersScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupNewThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupThreadsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupsHomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
@@ -593,6 +596,32 @@ fun BuildNavigation(
 
         composableFromEndArgs<Route.RelayGroupThreads> {
             RelayGroupThreadsScreen(
+                id = it.id,
+                relayUrl = it.relayUrl,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.RelayGroupNewThread> {
+            RelayGroupNewThreadScreen(
+                id = it.id,
+                relayUrl = it.relayUrl,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.RelayGroupCreate> {
+            RelayGroupCreateScreen(
+                relayUrl = it.relayUrl,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.RelayGroupEdit> {
+            RelayGroupEditScreen(
                 id = it.id,
                 relayUrl = it.relayUrl,
                 accountViewModel = accountViewModel,

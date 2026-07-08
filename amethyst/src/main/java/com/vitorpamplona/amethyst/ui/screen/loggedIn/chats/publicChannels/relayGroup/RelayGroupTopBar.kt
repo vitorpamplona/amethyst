@@ -100,7 +100,6 @@ fun RelayGroupTopBar(
     var menuOpen by remember { mutableStateOf(false) }
     var showInvite by remember { mutableStateOf(false) }
     var showJoinCode by remember { mutableStateOf(false) }
-    var showEdit by remember { mutableStateOf(false) }
 
     TopBarExtensibleWithBackButton(
         title = {
@@ -220,7 +219,7 @@ fun RelayGroupTopBar(
                                 text = { Text(stringRes(R.string.relay_group_menu_edit)) },
                                 onClick = {
                                     menuOpen = false
-                                    showEdit = true
+                                    nav.nav(Route.RelayGroupEdit(channel.groupId.id, channel.groupId.relayUrl.url))
                                 },
                             )
                         }
@@ -249,10 +248,6 @@ fun RelayGroupTopBar(
 
     if (showInvite) {
         InviteRelayGroupDialog(channel, accountViewModel) { showInvite = false }
-    }
-
-    if (showEdit) {
-        EditRelayGroupDialog(channel, accountViewModel) { showEdit = false }
     }
 
     if (showJoinCode) {

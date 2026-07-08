@@ -1498,25 +1498,46 @@ class Account(
         groupId: String,
         name: String,
         about: String? = null,
+        picture: String? = null,
         isPrivate: Boolean = false,
         isClosed: Boolean = false,
+        isHidden: Boolean = false,
+        isRestricted: Boolean = false,
     ): GroupId {
         signAndSendPrivatelyOrBroadcast(CreateGroupEvent.build(groupId)) { listOf(relay) }
 
-        val status =
-            buildSet {
-                // NIP-29 flags are presence-only: public/open is the absence of the
-                // private/closed tags, so emit only the restrictive flags that are on.
-                if (isPrivate) add(GroupMetadataEvent.GroupStatus.PRIVATE)
-                if (isClosed) add(GroupMetadataEvent.GroupStatus.CLOSED)
-            }
-        val edit = EditMetadataEvent.build(groupId, name = name, about = about, status = status)
+        val edit =
+            EditMetadataEvent.build(
+                groupId,
+                name = name,
+                about = about,
+                picture = picture,
+                status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
+            )
         signAndSendPrivatelyOrBroadcast(edit) { listOf(relay) }
 
         val id = GroupId(groupId, relay)
         follow(LocalCache.getOrCreateRelayGroupChannel(id))
         return id
     }
+
+    /**
+     * The set of NIP-29 status flags to emit on a kind-9002 metadata event. Flags are
+     * presence-only — public/open/visible/unrestricted are simply the ABSENCE of their
+     * restrictive counterpart — so only the enabled restrictive flags are added.
+     */
+    private fun relayGroupStatus(
+        isPrivate: Boolean,
+        isClosed: Boolean,
+        isHidden: Boolean,
+        isRestricted: Boolean,
+    ): Set<GroupMetadataEvent.GroupStatus> =
+        buildSet {
+            if (isPrivate) add(GroupMetadataEvent.GroupStatus.PRIVATE)
+            if (isClosed) add(GroupMetadataEvent.GroupStatus.CLOSED)
+            if (isHidden) add(GroupMetadataEvent.GroupStatus.HIDDEN)
+            if (isRestricted) add(GroupMetadataEvent.GroupStatus.RESTRICTED)
+        }
 
     /** Post a kind 11 thread (forum-style) to the group, scoped by its `h` tag. */
     suspend fun postRelayGroupThread(
@@ -1564,17 +1585,20 @@ class Account(
         channel: RelayGroupChannel,
         name: String?,
         about: String?,
+        picture: String?,
         isPrivate: Boolean,
         isClosed: Boolean,
+        isHidden: Boolean,
+        isRestricted: Boolean,
     ) {
-        val status =
-            buildSet {
-                // NIP-29 flags are presence-only: public/open is the absence of the
-                // private/closed tags, so emit only the restrictive flags that are on.
-                if (isPrivate) add(GroupMetadataEvent.GroupStatus.PRIVATE)
-                if (isClosed) add(GroupMetadataEvent.GroupStatus.CLOSED)
-            }
-        val template = EditMetadataEvent.build(channel.groupId.id, name = name, about = about, status = status)
+        val template =
+            EditMetadataEvent.build(
+                channel.groupId.id,
+                name = name,
+                about = about,
+                picture = picture,
+                status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
+            )
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 

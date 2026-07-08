@@ -661,6 +661,20 @@ sealed class Route {
         val relayUrl: String,
     ) : Route()
 
+    @Serializable data class RelayGroupNewThread(
+        val id: String,
+        val relayUrl: String,
+    ) : Route()
+
+    @Serializable data class RelayGroupCreate(
+        val relayUrl: String,
+    ) : Route()
+
+    @Serializable data class RelayGroupEdit(
+        val id: String,
+        val relayUrl: String,
+    ) : Route()
+
     @Serializable object RelayGroups : Route()
 
     @Serializable object RelayGroupBrowse : Route()

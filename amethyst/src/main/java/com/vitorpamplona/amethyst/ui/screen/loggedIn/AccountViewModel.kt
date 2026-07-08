@@ -1443,9 +1443,14 @@ class AccountViewModel(
         groupId: String,
         name: String,
         about: String?,
+        picture: String?,
         isPrivate: Boolean,
         isClosed: Boolean,
-    ) = launchSigner { account.createRelayGroup(relay, groupId, name, about, isPrivate, isClosed) }
+        isHidden: Boolean,
+        isRestricted: Boolean,
+    ) = launchSigner {
+        account.createRelayGroup(relay, groupId, name, about, picture, isPrivate, isClosed, isHidden, isRestricted)
+    }
 
     fun createRelayGroupInvite(
         channel: RelayGroupChannel,
@@ -1473,9 +1478,14 @@ class AccountViewModel(
         channel: RelayGroupChannel,
         name: String?,
         about: String?,
+        picture: String?,
         isPrivate: Boolean,
         isClosed: Boolean,
-    ) = launchSigner { account.editRelayGroupMetadata(channel, name, about, isPrivate, isClosed) }
+        isHidden: Boolean,
+        isRestricted: Boolean,
+    ) = launchSigner {
+        account.editRelayGroupMetadata(channel, name, about, picture, isPrivate, isClosed, isHidden, isRestricted)
+    }
 
     fun follow(users: List<User>) = launchSigner { account.follow(users) }
 

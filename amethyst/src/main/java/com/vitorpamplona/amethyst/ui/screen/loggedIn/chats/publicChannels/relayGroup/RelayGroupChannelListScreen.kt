@@ -39,10 +39,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -81,8 +80,6 @@ fun RelayGroupChannelListScreen(
     nav: INav,
 ) {
     val relay = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) } ?: return
-
-    var showCreate by remember { mutableStateOf(false) }
 
     RelayGroupDirectorySubscription(relay, accountViewModel.dataSources().relayGroupDirectory, accountViewModel)
 
@@ -116,7 +113,7 @@ fun RelayGroupChannelListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showCreate = true }) {
+            FloatingActionButton(onClick = { nav.nav(Route.RelayGroupCreate(relay.url)) }) {
                 Icon(
                     symbol = MaterialSymbols.Add,
                     contentDescription = stringRes(R.string.relay_group_create_title),
@@ -145,10 +142,6 @@ fun RelayGroupChannelListScreen(
                 }
             }
         }
-    }
-
-    if (showCreate) {
-        CreateRelayGroupDialog(relay, accountViewModel, nav) { showCreate = false }
     }
 }
 

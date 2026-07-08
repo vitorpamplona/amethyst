@@ -38,9 +38,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -97,7 +95,6 @@ private fun RelayGroupThreads(
     RelayGroupThreadsSubscription(channel, accountViewModel.dataSources().relayGroupThreads, accountViewModel)
 
     val threads by channel.threads.collectAsStateWithLifecycle()
-    var showCompose by remember { mutableStateOf(false) }
 
     // Only members can post a thread (the relay rejects a non-member's kind-11), so the
     // compose FAB is hidden for everyone else.
@@ -128,7 +125,9 @@ private fun RelayGroupThreads(
         },
         floatingActionButton = {
             if (canPost) {
-                FloatingActionButton(onClick = { showCompose = true }) {
+                FloatingActionButton(
+                    onClick = { nav.nav(Route.RelayGroupNewThread(channel.groupId.id, channel.groupId.relayUrl.url)) },
+                ) {
                     Icon(
                         symbol = MaterialSymbols.Add,
                         contentDescription = stringRes(R.string.relay_group_thread_new),
@@ -157,10 +156,6 @@ private fun RelayGroupThreads(
                 }
             }
         }
-    }
-
-    if (showCompose) {
-        NewRelayGroupThreadDialog(channel, accountViewModel) { showCompose = false }
     }
 }
 
