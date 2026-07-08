@@ -30,7 +30,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplyCount
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
@@ -98,6 +99,10 @@ private fun RelayGroupThreads(
     val threads by channel.threads.collectAsStateWithLifecycle()
     var showCompose by remember { mutableStateOf(false) }
 
+    // Only members can post a thread (the relay rejects a non-member's kind-11), so the
+    // compose FAB is hidden for everyone else.
+    val canPost = channel.membershipOf(accountViewModel.userProfile().pubkeyHex).isMember()
+
     Scaffold(
         topBar = {
             TopBarExtensibleWithBackButton(
@@ -122,12 +127,14 @@ private fun RelayGroupThreads(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showCompose = true }) {
-                Icon(
-                    symbol = MaterialSymbols.Add,
-                    contentDescription = stringRes(R.string.relay_group_thread_new),
-                    modifier = Modifier.size(24.dp),
-                )
+            if (canPost) {
+                FloatingActionButton(onClick = { showCompose = true }) {
+                    Icon(
+                        symbol = MaterialSymbols.Add,
+                        contentDescription = stringRes(R.string.relay_group_thread_new),
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
             }
         },
     ) { padding ->
@@ -142,9 +149,11 @@ private fun RelayGroupThreads(
             }
         } else {
             LazyColumn(modifier = Modifier.padding(padding)) {
-                items(threads, key = { it.idHex }) { thread ->
+                itemsIndexed(threads, key = { _, thread -> thread.idHex }) { index, thread ->
+                    if (index > 0) {
+                        HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                    }
                     ThreadRow(thread, accountViewModel, nav) { nav.nav(Route.Note(thread.idHex)) }
-                    HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }
@@ -162,6 +171,9 @@ private fun ThreadRow(
     nav: INav,
     onClick: () -> Unit,
 ) {
+    // Observe the reply count so a kind-1111 comment arriving on an already-listed thread
+    // bumps it live (channel.threads only re-emits on add/remove of a thread).
+    val replyCount by observeNoteReplyCount(thread, accountViewModel)
     val event = thread.event as? ThreadEvent
     val title = event?.title()?.takeIf { it.isNotBlank() } ?: stringRes(R.string.relay_group_thread_untitled)
     val preview =
@@ -170,7 +182,6 @@ private fun ThreadRow(
             ?.replace('\n', ' ')
             ?.trim()
             .orEmpty()
-    val replyCount = thread.replies.size
     val author = thread.author
 
     Row(

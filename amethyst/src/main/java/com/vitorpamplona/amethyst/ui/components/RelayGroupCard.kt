@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,8 +28,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -100,27 +104,28 @@ private fun RelayGroupCardContent(
 
     val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
     val memberCount = channel.memberCount()
-
-    // Relay host is known immediately; the member count fills in when the roster loads.
-    // Both render on the same single line so nothing reflows as the count arrives.
     val relayLabel = channel.groupId.relayUrl.displayUrl()
-    val subtitle =
-        if (memberCount > 0) {
-            "$relayLabel · ${pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount)}"
-        } else {
-            relayLabel
+
+    // Closed (invite-only) is the more actionable signal to a prospective joiner than
+    // private, so it wins when both are set. Null for a plain open group.
+    val statusBadge =
+        when {
+            channel.isClosed() -> stringRes(R.string.relay_group_badge_invite_only)
+            channel.isPrivate() -> stringRes(R.string.relay_group_badge_private)
+            else -> null
         }
 
     // Shown only when the group actually has an about, so description-less groups stay
     // compact. It appears (a small one-time grow) once the relay-signed metadata loads.
     val description = channel.summary()?.takeIf { it.isNotBlank() }
 
-    OutlinedCard(
+    ElevatedCard(
         onClick = {
             nav.nav(
                 Route.RelayGroup(channel.groupId.id, channel.groupId.relayUrl.url, inviteCode = inviteCode),
             )
         },
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
@@ -133,7 +138,11 @@ private fun RelayGroupCardContent(
                     robot = channel.groupId.id,
                     model = channel.profilePicture(),
                     contentDescription = channel.toBestDisplayName(),
-                    modifier = Modifier.size(48.dp).clip(CircleShape),
+                    modifier =
+                        Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape),
                     loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                     loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
                     autoPlayGif = autoPlayGif,
@@ -142,38 +151,58 @@ private fun RelayGroupCardContent(
                 Column(Modifier.weight(1f)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        if (channel.isPrivate()) {
-                            Icon(
-                                symbol = MaterialSymbols.Lock,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(14.dp),
-                            )
-                        }
                         Text(
                             text = channel.toBestDisplayName(),
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false),
                         )
+                        if (statusBadge != null) {
+                            StatusPill(statusBadge)
+                        }
                     }
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        if (memberCount > 0) {
+                            Icon(
+                                symbol = MaterialSymbols.Group,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Text(
+                                text = pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = "·",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Text(
+                            text = relayLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                    }
                 }
 
                 Icon(
                     symbol = MaterialSymbols.ChevronRight,
                     contentDescription = stringRes(R.string.relay_group_open),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp),
                 )
             }
 
@@ -188,5 +217,21 @@ private fun RelayGroupCardContent(
                 )
             }
         }
+    }
+}
+
+/** A small tonal pill flagging group visibility/join policy (e.g. Private / Invite-only). */
+@Composable
+private fun StatusPill(text: String) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+        )
     }
 }

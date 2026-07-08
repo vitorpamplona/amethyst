@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -77,12 +76,17 @@ fun RelayGroupBrowseScreen(
     nav: INav,
 ) {
     var relayUrl by remember { mutableStateOf("") }
+    var showError by remember { mutableStateOf(false) }
 
     val joined by accountViewModel.account.relayGroupList.liveRelayGroupServers
         .collectAsStateWithLifecycle()
 
     fun open(url: String) {
-        val normalized = RelayUrlNormalizer.normalizeOrNull(url.trim()) ?: return
+        val normalized = RelayUrlNormalizer.normalizeOrNull(url.trim())
+        if (normalized == null) {
+            showError = true
+            return
+        }
         nav.nav(Route.RelayGroupServer(normalized.url))
     }
 
@@ -114,20 +118,26 @@ fun RelayGroupBrowseScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             )
 
-            Row(
+            OutlinedTextField(
+                value = relayUrl,
+                onValueChange = {
+                    relayUrl = it
+                    showError = false
+                },
+                singleLine = true,
+                isError = showError,
+                supportingText =
+                    if (showError) {
+                        { Text(stringRes(R.string.relay_group_browse_invalid_url)) }
+                    } else {
+                        null
+                    },
+                label = { Text(stringRes(R.string.relay_group_browse_relay_label)) },
+                placeholder = { Text("wss://…") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                keyboardActions = KeyboardActions(onGo = { open(relayUrl) }),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            ) {
-                OutlinedTextField(
-                    value = relayUrl,
-                    onValueChange = { relayUrl = it },
-                    singleLine = true,
-                    label = { Text(stringRes(R.string.relay_group_browse_relay_label)) },
-                    placeholder = { Text("wss://…") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
-                    keyboardActions = KeyboardActions(onGo = { open(relayUrl) }),
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            )
 
             Button(
                 onClick = { open(relayUrl) },
