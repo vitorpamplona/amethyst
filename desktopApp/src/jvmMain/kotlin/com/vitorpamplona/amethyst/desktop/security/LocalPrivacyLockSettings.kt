@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.desktop.security
 import androidx.compose.runtime.compositionLocalOf
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 
-/** Provided once at the Desktop App root alongside LocalMessagesLockState. */
+/** Provided once at the Desktop App root alongside LocalPrivacyLockState. */
 val LocalPrivacyLockSettings =
     compositionLocalOf<PrivacyLockSettings> {
         error("LocalPrivacyLockSettings not provided — wrap App() with CompositionLocalProvider")

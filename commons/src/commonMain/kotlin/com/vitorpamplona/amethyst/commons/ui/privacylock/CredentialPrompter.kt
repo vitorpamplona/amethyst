@@ -55,7 +55,7 @@ enum class PromptResult {
 
     /**
      * Credential surface permanently unavailable on this device — caller
-     * should invoke [com.vitorpamplona.amethyst.commons.privacylock.MessagesLockState.onCredentialUnavailable].
+     * should invoke [com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockState.onCredentialUnavailable].
      */
     Unavailable,
 

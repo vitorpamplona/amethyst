@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.privacylock
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.compositionLocalOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -33,19 +35,25 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 /**
- * App-global state holder for the Messages privacy lock.
+ * App-global state holder for a single privacy-lock [scope].
  *
- * - Single instance per app, provided via [LocalMessagesLockState] at the
- *   App composition root.
+ * One instance per gated route (Messages, Wallet, …) is provided via
+ * [LocalPrivacyLockState] at the App composition root. All instances share
+ * the same [PrivacyLockSettings] — one master `lockEnabled` flag enables
+ * every scope together — but each scope keeps its own [LockState] and its
+ * own idle-timer [Job] so unlock, leave-route, and inactivity transitions
+ * apply independently per route.
+ *
  * - Initial value is seeded synchronously from [settings.lockEnabled.value]
  *   so the first composition sees [LockState.Locked] without flashing
  *   content (deep-link race fix, plan §Security Hardening H1).
  * - The underlying StateFlow is hot (`MutableStateFlow`); notification path
  *   can read `state.value` synchronously without subscribing.
  */
-class MessagesLockState(
+class PrivacyLockState(
+    val scope: LockScope,
     private val settings: PrivacyLockSettings,
-    private val scope: CoroutineScope,
+    private val coroutineScope: CoroutineScope,
 ) {
     private val seed: LockState =
         if (settings.lockEnabled.value) LockState.Locked else LockState.Disabled
@@ -64,12 +72,12 @@ class MessagesLockState(
                 } else if (mutableState.value is LockState.Disabled) {
                     mutableState.value = LockState.Locked
                 }
-            }.launchIn(scope)
+            }.launchIn(coroutineScope)
 
         combine(settings.lockEnabled, settings.inactivityTimer) { enabled, timer -> enabled to timer }
             .onEach { _ ->
                 if (mutableState.value is LockState.Unlocked) restartIdleTimer()
-            }.launchIn(scope)
+            }.launchIn(coroutineScope)
     }
 
     /** Resets the inactivity timer. No-op unless currently Unlocked. */
@@ -90,7 +98,7 @@ class MessagesLockState(
      * Mark the session as authenticated. Transitions from either
      * [LockState.Locked] (normal unlock path) or [LockState.Disabled]
      * (first-run banner path — enabling the lock while the user is
-     * actively in Messages should NOT flash the lock screen).
+     * actively in a gated route should NOT flash the lock screen).
      * No-op if already [LockState.Unlocked]. Starts the idle timer.
      */
     fun onUnlockSuccess() {
@@ -105,7 +113,8 @@ class MessagesLockState(
 
     /**
      * Triggered when biometric / OS credential is permanently unavailable.
-     * Auto-disables the lock so the user can keep accessing Messages.
+     * Auto-disables the lock (flips every scope to [LockState.Disabled]
+     * via the shared setting) so the user can keep accessing gated routes.
      */
     fun onCredentialUnavailable() {
         cancelIdleTimer()
@@ -117,6 +126,10 @@ class MessagesLockState(
      * Record a failed unlock attempt. Applies exponential backoff after
      * [PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES] failures: base 30 s,
      * doubling each further failure, capped at 5 min.
+     *
+     * Backoff state is shared across scopes — a mistyped password on the
+     * Wallet gate locks out the Messages gate too (and vice versa). This is
+     * intentional anti-brute-force behaviour.
      *
      * @param nowMs current epoch millis (injected for testability).
      * @return the new [PrivacyLockSettings.lockedUntilEpochMs] value, or
@@ -148,7 +161,7 @@ class MessagesLockState(
         cancelIdleTimer()
         val millis = settings.inactivityTimer.value.millis ?: return
         idleTimerJob =
-            scope.launch {
+            coroutineScope.launch {
                 delay(millis)
                 if (mutableState.value is LockState.Unlocked) {
                     mutableState.value = LockState.Locked
@@ -162,8 +175,22 @@ class MessagesLockState(
     }
 }
 
-/** Provided once at the App composition root. */
-val LocalMessagesLockState =
-    compositionLocalOf<MessagesLockState> {
-        error("LocalMessagesLockState not provided — wrap App() with CompositionLocalProvider")
+/**
+ * Provided once at the App composition root. Map keyed by [LockScope]; every
+ * scope must have an entry (see [lockStateFor] which throws when missing).
+ */
+val LocalPrivacyLockState =
+    compositionLocalOf<Map<LockScope, PrivacyLockState>> {
+        error("LocalPrivacyLockState not provided — wrap App() with CompositionLocalProvider")
     }
+
+/**
+ * Convenience accessor used inside gate composables. Reads the map from the
+ * ambient [LocalPrivacyLockState] and returns the state holder for [scope].
+ * Throws if the scope was not registered at the App root.
+ */
+@Composable
+@ReadOnlyComposable
+fun lockStateFor(scope: LockScope): PrivacyLockState =
+    LocalPrivacyLockState.current[scope]
+        ?: error("PrivacyLockState for $scope not registered at App root")

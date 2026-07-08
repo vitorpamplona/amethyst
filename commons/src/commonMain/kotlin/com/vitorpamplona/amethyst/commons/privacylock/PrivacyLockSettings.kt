@@ -37,7 +37,7 @@ import kotlinx.coroutines.flow.StateFlow
 interface PrivacyLockSettings {
     val lockEnabled: StateFlow<Boolean>
     val inactivityTimer: StateFlow<InactivityTimer>
-    val redactionLevel: StateFlow<DmRedactionLevel>
+    val dmRedactionLevel: StateFlow<DmRedactionLevel>
     val firstRunCardSeen: StateFlow<Boolean>
 
     /**
@@ -68,7 +68,7 @@ interface PrivacyLockSettings {
 
     fun setInactivityTimer(timer: InactivityTimer)
 
-    fun setRedactionLevel(level: DmRedactionLevel)
+    fun setDmRedactionLevel(level: DmRedactionLevel)
 
     fun setFirstRunCardSeen(seen: Boolean)
 

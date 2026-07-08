@@ -18,29 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.privacylock
+package com.vitorpamplona.amethyst.desktop.security
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
-import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockState
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.dp
 
 /**
- * Observes pointer events on the Initial pass — does NOT consume them, so
- * underlying scroll / click handlers behave normally. Every gesture resets
- * the idle timer in [state]. Apply ONCE at the route root to avoid scattering
- * reset calls across every child composable (per architecture review).
+ * Blur the modified node when the privacy lock is enabled AND the desktop
+ * window is currently unfocused.
  *
- * Incoming DM events (background flow updates) DO NOT trigger this modifier
- * since they're not user input — preserves the "walked-away-from-desk"
- * protection per brainstorm resolved Q.
+ * Per plan Q4: applies only to sensitive text nodes (balance amount, invoice
+ * strings, addresses, NWC URIs, transaction memos) — NOT to card
+ * containers, icons, or layout structure. This preserves the visual
+ * skeleton for a passer-by while hiding the meaningful values.
+ *
+ * Uses Compose Desktop's built-in [LocalWindowInfo.isWindowFocused] — no
+ * Swing WindowListener plumbing required.
  */
-fun Modifier.resetIdleOnInteraction(state: PrivacyLockState): Modifier =
-    this.pointerInput(state) {
-        awaitPointerEventScope {
-            while (true) {
-                awaitPointerEvent(PointerEventPass.Initial)
-                state.onUserInteraction()
-            }
-        }
-    }
+@Composable
+fun Modifier.privacyLockBlurWhenUnfocused(): Modifier {
+    val settings = LocalPrivacyLockSettings.current
+    val enabled by settings.lockEnabled.collectAsState()
+    val focused = LocalWindowInfo.current.isWindowFocused
+    return if (enabled && !focused) this.then(Modifier.blur(16.dp)) else this
+}

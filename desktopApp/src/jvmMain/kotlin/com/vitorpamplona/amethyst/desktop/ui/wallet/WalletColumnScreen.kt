@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.nwc.NwcPaymentHandler
+import com.vitorpamplona.amethyst.desktop.security.privacyLockBlurWhenUnfocused
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.auth.QrCodeCanvas
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
@@ -134,107 +135,112 @@ fun WalletColumnScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (nwcConnection == null) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                NoWalletContent(onConnect = { showConnectDialog = true })
-            }
-        } else {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Column(
-                    modifier = Modifier.widthIn(max = 360.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+    Column(modifier = Modifier.fillMaxSize()) {
+        com.vitorpamplona.amethyst.desktop.security.WalletFirstRunBanner(
+            onSaved = { message -> scope.launch { snackbarHostState.showSnackbar(message) } },
+        )
+        Box(modifier = Modifier.fillMaxSize().weight(1f)) {
+            if (nwcConnection == null) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    WalletBalanceCard(
-                        balanceSats = balanceSats,
-                        isLoading = isLoadingBalance,
-                        onRefresh = {
-                            isLoadingBalance = true
-                            scope.launch {
-                                when (val result = paymentHandler.getBalance(nwcConnection)) {
-                                    is NwcPaymentHandler.BalanceResult.Success -> {
-                                        balanceSats = result.balanceMsats / 1000
-                                    }
-
-                                    is NwcPaymentHandler.BalanceResult.Error -> {
-                                        snackbarHostState.showSnackbar("Balance error: ${result.message}")
-                                    }
-
-                                    is NwcPaymentHandler.BalanceResult.Timeout -> {
-                                        snackbarHostState.showSnackbar("Balance request timed out")
-                                    }
-                                }
-                                isLoadingBalance = false
-                            }
-                        },
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    NoWalletContent(onConnect = { showConnectDialog = true })
+                }
+            } else {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Column(
+                        modifier = Modifier.widthIn(max = 360.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        Button(
-                            onClick = { showSendDialog = true },
-                            modifier = Modifier.weight(1f),
+                        WalletBalanceCard(
+                            balanceSats = balanceSats,
+                            isLoading = isLoadingBalance,
+                            onRefresh = {
+                                isLoadingBalance = true
+                                scope.launch {
+                                    when (val result = paymentHandler.getBalance(nwcConnection)) {
+                                        is NwcPaymentHandler.BalanceResult.Success -> {
+                                            balanceSats = result.balanceMsats / 1000
+                                        }
+
+                                        is NwcPaymentHandler.BalanceResult.Error -> {
+                                            snackbarHostState.showSnackbar("Balance error: ${result.message}")
+                                        }
+
+                                        is NwcPaymentHandler.BalanceResult.Timeout -> {
+                                            snackbarHostState.showSnackbar("Balance request timed out")
+                                        }
+                                    }
+                                    isLoadingBalance = false
+                                }
+                            },
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Icon(symbol = MaterialSymbols.ArrowUpward, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Send")
+                            Button(
+                                onClick = { showSendDialog = true },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(symbol = MaterialSymbols.ArrowUpward, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Send")
+                            }
+                            OutlinedButton(
+                                onClick = { showReceiveDialog = true },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(symbol = MaterialSymbols.ArrowDownward, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Receive")
+                            }
                         }
-                        OutlinedButton(
-                            onClick = { showReceiveDialog = true },
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(symbol = MaterialSymbols.ArrowDownward, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Receive")
+
+                        HorizontalDivider()
+
+                        Text(
+                            text = "Connected Wallet",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = "Relay: ${nwcConnection.relayUri}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = "Wallet: ${nwcConnection.pubKeyHex.take(8)}...${nwcConnection.pubKeyHex.takeLast(8)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+
+                        TextButton(onClick = {
+                            appScope.launch {
+                                accountManager.clearNwcConnection(account.npub)
+                                balanceSats = null
+                            }
+                        }) {
+                            Text("Disconnect", color = MaterialTheme.colorScheme.error)
                         }
-                    }
-
-                    HorizontalDivider()
-
-                    Text(
-                        text = "Connected Wallet",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = "Relay: ${nwcConnection.relayUri}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = "Wallet: ${nwcConnection.pubKeyHex.take(8)}...${nwcConnection.pubKeyHex.takeLast(8)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    TextButton(onClick = {
-                        appScope.launch {
-                            accountManager.clearNwcConnection(account.npub)
-                            balanceSats = null
-                        }
-                    }) {
-                        Text("Disconnect", color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
-        }
 
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
     }
 
     // -- Dialogs --
@@ -369,6 +375,7 @@ private fun WalletBalanceCard(
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.privacyLockBlurWhenUnfocused(),
                 )
             } else {
                 Text(
@@ -875,7 +882,10 @@ private fun ReceiveDialog(
                         "${formatSats(amount.toLongOrNull() ?: 0)} sats",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        modifier =
+                            Modifier
+                                .align(Alignment.CenterHorizontally)
+                                .privacyLockBlurWhenUnfocused(),
                     )
                     if (description.isNotBlank()) {
                         Spacer(Modifier.height(4.dp))
@@ -889,10 +899,13 @@ private fun ReceiveDialog(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // QR code
+                    // QR code — sensitive, blur when window unfocused
                     QrCodeCanvas(
                         data = generatedInvoice!!,
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        modifier =
+                            Modifier
+                                .align(Alignment.CenterHorizontally)
+                                .privacyLockBlurWhenUnfocused(),
                         size = 240.dp,
                     )
 

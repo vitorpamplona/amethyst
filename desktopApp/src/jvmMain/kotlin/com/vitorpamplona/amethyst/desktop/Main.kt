@@ -699,14 +699,17 @@ fun App(
             com.vitorpamplona.amethyst.commons.privacylock
                 .PreferencesPrivacyLockSettings()
         }
-    val messagesLockState =
+    val privacyLockStates =
         remember(privacyLockSettings) {
-            com.vitorpamplona.amethyst.commons.privacylock
-                .MessagesLockState(privacyLockSettings, appScope)
+            val scopes = com.vitorpamplona.amethyst.commons.privacylock.LockScope.entries
+            scopes.associateWith { scope ->
+                com.vitorpamplona.amethyst.commons.privacylock
+                    .PrivacyLockState(scope, privacyLockSettings, appScope)
+            }
         }
 
     CompositionLocalProvider(
-        com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState provides messagesLockState,
+        com.vitorpamplona.amethyst.commons.privacylock.LocalPrivacyLockState provides privacyLockStates,
         com.vitorpamplona.amethyst.desktop.security.LocalPrivacyLockSettings provides privacyLockSettings,
     ) {
         AppInner(
