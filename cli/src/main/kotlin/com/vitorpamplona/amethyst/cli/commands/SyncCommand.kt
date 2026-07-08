@@ -113,7 +113,7 @@ object SyncCommand {
                 ?: return Output.error("bad_args", "sync requires --relay URL")
         val relay =
             RelayUrlNormalizer.normalizeOrNull(relayUrl)
-                ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
+                ?: return Output.invalidRelayUrl(relayUrl)
         val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 30L) * 1000
         // Default direction is download; --up adds upload.
         val up = args.bool("up")

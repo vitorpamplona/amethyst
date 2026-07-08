@@ -137,7 +137,9 @@ object CorpusDownloader {
         val raw = CorpusIO.read(spill).events
         val corpus = CorpusSource.prepare(raw, target, "download:${relayUrls.joinToString(",")}", log)
         CorpusIO.write(cached, corpus)
-        checkpoint.delete()
+        if (!checkpoint.delete() && checkpoint.exists()) {
+            log("  ! could not delete stale checkpoint ${checkpoint.name}")
+        }
         log("  cached prepared corpus to ${cached.path}")
         return corpus
     }
