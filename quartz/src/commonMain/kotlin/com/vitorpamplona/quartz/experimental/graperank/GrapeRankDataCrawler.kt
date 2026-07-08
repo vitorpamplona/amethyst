@@ -50,9 +50,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -138,12 +138,13 @@ class GrapeRankDataCrawler(
      *   [IEventStore.batchInsert]. The outbox model streams the same events from
      *   many relays through a single SQLite writer, so batching amortizes the
      *   per-transaction + writer-mutex cost across the batch (coerced to `>= 1`).
-     * @param drainConcurrency how many outbox batches drain at once (the worker
-     *   pool size). A GLOBAL bound (memory / open sockets); the per-relay
-     *   concurrent-sub cap is enforced separately by [AdaptiveRelayLimiter]. Keep it
-     *   moderate: a higher global fan-out re-floods busy hubs faster than demotion
-     *   catches up (an A/B at 64 ran ~2x slower with more dead relays), so 24 is the
-     *   validated default and raising it is a probe, not a speedup.
+     * @param drainConcurrency how many relay-units drain at once — a GLOBAL bound on
+     *   concurrent outbox subscriptions (memory / open sockets); the per-relay
+     *   concurrent-sub cap is enforced separately by [AdaptiveRelayLimiter]. Phase B
+     *   drains each relay independently and streams the result (no per-batch join),
+     *   so this counts relays, not batches. Keep it moderate: a higher global fan-out
+     *   re-floods busy hubs faster than demotion catches up, so raising it is a probe,
+     *   not a speedup.
      * @param timeoutEvictStrikes evict a relay after this many drains that timed out
      *   (connect timeout or park idle-cut) having delivered NOTHING. Unlike
      *   [classifyDrainFailure] — which never marks a timeout dead, since one slow
@@ -162,7 +163,7 @@ class GrapeRankDataCrawler(
         val parkTimeoutMs: Long = 40_000,
         val diagnose: Boolean = false,
         val insertBatchSize: Int = 500,
-        val drainConcurrency: Int = 24,
+        val drainConcurrency: Int = 1024,
         val timeoutEvictStrikes: Int = 3,
         /**
          * Also skip proven-dead relays in the kind:10002 discovery sweep
@@ -1236,58 +1237,43 @@ class GrapeRankDataCrawler(
                     // on the producer (keeps writeRelayFreq serial) and ingest runs
                     // only on the consumer (keeps done/builder/hopOf serial), now
                     // overlapped with draining instead of blocked behind each batch.
-                    val routed = Channel<Pair<List<HexKey>, Map<NormalizedRelayUrl, List<Filter>>>>(config.drainConcurrency * 2)
-                    val drainedOut = Channel<DrainedBatch>(Channel.UNLIMITED)
+                    // Per-user count of relay-units still outstanding. A user is finalized
+                    // (its list ingested, or a failed attempt counted) only when this hits
+                    // zero. The dispatcher sets a user's FULL count before launching any of
+                    // its units, so a fast relay can't finalize the user before its slower
+                    // sibling relays are even scheduled.
+                    val relaysLeft = ConcurrentMap<HexKey, Int>()
+                    val drainedOut = Channel<DrainedUnit>(Channel.UNLIMITED)
+                    // Bound concurrent relay drains. Each holds its slot only for the fast
+                    // window (it parks and releases before parkTimeout), so slots turn over
+                    // quickly. Crucially there is NO per-batch join: every relay is drained
+                    // independently and its result streamed the instant it resolves, so a
+                    // slow relay never holds up other users — fast relays' contact lists are
+                    // ingested immediately instead of waiting out a batch's slowest relay.
+                    val unitGate = Semaphore(config.drainConcurrency)
                     coroutineScope {
-                        // Producer: route each batch by outbox (serial), backpressured
-                        // by the bounded `routed` channel.
-                        val producer =
-                            launch {
-                                for (batch in stragglers.chunked(USER_BATCH)) {
-                                    val filters = routeByOutbox(batch.toSet(), backbone)
-                                    routed.send(batch to filters)
-                                }
-                                routed.close()
-                            }
-                        // Drain workers: pure network, no shared graph-state writes
-                        // except recordDead (concurrent-safe). Each captures the relays
-                        // that cleanly EOSE'd, so the consumer can tell "answered empty"
-                        // from "timed out" per user.
-                        val workers =
-                            List(config.drainConcurrency) {
-                                launch {
-                                    for ((batch, filters) in routed) {
-                                        val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
-                                        val answered = HashSet<NormalizedRelayUrl>()
-                                        val events = drainGated(filters, dead, answered)
-                                        recordDead(dead)
-                                        drainedOut.send(DrainedBatch(batch, filters, answered, events))
-                                    }
-                                }
-                            }
-                        // Consumer: single-writer ingest, overlapped with draining.
+                        // Consumer: single-writer ingest + per-user completion, overlapped
+                        // with draining. Reads one relay's result at a time.
                         val consumer =
                             launch {
                                 for (d in drainedOut) {
-                                    relaysContacted += d.filters.keys
-                                    // Any relay that gave us an event is proven live + useful.
-                                    for ((relay, _) in d.events) liveRelays.add(relay)
-
-                                    // Per user, record relays that answered (EOSE'd) but did
-                                    // not return their kind:3, so they aren't re-queried there.
-                                    val returnedByRelay = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
-                                    for ((relay, ev) in d.events) {
-                                        if (ev is ContactListEvent) returnedByRelay.getOrPut(relay) { HashSet() }.add(ev.pubKey)
-                                    }
-                                    for (relay in d.answered) {
-                                        val asked = d.filters[relay]?.flatMapTo(HashSet()) { it.authors.orEmpty() } ?: continue
-                                        val returned = returnedByRelay[relay].orEmpty()
-                                        for (pk in asked) {
-                                            if (pk !in returned) askedEmpty.getOrPut(pk) { ConcurrentSet() }.add(relay)
+                                    d.relay?.let { relay ->
+                                        relaysContacted += relay
+                                        // A relay that gave us an event is proven live + useful.
+                                        for ((r, _) in d.events) liveRelays.add(r)
+                                        // If it EOSE'd but didn't return a user's kind:3, record
+                                        // that so the user isn't re-queried there next round.
+                                        if (d.answeredCleanly) {
+                                            val returned = HashSet<HexKey>()
+                                            for ((_, ev) in d.events) if (ev is ContactListEvent) returned.add(ev.pubKey)
+                                            for (pk in d.users) if (pk !in returned) askedEmpty.getOrPut(pk) { ConcurrentSet() }.add(relay)
                                         }
                                     }
-
-                                    for (pk in d.batch) {
+                                    // One of each covered user's relays just resolved; finalize
+                                    // the user once all of them have.
+                                    for (pk in d.users) {
+                                        val left = relaysLeft.merge(pk, -1) { a, b -> a + b } ?: -1
+                                        if (left > 0) continue
                                         if (pk in done) continue
                                         val contacts = contactsOf(pk)
                                         if (contacts != null) {
@@ -1301,8 +1287,44 @@ class GrapeRankDataCrawler(
                                     }
                                 }
                             }
-                        producer.join()
-                        workers.joinAll()
+                        // Dispatcher: route each batch by outbox (serial on this coroutine,
+                        // keeping writeRelayFreq single-writer), then launch one independent
+                        // drain per relay. The inner scope joins all drains before we close
+                        // the results channel.
+                        coroutineScope {
+                            for (batch in stragglers.chunked(USER_BATCH)) {
+                                val filters = routeByOutbox(batch.toSet(), backbone)
+                                // Set every routed user's full relay count BEFORE any drain runs.
+                                val routedUsers = HashSet<HexKey>()
+                                for ((_, fs) in filters) {
+                                    for (f in fs) {
+                                        for (a in f.authors.orEmpty()) {
+                                            relaysLeft.merge(a, 1) { x, y -> x + y }
+                                            routedUsers.add(a)
+                                        }
+                                    }
+                                }
+                                for ((relay, fs) in filters) {
+                                    val users = fs.flatMapTo(HashSet()) { it.authors.orEmpty() }
+                                    unitGate.acquire()
+                                    launch {
+                                        try {
+                                            val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
+                                            val answered = HashSet<NormalizedRelayUrl>()
+                                            val events = drainGated(mapOf(relay to fs), dead, answered)
+                                            recordDead(dead)
+                                            drainedOut.send(DrainedUnit(relay, users, relay in answered, events))
+                                        } finally {
+                                            unitGate.release()
+                                        }
+                                    }
+                                }
+                                // A straggler the outbox model routed nowhere gets no unit —
+                                // finalize it (a missed attempt) so it isn't stuck pending.
+                                val orphans = batch.filterTo(HashSet()) { it !in routedUsers }
+                                if (orphans.isNotEmpty()) drainedOut.send(DrainedUnit(null, orphans, false, emptyList()))
+                            }
+                        }
                         drainedOut.close()
                         consumer.join()
                     }
@@ -1383,15 +1405,16 @@ class GrapeRankDataCrawler(
     }
 
     /**
-     * One Phase-B batch after draining: the users asked for, the relay->filters map
-     * they were routed through, the relays that cleanly EOSE'd ([answered]), and the
-     * fresh events. Carries enough for the consumer to attribute "answered but
-     * empty" per user without re-deriving the routing.
+     * One relay's drained result, streamed to the consumer the moment it resolves —
+     * the [users] it covered, whether it cleanly EOSE'd ([answeredCleanly]), and the
+     * fresh [events]. A null [relay] is a "routed nowhere" marker: the covered users
+     * had no relay to query, so they carry no events and are finalized as a missed
+     * attempt.
      */
-    private class DrainedBatch(
-        val batch: List<HexKey>,
-        val filters: Map<NormalizedRelayUrl, List<Filter>>,
-        val answered: Set<NormalizedRelayUrl>,
+    private class DrainedUnit(
+        val relay: NormalizedRelayUrl?,
+        val users: Set<HexKey>,
+        val answeredCleanly: Boolean,
         val events: List<Pair<NormalizedRelayUrl, Event>>,
     )
 
