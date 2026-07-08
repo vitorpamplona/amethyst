@@ -13,7 +13,7 @@
         <item quantity="other">Ez a bejegyzés több mint %1$d kulcsszót tartalmaz</item>
     </plurals>
     <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d asset egybecsomagolva</item>
+        <item quantity="one">%1$d összetevő egybecsomagolva</item>
         <item quantity="other">%1$d asset egybecsomagolva</item>
     </plurals>
     <plurals name="thread_collapsed_reply_count">
@@ -56,12 +56,12 @@
     <string name="login_with_a_private_key_to_be_able_to_reply">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy válaszolni tudjon</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy meg tudja tolni a bejegyzéseket</string>
     <string name="login_with_a_private_key_to_like_posts">Ön nyilvános kulcsot használ, és a nyilvános kulcsok csak olvashatóak. Jelentkezzen be a privát kulccsal a hozzászólások kedveléséhez</string>
-    <string name="no_zap_amount_setup_long_press_to_change">Nincs beállítva Zap-összeg. Koppintson hosszan a beállításhoz</string>
+    <string name="no_zap_amount_setup_long_press_to_change">Nincs beállítva zapösszeg. Koppintson hosszan a beállításhoz</string>
     <string name="chat_zap_amount_suffix">%1$s satot küldött</string>
     <string name="chat_zap_anonymous">Névtelen</string>
     <string name="chat_raid_is_raiding">raidet indít</string>
-    <string name="chat_clip_created_a_clip">létrehozott egy klippet</string>
-    <string name="login_with_a_private_key_to_be_able_to_send_zaps">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatók a bejegyzések. Jelentkezzen be a privát kulcsával, hogy Zap-et tudjon küldeni</string>
+    <string name="chat_clip_created_a_clip">létrehozott egy klipet</string>
+    <string name="login_with_a_private_key_to_be_able_to_send_zaps">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatók a bejegyzések. Jelentkezzen be a privát kulcsával, hogy zapet tudjon küldeni</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy követni tudjon embereket</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy ki tudja követni az embereket, akiket követ</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy egy szót vagy mondat el tudjon rejteni</string>
@@ -104,7 +104,7 @@
     <string name="clink_debit_no_response">A terhelési szolgáltató nem teljesítette a fizetést.</string>
     <string name="clink_confirm_payment_title">Kifizetés megerősítése</string>
     <string name="clink_confirm_pay_amount_via_source">%1$s kifizetése ezzel: %2$s?</string>
-    <string name="clink_confirm_pay_via_source">Kifizeti ezt számlát a(z) %1$s használatával?</string>
+    <string name="clink_confirm_pay_via_source">Kifizeti ezt a számlát a(z) %1$s használatával?</string>
     <string name="clink_offer_amount_sats">Összeg (satoshiban)</string>
     <string name="clink_offer_invalid_amount">Adjon meg egy érvényes összeget ehhez az ajánlathoz.</string>
     <string name="clink_offer_amount_range">Engedélyezett tartomány: %1$s-%2$s satoshi</string>
@@ -120,7 +120,7 @@
     <string name="clink_budget_monthly">Havonta</string>
     <string name="clink_debit_pay_only">Csak fizetés</string>
     <string name="wallet_add_clink_title">CLINK terhelés</string>
-    <string name="wallet_add_clink_description">Fizetés és zappelés olyan tárcából, amely előzetesen engedélyezte az Ön fiókját. Csak költés — nincs egyenleg vagy előzmény.</string>
+    <string name="wallet_add_clink_description">Fizetés és zapelés olyan tárcából, amely előzetesen engedélyezte az Ön fiókját. Csak költés — nincs egyenleg vagy előzmény.</string>
     <string name="wallet_add_clink_invalid">Érvénytelen CLINK terhelési mutató. Várt mutató: egy ndebit1… karakterlánc.</string>
     <string name="wallet_paste_ndebit">Ndebit-mutató beillesztése</string>
     <string name="pay">Fizetés</string>
@@ -137,10 +137,10 @@
     <string name="send_payment_amount">Összeg</string>
     <string name="send_payment_fixed_price">Ajánlat által meghatározott ár</string>
     <string name="send_payment_receipt_section">Zap-igazolás</string>
-    <string name="send_payment_receipt_clink">Közvetlen Lightning fizetés - nem lesz Zap-igazolás közzétéve a Nostr-on.</string>
-    <string name="send_payment_receipt_onchain">Egy láncon bebelüli Zap-igazolás közzé lesz téve a Nostr-on, így a címzett megtalálhatja a kifizetést.</string>
+    <string name="send_payment_receipt_clink">Közvetlen lightning-fizetés - nem lesz zapigazolás közzétéve a Nostr-on.</string>
+    <string name="send_payment_receipt_onchain">Egy láncon belüli zapigazolás közzé lesz téve a Nostr-on, így a címzett megtalálhatja a kifizetést.</string>
     <string name="send_payment_receipt_onchain_address">Fizetés közvetlenül a láncon belüli pénztárcából a profil megadott bitcoin-címére (%1$s) - nem lesz zapigazolás közzétéve.</string>
-    <string name="send_payment_receipt_cashu">A nutzap-esemény magát az ecash-t kézbesíti, így az mindig közzé lesz téve.</string>
+    <string name="send_payment_receipt_cashu">A nutzap-esemény magát az ecasht kézbesíti, így az mindig közzé lesz téve.</string>
     <string name="send_payment_requesting_invoice">Számla kérése…</string>
     <string name="send_payment_requesting_invoice_nostr">Számla kérése a Nostr hálózaton keresztül…</string>
     <string name="send_payment_paying_via">Kifizetés ezzel: %1$s…</string>
@@ -155,7 +155,7 @@
     <string name="send_payment_pay_button">%1$s satoshi kifizetése</string>
     <string name="send_payment_pay_button_empty">Fizetés</string>
     <string name="send_payment_no_methods">Ennek a profilnak nincsenek olyan fizetési módjai, amelyeket az Amethyst közvetlenül ki tudna fizetni.</string>
-    <string name="send_payment_min_onchain">A láncon belüli zap-ekhez legalább %1$s satoshi szükséges</string>
+    <string name="send_payment_min_onchain">A láncon belüli zapekhez legalább %1$s satoshi szükséges</string>
     <string name="send_payment_cashu_insufficient">Nincs elegendő egyenleg egy olyan pénzverdében, amit ez a címzett elfogad. Előbb fel kell tölteni a cashu-pénztárcát.</string>
     <string name="send_payment_cashu_balance">A címzett számára elküldhető összeg: %1$s satoshi</string>
     <string name="send_payment_onchain_fee">Hálózati díj</string>
@@ -211,7 +211,7 @@
     <string name="video_download_has_started_toast">A videó letöltése megkezdődött…</string>
     <string name="media_download_has_started_toast">A média letöltése megkezdődött…</string>
     <string name="pin_conversation">Kitűzés felülre</string>
-    <string name="unpin_conversation">Kitűzés megszűntetése</string>
+    <string name="unpin_conversation">Kitűzés megszüntetése</string>
     <string name="pinned_to_top">Kitűzve felülre</string>
     <string name="failed_to_save_the_image">Nem sikerült menteni a képet</string>
     <string name="video_saved_to_the_gallery">Videó mentve a videógalériába</string>
@@ -300,7 +300,7 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <string name="chats_reply_not_found">Nem sikerült megtalálni ezt az üzenetet</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
-    <string name="chats_reply_searched">Minden átjátszó le lett kérve · érintse meg a megtekintéshez</string>
+    <string name="chats_reply_searched">Minden átjátszó le lett kérve · koppintson ide a megtekintéshez</string>
     <string name="error_loading_replies">"Hiba a válaszok betöltésekor: "</string>
     <string name="try_again">Próbálja újra</string>
     <string name="notification_feed_is_empty">Még nincsenek értesítések.</string>
@@ -430,7 +430,7 @@
     <string name="report_dialog_post_report_btn">Bejelentés közzététele</string>
     <string name="report_dialog_title">Letiltás és bejelentés</string>
     <string name="block_only">Letiltás</string>
-    <string name="manual_zaps">Kézi Zap-megosztás</string>
+    <string name="manual_zaps">Kézi zapmegosztás</string>
     <string name="bookmarks">Könyvjelző</string>
     <string name="bookmarks_title">Könyvjelzők</string>
     <string name="bookmarks_explainer">Saját könyvjelzők</string>
@@ -457,7 +457,7 @@
     <string name="schedule_post_preset_next_monday_morning">Következő hétfő délelőtt 9 órakor</string>
     <string name="schedule_post_always_on_prompt_title">Bekapcsolja a folyamatos értesítési szolgáltatást?</string>
     <string name="schedule_post_always_on_prompt_message">Az ütemezett bejegyzések csak akkor jelennek meg biztosan, ha a „Folyamatos értesítési szolgáltatás” engedélyezve van. Ellenkező esetben előfordulhat, hogy csak az alkalmazás következő megnyitásakor jelennek meg.</string>
-    <string name="schedule_post_always_on_prompt_open_settings">Beállítások menyitása</string>
+    <string name="schedule_post_always_on_prompt_open_settings">Beállítások megnyitása</string>
     <string name="schedule_post_always_on_prompt_continue">Folytatás mindenképpen</string>
     <string name="scheduled_posts_at_time">%1$s → %2$s</string>
     <string name="scheduled_posts_at_time_past">%1$s · %2$s ezelőtt</string>
@@ -479,7 +479,7 @@
     <string name="scheduled_posts_status_publishing">Küldés…</string>
     <string name="scheduled_posts_status_failed">Sikertelen</string>
     <string name="scheduled_posts_status_sent">Elküldve</string>
-    <string name="scheduled_posts_status_cancelled">Megszakitva</string>
+    <string name="scheduled_posts_status_cancelled">Megszakítva</string>
     <plurals name="scheduled_posts_logout_warning">
         <item quantity="one">Önnek %d ütemezett bejegyzése van, amely még nem lett közzétéve. A kijelentkezéssel véglegesen törli azt.</item>
         <item quantity="other">Önnek %d ütemezett bejegyzése van, amelyek még nem lettek közzétéve. A kijelentkezéssel véglegesen törli azokat.</item>
@@ -515,7 +515,7 @@
     <string name="new_community_add_moderator_placeholder">Név, npub vagy NIP-05</string>
     <string name="new_community_owner">Tulajdonos</string>
     <string name="new_community_relays_section">Átjátszók</string>
-    <string name="new_community_relays_hint">Válasszon átjátzsókat, amelyek a kéréseket, jóváhagyásokat vagy a közösségi szerzők metaadatait fogják tárolni.</string>
+    <string name="new_community_relays_hint">Válasszon átjátszókat, amelyek a kéréseket, jóváhagyásokat vagy a közösségi szerzők metaadatait fogják tárolni.</string>
     <string name="new_community_relay_marker_none">Bármelyik</string>
     <string name="new_community_relay_marker_author">Szerző</string>
     <string name="new_community_relay_marker_requests">Kérések</string>
@@ -698,7 +698,7 @@
     <string name="napplet_cap_keys_desc">Billentyűkötések hozzárendelése</string>
     <string name="napplet_cap_relay_desc">Események olvasása, aláírása és közzététele</string>
     <string name="napplet_cap_storage_desc">Saját privát tárhely</string>
-    <string name="napplet_cap_value_desc">Lightning számlák kifizetése</string>
+    <string name="napplet_cap_value_desc">Lightning-számlák kifizetése</string>
     <string name="napplet_cap_resource_desc">Webes és Blossom erőforrások lekérése</string>
     <string name="napplet_cap_upload_desc">Fájlok feltöltése a saját médiakiszolgálóra</string>
     <string name="napplet_cap_theme">Téma</string>
@@ -892,7 +892,7 @@
     <string name="nest_hush_local_restore">Ezen előadó visszaállítása</string>
     <string name="nest_participant_view_profile">Profil megtekintése</string>
     <string name="nest_participant_zap">Zap küldése</string>
-    <string name="nest_participant_zap_split_unsupported">A Zap-megosztás nem támogatott hangszobán belül. Nyissa meg a profilképernyőt a küldéshez.</string>
+    <string name="nest_participant_zap_split_unsupported">A zapmegosztás nem támogatott hangszobán belül. Nyissa meg a profilképernyőt a küldéshez.</string>
     <string name="nest_participant_follow">Követés</string>
     <string name="nest_participant_unfollow">Követés megszüntetése</string>
     <string name="nest_participant_mute">Némítás</string>
@@ -941,7 +941,7 @@
     <string name="nests_servers_my_section">Saját kiszolgálók</string>
     <string name="nests_servers_my_explainer">Kind-10112 típusú cserélhető eseményként mentve, így más kliensek is olvashatják az Ön beállítását.</string>
     <string name="nests_servers_add_relay_field">Átjátszó (WebTransport) webcíme</string>
-    <string name="nests_servers_add_auth_field">Hitelesítési (JWT mint) webcím</string>
+    <string name="nests_servers_add_auth_field">Hitelesítési (JWT-pénzverde) webcím</string>
     <string name="nests_servers_add_pair_button">Hozzáadás</string>
     <string name="nests_servers_relay_label">Átjátszó</string>
     <string name="nests_servers_auth_label">Hitelesítés</string>
@@ -1172,13 +1172,13 @@
     <string name="bookmark_list_explainer">A könyvjelzőlisták metaadatai a Nostr-on bárki számára láthatók. Csak a privát tagok vannak titkosítva.</string>
     <string name="move_bookmark_to_public_label">Áthelyezés a nyilvános könyvjelzőkbe</string>
     <string name="move_bookmark_to_private_label">Áthelyezés a privát könyvjelzőkbe</string>
-    <string name="quick_zap_amounts">Gyors Zap-összegek</string>
-    <string name="quick_zap_amounts_explainer">A „Zap” gomb megnyomásakor jelenik meg. Az egyes összegeket a címzett által támogatott bármely fizetési csatornán keresztül ki lehet fizetni - Lightning, Cashu vagy láncon belül (láncon belül csak nagyobb összegek esetén). Érintse meg az összeget annak eltávolításához. Ha üresen hagyja, a rendszer minden alkalommal megnyitja az összeg megadására szolgáló párbeszédpanelt.</string>
+    <string name="quick_zap_amounts">Gyors zapösszegek</string>
+    <string name="quick_zap_amounts_explainer">A „Zap” gomb megnyomásakor jelenik meg. Az egyes összegeket a címzett által támogatott bármely fizetési csatornán keresztül ki lehet fizetni - Lightning, Cashu vagy láncon belül (láncon belül csak nagyobb összegek esetén). Koppintson az összegre annak eltávolításához. Ha üresen hagyja, a rendszer minden alkalommal megnyitja az összeg megadására szolgáló párbeszédpanelt.</string>
     <string name="send_onchain_instead">Küldés inkább láncon belül</string>
-    <string name="reload_mint_title">Mint feltöltése</string>
+    <string name="reload_mint_title">Pénzverde feltöltése</string>
     <string name="reload_mint_sats_amount">%1$s satoshi</string>
     <string name="reload_mint_topup_label">Feltöltés összege</string>
-    <string name="reload_mint_section_to">Feltöltendő mint</string>
+    <string name="reload_mint_section_to">Feltöltendő pénzverde</string>
     <string name="reload_mint_section_from">Fedezet innen</string>
     <string name="reload_mint_pay_lightning">Kifizetés Lightninggal</string>
     <string name="reload_mint_lightning_desc">Új ecash verése a saját Lightning tárcából</string>
@@ -1194,8 +1194,8 @@
     <string name="reload_mint_needs_more">további %1$s satoshi szükséges</string>
     <string name="reload_mint_funded">feltöltve</string>
     <string name="reload_mint_copy_invoice">Számla másolása</string>
-    <string name="topup_mint_title">Mint feltöltése</string>
-    <string name="topup_mint_action">Ezen mint feltöltése</string>
+    <string name="topup_mint_title">Pénzverde feltöltése</string>
+    <string name="topup_mint_action">Ezen pénzverde feltöltése</string>
     <string name="topup_mint_amount_label">Hozzáadandó összeg</string>
     <string name="topup_mint_confirm">Feltöltés</string>
     <string name="zap_privacy_section">Zap adatvédelem</string>
@@ -1240,7 +1240,7 @@
     <string name="ai_suggested_alt_text_hint">LLM által javasolt, szerkessze bátran</string>
     <string name="ai_suggested_alt_text_dismiss">LLM-javaslatok eltüntetése</string>
     <string name="zap_type">Zaptípus</string>
-    <string name="zap_type_explainer">Zap-típus minden lehetőséghez</string>
+    <string name="zap_type_explainer">Zaptípus minden lehetőséghez</string>
     <string name="zap_type_public">Nyilvános</string>
     <string name="zap_type_public_explainer">Mindenki láthatja a tranzakciót és az üzenetet</string>
     <string name="zap_type_private">Privát</string>
@@ -1280,7 +1280,7 @@
     <string name="uploading_state_compressing">Tömörítés…</string>
     <string name="uploading_state_uploading">Feltöltés…</string>
     <string name="uploading_state_server_processing">Feldolgozás…</string>
-    <string name="uploading_state_downloading">Letöltés…</string>
+    <string name="uploading_state_downloading">Letöltés</string>
     <string name="uploading_state_hashing">Kivonatolás</string>
     <string name="uploading_state_finished">Kész</string>
     <string name="uploading_state_error">Hiba</string>
@@ -1373,14 +1373,14 @@
     <string name="app_notification_dms_channel_name">Privát üzenetek</string>
     <string name="app_notification_dms_channel_description">Értesítés, ha privát üzenet érkezik</string>
     <string name="app_notification_zaps_channel_name">Zapet kapott</string>
-    <string name="app_notification_zaps_channel_description">Értesítés, amikor valaki Zap-et küld Önnek</string>
+    <string name="app_notification_zaps_channel_description">Értesítés, amikor valaki zapet küld Önnek</string>
     <string name="app_notification_zaps_channel_message">%1$s satoshi</string>
     <string name="app_notification_zaps_channel_message_from">Tőle: %1$s</string>
     <string name="app_notification_zaps_channel_message_for">neki: %1$s</string>
     <string name="app_notification_reply_label">Válasz</string>
     <string name="app_notification_mark_read_label">Megjelölés olvasottként</string>
     <string name="app_notification_dms_summary">Új üzenetek</string>
-    <string name="app_notification_zaps_summary">Új zap-ek</string>
+    <string name="app_notification_zaps_summary">Új zapek</string>
     <string name="app_notification_reactions_channel_name">Reakciók</string>
     <string name="app_notification_reactions_channel_description">Értesítés, amikor valaki reagál az egyik bejegyzésre</string>
     <string name="app_notification_reactions_channel_message">%1$s reagált az Ön bejegyzésére</string>
@@ -1431,7 +1431,7 @@
     <string name="call_permission_denied_title">Engedély szükséges</string>
     <string name="call_permission_denied_voice">Az Amethyst alkalmazásnak hozzáférésre van szüksége a mikrofonhoz a hanghívások kezdeményezéséhez. Engedélyezze ezt az alkalmazás beállításaiban.</string>
     <string name="call_permission_denied_video">Az Amethyst alkalmazásnak hozzáférésre van szüksége a kamerához és a mikrofonhoz a videohívások kezdeményezéséhez. Engedélyezze ezeket az alkalmazás beállításaiban.</string>
-    <string name="call_permission_denied_open_settings">Beállítások menyitása</string>
+    <string name="call_permission_denied_open_settings">Beállítások megnyitása</string>
     <string name="call_permission_denied_cancel">Mégse</string>
     <string name="call_settings">Hívásbeállítások</string>
     <string name="call_settings_enable_calls">Hang- és videóhívások engedélyezése</string>
@@ -1440,7 +1440,7 @@
     <string name="call_settings_max_bitrate">Legmagasabb videó-bitsebesség</string>
     <string name="call_settings_turn_servers">TURN-/ STUN-kiszolgálók</string>
     <string name="call_settings_turn_description">Az alapértelmezett STUN- és TURN-kiszolgálók minden esetben biztosítottak. Korlátozó hálózatok esetén adjon hozzá egyéni TURN kiszolgálókat.</string>
-    <string name="call_settings_default_servers">Alapértelmezett kiszolgálók (mindíg aktívak)</string>
+    <string name="call_settings_default_servers">Alapértelmezett kiszolgálók (mindig aktívak)</string>
     <string name="call_settings_custom_turn">Egyéni TURN-kiszolgálók</string>
     <string name="call_settings_no_custom_turn">Nincsenek egyéni TURN-kiszolgálók beállítva.</string>
     <string name="call_settings_add_turn">TURN-kiszolgáló hozzáadása</string>
@@ -1500,10 +1500,10 @@
     <string name="security_hidden_words_empty">Nincsenek rejtett szavak. Adjon hozzá egy szót alább, hogy elrejtse az azt tartalmazó bejegyzéseket.</string>
     <string name="new_reaction_symbol">Új reakció-szimbólum</string>
     <string name="no_reaction_type_setup_long_press_to_change">A felhasználó számára nincsenek előre kiválasztott reakciótípusok. Hosszan nyomja meg a szív gombot a módosításhoz</string>
-    <string name="zapraiser">Zap-gyűjtés</string>
+    <string name="zapraiser">Zapgyűjtés</string>
     <string name="zapraiser_explainer">Hozzáadja a bejegyzéshez a satoshi célösszeget, hogy megemelje a bejegyzést. Az ezt támogató kliensek ezt egy előrehaladási sávval jeleníthetik meg, hogy adományozásra ösztönözzenek</string>
     <string name="zapraiser_target_amount_in_sats">Célösszeg satoshiban</string>
-    <string name="sats_to_complete">A Zap-gyűjtés jelenleg: %1$s. %2$s satoshi kell még a célig</string>
+    <string name="sats_to_complete">A zapgyűjtés jelenleg: %1$s. %2$s satoshi kell még a célig</string>
     <string name="read_from_relay">Olvasás az átjátszóról</string>
     <string name="write_to_relay">Írás az átjátszóra</string>
     <string name="write_to_relay_description">Az átjátszónak küldött bájt-mennyiség, beleértve a szűrőket és eseményeket is</string>
@@ -1785,13 +1785,13 @@
     <string name="moderators">Moderátorok</string>
     <string name="login_with_external_signer">Bejelentkezés Amberrel</string>
     <string name="status_update">Állapot frissítése</string>
-    <string name="poll_zap_value_min_max_explainer">A szavazatok egy Zap összeggel vannak súlyozva. Beállíthat egy minimális összeget, hogy elkerülje a spamelőket, és egy maximális összeget, hogy elkerülje, hogy a nagy Zap-elők átvegyék a szavazást. Használja ugyanazt az összeget mindkét mezőben, hogy minden szavazatot ugyanannyira értékeljen. Hagyja üresen, hogy bármilyen összeget elfogadjon.</string>
-    <string name="error_dialog_zap_error">Nem sikerült Zap-et küldeni</string>
+    <string name="poll_zap_value_min_max_explainer">A szavazatok egy zapösszeggel vannak súlyozva. Beállíthat egy minimális összeget, hogy elkerülje a spamelőket, és egy maximális összeget, hogy elkerülje, hogy a nagy zapelők átvegyék a szavazást. Használja ugyanazt az összeget mindkét mezőben, hogy minden szavazatot ugyanannyira értékeljen. Hagyja üresen, hogy bármilyen összeget elfogadjon.</string>
+    <string name="error_dialog_zap_error">Nem sikerült zapet küldeni</string>
     <string name="error_dialog_talk_to_user">Üzenet a felhasználónak</string>
     <string name="error_dialog_talk_to_user_name">Üzenet: %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="zap_split_title">Zapek megosztása és továbbítása</string>
-    <string name="zap_split_explainer">A funkciót támogató kliensek megosztják és továbbítják a Zap-eket az itt hozzáadott felhasználóknak az Ön felhasználói helyett</string>
+    <string name="zap_split_explainer">A funkciót támogató kliensek megosztják és továbbítják a zapeket az itt hozzáadott felhasználóknak az Ön felhasználói helyett</string>
     <string name="zap_split_search_and_add_user">Felhasználó keresése és hozzáadása</string>
     <string name="zap_split_search_and_add_user_placeholder">Felhasználónév vagy megjelenítendő név</string>
     <string name="missing_lud16">Hiányzó lightning-beállítás</string>
@@ -1805,7 +1805,7 @@
     <string name="error_video_open_in_browser">Megnyitás böngészőben</string>
     <string name="sign_request_rejected2">Aláírási kérés elutasítva</string>
     <string name="sign_request_rejected_description">Győződjön meg arról, hogy ezt a tranzakciót az aláíró-alkalmazás hitelesítette-e</string>
-    <string name="no_wallet_found_with_error">Nem található pénztárca a Lighning-számla kifizetéséhez (Hiba: %1$s). A Zap-ek használatához telepítsen egy Lightning-pénztárcát</string>
+    <string name="no_wallet_found_with_error">Nem található pénztárca a lighning-számla kifizetéséhez (Hiba: %1$s). A zapek használatához telepítsen egy lightning-pénztárcát</string>
     <string name="no_wallet_found">Nem található pénztárca a Lighning-számla kifizetéséhez. A Zap-ek használatához telepítsen egy Lightning-pénztárcát</string>
     <string name="no_blossom_apps_found_title">Nem lehet megnyitni a Blossom-hivatkozásokat</string>
     <string name="no_blossom_apps_found_description">Nem található Blossom-alkalmazás. Telepítsen egy helyi Blossom-alkalmazást a fájl megtekintéséhez</string>
@@ -1835,7 +1835,7 @@
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Hiba történt a(z) %1$s JSON elemzésekor. Ellenőrizze a felhasználó Lightning-beállítását</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Nem található a visszahívási webcím a(z) %1$s válaszából</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Helytelen (%1$s satoshi) számlaösszeg a következőtől: %2$s. A következőnek kellett volna lennie: %3$s</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Nem sikerült a Zap-összeg elküldése előtt lightning-számlát készíteni. A címzett lightning-pénztárcája a következő hibát küldte: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Nem sikerült a zapösszeg elküldése előtt lightning-számlát készíteni. A címzett lightning-pénztárcája a következő hibát küldte: %1$s</string>
     <string name="read_only_user">Csak olvasható felhasználó</string>
     <string name="no_reactions_setup">Nincs reakcióbeállítás</string>
     <string name="notification_settings">Értesítések</string>
@@ -1923,7 +1923,7 @@
     <string name="metadata_strip_failed_body">Ez a fájlformátum nem támogatja a metaadatok eltávolítását. Lehet, hogy a fájl tartalmaz személyes adatokat, például hely- és eszközadatokat. Mindenképp fel akarja tölteni?</string>
     <string name="metadata_strip_failed_upload">Feltöltés mindenképp</string>
     <string name="metadata_strip_failed_upload_cancelled">Nem sikerült eltávolítani a médiafájlokból a privát metaadatokat. Feltöltés megszakítva.</string>
-    <string name="upload_cancelled">Feltölrés megszakítva</string>
+    <string name="upload_cancelled">Feltöltés megszakítva</string>
     <string name="avif_metadata_strip_failed">Nem sikerült eltávolítani az AVIF-fájl metaadatait: %1$s</string>
     <string name="edit_draft">Piszkozat szerkesztése</string>
     <string name="login_with_qr_code">Bejelentkezés QR-kóddal</string>
@@ -1956,8 +1956,8 @@
     <string name="wallet_outgoing">Elküldött</string>
     <string name="wallet_refresh">Frissítés</string>
     <string name="wallet_filter_all">Összes</string>
-    <string name="wallet_filter_zaps">Zap-ek</string>
-    <string name="wallet_filter_non_zaps">Nem-zap-ek</string>
+    <string name="wallet_filter_zaps">Zapek</string>
+    <string name="wallet_filter_non_zaps">Nem-zapek</string>
     <string name="wallet_add">Pénztárca hozzáadása</string>
     <string name="wallet_default">Alapértelmezett</string>
     <string name="wallet_set_default">Beállítás alapértelmezettként</string>
@@ -2009,9 +2009,9 @@
     <string name="cashu_created_pick_mints">Pénzverdék kiválasztása</string>
     <string name="cashu_balance">Egyenleg</string>
     <string name="cashu_mints">Pénzverdék</string>
-    <string name="cashu_mint_url">Mint webcíme</string>
-    <string name="cashu_remove_mint">Mint eltávolítása</string>
-    <string name="cashu_add_mint">Mint hozzáadása</string>
+    <string name="cashu_mint_url">Pénzverde webcíme</string>
+    <string name="cashu_remove_mint">Pénzverde eltávolítása</string>
+    <string name="cashu_add_mint">Pénzverde hozzáadása</string>
     <string name="cashu_history">Előzmények</string>
     <string name="cashu_wallet_autosaves">A pénztárcája automatikusan mentésre kerül, amikor pénzverdét ad hozzá vagy távolít el. Egy nutzap kulcs jön létre az Ön számára, amikor először ad hozzá egy pénzverdét.</string>
     <string name="cashu_wallet_saving">Mentés…</string>
@@ -2040,7 +2040,7 @@
     <string name="cashu_amount_sats">Összeg (satoshiban)</string>
     <string name="cashu_pick_mint">Válasszon pénzverdét</string>
     <string name="cashu_memo_optional">Megjegyzés (nem kötelező)</string>
-    <string name="cashu_invoice_bolt11">Lightning számla (bolt11)</string>
+    <string name="cashu_invoice_bolt11">Lightning-számla (bolt11)</string>
     <string name="cashu_token_label">Cashu token</string>
     <string name="cashu_copy_invoice">Számla másolása</string>
     <string name="cashu_request_invoice">Számla kérése</string>
@@ -2050,13 +2050,13 @@
     <string name="cashu_settings_title">Cashu pénztárca beállításai</string>
     <string name="cashu_settings_edit_wallet">Saját pénzverdék</string>
     <string name="cashu_settings_edit_wallet_subtitle">Adja hozzá vagy távolítsa el a pénztárcájában használt pénzverdéket.</string>
-    <string name="cashu_settings_my_recommendations">Saját mint-ajánlások</string>
+    <string name="cashu_settings_my_recommendations">Saját pénzverde-ajánlások</string>
     <string name="cashu_settings_recommendations_subtitle">Vállaljon nyilvánosan kezességet az Ön által megbízhatónak tartott pénzverdékért, és vonja vissza az ajánlásokat.</string>
-    <string name="cashu_settings_no_recommendations">Még nem ajánlott egy mintet sem. Koppintson a felfelé mutató hüvelykujjra egy mint mellett, hogy nyilvánosan ajánlja azt.</string>
+    <string name="cashu_settings_no_recommendations">Még nem ajánlott egy pénzverdét sem. Koppintson a felfelé mutató hüvelykujjra egy pénzverde mellett, hogy nyilvánosan ajánlja azt.</string>
     <string name="cashu_settings_delete_recommendation">Ajánlás törlése</string>
     <string name="cashu_settings_delete_confirm_title">Visszavonja az ajánlást?</string>
     <string name="cashu_settings_delete_confirm_body">Törlési kérés közzététele a(z) %1$s pénzverdéről szóló kind:38000 ajánlásához. Azok az átjátszók, amelyek tiszteletben tartják a NIP-09-et, el fogják távolítani.</string>
-    <string name="cashu_settings_add_recommendation">Egy mint ajánlása</string>
+    <string name="cashu_settings_add_recommendation">Egy pénzverde ajánlása</string>
     <string name="cashu_settings_restore_title">Visszaállítás seed-ből</string>
     <string name="cashu_settings_restore_subtitle">Minden korábbi titok újralevezetése, és minden mint megkérdezése, hogy visszaadja-e a még nyilvántartásban lévő vak aláírásokat. Hasznos eszközvesztés vagy egy megbízhatatlan átjátszó általi token-esemény törlése esetén.</string>
     <string name="cashu_settings_restore_running">Pénzverdék vizsgálata…</string>
@@ -2065,14 +2065,14 @@
     <string name="cashu_settings_stop_nutzaps">Nutzapok fogadásának leállítása</string>
     <string name="cashu_settings_stop_nutzaps_subtitle">Vonja vissza a kind:10019 eseményét, hogy mások ne küldhessenek Önnek több nutzapot. Az Ön pénztárcája és egyenlege változatlan marad.</string>
     <string name="cashu_settings_stop_nutzaps_confirm_title">Leállítja a nutzapok fogadását?</string>
-    <string name="cashu_settings_stop_nutzaps_confirm_body">A nutzap-info eseményét egy üresre cseréljük, és kérni fogjuk a törlését. A továbbiakban nem fognak tudni nutzapot küldeni Önnek. Ezt a pénztárcája szerkesztésével bármikor visszakapcsolhatja. Ez az egyenlegét nem érinti.</string>
+    <string name="cashu_settings_stop_nutzaps_confirm_body">A nutzap-info eseményét egy üresre cseréljük, és kérni fogjuk a törlését. A továbbiakban nem fognak tudni nutzapet küldeni Önnek. Ezt a pénztárcája szerkesztésével bármikor visszakapcsolhatja. Ez az egyenlegét nem érinti.</string>
     <string name="cashu_settings_recreate_key">Nutzap-kulcs újraelőállítása</string>
     <string name="cashu_settings_recreate_key_subtitle">Egy teljesen új kulcs előállítása a nutzapok fogadásához. Ritkán van rá szükség - általában csak akkor, ha a jelenlegi kulcsa kiszivárgott. A régi kulcsára már elküldött, de még be nem váltott nutzapok elvesznek.</string>
     <string name="cashu_settings_recreate_key_confirm_title">Újraelőállítja a nutzap-kulcsot?</string>
     <string name="cashu_settings_recreate_key_confirm_body">Egy új P2PK kulcs kerül előállításra és közzétételre a kind:10019 és kind:17375 eseményeiben, megtartva a jelenlegi pénzverdéit. A küldők elkezdenek nutzapokat zárolni az új kulcshoz. A régi kulcsára már elküldött, de még be nem váltott nutzapok helyreállíthatatlanná válnak. Erre ritkán van szükség.</string>
     <string name="cashu_settings_recreate_key_action">Kulcs újraelőállítása</string>
     <string name="cashu_settings_import_key">Nutzap-kulcs importálása</string>
-    <string name="cashu_settings_import_key_subtitle">Cserélje le a nutzap-kulcsát egy beillesztett kulcsra - például a pénztárca biztonsági mentésből történő visszaállításához. Ritkán van rá szükség. A régi kulcsához zárolt nutzapok a továbbiakban nem lesznek beválthatók.</string>
+    <string name="cashu_settings_import_key_subtitle">Cserélje le a nutzap-kulcsát egy beillesztett kulcsra - például a pénztárca biztonsági mentésből történő visszaállításához. Ritkán van rá szükség. A régi kulcsához zárolt nutzapek a továbbiakban nem lesznek beválthatók.</string>
     <string name="cashu_settings_import_key_confirm_title">Importálja a nutzap-kulcsot?</string>
     <string name="cashu_settings_import_key_confirm_body">Illessze be a nutzapok fogadásához használandó P2PK privát kulcsot (hex). A kind:10019 és kind:17375 eseményei újra közzé lesznek téve ezzel a kulccsal, megtartva a jelenlegi pénzverdéit. A jelenlegi kulcsához zárolt nutzapok többé nem lesznek beválthatók, kivéve, ha a kulcs megegyezik. Erre ritkán van szükség.</string>
     <string name="cashu_settings_import_key_field">P2PK privát kulcs (hex)</string>
@@ -2080,15 +2080,15 @@
     <string name="cashu_settings_delete_wallet">Pénztárca törlése</string>
     <string name="cashu_settings_delete_wallet_subtitle">Távolítsa el a pénztárcát és állítsa le a nutzapokat. A fennmaradó egyenleg helyreállíthatatlanná válhat.</string>
     <string name="cashu_settings_delete_wallet_confirm_title">Törli ezt a pénztárcát?</string>
-    <string name="cashu_settings_delete_wallet_confirm_body">Ez a művelet a kind:17375 pénztárca és a kind:10019 nutzap-információ törlését kéri. Az ecash-igazolások nem törlődnek a Mintekből, de a pénztárca kulcsának eltűnésével a megmaradt egyenleg és a be nem váltott nutzapok helyreállíthatatlanná válhatnak. Győződjön meg arról, hogy először elköltötte vagy áthelyezte a pénzét. Ez a művelet nem vonható vissza.</string>
+    <string name="cashu_settings_delete_wallet_confirm_body">Ez a művelet a kind:17375 pénztárca és a kind:10019 nutzap-információ törlését kéri. Az ecash-igazolások nem törlődnek a pénzverdékből, de a pénztárca kulcsának eltűnésével a megmaradt egyenleg és a be nem váltott nutzapok helyreállíthatatlanná válhatnak. Győződjön meg arról, hogy először elköltötte vagy áthelyezte a pénzét. Ez a művelet nem vonható vissza.</string>
     <string name="cashu_pay_invoice">Számla kifizetése</string>
     <string name="cashu_get_quote">Árajánlat kérése</string>
     <string name="cashu_getting_quote">Árajánlat kérése a pénzverdétől…</string>
     <string name="cashu_quote_confirm">Kifizetsz %1$s satot + legfeljebb %2$s sat díjat?</string>
     <string name="cashu_verify">Ellenőrzés</string>
-    <string name="cashu_mint_reachable">✓ A mint elérhető</string>
+    <string name="cashu_mint_reachable">✓ A pénzverde elérhető</string>
     <string name="cashu_mint_reachable_named">✓ %1$s</string>
-    <string name="cashu_mint_unreachable">A mint nem érhető el: %1$s</string>
+    <string name="cashu_mint_unreachable">A pénzverde nem érhető el: %1$s</string>
     <string name="nutzap">Nutzap</string>
     <string name="nutzap_failed_title">Nem sikerült a nutzap</string>
     <string name="nutzap_failed_no_recipient">Nincs megadva a címzett nyilvános kulcsa a bejegyzésen</string>
@@ -2099,7 +2099,7 @@
     <string name="cashu_done">Kész</string>
     <string name="cashu_requesting_invoice">Számla kérése a pénzverdétől…</string>
     <string name="cashu_waiting_for_payment">Várakozás a számla kifizetésére…</string>
-    <string name="cashu_checking_mint">Mint ellenőrzése…</string>
+    <string name="cashu_checking_mint">Pénzverde ellenőrzése…</string>
     <string name="cashu_completing_mint">Bizonyítékok kiállítása…</string>
     <string name="cashu_paying_invoice">Fizetés a minten keresztül…</string>
     <string name="cashu_building_token">Bizonyítékok cseréje…</string>
@@ -2150,7 +2150,7 @@
         <item quantity="other">%1$s sat küldése, %2$d felé osztva</item>
     </plurals>
     <plurals name="onchain_send_use_note_split">
-        <item quantity="one">Ennek a bejegyzésnek a(z) %1$d-felé osztott zap-jének használata</item>
+        <item quantity="one">Ennek a bejegyzésnek a(z) %1$d-felé osztott zapjének használata</item>
         <item quantity="other">Ennek a bejegyzésnek a(z) %1$d-felé osztott zap-jének használata</item>
     </plurals>
     <plurals name="onchain_send_splits_label">
@@ -2331,7 +2331,7 @@
     <string name="boost_or_quote_description">Megtolás vagy Idézés</string>
     <string name="like_description">Tetszik</string>
     <string name="zap_description">Zap</string>
-    <string name="onchain_zap_description">Láncon belüli Bitcoin Zap-ke</string>
+    <string name="onchain_zap_description">Láncon belüli Bitcoinzap</string>
     <string name="onchain_zap_pending">Függőben lévő megerősítés</string>
     <string name="change_reaction">Gyors reakciók megváltoztatása</string>
     <string name="bottom_bar_settings">Alsó navigációs sáv</string>
@@ -2348,6 +2348,7 @@
     <string name="profile_ui_setting_app_recommendations">Ajánlott alkalmazások</string>
     <string name="profile_ui_setting_zap_received_feed">Beérkezett zapek hírfolyama</string>
     <string name="profile_ui_setting_followers_feed">Követők hírfolyama</string>
+    <string name="profile_ui_setting_onchain_wallet">Bitcoin (láncon belüli) pénztárca</string>
     <string name="reactions_settings">Reakciósor</string>
     <string name="reactions_settings_description">Állítsa be, hogy mely reakciógombok jelenjenek meg, azok sorrendjét, valamint a számlálók megjelenítését.</string>
     <string name="reactions_settings_enabled">Engedélyezve</string>
@@ -2401,8 +2402,8 @@
     <string name="disable_poll">Szavazás kikapcsolása</string>
     <string name="add_bitcoin_invoice">Bitcoin-számla</string>
     <string name="cancel_bitcoin_invoice">Bitcoin-számla visszavonása</string>
-    <string name="add_zapraiser">Zap-gyűjtés</string>
-    <string name="cancel_zapraiser">Zap-gyűjtés visszavonása</string>
+    <string name="add_zapraiser">Zapgyűjtés</string>
+    <string name="cancel_zapraiser">Zapgyűjtés visszavonása</string>
     <string name="add_location">Helyszín</string>
     <string name="remove_location">Helyszín eltávolítása</string>
     <string name="add_content_warning">Tartalmi figyelmeztetés hozzáadása</string>
@@ -2447,7 +2448,7 @@
     <string name="public_home_section_explainer">Ez az átjátszótípus tárolja az összes tartalmat. Az Amethyst ide küldi az Ön bejegyzéseit, és mások ezeket az átjátszókat fogják használni, hogy megtalálják az Ön tartalmát. Adjon hozzá 1–3 átjátszót. Ezek lehetnek személyes-, fizetett- vagy nyilvános átjátszók.</string>
     <string name="public_notif_section">Nyilvános bejövő átjátszók</string>
     <string name="public_notif_section_explainer_profile">A felhasználó ezeken az átjátszókon keresztül fogadja az értesítéseket</string>
-    <string name="public_notif_section_explainer">Ez az átjátszótípus fogadja az összes választ, hozzászólást, kedvelést és Zap-et az Ön bejegyzéseire. Ezek lehetnek fizetős vagy ingyenes átjátszók. Az átjátszó üzemeltetője által beállított korlátok korlátozhatják a jó és a rossz értesítések számát. Ha például a hozzászólásokban kéretlen üzenet-támadások érik, a fizetős átjátszók kiszűrhetik a kéretlen tartalmakat. Vegyen fel 1–3 átjátszót.</string>
+    <string name="public_notif_section_explainer">Ez az átjátszótípus fogadja az összes választ, hozzászólást, kedvelést és zapet az Ön bejegyzéseire. Ezek lehetnek fizetős vagy ingyenes átjátszók. Az átjátszó üzemeltetője által beállított korlátok korlátozhatják a jó és a rossz értesítések számát. Ha például a hozzászólásokban kéretlen üzenet-támadások érik, a fizetős átjátszók kiszűrhetik a kéretlen tartalmakat. Vegyen fel 1–3 átjátszót.</string>
     <string name="private_inbox_section">Bejövő közvetlen üzenet-átjátszók</string>
     <string name="private_inbox_section_explainer_profile">A felhasználó ezeken az átjátszókon keresztül fogadja a közvetlen üzeneteket</string>
     <string name="private_inbox_section_explainer">Adjon hozzá 1–3 átjátszót, hogy privát postafiókként szolgáljon. Mások ezeket az átjátszókat használják, hogy Önnek privát üzeneteket küldjenek. A bejövő privát üzenetek átjátszóinak bárkitől el kell fogadniuk minden üzenetet, de azok letöltését csak Ön engedélyezheti. Jó választási lehetőségek:\n - inbox.nostr.wine (fizetős)\n - auth.nostr1.com (ingyenes)\n - you.nostr1.com (személyes átjátszók - fizetős)</string>
@@ -2606,7 +2607,7 @@
     <string name="it_s_not_possible_to_reply_to_a_draft_note">A piszkozatokra nem lehet válaszolni</string>
     <string name="it_s_not_possible_to_quote_to_a_draft_note">A piszkozatokat nem lehet idézni</string>
     <string name="it_s_not_possible_to_react_to_a_draft_note">A piszkozatokra nem lehet reagálni</string>
-    <string name="it_s_not_possible_to_zap_to_a_draft_note">A piszkozatokra nem lehet Zap-et küldeni</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">A piszkozatokra nem lehet zapet küldeni</string>
     <string name="draft_note">Piszkozat</string>
     <string name="load_from_text">Üzenet tőle</string>
     <string name="dvm_looking_for_app">Alkalmazás keresése</string>
@@ -2873,7 +2874,7 @@
     <string name="kind_git_reply">Git válasz</string>
     <string name="kind_git_pr">Beolvasztási kérés</string>
     <string name="kind_git_pr_update">Beolvasztási kérés frissítése</string>
-    <string name="kind_zap_goals">Zap-célok</string>
+    <string name="kind_zap_goals">Zapcélok</string>
     <string name="kind_hashtag_follows">Kulcsszókövetések</string>
     <string name="kind_highlights">Kiemelések</string>
     <string name="kind_http_auth">Http-hitelesítés</string>
@@ -2887,7 +2888,7 @@
     <string name="kind_zaps">Zap-ek</string>
     <string name="kind_nwc_request">NWC-kérések</string>
     <string name="kind_nwc_response">NWC-válasz</string>
-    <string name="kind_private_zaps">Privát zap-ek</string>
+    <string name="kind_private_zaps">Privát zapek</string>
     <string name="kind_zap_req">Zap-kérés</string>
     <string name="kind_blogs">Blogok</string>
     <string name="kind_meeting_room">Tárgyalószoba</string>
@@ -2909,7 +2910,7 @@
     <string name="kind_pictures">Képek</string>
     <string name="kind_workouts">Edzések</string>
     <string name="kind_pins">Rögzítettek</string>
-    <string name="kind_zap_poll">Zap-szavazás</string>
+    <string name="kind_zap_poll">Zapszavazás</string>
     <string name="kind_poll">Szavazás</string>
     <string name="kind_poll_response">Szavazásválasz</string>
     <string name="kind_nip04_dms">NIP-04 közvetlen üzenetek</string>
@@ -3088,7 +3089,7 @@
     <string name="hls_title_label">Cím</string>
     <string name="hls_title_placeholder">Adjon egy címet a videónak</string>
     <string name="hls_description_label">Leírás</string>
-    <string name="hls_description_placeholder">Miról szól ez a video?</string>
+    <string name="hls_description_placeholder">Miról szól ez a videó?</string>
     <string name="hls_content_warning_reason_placeholder">Indoklás (nem kötelező)</string>
     <string name="hls_codec_label">Kodek</string>
     <string name="hls_codec_h265">H.265 (jobb tömörítés)</string>
@@ -3155,6 +3156,7 @@
     <string name="goal_progress">%1$s gyűlt össze a(z) %2$s satoshis célból</string>
     <string name="fundraiser_ends">Véget ér ekkor: %1$s</string>
     <string name="fundraiser_onchain_donation">Láncon belüli adomány</string>
+    <string name="bird_detection_title">Madárfelismerés</string>
     <plurals name="birdex_species_count">
         <item quantity="one">Madárnapló · %1$d faj</item>
         <item quantity="other">Madárnapló · %1$d faj</item>
@@ -3164,6 +3166,9 @@
         <item quantity="other">%1$s +%2$d további</item>
     </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
+    <string name="ps1_save_title">PS1 memóriakártya-mentés</string>
+    <string name="ps1_save_block">%1$d blokk</string>
+    <string name="ps1_save_empty_slot">Üres hely</string>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <string name="road_event_police">Rendőrség</string>
     <string name="road_event_speed_camera">Sebességmérő kamera</string>
@@ -3331,7 +3336,7 @@
     <string name="add_emoji_fab">Emodzsi hozzáadása</string>
     <string name="emoji_add_dialog_title">Egyéni emodzsi hozzáadása</string>
     <string name="emoji_remove_dialog_title">%1$s eltávolítása:?</string>
-    <string name="emoji_long_press_hint">Érintsen meg hosszan egy emodzsit az eltávolításhoz</string>
+    <string name="emoji_long_press_hint">Koppintson hosszan egy emodzsira annak eltávolításhoz</string>
     <string name="emoji_pack_is_in_list">A(z) „%1$s” már az emodzsilistában van</string>
     <string name="emoji_pack_is_not_in_list">A(z) „%1$s” még nincs az emodzsilistában</string>
     <string name="emoji_pack_actions_dialog_title">Emodzsicsomag-műveletek</string>
