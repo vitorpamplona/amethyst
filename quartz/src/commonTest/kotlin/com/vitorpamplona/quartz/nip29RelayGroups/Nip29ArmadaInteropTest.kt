@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
+import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -258,6 +259,20 @@ class Nip29ArmadaInteropTest {
     }
 
     // ── kind 10009 user group list (NIP-51 simple groups) ────────────────────
+
+    @Test
+    fun groupTagIdentityIsIdAndRelayNotName() {
+        // Same (id, relay) is the same group regardless of the cached name, so a
+        // Set dedups it — otherwise the same group stored as a public tag and a
+        // private item would show twice and the joined-list flow would churn.
+        val a = GroupTag(gid, "wss://r", "Alpha")
+        val b = GroupTag(gid, "wss://r", null)
+        val c = GroupTag(gid, "wss://other", "Alpha")
+        assertEquals(a, b)
+        assertEquals(a.hashCode(), b.hashCode())
+        assertEquals(1, setOf(a, b).size)
+        assertTrue(a != c)
+    }
 
     @Test
     fun parsesUserGroupListPublicGroups() {

@@ -167,7 +167,10 @@ private fun RelayGroupMemberRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val user = remember(entry.pubkey) { accountViewModel.getUserIfExists(entry.pubkey) }
+    // Create-or-get (never a one-shot null): UsernameDisplay observes the user's
+    // metadata flow, so the name fills in when the kind:0 arrives instead of being
+    // stuck on truncated hex forever.
+    val user = remember(entry.pubkey) { accountViewModel.checkGetOrCreateUser(entry.pubkey) }
     var menuOpen by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf(false) }
 

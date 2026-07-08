@@ -578,8 +578,9 @@ private fun printUsage() {
         |  relaygroup join RELAY GID [--code CODE]    request to join (kind 9021)
         |  relaygroup leave RELAY GID                 leave (kind 9022)
         |  relaygroup message RELAY GID TEXT          post a kind-9 chat to the group
-        |  relaygroup edit RELAY GID [--name N]       edit metadata (kind 9002, admin)
-        |    [--about A] [--private] [--closed]
+        |  relaygroup edit RELAY GID [--name N]       edit metadata (kind 9002, admin);
+        |    [--about A] [--private|--public]         reads current visibility and only
+        |    [--closed|--open]                        changes the axis you specify
         |  relaygroup invite RELAY GID --code CODE    mint an invite code (kind 9009)
         |  relaygroup put-user RELAY GID PUBKEY       add/promote a user (kind 9000)
         |    [--role admin|moderator]

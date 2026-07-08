@@ -428,7 +428,7 @@ screen speaks.
 | `amy relaygroup join RELAY GID [--code CODE]` | Request to join (9021) and add it to your kind:10009 list. |
 | `amy relaygroup leave RELAY GID` | Leave (9022) and drop it from your kind:10009 list. |
 | `amy relaygroup message RELAY GID TEXT` | Post a kind:9 chat message into the group. |
-| `amy relaygroup edit RELAY GID [--name X] [--about A] [--private] [--closed]` | Edit metadata (9002, admin only). |
+| `amy relaygroup edit RELAY GID [--name X] [--about A] [--private\|--public] [--closed\|--open]` | Edit metadata (9002, admin only). Reads current visibility and changes only the axis you pass, so re-asserting one flag never resets the other. |
 | `amy relaygroup invite RELAY GID --code CODE` | Mint an invite code (9009, moderator). |
 | `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator]` | Add or promote a user (9000, moderator). |
 | `amy relaygroup remove-user RELAY GID PUBKEY` | Kick a user (9001, moderator). |

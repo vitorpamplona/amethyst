@@ -53,6 +53,7 @@ class RelayGroupChannel(
     var metadataNote: Note? = null
 
     var updatedMetadataAt: Long = 0
+        private set
 
     /** Relay-signed member pubkeys (kind 39002). */
     var members: Set<HexKey> = emptySet()
@@ -87,8 +88,10 @@ class RelayGroupChannel(
         event: GroupMetadataEvent,
         eventNote: Note? = null,
     ) {
-        // Only newer metadata supersedes.
-        if (event.createdAt < updatedMetadataAt) return
+        // Only newer metadata supersedes; equal-or-older is dropped, so a duplicate
+        // arrival isn't reprocessed (no redundant emit) and first-arrival wins on a
+        // createdAt tie. First load passes since real events have createdAt > 0.
+        if (event.createdAt <= updatedMetadataAt) return
         this.event = event
         this.metadataNote = eventNote
         this.updatedMetadataAt = event.createdAt
@@ -96,14 +99,14 @@ class RelayGroupChannel(
     }
 
     fun updateMembers(event: GroupMembersEvent) {
-        if (event.createdAt < membersUpdatedAt) return
+        if (event.createdAt <= membersUpdatedAt) return
         members = event.members().toSet()
         membersUpdatedAt = event.createdAt
         updateChannelInfo()
     }
 
     fun updateAdmins(event: GroupAdminsEvent) {
-        if (event.createdAt < adminsUpdatedAt) return
+        if (event.createdAt <= adminsUpdatedAt) return
         admins = event.admins()
         adminsUpdatedAt = event.createdAt
         updateChannelInfo()
@@ -132,8 +135,12 @@ class RelayGroupChannel(
         if (admin != null) {
             return when {
                 admin.roles.any { it.equals(RelayGroupMembership.ROLE_ADMIN, true) } -> RelayGroupMembership.ADMIN
-                admin.roles.any { it.equals(RelayGroupMembership.ROLE_MODERATOR, true) } -> RelayGroupMembership.MODERATOR
-                else -> RelayGroupMembership.MEMBER
+                // Presence in the kind-39001 admins list IS the moderation signal;
+                // the role labels (moderator, ceo, owner, …) are relay-defined. So
+                // anyone in that list who isn't the top-level admin is at least a
+                // moderator — never demote them to a plain member just because the
+                // role string is unrecognized or absent.
+                else -> RelayGroupMembership.MODERATOR
             }
         }
         return if (pubkey in members) RelayGroupMembership.MEMBER else RelayGroupMembership.NONE

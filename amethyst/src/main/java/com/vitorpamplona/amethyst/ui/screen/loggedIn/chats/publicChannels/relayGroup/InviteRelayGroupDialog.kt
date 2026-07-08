@@ -54,15 +54,17 @@ fun InviteRelayGroupDialog(
     val clipboard = LocalClipboardManager.current
     val code by remember { mutableStateOf(RandomInstance.bytes(6).toHexKey()) }
 
-    // Publishing the invite is a one-shot side effect when the dialog opens.
-    LaunchedEffect(code) {
-        accountViewModel.createRelayGroupInvite(channel, code)
-    }
-
     // A shareable, cross-client coordinate for the group (opens the chat in any
     // NIP-29 client). Null until the relay-signed metadata has loaded.
     val nAddr = channel.toNAddr()?.let { "nostr:$it" }
     val isClosed = channel.isClosed()
+
+    // A join code is only meaningful for closed (invite-only) groups; open groups
+    // join directly from the shared naddr. So mint the kind-9009 invite only when
+    // the group is actually closed, rather than on every dialog open.
+    LaunchedEffect(code, isClosed) {
+        if (isClosed) accountViewModel.createRelayGroupInvite(channel, code)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -94,13 +96,18 @@ fun InviteRelayGroupDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                // Copy the most useful thing: the group link, plus the code when
-                // the group is closed (so a recipient has both to join).
-                val toCopy = listOfNotNull(nAddr, if (isClosed) code else null).joinToString("\n")
-                clipboard.setText(AnnotatedString(toCopy.ifBlank { code }))
-                onDismiss()
-            }) {
+            // Copy the group link, plus the code when the group is closed (so a
+            // recipient has both to join). Never fall back to copying a code the
+            // dialog didn't show — for an open group with metadata not yet loaded
+            // there is simply nothing to copy, so disable the button.
+            val toCopy = listOfNotNull(nAddr, if (isClosed) code else null).joinToString("\n")
+            TextButton(
+                enabled = toCopy.isNotBlank(),
+                onClick = {
+                    clipboard.setText(AnnotatedString(toCopy))
+                    onDismiss()
+                },
+            ) {
                 Text(stringRes(R.string.copy))
             }
         },

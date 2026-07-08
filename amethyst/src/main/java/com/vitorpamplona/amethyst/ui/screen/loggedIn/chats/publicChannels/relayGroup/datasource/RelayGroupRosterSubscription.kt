@@ -21,15 +21,22 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**
  * Mount on any screen that lists the user's joined groups (the Messages tab's
- * inline/grouped views, the Relay Groups home) to keep their rosters live. The
- * assembler re-derives its per-relay filters from the joined-group list, so it
- * follows joins/leaves automatically.
+ * inline/grouped views, the Relay Groups home) to keep their rosters live.
+ *
+ * The query state is keyed on the account (stable), so the assembler wouldn't
+ * re-run its filter derivation on its own when the joined-group set changes.
+ * We watch [liveRelayGroupList] and invalidate the assembler on every change, so
+ * a join/leave while this screen stays foregrounded immediately re-subscribes to
+ * the new group's roster (critical for confirming admission to a closed group).
  */
 @Composable
 fun RelayGroupRosterSubscription(
@@ -40,6 +47,10 @@ fun RelayGroupRosterSubscription(
         remember(accountViewModel.account) {
             RelayGroupRosterQueryState(accountViewModel.account)
         }
+
+    val joined by accountViewModel.account.relayGroupList.liveRelayGroupList
+        .collectAsStateWithLifecycle()
+    LaunchedEffect(joined) { dataSource.invalidateFilters() }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)
 }

@@ -1800,9 +1800,25 @@ object LocalCache : ILocalCache, ICacheProvider {
         relay: NormalizedRelayUrl?,
     ) {
         val groupId = event.groupId() ?: return
-        if (relay == null) return
-        val channel = getOrCreateRelayGroupChannel(GroupId(groupId, relay))
-        channel.addNote(getOrCreateNote(event.id), relay)
+        val note = getOrCreateNote(event.id)
+        // Only attach a note we've actually loaded — never a placeholder for an
+        // unverified/not-yet-seen event. This is checked here (not via the "was
+        // newly consumed" flag) so the host relay's echo of an event we already
+        // stored from our own send still lands in the channel.
+        if (note.event == null) return
+
+        if (relay != null) {
+            // Normal arrival: the group only exists on its host relay and the
+            // filters are host-pinned, so the serving relay is the group's key.
+            getOrCreateRelayGroupChannel(GroupId(groupId, relay)).addNote(note, relay)
+        } else {
+            // Our own optimistic send has no provenance relay, so we can't build
+            // the (groupId, relay) key. Attach to every already-open channel with
+            // this group id — normally the exact room being composed in — so the
+            // message appears immediately. Don't fabricate a channel from a guessed
+            // relay; the host relay's later echo attaches it to the canonical key.
+            relayGroupChannels.filter { key, _ -> key.id == groupId }.forEach { it.addNote(note, null) }
+        }
     }
 
     fun consume(
@@ -2739,6 +2755,10 @@ object LocalCache : ILocalCache, ICacheProvider {
         publicChatChannels.forEach { _, channel ->
             pruneHiddenMessagesChannel(channel, account)
         }
+
+        relayGroupChannels.forEach { _, channel ->
+            pruneHiddenMessagesChannel(channel, account)
+        }
     }
 
     // 2× the 10-min `PRESENCE_FRESHNESS_WINDOW_SECONDS` used by
@@ -2786,6 +2806,10 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
         publicChatChannels.forEach { _, channel ->
+            pruneOldMessagesChannel(channel)
+        }
+
+        relayGroupChannels.forEach { _, channel ->
             pruneOldMessagesChannel(channel)
         }
 
@@ -3993,13 +4017,17 @@ object LocalCache : ILocalCache, ICacheProvider {
 
                 is ChatEvent -> {
                     consumeRegularEvent(event, relay, wasVerified).also {
-                        if (it) attachToRelayGroupIfScoped(event, relay)
+                        // Attach on every arrival, not just the newly-consumed one:
+                        // our own send is consumed first with a null relay, so the
+                        // host relay's later echo (new == false) is what carries the
+                        // provenance needed to key the channel. attach is idempotent.
+                        attachToRelayGroupIfScoped(event, relay)
                     }
                 }
 
                 is PollEvent -> {
                     consumeRegularEvent(event, relay, wasVerified).also {
-                        if (it) attachToRelayGroupIfScoped(event, relay)
+                        attachToRelayGroupIfScoped(event, relay)
                     }
                 }
 

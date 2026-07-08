@@ -1503,8 +1503,10 @@ class Account(
 
         val status =
             buildSet {
-                add(if (isPrivate) GroupMetadataEvent.GroupStatus.PRIVATE else GroupMetadataEvent.GroupStatus.PUBLIC)
-                add(if (isClosed) GroupMetadataEvent.GroupStatus.CLOSED else GroupMetadataEvent.GroupStatus.OPEN)
+                // NIP-29 flags are presence-only: public/open is the absence of the
+                // private/closed tags, so emit only the restrictive flags that are on.
+                if (isPrivate) add(GroupMetadataEvent.GroupStatus.PRIVATE)
+                if (isClosed) add(GroupMetadataEvent.GroupStatus.CLOSED)
             }
         val edit = EditMetadataEvent.build(groupId, name = name, about = about, status = status)
         signAndSendPrivatelyOrBroadcast(edit) { listOf(relay) }
@@ -1555,8 +1557,10 @@ class Account(
     ) {
         val status =
             buildSet {
-                add(if (isPrivate) GroupMetadataEvent.GroupStatus.PRIVATE else GroupMetadataEvent.GroupStatus.PUBLIC)
-                add(if (isClosed) GroupMetadataEvent.GroupStatus.CLOSED else GroupMetadataEvent.GroupStatus.OPEN)
+                // NIP-29 flags are presence-only: public/open is the absence of the
+                // private/closed tags, so emit only the restrictive flags that are on.
+                if (isPrivate) add(GroupMetadataEvent.GroupStatus.PRIVATE)
+                if (isClosed) add(GroupMetadataEvent.GroupStatus.CLOSED)
             }
         val template = EditMetadataEvent.build(channel.groupId.id, name = name, about = about, status = status)
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }

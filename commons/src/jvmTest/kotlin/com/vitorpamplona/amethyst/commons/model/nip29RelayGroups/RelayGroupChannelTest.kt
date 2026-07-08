@@ -105,10 +105,24 @@ class RelayGroupChannelTest {
     }
 
     @Test
-    fun adminWithoutKnownRoleIsPlainMember() {
+    fun adminWithUnknownRoleStillModerates() {
+        // Presence in the 39001 admins list is the moderation signal; an
+        // unrecognized (or empty) role label must not demote to plain MEMBER.
         val c = channel()
-        c.updateAdmins(admins(100, alice to listOf("ceo")))
-        assertEquals(RelayGroupMembership.MEMBER, c.membershipOf(alice))
+        c.updateAdmins(admins(100, alice to listOf("ceo"), bob to emptyList()))
+        assertEquals(RelayGroupMembership.MODERATOR, c.membershipOf(alice))
+        assertEquals(RelayGroupMembership.MODERATOR, c.membershipOf(bob))
+        assertTrue(c.membershipOf(alice).canModerate())
+    }
+
+    @Test
+    fun equalCreatedAtDoesNotResupersede() {
+        val c = channel()
+        c.updateMembers(members(100, alice, bob))
+        // A second 39002 with the SAME createdAt but fewer members must not win.
+        c.updateMembers(members(100, alice))
+        assertEquals(RelayGroupMembership.MEMBER, c.membershipOf(bob))
+        assertEquals(2, c.memberCount())
     }
 
     @Test

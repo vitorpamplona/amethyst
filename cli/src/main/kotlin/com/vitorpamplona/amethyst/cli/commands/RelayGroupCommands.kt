@@ -94,6 +94,9 @@ object RelayGroupCommands {
             val status = groupStatus(isPrivate, isClosed)
             val edit = EditMetadataEvent.build(groupId, name = name, about = about, status = status)
             val editAck = ctx.publish(ctx.signer.sign(edit), target)
+            // Track it in our own kind:10009 so `relaygroup list` shows it, matching
+            // the Android create flow (Account.createRelayGroup → follow).
+            val listed = updateGroupList(ctx, relay, groupId, add = true)
 
             Output.emit(
                 mapOf(
@@ -103,6 +106,7 @@ object RelayGroupCommands {
                     "private" to isPrivate,
                     "closed" to isClosed,
                     "published" to (createAck.values.any { it } && editAck.values.any { it }),
+                    "listed" to listed,
                 ),
             )
             return 0
@@ -192,13 +196,20 @@ private suspend fun updateGroupList(
     val outbox = ctx.outboxRelays()
     if (outbox.isEmpty()) return false
 
+    // Load the current list from BOTH the local store (amy's source of truth —
+    // every list we've published/synced is here) and a fresh relay drain, then
+    // take the newest. Relying on the drain alone is unsafe: a slow or empty
+    // fetch would look like "no list", and the `create` branch below would then
+    // replace the user's entire kind:10009 with just this one group.
     val filter = Filter(kinds = listOf(SimpleGroupListEvent.KIND), authors = listOf(ctx.identity.pubKeyHex), limit = 1)
-    val current =
+    val stored = ctx.latestReplaceable(ctx.identity.pubKeyHex, SimpleGroupListEvent.KIND) as? SimpleGroupListEvent
+    val drained =
         ctx
             .drain(outbox.associateWith { listOf(filter) }, 5_000)
             .map { it.second }
             .filterIsInstance<SimpleGroupListEvent>()
             .maxByOrNull { it.createdAt }
+    val current = listOfNotNull(stored, drained).maxByOrNull { it.createdAt }
 
     val tag = GroupTag(groupId, relay.url, null)
     val updated =
@@ -212,14 +223,19 @@ private suspend fun updateGroupList(
     return ctx.publish(updated, outbox).values.any { it }
 }
 
-/** The NIP-29 status flag set for the given visibility toggles. */
+/**
+ * The NIP-29 status flag set for the given visibility. NIP-29 flags are
+ * presence-only: a group is public/open by the ABSENCE of the private/closed
+ * tags, so we emit only the restrictive flags that are actually on — never a
+ * `["public"]`/`["open"]` tag (which are non-canonical and can confuse relays).
+ */
 internal fun groupStatus(
     isPrivate: Boolean,
     isClosed: Boolean,
 ): Set<GroupMetadataEvent.GroupStatus> =
     buildSet {
-        add(if (isPrivate) GroupMetadataEvent.GroupStatus.PRIVATE else GroupMetadataEvent.GroupStatus.PUBLIC)
-        add(if (isClosed) GroupMetadataEvent.GroupStatus.CLOSED else GroupMetadataEvent.GroupStatus.OPEN)
+        if (isPrivate) add(GroupMetadataEvent.GroupStatus.PRIVATE)
+        if (isClosed) add(GroupMetadataEvent.GroupStatus.CLOSED)
     }
 
 /**

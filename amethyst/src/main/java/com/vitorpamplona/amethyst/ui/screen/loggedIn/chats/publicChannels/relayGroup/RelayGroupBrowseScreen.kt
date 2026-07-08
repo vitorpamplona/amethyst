@@ -145,7 +145,10 @@ fun RelayGroupBrowseScreen(
                 }
             }
 
-            val suggestions = POPULAR_RELAYS.filter { it !in joined }
+            // `joined` holds normalized URLs (trailing-slash form); normalize the
+            // literals before comparing so an already-joined popular relay is hidden.
+            val joinedNormalized = joined.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it)?.url }
+            val suggestions = POPULAR_RELAYS.filter { RelayUrlNormalizer.normalizeOrNull(it)?.url !in joinedNormalized }
             if (suggestions.isNotEmpty()) {
                 SectionHeader(stringRes(R.string.relay_group_browse_popular))
                 suggestions.forEach { server ->

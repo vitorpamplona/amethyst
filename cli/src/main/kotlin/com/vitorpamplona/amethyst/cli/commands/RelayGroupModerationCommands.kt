@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
@@ -35,22 +37,83 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
  * host relay via [publishScoped] or a direct publish.
  */
 object RelayGroupModerationCommands {
-    /** `relaygroup edit RELAY GROUP_ID [--name N] [--about A] [--private] [--closed]` → 9002. */
+    /**
+     * `relaygroup edit RELAY GROUP_ID [--name N] [--about A] [--private|--public] [--closed|--open]` → 9002.
+     *
+     * A kind-9002 edit re-asserts the group's status flags, so sending only one
+     * axis would silently reset the other (e.g. `--closed` on a private group
+     * would drop `private` and leak it public). To avoid that we read the group's
+     * current 39000 metadata and merge: each axis keeps its current value unless
+     * the caller explicitly changes it with the flag or its counter-flag.
+     */
     suspend fun edit(
         dataDir: DataDir,
         rest: Array<String>,
-    ): Int =
-        publishScoped(dataDir, rest, "relaygroup edit RELAY GROUP_ID [--name N] [--about A] [--private] [--closed]") { _, groupId, args ->
-            // Only touch visibility when the user actually passed a flag — otherwise
-            // leave name/about edits without asserting an (unknown) status.
-            val status =
-                if (args.bool("private") || args.bool("closed")) {
-                    groupStatus(args.bool("private"), args.bool("closed"))
+    ): Int {
+        val args = Args(rest)
+        val usage = "relaygroup edit RELAY GROUP_ID [--name N] [--about A] [--private|--public] [--closed|--open]"
+        val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
+        val groupId = args.positionalOrNull(1) ?: return Output.error("bad_args", usage)
+        val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+
+            val filter =
+                Filter(kinds = listOf(GroupMetadataEvent.KIND), tags = mapOf("d" to listOf(groupId)), limit = 1)
+            val meta =
+                ctx
+                    .drain(mapOf(relay to listOf(filter)), 6_000)
+                    .map { it.second }
+                    .filterIsInstance<GroupMetadataEvent>()
+                    .maxByOrNull { it.createdAt }
+            if (meta == null) {
+                System.err.println(
+                    "warning: could not read current metadata for $groupId on ${relay.url}; " +
+                        "visibility will be set from the flags given only",
+                )
+            }
+
+            val isPrivate =
+                if (args.bool("private")) {
+                    true
+                } else if (args.bool("public")) {
+                    false
                 } else {
-                    emptySet()
+                    (meta?.isPrivate() ?: false)
                 }
-            EditMetadataEvent.build(groupId, name = args.flag("name"), about = args.flag("about"), status = status)
+            val isClosed =
+                if (args.bool("closed")) {
+                    true
+                } else if (args.bool("open")) {
+                    false
+                } else {
+                    (meta?.isClosed() ?: false)
+                }
+
+            val signed =
+                ctx.signer.sign(
+                    EditMetadataEvent.build(
+                        groupId,
+                        name = args.flag("name"),
+                        about = args.flag("about"),
+                        status = groupStatus(isPrivate, isClosed),
+                    ),
+                )
+            val ack = ctx.publish(signed, setOf(relay))
+            Output.emit(
+                mapOf(
+                    "event_id" to signed.id,
+                    "group_id" to groupId,
+                    "relay" to relay.url,
+                    "private" to isPrivate,
+                    "closed" to isClosed,
+                    "published" to ack.values.any { it },
+                ),
+            )
+            return 0
         }
+    }
 
     /** `relaygroup invite RELAY GROUP_ID --code CODE` → 9009. */
     suspend fun invite(
