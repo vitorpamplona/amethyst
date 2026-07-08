@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DrainFailure
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.classifyDrainFailure
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -685,19 +686,18 @@ class GrapeRankDataCrawler(
             val before = contactListsFed
             log("[graperank] aggregator recovery: ${stragglers.size} stragglers via ${aggregators.size} aggregators")
 
-            // Build the query against the full straggler set BEFORE any folding (the
-            // filter lists are materialized here, so later mutation of `stragglers` is
-            // safe). Ask ONLY for kind:3 — the contact list we're missing. A multi-kind
-            // filter is useless against the big indexers: user.kindpag.es caps its
-            // response at ~100 events per REQ (it ignores our limit), so a
-            // kinds=[3,10000,1984,10002] query comes back 100× kind:10002 and 0×
-            // kind:3 — the abundant relay lists crowd the contact lists out entirely.
-            // Asked for kind:3 alone it returns them in a few seconds. Their kind:10002
-            // is already fetched in bulk by [ensureRelayLists]; mutes/reports still come
-            // from the outbox model. The aggregator's job here is only the lists.
-            val filters =
-                aggregators.associateWith {
-                    stragglers.chunked(AUTHORS_PER_FILTER).map { chunk -> Filter(kinds = listOf(ContactListEvent.KIND), authors = chunk) }
+            // Chunk the stragglers once. Each chunk is queried on its OWN request:
+            // the big indexers return nothing for a filter carrying the whole set, so
+            // AUTHORS_PER_FILTER-sized chunks keep every request answerable. Ask ONLY
+            // for kind:3 — the contact list we're missing. A multi-kind filter is
+            // useless against these indexers: user.kindpag.es caps its response at ~100
+            // events per page (it ignores our limit), so a kinds=[3,10000,1984,10002]
+            // query comes back 100× kind:10002 and 0× kind:3 — the abundant relay lists
+            // crowd the contact lists out. Their kind:10002 is already fetched in bulk
+            // by [ensureRelayLists]; mutes/reports still come from the outbox model.
+            val chunks =
+                stragglers.chunked(AUTHORS_PER_FILTER).map { chunk ->
+                    Filter(kinds = listOf(ContactListEvent.KIND), authors = chunk)
                 }
 
             // Fold one delivered contact list per straggler, exactly once.
@@ -715,15 +715,30 @@ class GrapeRankDataCrawler(
             }
 
             relaysContacted += aggregators
-            // Fast deliveries fold immediately; a slow aggregator parks and its late
-            // kind:3 arrives on [lateHarvest], which we drain until the parked units
-            // finish — so a big aggregator that can't answer within the fast window is
-            // still fully harvested here instead of being abandoned.
-            foldAgg(drainGated(filters, null))
-            while (parkedInFlight.load() > 0L) {
-                withTimeoutOrNull(PARK_POLL_MS) { lateHarvest.receive() }?.let { foldAgg(listOf(it)) }
+            // Paginate every aggregator with `until` cursors instead of the crawl's
+            // single-shot [drainGated]: that grabs one page and stops, so against a
+            // relay that caps a page at ~100 events any straggler beyond the newest 100
+            // is silently dropped. [fetchAllPages] walks the whole filter to exhaustion.
+            // Relays run concurrently; each relay's chunks run sequentially so only one
+            // subscription is live per connection (staying under per-relay sub limits),
+            // gated by the [limiter] like every other query. Events land on a channel
+            // off the reader threads, then are verified/persisted and folded once.
+            val sink = Channel<Pair<NormalizedRelayUrl, Event>>(Channel.UNLIMITED)
+            coroutineScope {
+                for (agg in aggregators) {
+                    launch {
+                        for (chunk in chunks) {
+                            limiter.withPermit(agg) {
+                                client.fetchAllPages(agg, listOf(chunk), config.parkTimeoutMs) { ev ->
+                                    sink.trySend(agg to ev)
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            while (true) foldAgg(listOf(lateHarvest.tryReceive().getOrNull() ?: break))
+            sink.close()
+            foldAgg(persist(buildList { for (e in sink) add(e) }))
             log("[graperank] aggregator recovery: +${contactListsFed - before} contact lists")
         }
 
