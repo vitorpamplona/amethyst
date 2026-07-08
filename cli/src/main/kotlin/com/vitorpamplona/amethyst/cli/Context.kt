@@ -449,6 +449,23 @@ class Context(
     suspend fun anyRelays(): Set<NormalizedRelayUrl> = outboxRelays() + inboxRelays() + keyPackageRelays()
 
     /**
+     * Index relays — the shared, app-global set used to fetch profile
+     * metadata (kind 0) and follow lists (kind 3). Mirrors the Desktop
+     * app's `LocalRelayCategories.indexRelays` by reading from the same
+     * `java.util.prefs` node
+     * (`com/vitorpamplona/amethyst/relays/index`). Falls back to the
+     * shipping defaults when the user hasn't configured anything.
+     *
+     * This is what `amy wot sync` uses; `outboxRelays()` /
+     * `inboxRelays()` remain for callers that want relay lists derived
+     * from NIP-65 identity semantics.
+     */
+    fun indexRelays(): Set<NormalizedRelayUrl> =
+        com.vitorpamplona.amethyst.commons.relays.index
+            .PreferencesIndexRelays()
+            .effective()
+
+    /**
      * Seed relays for "look up someone we know nothing about" queries —
      * fetching another user's kind:10002 / 10050 / 10051 / 30443 before we
      * can deliver something to them.

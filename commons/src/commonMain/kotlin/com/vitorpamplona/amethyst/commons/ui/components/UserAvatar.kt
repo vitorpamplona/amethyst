@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +64,10 @@ data class ProfilePictureUrl(
  * @param loadProfilePicture Whether to load the profile picture (false = show robohash only)
  * @param loadRobohash Whether to generate robohash (false = show generic icon)
  * @param useThumbnailCache Whether to use the thumbnail disk cache for faster repeated loads
+ * @param badge Optional overlay drawn on top of the avatar (bottom-right by
+ *   convention). Used by Desktop for the WoT trust-score chip; Android call
+ *   sites leave it null. When null the avatar renders as before (no extra
+ *   `Box` wrapper).
  */
 @Composable
 fun UserAvatar(
@@ -73,7 +79,26 @@ fun UserAvatar(
     loadProfilePicture: Boolean = true,
     loadRobohash: Boolean = true,
     useThumbnailCache: Boolean = false,
+    badge: @Composable (BoxScope.() -> Unit)? = null,
 ) {
+    if (badge != null) {
+        Box(modifier = modifier.size(size)) {
+            UserAvatar(
+                userHex = userHex,
+                pictureUrl = pictureUrl,
+                size = size,
+                modifier = Modifier,
+                contentDescription = contentDescription,
+                loadProfilePicture = loadProfilePicture,
+                loadRobohash = loadRobohash,
+                useThumbnailCache = useThumbnailCache,
+                badge = null,
+            )
+            badge()
+        }
+        return
+    }
+
     val avatarModifier =
         remember(size, modifier) {
             modifier

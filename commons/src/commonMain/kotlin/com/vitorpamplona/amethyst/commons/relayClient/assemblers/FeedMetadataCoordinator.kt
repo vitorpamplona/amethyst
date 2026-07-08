@@ -33,13 +33,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.concurrent.Volatile
 
 /**
  * Coordinates metadata and reactions loading for feed items.
@@ -73,6 +76,15 @@ class FeedMetadataCoordinator(
     private val queuedPubkeys = mutableSetOf<HexKey>()
     private val queuedNoteIds = mutableSetOf<HexKey>()
     private val queuedBoostedIds = mutableSetOf<HexKey>()
+    private val queuedKind3Pubkeys = mutableSetOf<HexKey>()
+
+    // Batched paths only — pubkeys currently in-flight in a batched REQ.
+    // Prevents rapid re-fire of the same batch. Distinct from queuedPubkeys
+    // and queuedKind3Pubkeys (which record "asked and at least one relay
+    // returned EOSE") so a batch that times out with zero events can be
+    // retried on the next call — see PR #3483 review finding 5.
+    private val inFlightBatchedMetadata = mutableSetOf<HexKey>()
+    private val inFlightBatchedKind3 = mutableSetOf<HexKey>()
 
     /**
      * Start processing the subscription queue.
@@ -251,14 +263,24 @@ class FeedMetadataCoordinator(
     /**
      * Fast-path: batched metadata subscription for visible-viewport authors.
      * Bypasses rate limiter. Single filter with all authors. Closes after EOSE.
+     *
+     * Pubkeys are moved into [queuedPubkeys] (dedup) only after at least one
+     * relay EOSE'd. On timeout with zero EOSE (index relays all unreachable)
+     * they roll out of [inFlightBatchedMetadata] so a subsequent call can
+     * retry — see PR #3483 review finding 5.
      */
     fun loadMetadataBatched(
         pubkeys: List<HexKey>,
         timeoutMs: Long = 5_000L,
     ) {
-        val newPubkeys = pubkeys.filter { it !in queuedPubkeys }.distinct()
+        val newPubkeys =
+            pubkeys
+                .asSequence()
+                .filter { it !in queuedPubkeys && it !in inFlightBatchedMetadata }
+                .distinct()
+                .toList()
         if (newPubkeys.isEmpty()) return
-        queuedPubkeys.addAll(newPubkeys)
+        inFlightBatchedMetadata.addAll(newPubkeys)
 
         scope.launch {
             val filter =
@@ -269,8 +291,7 @@ class FeedMetadataCoordinator(
                 )
             val filterMap = indexRelays.associateWith { listOf(filter) }
             val subId = newSubId()
-            val eoseReceived = mutableSetOf<NormalizedRelayUrl>()
-            val allEose = CompletableDeferred<Unit>()
+            val gate = BatchEoseGate(scope, target = indexRelays.size)
 
             val listener =
                 object : SubscriptionListener {
@@ -287,16 +308,96 @@ class FeedMetadataCoordinator(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        eoseReceived.add(relay)
-                        if (eoseReceived.size >= indexRelays.size) {
-                            allEose.complete(Unit)
-                        }
+                        gate.notifyEose(relay)
                     }
                 }
 
             client.subscribe(subId, filterMap, listener)
-            withTimeoutOrNull(timeoutMs) { allEose.await() }
+            val eosedRelays = gate.awaitAll(timeoutMs)
             client.unsubscribe(subId)
+
+            if (eosedRelays > 0) {
+                queuedPubkeys.addAll(newPubkeys)
+            }
+            inFlightBatchedMetadata.removeAll(newPubkeys.toSet())
+        }
+    }
+
+    /**
+     * Batched kind-3 (follow list) subscription. Used by the WoT service
+     * to fetch the follow lists of every account the active user follows,
+     * so friends-of-friends counts can be computed.
+     *
+     * Chunks authors into ≤100 per Filter within a single subscription
+     * so relays with per-filter author caps (nostr-rs-relay defaults to
+     * ~100) don't silently truncate the batch. Aggregates EOSE across
+     * chunks and calls [onEose] once (or after [timeoutMs]).
+     *
+     * Pubkeys are moved into [queuedKind3Pubkeys] (dedup) only after at
+     * least one relay EOSE'd. On timeout with zero EOSE (index relays all
+     * unreachable — common on flaky mobile networks) they roll out of
+     * [inFlightBatchedKind3] so the next `loadKind3Batched` call retries
+     * — see PR #3483 review finding 5.
+     */
+    fun loadKind3Batched(
+        pubkeys: Collection<HexKey>,
+        timeoutMs: Long = 5_000L,
+        onEose: () -> Unit = {},
+    ) {
+        val newPubkeys =
+            pubkeys
+                .asSequence()
+                .filter { it !in queuedKind3Pubkeys && it !in inFlightBatchedKind3 }
+                .distinct()
+                .toList()
+        if (newPubkeys.isEmpty()) {
+            onEose()
+            return
+        }
+        inFlightBatchedKind3.addAll(newPubkeys)
+
+        scope.launch {
+            val filters =
+                newPubkeys.chunked(100).map { chunk ->
+                    Filter(
+                        kinds = listOf(ContactListEvent.KIND),
+                        authors = chunk,
+                        limit = chunk.size,
+                    )
+                }
+            val filterMap = indexRelays.associateWith { filters }
+            val subId = newSubId()
+            val gate = BatchEoseGate(scope, target = indexRelays.size)
+
+            val listener =
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        this@FeedMetadataCoordinator.onEvent?.invoke(event, relay)
+                    }
+
+                    override fun onEose(
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        gate.notifyEose(relay)
+                    }
+                }
+
+            client.subscribe(subId, filterMap, listener)
+            val eosedRelays = gate.awaitAll(timeoutMs)
+            client.unsubscribe(subId)
+
+            if (eosedRelays > 0) {
+                queuedKind3Pubkeys.addAll(newPubkeys)
+            }
+            inFlightBatchedKind3.removeAll(newPubkeys.toSet())
+
+            onEose()
         }
     }
 
@@ -307,5 +408,53 @@ class FeedMetadataCoordinator(
         priorityQueue.clear()
         queuedPubkeys.clear()
         queuedNoteIds.clear()
+        queuedKind3Pubkeys.clear()
+        inFlightBatchedMetadata.clear()
+        inFlightBatchedKind3.clear()
+    }
+
+    /**
+     * Aggregates EOSE notifications from per-relay `onEose` callbacks
+     * (which the client may dispatch on `Dispatchers.IO`) via a
+     * [Channel]. The consumer coroutine is the sole reader/writer of the
+     * `seen` set, eliminating the race the previous `mutableSetOf` +
+     * shared-state check had — see PR #3483 review finding 6.
+     *
+     * [awaitAll] blocks up to [timeoutMs] and returns the number of
+     * relays that EOSE'd (may be less than [target] on timeout). The
+     * count feeds the retry decision in the batched loaders.
+     */
+    private class BatchEoseGate(
+        private val scope: CoroutineScope,
+        private val target: Int,
+    ) {
+        private val incoming = Channel<NormalizedRelayUrl>(Channel.UNLIMITED)
+        private val done = CompletableDeferred<Unit>()
+
+        @Volatile private var lastCount = 0
+
+        fun notifyEose(relay: NormalizedRelayUrl) {
+            incoming.trySend(relay)
+        }
+
+        suspend fun awaitAll(timeoutMs: Long): Int {
+            if (target <= 0) return 0
+            val consumer =
+                scope.launch {
+                    val seen = mutableSetOf<NormalizedRelayUrl>()
+                    for (relay in incoming) {
+                        if (seen.add(relay)) {
+                            lastCount = seen.size
+                            if (seen.size >= target && !done.isCompleted) {
+                                done.complete(Unit)
+                            }
+                        }
+                    }
+                }
+            withTimeoutOrNull(timeoutMs) { done.await() }
+            incoming.close()
+            consumer.join()
+            return lastCount
+        }
     }
 }

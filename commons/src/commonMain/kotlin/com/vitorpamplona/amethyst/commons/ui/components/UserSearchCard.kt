@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,12 +47,17 @@ import org.jetbrains.compose.resources.stringResource
 /**
  * A card displaying user search result with avatar, name, and nip05/pubkey.
  * Shared between Android and Desktop search screens.
+ *
+ * @param badge Optional overlay drawn on top of the avatar (bottom-right
+ *   by convention). Used by Desktop for the WoT trust-score chip; Android
+ *   call sites leave it null. Forwarded to [UserAvatar].
  */
 @Composable
 fun UserSearchCard(
     user: User,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    badge: @Composable (BoxScope.() -> Unit)? = null,
 ) {
     Card(
         modifier =
@@ -73,6 +79,7 @@ fun UserSearchCard(
                 pictureUrl = user.profilePicture(),
                 size = 40.dp,
                 contentDescription = stringResource(Res.string.accessibility_user_avatar),
+                badge = badge,
             )
 
             Column(modifier = Modifier.weight(1f)) {

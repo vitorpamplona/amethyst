@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -66,6 +67,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
@@ -90,6 +92,27 @@ class DesktopLocalCache : ICacheProvider {
     /** Cached follow set for the logged-in user. Thread-safe + Compose-observable. */
     private val _followedUsers = MutableStateFlow<Set<HexKey>>(emptySet())
     val followedUsers: StateFlow<Set<HexKey>> = _followedUsers.asStateFlow()
+
+    /**
+     * Active user's pubkey (hex). Set from Main.kt on login. When set, only
+     * kind-3 events from this pubkey update [_followedUsers] and
+     * [lastContactListEvent]. Other users' kind-3 events still flow through
+     * [contactListEvents] for consumers like the WoT service.
+     */
+    @Volatile
+    var accountPubkey: HexKey? = null
+
+    /**
+     * Fires for every accepted kind-3 event (both the active user's and
+     * other users' — filtered downstream). Buffered so slow consumers don't
+     * block the consume path.
+     */
+    private val _contactListEvents =
+        MutableSharedFlow<ContactListEvent>(
+            extraBufferCapacity = 64,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+    val contactListEvents: SharedFlow<ContactListEvent> = _contactListEvents.asSharedFlow()
 
     /** Increments on each metadata update — observe to recompose when user names change. */
     private val _metadataVersion = MutableStateFlow(0L)
@@ -281,10 +304,42 @@ class DesktopLocalCache : ICacheProvider {
                 consumeComment(event, relay)
             }
 
+            is AdvertisedRelayListEvent -> {
+                consumeAdvertisedRelayList(event, relay)
+            }
+
             else -> {
                 false
             }
         }
+
+    /**
+     * Consumes a kind 10002 (NIP-65) advertised relay list event. Stores
+     * the newest per-author copy in [addressableNotes] so the outbox
+     * dispatcher can look up each follow's declared write relays without
+     * a fresh REQ. Emits nothing to the event stream — the UI doesn't
+     * render kind 10002s directly.
+     */
+    private fun consumeAdvertisedRelayList(
+        event: AdvertisedRelayListEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val addressableNote = getOrCreateAddressableNote(event.address())
+        val existing = addressableNote.event
+        if (existing != null && existing.createdAt >= event.createdAt) return false
+        val author = getOrCreateUser(event.pubKey)
+        addressableNote.loadEvent(event, author, emptyList())
+        relay?.let { addressableNote.addRelay(it) }
+        return false
+    }
+
+    /**
+     * Returns the cached kind-10002 event for [pubkey], if any. Used by the
+     * outbox dispatcher to skip a Phase-1 REQ for authors whose write-relay
+     * list is already in the store (from a previous session's local relay
+     * hydration or an in-session discovery).
+     */
+    fun cachedAdvertisedRelayList(pubkey: HexKey): AdvertisedRelayListEvent? = addressableNotes.get(AdvertisedRelayListEvent.createAddress(pubkey).toValue())?.event as? AdvertisedRelayListEvent
 
     /**
      * Consumes a kind 1 text note event.
@@ -472,19 +527,47 @@ class DesktopLocalCache : ICacheProvider {
 
     /**
      * Consumes a kind 3 contact list event (replaceable).
-     * Updates the cached followedUsers set.
+     *
+     * Tracks the newest kind-3 per author (not a single global scalar) so
+     * ingesting other users' follow lists (e.g. for WoT scoring) doesn't
+     * corrupt the active user's state. Only the active user's kind-3 updates
+     * [_followedUsers] / [lastContactListEvent]. Every accepted event fans
+     * out on [_contactListEvents] for downstream consumers.
      */
-    private var lastContactListCreatedAt = 0L
+    private val lastContactListByAuthor = ConcurrentHashMap<HexKey, Long>()
 
     var lastContactListEvent: ContactListEvent? = null
         private set
 
     private fun consumeContactList(event: ContactListEvent): Boolean {
-        // Replaceable event — only accept newer contact lists
-        if (event.createdAt <= lastContactListCreatedAt) return false
-        lastContactListCreatedAt = event.createdAt
-        lastContactListEvent = event
-        _followedUsers.value = event.verifiedFollowKeySet()
+        // Replaceable event — only accept newer contact lists per author.
+        val prev = lastContactListByAuthor[event.pubKey] ?: 0L
+        if (event.createdAt <= prev) return false
+
+        // Stamp lastContactListByAuthor *only* on branches where we know
+        // whether this event is the active user's own kind-3. If accountPubkey
+        // hasn't been bound yet (login/hydration ordering window), skip the
+        // stamp entirely so a later relay retry — after Main.kt binds
+        // accountPubkey — is not rejected by the createdAt gate. The
+        // _followedUsers state remains untouched in that case; downstream
+        // consumers still get the fan-out via _contactListEvents (WoT etc).
+        val currentAccountPubkey = accountPubkey
+        when {
+            event.pubKey == currentAccountPubkey -> {
+                lastContactListEvent = event
+                _followedUsers.value = event.verifiedFollowKeySet()
+                lastContactListByAuthor[event.pubKey] = event.createdAt
+            }
+            currentAccountPubkey != null -> {
+                // Known-not-self: safe to stamp.
+                lastContactListByAuthor[event.pubKey] = event.createdAt
+            }
+            else -> {
+                // accountPubkey not bound yet — cannot tell if this is self.
+                // Defer stamping so the relay retry that arrives after bind
+                // will still populate _followedUsers.
+            }
+        }
 
         // Store in addressableNotes too — Kind3FollowListState.getFollowListEvent
         // reads from getOrCreateAddressableNote(...) and would otherwise see a
@@ -493,6 +576,8 @@ class DesktopLocalCache : ICacheProvider {
         val addressableNote = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
         addressableNote.loadEvent(event, author, emptyList())
+
+        _contactListEvents.tryEmit(event)
         return true
     }
 
@@ -786,7 +871,9 @@ class DesktopLocalCache : ICacheProvider {
         followerCounts.clear()
         followingCounts.clear()
         notesByAuthor.clear()
-        lastContactListCreatedAt = 0L
+        lastContactListByAuthor.clear()
+        lastContactListEvent = null
+        accountPubkey = null
     }
 }
 

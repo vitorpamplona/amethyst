@@ -152,7 +152,7 @@ class CoordinatorPipelineTest {
     fun `consumeEvent routes text note into cache and triggers ViewModel update`() =
         runBlocking {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-            val cache = DesktopLocalCache()
+            val cache = DesktopLocalCache().apply { accountPubkey = userPubKey }
             val (coordinator, _) = createCoordinator(cache, scope)
 
             val vm = DesktopFeedViewModel(DesktopGlobalFeedFilter(cache), cache)
@@ -191,7 +191,7 @@ class CoordinatorPipelineTest {
     fun `consumeEvent updates lastEventAt timestamp`() =
         runBlocking {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-            val cache = DesktopLocalCache()
+            val cache = DesktopLocalCache().apply { accountPubkey = userPubKey }
             val (coordinator, _) = createCoordinator(cache, scope)
 
             assertTrue(coordinator.lastEventAt.value == null, "lastEventAt should be null initially")
@@ -217,7 +217,7 @@ class CoordinatorPipelineTest {
     fun `contact list consumed via coordinator updates followedUsers`() =
         runBlocking {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-            val cache = DesktopLocalCache()
+            val cache = DesktopLocalCache().apply { accountPubkey = userPubKey }
             val (coordinator, _) = createCoordinator(cache, scope)
 
             val contactEvent =
@@ -244,7 +244,7 @@ class CoordinatorPipelineTest {
     fun `following feed shows notes after contact list and text notes arrive via coordinator`() =
         runBlocking {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-            val cache = DesktopLocalCache()
+            val cache = DesktopLocalCache().apply { accountPubkey = userPubKey }
             val (coordinator, _) = createCoordinator(cache, scope)
 
             // Step 1: Contact list arrives
@@ -294,7 +294,7 @@ class CoordinatorPipelineTest {
     fun `following feed remains empty when no contact list has been consumed`() =
         runBlocking {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-            val cache = DesktopLocalCache()
+            val cache = DesktopLocalCache().apply { accountPubkey = userPubKey }
             val (coordinator, _) = createCoordinator(cache, scope)
 
             // No contact list consumed — followedUsers is empty
@@ -334,7 +334,7 @@ class CoordinatorPipelineTest {
     fun `duplicate events are not double-counted in feed`() =
         runBlocking {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-            val cache = DesktopLocalCache()
+            val cache = DesktopLocalCache().apply { accountPubkey = userPubKey }
             val (coordinator, _) = createCoordinator(cache, scope)
 
             val vm = DesktopFeedViewModel(DesktopGlobalFeedFilter(cache), cache)
@@ -372,7 +372,7 @@ class CoordinatorPipelineTest {
     fun `requestInteractions opens subscription on client`() =
         runBlocking {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-            val cache = DesktopLocalCache()
+            val cache = DesktopLocalCache().apply { accountPubkey = userPubKey }
             val (coordinator, client) = createCoordinator(cache, scope)
 
             val noteIds = listOf("n1".padEnd(64, '0'))
@@ -393,7 +393,7 @@ class CoordinatorPipelineTest {
     fun `requestInteractions with empty noteIds returns without opening subscription`() =
         runBlocking {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-            val cache = DesktopLocalCache()
+            val cache = DesktopLocalCache().apply { accountPubkey = userPubKey }
             val (coordinator, client) = createCoordinator(cache, scope)
 
             coordinator.requestInteractions(emptyList(), setOf(relayUrl))
