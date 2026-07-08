@@ -49,9 +49,9 @@ interface RelayGroupRepository {
 
 /**
  * The user's NIP-51 "simple groups" list (kind 10009): the cross-device source
- * of truth for which NIP-29 groups they've joined. Joined groups are stored as
- * `["group", id, relay, name?]` items, either public or NIP-44-encrypted private
- * (encrypted to self). Mirrors
+ * of truth for which NIP-29 groups they've joined. Joined groups are written as
+ * PUBLIC `["group", id, relay, name?]` tags (see [follow] for why); reads still
+ * merge in any NIP-44-encrypted private items so older lists keep working. Mirrors
  * [com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListState].
  */
 class RelayGroupListState(
@@ -103,16 +103,22 @@ class RelayGroupListState(
         val relayGroupList = getRelayGroupList()
         val group = channel.toGroupTag()
 
+        // Store joined groups as PUBLIC `["group", id, relay]` tags. NIP-29 group
+        // membership is already public on the relay (the kind-39002 members list),
+        // so private storage buys almost no privacy — and the reference NIP-29
+        // clients (Flotilla, nostrord) read only the public tags, so a private list
+        // makes our joined groups invisible to them. Reading still merges public +
+        // any legacy private items, so existing private entries keep working.
         return if (relayGroupList == null) {
             SimpleGroupListEvent.create(
-                privateGroups = listOf(group),
+                publicGroups = listOf(group),
                 signer = signer,
             )
         } else {
             SimpleGroupListEvent.add(
                 earlierVersion = relayGroupList,
                 group = group,
-                isPrivate = true,
+                isPrivate = false,
                 signer = signer,
             )
         }

@@ -212,10 +212,13 @@ private suspend fun updateGroupList(
     val current = listOfNotNull(stored, drained).maxByOrNull { it.createdAt }
 
     val tag = GroupTag(groupId, relay.url, null)
+    // Public tags, matching the app and the reference NIP-29 clients (membership is
+    // already public via the relay's kind-39002 list); reads still merge legacy
+    // private items.
     val updated =
         when {
-            add && current == null -> SimpleGroupListEvent.create(privateGroups = listOf(tag), signer = ctx.signer)
-            add -> SimpleGroupListEvent.add(current!!, tag, isPrivate = true, signer = ctx.signer)
+            add && current == null -> SimpleGroupListEvent.create(publicGroups = listOf(tag), signer = ctx.signer)
+            add -> SimpleGroupListEvent.add(current!!, tag, isPrivate = false, signer = ctx.signer)
             current == null -> return false // nothing to remove from
             else -> SimpleGroupListEvent.remove(current, tag, signer = ctx.signer)
         }

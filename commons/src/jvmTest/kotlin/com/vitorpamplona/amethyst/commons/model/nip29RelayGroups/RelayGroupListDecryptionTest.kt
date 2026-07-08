@@ -48,6 +48,27 @@ class RelayGroupListDecryptionTest {
     private fun keysIn(event: SimpleGroupListEvent) = runBlocking { cache.groupSet(event).map { it.groupId }.toSet() }
 
     @Test
+    fun publicGroupIsAPlainTagAndStillReadThroughTheCache() =
+        runBlocking {
+            // follow() now writes public tags (interop with Flotilla/nostrord). A
+            // public group must appear as a plain `["group", …]` tag AND still be
+            // returned by the same merged read path used for private items.
+            val list = SimpleGroupListEvent.create(publicGroups = listOf(groupA), signer = signer)
+
+            assertTrue(list.publicGroups().any { it.groupId == "aaaa" })
+            assertEquals(setOf("aaaa"), keysIn(list))
+        }
+
+    @Test
+    fun readMergesPublicAndPrivateItems() =
+        runBlocking {
+            // A mixed list (a legacy private item + a new public one) reads as both,
+            // so switching follow() to public doesn't strip previously-private groups.
+            val list = SimpleGroupListEvent.create(publicGroups = listOf(groupA), privateGroups = listOf(groupB), signer = signer)
+            assertEquals(setOf("aaaa", "bbbb"), keysIn(list))
+        }
+
+    @Test
     fun followedPrivateGroupRoundTripsThroughDecryption() =
         runBlocking {
             val list = SimpleGroupListEvent.create(privateGroups = listOf(groupA), signer = signer)

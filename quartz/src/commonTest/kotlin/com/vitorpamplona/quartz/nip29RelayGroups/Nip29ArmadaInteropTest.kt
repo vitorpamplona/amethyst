@@ -335,6 +335,25 @@ class Nip29ArmadaInteropTest {
     }
 
     @Test
+    fun readsThreadTitleFromTitleOrSubject() {
+        // NIP-7D uses a `title` tag; nostrord uses `subject`. We read either.
+        val withTitle = parse(ThreadEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("title", "Welcome")), pubKey = alice) as ThreadEvent
+        assertEquals("Welcome", withTitle.title())
+
+        val withSubject = parse(ThreadEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("subject", "Howdy")), pubKey = alice) as ThreadEvent
+        assertEquals("Howdy", withSubject.title())
+
+        // `title` wins when both are present.
+        val both = parse(ThreadEvent.KIND, arrayOf(arrayOf("title", "T"), arrayOf("subject", "S")), pubKey = alice) as ThreadEvent
+        assertEquals("T", both.title())
+
+        // We emit the spec-correct `title` tag, never `subject`.
+        val built = ThreadEvent.build("body", "Hello") { hTag(gid) }
+        assertTrue(built.tags.any { it[0] == "title" && it[1] == "Hello" })
+        assertTrue(built.tags.none { it[0] == "subject" })
+    }
+
+    @Test
     fun buildsGroupThreadReplyWithHTagAndRootReference() {
         // A reply to a kind-11 group thread must be a 1111 comment that BOTH roots
         // at the thread AND carries the group `h` tag — the exact composition the
