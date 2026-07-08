@@ -41,37 +41,46 @@ class DrainFailureTest {
         assertNull(classifyDrainFailure("cannot:timeout (SocketTimeoutException)"))
     }
 
-    // Failing to ESTABLISH the connection is a strong dead signal (0/30 reachable
-    // fresh): HARD, so one strike drops it. "connect timed out" must be caught here
-    // and NOT fall through to the alive-but-slow read-timeout branch.
+    // An HTTP 429 rate-limit is alive and will serve us after backoff: never dead.
+    // Measured 4/4 such relays reachable when re-probed fresh.
     @Test
-    fun connectEstablishmentFailuresAreHard() {
-        assertEquals(DrainFailure.HARD, classifyDrainFailure("cannot:Connect timed out (SocketTimeoutException)"))
-        assertEquals(DrainFailure.HARD, classifyDrainFailure("cannot:Unexpected response code for CONNECT:  (IOException)"))
-        assertEquals(DrainFailure.HARD, classifyDrainFailure("cannot:Connection refused (ConnectException)"))
-        assertEquals(DrainFailure.HARD, classifyDrainFailure("cannot:Failed to connect to /1.2.3.4:443"))
-        assertEquals(DrainFailure.HARD, classifyDrainFailure("cannot:No route to host (NoRouteToHostException)"))
+    fun rateLimitStaysRetryable() {
+        assertNull(classifyDrainFailure("cannot:Server Misconfigured. Response: 429 Too Many Requests (ProtocolException)"))
     }
 
-    // DNS and TLS misconfig can never work: HARD.
+    // Failing to ESTABLISH the connection is dead (0/30 reachable fresh). "connect
+    // timed out" must be caught as DEAD and NOT slip into the read-timeout branch.
     @Test
-    fun dnsAndTlsAreHard() {
-        assertEquals(DrainFailure.HARD, classifyDrainFailure("cannot:Unable to resolve host (UnknownHostException)"))
-        assertEquals(DrainFailure.HARD, classifyDrainFailure("cannot:Received fatal alert: unrecognized_name (SSLHandshakeException)"))
-        assertEquals(DrainFailure.HARD, classifyDrainFailure("cannot:PKIX path building failed: certificate (CertificateException)"))
+    fun connectEstablishmentFailuresAreDead() {
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Connect timed out (SocketTimeoutException)"))
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Unexpected response code for CONNECT:  (IOException)"))
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Connection refused (ConnectException)"))
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Failed to connect to /1.2.3.4:443"))
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:No route to host (NoRouteToHostException)"))
     }
 
-    // A bad HTTP upgrade is HARD unless the status is a retryable 429/5xx.
+    // DNS and TLS misconfig can never work: DEAD.
     @Test
-    fun httpUpgradeSplitsOnStatus() {
-        assertEquals(DrainFailure.HARD, classifyDrainFailure("cannot:Server Misconfigured. not a websocket"))
-        assertEquals(DrainFailure.TRANSIENT, classifyDrainFailure("cannot:Server Misconfigured. Response: 503 (ProtocolException)"))
+    fun dnsAndTlsAreDead() {
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Unable to resolve host (UnknownHostException)"))
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Received fatal alert: unrecognized_name (SSLHandshakeException)"))
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:PKIX path building failed: certificate (CertificateException)"))
     }
 
-    // A mid-stream reset (connection already established) might clear: TRANSIENT.
+    // Every other bad HTTP upgrade won't serve us this run (measured 503 0%, 502 20%
+    // reachable; 402/403 gated; 200 not a relay) — DEAD, dropped on the first strike.
     @Test
-    fun midStreamResetIsTransient() {
-        assertEquals(DrainFailure.TRANSIENT, classifyDrainFailure("cannot:Connection reset (SocketException)"))
-        assertEquals(DrainFailure.TRANSIENT, classifyDrainFailure("cannot:Broken pipe (SocketException)"))
+    fun deadOrGatedHttpUpgradesAreDead() {
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Server Misconfigured. not a websocket"))
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Server Misconfigured. Response: 503 Service Unavailable (ProtocolException)"))
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Server Misconfigured. Response: 502 Bad Gateway (ProtocolException)"))
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Server Misconfigured. Response: 402 Payment Required (ProtocolException)"))
+    }
+
+    // A mid-stream reset won't hand us events this run either: DEAD.
+    @Test
+    fun midStreamResetIsDead() {
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Connection reset (SocketException)"))
+        assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Broken pipe (SocketException)"))
     }
 }

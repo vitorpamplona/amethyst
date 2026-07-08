@@ -226,7 +226,7 @@ class GrapeRankDataCrawler(
      * — so those stay plain collections. The frontier IS [hopOf]'s key set: a user
      * is "discovered" iff it has a hop stamp. Only the state genuinely shared across
      * the producer / consumer / drain-worker coroutines is concurrent: relayHints,
-     * attempts, deadRelays, relayStrikes.
+     * attempts, deadRelays.
      */
     private inner class CrawlRun(
         val observer: HexKey,
@@ -249,12 +249,12 @@ class GrapeRankDataCrawler(
         val relayHints = ConcurrentMap<HexKey, ConcurrentSet<NormalizedRelayUrl>>()
         val attempts = ConcurrentMap<HexKey, Int>()
         val deadRelays = ConcurrentSet<NormalizedRelayUrl>()
-        val relayStrikes = ConcurrentMap<NormalizedRelayUrl, Int>()
 
         // Unproductive-TIMEOUT strikes, keyed by relay AUTHORITY (host[:port]), not the
-        // full URL. [classifyDrainFailure] deliberately treats every timeout — a connect
-        // timeout OR a park idle-cut — as "busy, retry" and never dead, because one slow
-        // answer shouldn't evict a relay. But in a crawl the same unresponsive server is
+        // full URL. [classifyDrainFailure] treats a READ timeout or a park idle-cut — the
+        // relay answered the handshake but is slow — as "busy, retry" and never dead,
+        // because one slow answer shouldn't evict a relay. But in a crawl the same
+        // unresponsive server is
         // routed through every straggler's outbox, every round, each visit burning the
         // full timeout + park window for zero data. Keying by authority is what defeats
         // the outbox-model's per-user path fragmentation: a paid/dead host like
@@ -324,20 +324,14 @@ class GrapeRankDataCrawler(
         var progConverging = false
 
         /**
-         * A relay that HARD-failed (bad domain, TLS misconfig, dead HTTP code) is
-         * dropped on the first strike: it will not fix itself. A TRANSIENT failure
-         * (refused/reset/unreachable, or a 429/5xx) might clear, so it takes
-         * MAX_DEAD_STRIKES before we give up. Pure timeouts never reach here — the
-         * drain treats them as busy-retry and does not report them dead at all.
+         * A relay [classifyDrainFailure] flagged [DrainFailure.DEAD] won't serve us
+         * this run (bad domain, TLS misconfig, dead/gated HTTP code, refused/reset,
+         * connect that never opened), so it is dropped on the first strike. Read
+         * timeouts and alive 429 rate-limits never reach here — the drain treats them
+         * as busy-retry and does not report them dead at all.
          */
         fun recordDead(failed: Map<NormalizedRelayUrl, DrainFailure>) {
-            for ((r, kind) in failed) {
-                when (kind) {
-                    DrainFailure.HARD -> deadRelays.add(r)
-                    DrainFailure.TRANSIENT ->
-                        if (relayStrikes.merge(r, 1) { a, b -> a + b } >= MAX_DEAD_STRIKES) deadRelays.add(r)
-                }
-            }
+            for ((r, _) in failed) deadRelays.add(r)
         }
 
         /**
@@ -960,11 +954,7 @@ class GrapeRankDataCrawler(
                 relay: NormalizedRelayUrl,
                 into: ConcurrentMap<NormalizedRelayUrl, DrainFailure>,
             ) {
-                classifyDrainFailure(reason)?.let { kind ->
-                    into.merge(relay, kind) { a, b ->
-                        if (a == DrainFailure.HARD || b == DrainFailure.HARD) DrainFailure.HARD else DrainFailure.TRANSIENT
-                    }
-                }
+                classifyDrainFailure(reason)?.let { kind -> into[relay] = kind }
             }
 
             fun logSlow(
@@ -1677,10 +1667,6 @@ class GrapeRankDataCrawler(
         // The small-remainder broadcast goes to this many top live relays — a user's
         // kind:3 is often mirrored on a busy relay ranked below the top 10.
         private const val BROADCAST_RELAYS = 60
-
-        // A relay that fails to CONNECT this many times is treated as dead. Kept
-        // above 1 so a single transient connect blip doesn't evict a relay.
-        private const val MAX_DEAD_STRIKES = 3
 
         // Most-used write relays kept as the known-good backbone for retrying users.
         private const val BACKBONE_SIZE = 30

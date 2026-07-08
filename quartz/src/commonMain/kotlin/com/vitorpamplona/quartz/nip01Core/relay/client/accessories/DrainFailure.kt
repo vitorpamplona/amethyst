@@ -21,80 +21,48 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 /**
- * Why a relay could not be used for a one-shot drain — when the reason is worth
- * acting on (dropping the relay from further routing).
+ * A drain per-relay failure worth acting on: the relay will not serve us THIS run,
+ * so drop it from further routing on the first occurrence. There is only one such
+ * verdict — [DEAD] — because re-probing hop-8's failed relays fresh, outside the
+ * crawl, showed the old "might clear, retry a few times" (TRANSIENT) bucket almost
+ * never clears: 503 Service Unavailable was 0/12 reachable, 502 Bad Gateway 3/15,
+ * connection-establishment failures 0/30, and the codes that WERE alive (403/402)
+ * are gated and will never hand us events. Spending extra dials on them was waste.
  *
- *  - [HARD]: the relay answered wrong, or cannot exist. A bad HTTP upgrade (not a
- *    websocket / dead status code), an unresolvable domain, or a TLS misconfig.
- *    This will not fix itself, so one strike is enough to drop it.
- *  - [TRANSIENT]: a failure that might clear — a connection reset mid-stream or a
- *    temporary 429/5xx on the upgrade. Struck a few times before we give up.
- *
- * The split between the two connect failures is drawn on measured reachability. On
- * a hop-8 crawl, relays that failed to ESTABLISH a connection (connect timed out,
- * refused, unroutable, or the proxy couldn't tunnel the CONNECT) were 0/30 reachable
- * when re-probed fresh outside the crawl — genuinely dead, so they are [HARD] and one
- * strike drops them. But relays that hit a *read* timeout (handshake accepted, slow
- * to serve) were 12/18 (67%) reachable fresh — alive, only overloaded by the crawl's
- * fan-out. Those must NOT be marked dead: [classifyDrainFailure] returns null for a
- * read/generic timeout (and any non-failure terminal reason), and the crawler's
- * per-authority timeout strikes, which CLEAR on any success, shed only the truly gone.
+ * The only two connect failures that genuinely recover are kept OUT of this verdict
+ * by [classifyDrainFailure] returning null (retry, never dead):
+ *  - a **read** timeout — the relay accepted the handshake but is slow to serve;
+ *    12/18 (67%) were reachable fresh, only overloaded by the crawl's fan-out. The
+ *    crawler's per-authority timeout strikes, which CLEAR on success, shed the gone.
+ *  - an HTTP **429 / too many requests** — alive and rate-limiting; 4/4 reachable
+ *    fresh. Retrying (spaced by the rate limiter) is how we eventually get its data.
  */
-enum class DrainFailure { HARD, TRANSIENT }
+enum class DrainFailure { DEAD, }
 
 /**
- * Classify a drain per-relay terminal reason. Returns null when the relay should
- * simply be retried (a timeout, or a non-failure like eose/closed). The reason
- * shape is `cannot:<message>` for a connect failure (see
- * `BasicRelayClient.onCannotConnect`), or `eose` / `closed:…` / `timeout`.
+ * Classify a drain per-relay terminal reason. Returns null when the relay should be
+ * retried rather than dropped — a read/generic timeout, an alive 429 rate-limit, or
+ * a non-failure like eose/closed. Any other `cannot:<message>` (see
+ * `BasicRelayClient.onCannotConnect`) is [DrainFailure.DEAD]: it will not serve us
+ * this run, so drop it now instead of paying repeated connect attempts.
  */
 fun classifyDrainFailure(reason: String): DrainFailure? {
     if (!reason.startsWith("cannot")) return null
     val m = reason.removePrefix("cannot:").lowercase()
-    // The message now carries the exception class name (see BasicRelayClient), so
-    // we can key on the stable *type* rather than localized message text.
-    // Couldn't even open the socket: the connect timed out, was refused, the host is
-    // unroutable, or the proxy couldn't tunnel the CONNECT. Measured 0/30 such relays
-    // reachable when re-probed fresh outside the crawl — dead, so one strike is enough.
-    // Checked BEFORE the timeout branch so "connect timed out" lands here and is not
-    // mistaken for the alive-but-slow *read* timeout below.
-    if ("connect timed out" in m ||
-        "unexpected response code for connect" in m || // proxy couldn't CONNECT-tunnel
-        "connection refused" in m ||
-        "econnrefused" in m ||
-        "failed to connect" in m ||
-        "no route to host" in m ||
-        "network is unreachable" in m ||
-        "network is down" in m
-    ) {
-        return DrainFailure.HARD
-    }
-    // Busy, not dead: a READ timeout means the relay accepted the handshake but was
-    // slow to serve — measured 12/18 (67%) reachable fresh outside the crawl, only
-    // overloaded by its fan-out. Retry (never mark dead); per-authority timeout
-    // strikes that clear on success shed the truly gone.
-    if ("timeout" in m || "timed out" in m) return null // SocketTimeoutException, etc.
-    // Cannot ever work: unresolvable domain (DNS) or a TLS misconfiguration.
-    // Dead for good — one strike is enough.
-    if ("unknownhost" in m || // UnknownHostException
-        "unable to resolve host" in m ||
-        "no address associated" in m ||
-        "nodename nor servname" in m ||
-        "sslhandshake" in m || // SSLHandshakeException
-        "sslpeerunverified" in m ||
-        "sslexception" in m ||
-        "certificate" in m || // CertificateException
-        "trust anchor" in m ||
-        "certpath" in m
-    ) {
-        return DrainFailure.HARD
-    }
-    // Wrong HTTP upgrade. Usually a misconfigured endpoint (not a relay), but
-    // 429 / 5xx mean "busy, come back later", so those stay transient.
-    if ("server misconfigured" in m || "not a websocket" in m || "expected http 101" in m) {
-        val transientCode = Regex("response: (429|500|502|503|504)").containsMatchIn(m)
-        return if (transientCode) DrainFailure.TRANSIENT else DrainFailure.HARD
-    }
-    // Refused / reset / unreachable / anything else: might clear — retry a few times.
-    return DrainFailure.TRANSIENT
+    // Alive, only asking us to slow down: an HTTP 429 / "too many requests" reliably
+    // clears — 4/4 such relays were reachable when re-probed fresh. Retry it (the
+    // rate limiter spaces our opens); never drop it.
+    if ("429" in m || "too many requests" in m) return null
+    // A READ timeout means the relay accepted the handshake but is slow to serve —
+    // 12/18 (67%) reachable fresh, alive but overloaded by the fan-out. Retry; the
+    // crawler's per-authority timeout strikes, which clear on success, shed the gone.
+    // A *connect* timeout is the opposite (the socket never opened, 0/30 reachable),
+    // so it is excluded here and falls through to DEAD with every other failure.
+    if (("timeout" in m || "timed out" in m) && "connect timed out" !in m) return null
+    // Everything else won't serve us this run: connect refused / unroutable / the
+    // proxy couldn't tunnel the CONNECT, a DNS or TLS failure, a dead-or-not-a-relay
+    // HTTP upgrade (502/503/500/504/410/404/200/…), or a mid-stream reset. Measured
+    // mostly dead (503 0%, 502 20% reachable) and, when alive, gated (402/403) or not
+    // a relay (200). Drop it now rather than burn more dials on it.
+    return DrainFailure.DEAD
 }
