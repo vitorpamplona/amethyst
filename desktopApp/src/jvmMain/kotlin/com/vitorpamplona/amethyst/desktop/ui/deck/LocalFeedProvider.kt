@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.feeds.custom.defaultFeeds
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -38,6 +39,7 @@ private val feedPrefs: Preferences by lazy {
     Preferences.userRoot().node("amethyst/feeds")
 }
 
+@OptIn(DelicateCoroutinesApi::class)
 private val defaultRepository by lazy {
     val repo = FeedDefinitionRepository(GlobalScope)
 
@@ -66,6 +68,7 @@ val LocalFeedRepository =
         defaultRepository
     }
 
+@OptIn(DelicateCoroutinesApi::class)
 val LocalFeedScope =
     compositionLocalOf<CoroutineScope> {
         GlobalScope

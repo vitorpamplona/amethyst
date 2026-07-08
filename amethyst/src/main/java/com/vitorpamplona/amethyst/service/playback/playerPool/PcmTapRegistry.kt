@@ -65,7 +65,7 @@ class SpectrumAudioBufferSink(
     private var channels = 1
     private var encoding = C.ENCODING_PCM_16BIT
 
-    @OptIn(ExperimentalCoroutinesApi::class)
+    @kotlin.OptIn(ExperimentalCoroutinesApi::class)
     override fun flush(
         sampleRateHz: Int,
         channelCount: Int,

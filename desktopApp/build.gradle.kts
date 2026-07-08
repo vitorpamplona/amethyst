@@ -98,7 +98,7 @@ dependencies {
     testImplementation(libs.okhttp)
 
     // Compose UI testing (createComposeRule / onNodeWithText / etc.)
-    testImplementation(compose.desktop.uiTestJUnit4)
+    testImplementation(libs.jetbrains.compose.ui.test.junit4)
 }
 
 compose.desktop {

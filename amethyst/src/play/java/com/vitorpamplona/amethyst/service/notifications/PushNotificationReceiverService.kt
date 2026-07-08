@@ -86,6 +86,7 @@ class PushNotificationReceiverService : FirebaseMessagingService() {
         super.onDestroy()
     }
 
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun onNewToken(token: String) {
         scope.launch(Dispatchers.IO) {
             Log.d("PushNotificationService", "PushNotificationReceiverService.onNewToken")
