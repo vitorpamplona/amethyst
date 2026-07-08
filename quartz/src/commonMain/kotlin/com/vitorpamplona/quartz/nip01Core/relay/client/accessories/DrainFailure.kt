@@ -27,13 +27,18 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
  *  - [HARD]: the relay answered wrong, or cannot exist. A bad HTTP upgrade (not a
  *    websocket / dead status code), an unresolvable domain, or a TLS misconfig.
  *    This will not fix itself, so one strike is enough to drop it.
- *  - [TRANSIENT]: a failure that might clear — connection refused / reset, host
- *    unreachable, or a temporary 429/5xx on the upgrade. Struck a few times
- *    before we give up.
+ *  - [TRANSIENT]: a failure that might clear — a connection reset mid-stream or a
+ *    temporary 429/5xx on the upgrade. Struck a few times before we give up.
  *
- * A pure connect **timeout** is neither. The relay is most likely just busy, so
- * we retry it and never mark it dead — [classifyDrainFailure] returns null for
- * it (and for any non-failure terminal reason).
+ * The split between the two connect failures is drawn on measured reachability. On
+ * a hop-8 crawl, relays that failed to ESTABLISH a connection (connect timed out,
+ * refused, unroutable, or the proxy couldn't tunnel the CONNECT) were 0/30 reachable
+ * when re-probed fresh outside the crawl — genuinely dead, so they are [HARD] and one
+ * strike drops them. But relays that hit a *read* timeout (handshake accepted, slow
+ * to serve) were 12/18 (67%) reachable fresh — alive, only overloaded by the crawl's
+ * fan-out. Those must NOT be marked dead: [classifyDrainFailure] returns null for a
+ * read/generic timeout (and any non-failure terminal reason), and the crawler's
+ * per-authority timeout strikes, which CLEAR on any success, shed only the truly gone.
  */
 enum class DrainFailure { HARD, TRANSIENT }
 
@@ -48,8 +53,26 @@ fun classifyDrainFailure(reason: String): DrainFailure? {
     val m = reason.removePrefix("cannot:").lowercase()
     // The message now carries the exception class name (see BasicRelayClient), so
     // we can key on the stable *type* rather than localized message text.
-    // Busy, not dead: a connect/read timeout means the handshake just didn't
-    // finish in time. Retry it — the relay is probably fine, only slow or loaded.
+    // Couldn't even open the socket: the connect timed out, was refused, the host is
+    // unroutable, or the proxy couldn't tunnel the CONNECT. Measured 0/30 such relays
+    // reachable when re-probed fresh outside the crawl — dead, so one strike is enough.
+    // Checked BEFORE the timeout branch so "connect timed out" lands here and is not
+    // mistaken for the alive-but-slow *read* timeout below.
+    if ("connect timed out" in m ||
+        "unexpected response code for connect" in m || // proxy couldn't CONNECT-tunnel
+        "connection refused" in m ||
+        "econnrefused" in m ||
+        "failed to connect" in m ||
+        "no route to host" in m ||
+        "network is unreachable" in m ||
+        "network is down" in m
+    ) {
+        return DrainFailure.HARD
+    }
+    // Busy, not dead: a READ timeout means the relay accepted the handshake but was
+    // slow to serve — measured 12/18 (67%) reachable fresh outside the crawl, only
+    // overloaded by its fan-out. Retry (never mark dead); per-authority timeout
+    // strikes that clear on success shed the truly gone.
     if ("timeout" in m || "timed out" in m) return null // SocketTimeoutException, etc.
     // Cannot ever work: unresolvable domain (DNS) or a TLS misconfiguration.
     // Dead for good — one strike is enough.
