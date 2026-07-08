@@ -597,7 +597,9 @@ private fun printUsage() {
         |    [--max-rounds N] [--max-hops N]           for their latest kind:3/10000/1984 until every
         |    [--offline] [--timeout SECS]              discovered user has been checked (no user cap;
         |    [--diagnose]                              --max-hops bounds follow distance, e.g. 8;
-        |                                              --diagnose logs slow/failed relays on timeout).
+        |                                              --diagnose dumps per-relay telemetry: outcome
+        |                                              mix, yield, latency, and a LIVE/DEAD + limits
+        |                                              classification table of every relay contacted).
         |    [--publish] [--min-rank N]                OBSERVER: npub|nprofile|hex|name@domain (default:
         |    [--publish-limit N] [--publish-relay URL] active account). --offline scores from the local
         |                                              store only. --publish reconciles NIP-85 kind:30382
