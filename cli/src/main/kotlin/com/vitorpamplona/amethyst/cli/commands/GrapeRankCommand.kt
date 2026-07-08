@@ -52,10 +52,15 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProvider
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceType
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.net.URI
 import kotlin.math.roundToInt
 
 /**
@@ -121,6 +126,46 @@ object GrapeRankCommand {
                 "wss://nostr.oxtr.dev",
                 "wss://nos.lol",
             ).mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
+
+    private const val PROBE_TIMEOUT_MS = 2000
+
+    /**
+     * Cheap reachability pre-probe: a raw TCP connect (one round trip) with a tight
+     * timeout. Returns false only when the port won't even accept a socket — a dead
+     * dropper, refusal, or unroutable/onion/LAN host — which the crawler drops into
+     * deadHosts before the WS path pays its 7s connectTimeout. A busy-but-alive relay
+     * accepts the SYN instantly at the kernel level (its slowness is at the app layer),
+     * so it passes here and is left for the real WS attempt. Unparseable host → true,
+     * so an odd URL is never culled on a parse quirk — let the WS decide.
+     */
+    private suspend fun tcpReachable(relay: NormalizedRelayUrl): Boolean =
+        withContext(Dispatchers.IO) {
+            val hostPort = relayHostPort(relay) ?: return@withContext true
+            try {
+                Socket().use { it.connect(InetSocketAddress(hostPort.first, hostPort.second), PROBE_TIMEOUT_MS) }
+                true
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                false
+            }
+        }
+
+    private fun relayHostPort(relay: NormalizedRelayUrl): Pair<String, Int>? =
+        try {
+            val uri = URI(relay.url)
+            val host = uri.host ?: return null
+            val port =
+                if (uri.port > 0) {
+                    uri.port
+                } else if (relay.url.startsWith("wss://", ignoreCase = true)) {
+                    443
+                } else {
+                    80
+                }
+            host to port
+        } catch (e: Exception) {
+            null
+        }
 
     suspend fun dispatch(
         dataDir: DataDir,
@@ -396,6 +441,10 @@ object GrapeRankCommand {
                     insertBatchSize = args.intFlag("insert-batch", 500),
                     drainConcurrency = args.intFlag("drain-concurrency", 24),
                     timeoutEvictStrikes = args.intFlag("timeout-evict", 3),
+                    // Cheap TCP reachability pre-probe (--no-probe to disable). No Tor
+                    // transport here, so .onion relays are skipped on sight.
+                    reachabilityProbe = if (args.bool("no-probe")) null else ::tcpReachable,
+                    torEnabled = false,
                     // shedDeadDiscovery / shardRotations keep their benchmarked-best
                     // Config defaults.
                 ),

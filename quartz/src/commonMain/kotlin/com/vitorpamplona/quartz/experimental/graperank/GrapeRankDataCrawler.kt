@@ -49,10 +49,13 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -177,6 +180,25 @@ class GrapeRankDataCrawler(
          * 6-rotation wall cost with no completeness loss (1 clears too little).
          */
         val shardRotations: Int = 2,
+        /**
+         * Optional cheap reachability pre-probe. Given a relay, returns false if it
+         * is definitely unreachable from here — a raw TCP connect (one round trip)
+         * that failed fast. A background culler runs it over the cold tail of learned
+         * relays and drops the unreachable ones into [deadHosts] BEFORE the expensive
+         * WS path pays the full 7s connectTimeout on them. It only ever marks dead
+         * and defers to the WS verdict: a host already proven live/dead is skipped.
+         * A tight TCP timeout is safe where a tight WS timeout is not — a busy-but-
+         * alive relay accepts the SYN instantly (kernel-level) and only stalls at the
+         * app layer, so TCP-reachability separates "unreachable" from "slow". Null
+         * disables pre-probing.
+         */
+        val reachabilityProbe: (suspend (NormalizedRelayUrl) -> Boolean)? = null,
+        /**
+         * Whether this client can reach .onion relays (has a Tor transport). When
+         * false, every .onion relay is unreachable and [isDead] skips it on sight —
+         * no socket, no wasted connect attempt.
+         */
+        val torEnabled: Boolean = false,
     )
 
     /** What the crawl fetched — the counters the caller reports and the graph is built from. */
@@ -219,14 +241,13 @@ class GrapeRankDataCrawler(
     }
 
     /**
-     * Holds all per-crawl mutable state. Graph state (done/hopOf/builder/
-     * writeRelayFreq/liveRelays/relaysContacted) is single-writer by construction
-     * — Phase A and the Phase-B consumer never run concurrently, and routeByOutbox
-     * (the only Phase-B producer write, to writeRelayFreq) touches a disjoint field
-     * — so those stay plain collections. The frontier IS [hopOf]'s key set: a user
-     * is "discovered" iff it has a hop stamp. Only the state genuinely shared across
-     * the producer / consumer / drain-worker coroutines is concurrent: relayHints,
-     * attempts, deadRelays.
+     * Holds all per-crawl mutable state. Graph state (done/hopOf/builder/liveRelays/
+     * relaysContacted) is single-writer by construction — Phase A and the Phase-B
+     * consumer never run concurrently — so those stay plain collections. The frontier
+     * IS [hopOf]'s key set: a user is "discovered" iff it has a hop stamp. State
+     * genuinely shared across the producer / consumer / drain-worker coroutines is
+     * concurrent: relayHints, attempts, deadRelays. [writeRelayFreq] is also concurrent
+     * because the background reachability culler reads it while routeByOutbox writes it.
      */
     private inner class CrawlRun(
         val observer: HexKey,
@@ -237,7 +258,7 @@ class GrapeRankDataCrawler(
         val hopOf = hashMapOf(observer to 0)
         val done = hashSetOf<HexKey>()
         val relaysContacted = hashSetOf<NormalizedRelayUrl>()
-        val writeRelayFreq = HashMap<NormalizedRelayUrl, Int>()
+        val writeRelayFreq = ConcurrentMap<NormalizedRelayUrl, Int>()
         val liveRelays = hashSetOf<NormalizedRelayUrl>()
 
         // Per-relay outcome/latency/yield accounting, written from every drain unit
@@ -366,19 +387,74 @@ class GrapeRankDataCrawler(
 
         /**
          * A relay is out of the routing pool if it hard/transient-failed (per-URL
-         * [deadRelays]) or its whole authority was timeout-evicted ([deadHosts]).
+         * [deadRelays]) or its whole authority was timeout-evicted ([deadHosts]); a
+         * .onion relay is dead on sight unless we have a Tor transport, since every
+         * connect to it would only hang and fail.
          */
-        fun isDead(relay: NormalizedRelayUrl): Boolean = relay in deadRelays || authorityOf(relay.url) in deadHosts
+        fun isDead(relay: NormalizedRelayUrl): Boolean =
+            relay in deadRelays ||
+                authorityOf(relay.url) in deadHosts ||
+                (!config.torEnabled && relay.url.contains(".onion"))
 
         /** The busiest live relays we've learned, excluding the dead ones. */
         fun topLiveRelays(cap: Int): List<NormalizedRelayUrl> =
-            writeRelayFreq.entries
+            writeRelayFreq
+                .snapshot()
+                .entries
                 .asSequence()
                 .filter { it.key in liveRelays && !isDead(it.key) }
                 .sortedByDescending { it.value }
                 .take(cap)
                 .map { it.key }
                 .toList()
+
+        /**
+         * Background reachability culler. Cheaply TCP-probes the relays we've learned —
+         * COLD TAIL FIRST — and drops the unreachable ones into [deadHosts] so the WS
+         * path never pays the 7s connectTimeout on a dead host. It only ever marks dead
+         * and probes each authority once: a host already resolved by the WS path
+         * ([isDead]) is skipped, and a live host would pass the TCP probe anyway, so the
+         * WS verdict always wins ("if the websocket gets there first, let it run"). The
+         * cold-tail ordering keeps it off the hot relays the crawl is actively dialing.
+         * Runs on [bgScope] until the crawl cancels it.
+         */
+        private suspend fun cullUnreachable(probe: suspend (NormalizedRelayUrl) -> Boolean) {
+            val probed = HashSet<String>() // authorities; only ever touched by this coroutine's loop
+            val gate = Semaphore(PROBE_CONCURRENCY)
+            while (currentCoroutineContext().isActive) {
+                // Least-written relays are the niche/dead long tail the WS path reaches
+                // last — probing them first buys the most head start with the least
+                // contention against the busy relays already being connected.
+                val batch =
+                    writeRelayFreq
+                        .snapshot()
+                        .entries
+                        .asSequence()
+                        .filter { authorityOf(it.key.url) !in probed && !isDead(it.key) }
+                        .sortedBy { it.value }
+                        .map { it.key }
+                        .toList()
+                if (batch.isEmpty()) {
+                    delay(PROBE_IDLE_MS)
+                    continue
+                }
+                coroutineScope {
+                    for (relay in batch) {
+                        val authority = authorityOf(relay.url)
+                        if (!probed.add(authority)) continue
+                        gate.acquire()
+                        launch {
+                            try {
+                                // Re-check: the WS path may have resolved it while queued.
+                                if (!isDead(relay) && !probe(relay)) deadHosts.add(authority)
+                            } finally {
+                                gate.release()
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         /**
          * Feed a user's contact list into the graph, harvest relay hints, stamp
@@ -616,7 +692,7 @@ class GrapeRankDataCrawler(
 
             for (pk in pubkeys) {
                 val write = relaysOf(pk)?.writeRelaysNorm()?.takeIf { it.isNotEmpty() }
-                write?.forEach { writeRelayFreq[it] = (writeRelayFreq[it] ?: 0) + 1 }
+                write?.forEach { writeRelayFreq.merge(it, 1) { a, b -> a + b } }
                 val relays =
                     when {
                         write == null -> relayHints[pk]?.snapshot().orEmpty() + backbone + fallback
@@ -1172,6 +1248,12 @@ class GrapeRankDataCrawler(
             // Runs on [scope], so scope.cancel() at crawl end stops it.
             scope.launch { progressTicker() }
 
+            // Background reachability culler: cheaply TCP-probes the cold tail of
+            // learned relays and drops the unreachable ones into deadHosts before the
+            // WS path pays the full connectTimeout on them. Runs on [scope], stopped
+            // by scope.cancel() at crawl end.
+            config.reachabilityProbe?.let { probe -> scope.launch { cullUnreachable(probe) } }
+
             while (rounds < config.maxRounds) {
                 // Fold in whatever the parked (slow-but-alive) relays have delivered
                 // since the last round — their late contact lists expand the frontier
@@ -1572,6 +1654,15 @@ class GrapeRankDataCrawler(
     companion object {
         // Authors per REQ filter — keeps individual subscriptions within relay limits.
         private const val AUTHORS_PER_FILTER = 300
+
+        // Concurrent TCP reachability probes in the background culler. Raw sockets are
+        // cheap and short-lived; the per-relay WS limiter is unaffected (this never
+        // opens a REQ), so this only bounds file descriptors during the cull.
+        private const val PROBE_CONCURRENCY = 256
+
+        // Re-scan interval for the culler when it has probed everything learned so far
+        // and is waiting for new relays to be discovered.
+        private const val PROBE_IDLE_MS = 2000L
 
         // A single REQ can match up to authors×kinds events; a relay that caps its
         // response below that silently drops the tail (measured: user.kindpag.es
