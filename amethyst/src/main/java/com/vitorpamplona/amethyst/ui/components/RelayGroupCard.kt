@@ -111,9 +111,9 @@ private fun RelayGroupCardContent(
             relayLabel
         }
 
-    // Description is reserved at a fixed two lines so it fills in when the metadata
-    // arrives without changing the card's height (empty for groups with no about).
-    val description = channel.summary()?.takeIf { it.isNotBlank() } ?: ""
+    // Shown only when the group actually has an about, so description-less groups stay
+    // compact. It appears (a small one-time grow) once the relay-signed metadata loads.
+    val description = channel.summary()?.takeIf { it.isNotBlank() }
 
     OutlinedCard(
         onClick = {
@@ -177,15 +177,16 @@ private fun RelayGroupCardContent(
                 )
             }
 
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                minLines = 2,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
         }
     }
 }
