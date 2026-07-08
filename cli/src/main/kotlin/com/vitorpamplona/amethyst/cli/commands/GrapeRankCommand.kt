@@ -394,7 +394,7 @@ object GrapeRankCommand {
                     parkTimeoutMs = args.longFlag("park-timeout", 40L) * 1000,
                     diagnose = args.bool("diagnose"),
                     insertBatchSize = args.intFlag("insert-batch", 500),
-                    drainConcurrency = args.intFlag("drain-concurrency", 1024),
+                    drainConcurrency = args.intFlag("drain-concurrency", 4096),
                     timeoutEvictStrikes = args.intFlag("timeout-evict", 3),
                     // shedDeadDiscovery / shardRotations keep their benchmarked-best
                     // Config defaults.
