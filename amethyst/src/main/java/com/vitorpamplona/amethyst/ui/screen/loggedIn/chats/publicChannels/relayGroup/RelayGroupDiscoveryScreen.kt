@@ -33,8 +33,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -45,9 +43,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,44 +61,19 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupDirectorySubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
-private class DiscoveryFilterOption(
-    val labelRes: Int,
-    val isSelected: (RelayGroupDiscoveryViewModel) -> Boolean,
-    val apply: (RelayGroupDiscoveryViewModel) -> Unit,
-)
-
-private val DISCOVERY_FILTERS =
-    listOf(
-        DiscoveryFilterOption(R.string.relay_group_discovery_filter_global, { !it.favorites.value && it.filter.value == TopFilter.Global }) {
-            it.favorites.value = false
-            it.filter.value = TopFilter.Global
-        },
-        DiscoveryFilterOption(R.string.relay_group_discovery_filter_follows, { !it.favorites.value && it.filter.value == TopFilter.AllFollows }) {
-            it.favorites.value = false
-            it.filter.value = TopFilter.AllFollows
-        },
-        DiscoveryFilterOption(R.string.relay_group_discovery_filter_around_me, { !it.favorites.value && it.filter.value == TopFilter.AroundMe }) {
-            it.favorites.value = false
-            it.filter.value = TopFilter.AroundMe
-        },
-        DiscoveryFilterOption(R.string.relay_group_discovery_filter_favorites, { it.favorites.value }) {
-            it.favorites.value = true
-        },
-    )
-
-/** How many relays we fan the directory query out to at once, so "Global" stays bounded. */
-private const val MAX_DISCOVERY_RELAYS = 40
-
 /**
- * Discover NIP-29 groups across a relay set chosen by a top-bar filter (Global / Follows /
- * Around Me / Favorites — see [RelayGroupDiscoveryViewModel]). Fans the group-directory
- * query out to those relays and lists every group they host as a joinable card.
+ * Discover NIP-29 groups across the relay set the top-bar filter resolves to. Mirrors the
+ * Git/Pictures feeds: a [FeedFilterSpinner] persists the selection to
+ * `defaultRelayGroupsDiscoveryFollowList` (Global / Follows / a followed hashtag or geohash /
+ * a specific relay — favorite relays show up as relay chips). The group directory query is
+ * fanned out to every relay in that set and each group is listed as a joinable card.
  */
 @Composable
 fun RelayGroupDiscoveryScreen(
@@ -115,69 +85,32 @@ fun RelayGroupDiscoveryScreen(
 
     val relays by viewModel.relays.collectAsStateWithLifecycle()
     val groups by viewModel.groups.collectAsStateWithLifecycle()
-    val favorites by viewModel.favorites.collectAsStateWithLifecycle()
-    val filter by viewModel.filter.collectAsStateWithLifecycle()
+    val selectedFilter by accountViewModel.account.settings.defaultRelayGroupsDiscoveryFollowList
+        .collectAsStateWithLifecycle()
     val favoriteRelays by accountViewModel.account.relayFeedsList.flow
         .collectAsStateWithLifecycle()
 
     // Fan the directory subscription out to each relay in the current set while the screen
     // is visible; each is a lifecycle-aware per-relay REQ that EOSEs and dedupes by relay.
-    relays.take(MAX_DISCOVERY_RELAYS).forEach { relay ->
+    relays.forEach { relay ->
         key(relay) {
             RelayGroupDirectorySubscription(relay, accountViewModel.dataSources().relayGroupDirectory, accountViewModel)
         }
     }
 
-    var menuOpen by remember { mutableStateOf(false) }
-    val currentLabel = stringRes(DISCOVERY_FILTERS.first { it.isSelected(viewModel) }.labelRes)
-
     Scaffold(
         topBar = {
+            val options by accountViewModel.feedStates.feedListOptions.kind3GlobalPeopleRoutes
+                .collectAsStateWithLifecycle()
             TopBarExtensibleWithBackButton(
                 title = {
-                    Box {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier =
-                                Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .clickable { menuOpen = true }
-                                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                        ) {
-                            Column {
-                                Text(
-                                    text = stringRes(R.string.relay_group_discovery_title),
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    text = currentLabel,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    maxLines = 1,
-                                )
-                            }
-                            Icon(
-                                symbol = MaterialSymbols.ExpandMore,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            DISCOVERY_FILTERS.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(stringRes(option.labelRes)) },
-                                    onClick = {
-                                        option.apply(viewModel)
-                                        menuOpen = false
-                                    },
-                                )
-                            }
-                        }
-                    }
+                    FeedFilterSpinner(
+                        placeholderCode = selectedFilter,
+                        explainer = stringRes(R.string.select_list_to_filter),
+                        options = options,
+                        onSelect = accountViewModel.account.settings::changeDefaultRelayGroupsDiscoveryFollowList,
+                        accountViewModel = accountViewModel,
+                    )
                 },
                 actions = {
                     IconButton(onClick = { nav.nav(Route.RelayGroupBrowse) }) {
@@ -196,10 +129,10 @@ fun RelayGroupDiscoveryScreen(
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
                     text =
-                        if (favorites || filter != TopFilter.Global) {
-                            stringRes(R.string.relay_group_discovery_empty_filtered)
-                        } else {
+                        if (selectedFilter == TopFilter.Global) {
                             stringRes(R.string.relay_group_discovery_empty)
+                        } else {
+                            stringRes(R.string.relay_group_discovery_empty_filtered)
                         },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -298,7 +231,8 @@ private fun RelayGroupDiscoveryCard(
             }
         }
 
-        // Star the group's host relay so it shows under the Favorites filter.
+        // Star the group's host relay so it (and its other groups) surface under the relay
+        // chip in the filter — the favorite is the kind-10012 relay-feeds list.
         IconButton(onClick = {
             if (isFavoriteRelay) accountViewModel.unfollowRelayFeed(relay) else accountViewModel.followRelayFeed(relay)
         }) {

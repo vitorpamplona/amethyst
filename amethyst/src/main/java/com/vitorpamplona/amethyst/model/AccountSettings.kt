@@ -215,6 +215,7 @@ class AccountSettings(
     val defaultCommunitiesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultFollowPacksFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultAppRecommendationsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultRelayGroupsDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
     val clinkDebitWallets: MutableStateFlow<List<ClinkDebitWalletEntryNorm>> = MutableStateFlow(emptyList()),
     // The unified default spend rail (an NWC wallet OR a CLINK debit). Persisted under a
@@ -654,6 +655,17 @@ class AccountSettings(
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultRelayGroupsDiscoveryFollowList(name: FeedDefinition) {
+        changeDefaultRelayGroupsDiscoveryFollowList(name.code)
+    }
+
+    fun changeDefaultRelayGroupsDiscoveryFollowList(name: TopFilter) {
+        if (defaultRelayGroupsDiscoveryFollowList.value != name) {
+            defaultRelayGroupsDiscoveryFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

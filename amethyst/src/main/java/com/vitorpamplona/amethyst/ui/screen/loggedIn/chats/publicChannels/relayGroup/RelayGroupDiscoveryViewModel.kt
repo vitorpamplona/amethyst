@@ -26,9 +26,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
@@ -37,15 +35,14 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.All
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -69,23 +66,23 @@ fun IFeedTopNavPerRelayFilterSet.relayKeys(): Set<NormalizedRelayUrl> =
         is AllCommunitiesTopNavPerRelayFilterSet -> set.keys
         is SingleCommunityTopNavPerRelayFilterSet -> set.keys
         is MutedAuthorsTopNavPerRelayFilterSet -> set.keys
+        // A single relay chip (includes a starred favorite relay).
+        is RelayTopNavPerRelayFilterSet -> setOf(relayUrl)
+        // DVM algo-feed selections carry no group-hosting relays.
         else -> emptySet()
     }
 
 /**
- * Drives the Relay Groups discovery feed. A top-bar filter ([Global], [AllFollows],
- * [AroundMe], …) selects a relay set via the account's shared `topNavFilterFlow` +
- * outbox resolution; a [favorites] toggle swaps in the user's kind-10009… kind-10012
- * favorite-relays list instead. Either way the feed is every group (kind 39000) those
- * relays host, read from [LocalCache] as directory events arrive. Selection is kept in
- * this ViewModel (not persisted) — a discovery screen resets to Global each visit.
+ * Drives the Relay Groups discovery feed. The top bar's [FeedFilterSpinner] writes the
+ * selection to the account's persisted `defaultRelayGroupsDiscoveryFollowList` (Global /
+ * Follows / a followed hashtag or geohash / a specific relay — including favorite relays,
+ * which surface as relay chips), exactly like every other feed. Because a group's kind-39000
+ * is relay-signed, the only thing the filter contributes is its RELAY SET ([relayKeys]); the
+ * feed is every group those relays host, read from [LocalCache] as directory events arrive.
  */
 @Stable
 class RelayGroupDiscoveryViewModel : ViewModel() {
     private lateinit var account: Account
-
-    val filter = MutableStateFlow<TopFilter>(TopFilter.Global)
-    val favorites = MutableStateFlow(false)
 
     lateinit var relays: StateFlow<Set<NormalizedRelayUrl>>
         private set
@@ -98,12 +95,10 @@ class RelayGroupDiscoveryViewModel : ViewModel() {
         if (this::account.isInitialized) return
         account = acc
 
-        val perRelaySet = OutboxLoaderState(account.topNavFilterFlow(filter), LocalCache, viewModelScope).flow
-
         relays =
-            combine(favorites, perRelaySet, account.relayFeedsList.flow) { showFavorites, perRelay, favoriteRelays ->
-                if (showFavorites) favoriteRelays else perRelay.relayKeys()
-            }.stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+            account.liveRelayGroupsDiscoveryFollowListsPerRelay
+                .map { it.relayKeys() }
+                .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
 
         groups =
             relays
@@ -129,6 +124,4 @@ class RelayGroupDiscoveryViewModel : ViewModel() {
                         .thenBy { it.toBestDisplayName().lowercase() },
                 )
         }
-
-    fun isFavorite(relay: NormalizedRelayUrl): Boolean = relay in account.relayFeedsList.flow.value
 }
