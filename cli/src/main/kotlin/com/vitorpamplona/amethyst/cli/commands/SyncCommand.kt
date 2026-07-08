@@ -27,6 +27,9 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncException
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.deletionSideChannelFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.excludesDeletionKinds
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyPropagateDeletions
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcile
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -53,6 +56,16 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * Pass both for a full bidirectional sync. The filter flags are the same as
  * `fetch`/`subscribe`; an empty filter reconciles the whole store.
+ *
+ * Deletions ride a side-channel. NIP-77 reconciles by id over the content
+ * filter, so a scoped sync (`--kind 1`) would never carry the kind-5/62 that
+ * deletes one of those notes — the deletion would be stuck on whichever side
+ * issued it. So whenever the filter pins `kinds` and excludes 5/62, a second
+ * reconcile over `{kinds:[5,62], authors:<same>}` runs **both directions
+ * regardless of --up/--down** ([negentropyPropagateDeletions]): local deletions
+ * are pushed up so the relay applies them, and the relay's deletions are pulled
+ * down so the local store applies them. A kind-62 vanish is only pushed to a
+ * relay it actually targets. Pass `--no-sync-deletions` to opt out.
  *
  * Both directions are pipelined with the reconcile: need-id batches feed
  * [DOWNLOAD_WORKERS] concurrent by-id REQ drains and have-ids feed a single
@@ -93,6 +106,7 @@ object SyncCommand {
         // Default direction is download; --up adds upload.
         val up = args.bool("up")
         val down = args.bool("down") || !up
+        val syncDeletions = !args.bool("no-sync-deletions")
         val filter = RawEventSupport.buildFilter(args)
 
         Context.open(dataDir).use { ctx ->
@@ -160,6 +174,34 @@ object SyncCommand {
                     return Output.error("sync_error", e.message ?: "negentropy sync failed")
                 }
 
+            // Deletion side-channel: propagate kind 5/62 both ways, independent of
+            // the content filter, so a scoped sync still carries the deletions that
+            // apply to it. No-op (returns null) when the filter already covers 5/62.
+            val deletionsDown = AtomicInteger(0)
+            val deletionsUp = AtomicInteger(0)
+            val deletionResult =
+                if (syncDeletions && filter.excludesDeletionKinds()) {
+                    try {
+                        val localDeletions = ctx.store.query<Event>(filter.deletionSideChannelFilter())
+                        ctx.client.negentropyPropagateDeletions(
+                            relay = relay,
+                            contentFilter = filter,
+                            localDeletions = localDeletions,
+                            idleTimeoutMs = timeoutMs,
+                            download = { batch ->
+                                deletionsDown.addAndGet(ctx.drain(mapOf(relay to listOf(Filter(ids = batch))), timeoutMs).size)
+                            },
+                            upload = { event ->
+                                if (ctx.publish(event, setOf(relay)).values.any { it }) deletionsUp.incrementAndGet()
+                            },
+                        )
+                    } catch (e: NegentropySyncException) {
+                        return Output.error("sync_error", e.message ?: "deletion sync failed")
+                    }
+                } else {
+                    null
+                }
+
             Output.emit(
                 mapOf(
                     "relay" to relay.url,
@@ -169,6 +211,10 @@ object SyncCommand {
                     "have" to result.haveCount,
                     "downloaded" to downloaded.get(),
                     "uploaded" to uploaded.get(),
+                    "deletions_need" to (deletionResult?.needCount ?: 0),
+                    "deletions_have" to (deletionResult?.haveCount ?: 0),
+                    "deletions_downloaded" to deletionsDown.get(),
+                    "deletions_uploaded" to deletionsUp.get(),
                 ),
             )
             return 0
