@@ -238,6 +238,7 @@ object GrapeRankCommand {
                     "relay_throttling" to if (ctx.relayLimiter.hadThrottling()) ctx.relayLimiter.snapshot() else null,
                     "max_hop_reached" to (hopHistogram.keys.maxOrNull() ?: 0),
                     "users_by_hop" to hopHistogram.mapKeys { it.key.toString() },
+                    "contact_lists_by_hop" to crawlStats?.contactsFedByHop.orEmpty().mapKeys { it.key.toString() },
                     "graph_users" to graph.nodeCount,
                     "graph_edges" to graph.edgeCount(),
                     "reports_deleted" to reportsDeleted,
@@ -372,6 +373,8 @@ object GrapeRankCommand {
                     diagnose = args.bool("diagnose"),
                     insertBatchSize = args.intFlag("insert-batch", 500),
                     drainConcurrency = args.intFlag("drain-concurrency", 24),
+                    // shedDeadDiscovery / shardRotations keep their benchmarked-best
+                    // Config defaults.
                 ),
             log = { System.err.println(it) },
         )
@@ -415,6 +418,7 @@ object GrapeRankCommand {
                     "relay_throttling" to if (ctx.relayLimiter.hadThrottling()) ctx.relayLimiter.snapshot() else null,
                     "max_hop_reached" to (stats.hopHistogram.keys.maxOrNull() ?: 0),
                     "users_by_hop" to stats.hopHistogram.mapKeys { it.key.toString() },
+                    "contact_lists_by_hop" to stats.contactsFedByHop.mapKeys { it.key.toString() },
                     "users_discovered" to stats.hopHistogram.values.sum(),
                     "contact_lists_fed" to stats.contactListsFed,
                     "download_ms" to stats.downloadMs,
