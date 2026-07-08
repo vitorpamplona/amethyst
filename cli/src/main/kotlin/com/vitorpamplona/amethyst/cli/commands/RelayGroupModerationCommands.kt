@@ -91,13 +91,17 @@ object RelayGroupModerationCommands {
                     (meta?.isClosed() ?: false)
                 }
 
+            // A kind-9002 re-asserts the whole metadata, so omitted fields must be carried over
+            // from the current 39000 — otherwise editing only a flag would wipe name/about/tags.
             val signed =
                 ctx.signer.sign(
                     EditMetadataEvent.build(
                         groupId,
-                        name = args.flag("name"),
-                        about = args.flag("about"),
+                        name = args.flag("name") ?: meta?.name(),
+                        about = args.flag("about") ?: meta?.about(),
                         status = groupStatus(isPrivate, isClosed),
+                        hashtags = meta?.hashtags() ?: emptyList(),
+                        geohashes = meta?.geohashes()?.maxByOrNull { it.length }?.let { listOf(it) } ?: emptyList(),
                     ),
                 )
             val ack = ctx.publish(signed, setOf(relay))

@@ -24,9 +24,10 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavP
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
-// A follows filter routes to each relay the follow set uses and asks, per relay, for the three
-// ways a follow surfaces in a relay-signed group: the relay signing-key is a follow, or a follow
-// is an admin (39001) or a member (39002). See [filterRelayGroupsByAuthors].
+// The All-Follows filter is a big-OR: a group surfaces if a follow is its relay key / admin /
+// member (via [filterRelayGroupsByAuthors]) OR it carries a followed topic / geohash. The local
+// AnyOf constraint matches all three lenses, so the REQ must fetch all three — otherwise a group
+// under a followed hashtag run by non-followed people would be matched but never requested.
 fun filterRelayGroupsByFollows(
     followsSet: AllFollowsTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
@@ -34,10 +35,20 @@ fun filterRelayGroupsByFollows(
 ): List<RelayBasedFilter> {
     if (followsSet.set.isEmpty()) return emptyList()
 
+    val channelsByRelay = relayGroupChannelsByRelay()
     return followsSet.set.flatMap {
-        val relaySince = since?.get(it.key)?.time ?: defaultSince
-        it.value.authors?.let { authors ->
-            filterRelayGroupsByAuthors(it.key, authors, relaySince)
-        } ?: emptyList()
+        val relay = it.key
+        val relaySince = since?.get(relay)?.time ?: defaultSince
+        buildList {
+            it.value.authors?.takeIf { a -> a.isNotEmpty() }?.let { authors ->
+                addAll(filterRelayGroupsByAuthors(relay, authors, relaySince, channelsByRelay[relay].orEmpty()))
+            }
+            it.value.hashtags?.takeIf { h -> h.isNotEmpty() }?.let { hashtags ->
+                addAll(filterRelayGroupsByHashtag(relay, hashtags, relaySince))
+            }
+            it.value.geotags?.takeIf { g -> g.isNotEmpty() }?.let { geotags ->
+                addAll(filterRelayGroupsByGeohashes(relay, geotags, relaySince))
+            }
+        }
     }
 }

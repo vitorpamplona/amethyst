@@ -69,6 +69,16 @@ class RelayGroupChannel(
     private var adminsUpdatedAt: Long = 0
 
     /**
+     * Members ∪ admins, recomputed only when a roster event lands. [memberCount] and the discovery
+     * feed read this per note / per recomposition, so caching it avoids rebuilding the set each read.
+     */
+    private var allMembers: Set<HexKey> = emptySet()
+
+    private fun recomputeAllMembers() {
+        allMembers = if (admins.isEmpty()) members else members + admins.mapTo(HashSet()) { it.pubKey }
+    }
+
+    /**
      * Kind-11 threads (forum-style posts) scoped to this group, kept apart from the
      * kind-9 chat [Channel.notes] so the chat feed stays clean. Surfaced through the
      * group's "Threads" view; each thread's own comment tree (kind 1111) is loaded
@@ -78,17 +88,21 @@ class RelayGroupChannel(
     private val _threads = MutableStateFlow<List<Note>>(emptyList())
     val threads: StateFlow<List<Note>> = _threads
 
+    private fun republishThreads() {
+        _threads.value = threadNotes.values().sortedByDescending { it.createdAt() ?: 0L }
+    }
+
     /** Add a kind-11 thread note; newest-first snapshot is re-published to [threads]. */
     fun addThread(note: Note) {
         if (threadNotes.containsKey(note.idHex)) return
         threadNotes.put(note.idHex, note)
-        _threads.value = threadNotes.values().sortedByDescending { it.createdAt() ?: 0L }
+        republishThreads()
     }
 
     fun removeThread(note: Note) {
         if (!threadNotes.containsKey(note.idHex)) return
         threadNotes.remove(note.idHex)
-        _threads.value = threadNotes.values().sortedByDescending { it.createdAt() ?: 0L }
+        republishThreads()
     }
 
     fun threadCount(): Int = threadNotes.size()
@@ -130,6 +144,7 @@ class RelayGroupChannel(
         if (event.createdAt <= membersUpdatedAt) return
         members = event.members().toSet()
         membersUpdatedAt = event.createdAt
+        recomputeAllMembers()
         updateChannelInfo()
     }
 
@@ -137,6 +152,7 @@ class RelayGroupChannel(
         if (event.createdAt <= adminsUpdatedAt) return
         admins = event.admins()
         adminsUpdatedAt = event.createdAt
+        recomputeAllMembers()
         updateChannelInfo()
     }
 
@@ -151,7 +167,7 @@ class RelayGroupChannel(
     }
 
     /** Number of known members (admins are members too). */
-    fun memberCount(): Int = (members + admins.map { it.pubKey }).size
+    fun memberCount(): Int = allMembers.size
 
     /**
      * The relay's view of [pubkey]'s membership, from the signed admin/member

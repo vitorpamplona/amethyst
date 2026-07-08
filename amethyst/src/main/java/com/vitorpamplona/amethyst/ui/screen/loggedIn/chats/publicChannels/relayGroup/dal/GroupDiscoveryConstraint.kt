@@ -102,9 +102,10 @@ sealed interface GroupDiscoveryConstraint {
 /**
  * Resolve the selected top-nav filter into a per-relay [GroupDiscoveryConstraint]. The relays
  * are exactly the relays the filter routes to; each relay's constraint carries only that relay's
- * slice of the follow/topic/geo set (matching how the note feeds shard per relay). Filter kinds
- * that don't map to a people/topic/geo dimension (communities, muted-only) fall back to
+ * slice of the follow/topic/geo set (matching how the note feeds shard per relay). Community
+ * selections have no people/topic/geo dimension, so they fall back to
  * [GroupDiscoveryConstraint.AllGroups] — still constraining the RELAY set, just not the people.
+ * Each branch mirrors what the datasource actually REQs for that filter, so fetch and display agree.
  */
 fun IFeedTopNavPerRelayFilterSet.toGroupConstraints(): Map<NormalizedRelayUrl, GroupDiscoveryConstraint> =
     when (this) {
@@ -124,29 +125,15 @@ fun IFeedTopNavPerRelayFilterSet.toGroupConstraints(): Map<NormalizedRelayUrl, G
                         f.hashtags?.takeIf { it.isNotEmpty() }?.let { add(GroupDiscoveryConstraint.ByHashtags(it)) }
                         f.geotags?.takeIf { it.isNotEmpty() }?.let { add(GroupDiscoveryConstraint.ByGeohashes(it)) }
                     }
-                when {
-                    lenses.isEmpty() -> GroupDiscoveryConstraint.AllGroups
-                    lenses.size == 1 -> lenses.first()
-                    else -> GroupDiscoveryConstraint.AnyOf(lenses)
-                }
+                if (lenses.isEmpty()) GroupDiscoveryConstraint.AllGroups else GroupDiscoveryConstraint.AnyOf(lenses)
             }
-        // Community / muted-authors / DVM algo selections carry no group-hosting dimension;
-        // show every group the resolved relays host (or nothing when there are no relays).
-        else -> relayKeys().associateWith { GroupDiscoveryConstraint.AllGroups }
-    }
-
-/** The relays a filter set routes to, regardless of type. Used for the AllGroups fallback. */
-private fun IFeedTopNavPerRelayFilterSet.relayKeys(): Set<NormalizedRelayUrl> =
-    when (this) {
-        is GlobalTopNavPerRelayFilterSet -> set.keys
-        is RelayTopNavPerRelayFilterSet -> setOf(relayUrl)
-        is AuthorsTopNavPerRelayFilterSet -> set.keys
-        is HashtagTopNavPerRelayFilterSet -> set.keys
-        is LocationTopNavPerRelayFilterSet -> set.keys
-        is AllFollowsTopNavPerRelayFilterSet -> set.keys
-        is AllCommunitiesTopNavPerRelayFilterSet -> set.keys
-        is SingleCommunityTopNavPerRelayFilterSet -> set.keys
-        is MutedAuthorsTopNavPerRelayFilterSet -> set.keys
-        // DVM algo-feed selections carry no group-hosting relays.
-        else -> emptySet()
+        // Muted-authors is a "show me the muted" lens: keep groups where a muted user is the relay
+        // key / an admin / a member (matching the #p roster REQ that fetches them).
+        is MutedAuthorsTopNavPerRelayFilterSet ->
+            set.mapValues { (_, f) -> GroupDiscoveryConstraint.ByPeople(f.authors) }
+        // Community selections carry no group-hosting dimension; show every group the resolved
+        // relays host (matching the broad directory REQ). Empty for DVM/anything with no relays.
+        is AllCommunitiesTopNavPerRelayFilterSet -> set.keys.associateWith { GroupDiscoveryConstraint.AllGroups }
+        is SingleCommunityTopNavPerRelayFilterSet -> set.keys.associateWith { GroupDiscoveryConstraint.AllGroups }
+        else -> emptyMap()
     }

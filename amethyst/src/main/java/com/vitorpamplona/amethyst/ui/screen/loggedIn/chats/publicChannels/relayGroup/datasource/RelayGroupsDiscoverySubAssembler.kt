@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
@@ -27,6 +28,8 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -84,6 +87,16 @@ class RelayGroupsDiscoverySubAssembler(
                 key.account.scope.launch(Dispatchers.IO) {
                     key.feedStates.relayGroupsDiscoveryFeed.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
+                    }
+                },
+                // A #p roster hit (39001/39002) discovers a group but carries no 39000, so re-run
+                // the assembly when rosters land — that fires the #d metadata backfill for groups
+                // where a follow is an admin/member but whose metadata isn't cached yet.
+                key.account.scope.launch(Dispatchers.IO) {
+                    LocalCache.live.newEventBundles.sample(2000).collectLatest { bundle ->
+                        if (bundle.any { it.event is GroupAdminsEvent || it.event is GroupMembersEvent }) {
+                            invalidateFilters()
+                        }
                     }
                 },
             )

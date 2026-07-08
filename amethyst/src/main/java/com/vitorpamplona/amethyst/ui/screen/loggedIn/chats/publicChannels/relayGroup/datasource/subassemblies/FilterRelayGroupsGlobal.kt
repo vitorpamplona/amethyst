@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 fun filterRelayGroupsGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
@@ -32,10 +31,13 @@ fun filterRelayGroupsGlobal(
 ): List<RelayBasedFilter> {
     if (relays.set.isEmpty()) return emptyList()
 
+    // No `since` floor: a group's kind-39000 is stable metadata that a relay rarely re-signs, so a
+    // "last week" cutoff (as the git-repos feed uses) would hide long-lived groups. We page on the
+    // whole directory instead, carrying only the EOSE cursor once we have one.
     return relays.set.flatMap {
         filterRelayGroupsDirectory(
             relay = it.key,
-            since = since?.get(it.key)?.time ?: defaultSince ?: TimeUtils.oneWeekAgo(),
+            since = since?.get(it.key)?.time ?: defaultSince,
         )
     }
 }

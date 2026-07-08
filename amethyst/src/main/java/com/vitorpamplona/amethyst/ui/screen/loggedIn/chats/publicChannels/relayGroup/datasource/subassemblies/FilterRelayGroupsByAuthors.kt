@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies
 
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
@@ -34,19 +35,29 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 
+/** One scan of the group cache, grouped by host relay — reused across every relay in a filter set. */
+fun relayGroupChannelsByRelay(): Map<NormalizedRelayUrl, List<RelayGroupChannel>> =
+    LocalCache.relayGroupChannels
+        .filter { _, _ -> true }
+        .groupBy { it.groupId.relayUrl }
+
 /**
  * A group's kind-39000 is relay-signed, so a follow shows up in three distinct ways, and each is a
  * real relay-side REQ (not a broad "pull everything" pass):
  *  1. the follow IS the relay signing key → `{kinds:[39000], authors:<follows>}` (metadata included);
  *  2. a follow is an admin/member → `{kinds:[39001,39002], #p:<follows>}` (standard p-tag filter);
  *  3. metadata backfill for the groups (2) surfaced → `{kinds:[39000], #d:<their group-ids>}`, read
- *     from the rosters already in cache (empty on the first pass, filled once (2)'s events land and
- *     the sub-assembler re-invalidates).
+ *     from the rosters already in [cachedChannels] (empty on the first pass, filled once (2)'s events
+ *     land and the sub-assembler re-invalidates).
+ *
+ * [cachedChannels] is this relay's slice of [relayGroupChannelsByRelay]; the set-level callers scan
+ * the cache once and pass the slice so the (3) backfill isn't an O(relays × total-groups) re-scan.
  */
 fun filterRelayGroupsByAuthors(
     relay: NormalizedRelayUrl,
     authors: Set<HexKey>,
     since: Long? = null,
+    cachedChannels: List<RelayGroupChannel> = LocalCache.getRelayGroupChannelsOnRelay(relay),
 ): List<RelayBasedFilter> {
     if (authors.isEmpty()) return emptyList()
     val authorList = authors.sorted()
@@ -79,8 +90,7 @@ fun filterRelayGroupsByAuthors(
 
     // (3) backfill 39000 metadata for the roster-discovered groups already known on this relay.
     val rosterGroupIds =
-        LocalCache
-            .getRelayGroupChannelsOnRelay(relay)
+        cachedChannels
             .filter { channel -> channel.admins.any { it.pubKey in authors } || channel.members.any { it in authors } }
             .map { it.groupId.id }
     if (rosterGroupIds.isNotEmpty()) {
@@ -107,11 +117,13 @@ fun filterRelayGroupsByAuthors(
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
+    val channelsByRelay = relayGroupChannelsByRelay()
     return authorSet.set.flatMap {
         filterRelayGroupsByAuthors(
             relay = it.key,
             authors = it.value.authors,
             since = since?.get(it.key)?.time ?: defaultSince,
+            cachedChannels = channelsByRelay[it.key].orEmpty(),
         )
     }
 }
@@ -123,11 +135,13 @@ fun filterRelayGroupsByMutedAuthors(
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
+    val channelsByRelay = relayGroupChannelsByRelay()
     return authorSet.set.flatMap {
         filterRelayGroupsByAuthors(
             relay = it.key,
             authors = it.value.authors,
             since = since?.get(it.key)?.time ?: defaultSince,
+            cachedChannels = channelsByRelay[it.key].orEmpty(),
         )
     }
 }

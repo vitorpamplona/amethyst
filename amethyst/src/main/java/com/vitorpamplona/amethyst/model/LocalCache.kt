@@ -1813,12 +1813,15 @@ object LocalCache : ILocalCache, ICacheProvider {
             // filters are host-pinned, so the serving relay is the group's key.
             getOrCreateRelayGroupChannel(GroupId(groupId, relay)).addNote(note, relay)
         } else {
-            // Our own optimistic send has no provenance relay, so we can't build
-            // the (groupId, relay) key. Attach to every already-open channel with
-            // this group id — normally the exact room being composed in — so the
-            // message appears immediately. Don't fabricate a channel from a guessed
-            // relay; the host relay's later echo attaches it to the canonical key.
-            relayGroupChannels.filter { key, _ -> key.id == groupId }.forEach { it.addNote(note, null) }
+            // Our own optimistic send has no provenance relay, so we can't build the (groupId,
+            // relay) key. Attach only when a SINGLE open channel has this group id (the room being
+            // composed in). When the id is ambiguous across relays — e.g. the relay-wide "_" group
+            // joined on several relays — skip: attaching to all of them bleeds the message into
+            // rooms it wasn't sent to. The host relay's echo (relay != null) lands it on the right key.
+            relayGroupChannels
+                .filter { key, _ -> key.id == groupId }
+                .singleOrNull()
+                ?.addNote(note, null)
         }
     }
 
@@ -1838,7 +1841,11 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (relay != null) {
             getOrCreateRelayGroupChannel(GroupId(groupId, relay)).addThread(note)
         } else {
-            relayGroupChannels.filter { key, _ -> key.id == groupId }.forEach { it.addThread(note) }
+            // See attachToRelayGroupIfScoped: only attach when the group id is unambiguous.
+            relayGroupChannels
+                .filter { key, _ -> key.id == groupId }
+                .singleOrNull()
+                ?.addThread(note)
         }
     }
 

@@ -38,6 +38,8 @@ import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 /** One on-screen group card's request to warm a single group. */
 class RelayGroupPreviewQueryState(
     val channel: RelayGroupChannel,
+    /** When true, prefetch only recent content — the caller's screen already streams metadata. */
+    val contentOnly: Boolean = false,
 )
 
 /** Newest content kinds we prefetch so opening the card lands on populated screens. */
@@ -78,7 +80,8 @@ class RelayGroupPreviewSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         val groupId = key.channel.groupId
-        return filterMetadataToRelayGroup(key.channel, since) +
+        val metadata = if (key.contentOnly) emptyList() else filterMetadataToRelayGroup(key.channel, since)
+        return metadata +
             RelayBasedFilter(
                 relay = groupId.relayUrl,
                 filter =

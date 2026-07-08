@@ -27,9 +27,23 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+
+/**
+ * Resolves a relay-signed kind-39000 metadata note to the live [RelayGroupChannel] it belongs to.
+ * A group is keyed by (host relay + group id); the SAME resolver is used by the feed filter's
+ * match/sort AND the discovery row's renderer, so a note seen on more than one relay always binds
+ * to one channel (no more "sorted by relay B's roster, rendered with relay A's empty one").
+ */
+fun relayGroupDiscoveryChannelFor(note: Note): RelayGroupChannel? {
+    val groupId = (note.event as? GroupMetadataEvent)?.groupId() ?: return null
+    return note.relays.firstNotNullOfOrNull { LocalCache.getRelayGroupChannelIfExists(GroupId(groupId, it)) }
+}
 
 /**
  * The Relay Groups discovery feed. Rows are the relay-signed kind-39000 metadata notes; the
@@ -63,42 +77,53 @@ class RelayGroupDiscoveryFeedFilter(
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> {
         val byRelay = constraints()
-        return newItems.filterTo(HashSet()) { matches(it, byRelay) }
+        return newItems.flatMapTo(HashSet()) { note ->
+            when (note.event) {
+                is GroupMetadataEvent -> if (matches(note, byRelay)) listOf(note) else emptyList()
+                // A roster change (39001/39002) can newly qualify a group whose 39000 already
+                // arrived (a follow just became an admin/member). The roster note itself isn't a
+                // feed row, so re-test the group's metadata note and inject it if it now matches —
+                // otherwise the group would stay hidden (or frozen at 0 members) until a refresh.
+                is GroupAdminsEvent, is GroupMembersEvent ->
+                    rosterMetadataNote(note)?.takeIf { matches(it, byRelay) }?.let { listOf(it) } ?: emptyList()
+                else -> emptyList()
+            }
+        }
     }
 
     /**
-     * The group qualifies when it was served by a relay in the filter's set AND that relay's
-     * constraint accepts it. The 39000 note carries its own relay-signed metadata; its roster
-     * (admins/members) lives on the [RelayGroupChannel] keyed by (serving relay + group id),
-     * which [LocalCache.consume] created when the metadata arrived.
+     * The group qualifies when its host relay is in the filter's set AND that relay's constraint
+     * accepts it. [relayGroupDiscoveryChannelFor] picks the one channel (metadata + roster); the
+     * roster lives on the [RelayGroupChannel] [LocalCache.consume] created when the metadata arrived.
      */
     private fun matches(
         note: Note,
         byRelay: Map<NormalizedRelayUrl, GroupDiscoveryConstraint>,
     ): Boolean {
         if (byRelay.isEmpty()) return false
-        val event = note.event as? GroupMetadataEvent ?: return false
-        return note.relays.any { relay ->
-            val constraint = byRelay[relay] ?: return@any false
-            val channel = LocalCache.getRelayGroupChannelIfExists(GroupId(event.groupId(), relay))
-            channel != null && constraint.matches(channel)
-        }
+        val channel = relayGroupDiscoveryChannelFor(note) ?: return false
+        return byRelay[channel.groupId.relayUrl]?.matches(channel) == true
+    }
+
+    /** The 39000 metadata note for the group a roster (39001/39002) note belongs to, if cached. */
+    private fun rosterMetadataNote(note: Note): Note? {
+        val groupId =
+            when (val event = note.event) {
+                is GroupAdminsEvent -> event.groupId()
+                is GroupMembersEvent -> event.groupId()
+                else -> null
+            } ?: return null
+        return note.relays
+            .firstNotNullOfOrNull { LocalCache.getRelayGroupChannelIfExists(GroupId(groupId, it)) }
+            ?.metadataNote
     }
 
     override fun sort(items: Set<Note>): List<Note> {
-        fun channelOf(note: Note): RelayGroupChannel? {
-            val event = note.event as? GroupMetadataEvent ?: return null
-            return note.relays.firstNotNullOfOrNull {
-                LocalCache.getRelayGroupChannelIfExists(GroupId(event.groupId(), it))
-            }
-        }
-
-        val memberCount = items.associateWith { channelOf(it)?.memberCount() ?: 0 }
-
-        return items.sortedWith(
-            compareByDescending<Note> { memberCount[it] }
-                .thenByDescending { it.createdAt() ?: 0L }
-                .thenBy { it.idHex },
-        )
+        // Snapshot the member count once per note (stable key), then order by it descending with
+        // the shared default feed order (createdAt snapshot + id) as a stable tie-break. Reading
+        // createdAt live inside a comparator risks TimSort's "contract violated" crash when a
+        // newer 39000 replaces a note's event mid-sort — sortedByDefaultFeedOrder avoids that.
+        val memberCount = items.associateWith { relayGroupDiscoveryChannelFor(it)?.memberCount() ?: 0 }
+        return items.sortedByDefaultFeedOrder().sortedByDescending { memberCount[it] }
     }
 }

@@ -57,7 +57,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
@@ -70,12 +70,12 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupPreviewSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
-import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 
 /**
  * Discover NIP-29 groups across the relay set the top-bar filter resolves to. Built on the shared
@@ -147,9 +147,17 @@ fun RelayGroupDiscoveryScreen(
                         routeForLastRead = null,
                         onLoaded = { loaded ->
                             val items by loaded.feed.collectAsStateWithLifecycle()
-                            LazyColumn(Modifier.fillMaxWidth(), state = listState) {
-                                itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
-                                    RelayGroupDiscoveryRow(item, accountViewModel, nav)
+                            LazyColumn(
+                                contentPadding = rememberFeedContentPadding(FeedPadding),
+                                modifier = Modifier.fillMaxWidth(),
+                                state = listState,
+                            ) {
+                                itemsIndexed(
+                                    items.list,
+                                    key = { _, item -> item.idHex },
+                                    contentType = { _, item -> item.event?.kind ?: -1 },
+                                ) { _, item ->
+                                    RelayGroupDiscoveryRow(item, Modifier.animateItem(), accountViewModel, nav)
                                 }
                             }
                         },
@@ -185,15 +193,18 @@ private fun WatchAccountForRelayGroupDiscovery(
 @Composable
 private fun RelayGroupDiscoveryRow(
     note: Note,
+    modifier: Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val event = note.event as? GroupMetadataEvent ?: return
-    val relay = note.relays.firstOrNull() ?: return
-    val baseChannel = remember(event.groupId(), relay) { LocalCache.getOrCreateRelayGroupChannel(GroupId(event.groupId(), relay)) }
+    // Resolve the note to its channel the SAME way the feed filter matched/sorted it, so the row
+    // never binds a different relay's (empty) channel than the one the feed qualified.
+    val baseChannel = remember(note) { relayGroupDiscoveryChannelFor(note) } ?: return
 
-    // Prefetch the group's recent content so opening the card lands on a populated screen.
-    RelayGroupPreviewSubscription(baseChannel, accountViewModel.dataSources().relayGroupPreview, accountViewModel)
+    // Prefetch the group's recent content so opening the card lands on a populated screen. The
+    // metadata/rosters are already streaming from the directory subscription, so only ask for
+    // content here (contentOnly) instead of re-requesting 39000-39003 per visible row.
+    RelayGroupPreviewSubscription(baseChannel, accountViewModel.dataSources().relayGroupPreview, accountViewModel, contentOnly = true)
 
     val channelState by baseChannel
         .flow()
@@ -206,6 +217,7 @@ private fun RelayGroupDiscoveryRow(
 
     RelayGroupDiscoveryCard(
         channel = channel,
+        modifier = modifier,
         myPubkey = accountViewModel.userProfile().pubkeyHex,
         isFavoriteRelay = channel.groupId.relayUrl in favoriteRelays,
         accountViewModel = accountViewModel,
@@ -216,6 +228,7 @@ private fun RelayGroupDiscoveryRow(
 @Composable
 private fun RelayGroupDiscoveryCard(
     channel: RelayGroupChannel,
+    modifier: Modifier,
     myPubkey: String,
     isFavoriteRelay: Boolean,
     accountViewModel: AccountViewModel,
@@ -229,7 +242,7 @@ private fun RelayGroupDiscoveryCard(
     ElevatedCard(
         onClick = { nav.nav(routeFor(channel)) },
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp),
     ) {
         Column(Modifier.fillMaxWidth().padding(12.dp)) {
             Row(

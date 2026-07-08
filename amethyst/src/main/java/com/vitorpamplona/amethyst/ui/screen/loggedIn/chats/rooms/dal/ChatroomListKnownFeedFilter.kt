@@ -37,6 +37,8 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.groupId
+import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 
 class ChatroomListKnownFeedFilter(
     val account: Account,
@@ -126,8 +128,13 @@ class ChatroomListKnownFeedFilter(
 
         // Gets the latest message by room from the new items.
         val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
+        val newRelevantRelayGroups = filterRelevantRelayGroupMessages(newItems, account)
 
-        if (newRelevantPrivateMessages.isEmpty() && newRelevantPublicMessages.isEmpty() && newRelevantEphemeralChats.isEmpty()) {
+        if (newRelevantPrivateMessages.isEmpty() &&
+            newRelevantPublicMessages.isEmpty() &&
+            newRelevantEphemeralChats.isEmpty() &&
+            newRelevantRelayGroups.isEmpty()
+        ) {
             return oldList
         }
 
@@ -182,6 +189,22 @@ class ChatroomListKnownFeedFilter(
             }
         }
 
+        newRelevantRelayGroups.forEach { newNotePair ->
+            var hasUpdated = false
+            oldList.forEach { oldNote ->
+                val oldGroupId = oldNote.event?.takeIf { it.isGroupScoped() }?.groupId()
+                if (newNotePair.key == oldGroupId) {
+                    hasUpdated = true
+                    if ((newNotePair.value.createdAt() ?: 0L) > (oldNote.createdAt() ?: 0L)) {
+                        myNewList = myNewList.replace(oldNote, newNotePair.value)
+                    }
+                }
+            }
+            if (!hasUpdated) {
+                myNewList = myNewList.plus(newNotePair.value)
+            }
+        }
+
         return sort(myNewList.toSet()).take(1000)
     }
 
@@ -192,11 +215,21 @@ class ChatroomListKnownFeedFilter(
 
         // Gets the latest message by room from the new items.
         val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
+        val newRelevantRelayGroups = filterRelevantRelayGroupMessages(newItems, account)
 
-        return if (newRelevantPrivateMessages.isEmpty() && newRelevantPublicMessages.isEmpty() && newRelevantEphemeralChats.isEmpty()) {
+        return if (newRelevantPrivateMessages.isEmpty() &&
+            newRelevantPublicMessages.isEmpty() &&
+            newRelevantEphemeralChats.isEmpty() &&
+            newRelevantRelayGroups.isEmpty()
+        ) {
             emptySet()
         } else {
-            (newRelevantPrivateMessages.values + newRelevantPublicMessages.values + newRelevantEphemeralChats.values).toSet()
+            (
+                newRelevantPrivateMessages.values +
+                    newRelevantPublicMessages.values +
+                    newRelevantEphemeralChats.values +
+                    newRelevantRelayGroups.values
+            ).toSet()
         }
     }
 
@@ -247,6 +280,28 @@ class ChatroomListKnownFeedFilter(
                 }
             }
         return newRelevantEphemeralChats
+    }
+
+    /** Latest message per joined NIP-29 group (inline view mode), keyed by group id. */
+    private fun filterRelevantRelayGroupMessages(
+        newItems: Set<Note>,
+        account: Account,
+    ): MutableMap<String, Note> {
+        if (account.settings.relayGroupViewMode.value != RelayGroupViewMode.INLINE) return mutableMapOf()
+        val joinedGroupIds =
+            account.relayGroupList.liveRelayGroupList.value
+                .mapTo(HashSet()) { it.groupId }
+        val result = mutableMapOf<String, Note>()
+        newItems.forEach { newNote ->
+            val gid = newNote.event?.takeIf { it.isGroupScoped() }?.groupId()
+            if (gid != null && gid in joinedGroupIds && account.isAcceptable(newNote)) {
+                val lastNote = result[gid]
+                if (lastNote == null || (newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
+                    result[gid] = newNote
+                }
+            }
+        }
+        return result
     }
 
     private fun filterRelevantPrivateMessages(
