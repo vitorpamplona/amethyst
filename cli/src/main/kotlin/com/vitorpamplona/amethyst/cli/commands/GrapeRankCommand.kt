@@ -104,6 +104,20 @@ object GrapeRankCommand {
             "wss://eden.nostr.land",
         ).mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
 
+    // Network-wide aggregators that scrape and hold kind:3 for users whose own
+    // outbox lacks it. The crawler queries these for a straggler's CONTENT (kind:3),
+    // not just their kind:10002 relay list. Measured on observer 460c25e6: querying
+    // user.kindpag.es for kind:3 alone recovers ~180 stragglers the pure outbox model
+    // never finds. The profile indexers (kindpag/purplepag/coracle/yabu/nostr1) plus
+    // the ActivityPub bridges (ditto/momostr/mostr, which host bridged users' lists).
+    private val CONTENT_AGGREGATOR_RELAYS: Set<NormalizedRelayUrl> =
+        DefaultIndexerRelayList +
+            listOf(
+                "wss://relay.ditto.pub",
+                "wss://relay.momostr.pink",
+                "wss://relay.mostr.pub",
+            ).mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -358,6 +372,9 @@ object GrapeRankCommand {
         val discoveryRelays =
             ctx.bootstrapRelays() + Constants.eventFinderRelays + DefaultIndexerRelayList + EXTRA_DISCOVERY_RELAYS
         val contentFallback = ctx.bootstrapRelays() + Constants.eventFinderRelays
+        // Aggregator kind:3 recovery for stragglers is on by default; --no-aggregators
+        // disables it for A/B comparison.
+        val aggregators = if (args.bool("no-aggregators")) emptySet() else CONTENT_AGGREGATOR_RELAYS
         return GrapeRankDataCrawler(
             client = ctx.client,
             store = ctx.store,
@@ -366,6 +383,7 @@ object GrapeRankCommand {
                 GrapeRankDataCrawler.Config(
                     relayListDiscoveryRelays = discoveryRelays,
                     contentFallbackRelays = contentFallback,
+                    contentAggregatorRelays = aggregators,
                     maxRounds = args.intFlag("max-rounds", Int.MAX_VALUE),
                     maxHops = args.intFlag("max-hops", Int.MAX_VALUE),
                     timeoutMs = args.longFlag("timeout", 10L) * 1000,

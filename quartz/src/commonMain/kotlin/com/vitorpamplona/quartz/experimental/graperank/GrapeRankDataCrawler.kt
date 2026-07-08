@@ -111,6 +111,14 @@ class GrapeRankDataCrawler(
      *   defaults that carry kind:10002 for most of the network.
      * @param contentFallbackRelays best-effort general relays that *might* hold a
      *   user's kind:3/10000/1984 when their outbox is unknown or unreachable.
+     * @param contentAggregatorRelays index/aggregator relays queried for a STRAGGLER's
+     *   kind:3 content (not just their kind:10002). The outbox model asks "where does
+     *   this user write?" — but a large tail of users have no kind:3 on their own
+     *   advertised outbox (or it's dead), while a network-wide aggregator (kindpag.es,
+     *   …) scraped and holds it. Those aggregators are queried only for kind:10002 in
+     *   [ensureRelayLists]; folding them in here, for users whose outbox already
+     *   failed ([attempts] > 0) or is unknown, recovers contact lists the pure outbox
+     *   model structurally cannot. Empty disables the behaviour.
      * @param maxRounds safety backstop on freshness passes (default: run to convergence).
      * @param maxHops follow-graph distance from the observer to crawl (Brainstorm uses 8).
      * @param timeoutMs the FAST per-drain timeout that gates a round's progression.
@@ -145,6 +153,7 @@ class GrapeRankDataCrawler(
     class Config(
         val relayListDiscoveryRelays: Set<NormalizedRelayUrl>,
         val contentFallbackRelays: Set<NormalizedRelayUrl>,
+        val contentAggregatorRelays: Set<NormalizedRelayUrl> = emptySet(),
         val maxRounds: Int = Int.MAX_VALUE,
         val maxHops: Int = Int.MAX_VALUE,
         val timeoutMs: Long = 10_000,
@@ -590,8 +599,12 @@ class GrapeRankDataCrawler(
          * Group [pubkeys] by the relays we should query for their events:
          *  - first try: the user's own kind:10002 write relays (the outbox model);
          *  - a retry (`attempts[pk] > 0`, its outbox already failed): outbox +
-         *    [backbone] — the known-good relays other people write to;
-         *  - no outbox at all: harvested hints + backbone + the general fallback.
+         *    [backbone] — the known-good relays other people write to — PLUS the
+         *    content aggregators (kindpag.es, …), because a large tail of users have
+         *    no kind:3 on their own outbox and only a network-wide aggregator holds it;
+         *  - no outbox at all: harvested hints + backbone + the general fallback +
+         *    the aggregators (same reason — their outbox is unknown, so the aggregator
+         *    that scraped their kind:3 is often the only place to find it).
          *
          * Also tallies each user's write relays into [writeRelayFreq] so the
          * backbone can be learned from the crawl. Authors are chunked per relay.
@@ -601,6 +614,7 @@ class GrapeRankDataCrawler(
             backbone: Set<NormalizedRelayUrl>,
         ): Map<NormalizedRelayUrl, List<Filter>> {
             val fallback = config.contentFallbackRelays
+            val aggregators = config.contentAggregatorRelays
             val perRelay = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
 
             for (pk in pubkeys) {
@@ -608,8 +622,8 @@ class GrapeRankDataCrawler(
                 write?.forEach { writeRelayFreq[it] = (writeRelayFreq[it] ?: 0) + 1 }
                 val relays =
                     when {
-                        write == null -> relayHints[pk]?.snapshot().orEmpty() + backbone + fallback
-                        (attempts[pk] ?: 0) > 0 -> write + backbone
+                        write == null -> relayHints[pk]?.snapshot().orEmpty() + backbone + fallback + aggregators
+                        (attempts[pk] ?: 0) > 0 -> write + backbone + aggregators
                         else -> write
                     }
                 // Skip relays proven dead (routing to them only burns the drain
