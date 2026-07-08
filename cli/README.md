@@ -385,6 +385,41 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy notes feed [--author USER \| --following] [--limit N]` | Read recent kind:1 notes (yours, one user's, or your follow set). |
 | `amy profile show [USER]` | Print kind:0 metadata. USER accepts npub/nprofile/hex/NIP-05; defaults to self. |
 | `amy profile edit --name … --about … --picture URL …` | Patch and re-publish your kind:0. |
+| `amy follow USER` / `amy unfollow USER` | Add/remove USER from your kind:3 contact list (fetches the freshest list first). |
+| `amy graperank [OBSERVER] [--offline] [--publish] [--min-rank N] [--publish-relay URL]` | Compute GrapeRank web-of-trust scores (0..1) over the follow/mute/report graph. Exhaustively crawls each user's kind:10002 outbox for their latest kind:3/10000/1984 until every discovered user is checked (no user cap), dropping reports the author retracted via NIP-09. With `--publish`, reconciles NIP-85 kind:30382 cards signed by a per-observer **service key**: publishes changed/new ranks (cutoff `--min-rank`, default 2), skips unchanged, and **retracts** (kind:5) any card whose target left the graph or fell below the cutoff. |
+| `amy graperank operator [status \| relay <url>… \| providers]` | Manage the machine's operator keys (independent of any account, under `~/.amy/operator/`). `relay` sets where cards + retractions publish; `status` shows the master pubkey and relays; `providers` lists the observer → service-pubkey map. |
+| `amy graperank register [PROVIDER] [--service KIND:TAG] [--relay URL]` | Declare a NIP-85 provider in your kind:10040 so clients can discover it (default: self as the `30382:rank` provider). |
+| `amy graperank providers [USER]` | List a user's declared NIP-85 trusted providers (public + your own private entries). |
+
+#### Publishing GrapeRank scores (NIP-85)
+
+Ranks are published as kind:30382 cards, but **not** under your account key. A
+machine holds one **operator master** seed (`~/.amy/operator/`, stored via the
+same `--secret-backend` as accounts, independent of any account). From it a
+distinct, deterministic **service key** is derived per observer:
+
+```
+serviceKey(observer) = sha256(masterPriv ‖ "graperank-provider:" ‖ observerHex)
+```
+
+Because kind:30382 is addressable (`pubkey + d-tag`), the stable per-observer key
+means re-publishing **replaces** a target's card instead of orphaning it — and
+losing everything but the master seed still re-derives every key. Set up once and
+publish:
+
+```bash
+amy graperank operator relay wss://relay.example.com   # where all cards live
+amy graperank <observer> --publish                     # sign with the observer's service key
+```
+
+Each publish **reconciles** against what the service key already published: new or
+changed ranks (≥ `--min-rank`, default 2) are signed and sent; unchanged ranks are
+skipped (no new event id); and any card whose target dropped out of the graph or
+fell below the cutoff is **retracted** with a kind:5. When the observer is your
+own account (we hold the key), Amy also writes their kind:10040 pointing
+`30382:rank → serviceKey @ operator relay` to their outbox, so clients can find
+the cards. For a third-party observer, `graperank operator providers` prints the
+`observer → service-pubkey` mapping to wire their kind:10040 out-of-band.
 
 ### Direct messages (NIP-17)
 

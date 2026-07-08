@@ -234,6 +234,22 @@ class DataDir(
     val groupsDir = File(marmotDir, "groups")
     val keyPackageBundleFile = File(marmotDir, "keypackages.bundle")
 
+    /**
+     * SQLite event-store DB file, a sibling of [eventsDir] under
+     * `<root>/shared/`. Used when the store backend is SQLite (the
+     * default — see [StoreFactory]); the FS backend uses [eventsDir]
+     * instead. Kept alongside the FS store so switching backends never
+     * clobbers the other's data.
+     */
+    val eventsDbFile: File = File(eventsDir.parentFile ?: root, "events.db")
+
+    /**
+     * Machine-level operator keys for GrapeRank trusted-assertion publishing,
+     * rooted at `~/.amy/operator/` (the account root's parent) so a single
+     * operator master is shared across accounts. See [OperatorKeys].
+     */
+    fun operatorKeys(): OperatorKeys = OperatorKeys(root.parentFile ?: root, secrets)
+
     init {
         SecureFileIO.secureMkdirs(root)
         // The accountless dir only ever exposes the shared event store; don't

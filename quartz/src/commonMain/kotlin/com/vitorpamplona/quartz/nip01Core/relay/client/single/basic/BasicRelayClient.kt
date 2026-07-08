@@ -136,7 +136,9 @@ open class BasicRelayClient(
             socket?.connect()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            listener.onCannotConnect(this, "Error when trying to connect: ${e.message ?: e::class.simpleName}")
+            val typeName = e::class.simpleName
+            val detail = e.message?.let { "$it ($typeName)" } ?: (typeName ?: "unknown error")
+            listener.onCannotConnect(this, "Error when trying to connect: $detail")
             listener.onDisconnected(this)
             dontTryAgainForALongTime()
             markConnectionAsClosed()
@@ -187,9 +189,15 @@ open class BasicRelayClient(
             } else {
                 socket?.disconnect()
 
-                // suppression rules below must match the raw message; displayMsg is for listener output only
+                // suppression rules below must match the raw message; displayMsg is for listener output only.
+                // Always include the exception's class name: message text is
+                // localized and inconsistent across platforms, but the type
+                // (SocketTimeoutException / UnknownHostException / SSLHandshakeException /
+                // ConnectException …) is stable and lets listeners classify a failure
+                // reliably — a busy relay (timeout) vs a dead one (bad domain / TLS).
                 val msg = t.message
-                val displayMsg = msg ?: t::class.simpleName
+                val typeName = t::class.simpleName
+                val displayMsg = if (msg != null) "$msg ($typeName)" else (typeName ?: "unknown error")
 
                 // checks if this is an actual failure. Closing the socket generates an onFailure as well.
                 // ignore tor errors.

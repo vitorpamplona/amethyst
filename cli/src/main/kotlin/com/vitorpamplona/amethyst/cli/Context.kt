@@ -38,12 +38,14 @@ import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.crypto.verify
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DrainFailure
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.classifyDrainFailure
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
@@ -55,7 +57,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketF
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
-import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
+import com.vitorpamplona.quartz.nip01Core.store.verifyAndInsert
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
@@ -78,7 +80,9 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 /**
  * Per-invocation wiring. Each CLI run constructs a Context, does its work,
@@ -98,9 +102,10 @@ import okhttp3.OkHttpClient
  * Every Nostr event Amy observes — whether received from a relay
  * subscription, unwrapped from a NIP-59 gift wrap, or generated locally
  * before publish — is verified (NIP-01 signature + id check via
- * [Event.verify]) and persisted to the file-backed [IEventStore] at
- * `<data-dir>/events-store/`. Malformed events are dropped before
- * reaching command code.
+ * [Event.verify]) and persisted to the shared [IEventStore] under
+ * `<data-dir>/shared/` (a SQLite DB by default, or the FS tree when
+ * `AMY_STORE=fs` — see [StoreFactory]). Malformed events are dropped
+ * before reaching command code.
  *
  * This makes [store] the authoritative cache of everything Amy has ever
  * seen: profile metadata, relay lists, contact lists, gift wraps,
@@ -124,7 +129,31 @@ class Context(
      */
     val anonymous: Boolean = false,
 ) : AutoCloseable {
-    private val okhttp = OkHttpClient.Builder().socketFactory(TcpNoDelaySocketFactory).build()
+    private val okhttp =
+        OkHttpClient
+            .Builder()
+            .socketFactory(TcpNoDelaySocketFactory)
+            // The crawl opens WebSockets to thousands of relays. Each WS-upgrade
+            // handshake is an async call through OkHttp's shared Dispatcher, whose
+            // default cap (maxRequests=64) throttles the connection ramp — worse,
+            // a dead relay holds a slot for the whole connectTimeout, starving live
+            // relays queued behind it. Widen the dispatcher so handshakes fan out,
+            // and keep connectTimeout tight-ish so an unreachable relay frees its
+            // slot fast. This is orthogonal to REQ concurrency (that runs on
+            // already-open sockets, bounded by AdaptiveRelayLimiter), so it can't
+            // trip a relay's REQ rate-limit — it only speeds connection setup. The
+            // executor thread pool is unbounded on demand, so raising maxRequests
+            // just lets more of those short-lived handshakes proceed at once. 7s
+            // (not 5s): a 5s cap struck too many merely-busy relays as connect
+            // failures — the crawl treats a connect *timeout* as retryable anyway,
+            // but the extra headroom lets slow-but-alive relays finish the handshake.
+            .connectTimeout(7, TimeUnit.SECONDS)
+            .dispatcher(
+                Dispatcher().apply {
+                    maxRequests = 256
+                    maxRequestsPerHost = 16
+                },
+            ).build()
 
     val client: NostrClient =
         NostrClient(
@@ -155,6 +184,44 @@ class Context(
         } ?: NostrSignerInternal(identity.keyPair())
 
     /**
+     * Client-wide tally of relay feedback — NOTICE frames, CLOSED reasons
+     * (auth-required / rate-limited / restricted / …), and NIP-42 AUTH
+     * challenges — so a failed REQ can be explained instead of guessed at.
+     * Registered on [client] for the life of this run.
+     */
+    val relayDiagnostics: RelayDiagnostics = RelayDiagnostics().also { client.addConnectionListener(it) }
+
+    /**
+     * Adaptive per-relay concurrent-subscription cap. Starts every relay
+     * generous (100) and demotes only the ones that complain about concurrency
+     * (100 → 20 → 10), driven straight off the NOTICE/CLOSED frames it observes
+     * as a connection listener. [drain]'s `gatePerRelay` path holds a relay's
+     * permit for the life of that relay's subscription, so we never exceed the
+     * cap the relay itself asked for. Idle for commands that don't opt in.
+     */
+    val relayLimiter: AdaptiveRelayLimiter = AdaptiveRelayLimiter().also { client.addConnectionListener(it) }
+
+    /**
+     * NIP-42 responder: answers a relay's AUTH challenge by signing with the
+     * account key, so auth-gated relays serve our reads instead of CLOSing the
+     * subscription. Constructing it registers its own listener on [client].
+     * Only a local key auto-signs — a remote bunker signer is skipped, since a
+     * per-relay remote round-trip during a crawl would stall it (and signing an
+     * auth event with any key still unlocks relays that just want *some* auth).
+     */
+    private val relayAuth: RelayAuthenticator =
+        RelayAuthenticator(
+            client = client,
+            signWithAllLoggedInUsers = { _, template ->
+                if (signer is NostrSignerInternal) {
+                    runCatching { listOf(signer.sign(template)) }.getOrElse { emptyList() }
+                } else {
+                    emptyList()
+                }
+            },
+        )
+
+    /**
      * NIP-05 resolver for turning `alice@damus.io`-style identifiers into pubkeys.
      * Uses the same OkHttp instance as the WebSocket client so we share connection
      * pools and TLS sessions.
@@ -174,23 +241,13 @@ class Context(
     private val messageStore by lazy { FileMarmotMessageStore(dataDir.groupsDir) }
 
     /**
-     * Filesystem-backed Nostr event store, rooted at [DataDir.eventsDir].
-     * Lazy so commands that don't touch persistent event state pay zero
-     * open cost (no `.lock` file, no seed allocation). Closed by
-     * [close] when this Context shuts down.
-     *
-     * Files are written pretty-printed (not the compact NIP-01 canonical
-     * form) so `cat`, `jq`, `git diff` are useful out of the box —
-     * humans inspect these files. Verification always re-canonicalises,
-     * so the stored bytes never feed back into a signature check.
+     * Shared Nostr event store for this run, opened via [StoreFactory]
+     * (SQLite by default, or the FS tree when `AMY_STORE=fs`). Lazy so
+     * commands that don't touch persistent event state pay zero open cost
+     * (no DB file / `.lock`, no seed allocation). Closed by [close] when
+     * this Context shuts down.
      */
-    private val storeDelegate: Lazy<IEventStore> =
-        lazy {
-            FsEventStore(
-                root = dataDir.eventsDir.toPath(),
-                eventToJson = JacksonMapper::toJsonPretty,
-            )
-        }
+    private val storeDelegate: Lazy<IEventStore> = lazy { StoreFactory.open(dataDir) }
     val store: IEventStore by storeDelegate
 
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
@@ -424,15 +481,26 @@ class Context(
      * Subscribe to the given filters across the given relays, drain all events
      * until either every relay has sent EOSE or the timeout elapses, and
      * return them. Used for one-shot catch-up queries — not live subscriptions.
+     *
+     * When [deadOut] is provided, every relay that reported it could not be
+     * connected to (`onCannotConnect`) is added to it, so callers can prune
+     * proven-dead relays from future routing instead of paying the full
+     * [timeoutMs] on them again. Slow-but-connected relays are NOT reported —
+     * only hard connect failures, so a temporarily-busy relay isn't discarded.
      */
     suspend fun drain(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         timeoutMs: Long = 8_000,
+        diagnoseSlow: Boolean = false,
+        deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
     ): List<Pair<NormalizedRelayUrl, Event>> {
         if (filters.isEmpty()) return emptyList()
         val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
-        val doneChannel = Channel<NormalizedRelayUrl>(UNLIMITED)
+        // Carries the terminal reason per relay so a timeout can distinguish a slow
+        // relay (never terminal) from a connect failure / CLOSED.
+        val doneChannel = Channel<Pair<NormalizedRelayUrl, String>>(UNLIMITED)
         val remaining = filters.keys.toMutableSet()
+        val doneReasons = HashMap<NormalizedRelayUrl, String>()
         val subId = newSubId()
         val listener =
             object : SubscriptionListener {
@@ -449,7 +517,7 @@ class Context(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    doneChannel.trySend(relay)
+                    doneChannel.trySend(relay to "eose")
                 }
 
                 override fun onClosed(
@@ -457,7 +525,7 @@ class Context(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    doneChannel.trySend(relay)
+                    doneChannel.trySend(relay to "closed:$message")
                 }
 
                 override fun onCannotConnect(
@@ -465,35 +533,73 @@ class Context(
                     message: String,
                     forFilters: List<Filter>?,
                 ) {
-                    doneChannel.trySend(relay)
+                    doneChannel.trySend(relay to "cannot:$message")
                 }
             }
         val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
         try {
             client.subscribe(subId, filters, listener)
-            withTimeoutOrNull(timeoutMs) {
-                while (remaining.isNotEmpty()) {
-                    select {
-                        eventChannel.onReceive { pair ->
-                            if (verifyAndStore(pair.second)) collected.add(pair)
+            val completed =
+                withTimeoutOrNull(timeoutMs) {
+                    while (remaining.isNotEmpty()) {
+                        select {
+                            eventChannel.onReceive { pair ->
+                                if (verifyAndStore(pair.second)) collected.add(pair)
+                            }
+                            doneChannel.onReceive { (relay, reason) ->
+                                remaining.remove(relay)
+                                doneReasons[relay] = reason
+                            }
                         }
-                        doneChannel.onReceive { r -> remaining.remove(r) }
                     }
+                    // Drain any events that landed after EOSE but before cancel
+                    while (true) {
+                        val r = eventChannel.tryReceive()
+                        if (!r.isSuccess) break
+                        val pair = r.getOrThrow()
+                        if (verifyAndStore(pair.second)) collected.add(pair)
+                    }
+                    true
                 }
-                // Drain any events that landed after EOSE but before cancel
-                while (true) {
-                    val r = eventChannel.tryReceive()
-                    if (!r.isSuccess) break
-                    val pair = r.getOrThrow()
-                    if (verifyAndStore(pair.second)) collected.add(pair)
-                }
+            if (diagnoseSlow && completed == null && remaining.isNotEmpty()) {
+                logSlowDrain(timeoutMs, remaining, doneReasons, collected)
             }
         } finally {
             client.unsubscribe(subId)
             eventChannel.close()
             doneChannel.close()
         }
+        deadOut?.let { out ->
+            for ((relay, reason) in doneReasons) {
+                classifyDrainFailure(reason)?.let { out[relay] = it }
+            }
+        }
         return collected
+    }
+
+    /**
+     * On a [drain] timeout, report which relays stalled and why — a relay that
+     * never sent EOSE (slow, possibly still streaming) vs one that couldn't be
+     * reached (CANNOT-CONNECT, which points at our side / the network) vs one
+     * that CLOSED the sub. Includes how many events each slow relay did send, so
+     * "relay is slow" and "we never connected" are easy to tell apart.
+     */
+    private fun logSlowDrain(
+        timeoutMs: Long,
+        stalled: Set<NormalizedRelayUrl>,
+        doneReasons: Map<NormalizedRelayUrl, String>,
+        collected: List<Pair<NormalizedRelayUrl, Event>>,
+    ) {
+        val eventsPer = collected.groupingBy { it.first }.eachCount()
+        val cannot = doneReasons.filterValues { it.startsWith("cannot") }
+        val closed = doneReasons.filterValues { it.startsWith("closed") }
+        val slowDetail = stalled.take(12).joinToString(", ") { "${it.url}(${eventsPer[it] ?: 0}ev)" }
+        val cannotDetail = cannot.entries.take(8).joinToString(", ") { "${it.key.url}=${it.value.removePrefix("cannot:").take(40)}" }
+        System.err.println(
+            "[drain] timeout ${timeoutMs}ms: ${stalled.size} slow(no EOSE), ${cannot.size} cannot-connect, ${closed.size} closed" +
+                (if (slowDetail.isNotEmpty()) " | slow: $slowDetail" else "") +
+                (if (cannotDetail.isNotEmpty()) " | cannot: $cannotDetail" else ""),
+        )
     }
 
     /**
@@ -595,26 +701,17 @@ class Context(
     }
 
     /**
-     * Verify [event]'s NIP-01 id+signature and, if valid, persist it
-     * to [store]. Returns `true` when the event was accepted (and
-     * therefore should be surfaced to callers). Persistence failures
-     * (I/O errors, full disk) are logged but do not propagate.
+     * Verify [event]'s NIP-01 id+signature and, if valid, persist it to [store].
+     * Returns `true` when the event was accepted (and therefore should be surfaced
+     * to callers). Persistence failures (I/O errors, full disk) are logged but do
+     * not propagate; a UNIQUE-constraint rejection is normal and swallowed quietly.
      *
-     * Every event-arrival path in the CLI funnels through this method
-     * so that [store] is the authoritative cache of what Amy has seen.
+     * Every event-arrival path in the CLI funnels through this so that [store] is
+     * the authoritative cache of what Amy has seen. Delegates to the shared quartz
+     * [verifyAndInsert] sink so the CLI and the GrapeRank crawler apply the exact
+     * same verify-then-store policy.
      */
-    suspend fun verifyAndStore(event: Event): Boolean {
-        if (!event.verify()) {
-            System.err.println("[cli] dropped event ${event.id.take(8)} kind=${event.kind} — bad signature")
-            return false
-        }
-        try {
-            store.insert(event)
-        } catch (t: Throwable) {
-            System.err.println("[cli] store insert failed for ${event.id.take(8)}: ${t.message}")
-        }
-        return true
-    }
+    suspend fun verifyAndStore(event: Event): Boolean = store.verifyAndInsert(event)
 
     // ------------------------------------------------------------------
     // Cache-first reads from [store]

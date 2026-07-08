@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.cli.commands.FilterCommand
 import com.vitorpamplona.amethyst.cli.commands.FollowCommand
 import com.vitorpamplona.amethyst.cli.commands.GiftCommands
 import com.vitorpamplona.amethyst.cli.commands.GitCommands
+import com.vitorpamplona.amethyst.cli.commands.GrapeRankCommand
 import com.vitorpamplona.amethyst.cli.commands.GroupCommands
 import com.vitorpamplona.amethyst.cli.commands.InitCommands
 import com.vitorpamplona.amethyst.cli.commands.KeyCommands
@@ -72,6 +73,8 @@ import com.vitorpamplona.amethyst.cli.commands.cashu.CashuCommands
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuMintCommands
 import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.runBlocking
 import kotlin.system.exitProcess
 
@@ -104,6 +107,12 @@ fun main(argv: Array<String>) {
     // also sets this via applicationDefaultJvmArgs; this is a belt-and-
     // braces guard for invocations that bypass the launcher scripts.
     System.setProperty("java.awt.headless", "true")
+
+    // Quiet quartz's internal DEBUG chatter (relay auth, MLS restore, URL
+    // rejection, throttle notices) by default so it doesn't drown a command's
+    // own output; --verbose / -v restores full DEBUG. Set before dispatch so
+    // even startup logging is gated.
+    Log.minLevel = if (argv.any { it == "--verbose" || it == "-v" }) LogLevel.DEBUG else LogLevel.WARN
 
     // Set output mode before dispatch so even argument-parsing errors
     // honour --json.
@@ -161,6 +170,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
             GlobalFlag.SECRET_BACKEND -> secretBackendFlag = consumed.value
             GlobalFlag.PASSPHRASE_FILE -> passphraseFileFlag = consumed.value
             GlobalFlag.JSON -> Output.mode = Output.Mode.JSON
+            GlobalFlag.VERBOSE -> Unit // level already applied in main(); just strip it here
             null -> filteredArgs.add(a)
         }
         i += consumed.tokensConsumed
@@ -254,6 +264,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "store" -> StoreCommands.dispatch(dataDir, tail)
         "follow" -> FollowCommand.follow(dataDir, tail)
         "unfollow" -> FollowCommand.unfollow(dataDir, tail)
+        "graperank" -> GrapeRankCommand.dispatch(dataDir, tail)
         "search" -> SearchCommand.dispatch(dataDir, tail)
         "zap" -> ZapCommand.dispatch(dataDir, tail)
         "offer" -> OfferCommands.dispatch(dataDir, tail)
@@ -305,11 +316,13 @@ private suspend fun marmotDispatch(
 private enum class GlobalFlag(
     val long: String,
     val takesValue: Boolean = true,
+    val short: String? = null,
 ) {
     ACCOUNT("--account"),
     SECRET_BACKEND("--secret-backend"),
     PASSPHRASE_FILE("--passphrase-file"),
     JSON("--json", takesValue = false),
+    VERBOSE("--verbose", takesValue = false, short = "-v"),
 }
 
 private data class ConsumedFlag(
@@ -328,7 +341,7 @@ private fun extractGlobalFlag(
     idx: Int,
 ): Pair<GlobalFlag?, ConsumedFlag> {
     for (flag in GlobalFlag.values()) {
-        if (token == flag.long) {
+        if (token == flag.long || token == flag.short) {
             return if (flag.takesValue) {
                 flag to ConsumedFlag(argv.getOrNull(idx + 1), 2)
             } else {
@@ -353,13 +366,15 @@ private fun printUsage() {
         |      [--secret-backend auto|keychain|ncryptsec|plaintext]
         |      [--passphrase-file PATH]
         |      [--json]
+        |      [--verbose|-v]
         |      <cmd> [args...]
         |
         |Account selection:
         |  All state lives under ~/.amy/. Per-account directories
         |  ~/.amy/<account>/ hold identity, cursors, MLS state, and
         |  aliases; every observed Nostr event lands in the shared
-        |  ~/.amy/shared/events-store/. ACCOUNT must match
+        |  store under ~/.amy/shared/ (a SQLite `events.db` by default, or
+        |  the `events-store/` tree when AMY_STORE=fs). ACCOUNT must match
         |  [a-zA-Z0-9_-]{1,64} (no spaces, no slashes).
         |
         |  Resolution order:
@@ -575,6 +590,31 @@ private fun printUsage() {
         |  unfollow USER [--timeout SECS]             remove USER from your contact list
         |                                              (USER: npub|nprofile|hex|name@domain)
         |
+        |Web of Trust (GrapeRank):
+        |  graperank [OBSERVER]                       compute subjective trust scores (0..1) for every
+        |    [--limit N] [--min-score X]               user reachable in the follow/mute/report graph.
+        |    [--rigor X] [--attenuation X]             Exhaustively crawls each user's kind:10002 outbox
+        |    [--max-rounds N] [--max-hops N]           for their latest kind:3/10000/1984 until every
+        |    [--offline] [--timeout SECS]              discovered user has been checked (no user cap;
+        |    [--diagnose]                              --max-hops bounds follow distance, e.g. 8;
+        |                                              --diagnose logs slow/failed relays on timeout).
+        |    [--publish] [--min-rank N]                OBSERVER: npub|nprofile|hex|name@domain (default:
+        |    [--publish-limit N] [--publish-relay URL] active account). --offline scores from the local
+        |                                              store only. --publish reconciles NIP-85 kind:30382
+        |                                              cards signed by a per-observer service key: sends
+        |                                              new/changed ranks >= --min-rank (default 2), skips
+        |                                              unchanged, and retracts (kind:5) any card whose
+        |                                              target left the graph or fell below the cutoff.
+        |  graperank operator [status|relay <url>…    manage the machine's operator keys (~/.amy/operator/,
+        |    |providers]                               independent of accounts): relay sets where cards +
+        |                                              retractions publish; status shows master + relays;
+        |                                              providers lists observer -> service-pubkey.
+        |  graperank register [PROVIDER]              declare a NIP-85 provider in your kind:10040 so
+        |    [--service KIND:TAG] [--relay URL]        clients can discover it (default: self as the
+        |    [--private]                               30382:rank provider at your first outbox relay).
+        |  graperank providers [USER] [--refresh]     list a user's declared NIP-85 trusted providers
+        |    [--timeout SECS]                          (default: active account).
+        |
         |Zaps (NIP-57):
         |  zap user USER SATS               build a profile zap-request, fetch a BOLT11
         |    [--comment X] [--anon|--private]  invoice from the recipient's LN service
@@ -649,11 +689,15 @@ private fun printUsage() {
         |
         |  marmot reset [--yes]                       wipe all local MLS/KeyPackage state (destructive)
         |
-        |Local event store (`<data-dir>/events-store/`):
-        |  store stat                                 event count, kind histogram, disk usage
+        |Local event store (shared, under `<data-dir>/shared/`):
+        |  Backend selected by AMY_STORE: sqlite (default; `shared/events.db`)
+        |  or fs (`AMY_STORE=fs`; the `shared/events-store/` tree). SQLite is
+        |  far more compact at scale — the FS tree spends one file per index
+        |  posting, so large crawls balloon on disk.
+        |  store stat                                 event count + disk usage (kind histogram/mtime on fs)
         |  store sweep-expired                        delete events past their NIP-40 expiration
-        |  store scrub                                rebuild idx/ from canonical events (after edits / crashes)
-        |  store compact                              drop dangling idx entries (canonical gone)
+        |  store scrub                                fs: rebuild idx/ from canonical events; sqlite: no-op
+        |  store compact                              fs: drop dangling idx entries; sqlite: VACUUM
         |  store reindex-fts                          rebuild the NIP-50 search index (after a searchable-kinds change)
         """.trimMargin(),
     )
