@@ -24,19 +24,29 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.GroupDiscoveryConstraint
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
 
-/** One screen's request for the full channel directory of a single relay. */
+/**
+ * One screen's request for a single relay's group directory. [constraint] narrows the REQ
+ * per top-nav filter: [GroupDiscoveryConstraint.ByHashtags]/[GroupDiscoveryConstraint.ByGeohashes]
+ * query only kind-39000 tagged with the topic/geo (relay must copy `t`/`g` onto the 39000);
+ * every other constraint pulls the broad directory (39000-39003) since the people match needs
+ * the rosters. Defaults to [GroupDiscoveryConstraint.AllGroups] for the "browse a relay" screen.
+ */
 class RelayGroupDirectoryQueryState(
     val relay: NormalizedRelayUrl,
     val account: Account,
+    val constraint: GroupDiscoveryConstraint = GroupDiscoveryConstraint.AllGroups,
 )
 
 private val RELAY_GROUP_DIRECTORY_KINDS =
@@ -76,18 +86,35 @@ class RelayGroupDirectorySubAssembler(
     override fun updateFilter(
         key: RelayGroupDirectoryQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> =
-        listOf(
-            RelayBasedFilter(
-                relay = key.relay,
-                filter =
+    ): List<RelayBasedFilter> {
+        val sinceTime = since?.get(key.relay)?.time
+        val filter =
+            when (val c = key.constraint) {
+                is GroupDiscoveryConstraint.ByHashtags ->
+                    Filter(
+                        kinds = listOf(GroupMetadataEvent.KIND),
+                        tags = mapOf(HashtagTag.TAG_NAME to c.hashtags.map { it.lowercase() }),
+                        limit = 500,
+                        since = sinceTime,
+                    )
+                is GroupDiscoveryConstraint.ByGeohashes ->
+                    Filter(
+                        kinds = listOf(GroupMetadataEvent.KIND),
+                        tags = mapOf(GeoHashTag.TAG_NAME to c.geohashes.map { it.lowercase() }),
+                        limit = 500,
+                        since = sinceTime,
+                    )
+                // AllGroups / ByPeople / AnyOf need the rosters (39001/39002) for the people
+                // match and member counts, so pull the whole directory unnarrowed.
+                else ->
                     Filter(
                         kinds = RELAY_GROUP_DIRECTORY_KINDS,
                         limit = 500,
-                        since = since?.get(key.relay)?.time,
-                    ),
-            ),
-        )
+                        since = sinceTime,
+                    )
+            }
+        return listOf(RelayBasedFilter(relay = key.relay, filter = filter))
+    }
 
     override fun id(key: RelayGroupDirectoryQueryState) = key.relay
 }

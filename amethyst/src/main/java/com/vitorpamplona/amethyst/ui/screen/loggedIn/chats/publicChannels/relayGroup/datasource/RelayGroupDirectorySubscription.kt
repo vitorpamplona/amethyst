@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.GroupDiscoveryConstraint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Composable
@@ -31,10 +32,11 @@ fun RelayGroupDirectorySubscription(
     relay: NormalizedRelayUrl,
     dataSource: RelayGroupDirectoryFilterAssembler,
     accountViewModel: AccountViewModel,
+    constraint: GroupDiscoveryConstraint = GroupDiscoveryConstraint.AllGroups,
 ) {
     val state =
-        remember(accountViewModel.account, relay) {
-            RelayGroupDirectoryQueryState(relay, accountViewModel.account)
+        remember(accountViewModel.account, relay, constraint) {
+            RelayGroupDirectoryQueryState(relay, accountViewModel.account, constraint)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

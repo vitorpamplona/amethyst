@@ -83,18 +83,24 @@ fun RelayGroupDiscoveryScreen(
     val viewModel: RelayGroupDiscoveryViewModel = viewModel()
     viewModel.init(accountViewModel.account)
 
-    val relays by viewModel.relays.collectAsStateWithLifecycle()
+    val constraints by viewModel.constraints.collectAsStateWithLifecycle()
     val groups by viewModel.groups.collectAsStateWithLifecycle()
     val selectedFilter by accountViewModel.account.settings.defaultRelayGroupsDiscoveryFollowList
         .collectAsStateWithLifecycle()
     val favoriteRelays by accountViewModel.account.relayFeedsList.flow
         .collectAsStateWithLifecycle()
 
-    // Fan the directory subscription out to each relay in the current set while the screen
-    // is visible; each is a lifecycle-aware per-relay REQ that EOSEs and dedupes by relay.
-    relays.forEach { relay ->
+    // Fan the directory subscription out to each relay in the current set while the screen is
+    // visible; each is a lifecycle-aware per-relay REQ (narrowed by the relay's constraint for
+    // topic/geo filters) that EOSEs and dedupes by relay.
+    constraints.forEach { (relay, constraint) ->
         key(relay) {
-            RelayGroupDirectorySubscription(relay, accountViewModel.dataSources().relayGroupDirectory, accountViewModel)
+            RelayGroupDirectorySubscription(
+                relay,
+                accountViewModel.dataSources().relayGroupDirectory,
+                accountViewModel,
+                constraint,
+            )
         }
     }
 

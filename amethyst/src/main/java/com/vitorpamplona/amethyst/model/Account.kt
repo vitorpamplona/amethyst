@@ -1506,6 +1506,8 @@ class Account(
         isClosed: Boolean = false,
         isHidden: Boolean = false,
         isRestricted: Boolean = false,
+        hashtags: List<String> = emptyList(),
+        geohashes: List<String> = emptyList(),
     ): GroupId {
         signAndSendPrivatelyOrBroadcast(CreateGroupEvent.build(groupId)) { listOf(relay) }
 
@@ -1516,6 +1518,8 @@ class Account(
                 about = about,
                 picture = picture,
                 status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
+                hashtags = hashtags,
+                geohashes = geohashes,
             )
         signAndSendPrivatelyOrBroadcast(edit) { listOf(relay) }
 
@@ -1593,6 +1597,8 @@ class Account(
         isClosed: Boolean,
         isHidden: Boolean,
         isRestricted: Boolean,
+        hashtags: List<String> = emptyList(),
+        geohashes: List<String> = emptyList(),
     ) {
         val template =
             EditMetadataEvent.build(
@@ -1601,6 +1607,8 @@ class Account(
                 about = about,
                 picture = picture,
                 status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
+                hashtags = hashtags,
+                geohashes = geohashes,
             )
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }

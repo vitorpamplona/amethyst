@@ -28,6 +28,10 @@ import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.hasTagName
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -50,6 +54,19 @@ class GroupMetadataEvent(
     fun about() = tags.firstTagValue("about")
 
     fun picture() = tags.firstTagValue("picture")
+
+    /**
+     * Topic hashtags (`t` tags) the relay advertises for this group, used by the
+     * discovery feed's hashtag filter. NIP-29 doesn't define these; a group only
+     * carries them if its host relay copies the requested `t` tags onto the 39000.
+     */
+    fun hashtags() = tags.hashtags()
+
+    /**
+     * Geohashes (`g` tags) the relay advertises for this group, used by the discovery
+     * feed's geo filter. Same relay-cooperation caveat as [hashtags].
+     */
+    fun geohashes() = tags.geohashes()
 
     /** Only members can read. Presence of the `private` flag; absent = public read. */
     fun isPrivate() = tags.hasTagName("private")
@@ -108,6 +125,8 @@ class GroupMetadataEvent(
             picture: String? = null,
             status: Set<GroupStatus> = emptySet(),
             supportedKinds: List<Int>? = null,
+            hashtags: List<String> = emptyList(),
+            geohashes: List<String> = emptyList(),
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GroupMetadataEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
@@ -119,6 +138,9 @@ class GroupMetadataEvent(
             supportedKinds?.let { kinds ->
                 add((listOf("supported_kinds") + kinds.map { it.toString() }).toTypedArray())
             }
+            addAll(HashtagTag.assemble(hashtags))
+            // Mip-map each geohash into every prefix so a coarser followed geohash still matches.
+            geohashes.forEach { addAll(GeoHashTag.assemble(it).toList()) }
             initializer()
         }
     }

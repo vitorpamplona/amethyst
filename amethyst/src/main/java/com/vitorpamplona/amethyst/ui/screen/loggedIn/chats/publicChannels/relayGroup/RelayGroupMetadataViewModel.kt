@@ -75,6 +75,12 @@ class RelayGroupMetadataViewModel : ViewModel() {
     val about = mutableStateOf(TextFieldValue())
     val picture = mutableStateOf(TextFieldValue())
 
+    /** Comma/space-separated topic hashtags; drives the discovery hashtag filter. */
+    val topics = mutableStateOf(TextFieldValue())
+
+    /** A single geohash for the group's location; drives the discovery geo filter. */
+    val geohash = mutableStateOf(TextFieldValue())
+
     var isPrivate by mutableStateOf(false)
     var isClosed by mutableStateOf(false)
     var isHidden by mutableStateOf(false)
@@ -126,7 +132,28 @@ class RelayGroupMetadataViewModel : ViewModel() {
         isClosed = channel.isClosed()
         isHidden = event?.isHidden() ?: false
         isRestricted = event?.isRestricted() ?: false
+        topics.value = TextFieldValue(event?.hashtags()?.distinct()?.joinToString(" ") ?: "")
+        // Stored geohashes are mip-mapped into every prefix; the last (longest) is the real one.
+        geohash.value = TextFieldValue(event?.geohashes()?.maxByOrNull { it.length } ?: "")
     }
+
+    /** Split the topics field into distinct, non-blank, lowercased hashtags (leading `#` dropped). */
+    private fun parseTopics(): List<String> =
+        topics.value.text
+            .split(',', ' ', '\n', '\t')
+            .map { it.trim().removePrefix("#").lowercase() }
+            .filter { it.isNotBlank() }
+            .distinct()
+
+    /** The single geohash (lowercased, `#` stripped), or empty when none. */
+    private fun parseGeohashes(): List<String> =
+        geohash.value.text
+            .trim()
+            .removePrefix("#")
+            .lowercase()
+            .ifBlank { null }
+            ?.let { listOf(it) }
+            ?: emptyList()
 
     fun markTouched() {
         touched = true
@@ -179,6 +206,8 @@ class RelayGroupMetadataViewModel : ViewModel() {
             picture.value.text
                 .trim()
                 .ifBlank { null }
+        val hashtags = parseTopics()
+        val geohashes = parseGeohashes()
         val existing = channel
         if (existing == null) {
             account.createRelayGroup(
@@ -191,6 +220,8 @@ class RelayGroupMetadataViewModel : ViewModel() {
                 isClosed = isClosed,
                 isHidden = isHidden,
                 isRestricted = isRestricted,
+                hashtags = hashtags,
+                geohashes = geohashes,
             )
         } else {
             account.editRelayGroupMetadata(
@@ -202,6 +233,8 @@ class RelayGroupMetadataViewModel : ViewModel() {
                 isClosed = isClosed,
                 isHidden = isHidden,
                 isRestricted = isRestricted,
+                hashtags = hashtags,
+                geohashes = geohashes,
             )
         }
     }

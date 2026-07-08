@@ -1977,6 +1977,12 @@
     <string name="relay_group_field_picture">Group picture</string>
     <string name="relay_group_add_photo">Add photo</string>
     <string name="relay_group_change_photo">Change photo</string>
+    <string name="relay_group_section_discovery">Discovery</string>
+    <string name="relay_group_section_discovery_desc">Help people find this group. Topics and a location surface it under the matching discovery filters (if the host relay supports them).</string>
+    <string name="relay_group_field_topics">Topics</string>
+    <string name="relay_group_field_topics_hint">bitcoin, nostr, art</string>
+    <string name="relay_group_field_geohash">Location (geohash)</string>
+    <string name="relay_group_field_geohash_hint">u0nd</string>
     <string name="relay_group_section_permissions">Permissions</string>
     <string name="relay_group_flag_private">Private</string>
     <string name="relay_group_flag_private_desc">Only members can read messages.</string>

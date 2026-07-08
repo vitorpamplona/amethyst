@@ -293,6 +293,42 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
 
     Spacer(Modifier.height(12.dp))
     Text(
+        text = stringRes(R.string.relay_group_section_discovery),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+    )
+    Text(
+        text = stringRes(R.string.relay_group_section_discovery_desc),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 2.dp),
+    )
+
+    OutlinedTextField(
+        value = viewModel.topics.value,
+        onValueChange = {
+            viewModel.topics.value = it
+            viewModel.markTouched()
+        },
+        singleLine = true,
+        label = { Text(stringRes(R.string.relay_group_field_topics)) },
+        placeholder = { Text(stringRes(R.string.relay_group_field_topics_hint)) },
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    )
+    OutlinedTextField(
+        value = viewModel.geohash.value,
+        onValueChange = {
+            viewModel.geohash.value = it
+            viewModel.markTouched()
+        },
+        singleLine = true,
+        label = { Text(stringRes(R.string.relay_group_field_geohash)) },
+        placeholder = { Text(stringRes(R.string.relay_group_field_geohash_hint)) },
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    )
+
+    Spacer(Modifier.height(12.dp))
+    Text(
         text = stringRes(R.string.relay_group_section_permissions),
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,

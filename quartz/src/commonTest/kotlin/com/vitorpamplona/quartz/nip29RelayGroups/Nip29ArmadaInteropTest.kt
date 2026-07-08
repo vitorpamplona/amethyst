@@ -320,6 +320,58 @@ class Nip29ArmadaInteropTest {
     }
 
     @Test
+    fun parsesGroupMetadataTopicsAndGeohashes() {
+        // Amethyst-extension: a relay that copies requested topics/geo onto the 39000.
+        val e =
+            parse(
+                GroupMetadataEvent.KIND,
+                arrayOf(
+                    arrayOf("d", gid),
+                    arrayOf("name", "Bitcoin Devs"),
+                    arrayOf("t", "bitcoin"),
+                    arrayOf("t", "nostr"),
+                    arrayOf("g", "u0nd"),
+                ),
+            ) as GroupMetadataEvent
+        assertEquals(listOf("bitcoin", "nostr"), e.hashtags())
+        assertEquals(listOf("u0nd"), e.geohashes())
+    }
+
+    @Test
+    fun buildsGroupMetadataWithTopicsAndGeohashes() {
+        val tags =
+            GroupMetadataEvent
+                .build(
+                    groupId = gid,
+                    name = "Bitcoin Devs",
+                    hashtags = listOf("Bitcoin"),
+                    geohashes = listOf("u0nd"),
+                ).tags
+        // HashtagTag.assemble lowercases mixed-case topics alongside the original.
+        assertTrue(tags.any { it[0] == "t" && it[1] == "bitcoin" })
+        // GeoHashTag.assemble mip-maps the geohash into every prefix.
+        assertTrue(tags.any { it[0] == "g" && it[1] == "u0nd" })
+        assertTrue(tags.any { it[0] == "g" && it[1] == "u" })
+
+        val parsed = parse(GroupMetadataEvent.KIND, tags) as GroupMetadataEvent
+        assertTrue(parsed.hashtags().contains("bitcoin"))
+        assertTrue(parsed.geohashes().contains("u0nd"))
+    }
+
+    @Test
+    fun buildsEditMetadataWithTopicsAndGeohashes() {
+        val edit =
+            EditMetadataEvent.build(
+                groupId = gid,
+                name = "Bitcoin Devs",
+                hashtags = listOf("bitcoin"),
+                geohashes = listOf("u0nd"),
+            )
+        assertTrue(edit.tags.any { it[0] == "t" && it[1] == "bitcoin" })
+        assertTrue(edit.tags.any { it[0] == "g" && it[1] == "u0nd" })
+    }
+
+    @Test
     fun buildsCreateAndModerationEvents() {
         assertTrue(CreateGroupEvent.build(gid).tags.any { it[0] == "h" && it[1] == gid })
         assertTrue(CreateInviteEvent.build(gid, "code42").tags.any { it[0] == "code" && it[1] == "code42" })
