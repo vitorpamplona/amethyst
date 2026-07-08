@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncException
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcile
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -110,7 +111,7 @@ object SyncCommand {
         // publish the local deletions that would make the relay remove them — an id- or
         // address-based kind-5, or a kind-62 vanish that targets this relay. Only those
         // deletions, nothing else (not other deletions by the same author). We fetch the
-        // need events (not to keep — [Context.fetchRaw] neither verifies nor stores) only
+        // need events (not to keep — `fetchAll` neither verifies nor stores) only
         // to learn their author/address/created_at so [deletionsCovering] can tell which
         // of our deletions actually apply. Nothing is pulled down or applied locally, so
         // this can never over-delete the local store.
@@ -145,8 +146,9 @@ object SyncCommand {
                             List(DOWNLOAD_WORKERS) {
                                 launch {
                                     for (batch in needBatches) {
-                                        // Fetch the need events once (raw — no verify/store).
-                                        val events = ctx.fetchRaw(mapOf(relay to listOf(Filter(ids = batch))), timeoutMs)
+                                        // Fetch the need events once (no verify/store — we only
+                                        // need their metadata to decide which deletions apply).
+                                        val events = ctx.client.fetchAll(relay, Filter(ids = batch), timeoutMs)
                                         // Push up the deletions that would remove them from the relay.
                                         if (syncDeletions) {
                                             for (del in ctx.store.deletionsCovering(events, relay)) {
