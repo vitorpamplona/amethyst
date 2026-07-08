@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,8 +31,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -69,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupPreviewSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -148,7 +150,6 @@ fun RelayGroupDiscoveryScreen(
                             LazyColumn(Modifier.fillMaxWidth(), state = listState) {
                                 itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
                                     RelayGroupDiscoveryRow(item, accountViewModel, nav)
-                                    HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                                 }
                             }
                         },
@@ -177,7 +178,9 @@ private fun WatchAccountForRelayGroupDiscovery(
 /**
  * Resolves the 39000 metadata note to its live [RelayGroupChannel] (keyed by host relay + group
  * id) and recomposes in place as the relay-signed metadata / roster changes, so member counts and
- * membership stay current without moving the row.
+ * membership stay current without moving the row. While the row is on screen it also warms the
+ * group — the newest handful of chat messages / threads — so tapping it opens an already-populated
+ * screen. The warm-up is lifecycle-aware and tears down as the row scrolls off.
  */
 @Composable
 private fun RelayGroupDiscoveryRow(
@@ -188,6 +191,9 @@ private fun RelayGroupDiscoveryRow(
     val event = note.event as? GroupMetadataEvent ?: return
     val relay = note.relays.firstOrNull() ?: return
     val baseChannel = remember(event.groupId(), relay) { LocalCache.getOrCreateRelayGroupChannel(GroupId(event.groupId(), relay)) }
+
+    // Prefetch the group's recent content so opening the card lands on a populated screen.
+    RelayGroupPreviewSubscription(baseChannel, accountViewModel.dataSources().relayGroupPreview, accountViewModel)
 
     val channelState by baseChannel
         .flow()
@@ -220,56 +226,107 @@ private fun RelayGroupDiscoveryCard(
     val memberCount = channel.memberCount()
     val relay = channel.groupId.relayUrl
 
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ElevatedCard(
+        onClick = { nav.nav(routeFor(channel)) },
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp),
     ) {
-        RobohashFallbackAsyncImage(
-            robot = channel.groupId.id,
-            model = channel.profilePicture(),
-            contentDescription = channel.toBestDisplayName(),
-            modifier = Modifier.size(48.dp).clip(CircleShape),
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-            autoPlayGif = autoPlayGif,
-        )
-
-        Column(
-            Modifier
-                .weight(1f)
-                .clickable { nav.nav(routeFor(channel)) },
-        ) {
+        Column(Modifier.fillMaxWidth().padding(12.dp)) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    text = channel.toBestDisplayName(),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
+                RobohashFallbackAsyncImage(
+                    robot = channel.groupId.id,
+                    model = channel.profilePicture(),
+                    contentDescription = channel.toBestDisplayName(),
+                    modifier =
+                        Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape),
+                    loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                    loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                    autoPlayGif = autoPlayGif,
                 )
-                DiscoveryStatusPill(channel)
-            }
-            val subtitle =
-                if (memberCount > 0) {
-                    "${relay.displayUrl()} · ${pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount)}"
-                } else {
-                    relay.displayUrl()
+
+                Column(Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = channel.toBestDisplayName(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        DiscoveryStatusPill(channel)
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        if (memberCount > 0) {
+                            Icon(
+                                symbol = MaterialSymbols.Group,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Text(
+                                text = pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = "·",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Text(
+                            text = relay.displayUrl(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                    }
                 }
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+
+                // Star the group's host relay so it (and its other groups) surface under the relay
+                // chip in the filter — the favorite is the kind-10012 relay-feeds list.
+                IconButton(onClick = {
+                    if (isFavoriteRelay) accountViewModel.unfollowRelayFeed(relay) else accountViewModel.followRelayFeed(relay)
+                }) {
+                    Icon(
+                        symbol = if (isFavoriteRelay) MaterialSymbols.Star else MaterialSymbols.StarBorder,
+                        contentDescription = stringRes(R.string.relay_group_favorite_relay),
+                        tint = if (isFavoriteRelay) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+
+                if (!isMember) {
+                    FilledTonalButton(onClick = {
+                        // Open groups join directly; closed ones open the group where the invite
+                        // code can be entered.
+                        if (channel.isClosed()) {
+                            nav.nav(routeFor(channel))
+                        } else {
+                            accountViewModel.joinRelayGroup(channel)
+                        }
+                    }) {
+                        Text(stringRes(R.string.join))
+                    }
+                }
+            }
+
             channel.summary()?.takeIf { it.isNotBlank() }?.let {
                 Text(
                     text = it,
@@ -277,34 +334,8 @@ private fun RelayGroupDiscoveryCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
-            }
-        }
-
-        // Star the group's host relay so it (and its other groups) surface under the relay
-        // chip in the filter — the favorite is the kind-10012 relay-feeds list.
-        IconButton(onClick = {
-            if (isFavoriteRelay) accountViewModel.unfollowRelayFeed(relay) else accountViewModel.followRelayFeed(relay)
-        }) {
-            Icon(
-                symbol = if (isFavoriteRelay) MaterialSymbols.Star else MaterialSymbols.StarBorder,
-                contentDescription = stringRes(R.string.relay_group_favorite_relay),
-                tint = if (isFavoriteRelay) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-
-        if (!isMember) {
-            FilledTonalButton(onClick = {
-                // Open groups join directly; closed ones open the group where the invite
-                // code can be entered.
-                if (channel.isClosed()) {
-                    nav.nav(routeFor(channel))
-                } else {
-                    accountViewModel.joinRelayGroup(channel)
-                }
-            }) {
-                Text(stringRes(R.string.join))
             }
         }
     }
