@@ -52,6 +52,14 @@ import kotlin.test.assertEquals
  * (the O(N) part it shares with any sync) next to the settle cost, so the deletion
  * overhead is visible as "≈ a couple of reconciles + K", not "+ a content re-download".
  *
+ * Why the printed settle can read as several× a bare reconcile at large N: the extra time
+ * is NOT the deletion algorithm (a phase breakdown showed reconciles stay ~sub-second at
+ * N=100k, and the settle re-fetches K=20, not N). It is entirely the K `publishAndConfirm`
+ * ingests into a large geode relay — publishing K *plain* notes costs the same — and that
+ * ingest path is JVM-cold on first use: consecutive K-note batches dropped monotonically
+ * (~3100 → ~570 ms) purely from JIT warmup. So the cost is O(K) relay-ingest dominated by
+ * one-time warmup, independent of N.
+ *
  * Default N is small so it doubles as a fast correctness guard; scale it with
  * `-DdelBenchN=200000` to see the shape at size. Not a speed assertion (container noise).
  */
