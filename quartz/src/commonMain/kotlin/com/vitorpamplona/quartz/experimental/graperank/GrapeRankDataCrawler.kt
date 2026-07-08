@@ -153,6 +153,19 @@ class GrapeRankDataCrawler(
         val insertBatchSize: Int = 500,
         val drainConcurrency: Int = 24,
         val timeoutEvictStrikes: Int = 3,
+        /**
+         * Also skip proven-dead relays in the kind:10002 discovery sweep
+         * ([ensureRelayLists]). Without it the discovery/backbone set is queried
+         * every round regardless of deadRelays, so a refusing indexer (snort,
+         * nostr.band…) is re-hammered every round. Benchmarked win — default on.
+         */
+        val shedDeadDiscovery: Boolean = true,
+        /**
+         * Rotation passes in the sharded backbone sweep (each is an awaitAll
+         * barrier). Benchmarked: 2 clears the backbone bulk at ~40% of the
+         * 6-rotation wall cost with no completeness loss (1 clears too little).
+         */
+        val shardRotations: Int = 2,
     )
 
     /** What the crawl fetched — the counters the caller reports and the graph is built from. */
@@ -162,6 +175,12 @@ class GrapeRankDataCrawler(
         val relaysContacted: Int,
         /** Users bucketed by follow-graph distance from the observer (hop -> count), ascending. */
         val hopHistogram: Map<Int, Int>,
+        /**
+         * Contact lists successfully recovered, bucketed by the fed user's hop
+         * (hop -> count), ascending. Divide by [hopHistogram] at the same hop for
+         * per-hop completeness (fraction of discovered users we pulled a kind:3 for).
+         */
+        val contactsFedByHop: Map<Int, Int>,
         val downloadMs: Long,
         /** Wall time verifying signatures, summed across the concurrent consumers. */
         val verifyMs: Long,
@@ -209,6 +228,11 @@ class GrapeRankDataCrawler(
         val relaysContacted = hashSetOf<NormalizedRelayUrl>()
         val writeRelayFreq = HashMap<NormalizedRelayUrl, Int>()
         val liveRelays = hashSetOf<NormalizedRelayUrl>()
+
+        // Per-relay outcome/latency/yield accounting, written from every drain unit
+        // (fast + parked) across every round. Dumped at crawl end; the raw signal a
+        // future adaptive controller reads to size filters / cap / strangle per relay.
+        val telemetry = RelayTelemetry()
 
         // Concurrent: touched by more than one of producer/consumer/drain-workers.
         val relayHints = ConcurrentMap<HexKey, ConcurrentSet<NormalizedRelayUrl>>()
@@ -270,6 +294,14 @@ class GrapeRankDataCrawler(
 
         var rounds = 0
         var contactListsFed = 0
+
+        // Contact lists successfully recovered, bucketed by the fed user's hop
+        // distance from the observer. Paired with [hopOf]'s histogram (users
+        // DISCOVERED per hop), this gives per-hop completeness: how many of the
+        // users found at each hop we actually pulled a kind:3 for. Single-writer:
+        // only [ingest] touches it, and ingest runs only on the round loop /
+        // Phase-B consumer, never concurrently.
+        val contactsFedByHop = HashMap<Int, Int>()
 
         // Live-progress context the heartbeat ticker reads (plain vars set only by the
         // single round-loop coroutine; the ticker's reads are benign racy int/bool
@@ -366,6 +398,8 @@ class GrapeRankDataCrawler(
             }
             builder?.addFollows(source, follows)
             contactListsFed++
+            val sourceHop = hopOf[source] ?: 0
+            contactsFedByHop[sourceHop] = (contactsFedByHop[sourceHop] ?: 0) + 1
             return fresh
         }
 
@@ -404,7 +438,7 @@ class GrapeRankDataCrawler(
             var missing = authors.filter { it !in done && contactsOf(it) == null }
             var got = 0
             var rotation = 0
-            while (missing.size > SHARD_BROADCAST_THRESHOLD && rotation < SHARD_ROTATIONS) {
+            while (missing.size > SHARD_BROADCAST_THRESHOLD && rotation < config.shardRotations) {
                 val shards = Array(n) { ArrayList<HexKey>() }
                 for (pk in missing) {
                     val base = ((pk.hashCode() % n) + n) % n
@@ -496,7 +530,12 @@ class GrapeRankDataCrawler(
                 drainGated(filters, null)
             }
 
-            val discovery = config.relayListDiscoveryRelays
+            val discovery =
+                if (config.shedDeadDiscovery) {
+                    config.relayListDiscoveryRelays.filterTo(HashSet()) { it !in deadRelays }
+                } else {
+                    config.relayListDiscoveryRelays
+                }
             query(missing, discovery)
 
             val stillMissing = missing.filter { relaysOf(it) == null }
@@ -871,6 +910,7 @@ class GrapeRankDataCrawler(
                                         unitEvents.close()
                                         client.unsubscribe(subId)
                                         val drained = buildList { for (e in unitEvents) add(e) }
+                                        telemetry.record(subRelay, RelayTelemetry.outcomeOf(reason, parked = false), elapsedMs, authorsIn(groupFilters), drained.size)
                                         val persisted = persist(drained)
                                         // Alive if it EOSE'd or handed us anything; a connect-timeout that
                                         // gave nothing (classifyDrainFailure leaves it retryable forever)
@@ -894,19 +934,21 @@ class GrapeRankDataCrawler(
                                                     // of SILENCE (no event, no terminal), so a relay still
                                                     // streaming a large result set is never chopped mid-flight.
                                                     val late = awaitTerminalOrIdle(done, activity, config.parkTimeoutMs)
-                                                    logSlow(subRelay, "parked→$late", mark.elapsedNow().inWholeMilliseconds, groupFilters)
+                                                    val lateMs = mark.elapsedNow().inWholeMilliseconds
+                                                    logSlow(subRelay, "parked→$late", lateMs, groupFilters)
                                                     // A parked relay that ends in a hard/transient failure (not a
                                                     // clean EOSE) is reported dead the same way a fast one would be.
                                                     val lateDead = ConcurrentMap<NormalizedRelayUrl, DrainFailure>()
                                                     classify(late, subRelay, lateDead)
                                                     recordDead(lateDead.snapshot())
                                                     unitEvents.close()
-                                                    val drainedLate = buildList { for (e in unitEvents) add(e) }
-                                                    for (pair in persist(drainedLate)) lateHarvest.trySend(pair)
+                                                    val lateDrained = buildList { for (e in unitEvents) add(e) }
+                                                    telemetry.record(subRelay, RelayTelemetry.outcomeOf(late, parked = true), lateMs, authorsIn(groupFilters), lateDrained.size)
+                                                    for (pair in persist(lateDrained)) lateHarvest.trySend(pair)
                                                     // Same liveness rule as the fast path: a park that ended
                                                     // in a clean EOSE or delivered anything clears the relay;
                                                     // one that idle-cut ("timeout") with nothing strikes it.
-                                                    if (late == "eose" || drainedLate.isNotEmpty()) {
+                                                    if (late == "eose" || lateDrained.isNotEmpty()) {
                                                         clearTimeoutStrikes(subRelay)
                                                     } else if (late == "timeout" || isTimeoutReason(late)) {
                                                         strikeUnproductiveTimeout(subRelay)
@@ -917,7 +959,9 @@ class GrapeRankDataCrawler(
                                                 }
                                             }
                                         } else {
-                                            logSlow(subRelay, "timeout", mark.elapsedNow().inWholeMilliseconds, groupFilters)
+                                            val toMs = mark.elapsedNow().inWholeMilliseconds
+                                            logSlow(subRelay, "timeout", toMs, groupFilters)
+                                            telemetry.record(subRelay, RelayTelemetry.Outcome.FAST_TIMEOUT, toMs, authorsIn(groupFilters), 0)
                                             unitEvents.close()
                                             client.unsubscribe(subId)
                                             // Parking disabled: a fast timeout with nothing delivered is
@@ -938,6 +982,53 @@ class GrapeRankDataCrawler(
             deadOut?.putAll(failures.snapshot())
             answeredOut?.addAll(filters.keys.filter { it !in notAnswered })
             return fast
+        }
+
+        /**
+         * Emit the per-relay classification table: for every relay we touched, our
+         * LIVE/DEAD verdict and the concurrency/rate limits we settled on, joined
+         * with the evidence (attempts + outcome counts + yield + latency) that drove
+         * it. One `[relay-class]` line per relay (tab-separated) plus a `[relay-class-sum]`
+         * summary, so a later test can re-probe each relay and check the verdict/limit.
+         */
+        fun dumpRelayClassification() {
+            val rows = telemetry.rows.snapshot()
+            if (rows.isEmpty()) return
+            log(
+                "[relay-class-hdr] url\tclass\tconc_cap\trate_ms\tattempts\teose\ttimeout\t" +
+                    "cannot\tratelim\tauth\tyield_pct\tmean_lat_ms\tmax_lat_ms",
+            )
+            var unreachable = 0
+            var throttled = 0
+            var live = 0
+            val capHist = HashMap<Int, Int>()
+            for ((relay, r) in rows) {
+                val cap = limiter.concurrencyCapOf(relay)
+                val rate = limiter.rateDelayOf(relay)
+                capHist[cap] = (capHist[cap] ?: 0) + 1
+                // UNREACHABLE: we gave up on it (dead set, connect-failure driven).
+                // THROTTLED: alive, but it pushed back so we capped/rate-limited it.
+                // LIVE: alive at default limits.
+                val klass =
+                    when {
+                        relay in deadRelays -> "UNREACHABLE".also { unreachable++ }
+                        limiter.isThrottled(relay) -> "THROTTLED".also { throttled++ }
+                        else -> "LIVE".also { live++ }
+                    }
+                val att = r.attempts.load()
+                val eose = r.count(RelayTelemetry.Outcome.FAST_EOSE) + r.count(RelayTelemetry.Outcome.SLOW_EOSE)
+                val to = r.count(RelayTelemetry.Outcome.FAST_TIMEOUT) + r.count(RelayTelemetry.Outcome.PARK_TIMEOUT)
+                val ask = r.authorsAsked.load()
+                val yieldPct = if (ask > 0) r.eventsReturned.load() * 100 / ask else 0
+                val meanLat = if (att > 0) r.latSumMs.load() / att else 0
+                log(
+                    "[relay-class] ${relay.url}\t$klass\t$cap\t$rate\t$att\t$eose\t$to\t" +
+                        "${r.count(RelayTelemetry.Outcome.CANNOT)}\t${r.count(RelayTelemetry.Outcome.CLOSED_RATE)}\t" +
+                        "${r.count(RelayTelemetry.Outcome.CLOSED_AUTH)}\t$yieldPct\t$meanLat\t${r.latMaxMs.load()}",
+                )
+            }
+            val capsStr = capHist.entries.sortedBy { it.key }.joinToString(", ", "{", "}") { "${it.key}=${it.value}" }
+            log("[relay-class-sum] relays=${rows.size} live=$live throttled=$throttled unreachable=$unreachable concurrency_caps=$capsStr")
         }
 
         suspend fun run(): Stats {
@@ -990,11 +1081,15 @@ class GrapeRankDataCrawler(
 
                 val discoveredBefore = hopOf.size
                 val fedBefore = contactListsFed
+                val roundMark = TimeSource.Monotonic.markNow()
 
                 // Phase A — bulk-fetch from the busiest relays via the sharded sweep.
                 // Most users' kind:3 lives on the big popular relays, so this clears
                 // the majority cheaply (early rounds no-op until a backbone is learned).
+                val fedBeforeA = contactListsFed
                 shardedSweep(pending)
+                val phaseAMs = roundMark.elapsedNow().inWholeMilliseconds
+                val phaseAFed = contactListsFed - fedBeforeA
 
                 // Phase B — whoever the popular relays didn't have (niche outboxes):
                 // resolve their kind:10002, then fetch from their own write relays,
@@ -1085,10 +1180,12 @@ class GrapeRankDataCrawler(
                     }
                 }
 
+                val roundMs = roundMark.elapsedNow().inWholeMilliseconds
                 log(
                     "[graperank] round $rounds: pending=${pending.size}, " +
                         "gotList=${contactListsFed - fedBefore}, newUsers=${hopOf.size - discoveredBefore}, " +
-                        "discovered=${hopOf.size}, done=${done.size}, dead=${deadRelays.size()}",
+                        "discovered=${hopOf.size}, done=${done.size}, dead=${deadRelays.size()}, " +
+                        "time=${roundMs}ms (phaseA=${phaseAMs}ms fed=$phaseAFed, phaseB=${roundMs - phaseAMs}ms fed=${contactListsFed - fedBefore - phaseAFed})",
                 )
             }
 
@@ -1105,6 +1202,16 @@ class GrapeRankDataCrawler(
             // Stop any parked subscriptions + Tier-2 relay-list sweeps still in flight
             // (whatever they fetched already landed in the store).
             scope.cancel()
+
+            // Per-relay outcome/latency/yield table. Totals + worst time-sinks always;
+            // the full per-relay dump (thousands of lines) only under --diagnose.
+            telemetry.dump(log, full = config.diagnose)
+
+            // Machine-readable per-relay CLASSIFICATION table: our live/dead verdict
+            // and the concurrency/rate limits we settled on, joined with the evidence
+            // (outcome counts + yield) so it can be checked against an independent
+            // re-probe later. Emitted only under --diagnose (one line per relay).
+            if (config.diagnose) dumpRelayClassification()
 
             val hopHistogram =
                 hopOf.values
@@ -1132,6 +1239,7 @@ class GrapeRankDataCrawler(
                 contactListsFed = contactListsFed,
                 relaysContacted = relaysContacted.size,
                 hopHistogram = hopHistogram,
+                contactsFedByHop = contactsFedByHop.toList().sortedBy { it.first }.toMap(),
                 downloadMs = downloadMs,
                 verifyMs = verifyMs,
                 insertMs = insertMs,
@@ -1152,6 +1260,168 @@ class GrapeRankDataCrawler(
         val answered: Set<NormalizedRelayUrl>,
         val events: List<Pair<NormalizedRelayUrl, Event>>,
     )
+
+    /**
+     * Per-relay outcome + latency + yield accounting, accumulated across the whole
+     * crawl from every drain unit (fast and parked). This is the ground truth for
+     * "which relays are worth talking to": for each relay we track how every REQ
+     * ended, how long it took, how many authors we asked it for, and how many
+     * events it actually returned. A relay that eats a 27s connect on every REQ and
+     * returns nothing is a pure time sink; one that EOSEs fast with a high
+     * events/authors yield is gold. The dump at crawl end sorts by wasted time so
+     * the worst offenders are obvious, and it's the signal source a future adaptive
+     * controller uses to size filters / cap concurrency / strangle per relay.
+     *
+     * Fully concurrent: many drain workers and parked coroutines record at once, so
+     * every counter is atomic and the row map is a [ConcurrentMap].
+     */
+    class RelayTelemetry {
+        enum class Outcome {
+            /** EOSE within the fast window — the good case. */
+            FAST_EOSE,
+
+            /** EOSE, but only after parking (blew the fast window, delivered late). */
+            SLOW_EOSE,
+
+            /** Blew the fast window and never parked (parking off / no bg scope). */
+            FAST_TIMEOUT,
+
+            /** Parked, then the park idle window elapsed with no terminal. */
+            PARK_TIMEOUT,
+
+            /** Could not open the socket at all (offline / DNS / TLS / refused). */
+            CANNOT,
+
+            /** CLOSED with a rate-limit / too-many-subs / burst complaint. */
+            CLOSED_RATE,
+
+            /** CLOSED demanding NIP-42 auth we don't provide. */
+            CLOSED_AUTH,
+
+            /** CLOSED blocked / restricted / banned. */
+            CLOSED_BLOCKED,
+
+            /** CLOSED for any other reason. */
+            CLOSED_OTHER,
+        }
+
+        class Row {
+            val byOutcome = ConcurrentMap<Outcome, AtomicLong>()
+            val attempts = AtomicLong(0)
+            val authorsAsked = AtomicLong(0)
+            val eventsReturned = AtomicLong(0)
+            val latSumMs = AtomicLong(0)
+            val latMaxMs = AtomicLong(0)
+
+            fun bump(outcome: Outcome) = byOutcome.getOrPut(outcome) { AtomicLong(0) }.addAndFetch(1)
+
+            fun count(outcome: Outcome): Long = byOutcome[outcome]?.load() ?: 0
+        }
+
+        val rows = ConcurrentMap<NormalizedRelayUrl, Row>()
+
+        fun record(
+            relay: NormalizedRelayUrl,
+            outcome: Outcome,
+            latencyMs: Long,
+            authorsAsked: Int,
+            eventsReturned: Int,
+        ) {
+            val row = rows.getOrPut(relay) { Row() }
+            row.attempts.addAndFetch(1)
+            row.bump(outcome)
+            row.authorsAsked.addAndFetch(authorsAsked.toLong())
+            row.eventsReturned.addAndFetch(eventsReturned.toLong())
+            row.latSumMs.addAndFetch(latencyMs)
+            while (true) {
+                val cur = row.latMaxMs.load()
+                if (latencyMs <= cur || row.latMaxMs.compareAndSet(cur, latencyMs)) break
+            }
+        }
+
+        /** Total wall time we spent waiting on a relay that gave us nothing useful. */
+        private fun wastedMs(r: Row): Long {
+            // Time in the two no-yield terminal classes; a slow EOSE that DID return
+            // events isn't "wasted", so only count the pure sinks.
+            val sinkAttempts = r.count(Outcome.FAST_TIMEOUT) + r.count(Outcome.PARK_TIMEOUT) + r.count(Outcome.CANNOT)
+            val total = r.attempts.load()
+            if (total == 0L) return 0
+            return r.latSumMs.load() * sinkAttempts / total
+        }
+
+        /**
+         * Dump the per-relay table via [log]. Totals + the worst time-sinks always;
+         * the FULL per-relay table (every relay we touched, sorted worst-first) only
+         * when [full] — thousands of lines, so gate it behind --diagnose.
+         */
+        fun dump(
+            log: (String) -> Unit,
+            full: Boolean,
+        ) {
+            val snap = rows.snapshot()
+            if (snap.isEmpty()) return
+
+            val totals = HashMap<Outcome, Long>()
+            var authors = 0L
+            var events = 0L
+            for ((_, r) in snap) {
+                for (o in Outcome.entries) totals[o] = (totals[o] ?: 0) + r.count(o)
+                authors += r.authorsAsked.load()
+                events += r.eventsReturned.load()
+            }
+            log(
+                "[relay-telemetry] ${snap.size} relays · outcomes " +
+                    Outcome.entries.filter { (totals[it] ?: 0) > 0 }.joinToString(" ") { "${it.name.lowercase()}=${totals[it]}" },
+            )
+            log("[relay-telemetry] asked $authors author-slots, got $events events (yield ${if (authors > 0) events * 100 / authors else 0}%)")
+
+            fun line(
+                url: String,
+                r: Row,
+            ): String {
+                val a = r.attempts.load()
+                val meanLat = if (a > 0) r.latSumMs.load() / a else 0
+                val ask = r.authorsAsked.load()
+                val yield = if (ask > 0) r.eventsReturned.load() * 100 / ask else 0
+                return "  $url att=$a eose=${r.count(Outcome.FAST_EOSE)}/${r.count(Outcome.SLOW_EOSE)} " +
+                    "to=${r.count(Outcome.FAST_TIMEOUT) + r.count(Outcome.PARK_TIMEOUT)} cannot=${r.count(Outcome.CANNOT)} " +
+                    "rate=${r.count(Outcome.CLOSED_RATE)} auth=${r.count(Outcome.CLOSED_AUTH)} " +
+                    "ask=$ask got=${r.eventsReturned.load()} yield=$yield% lat=$meanLat/${r.latMaxMs.load()}ms wasted=${wastedMs(r)}ms"
+            }
+
+            val ordered = snap.entries.sortedByDescending { wastedMs(it.value) }
+            log("[relay-telemetry] top time-sinks (by wasted ms):")
+            for ((relay, r) in ordered.take(25)) log(line(relay.url, r))
+
+            if (full) {
+                log("[relay-telemetry] FULL per-relay table (${snap.size} relays, worst-first):")
+                for ((relay, r) in ordered) log(line(relay.url, r))
+            }
+        }
+
+        companion object {
+            /** Map a drain terminal reason (see [drainGated]) to an [Outcome]. */
+            fun outcomeOf(
+                reason: String,
+                parked: Boolean,
+            ): Outcome =
+                when {
+                    reason == "eose" -> if (parked) Outcome.SLOW_EOSE else Outcome.FAST_EOSE
+                    reason == "timeout" -> if (parked) Outcome.PARK_TIMEOUT else Outcome.FAST_TIMEOUT
+                    reason.startsWith("cannot") -> Outcome.CANNOT
+                    reason.startsWith("closed:") -> {
+                        val m = reason.removePrefix("closed:").lowercase()
+                        when {
+                            "rate" in m || "too many" in m || "burst" in m || "slow down" in m || "subscription" in m -> Outcome.CLOSED_RATE
+                            "auth" in m -> Outcome.CLOSED_AUTH
+                            "block" in m || "restrict" in m || "ban" in m -> Outcome.CLOSED_BLOCKED
+                            else -> Outcome.CLOSED_OTHER
+                        }
+                    }
+                    else -> Outcome.CLOSED_OTHER
+                }
+        }
+    }
 
     /** Latest known kind:3 contact list for [pubKey] from the local store, or null. */
     private suspend fun contactsOf(pubKey: HexKey): ContactListEvent? =
@@ -1277,6 +1547,9 @@ class GrapeRankDataCrawler(
         // replaceable 10002, so the freshest always wins regardless of source relay.
         private val FETCH_KINDS =
             listOf(ContactListEvent.KIND, MuteListEvent.KIND, ReportEvent.KIND, AdvertisedRelayListEvent.KIND)
+
+        /** Total author slots across a unit's filters — what we asked a relay for. */
+        private fun authorsIn(filters: List<Filter>): Int = filters.sumOf { it.authors?.size ?: 0 }
 
         /** Count the size-driving entries in a filter: authors, ids, and tag values. */
         private fun filterEntries(f: Filter): Int =

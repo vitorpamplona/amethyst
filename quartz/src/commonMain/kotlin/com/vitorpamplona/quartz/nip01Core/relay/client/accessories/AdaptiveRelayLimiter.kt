@@ -87,6 +87,18 @@ class AdaptiveRelayLimiter(
 
     private fun gate(relay: NormalizedRelayUrl): Gate = gates.getOrPut(relay) { Gate(startCap) }
 
+    /** The concurrency cap currently enforced for [relay] ([startCap] unless demoted). */
+    fun concurrencyCapOf(relay: NormalizedRelayUrl): Int {
+        val step = subDemotions[relay] ?: 0
+        return if (step == 0) startCap else subLadder[(step - 1).coerceIn(0, subLadder.size - 1)]
+    }
+
+    /** The min interval (ms) between opens enforced for [relay]; 0 if not rate-limited. */
+    fun rateDelayOf(relay: NormalizedRelayUrl): Long = rateDelayMs[relay] ?: 0L
+
+    /** True if we lowered [relay]'s concurrency cap or imposed a rate delay (it pushed back). */
+    fun isThrottled(relay: NormalizedRelayUrl): Boolean = (subDemotions[relay] ?: 0) > 0 || (rateDelayMs[relay] ?: 0L) > 0L
+
     /**
      * Run [block] against [relay] respecting both limits: first wait out any rate
      * delay (spacing opens in time), then hold one of the relay's concurrency

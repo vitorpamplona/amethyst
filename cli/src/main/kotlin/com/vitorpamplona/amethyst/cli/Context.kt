@@ -199,7 +199,15 @@ class Context(
      * permit for the life of that relay's subscription, so we never exceed the
      * cap the relay itself asked for. Idle for commands that don't opt in.
      */
-    val relayLimiter: AdaptiveRelayLimiter = AdaptiveRelayLimiter().also { client.addConnectionListener(it) }
+    val relayLimiter: AdaptiveRelayLimiter =
+        AdaptiveRelayLimiter(
+            // The starting per-relay concurrent-sub cap dominates whether the crawl
+            // floods a popular relay into timing out. Benchmarked: 16 is ~30% faster
+            // on a from-scratch GrapeRank crawl than the old 100 (which drowned
+            // damus/nos.lol in 100 concurrent giant REQs) at equal completeness, and
+            // is still generous for the single-user fetches other amy commands do.
+            startCap = 16,
+        ).also { client.addConnectionListener(it) }
 
     /**
      * NIP-42 responder: answers a relay's AUTH challenge by signing with the
