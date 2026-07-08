@@ -78,6 +78,31 @@ class GroupInviteLinkTest {
     }
 
     @Test
+    fun rejectsSingleCharPossessive() {
+        // `wss://relay.damus.io's uptime` — the `'s` is a possessive, not a group id.
+        assertNull(GroupInviteLink.parse("wss://relay.damus.io's"))
+    }
+
+    @Test
+    fun acceptsUnderscoreDefaultGroupButNotOtherSingleChars() {
+        // `_` is the relay-wide default group and is a legitimate 1-char id; other lone
+        // chars are rejected as contractions.
+        assertEquals("_", GroupInviteLink.parse("wss://relay.example.com'_")?.groupId)
+        assertNull(GroupInviteLink.parse("wss://relay.example.com'x"))
+    }
+
+    @Test
+    fun suffixLengthRejectsPossessiveS() {
+        // "wss://r.com's uptime" — apostrophe at 11, `s` at 12 → not a link.
+        assertEquals(0, GroupInviteLink.suffixLength("wss://r.com's uptime", 12))
+    }
+
+    @Test
+    fun suffixLengthAcceptsUnderscore() {
+        assertEquals(1, GroupInviteLink.suffixLength("wss://r.com'_ hi", 12))
+    }
+
+    @Test
     fun suffixLengthMeasuresGroupIdOnly() {
         // "wss://r.com'abc def" — apostrophe at index 11, group id starts at 12.
         val content = "wss://r.com'abc def"

@@ -99,4 +99,70 @@ class RichTextParserGroupLinkTest {
         assertTrue(links.groupLinks.isEmpty())
         assertNull(groupSegmentsOf("odd wss://relay.damus.io' end").firstOrNull())
     }
+
+    // ---- weird apostrophe placements after non-relay URLs: none may become a group link ----
+
+    @Test
+    fun possessiveAfterRelayUrlIsNotAGroupLink() {
+        // "wss://relay.damus.io's uptime" — the possessive `'s` must not linkify group "s".
+        val text = "how is wss://relay.damus.io's uptime today"
+        val links = UrlParser().parseValidUrls(text)
+        assertTrue(links.groupLinks.isEmpty())
+        assertTrue(links.relayUrls.contains("wss://relay.damus.io"))
+        assertTrue(groupSegmentsOf(text).isEmpty())
+    }
+
+    @Test
+    fun apostropheAfterHttpUrlIsNotAGroupLink() {
+        val links = UrlParser().parseValidUrls("see https://example.com'abc123 here")
+        assertTrue(links.groupLinks.isEmpty())
+        assertTrue(links.withScheme.contains("https://example.com"))
+        assertTrue(groupSegmentsOf("see https://example.com'abc123 here").isEmpty())
+    }
+
+    @Test
+    fun apostropheAfterNostrUriIsNotAGroupLink() {
+        val text = "ping nostr:npub1sn0wdenkukak0d9dfczzeacvhkrgz92ak56egt7vdgzn8pv2wfqqhrjdv9'abc there"
+        val links = UrlParser().parseValidUrls(text)
+        assertTrue(links.groupLinks.isEmpty())
+    }
+
+    @Test
+    fun apostropheAfterBlossomUriIsNotAGroupLink() {
+        val text = "file blossom://b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553'abc"
+        assertTrue(UrlParser().parseValidUrls(text).groupLinks.isEmpty())
+    }
+
+    @Test
+    fun apostropheAfterEmailIsNotAGroupLink() {
+        val links = UrlParser().parseValidUrls("mail vitor@example.com'abc please")
+        assertTrue(links.groupLinks.isEmpty())
+    }
+
+    @Test
+    fun insecureWsSchemeAlsoLinkifies() {
+        // `ws://` (not just `wss://`) is a relay scheme and must peek the same way.
+        val links = UrlParser().parseValidUrls("dev ws://relay.example.com'abc123 test")
+        assertEquals(setOf("ws://relay.example.com'abc123"), links.groupLinks)
+    }
+
+    @Test
+    fun secondApostropheEndsTheGroupId() {
+        // `wss://relay.example.com'abc'def` — the group id is `abc`; `'def` is left as text.
+        val segs = groupSegmentsOf("go wss://relay.example.com'abc'def now")
+        assertEquals(1, segs.size)
+        assertEquals("wss://relay.example.com'abc", segs.first().segmentText)
+    }
+
+    @Test
+    fun multipleGroupLinksInOnePostAreAllDetected() {
+        val links =
+            UrlParser().parseValidUrls(
+                "two groups wss://groups.0xchat.com'aaaa and wss://chat.wisp.talk'bbbb here",
+            )
+        assertEquals(
+            setOf("wss://groups.0xchat.com'aaaa", "wss://chat.wisp.talk'bbbb"),
+            links.groupLinks,
+        )
+    }
 }

@@ -47,6 +47,16 @@ data class GroupInviteLink(
         // swallowing trailing prose punctuation into the link.
         private fun isIdChar(c: Char): Boolean = c in 'a'..'z' || c in 'A'..'Z' || c in '0'..'9' || c == '-' || c == '_'
 
+        /**
+         * A single-character group id is only accepted when it is the relay-wide default
+         * group `_`. Every real group id from the reference clients (relay29 random ids,
+         * Wisp/0xchat 12+ chars) is longer, whereas a lone char after an apostrophe is
+         * almost always an English possessive/contraction glued to a bare relay URL
+         * (`wss://relay.damus.io's uptime`). Rejecting it kills that false positive without
+         * dropping any real link.
+         */
+        private fun isAcceptableGroupId(id: String): Boolean = id.length >= 2 || id == "_"
+
         private const val CODE_PREFIX = "?code="
 
         /**
@@ -64,6 +74,7 @@ data class GroupInviteLink(
             var i = from
             while (i < content.length && isIdChar(content[i])) i++
             if (i == from) return 0 // empty group id — not a link
+            if (!isAcceptableGroupId(content.substring(from, i))) return 0 // possessive/contraction guard
 
             // Optional `?code=<code>`; only extend the span when a non-empty code follows.
             if (content.startsWith(CODE_PREFIX, i)) {
@@ -89,7 +100,7 @@ data class GroupInviteLink(
             val rest = link.substring(apos + 1)
             val queryIdx = rest.indexOf('?')
             val groupId = if (queryIdx < 0) rest else rest.substring(0, queryIdx)
-            if (groupId.isEmpty() || !groupId.all { isIdChar(it) }) return null
+            if (!groupId.all { isIdChar(it) } || !isAcceptableGroupId(groupId)) return null
 
             val code =
                 if (queryIdx >= 0) {
