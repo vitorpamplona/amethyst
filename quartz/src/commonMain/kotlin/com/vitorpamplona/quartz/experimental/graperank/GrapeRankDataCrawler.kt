@@ -603,10 +603,11 @@ class GrapeRankDataCrawler(
          *    [backbone] — the known-good relays other people write to;
          *  - no outbox at all: harvested hints + backbone + the general fallback.
          *
-         * The content aggregators are deliberately NOT mixed in here: they only serve
-         * kind:3 to a kind:3-only filter and time out on this path's multi-kind
-         * [FETCH_KINDS] query, so recovering from them is done separately, once and
-         * patiently, in [recoverStragglersFromAggregators].
+         * The content aggregators are deliberately NOT mixed in here: this path's
+         * multi-kind [FETCH_KINDS] query loses their kind:3 to their per-REQ result
+         * cap (a big indexer fills the response with the abundant kind:10002 and
+         * returns no kind:3), so recovering from them is done separately — kind:3-only,
+         * once and patiently — in [recoverStragglersFromAggregators].
          *
          * Also tallies each user's write relays into [writeRelayFreq] so the
          * backbone can be learned from the crawl. Authors are chunked per relay.
@@ -687,10 +688,13 @@ class GrapeRankDataCrawler(
             // Build the query against the full straggler set BEFORE any folding (the
             // filter lists are materialized here, so later mutation of `stragglers` is
             // safe). Ask ONLY for kind:3 — the contact list we're missing. A multi-kind
-            // filter breaks the big aggregators: user.kindpag.es serves kind:3 in a few
-            // seconds when asked for it alone, but times out returning nothing when the
-            // same authors are requested with kinds=[3,10000,1984,10002]. Mutes/reports
-            // still come from the outbox model; the aggregator's job here is the lists.
+            // filter is useless against the big indexers: user.kindpag.es caps its
+            // response at ~100 events per REQ (it ignores our limit), so a
+            // kinds=[3,10000,1984,10002] query comes back 100× kind:10002 and 0×
+            // kind:3 — the abundant relay lists crowd the contact lists out entirely.
+            // Asked for kind:3 alone it returns them in a few seconds. Their kind:10002
+            // is already fetched in bulk by [ensureRelayLists]; mutes/reports still come
+            // from the outbox model. The aggregator's job here is only the lists.
             val filters =
                 aggregators.associateWith {
                     stragglers.chunked(AUTHORS_PER_FILTER).map { chunk -> Filter(kinds = listOf(ContactListEvent.KIND), authors = chunk) }
