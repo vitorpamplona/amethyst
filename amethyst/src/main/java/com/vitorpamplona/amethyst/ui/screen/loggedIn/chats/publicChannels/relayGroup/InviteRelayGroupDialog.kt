@@ -30,16 +30,19 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontFamily
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
+import kotlinx.coroutines.launch
 
 /**
  * Mint a NIP-29 invite (kind 9009) for the group as soon as the dialog opens and
@@ -51,13 +54,23 @@ fun InviteRelayGroupDialog(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val code by remember { mutableStateOf(RandomInstance.bytes(6).toHexKey()) }
+
+    // Observe the relay-signed metadata so the naddr / closed-state fill in live: the
+    // dialog is often opened before the kind-39000 has arrived, and reading a snapshot
+    // there would leave the Copy button permanently disabled once it does load.
+    val channelState by channel
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+    val liveChannel = channelState.channel as? RelayGroupChannel ?: channel
 
     // A shareable, cross-client coordinate for the group (opens the chat in any
     // NIP-29 client). Null until the relay-signed metadata has loaded.
-    val nAddr = channel.toNAddr()?.let { "nostr:$it" }
-    val isClosed = channel.isClosed()
+    val nAddr = liveChannel.toNAddr()?.let { "nostr:$it" }
+    val isClosed = liveChannel.isClosed()
 
     // A join code is only meaningful for closed (invite-only) groups; open groups
     // join directly from the shared naddr. So mint the kind-9009 invite only when
@@ -73,13 +86,20 @@ fun InviteRelayGroupDialog(
             Column {
                 Text(stringRes(R.string.relay_group_invite_description))
 
-                nAddr?.let {
+                if (nAddr != null) {
                     Text(
-                        text = it,
+                        text = nAddr,
                         fontFamily = FontFamily.Monospace,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 2,
+                    )
+                } else {
+                    // Metadata (the group's pubkey, needed for the naddr) hasn't loaded yet.
+                    Text(
+                        text = stringRes(R.string.relay_group_invite_preparing),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -104,7 +124,7 @@ fun InviteRelayGroupDialog(
             TextButton(
                 enabled = toCopy.isNotBlank(),
                 onClick = {
-                    clipboard.setText(AnnotatedString(toCopy))
+                    scope.launch { clipboard.setText(toCopy) }
                     onDismiss()
                 },
             ) {

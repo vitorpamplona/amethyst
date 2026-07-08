@@ -1967,6 +1967,8 @@
     <string name="relay_group_menu_edit">Edit group</string>
     <string name="relay_group_threads_title">Threads</string>
     <string name="relay_group_open">Open group</string>
+    <string name="relay_group_channels_empty">No groups on this relay yet.</string>
+    <string name="relay_group_invite_preparing">Preparing invite…</string>
     <string name="relay_group_threads_empty">No threads yet. Start one with the + button.</string>
     <string name="relay_group_thread_new">New thread</string>
     <string name="relay_group_thread_untitled">Untitled</string>

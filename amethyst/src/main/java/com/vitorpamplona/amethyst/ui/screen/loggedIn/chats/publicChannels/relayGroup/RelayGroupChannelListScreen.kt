@@ -25,11 +25,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -54,6 +55,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -61,9 +63,10 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBack
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupDirectorySubscription
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
-import kotlinx.coroutines.delay
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 
 /**
  * Lists every channel a relay hosts (its kind 39000-39003 directory), so the user
@@ -83,16 +86,19 @@ fun RelayGroupChannelListScreen(
 
     RelayGroupDirectorySubscription(relay, accountViewModel.dataSources().relayGroupDirectory, accountViewModel)
 
-    // The channel set grows as directory events arrive; poll the cache while the
-    // screen is on top (a directory is small and rarely changes).
+    // Re-read the relay's channels whenever a group-metadata (kind 39000) event lands in
+    // the cache — driven by LocalCache.observeEvents rather than a timer, so the list
+    // updates as directory events arrive with no polling. The initial value is sorted too
+    // so the first frame doesn't reshuffle when the first emission arrives.
     val channels by produceState(
-        initialValue = accountViewModel.getRelayGroupChannelsOnRelay(relay),
+        initialValue = accountViewModel.getRelayGroupChannelsOnRelay(relay).sortedBy { it.toBestDisplayName().lowercase() },
         relay,
     ) {
-        while (true) {
-            value = accountViewModel.getRelayGroupChannelsOnRelay(relay).sortedBy { it.toBestDisplayName().lowercase() }
-            delay(1500)
-        }
+        LocalCache
+            .observeEvents<GroupMetadataEvent>(Filter(kinds = listOf(GroupMetadataEvent.KIND)))
+            .collect {
+                value = accountViewModel.getRelayGroupChannelsOnRelay(relay).sortedBy { it.toBestDisplayName().lowercase() }
+            }
     }
 
     Scaffold(
@@ -120,10 +126,23 @@ fun RelayGroupChannelListScreen(
         },
     ) { padding ->
         val myPubkey = accountViewModel.userProfile().pubkeyHex
-        LazyColumn(modifier = Modifier.padding(padding)) {
-            items(channels, key = { it.groupId.id }) { channel ->
-                RelayGroupChannelRow(channel, myPubkey, accountViewModel) { nav.nav(routeFor(channel)) }
-                HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
+        if (channels.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringRes(R.string.relay_group_channels_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(32.dp),
+                )
+            }
+        } else {
+            LazyColumn(modifier = Modifier.padding(padding)) {
+                itemsIndexed(channels, key = { _, channel -> channel.groupId.id }) { index, channel ->
+                    if (index > 0) {
+                        HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                    RelayGroupChannelRow(channel, myPubkey, accountViewModel) { nav.nav(routeFor(channel)) }
+                }
             }
         }
     }

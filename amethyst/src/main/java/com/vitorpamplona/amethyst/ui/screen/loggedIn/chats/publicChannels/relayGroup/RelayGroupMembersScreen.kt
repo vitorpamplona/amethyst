@@ -21,15 +21,18 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -60,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBack
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupPreviewSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -99,6 +103,12 @@ private fun RelayGroupMembers(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // Fetch the relay-signed roster (kinds 39001/39002) from the host relay while this
+    // standalone screen is open. observeChannel alone does NOT do this for a relay group
+    // (its finder only handles public-chat / live-activity channels), so without this the
+    // screen would only show whatever the chat screen happened to cache.
+    RelayGroupPreviewSubscription(baseChannel, accountViewModel.dataSources().relayGroupPreview, accountViewModel)
+
     // Recompose when the relay-signed roster (39001/39002) changes.
     val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? RelayGroupChannel ?: baseChannel
@@ -121,29 +131,48 @@ private fun RelayGroupMembers(
         topBar = {
             TopBarExtensibleWithBackButton(
                 title = {
-                    Text(
-                        text = stringRes(R.string.relay_group_members_title),
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Column {
+                        Text(
+                            text = stringRes(R.string.relay_group_members_title),
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = channel.toBestDisplayName(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 },
                 popBack = nav::popBack,
             )
         },
     ) { padding ->
-        LazyColumn(modifier = Modifier.padding(padding)) {
-            items(roster, key = { it.pubkey }) { entry ->
-                RelayGroupMemberRow(
-                    entry = entry,
-                    channel = channel,
-                    isSelf = entry.pubkey == myPubkey,
-                    viewerCanModerate = iCanModerate,
-                    viewerIsAdmin = iAmAdmin,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-                HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
+        if (roster.isEmpty()) {
+            // The roster always has at least the group's admins once it loads, so an
+            // empty list means the kind-39001/39002 events haven't arrived yet.
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(modifier = Modifier.padding(padding)) {
+                itemsIndexed(roster, key = { _, entry -> entry.pubkey }) { index, entry ->
+                    if (index > 0) {
+                        HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                    RelayGroupMemberRow(
+                        entry = entry,
+                        channel = channel,
+                        isSelf = entry.pubkey == myPubkey,
+                        viewerCanModerate = iCanModerate,
+                        viewerIsAdmin = iAmAdmin,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             }
         }
     }
