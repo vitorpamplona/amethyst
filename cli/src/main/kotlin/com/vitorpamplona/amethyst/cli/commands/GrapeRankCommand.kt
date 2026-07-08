@@ -568,7 +568,7 @@ object GrapeRankCommand {
                         "provider" to provider,
                         "relay" to relay.url,
                         "changed" to false,
-                        "based_on" to latest?.id,
+                        "based_on" to latest.id,
                     ),
                 )
                 return 0
@@ -744,7 +744,7 @@ object GrapeRankCommand {
             latest?.serviceProviders()?.any {
                 it.service == service && it.pubkey == providerPubkey && it.relayUrl == relay
             } ?: false
-        if (alreadyListed) return latest?.id
+        if (alreadyListed) return latest.id
 
         val tag = ServiceProviderTag(service, providerPubkey, relay)
         val event =

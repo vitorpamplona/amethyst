@@ -60,6 +60,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
@@ -711,6 +712,7 @@ class DesktopLocalCache : ICacheProvider {
      * @param relay The relay this event came from
      * @return true if event was processed, false if no matching request
      */
+    @OptIn(DelicateCoroutinesApi::class)
     fun consume(
         event: LnZapPaymentResponseEvent,
         relay: NormalizedRelayUrl?,

@@ -285,8 +285,6 @@ fun ShareNoteAsImageScreen(
                         *finalState.params,
                     )
                 }
-
-                else -> {}
             }
         }
     }

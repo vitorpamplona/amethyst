@@ -24,8 +24,7 @@ package com.vitorpamplona.quartz.utils.secp256k1
 internal actual class ScratchLocal<T> actual constructor(
     initializer: () -> T,
 ) {
-    private val tl = ThreadLocal.withInitial(initializer)
+    private val tl: ThreadLocal<T> = ThreadLocal.withInitial(initializer)
 
-    @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-    actual fun get(): T = tl.get()
+    actual fun get(): T = tl.get()!!
 }

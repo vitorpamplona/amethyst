@@ -564,11 +564,7 @@ private fun SendDialog(
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                         httpClient.newCall(request).execute()
                     }
-                val body = response.body?.string()
-                if (body == null) {
-                    sendState = SendState.Error("Failed to reach payment server", SendState.Idle)
-                    return@LaunchedEffect
-                }
+                val body = response.body.string()
                 val json = mapper.readTree(body)
                 val callback = json.get("callback")?.asText()?.ifBlank { null }
                 if (callback == null) {
@@ -611,11 +607,7 @@ private fun SendDialog(
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                         httpClient.newCall(request).execute()
                     }
-                val body = response.body?.string()
-                if (body == null) {
-                    sendState = SendState.Error("Failed to fetch invoice", SendState.Idle)
-                    return@LaunchedEffect
-                }
+                val body = response.body.string()
                 val json = mapper.readTree(body)
                 val pr = json.get("pr")?.asText()?.ifBlank { null }
                 if (pr != null) {

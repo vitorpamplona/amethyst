@@ -127,7 +127,7 @@ actual object EventHasherSerializer {
         content: String,
     ): Boolean {
         val br: BufferRecycler = JacksonMapper.mapper.factory._getBufferRecycler()
-        val digest = threadLocalDigest.get()
+        val digest = threadLocalDigest.get()!!
         val bb = HashingByteArrayBuilder(br, digest)
         try {
             val generator = JacksonMapper.mapper.createGenerator(bb, JsonEncoding.UTF8)

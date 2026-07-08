@@ -460,10 +460,10 @@ fun DisplayLiveBubbles(
     val feedState by liveSection.feedContent.collectAsStateWithLifecycle()
 
     when (val state = feedState) {
-        is ChannelFeedState.Empty -> null
-        is ChannelFeedState.FeedError -> null
+        is ChannelFeedState.Empty -> {}
+        is ChannelFeedState.FeedError -> {}
         is ChannelFeedState.Loaded -> DisplayLiveBubbles(state, accountViewModel, nav)
-        is ChannelFeedState.Loading -> null
+        is ChannelFeedState.Loading -> {}
     }
 }
 
