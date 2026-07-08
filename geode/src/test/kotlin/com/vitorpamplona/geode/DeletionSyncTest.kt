@@ -123,6 +123,7 @@ class DeletionSyncTest : RelayClientTest() {
 
     // ---- end-to-end through the relay ----------------------------------------
 
+    // UP direction: we deleted it, the relay still has it → send our deletion up.
     @Test
     fun sendsCoveringDeletionSoRelayRemovesTheNote() =
         runBlocking {
@@ -152,6 +153,47 @@ class DeletionSyncTest : RelayClientTest() {
             assertTrue(
                 defaultRelay.store.query<Event>(Filter(ids = listOf(target.id))).isEmpty(),
                 "relay applied the pushed deletion and removed the note",
+            )
+        }
+
+    // DOWN direction: the relay deleted it, we still have it → pull the relay's deletion
+    // down and apply it locally (the residual-have resolution).
+    @Test
+    fun appliesRelaysDeletionSoLocalRemovesTheNote() =
+        runBlocking {
+            val target = note("delete me down")
+            val deletion = signer.sign(DeletionEvent.build(listOf(target), createdAt = target.createdAt + 1))
+
+            // Relay already applied the deletion → holds only the kind-5.
+            defaultRelay.preload(listOf(target, deletion))
+            assertTrue(defaultRelay.store.query<Event>(Filter(ids = listOf(target.id))).isEmpty(), "relay deleted the note")
+
+            // Local still holds the note (never saw the deletion).
+            val local = hub.getOrCreate(RelayUrlNormalizer.normalize("ws://local-down/"))
+            local.preload(listOf(target))
+            assertEquals(1, local.store.query<Event>(Filter(ids = listOf(target.id))).size)
+
+            // Reconcile → the note is a HAVE (we have it, the relay lacks it).
+            val diff =
+                withTimeout(20_000) {
+                    client.negentropyReconcileIds(
+                        relay = defaultRelayUrl,
+                        filter = Filter(kinds = listOf(1)),
+                        localEntries = listOf(IdAndTime(target.createdAt, target.id)),
+                    )
+                }
+            assertEquals(setOf(target.id), diff.haveIds.toSet())
+
+            // What SyncCommand does for the down direction: take our have events, ask the
+            // RELAY which of ITS deletions cover them, and apply those locally.
+            val ourEvents = local.store.query<Event>(Filter(ids = diff.haveIds))
+            val relayDeletions = deletionsCovering(ourEvents, defaultRelayUrl) { f -> defaultRelay.store.query<Event>(f) }
+            assertEquals(listOf(deletion.id), relayDeletions.map { it.id })
+            relayDeletions.filterIsInstance<DeletionEvent>().forEach { local.store.insert(it) }
+
+            assertTrue(
+                local.store.query<Event>(Filter(ids = listOf(target.id))).isEmpty(),
+                "local applied the pulled deletion and removed the note",
             )
         }
 }
