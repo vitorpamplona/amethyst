@@ -26,8 +26,10 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DeletionSettleResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncException
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcile
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySettleDeletions
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
@@ -54,15 +56,29 @@ import java.util.concurrent.atomic.AtomicInteger
  * Pass both for a full bidirectional sync. The filter flags are the same as
  * `fetch`/`subscribe`; an empty filter reconciles the whole store.
  *
- * Both directions are pipelined with the reconcile: need-id batches feed
- * [DOWNLOAD_WORKERS] concurrent by-id REQ drains and have-ids feed a single
- * uploader, so downloads and uploads overlap the remaining reconcile rounds
- * instead of waiting for the full diff. Every downloaded event funnels
- * through `Context.drain`'s verify-and-store path, unchanged.
+ * Deletion propagation (on by default; disable with `--no-sync-deletions`) is a
+ * **second pass over the residual**, not per-event work in the content pass — so it
+ * costs the same whether the database is tiny or huge. After the content settle, a
+ * re-reconcile's leftover diff is (barring races) exactly the events a deletion kept
+ * from converging:
  *
- * Thin assembly only: the windowing, streaming, and back-pressure live in
- * quartz (`negentropyReconcile`); this file only routes ids to
- * `Context.drain` / `Context.publish`.
+ *   - a residual **need** (relay has it, we still lack it after `--down` tried to
+ *     download) = we deleted it → publish OUR covering deletion up so the relay drops it;
+ *   - a residual **have** (we have it, relay still lacks it after `--up` tried to upload)
+ *     = the relay deleted it → pull the relay's covering kind-5 down and apply it locally.
+ *
+ * Coverage is any way a deletion reaches an event ([deletionsCovering]): a NIP-09 kind-5
+ * by id (`e`) or address (`a`, cutoff-checked), or a NIP-62 vanish targeting this relay
+ * (up direction only — a pulled vanish is not auto-applied, its blast radius being the
+ * whole account). The residual is small (only real deletion mismatches), so only it is
+ * fetched — never the whole need set. The loop repeats until a round resolves nothing.
+ * So `amy sync` (default `--down`) makes the relay honor your deletions; `--up` makes
+ * your store honor the relay's; `--up --down` converges both ways.
+ *
+ * Content is pipelined with the reconcile: need-id batches feed [DOWNLOAD_WORKERS]
+ * concurrent by-id REQ drains and have-ids feed a single uploader. Thin assembly only:
+ * the windowing, streaming, and back-pressure live in quartz (`negentropyReconcile`);
+ * this file only routes ids to `Context.drain` / `Context.publish`.
  */
 object SyncCommand {
     private const val ID_CHUNK = 500
@@ -77,6 +93,15 @@ object SyncCommand {
 
     /** Overlapped `created_at`-window reconciles after an over-cap split. */
     private const val RECONCILE_CONCURRENCY = 2
+
+    /**
+     * Cap on deletion-settle rounds. Each round resolves the residual it can and
+     * re-reconciles; a healthy sync converges in 1–2 (round N sends/applies, round
+     * N+1 confirms empty). The cap only bounds pathological non-convergence (e.g. a
+     * relay that refuses a deletion), which the "resolved nothing → stop" check
+     * normally catches first.
+     */
+    private const val MAX_DELETION_ROUNDS = 4
 
     suspend fun run(
         dataDir: DataDir,
@@ -93,6 +118,7 @@ object SyncCommand {
         // Default direction is download; --up adds upload.
         val up = args.bool("up")
         val down = args.bool("down") || !up
+        val syncDeletions = !args.bool("no-sync-deletions")
         val filter = RawEventSupport.buildFilter(args)
 
         Context.openOrAnonymous(dataDir).use { ctx ->
@@ -104,23 +130,22 @@ object SyncCommand {
             val downloaded = AtomicInteger(0)
             val uploaded = AtomicInteger(0)
 
+            // ── Pass 1: content settle — download needs, upload haves. No deletion
+            // logic, so a plain sync costs exactly what it always did.
             val result =
                 try {
                     coroutineScope {
                         // needIds = relay has, we lack; haveIds = we have, relay lacks.
-                        // Bounded so a slow download back-pressures the reconcile
-                        // rounds instead of piling ids up in memory.
                         val needBatches = Channel<List<HexKey>>(DOWNLOAD_WORKERS * 2)
-                        // Unbounded is fine here: have-ids reference events we already
-                        // hold locally, so memory is bounded by the local set.
                         val haveBatches = Channel<List<HexKey>>(Channel.UNLIMITED)
 
                         val downloaders =
                             List(DOWNLOAD_WORKERS) {
                                 launch {
                                     for (batch in needBatches) {
-                                        val got = ctx.drain(mapOf(relay to listOf(Filter(ids = batch))), timeoutMs)
-                                        downloaded.addAndGet(got.size)
+                                        // drain verifies + stores; anything we deleted is
+                                        // rejected by our own tombstone and stays a "need".
+                                        downloaded.addAndGet(ctx.drain(mapOf(relay to listOf(Filter(ids = batch))), timeoutMs).size)
                                     }
                                 }
                             }
@@ -129,8 +154,7 @@ object SyncCommand {
                                 for (batch in haveBatches) {
                                     for (id in batch) {
                                         val ev = localById[id] ?: continue
-                                        val ack = ctx.publish(ev, setOf(relay))
-                                        if (ack.values.any { it }) uploaded.incrementAndGet()
+                                        if (ctx.publish(ev, setOf(relay)).values.any { it }) uploaded.incrementAndGet()
                                     }
                                 }
                             }
@@ -160,6 +184,28 @@ object SyncCommand {
                     return Output.error("sync_error", e.message ?: "negentropy sync failed")
                 }
 
+            // ── Pass 2+: deletion settle. The reusable quartz accessory re-reconciles
+            // and resolves only the residual — send our deletions up for what we deleted
+            // (bounded by --down), apply the relay's kind-5 down for what it deleted
+            // (bounded by --up) — looping until stable. Cheap regardless of database size
+            // (see negentropySettleDeletions), and best-effort so it can't fail the sync.
+            val deletions =
+                if (syncDeletions) {
+                    ctx.client.negentropySettleDeletions(
+                        relay = relay,
+                        filter = filter,
+                        store = ctx.store,
+                        sendUp = down,
+                        applyDown = up,
+                        batchSize = ID_CHUNK,
+                        idleTimeoutMs = timeoutMs,
+                        maxRounds = MAX_DELETION_ROUNDS,
+                        reconcileConcurrency = RECONCILE_CONCURRENCY,
+                    )
+                } else {
+                    DeletionSettleResult(0, 0, 0)
+                }
+
             Output.emit(
                 mapOf(
                     "relay" to relay.url,
@@ -169,6 +215,9 @@ object SyncCommand {
                     "have" to result.haveCount,
                     "downloaded" to downloaded.get(),
                     "uploaded" to uploaded.get(),
+                    "deletions_sent_up" to deletions.sentUp,
+                    "deletions_applied_down" to deletions.appliedDown,
+                    "deletion_rounds" to deletions.rounds,
                 ),
             )
             return 0

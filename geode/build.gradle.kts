@@ -72,6 +72,9 @@ tasks.withType<Test>().configureEach {
     // NegentropyServerReconcileBenchmark opt-in + sizing.
     System.getProperty("negServerBench")?.let { systemProperty("negServerBench", it) }
     System.getProperty("negBenchN")?.let { systemProperty("negBenchN", it) }
+    // DeletionSettleBenchmark sizing.
+    System.getProperty("delBenchN")?.let { systemProperty("delBenchN", it) }
+    System.getProperty("delBenchK")?.let { systemProperty("delBenchK", it) }
     // MirrorSyncThroughputTest sizing + external-source opt-in.
     System.getProperty("syncN")?.let { systemProperty("syncN", it) }
     System.getProperty("syncExpect")?.let { systemProperty("syncExpect", it) }
