@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.richtext.ParagraphState
 import com.vitorpamplona.amethyst.commons.richtext.PdfSegment
 import com.vitorpamplona.amethyst.commons.richtext.PhoneSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
+import com.vitorpamplona.amethyst.commons.richtext.RelayGroupLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.RelayUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SchemelessUrlSegment
@@ -531,6 +532,8 @@ private fun RenderWordWithoutPreview(
 
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
 
+        is RelayGroupLinkSegment -> ClickableRelayGroupLink(word.segmentText, nav)
+
         is BlossomUriSegment -> BlossomUriRendererNoPreview(word.segmentText, accountViewModel)
 
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
@@ -569,6 +572,7 @@ private fun RenderWordWithPreview(
         is RegularTextSegment -> Text(word.segmentText)
         is Base64Segment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
+        is RelayGroupLinkSegment -> ClickableRelayGroupLink(word.segmentText, nav)
         is BlossomUriSegment -> BlossomUriRenderer(word.segmentText, state, callbackUri, accountViewModel)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
     }

@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupInviteLink
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -205,6 +206,8 @@ fun uriToRoute(
         return connectedAppRoute(uri)
     }
 
+    relayGroupInviteRoute(uri)?.let { return it }
+
     val nip19 = Nip19Parser.uriToRoute(uri)?.entity
     if (nip19 != null) {
         LocalCache.consume(nip19)
@@ -324,4 +327,15 @@ private fun relayGroupDirectRoute(nip19: NAddress): Route? {
     if (nip19.kind != GroupMetadataEvent.KIND) return null
     val relay = nip19.relay.firstOrNull() ?: return null
     return Route.RelayGroup(nip19.dTag, relay.url)
+}
+
+/**
+ * Direct route for a NIP-29 group invite link in the de-facto `<relay>'<groupId>[?code=<code>]`
+ * form shared by Wisp and 0xchat (e.g. `wss://groups.0xchat.com'abc123`). The link carries its
+ * own host relay, so we can open the group straight away. Returns null for anything that isn't
+ * this exact shape, so it's safe to try before the nostr-entity parser.
+ */
+private fun relayGroupInviteRoute(uri: String): Route? {
+    val link = GroupInviteLink.parse(uri.removePrefix(NOSTR_URI_PREFIX)) ?: return null
+    return Route.RelayGroup(link.groupId, link.relayUrl.url)
 }
