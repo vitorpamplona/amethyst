@@ -27,8 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 /**
@@ -49,13 +47,8 @@ class Watermarks(
     /**
      * The `since` floor for an incremental re-fetch of [kind]: `newest + 1`, so
      * a relay returns only strictly-newer events. Null when we hold nothing for
-     * the kind (a cold fetch — no floor).
-     *
-     * Note for append-only kinds (kind:1984 reports): `+1` means a report
-     * published in the same second as our newest one would be skipped. That is
-     * acceptable for scoring (a same-second race is vanishingly rare and reports
-     * only nudge a score); a caller that wants belt-and-braces coverage can use
-     * [newest] directly and re-accept the boundary event.
+     * the kind (a cold fetch — no floor). Safe as `+1` because both crawl kinds
+     * (3 and 10002) are replaceable, so only a strictly-newer version matters.
      */
     fun sinceFor(kind: Kind): Long? = newestByKind[kind]?.let { it + 1 }
 
@@ -74,10 +67,10 @@ class Watermarks(
  * @param hopOf follow-graph distance from the observer, computed by BFS over the
  *   *stored* kind:3 contact lists only (no network). Its key set is the frontier
  *   we already know about.
- * @param watermarks per-author freshness floor for each crawl kind (see [Watermarks]),
- *   keyed by author for every user we hold any crawl event for — not just users in
- *   [hopOf], so a user discovered later in the crawl who has prior stored data still
- *   gets an incremental fetch.
+ * @param watermarks per-author freshness floor for the two crawl kinds — kind:3
+ *   and kind:10002 (see [Watermarks]) — keyed by author for every user we hold any
+ *   crawl event for, not just users in [hopOf], so a user discovered later in the
+ *   crawl who has prior stored data still gets an incremental fetch.
  * @param knownOutbox each user's kind:10002 write relays as last stored, so the
  *   router can route their content fetch without first resolving their outbox, and
  *   the ingest stage can diff a fresh 10002 against it to spot newly-added relays.
@@ -116,8 +109,8 @@ class BootstrapState(
  *    lists, stamping each reachable user's hop distance. This is the set of
  *    users we already know exist; the crawl expands it, it doesn't rediscover it.
  *  - **Seed the freshness watermarks** — the newest stored `created_at` per
- *    author per crawl kind (3 / 10000 / 1984 / 10002) — plus each user's
- *    last-known outbox from their kind:10002.
+ *    author for kind:3 and kind:10002 — plus each user's last-known outbox
+ *    from their kind:10002.
  *
  * Pure and network-free: only [IEventStore.query]. Everything downstream seeds
  * off the returned [BootstrapState].
@@ -148,15 +141,6 @@ class Sync2Bootstrap(
             bump(e.pubKey, ContactListEvent.KIND, e.createdAt)
             val cur = newestContacts[e.pubKey]
             if (cur == null || e.createdAt > cur.createdAt) newestContacts[e.pubKey] = e
-        }
-
-        // kind:10000 mutes + kind:1984 reports — watermark only (edges are
-        // materialized later, at score time, straight from the store).
-        for (e in store.query<Event>(Filter(kinds = listOf(MuteListEvent.KIND)))) {
-            if (e is MuteListEvent) bump(e.pubKey, MuteListEvent.KIND, e.createdAt)
-        }
-        for (e in store.query<Event>(Filter(kinds = listOf(ReportEvent.KIND)))) {
-            if (e is ReportEvent) bump(e.pubKey, ReportEvent.KIND, e.createdAt)
         }
 
         // kind:10002 — watermark AND the last-known write-relay set (newest per author).
@@ -195,12 +179,10 @@ class Sync2Bootstrap(
     }
 
     companion object {
-        /** The four kinds sync2 crawls: follows, mutes, reports, and relay lists. */
+        /** The two kinds sync2 crawls to build the graph: follows and relay lists. */
         val CRAWL_KINDS: List<Kind> =
             listOf(
                 ContactListEvent.KIND,
-                MuteListEvent.KIND,
-                ReportEvent.KIND,
                 AdvertisedRelayListEvent.KIND,
             )
     }
