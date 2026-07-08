@@ -241,13 +241,14 @@ class GrapeRankDataCrawler(
     }
 
     /**
-     * Holds all per-crawl mutable state. Graph state (done/hopOf/builder/liveRelays/
+     * Holds all per-crawl mutable state. Graph state (done/hopOf/builder/
      * relaysContacted) is single-writer by construction — Phase A and the Phase-B
      * consumer never run concurrently — so those stay plain collections. The frontier
      * IS [hopOf]'s key set: a user is "discovered" iff it has a hop stamp. State
      * genuinely shared across the producer / consumer / drain-worker coroutines is
-     * concurrent: relayHints, attempts, deadRelays. [writeRelayFreq] is also concurrent
-     * because the background reachability culler reads it while routeByOutbox writes it.
+     * concurrent: relayHints, attempts, deadRelays. [writeRelayFreq] and [liveRelays]
+     * are also concurrent because the background reachability culler reads them (to
+     * find candidates and skip already-live authorities) while the crawl writes them.
      */
     private inner class CrawlRun(
         val observer: HexKey,
@@ -259,7 +260,7 @@ class GrapeRankDataCrawler(
         val done = hashSetOf<HexKey>()
         val relaysContacted = hashSetOf<NormalizedRelayUrl>()
         val writeRelayFreq = ConcurrentMap<NormalizedRelayUrl, Int>()
-        val liveRelays = hashSetOf<NormalizedRelayUrl>()
+        val liveRelays = ConcurrentSet<NormalizedRelayUrl>()
 
         // Per-relay outcome/latency/yield accounting, written from every drain unit
         // (fast + parked) across every round. Dumped at crawl end; the raw signal a
@@ -412,16 +413,21 @@ class GrapeRankDataCrawler(
          * Background reachability culler. Cheaply TCP-probes the relays we've learned —
          * COLD TAIL FIRST — and drops the unreachable ones into [deadHosts] so the WS
          * path never pays the 7s connectTimeout on a dead host. It only ever marks dead
-         * and probes each authority once: a host already resolved by the WS path
-         * ([isDead]) is skipped, and a live host would pass the TCP probe anyway, so the
-         * WS verdict always wins ("if the websocket gets there first, let it run"). The
-         * cold-tail ordering keeps it off the hot relays the crawl is actively dialing.
-         * Runs on [bgScope] until the crawl cancels it.
+         * and probes each authority once. Any host the WS path already resolved is
+         * skipped: dead ones via [isDead], and hosts already proven LIVE ([liveRelays])
+         * are filtered out up front so we never waste a probe — or a needless TCP hit —
+         * on a working relay we depend on. Combined with the cold-tail ordering, the
+         * probe stays off the hot relays the crawl is actively dialing, and the WS
+         * verdict always wins ("if the websocket gets there first, let it run"). Runs on
+         * [bgScope] until the crawl cancels it.
          */
         private suspend fun cullUnreachable(probe: suspend (NormalizedRelayUrl) -> Boolean) {
             val probed = HashSet<String>() // authorities; only ever touched by this coroutine's loop
             val gate = Semaphore(PROBE_CONCURRENCY)
             while (currentCoroutineContext().isActive) {
+                // Never probe a host the WS path already proved live — wasted work and
+                // a needless TCP hit on the hot relays we depend on.
+                val liveAuthorities = liveRelays.snapshot().mapTo(HashSet()) { authorityOf(it.url) }
                 // Least-written relays are the niche/dead long tail the WS path reaches
                 // last — probing them first buys the most head start with the least
                 // contention against the busy relays already being connected.
@@ -430,8 +436,10 @@ class GrapeRankDataCrawler(
                         .snapshot()
                         .entries
                         .asSequence()
-                        .filter { authorityOf(it.key.url) !in probed && !isDead(it.key) }
-                        .sortedBy { it.value }
+                        .filter {
+                            val authority = authorityOf(it.key.url)
+                            authority !in probed && authority !in liveAuthorities && !isDead(it.key)
+                        }.sortedBy { it.value }
                         .map { it.key }
                         .toList()
                 if (batch.isEmpty()) {
@@ -1309,7 +1317,7 @@ class GrapeRankDataCrawler(
                     val backbone = topLiveRelays(BACKBONE_SIZE).toSet()
                     // Snapshot of every relay we've seen work, for the wide Tier-2
                     // sweep (taken now, before the Phase-B workers mutate liveRelays).
-                    val allLive = liveRelays.filterTo(HashSet()) { !isDead(it) }
+                    val allLive = liveRelays.snapshot().filterTo(HashSet()) { !isDead(it) }
                     ensureRelayLists(stragglers.toSet(), allLive, scope)
 
                     // Continuous worker pool instead of chunked awaitAll barriers, so
