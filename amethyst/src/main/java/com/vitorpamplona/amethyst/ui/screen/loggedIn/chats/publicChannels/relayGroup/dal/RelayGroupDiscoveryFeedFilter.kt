@@ -21,132 +21,84 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal
 
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.model.filterIntoSet
+import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 
 /**
- * The per-type match a discovery filter applies to a [RelayGroupChannel] on ONE relay.
- *
- * A NIP-29 group's kind-39000 is relay-signed, so the naive "author = a follow" match the
- * note feeds use never fires (the author is the relay). But the *people* dimension is still
- * meaningful — it just lives in the roster events and the relay's own key:
- *  - the relay signing the 39000 may be a followed key ([ByPeople] relay-key path);
- *  - a follow may be a group **admin** (kind 39001) or **member** (kind 39002).
- *
- * Topics/geo aren't defined by NIP-29, but a cooperating relay can copy requested `t`/`g`
- * tags onto the 39000 ([ByHashtags]/[ByGeohashes]).
+ * The Relay Groups discovery feed. Rows are the relay-signed kind-39000 metadata notes; the
+ * top-nav filter is resolved into a per-relay [GroupDiscoveryConstraint] ([toGroupConstraints])
+ * that decides which groups qualify: every group for Global, relay-key / admin / member for the
+ * people filters (rosters read from the group's [RelayGroupChannel]), or a `#t`/`#g` tag match
+ * for topic/geo filters. Structurally identical to
+ * [com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.dal.GitRepositoriesFeedFilter];
+ * the only difference is that a group's author is its relay, so the match runs through the
+ * roster-aware constraint rather than the author-based [com.vitorpamplona.amethyst.ui.dal.FilterByListParams].
  */
-sealed interface GroupDiscoveryConstraint {
-    fun matches(channel: RelayGroupChannel): Boolean
+class RelayGroupDiscoveryFeedFilter(
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
 
-    /** Every group the relay hosts (Global, or a specific relay chip). */
-    data object AllGroups : GroupDiscoveryConstraint {
-        override fun matches(channel: RelayGroupChannel) = channel.event != null
+    override fun limit() = 200
+
+    fun followList(): TopFilter = account.settings.defaultRelayGroupsDiscoveryFollowList.value
+
+    private fun constraints(): Map<NormalizedRelayUrl, GroupDiscoveryConstraint> = account.liveRelayGroupsDiscoveryFollowListsPerRelay.value.toGroupConstraints()
+
+    override fun feed(): List<Note> {
+        val byRelay = constraints()
+        val notes =
+            LocalCache.addressables.filterIntoSet(GroupMetadataEvent.KIND) { _, note ->
+                matches(note, byRelay)
+            }
+        return sort(notes)
     }
 
-    /** I follow the relay key, or a follow is an admin/member of the group. */
-    data class ByPeople(
-        val pubkeys: Set<HexKey>,
-    ) : GroupDiscoveryConstraint {
-        override fun matches(channel: RelayGroupChannel): Boolean {
-            if (pubkeys.isEmpty()) return false
-            val relayKey = channel.event?.pubKey
-            return (relayKey != null && relayKey in pubkeys) ||
-                channel.admins.any { it.pubKey in pubkeys } ||
-                channel.members.any { it in pubkeys }
+    override fun applyFilter(newItems: Set<Note>): Set<Note> {
+        val byRelay = constraints()
+        return newItems.filterTo(HashSet()) { matches(it, byRelay) }
+    }
+
+    /**
+     * The group qualifies when it was served by a relay in the filter's set AND that relay's
+     * constraint accepts it. The 39000 note carries its own relay-signed metadata; its roster
+     * (admins/members) lives on the [RelayGroupChannel] keyed by (serving relay + group id),
+     * which [LocalCache.consume] created when the metadata arrived.
+     */
+    private fun matches(
+        note: Note,
+        byRelay: Map<NormalizedRelayUrl, GroupDiscoveryConstraint>,
+    ): Boolean {
+        if (byRelay.isEmpty()) return false
+        val event = note.event as? GroupMetadataEvent ?: return false
+        return note.relays.any { relay ->
+            val constraint = byRelay[relay] ?: return@any false
+            val channel = LocalCache.getRelayGroupChannelIfExists(GroupId(event.groupId(), relay))
+            channel != null && constraint.matches(channel)
         }
     }
 
-    /** The 39000 carries a `t` tag matching one of these topics (compared lowercase). */
-    data class ByHashtags(
-        val hashtags: Set<String>,
-    ) : GroupDiscoveryConstraint {
-        private val lower = hashtags.mapTo(mutableSetOf()) { it.lowercase() }
-
-        override fun matches(channel: RelayGroupChannel): Boolean {
-            if (lower.isEmpty()) return false
-            return channel.event?.hashtags()?.any { it.lowercase() in lower } == true
+    override fun sort(items: Set<Note>): List<Note> {
+        fun channelOf(note: Note): RelayGroupChannel? {
+            val event = note.event as? GroupMetadataEvent ?: return null
+            return note.relays.firstNotNullOfOrNull {
+                LocalCache.getRelayGroupChannelIfExists(GroupId(event.groupId(), it))
+            }
         }
-    }
 
-    /** The 39000 carries a `g` tag matching one of these geohashes (mip-map prefixes intersect). */
-    data class ByGeohashes(
-        val geohashes: Set<String>,
-    ) : GroupDiscoveryConstraint {
-        private val lower = geohashes.mapTo(mutableSetOf()) { it.lowercase() }
+        val memberCount = items.associateWith { channelOf(it)?.memberCount() ?: 0 }
 
-        override fun matches(channel: RelayGroupChannel): Boolean {
-            if (lower.isEmpty()) return false
-            return channel.event?.geohashes()?.any { it.lowercase() in lower } == true
-        }
-    }
-
-    /** All-follows big-OR: a group matches if ANY of its people/topic/geo lenses match. */
-    data class AnyOf(
-        val constraints: List<GroupDiscoveryConstraint>,
-    ) : GroupDiscoveryConstraint {
-        override fun matches(channel: RelayGroupChannel) = constraints.any { it.matches(channel) }
+        return items.sortedWith(
+            compareByDescending<Note> { memberCount[it] }
+                .thenByDescending { it.createdAt() ?: 0L }
+                .thenBy { it.idHex },
+        )
     }
 }
-
-/**
- * Resolve the selected top-nav filter into a per-relay [GroupDiscoveryConstraint]. The relays
- * are exactly the relays the filter routes to; each relay's constraint carries only that relay's
- * slice of the follow/topic/geo set (matching how the note feeds shard per relay). Filter kinds
- * that don't map to a people/topic/geo dimension (communities, muted-only) fall back to
- * [GroupDiscoveryConstraint.AllGroups] — still constraining the RELAY set, just not the people.
- */
-fun IFeedTopNavPerRelayFilterSet.toGroupConstraints(): Map<NormalizedRelayUrl, GroupDiscoveryConstraint> =
-    when (this) {
-        is GlobalTopNavPerRelayFilterSet -> set.keys.associateWith { GroupDiscoveryConstraint.AllGroups }
-        is RelayTopNavPerRelayFilterSet -> mapOf(relayUrl to GroupDiscoveryConstraint.AllGroups)
-        is AuthorsTopNavPerRelayFilterSet ->
-            set.mapValues { (_, f) -> GroupDiscoveryConstraint.ByPeople(f.authors) }
-        is HashtagTopNavPerRelayFilterSet ->
-            set.mapValues { (_, f) -> GroupDiscoveryConstraint.ByHashtags(f.hashtags) }
-        is LocationTopNavPerRelayFilterSet ->
-            set.mapValues { (_, f) -> GroupDiscoveryConstraint.ByGeohashes(f.geotags) }
-        is AllFollowsTopNavPerRelayFilterSet ->
-            set.mapValues { (_, f) ->
-                val lenses =
-                    buildList {
-                        f.authors?.takeIf { it.isNotEmpty() }?.let { add(GroupDiscoveryConstraint.ByPeople(it)) }
-                        f.hashtags?.takeIf { it.isNotEmpty() }?.let { add(GroupDiscoveryConstraint.ByHashtags(it)) }
-                        f.geotags?.takeIf { it.isNotEmpty() }?.let { add(GroupDiscoveryConstraint.ByGeohashes(it)) }
-                    }
-                when {
-                    lenses.isEmpty() -> GroupDiscoveryConstraint.AllGroups
-                    lenses.size == 1 -> lenses.first()
-                    else -> GroupDiscoveryConstraint.AnyOf(lenses)
-                }
-            }
-        // Community / muted-authors / DVM algo selections carry no group-hosting dimension;
-        // show every group the resolved relays host (or nothing when there are no relays).
-        else -> relayKeys().associateWith { GroupDiscoveryConstraint.AllGroups }
-    }
-
-/** The relays a filter set routes to, regardless of type. Used for the AllGroups fallback. */
-private fun IFeedTopNavPerRelayFilterSet.relayKeys(): Set<NormalizedRelayUrl> =
-    when (this) {
-        is GlobalTopNavPerRelayFilterSet -> set.keys
-        is RelayTopNavPerRelayFilterSet -> setOf(relayUrl)
-        is AuthorsTopNavPerRelayFilterSet -> set.keys
-        is HashtagTopNavPerRelayFilterSet -> set.keys
-        is LocationTopNavPerRelayFilterSet -> set.keys
-        is AllFollowsTopNavPerRelayFilterSet -> set.keys
-        is AllCommunitiesTopNavPerRelayFilterSet -> set.keys
-        is SingleCommunityTopNavPerRelayFilterSet -> set.keys
-        is MutedAuthorsTopNavPerRelayFilterSet -> set.keys
-        // DVM algo-feed selections carry no group-hosting relays.
-        else -> emptySet()
-    }

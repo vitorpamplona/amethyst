@@ -22,19 +22,26 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Composable
-fun RelayGroupDirectorySubscription(
-    relay: NormalizedRelayUrl,
-    dataSource: RelayGroupDirectoryFilterAssembler,
+fun RelayGroupsDiscoveryFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
+    RelayGroupsDiscoveryFilterAssemblerSubscription(
+        accountViewModel.dataSources().relayGroupsDiscovery,
+        accountViewModel,
+    )
+}
+
+@Composable
+fun RelayGroupsDiscoveryFilterAssemblerSubscription(
+    dataSource: RelayGroupsDiscoveryFilterAssembler,
     accountViewModel: AccountViewModel,
 ) {
     val state =
-        remember(accountViewModel.account, relay) {
-            RelayGroupDirectoryQueryState(relay, accountViewModel.account)
+        remember(accountViewModel.account) {
+            RelayGroupsDiscoveryQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

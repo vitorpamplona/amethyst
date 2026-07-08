@@ -18,24 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
-@Composable
-fun RelayGroupDirectorySubscription(
-    relay: NormalizedRelayUrl,
-    dataSource: RelayGroupDirectoryFilterAssembler,
-    accountViewModel: AccountViewModel,
-) {
-    val state =
-        remember(accountViewModel.account, relay) {
-            RelayGroupDirectoryQueryState(relay, accountViewModel.account)
-        }
+// A follows filter pulls the whole directory (metadata + rosters) from each relay the follow set
+// routes to; the dal keeps groups where a follow is the relay key, an admin, or a member, and any
+// topic/geo groups the AllFollows big-OR also selects (all present in the directory pull).
+fun filterRelayGroupsByFollows(
+    followsSet: AllFollowsTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (followsSet.set.isEmpty()) return emptyList()
 
-    LifecycleAwareKeyDataSourceSubscription(state, dataSource)
+    return followsSet.set.flatMap {
+        filterRelayGroupsDirectory(
+            relay = it.key,
+            since = since?.get(it.key)?.time ?: defaultSince,
+        )
+    }
 }

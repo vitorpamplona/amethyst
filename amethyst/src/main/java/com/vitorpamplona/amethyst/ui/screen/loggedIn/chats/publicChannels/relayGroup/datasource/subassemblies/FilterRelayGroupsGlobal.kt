@@ -18,24 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.utils.TimeUtils
 
-@Composable
-fun RelayGroupDirectorySubscription(
-    relay: NormalizedRelayUrl,
-    dataSource: RelayGroupDirectoryFilterAssembler,
-    accountViewModel: AccountViewModel,
-) {
-    val state =
-        remember(accountViewModel.account, relay) {
-            RelayGroupDirectoryQueryState(relay, accountViewModel.account)
-        }
+fun filterRelayGroupsGlobal(
+    relays: GlobalTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (relays.set.isEmpty()) return emptyList()
 
-    LifecycleAwareKeyDataSourceSubscription(state, dataSource)
+    return relays.set.flatMap {
+        filterRelayGroupsDirectory(
+            relay = it.key,
+            since = since?.get(it.key)?.time ?: defaultSince ?: TimeUtils.oneWeekAgo(),
+        )
+    }
 }

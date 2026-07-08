@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.dal.ArticlesFeedFi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.dal.BadgesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.CalendarAppointmentsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.CalendarCollectionsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.RelayGroupDiscoveryFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.dal.CommunitiesFeedFilter
@@ -113,6 +114,7 @@ class AccountFeedContentStates(
     val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
     val workoutsFeed = FeedContentState(WorkoutFeedFilter(account), scope, LocalCache)
     val gitRepositoriesFeed = FeedContentState(GitRepositoriesFeedFilter(account), scope, LocalCache)
+    val relayGroupsDiscoveryFeed = FeedContentState(RelayGroupDiscoveryFeedFilter(account), scope, LocalCache)
     val calendarAppointmentsFeed = FeedContentState(CalendarAppointmentsFeedFilter(account), scope, LocalCache)
     val calendarCollectionsFeed = FeedContentState(CalendarCollectionsFeedFilter(account), scope, LocalCache)
     val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache)
@@ -231,6 +233,7 @@ class AccountFeedContentStates(
         picturesFeed.updateFeedWith(newNotes)
         workoutsFeed.updateFeedWith(newNotes)
         gitRepositoriesFeed.updateFeedWith(newNotes)
+        relayGroupsDiscoveryFeed.updateFeedWith(newNotes)
         productsFeed.updateFeedWith(newNotes)
         shortsFeed.updateFeedWith(newNotes)
         publicChatsFeed.updateFeedWith(newNotes)
@@ -293,6 +296,7 @@ class AccountFeedContentStates(
         picturesFeed.deleteFromFeed(newNotes)
         workoutsFeed.deleteFromFeed(newNotes)
         gitRepositoriesFeed.deleteFromFeed(newNotes)
+        relayGroupsDiscoveryFeed.deleteFromFeed(newNotes)
         productsFeed.deleteFromFeed(newNotes)
         shortsFeed.deleteFromFeed(newNotes)
         publicChatsFeed.deleteFromFeed(newNotes)
@@ -351,6 +355,7 @@ class AccountFeedContentStates(
         picturesFeed.trimToSize(maxItems)
         workoutsFeed.trimToSize(maxItems)
         gitRepositoriesFeed.trimToSize(maxItems)
+        relayGroupsDiscoveryFeed.trimToSize(maxItems)
         calendarAppointmentsFeed.trimToSize(maxItems)
         calendarCollectionsFeed.trimToSize(maxItems)
         productsFeed.trimToSize(maxItems)

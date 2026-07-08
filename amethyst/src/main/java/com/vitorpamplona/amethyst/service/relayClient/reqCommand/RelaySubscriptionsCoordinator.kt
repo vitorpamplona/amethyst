@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupPreviewFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupRosterFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupThreadsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource.CommunityFilterAssembler
@@ -121,6 +122,7 @@ class RelaySubscriptionsCoordinator(
     val relayGroupRoster = RelayGroupRosterFilterAssembler(client)
     val relayGroupThreads = RelayGroupThreadsFilterAssembler(client)
     val relayGroupPreview = RelayGroupPreviewFilterAssembler(client)
+    val relayGroupsDiscovery = RelayGroupsDiscoveryFilterAssembler(client)
     val chatroom = ChatroomFilterAssembler(client)
     val community = CommunityFilterAssembler(client)
     val gitRepository = RepositoryFilterAssembler(client)
@@ -186,6 +188,7 @@ class RelaySubscriptionsCoordinator(
             relayGroupRoster,
             relayGroupThreads,
             relayGroupPreview,
+            relayGroupsDiscovery,
             account,
             accountForeground,
             home,

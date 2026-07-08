@@ -22,15 +22,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
@@ -41,8 +39,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,62 +50,66 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupDirectorySubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 
 /**
- * Discover NIP-29 groups across the relay set the top-bar filter resolves to. Mirrors the
- * Git/Pictures feeds: a [FeedFilterSpinner] persists the selection to
- * `defaultRelayGroupsDiscoveryFollowList` (Global / Follows / a followed hashtag or geohash /
- * a specific relay — favorite relays show up as relay chips). The group directory query is
- * fanned out to every relay in that set and each group is listed as a joinable card.
+ * Discover NIP-29 groups across the relay set the top-bar filter resolves to. Built on the shared
+ * feed stack exactly like the Git-repositories screen: a [FeedContentState]
+ * ([com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates.relayGroupsDiscoveryFeed])
+ * fed by the per-type datasource, a [FeedFilterSpinner] persisting the selection to
+ * `defaultRelayGroupsDiscoveryFollowList`, and a [RefresheableBox] + [RenderFeedContentState]. Rows
+ * are the relay-signed 39000 metadata notes, rendered as joinable group cards.
  */
 @Composable
 fun RelayGroupDiscoveryScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val viewModel: RelayGroupDiscoveryViewModel = viewModel()
-    viewModel.init(accountViewModel.account)
+    RelayGroupDiscoveryScreen(
+        feedContentState = accountViewModel.feedStates.relayGroupsDiscoveryFeed,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
 
-    val constraints by viewModel.constraints.collectAsStateWithLifecycle()
-    val groups by viewModel.groups.collectAsStateWithLifecycle()
-    val selectedFilter by accountViewModel.account.settings.defaultRelayGroupsDiscoveryFollowList
-        .collectAsStateWithLifecycle()
-    val favoriteRelays by accountViewModel.account.relayFeedsList.flow
-        .collectAsStateWithLifecycle()
-
-    // Fan the directory subscription out to each relay in the current set while the screen is
-    // visible; each is a lifecycle-aware per-relay REQ (narrowed by the relay's constraint for
-    // topic/geo filters) that EOSEs and dedupes by relay.
-    constraints.forEach { (relay, constraint) ->
-        key(relay) {
-            RelayGroupDirectorySubscription(
-                relay,
-                accountViewModel.dataSources().relayGroupDirectory,
-                accountViewModel,
-                constraint,
-            )
-        }
-    }
+@Composable
+fun RelayGroupDiscoveryScreen(
+    feedContentState: FeedContentState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    WatchLifecycleAndUpdateModel(feedContentState)
+    WatchAccountForRelayGroupDiscovery(feedContentState, accountViewModel)
+    RelayGroupsDiscoveryFilterAssemblerSubscription(accountViewModel)
 
     Scaffold(
         topBar = {
-            val options by accountViewModel.feedStates.feedListOptions.kind3GlobalPeopleRoutes
+            val selectedFilter by accountViewModel.account.settings.defaultRelayGroupsDiscoveryFollowList
+                .collectAsStateWithLifecycle()
+            val options by accountViewModel.feedStates.feedListOptions.relayGroupsDiscoveryRoutes
                 .collectAsStateWithLifecycle()
             TopBarExtensibleWithBackButton(
                 title = {
@@ -131,36 +134,77 @@ fun RelayGroupDiscoveryScreen(
             )
         },
     ) { padding ->
-        if (groups.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text(
-                    text =
-                        if (selectedFilter == TopFilter.Global) {
-                            stringRes(R.string.relay_group_discovery_empty)
-                        } else {
-                            stringRes(R.string.relay_group_discovery_empty_filtered)
-                        },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(32.dp),
-                )
-            }
-        } else {
-            val myPubkey = accountViewModel.userProfile().pubkeyHex
-            LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-                items(groups, key = { it.groupId.toKey() }) { channel ->
-                    RelayGroupDiscoveryCard(
-                        channel = channel,
-                        myPubkey = myPubkey,
-                        isFavoriteRelay = channel.groupId.relayUrl in favoriteRelays,
+        Column(Modifier.padding(padding)) {
+            RefresheableBox(feedContentState, true) {
+                SaveableFeedContentState(feedContentState, scrollStateKey = ScrollStateKeys.RELAY_GROUPS_DISCOVERY_SCREEN) { listState ->
+                    RenderFeedContentState(
+                        feedContentState = feedContentState,
                         accountViewModel = accountViewModel,
+                        listState = listState,
                         nav = nav,
+                        routeForLastRead = null,
+                        onLoaded = { loaded ->
+                            val items by loaded.feed.collectAsStateWithLifecycle()
+                            LazyColumn(Modifier.fillMaxWidth(), state = listState) {
+                                itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
+                                    RelayGroupDiscoveryRow(item, accountViewModel, nav)
+                                    HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                                }
+                            }
+                        },
                     )
-                    HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }
     }
+}
+
+@Composable
+private fun WatchAccountForRelayGroupDiscovery(
+    feedContentState: FeedContentState,
+    accountViewModel: AccountViewModel,
+) {
+    val listName by accountViewModel.account.settings.defaultRelayGroupsDiscoveryFollowList
+        .collectAsStateWithLifecycle()
+    val perRelay by accountViewModel.account.liveRelayGroupsDiscoveryFollowListsPerRelay
+        .collectAsStateWithLifecycle()
+
+    LaunchedEffect(listName, perRelay) {
+        feedContentState.checkKeysInvalidateDataAndSendToTop()
+    }
+}
+
+/**
+ * Resolves the 39000 metadata note to its live [RelayGroupChannel] (keyed by host relay + group
+ * id) and recomposes in place as the relay-signed metadata / roster changes, so member counts and
+ * membership stay current without moving the row.
+ */
+@Composable
+private fun RelayGroupDiscoveryRow(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = note.event as? GroupMetadataEvent ?: return
+    val relay = note.relays.firstOrNull() ?: return
+    val baseChannel = remember(event.groupId(), relay) { LocalCache.getOrCreateRelayGroupChannel(GroupId(event.groupId(), relay)) }
+
+    val channelState by baseChannel
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+    val channel = channelState.channel as? RelayGroupChannel ?: baseChannel
+
+    val favoriteRelays by accountViewModel.account.relayFeedsList.flow
+        .collectAsStateWithLifecycle()
+
+    RelayGroupDiscoveryCard(
+        channel = channel,
+        myPubkey = accountViewModel.userProfile().pubkeyHex,
+        isFavoriteRelay = channel.groupId.relayUrl in favoriteRelays,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
 }
 
 @Composable

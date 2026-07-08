@@ -20,22 +20,31 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import kotlinx.coroutines.CoroutineScope
 
-@Composable
-fun RelayGroupDirectorySubscription(
-    relay: NormalizedRelayUrl,
-    dataSource: RelayGroupDirectoryFilterAssembler,
-    accountViewModel: AccountViewModel,
-) {
-    val state =
-        remember(accountViewModel.account, relay) {
-            RelayGroupDirectoryQueryState(relay, accountViewModel.account)
-        }
+class RelayGroupsDiscoveryQueryState(
+    val account: Account,
+    val feedStates: AccountFeedContentStates,
+    val scope: CoroutineScope,
+)
 
-    LifecycleAwareKeyDataSourceSubscription(state, dataSource)
+@Stable
+class RelayGroupsDiscoveryFilterAssembler(
+    client: INostrClient,
+) : ComposeSubscriptionManager<RelayGroupsDiscoveryQueryState>() {
+    val group =
+        listOf(
+            RelayGroupsDiscoverySubAssembler(client, ::allKeys),
+        )
+
+    override fun invalidateKeys() = invalidateFilters()
+
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
+
+    override fun destroy() = group.forEach { it.destroy() }
 }
