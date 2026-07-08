@@ -34,19 +34,18 @@ class MemoryTrimmingService(
     var isTrimmingMemoryMutex = AtomicBoolean(false)
 
     /**
-     * Tiered pruning scaled to the OS memory-pressure level.
+     * Two-tier pruning keyed to the OS trim levels still delivered since API 34
+     * (the foreground RUNNING_* and deeper MODERATE/COMPLETE levels were deprecated
+     * because apps are no longer notified of them).
      *
-     * Tier 1 — mild pressure (UI hidden, running-moderate):
+     * Tier 1 — UI hidden (fires on every app switch):
      *   Sweep stale WeakRefs, drop expired and superseded-replaceable events.
      *   Safe to run frequently; no UI-visible side effects.
      *
-     * Tier 2 — low memory (running-low, background):
-     *   Tier 1 + old chat messages + unobserved thread replies / reactions.
-     *   May cause feeds to re-fetch content that was scrolled past.
-     *
-     * Tier 3 — critical / imminent kill (running-critical, moderate, complete):
-     *   Tier 2 + sever all observer links + drop every event from muted/blocked users.
-     *   Aggressive; triggers recomposition wherever StateFlows were cleared.
+     * Tier 2 — background / real reclaim pressure (process on the LRU list):
+     *   Tier 1 + drop events from muted/blocked users + old chat messages +
+     *   unobserved thread replies / reactions. May cause feeds to re-fetch content
+     *   that was scrolled past; triggers recomposition wherever StateFlows cleared.
      */
     private fun doTrim(
         account: Collection<Account>,
@@ -60,16 +59,13 @@ class MemoryTrimmingService(
         cache.pruneExpiredEvents()
         cache.prunePastVersionsOfReplaceables()
 
-        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
-            // Tier 2: medium pressure — drop events from muted/blocked users
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
+            // Tier 2: real reclaim pressure — drop events from muted/blocked users, old
+            // messages, and unobserved reactions.
             account.forEach {
                 cache.pruneHiddenEvents(it)
                 cache.pruneHiddenMessages(it)
             }
-        }
-
-        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
-            // Tier 3: critical pressure — drop old messages and unobserved reactions
             val accounts = otherAccounts.mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()
             cache.pruneOldMessages()
             cache.pruneRepliesAndReactions(accounts)
@@ -79,7 +75,7 @@ class MemoryTrimmingService(
     suspend fun run(
         account: Collection<Account>,
         otherAccounts: List<AccountInfo>,
-        level: Int = ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL,
+        level: Int = ComponentCallbacks2.TRIM_MEMORY_BACKGROUND,
     ) {
         if (isTrimmingMemoryMutex.compareAndSet(false, true)) {
             Log.d("ServiceManager", "Trimming Memory (level=$level)")
