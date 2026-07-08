@@ -123,6 +123,12 @@ Each subscription tracks "End of Stored Events" per relay. The eose manager in `
 
 ## Related
 
+- **Headless / one-shot client ops** (CLI, geode, tests, non-compose code): don't go
+  through `Subscribable` — use the `INostrClient` extension functions in
+  `quartz/…/nip01Core/relay/client/accessories/` (`fetchAll`, `fetchFirst`,
+  `fetchAllPages`, `publishAndConfirm`, `count`, `negentropyReconcile`/`negentropySync`,
+  …). They're extensions, so they don't show up under "usages of `NostrClient`" — see
+  that package's `README.md` for the catalog before writing a raw subscribe/collect loop.
 - `nostr-expert/references/tag-patterns.md` — how tags inform what a filter needs to look for.
 - `kotlin-coroutines/references/relay-patterns.md` — relay pool internals (sibling layer beneath assemblers).
 - `feed-patterns` skill — feeds compose several Subscribables (content + metadata + reactions).
