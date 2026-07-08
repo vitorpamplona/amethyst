@@ -59,29 +59,28 @@ class Watermarks(
 }
 
 /**
- * Everything sync2 loads from the local store before touching the network — the
- * observer's already-known graph. Seeds the coordinator so the crawl starts
+ * The observer's follow graph as it exists in the local store right now — the
+ * output of [LocalGraphBFS]. Seeds the sync2 pipeline so the crawl starts
  * incremental instead of from scratch.
  *
  * @param observer the pubkey the graph is anchored at (always present in [hopOf] at hop 0).
- * @param hopOf follow-graph distance from the observer, computed by BFS over the
- *   *stored* kind:3 contact lists only (no network). Its key set is the frontier
- *   we already know about.
- * @param watermarks per-author freshness floor for the two crawl kinds — kind:3
- *   and kind:10002 (see [Watermarks]) — keyed by author for every user we hold any
- *   crawl event for, not just users in [hopOf], so a user discovered later in the
- *   crawl who has prior stored data still gets an incremental fetch.
- * @param knownOutbox each user's kind:10002 write relays as last stored, so the
- *   router can route their content fetch without first resolving their outbox, and
- *   the ingest stage can diff a fresh 10002 against it to spot newly-added relays.
+ * @param hopOf follow-graph distance from the observer for every user the BFS
+ *   reached over the *stored* kind:3 contact lists. Its key set is the frontier
+ *   we already know about; the crawl expands it.
+ * @param watermarks per-author freshness floor (see [Watermarks]) for the users
+ *   the BFS touched — kind:3 for anyone whose contact list we hold, kind:10002 for
+ *   anyone whose relay list we hold.
+ * @param knownOutbox each discovered user's kind:10002 write relays as last stored,
+ *   so the router can route their content fetch without first resolving their
+ *   outbox, and the ingest stage can diff a fresh 10002 against it for added relays.
  */
-class BootstrapState(
+class LocalGraph(
     val observer: HexKey,
     val hopOf: Map<HexKey, Int>,
     val watermarks: Map<HexKey, Watermarks>,
     val knownOutbox: Map<HexKey, Set<NormalizedRelayUrl>>,
 ) {
-    /** Number of users already reachable from the observer in the stored graph. */
+    /** Number of users reachable from the observer in the stored graph. */
     val discoveredUsers: Int get() = hopOf.size
 
     /** Users bucketed by follow-graph distance (hop -> count), ascending. */
@@ -101,67 +100,75 @@ class BootstrapState(
 }
 
 /**
- * Step 0 of the sync2 pipeline: load the observer's already-known graph out of
- * the local [store] so the crawl can start incremental.
+ * Step 0 of the sync2 pipeline: a breadth-first search of the observer's follow
+ * graph over the **local store only** (no network), so the crawl can start
+ * incremental.
  *
- * It does two independent things in one pass over the store:
- *  - **BFS the frontier** from the observer over the *stored* kind:3 contact
- *    lists, stamping each reachable user's hop distance. This is the set of
- *    users we already know exist; the crawl expands it, it doesn't rediscover it.
- *  - **Seed the freshness watermarks** — the newest stored `created_at` per
- *    author for kind:3 and kind:10002 — plus each user's last-known outbox
- *    from their kind:10002.
+ * It is a real, level-synchronized BFS — it only ever queries the frontier it has
+ * reached, one indexed author+kind lookup per level (chunked to
+ * [AUTHORS_PER_QUERY]). It never scans the whole store: a node's kind:3 is pulled
+ * on demand as the frontier expands, so memory and query cost are bounded by the
+ * size of the reachable graph (a few thousand users), not the store's millions of
+ * contact lists.
  *
- * Pure and network-free: only [IEventStore.query]. Everything downstream seeds
- * off the returned [BootstrapState].
+ * As it walks, it records each user's freshness [Watermarks] (kind:3 from the BFS
+ * pass, kind:10002 from a final pass over the discovered set) and their last-known
+ * outbox. Everything downstream seeds off the returned [LocalGraph].
  */
-class Sync2Bootstrap(
+class LocalGraphBFS(
     private val store: IEventStore,
 ) {
-    suspend fun load(observer: HexKey): BootstrapState {
-        // The store keeps only the newest version of a replaceable event, and both
-        // crawl kinds (3 and 10002) are replaceable, so each query returns at most
-        // one event per author — its created_at is the watermark directly, no fold.
+    suspend fun traverse(observer: HexKey): LocalGraph {
+        val hopOf = HashMap<HexKey, Int>()
         val watermarks = HashMap<HexKey, HashMap<Kind, Long>>()
 
-        // kind:3 — the follow lists we BFS over, plus the kind:3 watermark.
-        val contacts = HashMap<HexKey, ContactListEvent>()
-        for (e in store.query<Event>(Filter(kinds = listOf(ContactListEvent.KIND)))) {
-            if (e !is ContactListEvent) continue
-            contacts[e.pubKey] = e
-            watermarks.getOrPut(e.pubKey) { HashMap() }[ContactListEvent.KIND] = e.createdAt
-        }
-
-        // kind:10002 — watermark AND the last-known write-relay set.
-        val knownOutbox = HashMap<HexKey, Set<NormalizedRelayUrl>>()
-        for (e in store.query<Event>(Filter(kinds = listOf(AdvertisedRelayListEvent.KIND)))) {
-            if (e !is AdvertisedRelayListEvent) continue
-            watermarks.getOrPut(e.pubKey) { HashMap() }[AdvertisedRelayListEvent.KIND] = e.createdAt
-            e.writeRelaysNorm()?.let { knownOutbox[e.pubKey] = it.toHashSet() }
-        }
-
-        // BFS the follow graph from the observer over the stored contact lists.
-        // The observer is always present at hop 0, even on an empty store.
-        val hopOf = HashMap<HexKey, Int>()
+        // Level-synchronized BFS: process the whole current frontier, collect the
+        // next frontier, advance the hop. The observer is hop 0 (present even on an
+        // empty store). Each level is one batched query over just its authors —
+        // never a full-store scan. kind:3 is replaceable, so the store returns at
+        // most one list per author and its created_at is the kind:3 watermark.
         hopOf[observer] = 0
-        val queue = ArrayDeque<HexKey>()
-        queue.addLast(observer)
-        while (queue.isNotEmpty()) {
-            val user = queue.removeFirst()
-            val hop = hopOf.getValue(user)
-            val list = contacts[user] ?: continue
-            for (follow in list.verifiedFollowKeySet()) {
-                if (follow !in hopOf) {
-                    hopOf[follow] = hop + 1
-                    queue.addLast(follow)
+        var frontier: List<HexKey> = listOf(observer)
+        var hop = 0
+        while (frontier.isNotEmpty()) {
+            val nextHop = hop + 1
+            val next = LinkedHashSet<HexKey>()
+            for (chunk in frontier.chunked(AUTHORS_PER_QUERY)) {
+                val lists = store.query<Event>(Filter(authors = chunk, kinds = listOf(ContactListEvent.KIND)))
+                for (e in lists) {
+                    if (e !is ContactListEvent) continue
+                    watermarks.getOrPut(e.pubKey) { HashMap() }[ContactListEvent.KIND] = e.createdAt
+                    for (follow in e.verifiedFollowKeySet()) {
+                        if (follow !in hopOf) {
+                            hopOf[follow] = nextHop
+                            next.add(follow)
+                        }
+                    }
                 }
+            }
+            frontier = next.toList()
+            hop = nextHop
+        }
+
+        // kind:10002 for the discovered set only: watermark + last-known outbox,
+        // batched the same way. Replaceable, so one relay list per author.
+        val knownOutbox = HashMap<HexKey, Set<NormalizedRelayUrl>>()
+        for (chunk in hopOf.keys.chunked(AUTHORS_PER_QUERY)) {
+            val lists = store.query<Event>(Filter(authors = chunk, kinds = listOf(AdvertisedRelayListEvent.KIND)))
+            for (e in lists) {
+                if (e !is AdvertisedRelayListEvent) continue
+                watermarks.getOrPut(e.pubKey) { HashMap() }[AdvertisedRelayListEvent.KIND] = e.createdAt
+                e.writeRelaysNorm()?.let { knownOutbox[e.pubKey] = it.toHashSet() }
             }
         }
 
-        return BootstrapState(observer, hopOf, watermarks.mapValues { Watermarks(it.value) }, knownOutbox)
+        return LocalGraph(observer, hopOf, watermarks.mapValues { Watermarks(it.value) }, knownOutbox)
     }
 
     companion object {
+        /** Authors per store query — one batched lookup covers a whole BFS level. */
+        const val AUTHORS_PER_QUERY = 500
+
         /** The two kinds sync2 crawls to build the graph: follows and relay lists. */
         val CRAWL_KINDS: List<Kind> =
             listOf(

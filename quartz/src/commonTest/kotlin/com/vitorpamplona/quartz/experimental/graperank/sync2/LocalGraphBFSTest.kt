@@ -34,8 +34,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class Sync2BootstrapTest {
-    // A dummy signature — bootstrap never verifies, it only reads tags + created_at.
+class LocalGraphBFSTest {
+    // A dummy signature — the BFS never verifies, it only reads tags + created_at.
     private val sig = "0".repeat(128)
 
     /** A distinct valid 64-char hex pubkey/id for a small integer, e.g. pk(1). */
@@ -62,7 +62,7 @@ class Sync2BootstrapTest {
     private suspend fun bootstrap(
         observer: Int,
         events: List<Event>,
-    ): BootstrapState = Sync2Bootstrap(ListStore(events)).load(pk(observer))
+    ): LocalGraph = LocalGraphBFS(ListStore(events)).traverse(pk(observer))
 
     @Test
     fun emptyStoreYieldsObserverAtHopZero() =
