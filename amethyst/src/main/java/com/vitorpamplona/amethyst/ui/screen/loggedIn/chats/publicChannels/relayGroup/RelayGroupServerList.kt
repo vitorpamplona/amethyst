@@ -72,7 +72,7 @@ fun RelayGroupServerList(
 
         // Always offer a discovery entry, so a user with no groups yet still has
         // somewhere to start.
-        FindChannelsRow { nav.nav(Route.RelayGroupBrowse) }
+        FindChannelsRow { nav.nav(Route.RelayGroupDiscovery) }
         HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
