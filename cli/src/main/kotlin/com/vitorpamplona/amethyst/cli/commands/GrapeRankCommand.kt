@@ -372,6 +372,7 @@ object GrapeRankCommand {
                     diagnose = args.bool("diagnose"),
                     insertBatchSize = args.intFlag("insert-batch", 500),
                     drainConcurrency = args.intFlag("drain-concurrency", 24),
+                    timeoutEvictStrikes = args.intFlag("timeout-evict", 3),
                 ),
             log = { System.err.println(it) },
         )

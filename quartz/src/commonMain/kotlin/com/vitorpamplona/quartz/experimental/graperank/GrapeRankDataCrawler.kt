@@ -134,6 +134,13 @@ class GrapeRankDataCrawler(
      *   moderate: a higher global fan-out re-floods busy hubs faster than demotion
      *   catches up (an A/B at 64 ran ~2x slower with more dead relays), so 24 is the
      *   validated default and raising it is a probe, not a speedup.
+     * @param timeoutEvictStrikes evict a relay after this many drains that timed out
+     *   (connect timeout or park idle-cut) having delivered NOTHING. Unlike
+     *   [classifyDrainFailure] — which never marks a timeout dead, since one slow
+     *   answer shouldn't drop a relay — this catches the connect-but-silent / dead
+     *   endpoints that are otherwise re-tried through every straggler's outbox for the
+     *   rest of the crawl. A clean EOSE or any delivered event clears a relay's count,
+     *   so only never-productive relays are evicted. `<= 0` disables it.
      */
     class Config(
         val relayListDiscoveryRelays: Set<NormalizedRelayUrl>,
@@ -145,6 +152,7 @@ class GrapeRankDataCrawler(
         val diagnose: Boolean = false,
         val insertBatchSize: Int = 500,
         val drainConcurrency: Int = 24,
+        val timeoutEvictStrikes: Int = 3,
     )
 
     /** What the crawl fetched — the counters the caller reports and the graph is built from. */
@@ -207,6 +215,24 @@ class GrapeRankDataCrawler(
         val attempts = ConcurrentMap<HexKey, Int>()
         val deadRelays = ConcurrentSet<NormalizedRelayUrl>()
         val relayStrikes = ConcurrentMap<NormalizedRelayUrl, Int>()
+
+        // Unproductive-TIMEOUT strikes, keyed by relay AUTHORITY (host[:port]), not the
+        // full URL. [classifyDrainFailure] deliberately treats every timeout — a connect
+        // timeout OR a park idle-cut — as "busy, retry" and never dead, because one slow
+        // answer shouldn't evict a relay. But in a crawl the same unresponsive server is
+        // routed through every straggler's outbox, every round, each visit burning the
+        // full timeout + park window for zero data. Keying by authority is what defeats
+        // the outbox-model's per-user path fragmentation: a paid/dead host like
+        // `filter.nostr.wine` is advertised as hundreds of distinct per-user URLs
+        // (`filter.nostr.wine/npubA?broadcast=true`, …), so a per-URL counter never
+        // reaches the threshold on any single one — but they are one server, and it
+        // times out on all of them. We strike the authority and, past
+        // [Config.timeoutEvictStrikes], mark it dead in [deadHosts] so every URL under
+        // it is skipped. A clean EOSE or any delivered event clears the authority (see
+        // [clearTimeoutStrikes]), so a host that ever produces is never evicted — only
+        // the connect-but-silent / dead-endpoint class is.
+        val deadTimeoutStrikes = ConcurrentMap<String, Int>()
+        val deadHosts = ConcurrentSet<String>()
 
         // Crawl-wide dedup of event ids, shared across all concurrent drains and
         // every round. The outbox model mirrors the SAME event (especially kind:10002
@@ -271,11 +297,47 @@ class GrapeRankDataCrawler(
             }
         }
 
+        /**
+         * A relay's drain unit timed out (connect timeout or park idle-cut) having
+         * delivered nothing. Count the strike against its AUTHORITY and, once it
+         * reaches [Config.timeoutEvictStrikes], give up on the whole host — a
+         * connect-but-silent or dead endpoint that would otherwise be re-tried through
+         * every straggler's outbox for the rest of the crawl. Disabled when the
+         * threshold is <= 0.
+         */
+        fun strikeUnproductiveTimeout(relay: NormalizedRelayUrl) {
+            val limit = config.timeoutEvictStrikes
+            if (limit <= 0) return
+            val authority = authorityOf(relay.url)
+            if (authority in deadHosts) return
+            if (deadTimeoutStrikes.merge(authority, 1) { a, b -> a + b } >= limit) deadHosts.add(authority)
+        }
+
+        /**
+         * A relay just proved its host can produce — a clean EOSE or an actual event —
+         * so wipe any timeout strikes the authority accrued. Prevents an occasionally-
+         * slow but useful host (a busy backbone hub, or a multi-path relay where some
+         * paths are slow) from accumulating its way to eviction across a long crawl.
+         */
+        fun clearTimeoutStrikes(relay: NormalizedRelayUrl) {
+            // ConcurrentMap exposes no remove; reset the count to 0 atomically (0 is
+            // below any positive eviction threshold, so it reads as "unstruck"). Guard
+            // on a prior entry so we don't insert a 0 for every host that ever answers.
+            val authority = authorityOf(relay.url)
+            if (deadTimeoutStrikes[authority] != null) deadTimeoutStrikes.merge(authority, 0) { _, _ -> 0 }
+        }
+
+        /**
+         * A relay is out of the routing pool if it hard/transient-failed (per-URL
+         * [deadRelays]) or its whole authority was timeout-evicted ([deadHosts]).
+         */
+        fun isDead(relay: NormalizedRelayUrl): Boolean = relay in deadRelays || authorityOf(relay.url) in deadHosts
+
         /** The busiest live relays we've learned, excluding the dead ones. */
         fun topLiveRelays(cap: Int): List<NormalizedRelayUrl> =
             writeRelayFreq.entries
                 .asSequence()
-                .filter { it.key in liveRelays && it.key !in deadRelays }
+                .filter { it.key in liveRelays && !isDead(it.key) }
                 .sortedByDescending { it.value }
                 .take(cap)
                 .map { it.key }
@@ -463,7 +525,7 @@ class GrapeRankDataCrawler(
             val perRelayAuthors = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
             for (author in idsByAuthor.keys) {
                 val write = relaysOf(author)?.writeRelaysNorm()?.takeIf { it.isNotEmpty() } ?: backbone
-                for (relay in write) if (relay !in deadRelays) perRelayAuthors.getOrPut(relay) { HashSet() }.add(author)
+                for (relay in write) if (!isDead(relay)) perRelayAuthors.getOrPut(relay) { HashSet() }.add(author)
             }
             if (perRelayAuthors.isEmpty()) return
 
@@ -516,7 +578,7 @@ class GrapeRankDataCrawler(
                 // (re-querying them for this user is guaranteed-empty waste).
                 val emptied = askedEmpty[pk]
                 for (relay in relays) {
-                    if (relay in deadRelays) continue
+                    if (isDead(relay)) continue
                     if (emptied != null && relay in emptied) continue
                     perRelay.getOrPut(relay) { HashSet() }.add(pk)
                 }
@@ -808,7 +870,17 @@ class GrapeRankDataCrawler(
                                         if (elapsedMs > SLOW_DRAIN_LOG_MS) logSlow(subRelay, reason, elapsedMs, groupFilters)
                                         unitEvents.close()
                                         client.unsubscribe(subId)
-                                        persist(buildList { for (e in unitEvents) add(e) })
+                                        val drained = buildList { for (e in unitEvents) add(e) }
+                                        val persisted = persist(drained)
+                                        // Alive if it EOSE'd or handed us anything; a connect-timeout that
+                                        // gave nothing (classifyDrainFailure leaves it retryable forever)
+                                        // earns a strike toward eviction instead.
+                                        if (reason == "eose" || drained.isNotEmpty()) {
+                                            clearTimeoutStrikes(subRelay)
+                                        } else if (isTimeoutReason(reason)) {
+                                            strikeUnproductiveTimeout(subRelay)
+                                        }
+                                        persisted
                                     } else {
                                         // Still streaming — hand off and let the round move on.
                                         notAnswered.add(subRelay)
@@ -829,7 +901,16 @@ class GrapeRankDataCrawler(
                                                     classify(late, subRelay, lateDead)
                                                     recordDead(lateDead.snapshot())
                                                     unitEvents.close()
-                                                    for (pair in persist(buildList { for (e in unitEvents) add(e) })) lateHarvest.trySend(pair)
+                                                    val drainedLate = buildList { for (e in unitEvents) add(e) }
+                                                    for (pair in persist(drainedLate)) lateHarvest.trySend(pair)
+                                                    // Same liveness rule as the fast path: a park that ended
+                                                    // in a clean EOSE or delivered anything clears the relay;
+                                                    // one that idle-cut ("timeout") with nothing strikes it.
+                                                    if (late == "eose" || drainedLate.isNotEmpty()) {
+                                                        clearTimeoutStrikes(subRelay)
+                                                    } else if (late == "timeout" || isTimeoutReason(late)) {
+                                                        strikeUnproductiveTimeout(subRelay)
+                                                    }
                                                 } finally {
                                                     client.unsubscribe(subId)
                                                     parkedInFlight.addAndFetch(-1)
@@ -839,6 +920,9 @@ class GrapeRankDataCrawler(
                                             logSlow(subRelay, "timeout", mark.elapsedNow().inWholeMilliseconds, groupFilters)
                                             unitEvents.close()
                                             client.unsubscribe(subId)
+                                            // Parking disabled: a fast timeout with nothing delivered is
+                                            // the same unproductive-timeout signal, so strike it here too.
+                                            if (unitEvents.tryReceive().isFailure) strikeUnproductiveTimeout(subRelay)
                                         }
                                         emptyList()
                                     }
@@ -920,7 +1004,7 @@ class GrapeRankDataCrawler(
                     val backbone = topLiveRelays(BACKBONE_SIZE).toSet()
                     // Snapshot of every relay we've seen work, for the wide Tier-2
                     // sweep (taken now, before the Phase-B workers mutate liveRelays).
-                    val allLive = liveRelays.filterTo(HashSet()) { it !in deadRelays }
+                    val allLive = liveRelays.filterTo(HashSet()) { !isDead(it) }
                     ensureRelayLists(stragglers.toSet(), allLive, scope)
 
                     // Continuous worker pool instead of chunked awaitAll barriers, so
@@ -1035,7 +1119,8 @@ class GrapeRankDataCrawler(
             val stored = eventsStored.load()
             log(
                 "[graperank] crawl complete: ${hopOf.size} discovered, $contactListsFed contact lists fed, " +
-                    "${relaysContacted.size} relays contacted, ${deadRelays.size()} dead, $rounds rounds in $downloadMs ms; " +
+                    "${relaysContacted.size} relays contacted, ${deadRelays.size()} dead + ${deadHosts.size()} timeout-evicted hosts, " +
+                    "$rounds rounds in $downloadMs ms; " +
                     "by hop: " + hopHistogram.entries.joinToString(" ") { "${it.key}=${it.value}" },
             )
             log(
@@ -1092,6 +1177,40 @@ class GrapeRankDataCrawler(
         // --diagnose: a REQ that takes longer than this to reach a terminal (EOSE or
         // timeout) is logged with its relay + filter, so slow relays can be replayed.
         private const val SLOW_DRAIN_LOG_MS = 4000L
+
+        /**
+         * Is a drain terminal reason a connect/read TIMEOUT — the class
+         * [classifyDrainFailure] leaves retryable forever? The reason shape is
+         * `cannot:<message>` and the message now carries the exception class name
+         * (see BasicRelayClient), so a SocketTimeoutException surfaces as "timed
+         * out"/"timeout". Used to drive unproductive-timeout eviction.
+         */
+        private fun isTimeoutReason(reason: String): Boolean {
+            if (!reason.startsWith("cannot")) return false
+            val m = reason.removePrefix("cannot:").lowercase()
+            return "timeout" in m || "timed out" in m
+        }
+
+        /**
+         * The authority (host[:port]) of a normalized relay URL — the segment between
+         * the `wss://` / `ws://` scheme and the first `/`. This is the key the
+         * timeout-eviction counts on, so the many per-user path URLs the outbox model
+         * mints for one server (`filter.nostr.wine/npubA`, `filter.nostr.wine/npubB`, …)
+         * collapse to a single evictable host. A bare host is its own authority, so this
+         * is a no-op for the common no-path relay. Deliberately host-only: it must NOT
+         * fold `filter.nostr.wine` into `nostr.wine` — those are different servers with
+         * different behaviour (the bare host may read fine while the filter host stalls).
+         */
+        fun authorityOf(url: String): String {
+            val afterScheme =
+                when {
+                    url.startsWith("wss://") -> url.substring(6)
+                    url.startsWith("ws://") -> url.substring(5)
+                    else -> url
+                }
+            val slash = afterScheme.indexOf('/')
+            return if (slash >= 0) afterScheme.substring(0, slash) else afterScheme
+        }
 
         // Once the frontier is empty but parked relays are still streaming, how long
         // to block waiting for one of them to deliver before re-checking convergence.
