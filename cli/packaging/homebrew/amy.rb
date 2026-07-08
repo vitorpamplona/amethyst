@@ -19,7 +19,7 @@
 #   We publish exactly that as `amy-<version>-jvm.tar.gz` (bin/amy + lib/*.jar,
 #   no bundled runtime) from .github/workflows/create-release.yml.
 class Amy < Formula
-  desc "Command-line Nostr client from the Amethyst project"
+  desc "Nostr client from the Amethyst project"
   homepage "https://github.com/vitorpamplona/amethyst"
   url "https://github.com/vitorpamplona/amethyst/releases/download/v1.12.6/amy-1.12.6-jvm.tar.gz"
   sha256 "209316d704a4622ddef1fd86b958b7619e9d049c20f3543dff60348ec73affd6"
