@@ -122,7 +122,7 @@ class GrapeRankPublisher(
             .filterIsInstance<ContactCardEvent>()
             .groupBy { it.aboutUser() }
             .mapNotNull { (target, cards) ->
-                val t = target ?: return@mapNotNull null
+                val t = target.ifBlank { return@mapNotNull null }
                 t to (cards.maxByOrNull { it.createdAt } ?: return@mapNotNull null)
             }.toMap()
 
