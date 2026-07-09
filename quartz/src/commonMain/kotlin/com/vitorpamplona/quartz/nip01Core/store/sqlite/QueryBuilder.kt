@@ -594,6 +594,44 @@ class QueryBuilder(
         return db.countIn(rowIdSubqueries.sql, rowIdSubqueries.args)
     }
 
+    // -----------------------------------------------------------------
+    // Anti-join projections
+    //
+    // Set-difference over authors — "who is missing an event of kind K"
+    // — which the positive-only nostr Filter grammar can't express, so
+    // it lives here as a dedicated SELECT rather than going through the
+    // filter → SQL path.
+    // -----------------------------------------------------------------
+
+    /**
+     * Distinct authors with at least one stored event that have NO stored
+     * event of [kind]. The outer scan collects every distinct `pubkey`;
+     * the correlated `NOT EXISTS` is a point lookup on
+     * `query_by_kind_pubkey_created` (kind, pubkey, …), so the cost is one
+     * distinct-pubkey pass plus a seek per author. Order is unspecified.
+     */
+    fun authorsMissingKind(
+        kind: Int,
+        db: SQLiteConnection,
+    ): List<HexKey> {
+        val sql =
+            """
+            SELECT DISTINCT present.pubkey FROM event_headers AS present
+            WHERE NOT EXISTS (
+                SELECT 1 FROM event_headers AS wanted
+                WHERE wanted.kind = ? AND wanted.pubkey = present.pubkey
+            )
+            """.trimIndent()
+        return db.prepare(sql).use { stmt ->
+            stmt.bindLong(1, kind.toLong())
+            val out = ArrayList<HexKey>()
+            while (stmt.step()) {
+                out.add(stmt.getText(0))
+            }
+            out
+        }
+    }
+
     private fun SQLiteConnection.countEverything() = runCount("SELECT count(*) as count FROM event_headers")
 
     private fun SQLiteConnection.countIn(

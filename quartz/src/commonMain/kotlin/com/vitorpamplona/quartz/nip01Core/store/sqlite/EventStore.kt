@@ -77,6 +77,8 @@ class EventStore(
 
     override suspend fun count(filters: List<Filter>) = store.count(filters)
 
+    override suspend fun authorsMissingOutbox() = store.authorsMissingOutbox()
+
     override suspend fun snapshotIdsForNegentropy(
         filters: List<Filter>,
         maxEntries: Int?,

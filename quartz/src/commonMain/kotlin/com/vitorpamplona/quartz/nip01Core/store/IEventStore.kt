@@ -22,8 +22,10 @@ package com.vitorpamplona.quartz.nip01Core.store
 
 import com.vitorpamplona.negentropy.storage.IStorage
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 interface IEventStore : AutoCloseable {
     companion object {
@@ -120,6 +122,35 @@ interface IEventStore : AutoCloseable {
     suspend fun count(filter: Filter): Int
 
     suspend fun count(filters: List<Filter>): Int
+
+    /**
+     * Every distinct author with at least one stored event that has NO
+     * NIP-65 relay list (kind 10002 / "outbox") in this store.
+     *
+     * This is a whole-store anti-join — the set of all authors minus the
+     * authors who already have an outbox — which the positive-only nostr
+     * [Filter] grammar cannot express (there is no "NOT kind 10002"), so
+     * it is its own method rather than a [query]. "Missing" is relative to
+     * what THIS store holds (see [relay]); an author whose only 10002 was
+     * deleted (NIP-09) or expired (NIP-40) is reported as missing, because
+     * no row remains for it. Order is unspecified.
+     *
+     * The default implementation walks the store: it collects the authors
+     * that DO have an outbox, then streams every event and keeps the
+     * authors not in that set. Correct for any store but O(events). SQLite
+     * overrides it with a single `SELECT DISTINCT … NOT EXISTS` scan that
+     * seeks the outbox lookup on the `(kind, pubkey, …)` index.
+     */
+    suspend fun authorsMissingOutbox(): List<HexKey> {
+        val withOutbox = HashSet<HexKey>()
+        query<Event>(Filter(kinds = listOf(AdvertisedRelayListEvent.KIND))) { withOutbox.add(it.pubKey) }
+
+        val missing = LinkedHashSet<HexKey>()
+        query<Event>(Filter()) { event ->
+            if (event.pubKey !in withOutbox) missing.add(event.pubKey)
+        }
+        return missing.toList()
+    }
 
     /**
      * NIP-77 negentropy snapshot. Returns `(created_at, id)` pairs
