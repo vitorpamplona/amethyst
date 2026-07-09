@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.All
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByAuthors
@@ -37,6 +38,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByGeohashes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByHashtag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByMutedAuthors
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByRelay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
@@ -53,6 +55,7 @@ fun makeRelayGroupsDiscoveryFilter(
         is HashtagTopNavPerRelayFilterSet -> filterRelayGroupsByHashtag(feedSettings, since, defaultSince)
         is LocationTopNavPerRelayFilterSet -> filterRelayGroupsByGeohashes(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterRelayGroupsByMutedAuthors(feedSettings, since, defaultSince)
+        is RelayTopNavPerRelayFilterSet -> filterRelayGroupsByRelay(feedSettings, since, defaultSince)
         is SingleCommunityTopNavPerRelayFilterSet -> filterRelayGroupsByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
     }
