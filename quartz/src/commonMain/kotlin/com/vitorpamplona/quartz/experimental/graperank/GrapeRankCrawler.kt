@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -278,12 +279,21 @@ class GrapeRankCrawler(
         val hopOf = hashMapOf(observer to 0)
         val done = hashSetOf<HexKey>()
 
-        // Users we've already run the outbox-discovery sweep for (indexers + the wide
-        // live-relay pass in [ensureRelayLists]). The discovery relay set is static, so
-        // re-asking it for the same never-had-a-10002 user each round it recirculates is
-        // pure waste — the round-8 profile showed this as ~144k slow kind:10002 drains.
+        // Users we've already run the STATIC-relay outbox-discovery sweep for (the
+        // indexer set in [ensureRelayLists]). That relay set never changes, so re-asking
+        // it for the same never-had-a-10002 user each round it recirculates is pure waste
+        // — the round-8 profile showed this as ~144k slow kind:10002 drains.
         // Single-writer: only the round loop's [ensureRelayLists] touches it.
         val relayListDiscoverySwept = hashSetOf<HexKey>()
+
+        // Relays the WIDE (every-live-relay) recovery pass in [ensureRelayLists] has
+        // already asked. Unlike the discovery set the wide net GROWS as the crawl learns
+        // relays, so gating that pass on the swept-user set would never re-ask an old
+        // straggler for a home relay discovered after its first sweep. Tracking the asked
+        // relay set instead lets a late-appearing relay still surface an old straggler's
+        // 10002 while never asking the same (user, relay) pair twice.
+        // Single-writer: only the round loop's [ensureRelayLists] touches it.
+        val wideRelaysSwept = hashSetOf<NormalizedRelayUrl>()
         val relaysContacted = hashSetOf<NormalizedRelayUrl>()
         val writeRelayFreq = ConcurrentMap<NormalizedRelayUrl, Int>()
         val liveRelays = ConcurrentSet<NormalizedRelayUrl>()
@@ -315,11 +325,20 @@ class GrapeRankCrawler(
         // reaches the threshold on any single one — but they are one server, and it
         // times out on all of them. We strike the authority and, past
         // [Config.timeoutEvictStrikes], mark it dead in [deadHosts] so every URL under
-        // it is skipped. A clean EOSE or any delivered event clears the authority (see
-        // [clearTimeoutStrikes]), so a host that ever produces is never evicted — only
-        // the connect-but-silent / dead-endpoint class is.
+        // it is skipped. A clean EOSE or any delivered event records the authority in
+        // [producedHosts] (see [clearTimeoutStrikes]), and [isDead] treats an authority
+        // as dead ONLY while it is in [deadHosts] AND NOT in [producedHosts] — so a host
+        // that ever produces is never evicted, even if concurrent strikes from the
+        // 24-worker fan-out raced it into [deadHosts] at the same instant it EOSE'd.
+        // Only the connect-but-silent / dead-endpoint class stays evicted.
         val deadTimeoutStrikes = ConcurrentMap<String, Int>()
         val deadHosts = ConcurrentSet<String>()
+
+        // Authorities that ever produced (EOSE or a delivered event) this run. Membership
+        // here overrides [deadHosts] in [isDead], making the "ever produces ⇒ never
+        // evicted" invariant race-free: the strike path can lose to a clear and still add
+        // to [deadHosts], but the gate consults this set and lets the proven host run.
+        val producedHosts = ConcurrentSet<String>()
 
         // Crawl-wide dedup of event ids, shared across all concurrent drains and
         // every round. The outbox model mirrors the SAME event (especially kind:10002
@@ -416,34 +435,42 @@ class GrapeRankCrawler(
             val limit = config.timeoutEvictStrikes
             if (limit <= 0) return
             val authority = authorityOf(relay.url)
+            if (authority in producedHosts) return // proven productive — never evict on timeouts
             if (authority in deadHosts) return
             if (deadTimeoutStrikes.merge(authority, 1) { a, b -> a + b } >= limit) deadHosts.add(authority)
         }
 
         /**
          * A relay just proved its host can produce — a clean EOSE or an actual event —
-         * so wipe any timeout strikes the authority accrued. Prevents an occasionally-
-         * slow but useful host (a busy backbone hub, or a multi-path relay where some
-         * paths are slow) from accumulating its way to eviction across a long crawl.
+         * so record the authority in [producedHosts] (permanently protecting it from
+         * timeout eviction for the rest of the run) and wipe any timeout strikes it
+         * accrued. Prevents an occasionally-slow but useful host (a busy backbone hub, or
+         * a multi-path relay where some paths are slow) from accumulating its way to
+         * eviction across a long crawl — and, via the [isDead] gate, un-evicts one that a
+         * concurrent strike already pushed into [deadHosts] at the same instant.
          */
         fun clearTimeoutStrikes(relay: NormalizedRelayUrl) {
+            val authority = authorityOf(relay.url)
+            producedHosts.add(authority)
             // ConcurrentMap exposes no remove; reset the count to 0 atomically (0 is
             // below any positive eviction threshold, so it reads as "unstruck"). Guard
             // on a prior entry so we don't insert a 0 for every host that ever answers.
-            val authority = authorityOf(relay.url)
             if (deadTimeoutStrikes[authority] != null) deadTimeoutStrikes.merge(authority, 0) { _, _ -> 0 }
         }
 
         /**
          * A relay is out of the routing pool if it hard/transient-failed (per-URL
-         * [deadRelays]) or its whole authority was timeout-evicted ([deadHosts]); a
-         * .onion relay is dead on sight unless we have a Tor transport, since every
-         * connect to it would only hang and fail.
+         * [deadRelays]) or its whole authority was timeout-evicted ([deadHosts]) and has
+         * not since proven productive ([producedHosts] wins, so a slow-but-live host is
+         * never permanently evicted); a .onion relay is dead on sight unless we have a
+         * Tor transport, since every connect to it would only hang and fail.
          */
-        fun isDead(relay: NormalizedRelayUrl): Boolean =
-            relay in deadRelays ||
-                authorityOf(relay.url) in deadHosts ||
-                (!config.torEnabled && relay.url.contains(".onion"))
+        fun isDead(relay: NormalizedRelayUrl): Boolean {
+            val authority = authorityOf(relay.url)
+            return relay in deadRelays ||
+                (authority in deadHosts && authority !in producedHosts) ||
+                (!config.torEnabled && RelayUrlNormalizer.isOnion(relay.url))
+        }
 
         /** The busiest live relays we've learned, excluding the dead ones. */
         fun topLiveRelays(cap: Int): List<NormalizedRelayUrl> =
@@ -670,13 +697,6 @@ class GrapeRankCrawler(
             allLiveRelays: Set<NormalizedRelayUrl>,
             bgScope: CoroutineScope,
         ) {
-            // Only sweep users we have never swept: the discovery relay set is static,
-            // so a second sweep of a user still lacking a 10002 can't find one we didn't
-            // already miss. Mark them swept up-front so the wide pass below is gated too.
-            val missing = pubkeys.filter { relaysOf(it) == null && it !in relayListDiscoverySwept }
-            if (missing.isEmpty()) return
-            relayListDiscoverySwept.addAll(missing)
-
             suspend fun query(
                 authors: List<HexKey>,
                 relays: Set<NormalizedRelayUrl>,
@@ -698,20 +718,40 @@ class GrapeRankCrawler(
                 } else {
                     config.relayListDiscoveryRelays
                 }
-            // On the bounded indexer set, co-fetch the contact list in the same REQ: the
-            // outbox lookup already pays the round-trip and an indexer holding a user's
-            // 10002 often holds their kind:3, so we harvest it as a cheap byproduct.
-            query(missing, discovery, listOf(AdvertisedRelayListEvent.KIND, ContactListEvent.KIND))
 
-            val stillMissing = missing.filter { relaysOf(it) == null }
+            // First-time DISCOVERY sweep on the static indexer set: a user only needs it
+            // once (re-asking a static set can't find a 10002 we already missed). Co-fetch
+            // the contact list in the same REQ — an indexer holding a user's 10002 often
+            // holds their kind:3, a cheap byproduct of a round-trip we already pay.
+            val freshlyMissing = pubkeys.filter { relaysOf(it) == null && it !in relayListDiscoverySwept }
+            val freshlyMissingSet = freshlyMissing.toHashSet()
+            relayListDiscoverySwept.addAll(freshlyMissing)
+            query(freshlyMissing, discovery, listOf(AdvertisedRelayListEvent.KIND, ContactListEvent.KIND))
+
+            // WIDE recovery sweep for kind:10002 ONLY (co-fetching kind:3 across thousands
+            // of relays inflates this fire-and-forget sweep, which the finishing drain then
+            // waits on — measured +300s at hop-3). The wide net grows every round, so it is
+            // gated on the asked-RELAY set, not the swept-user set:
+            //  - a user first swept this round is asked the whole current wide net;
+            //  - a user swept earlier and still missing is asked ONLY the relays that
+            //    appeared since — so its home relay, discovered late, still surfaces.
+            // No (user, relay) pair is asked twice; every straggler eventually sees every
+            // live relay. The added olderStillMissing×newWide work self-limits: newWide
+            // shrinks toward zero as the relay universe is exhausted.
             val wide = allLiveRelays - discovery
-            if (stillMissing.isNotEmpty() && wide.isNotEmpty()) {
-                // The wide net is EVERY live relay (thousands). Ask it for kind:10002 ONLY —
-                // co-fetching kind:3 here would download the same big contact lists from
-                // hundreds of relays and inflate this fire-and-forget bgScope sweep, which
-                // the finishing drain then waits on (measured +300s at hop-3). The outbox
-                // this finds routes the user's kind:3 to their own relays in the next round.
-                bgScope.launch { query(stillMissing, wide, listOf(AdvertisedRelayListEvent.KIND)) }
+            val newWide = wide - wideRelaysSwept
+            wideRelaysSwept.addAll(wide)
+
+            val freshStillMissing = freshlyMissing.filter { relaysOf(it) == null }
+            val olderStillMissing = pubkeys.filter { it !in freshlyMissingSet && relaysOf(it) == null }
+            val hasWork =
+                (freshStillMissing.isNotEmpty() && wide.isNotEmpty()) ||
+                    (olderStillMissing.isNotEmpty() && newWide.isNotEmpty())
+            if (hasWork) {
+                bgScope.launch {
+                    query(freshStillMissing, wide, listOf(AdvertisedRelayListEvent.KIND))
+                    query(olderStillMissing, newWide, listOf(AdvertisedRelayListEvent.KIND))
+                }
             }
         }
 
@@ -1284,17 +1324,26 @@ class GrapeRankCrawler(
                                                     parkedInFlight.addAndFetch(-1)
                                                 }
                                             }
+                                            // Parked: events are persisted into lateHarvest by the
+                                            // coroutine above, so this round contributes nothing here.
+                                            emptyList()
                                         } else {
+                                            // Parking disabled (no bgScope, or parkTimeoutMs <= timeoutMs):
+                                            // drain and persist whatever streamed during the fast window
+                                            // instead of dropping it, then return it so the round ingests
+                                            // it exactly like the fast path — the other two branches persist,
+                                            // this one must too or those events are lost and re-queried.
                                             val toMs = mark.elapsedNow().inWholeMilliseconds
                                             logSlow(subRelay, "timeout", toMs, groupFilters)
-                                            telemetry.record(subRelay, RelayTelemetry.Outcome.FAST_TIMEOUT, toMs, authorsIn(groupFilters), 0)
                                             unitEvents.close()
                                             client.unsubscribe(subId)
-                                            // Parking disabled: a fast timeout with nothing delivered is
-                                            // the same unproductive-timeout signal, so strike it here too.
-                                            if (unitEvents.tryReceive().isFailure) strikeUnproductiveTimeout(subRelay)
+                                            val drained = buildList { for (e in unitEvents) add(e) }
+                                            telemetry.record(subRelay, RelayTelemetry.Outcome.FAST_TIMEOUT, toMs, authorsIn(groupFilters), drained.size)
+                                            // Nothing delivered → same unproductive-timeout signal, strike it;
+                                            // anything delivered proves the host productive and clears it.
+                                            if (drained.isEmpty()) strikeUnproductiveTimeout(subRelay) else clearTimeoutStrikes(subRelay)
+                                            persist(drained)
                                         }
-                                        emptyList()
                                     }
                                 }
                             }

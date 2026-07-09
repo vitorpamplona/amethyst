@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip66RelayMonitor.reachability
 
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
@@ -122,6 +123,14 @@ class RelayReachabilityStore(
      * WITHOUT. Signed by [signer] and inserted into [store]; being addressable, each
      * replaces this monitor's prior record for that relay, so the store stays bounded
      * at roughly the number of distinct relays.
+     *
+     * [rttOpenMs] is the measured open round-trip in ms. It defaults to 0 as a **liveness
+     * flag only** — presence of the `rtt-open` tag, not its magnitude, is what [snapshot]
+     * reads as "reachable", and a caller that merely proved a relay served events (like
+     * the crawler) has no dedicated probe latency to report. A `0` therefore means
+     * "reachable, latency not probed by this writer", NOT a real 0 ms measurement. Do NOT
+     * publish these records to the wider network as authoritative latency data until a
+     * dedicated monitor probe supplies a real [rttOpenMs]; aggregators rank by it.
      */
     suspend fun record(
         reachable: Set<NormalizedRelayUrl>,
@@ -154,7 +163,7 @@ class RelayReachabilityStore(
         /** NIP-66 `n` network type inferred from the URL, so a `.onion`/i2p relay is tagged correctly. */
         fun networkTypeOf(relay: NormalizedRelayUrl): NetworkType =
             when {
-                relay.url.contains(".onion") -> NetworkType.TOR
+                RelayUrlNormalizer.isOnion(relay.url) -> NetworkType.TOR
                 relay.url.contains(".i2p") -> NetworkType.I2P
                 else -> NetworkType.CLEARNET
             }

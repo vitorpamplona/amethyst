@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.NetworkType
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -51,6 +52,11 @@ class RelayReachabilityStoreTest {
     private val dead1 = RelayUrlNormalizer.normalize("wss://dead.example.com")
     private val dead2 = RelayUrlNormalizer.normalize("wss://gone.example.com")
     private val onion = RelayUrlNormalizer.normalize("wss://abc.onion")
+    private val onionPath = RelayUrlNormalizer.normalize("wss://abc.onion/npub1x")
+
+    // Contains the literal ".onion" as a substring but is NOT a Tor host — a loose
+    // `contains(".onion")` would misclassify it; the normalizer's isOnion must not.
+    private val fakeOnion = RelayUrlNormalizer.normalize("wss://relay.onionfake.com")
 
     @Test
     fun recordsAndReloadsReachability() =
@@ -102,13 +108,10 @@ class RelayReachabilityStoreTest {
 
     @Test
     fun onionRelayIsTaggedTorNetwork() {
-        assertEquals(
-            com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.NetworkType.TOR,
-            RelayReachabilityStore.networkTypeOf(onion),
-        )
-        assertEquals(
-            com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.NetworkType.CLEARNET,
-            RelayReachabilityStore.networkTypeOf(live1),
-        )
+        assertEquals(NetworkType.TOR, RelayReachabilityStore.networkTypeOf(onion))
+        assertEquals(NetworkType.TOR, RelayReachabilityStore.networkTypeOf(onionPath))
+        assertEquals(NetworkType.CLEARNET, RelayReachabilityStore.networkTypeOf(live1))
+        // A host that merely contains ".onion" as a substring is clearnet, not Tor.
+        assertEquals(NetworkType.CLEARNET, RelayReachabilityStore.networkTypeOf(fakeOnion))
     }
 }
