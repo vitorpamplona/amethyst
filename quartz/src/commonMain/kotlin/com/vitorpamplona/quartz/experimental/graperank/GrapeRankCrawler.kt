@@ -208,6 +208,15 @@ class GrapeRankCrawler(
          * permanently ignores an author's advertised home. See RelayReachabilityStore.
          */
         val knownDeadRelays: Set<NormalizedRelayUrl> = emptySet(),
+        /**
+         * Adaptive EOSE cutoff, in ms; 0 disables (the plain fast window). Measured:
+         * relays deliver their events in ~0.6s then sit ~4.6s more before sending EOSE
+         * (86% of drain wall). When >0, a drain that has delivered ≥1 event and then
+         * gone silent for this long is treated as complete instead of waiting out the
+         * full [timeoutMs] and parking. The idle timer only arms AFTER the first event,
+         * so a relay merely slow to answer still gets the full [timeoutMs].
+         */
+        val eoseIdleMs: Long = 0,
     )
 
     /** What the crawl fetched — the counters the caller reports and the graph is built from. */
@@ -961,6 +970,46 @@ class GrapeRankCrawler(
         }
 
         /**
+         * Fast-window wait with an adaptive EOSE cutoff. Measured: relays answer in
+         * ~0.6s then go quiet, but sit ~4.6s more before sending EOSE (86% of drain
+         * wall). So once a relay has delivered events AND then gone silent for [idleMs],
+         * treat it as complete ("eose-idle") instead of waiting out the full [hardCapMs]
+         * fast window and parking. Returns:
+         *  - a terminal reason (eose/closed/cannot) if one arrives,
+         *  - "eose-idle" if the relay delivered then fell quiet for [idleMs] (done),
+         *  - null if [hardCapMs] elapsed while it was still streaming or never answered
+         *    (→ park, exactly as the plain fast window would).
+         * The idle timer only ARMS after the first event, so a relay merely slow to send
+         * its first response gets the full [hardCapMs] and is never cut prematurely.
+         */
+        private suspend fun awaitTerminalOrQuiescent(
+            done: CompletableDeferred<String>,
+            activity: Channel<Unit>,
+            idleMs: Long,
+            hardCapMs: Long,
+        ): String? {
+            val start = TimeSource.Monotonic.markNow()
+            var sawEvent = false
+            while (true) {
+                val remaining = hardCapMs - start.elapsedNow().inWholeMilliseconds
+                if (remaining <= 0) return if (sawEvent) EOSE_IDLE else null
+                val window = if (sawEvent) minOf(idleMs, remaining) else remaining
+                val r =
+                    withTimeoutOrNull(window) {
+                        select {
+                            done.onAwait { it }
+                            activity.onReceive { ACTIVITY }
+                        }
+                    }
+                when (r) {
+                    null -> return if (sawEvent) EOSE_IDLE else null // quiet after data → done; else park
+                    ACTIVITY -> sawEvent = true // an event landed — arm/reset the idle window
+                    else -> return r // terminal reason (eose/closed/cannot)
+                }
+            }
+        }
+
+        /**
          * Fold one late-delivered event from a parked relay into the graph. Only the
          * round loop calls this (directly or via [foldLateHarvest]), so graph state
          * stays single-writer. Returns true if it fed a new contact list.
@@ -1211,7 +1260,12 @@ class GrapeRankCrawler(
                                             }
                                         }
                                     client.subscribe(subId, mapOf(subRelay to groupFilters), listener)
-                                    val reason = withTimeoutOrNull(config.timeoutMs) { done.await() }
+                                    val reason =
+                                        if (config.eoseIdleMs > 0) {
+                                            awaitTerminalOrQuiescent(done, activity, config.eoseIdleMs, config.timeoutMs)
+                                        } else {
+                                            withTimeoutOrNull(config.timeoutMs) { done.await() }
+                                        }
                                     if (reason != null) {
                                         // Terminal within the fast window — resolve this round.
                                         val elapsedMs = mark.elapsedNow().inWholeMilliseconds
@@ -1235,7 +1289,9 @@ class GrapeRankCrawler(
                                         val persisted = persist(drained)
                                         // A full page from a clean EOSE may be the relay's cap, not the
                                         // whole answer — background-paginate the remainder into lateHarvest.
-                                        if (reason == "eose") paginateIfCapped(subRelay, groupFilters, drained)
+                                        // Paginate on a clean EOSE and on an idle-cutoff: in both
+                                        // cases a full page may be the relay's cap, not the whole answer.
+                                        if (reason == "eose" || reason == EOSE_IDLE) paginateIfCapped(subRelay, groupFilters, drained)
                                         // Alive if it EOSE'd or handed us anything; a connect-timeout that
                                         // gave nothing (classifyDrainFailure leaves it retryable forever)
                                         // earns a strike toward eviction instead.
@@ -1779,6 +1835,7 @@ class GrapeRankCrawler(
             ): Outcome =
                 when {
                     reason == "eose" -> if (parked) Outcome.SLOW_EOSE else Outcome.FAST_EOSE
+                    reason == EOSE_IDLE -> Outcome.FAST_EOSE // delivered then quiet: a successful fast completion
                     reason == "timeout" -> if (parked) Outcome.PARK_TIMEOUT else Outcome.FAST_TIMEOUT
                     reason.startsWith("cannot") -> Outcome.CANNOT
                     reason.startsWith("closed:") -> {
@@ -1894,6 +1951,7 @@ class GrapeRankCrawler(
         // (resets the window). A control string that can't collide with a relay's
         // CLOSED/cannot message, which are the only other select results.
         private const val ACTIVITY = " activity"
+        private const val EOSE_IDLE = " eose-idle"
 
         // Times we re-query an unreachable user's outbox before giving up, so the
         // crawl still terminates on a finite graph.
