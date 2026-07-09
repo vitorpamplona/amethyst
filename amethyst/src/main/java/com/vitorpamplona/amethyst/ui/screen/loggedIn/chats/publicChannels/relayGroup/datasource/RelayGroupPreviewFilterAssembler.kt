@@ -46,8 +46,12 @@ class RelayGroupPreviewQueryState(
 private val RELAY_GROUP_PREVIEW_CONTENT_KINDS =
     listOf(ChatEvent.KIND, PollEvent.KIND, ThreadEvent.KIND, CommentEvent.KIND)
 
-/** How many recent events to pull ahead of a tap — enough to fill the first screen, no more. */
-private const val RELAY_GROUP_PREVIEW_LIMIT = 15
+/**
+ * How many recent events to pull ahead of a tap — enough to fill the first screen AND drive the
+ * discovery card's "50+ messages" activity signal (a chat that returns the full page reads as
+ * "50+"; fewer shows the exact loaded count).
+ */
+private const val RELAY_GROUP_PREVIEW_LIMIT = 50
 
 /**
  * Warms a NIP-29 group referenced inline (a group-link card) without opening it:

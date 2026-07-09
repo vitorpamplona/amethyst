@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupPreviewSubscription
@@ -78,6 +80,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
@@ -147,6 +151,10 @@ fun RelayGroupDiscoveryScreen(
                     routeForLastRead = null,
                     onLoaded = { loaded ->
                         val items by loaded.feed.collectAsStateWithLifecycle()
+                        // Collect the kind-3 follow set once for the whole list; each card highlights
+                        // the members it contains ("people you follow who are in here").
+                        val follows by accountViewModel.account.kind3FollowList.flow
+                            .collectAsStateWithLifecycle()
                         LazyColumn(
                             contentPadding = rememberFeedContentPadding(FeedPadding),
                             modifier = Modifier.fillMaxWidth(),
@@ -157,7 +165,7 @@ fun RelayGroupDiscoveryScreen(
                                 key = { _, item -> item.idHex },
                                 contentType = { _, item -> item.event?.kind ?: -1 },
                             ) { _, item ->
-                                RelayGroupDiscoveryRow(item, Modifier.animateItem(), accountViewModel, nav)
+                                RelayGroupDiscoveryRow(item, Modifier.animateItem(), follows.authors, accountViewModel, nav)
                             }
                         }
                     },
@@ -223,6 +231,7 @@ private fun WatchAccountForRelayGroupDiscovery(
 private fun RelayGroupDiscoveryRow(
     note: Note,
     modifier: Modifier,
+    follows: Set<HexKey>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -241,6 +250,19 @@ private fun RelayGroupDiscoveryRow(
         .collectAsStateWithLifecycle()
     val channel = channelState.channel as? RelayGroupChannel ?: baseChannel
 
+    // Reactive loaded-message count: the preview subscription streams kind-9 chats into the
+    // channel's note cache, and each arrival re-emits this flow, so the "50+ messages" activity
+    // signal grows live while the row is on screen.
+    val notesState by baseChannel
+        .flow()
+        .notes.stateFlow
+        .collectAsStateWithLifecycle()
+    val messageCount = notesState.channel.notes.size()
+
+    // People I follow who are in this group (relay-signed roster ∩ my kind-3 follows). Recomputed
+    // when the roster changes (channelState) or my follow list does.
+    val participatingFollows = remember(channelState, follows) { channel.participatingFollows(follows) }
+
     val favoriteRelays by accountViewModel.account.relayFeedsList.flow
         .collectAsStateWithLifecycle()
 
@@ -249,6 +271,8 @@ private fun RelayGroupDiscoveryRow(
         modifier = modifier,
         myPubkey = accountViewModel.userProfile().pubkeyHex,
         isFavoriteRelay = channel.groupId.relayUrl in favoriteRelays,
+        messageCount = messageCount,
+        participatingFollows = participatingFollows,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -260,6 +284,8 @@ private fun RelayGroupDiscoveryCard(
     modifier: Modifier,
     myPubkey: String,
     isFavoriteRelay: Boolean,
+    messageCount: Int,
+    participatingFollows: List<HexKey>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -308,22 +334,45 @@ private fun RelayGroupDiscoveryCard(
                         )
                         DiscoveryStatusPill(channel)
                     }
-                    if (memberCount > 0) {
+                    if (memberCount > 0 || messageCount > 0) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            Icon(
-                                symbol = MaterialSymbols.Group,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(14.dp),
-                            )
-                            Text(
-                                text = pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            if (memberCount > 0) {
+                                Icon(
+                                    symbol = MaterialSymbols.Group,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Text(
+                                    text = pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (memberCount > 0 && messageCount > 0) {
+                                Text(
+                                    text = "·",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (messageCount > 0) {
+                                // Loaded from the preview page; a full page reads as "50+", fewer as
+                                // the exact count. DISCOVERY_MESSAGE_CAP tracks the preview limit.
+                                Text(
+                                    text =
+                                        if (messageCount >= DISCOVERY_MESSAGE_CAP) {
+                                            pluralStringResource(R.plurals.relay_group_message_count_capped, DISCOVERY_MESSAGE_CAP, DISCOVERY_MESSAGE_CAP)
+                                        } else {
+                                            pluralStringResource(R.plurals.relay_group_message_count, messageCount, messageCount)
+                                        },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
@@ -343,15 +392,26 @@ private fun RelayGroupDiscoveryCard(
                 }
             }
 
-            // The host relay as its own chip, with the star inside it — makes explicit that the
-            // star favorites the RELAY (surfacing all its groups under the relay filter), not the
-            // group. Joining the group is the separate button above.
-            RelayFavoriteChip(
+            // Prominent social proof: the people I follow who are already in this group.
+            if (participatingFollows.isNotEmpty()) {
+                FollowsInGroupRow(
+                    follows = participatingFollows,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+            }
+
+            // The host relay as its own chip. Tapping the chip opens that relay's full group list;
+            // the star INSIDE it is a separate tap target that only favorites the relay (surfacing
+            // its groups under the relay filter). Joining the group is the separate button above.
+            RelayChip(
                 relay = relay,
                 isFavorite = isFavoriteRelay,
-                onToggle = {
+                onToggleFavorite = {
                     if (isFavoriteRelay) accountViewModel.unfollowRelayFeed(relay) else accountViewModel.followRelayFeed(relay)
                 },
+                onOpenRelay = { nav.nav(Route.RelayGroupServer(relay.url)) },
                 modifier = Modifier.padding(top = 8.dp),
             )
 
@@ -370,22 +430,23 @@ private fun RelayGroupDiscoveryCard(
 }
 
 /**
- * The group's host relay rendered as a tappable chip with the favorite star inside it. Tapping
- * toggles the relay in the kind-10012 relay-feeds list; a favorited relay (and every group it hosts)
- * then surfaces under the relay chip in the top-nav filter. Filled/primary when favorited, tonal
- * outline otherwise — visually distinct from the group's Join button so the two scopes (favorite the
- * relay vs. join the group) don't read as the same action.
+ * The group's host relay as a tappable chip. The chip body opens that relay's full group list
+ * ([Route.RelayGroupServer]); the star inside it is an independent tap target that only toggles the
+ * relay in the kind-10012 relay-feeds list (a favorited relay, and every group it hosts, then
+ * surfaces under the relay chip in the top-nav filter). Filled/primary when favorited, tonal outline
+ * otherwise — visually distinct from the group's Join button so the scopes don't read as one action.
  */
 @Composable
-private fun RelayFavoriteChip(
+private fun RelayChip(
     relay: NormalizedRelayUrl,
     isFavorite: Boolean,
-    onToggle: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onOpenRelay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier.fillMaxWidth()) {
         Surface(
-            onClick = onToggle,
+            onClick = onOpenRelay,
             shape = RoundedCornerShape(8.dp),
             color =
                 if (isFavorite) {
@@ -397,8 +458,8 @@ private fun RelayFavoriteChip(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                modifier = Modifier.padding(start = 2.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
             ) {
                 Icon(
                     symbol = if (isFavorite) MaterialSymbols.Star else MaterialSymbols.StarBorder,
@@ -409,7 +470,12 @@ private fun RelayFavoriteChip(
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         },
-                    modifier = Modifier.size(16.dp),
+                    modifier =
+                        Modifier
+                            .clip(CircleShape)
+                            .clickable(onClick = onToggleFavorite)
+                            .padding(4.dp)
+                            .size(16.dp),
                 )
                 Text(
                     text = relay.displayUrl(),
@@ -427,6 +493,51 @@ private fun RelayFavoriteChip(
         }
     }
 }
+
+/**
+ * Overlapping avatars of the people I follow who are in the group, with a "%d people you follow"
+ * caption — social proof that a group is worth joining. Shows up to five faces; the caption always
+ * carries the true total.
+ */
+@Composable
+private fun FollowsInGroupRow(
+    follows: List<HexKey>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy((-9).dp)) {
+            follows.take(5).forEach { pubkey ->
+                UserPicture(
+                    userHex = pubkey,
+                    size = Size25dp,
+                    pictureModifier = Modifier.border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
+        Text(
+            text = pluralStringResource(R.plurals.relay_group_follows_participating, follows.size, follows.size),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * Display cap for the loaded-message counter — kept in step with the discovery preview's fetch
+ * limit (RELAY_GROUP_PREVIEW_LIMIT), so a chat that returns the full page reads as "50+ messages".
+ */
+private const val DISCOVERY_MESSAGE_CAP = 50
 
 /** Small tonal pill: Invite-only wins over Private, matching the inline group card. */
 @Composable

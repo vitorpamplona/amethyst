@@ -2011,6 +2011,18 @@
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>
     </plurals>
+    <plurals name="relay_group_message_count">
+        <item quantity="one">%1$d message</item>
+        <item quantity="other">%1$d messages</item>
+    </plurals>
+    <plurals name="relay_group_message_count_capped">
+        <item quantity="one">%1$d+ message</item>
+        <item quantity="other">%1$d+ messages</item>
+    </plurals>
+    <plurals name="relay_group_follows_participating">
+        <item quantity="one">%1$d person you follow</item>
+        <item quantity="other">%1$d people you follow</item>
+    </plurals>
     <string name="messages_new_message">Private</string>
     <string name="messages_new_message_to">To</string>
     <string name="messages_new_message_subject">Subject</string>

@@ -170,6 +170,15 @@ class RelayGroupChannel(
     fun memberCount(): Int = allMembers.size
 
     /**
+     * The subset of this group's members/admins that [follows] contains — "people you follow who
+     * are in here". Reads the cached [allMembers] set, so it's cheap to call per recomposition.
+     */
+    fun participatingFollows(follows: Set<HexKey>): List<HexKey> {
+        if (follows.isEmpty() || allMembers.isEmpty()) return emptyList()
+        return allMembers.filter { it in follows }
+    }
+
+    /**
      * The relay's view of [pubkey]'s membership, from the signed admin/member
      * lists. Returns [RelayGroupMembership.NONE] when not in either list (or when
      * the lists haven't loaded yet).
