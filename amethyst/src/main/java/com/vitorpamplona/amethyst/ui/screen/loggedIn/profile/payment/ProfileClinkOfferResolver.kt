@@ -76,7 +76,7 @@ fun rememberProfileClinkOffer(
         // Fall back to the NIP-05 .well-known clink_offer (cached per address).
         val id = nip05?.let { Nip05Id.parse(it) }
         offer =
-            if (id != null && nip05 != null) {
+            if (nip05 != null && id != null) {
                 // Distinguish "cache miss" from a cached "no offer" (null) so we don't refetch.
                 val cacheKey = nip05.lowercase()
                 val cached = clinkOfferNip05Cache.get(cacheKey)

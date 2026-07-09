@@ -108,9 +108,7 @@ fun ControlWhenPlayerIsActive(
                         }
                     }
 
-                    else -> {
-                        Unit
-                    }
+                    else -> {}
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)

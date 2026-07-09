@@ -102,7 +102,7 @@ private fun LockToggleCard(
     var showRemovePassword by remember { mutableStateOf(false) }
     var pendingEnable by remember { mutableStateOf(false) }
 
-    SettingsCard(title = "Lock the Messages tab") {
+    SettingsCard(title = "Enable privacy lock") {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -110,8 +110,8 @@ private fun LockToggleCard(
         ) {
             Text(
                 text =
-                    "Require a password before the Messages column shows. " +
-                        "The rest of the app stays open.",
+                    "Require your password before the Messages and Wallet columns show. " +
+                        "Feed, profile, and search stay open.",
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
@@ -195,7 +195,7 @@ private fun InactivityCard(settings: PrivacyLockSettings) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Re-lock Messages after this much inactivity.",
+                text = "Re-lock Messages and Wallet after this much inactivity.",
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
@@ -220,7 +220,7 @@ private fun InactivityCard(settings: PrivacyLockSettings) {
 @Composable
 private fun RedactionCard(settings: PrivacyLockSettings) {
     val enabled by settings.lockEnabled.collectAsState()
-    val level by settings.redactionLevel.collectAsState()
+    val level by settings.dmRedactionLevel.collectAsState()
     if (!enabled) return
 
     SettingsCard(title = "DM notification preview") {
@@ -232,8 +232,8 @@ private fun RedactionCard(settings: PrivacyLockSettings) {
         ) {
             Text(
                 text =
-                    "When lock is on, DM notifications hide sender + message. " +
-                        "Change to Full to show them.",
+                    "When the lock is on, DM notifications hide sender + message. " +
+                        "Change to Full to show them. Wallet has no notifications yet.",
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
@@ -245,7 +245,7 @@ private fun RedactionCard(settings: PrivacyLockSettings) {
                     DropdownMenuItem(
                         text = { Text(entry.label()) },
                         onClick = {
-                            settings.setRedactionLevel(entry)
+                            settings.setDmRedactionLevel(entry)
                             expanded = false
                         },
                     )
@@ -276,7 +276,8 @@ private fun LimitationsCard() {
             )
             Text(
                 text =
-                    "This lock hides the Messages column on an unattended device. " +
+                    "This lock hides the Messages and Wallet columns on an unattended device. " +
+                        "Wallet balance and invoice text blur when the window loses focus. " +
                         "It does NOT protect against: filesystem access, memory dumps, " +
                         "attached debuggers, or screen-recording apps you've granted access. " +
                         "Your Nostr private key is still stored as it is today.",

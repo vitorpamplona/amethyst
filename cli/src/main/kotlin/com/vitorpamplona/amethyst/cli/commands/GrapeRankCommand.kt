@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.experimental.graperank.GrapeRank
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankDataCrawler
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankParams
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankPublisher
+import com.vitorpamplona.quartz.experimental.graperank.GrapeRankUpdater
 import com.vitorpamplona.quartz.experimental.graperank.TrustGraphBuilder
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -189,6 +190,7 @@ object GrapeRankCommand {
             "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
             "operator" -> operator(dataDir, tail.drop(1).toTypedArray())
             "sync" -> sync(dataDir, tail.drop(1).toTypedArray())
+            "update" -> update(dataDir, tail.drop(1).toTypedArray())
             "score" -> run(dataDir, tail.drop(1).toTypedArray(), forceOffline = true)
             else -> run(dataDir, tail)
         }
@@ -515,6 +517,112 @@ object GrapeRankCommand {
     }
 
     /**
+     * `amy graperank update [flags]` — refresh every locally-known author's WoT
+     * record kinds (0 / 3 / 10002 / 1984) straight from their own outbox, so the
+     * next `graperank score` runs on current data without a full follow-graph crawl.
+     *
+     * Thin wrapper over quartz's [GrapeRankUpdater]: it reads every kind:10002 in the
+     * store, inverts them into a `write-relay -> authors` map (the outbox model), and
+     * runs one NIP-77 negentropy reconcile per write relay scoped to its authors —
+     * bidirectional, settling deletions over the residual (its applyDown direction
+     * downloads the relay's kind:5 when an uploaded record was rejected), and falling
+     * back to a full paged download when a relay can't reconcile. This command only
+     * parses flags and renders the [GrapeRankUpdater.Result] as text/JSON.
+     *
+     * Flags: `--timeout SECS` (per-group idle watchdog, default 30),
+     * `--relay-concurrency N` (relays reconciled at once, default 4),
+     * `--author-chunk N` (authors per reconcile filter, default 500),
+     * `--min-authors N` (skip relays hosting fewer than N of our authors, default 1),
+     * `--report-limit N` (per-relay rows in the JSON, default 50),
+     * `--down` / `--up` / `--no-sync-deletions`.
+     */
+    private suspend fun update(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val reportLimit = args.intFlag("report-limit", 50).coerceAtLeast(0)
+        // Default is bidirectional; a single --down/--up narrows to that direction.
+        val downFlag = args.bool("down")
+        val upFlag = args.bool("up")
+
+        Context.openOrAnonymous(dataDir).use { ctx ->
+            ctx.prepare()
+
+            val updater =
+                GrapeRankUpdater(
+                    client = ctx.client,
+                    store = ctx.store,
+                    config =
+                        GrapeRankUpdater.Config(
+                            down = downFlag || !upFlag,
+                            up = upFlag || !downFlag,
+                            syncDeletions = !args.bool("no-sync-deletions"),
+                            relayConcurrency = args.intFlag("relay-concurrency", 4),
+                            authorChunk = args.intFlag("author-chunk", 500),
+                            minAuthors = args.intFlag("min-authors", 1),
+                            idleTimeoutMs = args.longFlag("timeout", 30L) * 1000,
+                        ),
+                    log = { System.err.println(it) },
+                )
+
+            val result = updater.update()
+
+            if (result.relays == 0) {
+                Output.emit(
+                    linkedMapOf<String, Any?>(
+                        "relay_lists_in_store" to result.relayListsInStore,
+                        "authors_with_outbox" to result.authorsWithOutbox,
+                        "relays" to 0,
+                        "note" to "no kind:10002 write relays in the local store — run `graperank sync` first",
+                    ),
+                )
+                return 0
+            }
+
+            // Busiest relays first, capped so a many-thousand-relay run still emits a
+            // bounded JSON object; totals below always cover every relay.
+            val report =
+                result.perRelay
+                    .sortedByDescending { it.downloaded + it.uploaded }
+                    .take(reportLimit)
+                    .map {
+                        linkedMapOf<String, Any?>(
+                            "relay" to it.relay.url,
+                            "authors" to it.authors,
+                            "need" to it.need,
+                            "have" to it.have,
+                            "downloaded" to it.downloaded,
+                            "uploaded" to it.uploaded,
+                            "deletions_sent_up" to it.deletionsSentUp,
+                            "deletions_applied_down" to it.deletionsAppliedDown,
+                            "paged_fallback" to it.pagedFallback,
+                            "error" to it.error,
+                        )
+                    }
+
+            Output.emit(
+                linkedMapOf<String, Any?>(
+                    "kinds" to GrapeRankUpdater.DEFAULT_KINDS,
+                    "relay_lists_in_store" to result.relayListsInStore,
+                    "authors_with_outbox" to result.authorsWithOutbox,
+                    "relays" to result.relays,
+                    "relays_ok" to result.relaysOk,
+                    "relays_failed" to result.relaysFailed,
+                    "relays_paged_fallback" to result.relaysPagedFallback,
+                    "downloaded" to result.downloaded,
+                    "uploaded" to result.uploaded,
+                    "deletions_sent_up" to result.deletionsSentUp,
+                    "deletions_applied_down" to result.deletionsAppliedDown,
+                    "report_limit" to reportLimit,
+                    "per_relay" to report,
+                ),
+            )
+            return 0
+        }
+    }
+
+    /**
      * Build + sign one kind:30382 [ContactCardEvent] per (target, rank), fanned
      * out across CPU cores (id-hash + Schnorr sign is CPU-bound). The signed
      * events are discarded — this only exists to time card generation. Returns
@@ -651,7 +759,7 @@ object GrapeRankCommand {
                         "provider" to provider,
                         "relay" to relay.url,
                         "changed" to false,
-                        "based_on" to latest?.id,
+                        "based_on" to latest.id,
                     ),
                 )
                 return 0
@@ -827,7 +935,7 @@ object GrapeRankCommand {
             latest?.serviceProviders()?.any {
                 it.service == service && it.pubkey == providerPubkey && it.relayUrl == relay
             } ?: false
-        if (alreadyListed) return latest?.id
+        if (alreadyListed) return latest.id
 
         val tag = ServiceProviderTag(service, providerPubkey, relay)
         val event =

@@ -62,7 +62,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState
+import com.vitorpamplona.amethyst.commons.privacylock.LockScope
+import com.vitorpamplona.amethyst.commons.privacylock.lockStateFor
 import kotlinx.coroutines.delay
 
 /** Enforced minimum length for a new/rotated password. */
@@ -103,7 +104,7 @@ fun SetPasswordDialog(
     val submit: () -> Unit = {
         val currentOk =
             !isChange ||
-                (existingHash != null && PasswordHasher.verify(current.toCharArray(), existingHash))
+                PasswordHasher.verify(current.toCharArray(), existingHash)
         when {
             !currentOk -> {
                 currentError = "Wrong password"
@@ -232,7 +233,10 @@ fun RemovePasswordDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val lockState = LocalMessagesLockState.current
+    // Remove-password only runs from Settings; the Messages state instance is
+    // as good as any — both scopes read the same shared lockedUntilEpochMs and
+    // failedUnlockAttempts, so backoff bookkeeping is scope-agnostic.
+    val lockState = lockStateFor(LockScope.Messages)
     val settings = LocalPrivacyLockSettings.current
     val lockedUntil by settings.lockedUntilEpochMs.collectAsState()
 

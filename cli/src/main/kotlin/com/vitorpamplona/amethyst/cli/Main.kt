@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
 import com.vitorpamplona.amethyst.cli.commands.SyncCommand
 import com.vitorpamplona.amethyst.cli.commands.UseCommand
 import com.vitorpamplona.amethyst.cli.commands.VerifyCommand
+import com.vitorpamplona.amethyst.cli.commands.WotCommand
 import com.vitorpamplona.amethyst.cli.commands.ZapCommand
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuCommands
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuMintCommands
@@ -287,6 +288,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "podcast" -> PodcastCommands.dispatch(dataDir, tail)
         "podcast20" -> Podcast20Commands.dispatch(dataDir, tail)
         "bunker" -> BunkerCommand.run(dataDir, tail)
+        "wot" -> WotCommand.dispatch(dataDir, tail)
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -607,6 +609,15 @@ private fun printUsage() {
         |                                              new/changed ranks >= --min-rank (default 2), skips
         |                                              unchanged, and retracts (kind:5) any card whose
         |                                              target left the graph or fell below the cutoff.
+        |  graperank update [--down] [--up]           refresh every locally-known author's WoT record kinds
+        |    [--no-sync-deletions] [--timeout SECS]     (0/3/10002/1984) from their own outbox: reads all
+        |    [--relay-concurrency N] [--author-chunk N] kind:10002 in the store, groups authors by write
+        |    [--min-authors N] [--report-limit N]       relay, and runs one NIP-77 negentropy reconcile per
+        |                                              relay scoped to its authors. Bidirectional by default;
+        |                                              the deletion settle downloads the relay's kind:5 when
+        |                                              an uploaded record was rejected (author retracted it).
+        |                                              Falls back to a full paged download when a relay
+        |                                              can't reconcile via negentropy.
         |  graperank operator [status|relay <url>…    manage the machine's operator keys (~/.amy/operator/,
         |    |providers]                               independent of accounts): relay sets where cards +
         |                                              retractions publish; status shows master + relays;

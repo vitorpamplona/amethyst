@@ -55,7 +55,7 @@ object AdminCommand {
         val args = Args(rest)
         val relayArg = args.positionalOrNull(0) ?: return Output.error("bad_args", "usage: admin RELAY METHOD [args]")
         val method = args.positionalOrNull(1) ?: return Output.error("bad_args", "missing method; e.g. supported-methods")
-        val relay = RelayUrlNormalizer.normalizeOrNull(relayArg) ?: return Output.error("bad_args", "invalid relay url: $relayArg")
+        val relay = RelayUrlNormalizer.normalizeOrNull(relayArg) ?: return Output.invalidRelayUrl(relayArg)
         val p2 = args.positionalOrNull(2)
         val reason = args.flag("reason")
 

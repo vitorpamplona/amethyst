@@ -49,7 +49,11 @@ abstract class RelayUnderTest(
     open fun prepare(
         port: Int,
         dataDir: File,
-    ) {}
+    ) {
+        // No-op by default: most relays are configured entirely through
+        // command-line flags. Overridden by relays that need config files
+        // on disk before launch (e.g. StrfryRelay).
+    }
 
     fun start(workDir: File): RunningRelay {
         val port = ServerSocket(0).use { it.localPort }

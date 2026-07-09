@@ -162,7 +162,7 @@ class GitHttpClient(
             visited.add(start)
         }
         while (frontier.isNotEmpty() && result.size < depth) {
-            val commit = frontier.poll()
+            val commit = frontier.poll()!!
             result.add(commit)
             for (parent in commit.parents) {
                 if (parent !in visited) {

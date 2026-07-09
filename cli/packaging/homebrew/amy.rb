@@ -1,9 +1,16 @@
 # Reference Homebrew formula for `amy`, the Amethyst CLI.
 #
-# This file is NOT consumed by any build in this repo. It is the artifact you
-# submit to Homebrew/homebrew-core (`brew bump-formula-pr` / a new-formula PR).
-# Once accepted, homebrew-core's copy is the source of truth; keep this in sync
-# for reference and to make version bumps a copy-paste.
+# Reference Homebrew formula for `amy`, the Amethyst CLI. Submit this to
+# Homebrew/homebrew-core (new-formula PR) or drop it into a personal tap
+# (`Formula/amy.rb`) for an instant `brew install <tap>/amy`.
+#
+# The url + sha256 below are kept in sync automatically on every stable release
+# by .github/workflows/bump-homebrew-formula.yml (it downloads the published
+# `amy-<version>-jvm.tar.gz`, recomputes the sha256, and opens a PR). To refresh
+# by hand instead:
+#   curl -fsSL -o amy-jvm.tar.gz \
+#     https://github.com/vitorpamplona/amethyst/releases/download/vX.Y.Z/amy-X.Y.Z-jvm.tar.gz
+#   shasum -a 256 amy-jvm.tar.gz
 #
 # Why a pre-built jar bundle instead of building from source:
 #   homebrew-core builds inside a network sandbox, so a Gradle build cannot
@@ -11,17 +18,11 @@
 #   to download a pre-built, no-JRE jar bundle and depend on the system openjdk.
 #   We publish exactly that as `amy-<version>-jvm.tar.gz` (bin/amy + lib/*.jar,
 #   no bundled runtime) from .github/workflows/create-release.yml.
-#
-# Before submitting: replace the version in the url and the sha256 with the
-# values for the actual published release asset:
-#   curl -fsSL -o amy-jvm.tar.gz \
-#     https://github.com/vitorpamplona/amethyst/releases/download/vX.Y.Z/amy-X.Y.Z-jvm.tar.gz
-#   shasum -a 256 amy-jvm.tar.gz
 class Amy < Formula
-  desc "Command-line Nostr client from the Amethyst project"
+  desc "Nostr client from the Amethyst project"
   homepage "https://github.com/vitorpamplona/amethyst"
-  url "https://github.com/vitorpamplona/amethyst/releases/download/v1.12.1/amy-1.12.1-jvm.tar.gz"
-  sha256 "REPLACE_WITH_RELEASE_ASSET_SHA256"
+  url "https://github.com/vitorpamplona/amethyst/releases/download/v1.12.6/amy-1.12.6-jvm.tar.gz"
+  sha256 "209316d704a4622ddef1fd86b958b7619e9d049c20f3543dff60348ec73affd6"
   license "MIT"
 
   # Lets homebrew-core's BrewTestBot auto-open version-bump PRs when a new

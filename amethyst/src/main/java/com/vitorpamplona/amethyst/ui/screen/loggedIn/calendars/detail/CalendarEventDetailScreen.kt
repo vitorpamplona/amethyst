@@ -215,7 +215,7 @@ fun CalendarEventDetailScreen(
                     }
                     // The Edit affordance is only meaningful when the current account is the
                     // author — relays will reject a signed-by-stranger replacement.
-                    if (isOwnEvent && event != null) {
+                    if (isOwnEvent) {
                         IconButton(onClick = {
                             nav.nav(
                                 Route.EditCalendarEvent(

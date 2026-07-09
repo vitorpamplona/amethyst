@@ -103,6 +103,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -818,6 +819,7 @@ fun BoostsPopup(
 /**
  * Fetches metadata for multiple users in a single subscription.
  */
+@OptIn(DelicateCoroutinesApi::class)
 private suspend fun fetchMetadataForUsers(
     pubKeys: List<String>,
     relayManager: DesktopRelayConnectionManager,
@@ -1584,6 +1586,7 @@ private fun openLightningUri(bolt11: String) {
  * Fetches user metadata on-demand to get lightning address.
  * Returns the lightning address if found, null otherwise.
  */
+@OptIn(DelicateCoroutinesApi::class)
 private suspend fun fetchUserLightningAddress(
     pubKey: String,
     relayManager: DesktopRelayConnectionManager,

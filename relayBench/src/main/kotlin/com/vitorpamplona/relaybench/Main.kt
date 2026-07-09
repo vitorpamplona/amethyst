@@ -246,6 +246,8 @@ private fun loadCorpus(
             )
     }
 
+private const val DOWNLOAD_FLAG = "--download"
+
 private fun parseArgs(args: Array<String>): Options? {
     val map = HashMap<String, MutableList<String>>()
     val flags = HashSet<String>()
@@ -260,7 +262,7 @@ private fun parseArgs(args: Array<String>): Options? {
             "--base-time",
             "--corpus",
             "--limit",
-            "--download",
+            DOWNLOAD_FLAG,
             "--max-event-bytes",
             "--max-tags",
             "--samples",
@@ -284,7 +286,7 @@ private fun parseArgs(args: Array<String>): Options? {
                 if (next != null && !next.startsWith("--")) {
                     map.getOrPut(arg) { mutableListOf() }.add(next)
                     i++
-                } else if (arg == "--download") {
+                } else if (arg == DOWNLOAD_FLAG) {
                     map.getOrPut(arg) { mutableListOf() }.add("")
                 } else {
                     System.err.println("Missing value for $arg")
@@ -330,7 +332,7 @@ private fun parseArgs(args: Array<String>): Options? {
                 else -> t.toLongOrNull() ?: CorpusSpec.DEFAULT_BASE_TIME
             },
         corpusFile = one("--corpus")?.let { File(it) },
-        downloadFrom = map["--download"]?.lastOrNull()?.split(',')?.filter { it.isNotBlank() },
+        downloadFrom = map[DOWNLOAD_FLAG]?.lastOrNull()?.split(',')?.filter { it.isNotBlank() },
         limit = int("--limit", 0),
         maxEventBytes = int("--max-event-bytes", CorpusSource.DEFAULT_MAX_EVENT_BYTES),
         maxTags = int("--max-tags", CorpusSource.DEFAULT_MAX_TAGS),

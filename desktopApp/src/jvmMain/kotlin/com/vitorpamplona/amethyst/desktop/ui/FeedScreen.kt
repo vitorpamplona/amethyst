@@ -99,7 +99,6 @@ import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SearchResultFilter
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
-import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.elements.BoostedMark
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.feeds.NewPostsChip
@@ -136,6 +135,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.amethyst.desktop.ui.note.SpamCheckedNoteRender
+import com.vitorpamplona.amethyst.desktop.ui.note.WoTBadgedAvatar
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.Nip65RelayEditor
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
@@ -290,14 +290,14 @@ private fun FeedNoteCardBody(
             ) {
                 GenericRepostLayout(
                     baseAuthorPicture = {
-                        UserAvatar(
+                        WoTBadgedAvatar(
                             userHex = event.pubKey,
                             pictureUrl = reposterUser?.profilePicture(),
                             size = 35.dp,
                         )
                     },
                     repostAuthorPicture = {
-                        UserAvatar(
+                        WoTBadgedAvatar(
                             userHex = originalEvent.pubKey,
                             pictureUrl = originalUser?.profilePicture(),
                             size = 35.dp,

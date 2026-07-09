@@ -237,7 +237,7 @@ object RelayCommands {
         val raw = args.positional(0, "relay-url")
         val normalized =
             raw.normalizeRelayUrlOrNull()
-                ?: return Output.error("bad_args", "invalid relay url: $raw")
+                ?: return Output.invalidRelayUrl(raw)
         val httpUrl = normalized.toHttp()
 
         val request =
@@ -286,21 +286,21 @@ object RelayCommands {
             val self = ctx.identity.pubKeyHex
             when (verb) {
                 "add" -> {
-                    val url = parseUrl(args.positional(0, "url")) ?: return Output.error("bad_args", "invalid relay url")
+                    val url = urlArg(args) ?: return Output.invalidRelayUrl(args.positional(0, "url"))
                     val existing = flat.read(ctx, self)
                     val added = existing.none { it.url == url.url }
                     if (added) ctx.verifyAndStore(flat.build(ctx, existing + url))
                     Output.emit(mapOf("noun" to flat.noun, "kind" to flat.kind, "url" to url.url, "added" to added))
                 }
                 "remove", "rm" -> {
-                    val url = parseUrl(args.positional(0, "url")) ?: return Output.error("bad_args", "invalid relay url")
+                    val url = urlArg(args) ?: return Output.invalidRelayUrl(args.positional(0, "url"))
                     val existing = flat.read(ctx, self)
                     val removed = existing.any { it.url == url.url }
                     if (removed) ctx.verifyAndStore(flat.build(ctx, existing.filterNot { it.url == url.url }))
                     Output.emit(mapOf("noun" to flat.noun, "kind" to flat.kind, "url" to url.url, "removed" to removed))
                 }
                 "set" -> {
-                    val relays = parseUrls(args.positional) ?: return Output.error("bad_args", "invalid relay url")
+                    val relays = parseUrls(args.positional) ?: return badUrlIn(args.positional)
                     if (relays.isEmpty()) return Output.error("bad_args", "set needs at least one URL; use `relay ${flat.noun} clear` to empty it")
                     val signed = flat.build(ctx, relays)
                     ctx.verifyAndStore(signed)
@@ -335,7 +335,7 @@ object RelayCommands {
             when (verb) {
                 "add", "remove", "rm" -> {
                     val present = verb == "add"
-                    val url = parseUrl(args.positional(0, "url")) ?: return Output.error("bad_args", "invalid relay url")
+                    val url = urlArg(args) ?: return Output.invalidRelayUrl(args.positional(0, "url"))
                     val changed = mutateNip65(ctx, self) { applyFacet(it, url, facet, present) }
                     Output.emit(
                         mapOf(
@@ -352,7 +352,7 @@ object RelayCommands {
                         if (verb == "clear") {
                             emptyList()
                         } else {
-                            val parsed = parseUrls(args.positional) ?: return Output.error("bad_args", "invalid relay url")
+                            val parsed = parseUrls(args.positional) ?: return badUrlIn(args.positional)
                             if (parsed.isEmpty()) return Output.error("bad_args", "set needs at least one URL; use `relay ${facet.noun} clear` to empty it")
                             parsed
                         }
@@ -388,7 +388,7 @@ object RelayCommands {
                     )
                 }
                 "remove", "rm" -> {
-                    val url = parseUrl(args.positional(0, "url")) ?: return Output.error("bad_args", "invalid relay url")
+                    val url = urlArg(args) ?: return Output.invalidRelayUrl(args.positional(0, "url"))
                     val removed = mutateNip65(ctx, self) { infos -> infos.filterNot { it.relayUrl.url == url.url } }
                     Output.emit(mapOf("noun" to "nip65", "kind" to AdvertisedRelayListEvent.KIND, "url" to url.url, "removed" to removed))
                 }
@@ -416,7 +416,7 @@ object RelayCommands {
         args: Args,
         add: Boolean,
     ): Int {
-        val url = parseUrl(args.positional(0, "url")) ?: return Output.error("bad_args", "invalid relay url")
+        val url = urlArg(args) ?: return Output.invalidRelayUrl(args.positional(0, "url"))
         Context.open(dataDir).use { ctx ->
             val self = ctx.identity.pubKeyHex
             val changed = linkedMapOf<String, Boolean>()
@@ -518,12 +518,18 @@ object RelayCommands {
 
     private fun parseUrl(raw: String): NormalizedRelayUrl? = raw.normalizeRelayUrlOrNull()
 
+    /** The single relay-URL argument every add/remove verb takes, or null if it doesn't parse. */
+    private fun urlArg(args: Args): NormalizedRelayUrl? = parseUrl(args.positional(0, "url"))
+
     /** Normalize + dedupe (order-preserving) a list of raw URLs, or null on any bad one. */
     private fun parseUrls(raws: List<String>): List<NormalizedRelayUrl>? {
         val out = mutableListOf<NormalizedRelayUrl>()
         for (raw in raws) out.add(raw.normalizeRelayUrlOrNull() ?: return null)
         return out.distinctBy { it.url }
     }
+
+    /** Error exit naming the first URL in [raws] that made [parseUrls] fail. */
+    private fun badUrlIn(raws: List<String>): Int = Output.invalidRelayUrl(raws.first { parseUrl(it) == null })
 
     private suspend fun readNip65(
         ctx: Context,

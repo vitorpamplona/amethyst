@@ -20,40 +20,21 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.privacylock
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState
+import com.vitorpamplona.amethyst.commons.privacylock.LockScope
 import com.vitorpamplona.amethyst.commons.privacylock.LockState
-import kotlinx.coroutines.launch
+import com.vitorpamplona.amethyst.commons.privacylock.lockStateFor
 
 /**
  * Wraps the Messages route and gates entry behind the credential prompt.
  *
  * Branch selection happens SYNCHRONOUSLY in composition — no
- * [LaunchedEffect] guard — so the chat content composable never enters
- * composition while [LockState.Locked]. Closes the deep-link race
- * (plan §Security Hardening H1).
+ * [androidx.compose.runtime.LaunchedEffect] guard — so the chat content
+ * composable never enters composition while [LockState.Locked]. Closes the
+ * deep-link race (plan §Security Hardening H1).
  *
  * The gate is an overlay, NOT a wrapper that disposes content. While
  * locked, the [content] lambda is not invoked at all; on unlock, the
@@ -61,12 +42,14 @@ import kotlinx.coroutines.launch
  * `rememberSaveable` survive a lock cycle (SavedStateRegistry-backed).
  * For plain `remember` state, drafts are cleared — accept this trade-off.
  *
- * The gate also fires [MessagesLockState.onLeaveRoute] from its
- * [DisposableEffect.onDispose] block, so navigating away locks immediately.
+ * The gate also fires
+ * [com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockState.onLeaveRoute]
+ * from its [DisposableEffect.onDispose] block, so navigating away locks
+ * immediately.
  */
 @Composable
 fun MessagesLockGate(content: @Composable () -> Unit) {
-    val lockState = LocalMessagesLockState.current
+    val lockState = lockStateFor(LockScope.Messages)
     val current by lockState.state.collectAsState()
 
     DisposableEffect(lockState) {
@@ -74,70 +57,13 @@ fun MessagesLockGate(content: @Composable () -> Unit) {
     }
 
     when (current) {
-        is LockState.Locked -> LockScreen()
+        is LockState.Locked ->
+            LockScreen(
+                scope = LockScope.Messages,
+                title = "Messages locked",
+                subtitle = "Unlock to read or send messages.",
+                unlockLabel = "Unlock",
+            )
         else -> content()
-    }
-}
-
-@Composable
-private fun LockScreen() {
-    val lockState = LocalMessagesLockState.current
-    val prompter = LocalCredentialPrompter.current
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(prompter) {
-        if (!prompter.available) {
-            lockState.onCredentialUnavailable()
-        }
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Icon(
-                symbol = MaterialSymbols.Lock,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Box(modifier = Modifier.size(16.dp))
-            Text(
-                text = "Messages locked",
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center,
-            )
-            Box(modifier = Modifier.size(8.dp))
-            Text(
-                text = "Unlock to read or send messages",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.widthIn(max = 320.dp),
-            )
-            Box(modifier = Modifier.size(32.dp))
-            Button(
-                onClick = {
-                    scope.launch {
-                        when (prompter.prompt()) {
-                            PromptResult.Success -> lockState.onUnlockSuccess()
-                            PromptResult.Unavailable -> lockState.onCredentialUnavailable()
-                            else -> Unit
-                        }
-                    }
-                },
-                enabled = prompter.available,
-            ) {
-                Text(text = "Unlock")
-            }
-        }
     }
 }

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.model
 
 import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
+import com.vitorpamplona.amethyst.commons.relays.index.PreferencesIndexRelays
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -47,6 +49,13 @@ class DesktopRelayCategories(
     accountRelays: DesktopAccountRelays,
     /** Reactive connected relay set — used as fallback when NIP-65 is empty */
     connectedRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    /**
+     * Shared index-relay preference — app-global, backed by
+     * [PreferencesIndexRelays] and visible to `amy` via the same
+     * Preferences node. Used by [indexRelays] and by
+     * `Main.kt` when constructing the subscriptions coordinator.
+     */
+    private val indexRelaysStore: PreferencesIndexRelays,
     scope: CoroutineScope,
 ) {
     /** Default relays — ALWAYS populated, used as stateIn initial value */
@@ -98,6 +107,26 @@ class DesktopRelayCategories(
         }.debounce(300)
             .distinctUntilChanged()
             .stateIn(scope, SharingStarted.Eagerly, defaultRelays)
+
+    /**
+     * Index relays: user override → [PreferencesIndexRelays.DEFAULT_INDEX_RELAYS].
+     *
+     * Unlike [feedRelays] / [notificationRelays] / [dmRelays] this
+     * category does *not* combine with connected/NIP-65 sets — it's a
+     * curated user choice about where to look up metadata and follow
+     * lists, not a "what's actually reachable right now" derived set.
+     * No debounce needed: writes are gated by settings-screen UI, not
+     * fanned in from a subscription pipeline.
+     */
+    val indexRelays: StateFlow<Set<NormalizedRelayUrl>> =
+        indexRelaysStore.relays
+            .map { it.ifEmpty { PreferencesIndexRelays.DEFAULT_INDEX_RELAYS } }
+            .distinctUntilChanged()
+            .stateIn(scope, SharingStarted.Eagerly, indexRelaysStore.effective())
+
+    fun setIndexRelays(new: Set<NormalizedRelayUrl>) {
+        indexRelaysStore.setRelays(new)
+    }
 
     companion object {
         val DEFAULT_SEARCH_RELAYS = DefaultSearchRelayList

@@ -160,6 +160,17 @@ Summarize the survey in your plan: for each component, note whether it's
 reused as-is, extracted from `amethyst/` to `commons/`, genuinely new
 (platform-specific only), or a duplicate of an existing pattern to avoid.
 
+**Relay client ops already exist — don't hand-roll subscribe/REQ/publish loops.**
+One-shot and high-level relay operations (fetch a set, fetch one, page past the
+relay cap, publish-and-confirm, NIP-45 count, NIP-77 sync/reconcile) are
+`INostrClient` **extension functions** in
+`quartz/…/nip01Core/relay/client/accessories/` (+ `…/reqs/` for the flow/subscribe
+helpers). Because they're extensions, they don't surface under "usages of
+`NostrClient`" or in completion — grep that package (or read its `README.md`, which
+catalogs them) before writing a new subscription/collect loop. Reuse `fetchAll`,
+`fetchFirst`, `fetchAllPages`, `publishAndConfirm`, `count`, `negentropyReconcile`,
+etc. instead of re-implementing them.
+
 **Share vs keep platform-native:**
 
 - **Share** → `quartz/commonMain/` (business logic, data models, protocol) and

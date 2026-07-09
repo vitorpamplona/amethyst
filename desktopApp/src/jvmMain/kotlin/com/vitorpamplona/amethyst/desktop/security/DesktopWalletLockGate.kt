@@ -1,0 +1,69 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.desktop.security
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.vitorpamplona.amethyst.commons.privacylock.LockScope
+import com.vitorpamplona.amethyst.commons.privacylock.LockState
+import com.vitorpamplona.amethyst.commons.privacylock.lockStateFor
+
+/**
+ * Desktop equivalent of `WalletLockGate`. Mirrors [DesktopMessagesLockGate]
+ * behaviour with wallet-scoped copy.
+ *
+ * Reads its lock state from `lockStateFor(LockScope.Wallet)` — a separate
+ * instance from Messages, so an unlocked Messages session does NOT
+ * auto-unlock the Wallet, and vice-versa. Both scopes share the same
+ * password, failed-attempt counter, and lockout schedule via the
+ * ambient [PrivacyLockSettings].
+ *
+ * @param onOpenSettings optional deep-link into the Settings screen used
+ *   when the user cleared the master password while the Wallet lock was
+ *   still toggled on. Per plan Q5: prefer deep-link over the plain
+ *   "Disable lock" fallback so the user can immediately set a new
+ *   password rather than blindly disabling the feature.
+ */
+@Composable
+fun DesktopWalletLockGate(
+    onOpenSettings: (() -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    val lockState = lockStateFor(LockScope.Wallet)
+    val current by lockState.state.collectAsState()
+
+    DisposableEffect(lockState) {
+        onDispose { lockState.onLeaveRoute() }
+    }
+
+    when (current) {
+        is LockState.Locked ->
+            DesktopLockScreen(
+                scope = LockScope.Wallet,
+                title = "Wallet locked",
+                subtitle = "Enter your privacy-lock password to view the wallet.",
+                onNoPasswordAction = onOpenSettings,
+            )
+        else -> content()
+    }
+}

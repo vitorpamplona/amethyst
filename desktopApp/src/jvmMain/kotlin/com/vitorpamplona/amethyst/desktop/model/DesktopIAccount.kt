@@ -93,6 +93,14 @@ class DesktopIAccount(
             },
         )
 
+    /**
+     * Friends-of-friends trust score. Populated by Main.kt's login flow
+     * from batch kind-3 fetches on the active user's follow set.
+     */
+    val wotService =
+        com.vitorpamplona.amethyst.commons.wot
+            .WoTService(scope)
+
     val nip65RelayList =
         Nip65RelayListState(
             signer,
