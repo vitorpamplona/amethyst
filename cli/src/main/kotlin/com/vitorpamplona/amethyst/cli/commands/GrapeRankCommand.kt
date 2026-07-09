@@ -35,16 +35,23 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DeletionSettleResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncException
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcile
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySettleDeletions
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviders
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
@@ -55,7 +62,14 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import java.util.Collections
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.roundToInt
 
 /**
@@ -115,6 +129,7 @@ object GrapeRankCommand {
             "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
             "operator" -> operator(dataDir, tail.drop(1).toTypedArray())
             "sync" -> sync(dataDir, tail.drop(1).toTypedArray())
+            "update" -> update(dataDir, tail.drop(1).toTypedArray())
             "score" -> run(dataDir, tail.drop(1).toTypedArray(), forceOffline = true)
             else -> run(dataDir, tail)
         }
@@ -429,6 +444,367 @@ object GrapeRankCommand {
             )
         }
         return 0
+    }
+
+    // ── graperank update: outbox-model refresh of the WoT record kinds ──────────
+
+    /** WoT record kinds a GrapeRank score is a function of, refreshed by `update`. */
+    private val UPDATE_KINDS =
+        listOf(
+            MetadataEvent.KIND, // 0    — profiles
+            ContactListEvent.KIND, // 3    — follows
+            AdvertisedRelayListEvent.KIND, // 10002 — outbox relay lists
+            ReportEvent.KIND, // 1984 — reports
+        )
+
+    /** ids per reconcile chunk and per by-id fetch (mirrors [SyncCommand]). */
+    private const val UPDATE_ID_CHUNK = 500
+
+    /** Concurrent by-id download REQs per relay (mirrors [SyncCommand]). */
+    private const val UPDATE_DOWNLOAD_WORKERS = 4
+
+    /** Overlapped `created_at`-window reconciles after an over-cap split. */
+    private const val UPDATE_RECONCILE_CONCURRENCY = 2
+
+    /** Cap on deletion-settle rounds; a healthy group converges in 1–2. */
+    private const val UPDATE_MAX_DELETION_ROUNDS = 4
+
+    /**
+     * `amy graperank update [flags]` — refresh every locally-known author's WoT
+     * record kinds (0 / 3 / 10002 / 1984) straight from their own outbox, so the
+     * next `graperank score` runs on current data without a full follow-graph crawl.
+     *
+     * Unlike `sync` (which walks the reachable follow graph outward from an
+     * observer), this is a store-driven refresh: it reads every kind:10002 already
+     * in the local store, inverts them into a `write-relay -> authors` map (the
+     * outbox model — an author's events live on the relays they write to), then
+     * runs ONE NIP-77 negentropy reconcile per write relay scoped to exactly the
+     * authors who publish there. So each relay is asked only for the authors it
+     * actually hosts, and each author is reconciled only against their own relays.
+     *
+     * Bidirectional by default (`--down`/`--up` narrow it):
+     *  - **down** downloads records the relay has and we lack (by-id REQ);
+     *  - **up** uploads records we have and the relay lacks (EVENT).
+     *
+     * After the content pass each group runs [negentropySettleDeletions] over the
+     * reconcile residual (disable with `--no-sync-deletions`). Its **applyDown**
+     * direction is the "download the deletion when our upload was rejected" case:
+     * an event we pushed up that the relay keeps rejecting (it deleted it) surfaces
+     * as a residual *have*, so we pull the relay's covering kind:5 down and apply it
+     * locally — our store drops the event the author retracted. The **sendUp**
+     * direction publishes OUR covering deletions for records we deleted that the
+     * relay still serves. Cheap: it works off the small residual, not the whole set.
+     *
+     * If negentropy can't reconcile a relay (no NIP-77 support, an over-cap minimal
+     * window, a mid-sync disconnect, …) the group falls back to a full paged download
+     * ([Context.drainAllPages]) of the same authors+kinds, so those records are still
+     * refreshed — only the deletion settle (negentropy-only) is skipped there.
+     *
+     * Flags: `--timeout SECS` (per-group idle watchdog, default 30),
+     * `--relay-concurrency N` (relays reconciled at once, default 4),
+     * `--author-chunk N` (authors per reconcile filter, default 500),
+     * `--min-authors N` (skip relays hosting fewer than N of our authors, default 1),
+     * `--report-limit N` (per-relay rows in the JSON, default 50),
+     * `--down` / `--up` / `--no-sync-deletions`.
+     */
+    private suspend fun update(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val timeoutMs = args.longFlag("timeout", 30L) * 1000
+        val relayConcurrency = args.intFlag("relay-concurrency", 4).coerceAtLeast(1)
+        val authorChunk = args.intFlag("author-chunk", 500).coerceAtLeast(1)
+        val minAuthors = args.intFlag("min-authors", 1).coerceAtLeast(1)
+        val reportLimit = args.intFlag("report-limit", 50).coerceAtLeast(0)
+        val syncDeletions = !args.bool("no-sync-deletions")
+        // Default is bidirectional; a single --down/--up narrows to that direction.
+        val downFlag = args.bool("down")
+        val upFlag = args.bool("up")
+        val down = downFlag || !upFlag
+        val up = upFlag || !downFlag
+
+        Context.openOrAnonymous(dataDir).use { ctx ->
+            ctx.prepare()
+
+            // Every author's outbox relays, read from the kind:10002 already in the
+            // store. Replaceable, so the store holds the latest per author; guard with
+            // a createdAt max in case both an old and new copy linger.
+            val latestRelayList = HashMap<HexKey, AdvertisedRelayListEvent>()
+            for (event in ctx.store.query<Event>(Filter(kinds = listOf(AdvertisedRelayListEvent.KIND)))) {
+                if (event !is AdvertisedRelayListEvent) continue
+                val prev = latestRelayList[event.pubKey]
+                if (prev == null || event.createdAt > prev.createdAt) latestRelayList[event.pubKey] = event
+            }
+
+            // Invert to write-relay -> authors (the outbox model). An author with no
+            // write-marked relays contributes nothing (nowhere to reconcile them).
+            val relayToAuthors = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
+            var authorsWithOutbox = 0
+            for ((author, list) in latestRelayList) {
+                val writes = list.writeRelaysNorm() ?: continue
+                authorsWithOutbox++
+                for (relay in writes) relayToAuthors.getOrPut(relay) { HashSet() }.add(author)
+            }
+
+            // Drop relays hosting fewer than --min-authors of our authors; largest
+            // first so the heaviest groups start while permits are free.
+            val groups =
+                relayToAuthors.entries
+                    .filter { it.value.size >= minAuthors }
+                    .sortedByDescending { it.value.size }
+
+            if (groups.isEmpty()) {
+                Output.emit(
+                    linkedMapOf<String, Any?>(
+                        "relay_lists_in_store" to latestRelayList.size,
+                        "authors_with_outbox" to authorsWithOutbox,
+                        "relays" to 0,
+                        "note" to "no kind:10002 write relays in the local store — run `graperank sync` first",
+                    ),
+                )
+                return 0
+            }
+
+            val downloaded = AtomicInteger(0)
+            val uploaded = AtomicInteger(0)
+            val deletionsUp = AtomicInteger(0)
+            val deletionsDown = AtomicInteger(0)
+            val relaysOk = AtomicInteger(0)
+            val relaysFailed = AtomicInteger(0)
+            val relaysPaged = AtomicInteger(0)
+            val perRelay = Collections.synchronizedList(ArrayList<Map<String, Any?>>())
+
+            val gate = Semaphore(relayConcurrency)
+            coroutineScope {
+                groups.forEach { (relay, authors) ->
+                    launch {
+                        gate.withPermit {
+                            val authorList = authors.toList()
+                            var relayDownloaded = 0
+                            var relayUploaded = 0
+                            var relayDelUp = 0
+                            var relayDelDown = 0
+                            var relayNeed = 0
+                            var relayHave = 0
+                            var failed = false
+                            var paged = false
+                            var error: String? = null
+
+                            for (chunk in authorList.chunked(authorChunk)) {
+                                val filter = Filter(kinds = UPDATE_KINDS, authors = chunk)
+                                val res = syncGroup(ctx, relay, filter, down, up, syncDeletions, timeoutMs)
+                                relayDownloaded += res.downloaded
+                                relayUploaded += res.uploaded
+                                relayDelUp += res.deletionsSentUp
+                                relayDelDown += res.deletionsAppliedDown
+                                relayNeed += res.need
+                                relayHave += res.have
+                                if (res.pagedFallback) paged = true
+                                if (res.error != null) {
+                                    failed = true
+                                    error = res.error
+                                }
+                            }
+
+                            downloaded.addAndGet(relayDownloaded)
+                            uploaded.addAndGet(relayUploaded)
+                            deletionsUp.addAndGet(relayDelUp)
+                            deletionsDown.addAndGet(relayDelDown)
+                            if (failed) relaysFailed.incrementAndGet() else relaysOk.incrementAndGet()
+                            if (paged) relaysPaged.incrementAndGet()
+
+                            System.err.println(
+                                "[graperank update] ${relay.url}: ${authors.size} authors, " +
+                                    "down $relayDownloaded, up $relayUploaded, del↑ $relayDelUp, del↓ $relayDelDown" +
+                                    (if (paged) " (paged fallback)" else "") +
+                                    (if (error != null) " (error: $error)" else ""),
+                            )
+                            perRelay.add(
+                                linkedMapOf<String, Any?>(
+                                    "relay" to relay.url,
+                                    "authors" to authors.size,
+                                    "need" to relayNeed,
+                                    "have" to relayHave,
+                                    "downloaded" to relayDownloaded,
+                                    "uploaded" to relayUploaded,
+                                    "deletions_sent_up" to relayDelUp,
+                                    "deletions_applied_down" to relayDelDown,
+                                    "paged_fallback" to paged,
+                                    "error" to error,
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Busiest relays first, capped so a many-thousand-relay run still emits a
+            // bounded JSON object; totals below always cover every relay.
+            val report =
+                perRelay
+                    .sortedByDescending { (it["downloaded"] as Int) + (it["uploaded"] as Int) }
+                    .take(reportLimit)
+
+            Output.emit(
+                linkedMapOf<String, Any?>(
+                    "kinds" to UPDATE_KINDS,
+                    "relay_lists_in_store" to latestRelayList.size,
+                    "authors_with_outbox" to authorsWithOutbox,
+                    "relays" to groups.size,
+                    "relays_ok" to relaysOk.get(),
+                    "relays_failed" to relaysFailed.get(),
+                    "relays_paged_fallback" to relaysPaged.get(),
+                    "downloaded" to downloaded.get(),
+                    "uploaded" to uploaded.get(),
+                    "deletions_sent_up" to deletionsUp.get(),
+                    "deletions_applied_down" to deletionsDown.get(),
+                    "report_limit" to reportLimit,
+                    "per_relay" to report,
+                ),
+            )
+            return 0
+        }
+    }
+
+    /** Outcome of one relay/author-chunk reconcile in [update]. */
+    private class GroupSyncResult(
+        val downloaded: Int,
+        val uploaded: Int,
+        val deletionsSentUp: Int,
+        val deletionsAppliedDown: Int,
+        val need: Int,
+        val have: Int,
+        /** True when negentropy couldn't reconcile and we paged the filter instead. */
+        val pagedFallback: Boolean,
+        val error: String?,
+    )
+
+    /**
+     * Content pass + deletion settle for one relay scoped to [filter] (kinds +
+     * one author chunk). Mirrors [SyncCommand]'s two-pass structure exactly — the
+     * reconcile, windowing, and back-pressure all live in quartz's
+     * [negentropyReconcile] / [negentropySettleDeletions]; this only routes ids to
+     * [Context.drain] / [Context.publish]. Best-effort: a reconcile failure is
+     * captured in [GroupSyncResult.error], never thrown, so one bad relay can't
+     * abort the whole update.
+     */
+    private suspend fun syncGroup(
+        ctx: Context,
+        relay: NormalizedRelayUrl,
+        filter: Filter,
+        down: Boolean,
+        up: Boolean,
+        syncDeletions: Boolean,
+        timeoutMs: Long,
+    ): GroupSyncResult {
+        val localEvents = ctx.store.query<Event>(filter)
+        val localById = localEvents.associateBy { it.id }
+        val localEntries = localEvents.map { IdAndTime(it.createdAt, it.id) }
+
+        val downloaded = AtomicInteger(0)
+        val uploaded = AtomicInteger(0)
+
+        val result =
+            try {
+                coroutineScope {
+                    // needIds = relay has, we lack; haveIds = we have, relay lacks.
+                    val needBatches = Channel<List<HexKey>>(UPDATE_DOWNLOAD_WORKERS * 2)
+                    val haveBatches = Channel<List<HexKey>>(Channel.UNLIMITED)
+
+                    val downloaders =
+                        List(UPDATE_DOWNLOAD_WORKERS) {
+                            launch {
+                                for (batch in needBatches) {
+                                    downloaded.addAndGet(ctx.drain(mapOf(relay to listOf(Filter(ids = batch))), timeoutMs).size)
+                                }
+                            }
+                        }
+                    val uploader =
+                        launch {
+                            for (batch in haveBatches) {
+                                for (id in batch) {
+                                    val ev = localById[id] ?: continue
+                                    if (ctx.publish(ev, setOf(relay)).values.any { it }) uploaded.incrementAndGet()
+                                }
+                            }
+                        }
+
+                    val reconcile =
+                        try {
+                            ctx.client.negentropyReconcile(
+                                relay = relay,
+                                filter = filter,
+                                localEntries = localEntries,
+                                batchSize = UPDATE_ID_CHUNK,
+                                idleTimeoutMs = timeoutMs,
+                                reconcileConcurrency = UPDATE_RECONCILE_CONCURRENCY,
+                                onHaveIds = if (up) { batch -> haveBatches.send(batch) } else null,
+                                onNeedIds = { batch -> if (down) needBatches.send(batch) },
+                            )
+                        } finally {
+                            needBatches.close()
+                            haveBatches.close()
+                        }
+
+                    downloaders.joinAll()
+                    uploader.join()
+                    reconcile
+                }
+            } catch (e: NegentropySyncException) {
+                // Negentropy couldn't reconcile this relay (no NIP-77, an over-cap
+                // minimal window, a disconnect, …). Fall back to a full paged download
+                // of the SAME authors+kinds so `update` still refreshes the records —
+                // [Context.drainAllPages] walks each relay past its per-REQ cap and
+                // verifies+stores every event. Only the download direction has a paging
+                // analog; upload and the negentropy-only deletion settle are skipped.
+                var pageError: String? = null
+                if (down) {
+                    try {
+                        downloaded.addAndGet(ctx.drainAllPages(mapOf(relay to listOf(filter)), timeoutMs).size)
+                    } catch (pe: Exception) {
+                        pageError = "negentropy: ${e.message}; page fallback: ${pe::class.simpleName}: ${pe.message}"
+                    }
+                }
+                return GroupSyncResult(
+                    downloaded = downloaded.get(),
+                    uploaded = uploaded.get(),
+                    deletionsSentUp = 0,
+                    deletionsAppliedDown = 0,
+                    need = 0,
+                    have = 0,
+                    pagedFallback = true,
+                    error = pageError,
+                )
+            }
+
+        val deletions =
+            if (syncDeletions) {
+                ctx.client.negentropySettleDeletions(
+                    relay = relay,
+                    filter = filter,
+                    store = ctx.store,
+                    sendUp = down,
+                    applyDown = up,
+                    batchSize = UPDATE_ID_CHUNK,
+                    idleTimeoutMs = timeoutMs,
+                    maxRounds = UPDATE_MAX_DELETION_ROUNDS,
+                    reconcileConcurrency = UPDATE_RECONCILE_CONCURRENCY,
+                )
+            } else {
+                DeletionSettleResult(0, 0, 0)
+            }
+
+        return GroupSyncResult(
+            downloaded = downloaded.get(),
+            uploaded = uploaded.get(),
+            deletionsSentUp = deletions.sentUp,
+            deletionsAppliedDown = deletions.appliedDown,
+            need = result.needCount,
+            have = result.haveCount,
+            pagedFallback = false,
+            error = null,
+        )
     }
 
     /**
