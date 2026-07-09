@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.sql.where
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 
 class QueryBuilder(
@@ -592,6 +593,53 @@ class QueryBuilder(
         val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher(db)) ?: return db.countEverything()
 
         return db.countIn(rowIdSubqueries.sql, rowIdSubqueries.args)
+    }
+
+    // -----------------------------------------------------------------
+    // Anti-join projections
+    //
+    // Set-difference over authors — "who is missing an event of kind K"
+    // — which the positive-only nostr Filter grammar can't express, so
+    // it lives here as a dedicated SELECT rather than going through the
+    // filter → SQL path.
+    // -----------------------------------------------------------------
+
+    /**
+     * Distinct identity authors with at least one stored event that have NO
+     * stored event of [kind], as an `EXCEPT` of two sets over `event_headers`:
+     * all authors, minus the authors that have a [kind]. Both sides are
+     * answered index-only off `query_by_kind_pubkey_created`
+     * (kind, pubkey, …) — which is created unconditionally, so this does not
+     * depend on the optional pubkey-alone index — and `EXCEPT` diffs them
+     * through one temp b-tree. That is ~3× faster than a
+     * `DISTINCT … NOT EXISTS` correlated scan, which pays one index seek per
+     * distinct author; the gap widens with author cardinality. Order is
+     * unspecified (`EXCEPT` returns pubkey-sorted, which callers must not rely
+     * on).
+     *
+     * GiftWraps (kind 1059) are excluded from the "authors" set: their
+     * `pubkey` is a random one-time key (the real recipient lives only in
+     * `pubkey_owner_hash`), so counting them would return an unbounded set of
+     * ephemeral keys that can never own a [kind] event.
+     */
+    fun authorsMissingKind(
+        kind: Int,
+        db: SQLiteConnection,
+    ): List<HexKey> {
+        val sql =
+            """
+            SELECT DISTINCT pubkey FROM event_headers WHERE kind <> ${GiftWrapEvent.KIND}
+            EXCEPT
+            SELECT pubkey FROM event_headers WHERE kind = ?
+            """.trimIndent()
+        return db.prepare(sql).use { stmt ->
+            stmt.bindLong(1, kind.toLong())
+            val out = ArrayList<HexKey>()
+            while (stmt.step()) {
+                out.add(stmt.getText(0))
+            }
+            out
+        }
     }
 
     private fun SQLiteConnection.countEverything() = runCount("SELECT count(*) as count FROM event_headers")
