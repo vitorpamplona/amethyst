@@ -75,7 +75,7 @@ private val POPULAR_RELAYS =
  * Discovery entry point for NIP-29 groups: paste any relay URL to browse the
  * channels it hosts (opening [Route.RelayGroupServer]), pick from relays you're
  * already on, or try a popular public relay. This is the "find new groups" flow
- * that the joined-only [RelayGroupServerList] can't offer.
+ * that the joined-only Messages list can't offer.
  */
 @Composable
 fun RelayGroupBrowseScreen(

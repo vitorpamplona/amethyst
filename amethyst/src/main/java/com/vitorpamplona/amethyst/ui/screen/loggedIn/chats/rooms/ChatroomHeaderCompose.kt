@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.RelayGroupServerRoomNote
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
@@ -100,7 +101,6 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
-import com.vitorpamplona.quartz.nip29RelayGroups.isGroupChatContent
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 
@@ -110,14 +110,18 @@ fun ChatroomHeaderCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // A joined Marmot or NIP-29 relay group with no messages yet is represented by an event-less
-    // placeholder note carrying its channel as a gatherer. Render it as the group row (via the
-    // gatherer) instead of waiting for an event that never arrives, which would blank the row.
-    val isEmptyGroupPlaceholder =
-        baseNote.event == null &&
-            baseNote.inGatherers?.any { it is MarmotGroupChatroom || it is RelayGroupChannel } == true
+    // Some Messages rows have no event: a per-relay grouped row (RelayGroupServerRoomNote), or a
+    // joined Marmot/NIP-29 group with no messages yet (an event-less placeholder carrying its channel
+    // as a gatherer). Render these directly instead of waiting for an event that never arrives, which
+    // would blank the row.
+    val rendersWithoutEvent =
+        baseNote is RelayGroupServerRoomNote ||
+            (
+                baseNote.event == null &&
+                    baseNote.inGatherers?.any { it is MarmotGroupChatroom || it is RelayGroupChannel } == true
+            )
 
-    if (baseNote.event != null || isEmptyGroupPlaceholder) {
+    if (baseNote.event != null || rendersWithoutEvent) {
         ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
     } else {
         val hasEvent by observeNoteHasEvent(baseNote, accountViewModel)
@@ -152,6 +156,11 @@ private fun ChatroomEntry(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    if (lastMessage is RelayGroupServerRoomNote) {
+        RelayGroupServerRoomCompose(lastMessage, accountViewModel, nav)
+        return
+    }
+
     val marmotGroup = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
     if (marmotGroup != null) {
         MarmotGroupRoomCompose(lastMessage, marmotGroup, accountViewModel, nav)
@@ -172,12 +181,12 @@ private fun ChatroomEntry(
         val gid = groupScopedEvent.groupId()
         val hostRelay = lastMessage.relays.firstOrNull()
         if (gid != null && hostRelay != null) {
-            val channel = LocalCache.getOrCreateRelayGroupChannel(GroupId(gid, hostRelay))
-            // Only actual chat content is the room's "last message". A group-scoped reaction/
-            // deletion/label lingering in the list must not render as the row (its content/time
-            // aren't a message) — fall back to the channel placeholder so the group still shows.
-            val rowNote = if (groupScopedEvent.isGroupChatContent()) lastMessage else channel.placeholderNote()
-            RelayGroupRoomCompose(rowNote, channel, accountViewModel, nav)
+            RelayGroupRoomCompose(
+                lastMessage,
+                LocalCache.getOrCreateRelayGroupChannel(GroupId(gid, hostRelay)),
+                accountViewModel,
+                nav,
+            )
             return
         }
     }
@@ -394,6 +403,44 @@ private fun RelayGroupRoomCompose(
                 .collectAsStateWithLifecycle()
                 .value,
         onClick = { nav.nav(Route.RelayGroup(channel.groupId.id, channel.groupId.relayUrl.url)) },
+    )
+}
+
+@Composable
+private fun RelayGroupServerRoomCompose(
+    row: RelayGroupServerRoomNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val relay = row.relay
+    val relayInfo by loadRelayInfo(relay)
+    val host = relay.displayUrl()
+    val name = relayInfo.name?.takeIf { it.isNotBlank() } ?: host
+
+    val author = row.newestMessage?.author
+    val noteEvent = row.newestMessage?.event
+    val lastContent =
+        if (author != null && noteEvent != null) {
+            val authorName by observeUserName(author, accountViewModel)
+            "$authorName: ${noteEvent.content.take(200)}"
+        } else {
+            stringRes(R.string.relay_group_no_messages_yet)
+        }
+
+    ChannelName(
+        channelIdHex = relay.url,
+        channelPicture = relayInfo.icon,
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, R.string.relay_group_server_label, modifier) },
+        channelLastTime = row.newestMessage?.createdAt(),
+        channelLastContent = lastContent,
+        hasNewMessages = false,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
+        onClick = { nav.nav(Route.RelayGroupServer(relay.url)) },
     )
 }
 

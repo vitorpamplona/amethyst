@@ -221,6 +221,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.CallSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ComposeSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.HiddenWordsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.HomeTabsSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.MessagesSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.MutedThreadsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NamecoinSettingsScreen
@@ -473,6 +474,7 @@ fun BuildNavigation(
         composableFromEnd<Route.ComposeSettings> { ComposeSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.MessagesSettings> { MessagesSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.AudioVisualizerSettings> { AudioVisualizerSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.BottomBarSettings> { BottomBarSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.HomeTabsSettings> { HomeTabsSettingsScreen(accountViewModel, nav) }

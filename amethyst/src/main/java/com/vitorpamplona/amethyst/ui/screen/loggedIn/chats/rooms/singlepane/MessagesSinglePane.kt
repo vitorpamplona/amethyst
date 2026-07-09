@@ -21,15 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.singlepane
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -41,8 +40,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AmethystClickableIcon
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupServerList
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupViewModeToggle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupMyJoinedGroupsSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
@@ -104,25 +101,18 @@ fun MessagesSinglePane(
         },
         accountViewModel = accountViewModel,
     ) {
-        val viewMode by accountViewModel.account.settings.relayGroupViewMode
-            .collectAsStateWithLifecycle()
-
         // Keep joined groups' rosters live while the messages list is on top, so
         // membership/pending state is accurate inline without opening each chat.
         RelayGroupMyJoinedGroupsSubscription(accountViewModel.dataSources().relayGroupMyJoinedGroups, accountViewModel)
 
-        Column {
-            RelayGroupViewModeToggle(accountViewModel)
-            if (viewMode == RelayGroupViewMode.GROUPED) {
-                RelayGroupServerList(accountViewModel, nav)
-            }
-            MessagesPager(
-                pagerState,
-                tabs,
-                accountViewModel,
-                nav,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        // The inline-vs-grouped NIP-29 display preference lives in Settings › Messages; joined groups
+        // (or per-relay rows in grouped mode) are woven directly into the feed below.
+        MessagesPager(
+            pagerState,
+            tabs,
+            accountViewModel,
+            nav,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }

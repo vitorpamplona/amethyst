@@ -404,6 +404,8 @@ sealed class Route {
 
     @Serializable object ReactionsSettings : Route()
 
+    @Serializable object MessagesSettings : Route()
+
     @Serializable object AudioVisualizerSettings : Route()
 
     @Serializable object BottomBarSettings : Route()

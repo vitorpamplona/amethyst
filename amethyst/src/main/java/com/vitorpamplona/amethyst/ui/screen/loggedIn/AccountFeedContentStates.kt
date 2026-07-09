@@ -179,6 +179,17 @@ class AccountFeedContentStates(
                 }
         }
 
+        // Flipping the NIP-29 view mode (inline groups vs one row per relay) changes what the
+        // Messages feed emits for joined groups, but no event flows through LocalCache — force a
+        // full rebuild so the list switches shape immediately.
+        scope.launch(Dispatchers.IO) {
+            account.settings.relayGroupViewMode
+                .drop(1)
+                .collect {
+                    dmKnown.invalidateData()
+                }
+        }
+
         // Pinning/unpinning a room only changes sort order, not membership, so no
         // chat event flows through LocalCache. Force a rebuild to re-sort. This
         // also fires when pins arrive via the synced AppSpecificData event.

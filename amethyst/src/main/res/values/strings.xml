@@ -1932,6 +1932,12 @@
     <string name="relay_groups_title">Relay Groups</string>
     <string name="relay_group_view_inline">Inline</string>
     <string name="relay_group_view_grouped">By relay</string>
+    <string name="relay_group_view_inline_desc">Show each group as its own conversation, mixed in with your chats.</string>
+    <string name="relay_group_view_grouped_desc">Collapse each relay\'s groups into a single row, placed at its newest message.</string>
+    <string name="relay_group_view_mode_title">NIP-29 group display</string>
+    <string name="relay_group_server_label">Relay groups</string>
+    <string name="messages_settings">Messages</string>
+    <string name="messages_settings_search_keywords" translatable="false">messages, chats, groups, nip-29, relay, inline, dm</string>
     <string name="relay_group_create_title">Create a group</string>
     <string name="relay_group_create_name">Group name</string>
     <string name="relay_group_create_topic">Topic (optional)</string>
