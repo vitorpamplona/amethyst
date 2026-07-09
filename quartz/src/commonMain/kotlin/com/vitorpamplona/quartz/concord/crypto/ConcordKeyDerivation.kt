@@ -180,6 +180,41 @@ object ConcordKeyDerivation {
         identity: String,
     ): ByteArray = hkdf32(voiceMediaKey, buildInfo(ConcordLabels.VOICE_SENDER, sha256(identity.encodeToByteArray())))
 
+    // ---- Plane keys (CORD-02) -------------------------------------------------
+
+    /** The Control Plane address for a community at [epoch] (holders of the root only). */
+    fun controlPlaneKey(
+        communityRoot: ByteArray,
+        communityId: ByteArray,
+        epoch: Long,
+    ): GroupKey = groupKey(ConcordLabels.CONTROL, communityRoot, communityId, epoch)
+
+    /** The Guestbook Plane address for a community at [epoch]. */
+    fun guestbookPlaneKey(
+        communityRoot: ByteArray,
+        communityId: ByteArray,
+        epoch: Long,
+    ): GroupKey = groupKey(ConcordLabels.GUESTBOOK, communityRoot, communityId, epoch)
+
+    // ---- Control entity coordinates (CORD-04) ---------------------------------
+    // Keyless coordinates: the community id is the HKDF ikm; distinct labels and
+    // id bytes give each entity kind its own address. All raw hkdf32 (32 bytes).
+
+    /** The Grant entity id for a member: `hkdf32(communityId, "concord/grant" ‖ 0x00 ‖ member)`. */
+    fun grantCoordinate(
+        communityId: ByteArray,
+        memberXOnly: ByteArray,
+    ): ByteArray = hkdf32(communityId, buildInfo(ConcordLabels.GRANT, memberXOnly))
+
+    /** The community-wide Banlist entity id: `hkdf32(communityId, "concord/banlist" ‖ 0x00 ‖ ZERO32)`. */
+    fun banlistCoordinate(communityId: ByteArray): ByteArray = hkdf32(communityId, buildInfo(ConcordLabels.BANLIST, ByteArray(32)))
+
+    /** The invite-registry entity id for a creator: `hkdf32(communityId, "concord/invite-links" ‖ 0x00 ‖ creator)`. */
+    fun inviteLinksCoordinate(
+        communityId: ByteArray,
+        creatorXOnly: ByteArray,
+    ): ByteArray = hkdf32(communityId, buildInfo(ConcordLabels.INVITE_LINKS, creatorXOnly))
+
     // ---- CORD-05 invite bundle key --------------------------------------------
 
     /**

@@ -98,10 +98,14 @@ class ChannelEntity(
     val deleted: Boolean = false,
 )
 
-/** A community's Metadata content (CORD-02): display name, icon, and description. */
+/**
+ * A community's Metadata content (CORD-02): display [name], optional [icon] and
+ * [description], and the community's bootstrap [relays]. Client-extensible.
+ */
 @Serializable
 class MetadataEntity(
     val name: String = "",
     val icon: String? = null,
     val description: String? = null,
+    val relays: List<String> = emptyList(),
 )
