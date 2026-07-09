@@ -33,8 +33,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -66,13 +66,12 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
-import com.vitorpamplona.amethyst.ui.navigation.topbars.LoggedInUserPictureDrawer
-import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupPreviewSubscription
@@ -123,83 +122,75 @@ fun RelayGroupDiscoveryScreen(
                 if (route == Route.RelayGroups) feedContentState.sendToTop() else nav.navBottomBar(route)
             }
         },
-        accountViewModel = accountViewModel,
-    ) { padding ->
-        Column(Modifier.padding(padding)) {
-            RefresheableBox(feedContentState, true) {
-                SaveableFeedContentState(feedContentState, scrollStateKey = ScrollStateKeys.RELAY_GROUPS_DISCOVERY_SCREEN) { listState ->
-                    RenderFeedContentState(
-                        feedContentState = feedContentState,
-                        accountViewModel = accountViewModel,
-                        listState = listState,
-                        nav = nav,
-                        routeForLastRead = null,
-                        onLoaded = { loaded ->
-                            val items by loaded.feed.collectAsStateWithLifecycle()
-                            LazyColumn(
-                                contentPadding = rememberFeedContentPadding(FeedPadding),
-                                modifier = Modifier.fillMaxWidth(),
-                                state = listState,
-                            ) {
-                                itemsIndexed(
-                                    items.list,
-                                    key = { _, item -> item.idHex },
-                                    contentType = { _, item -> item.event?.kind ?: -1 },
-                                ) { _, item ->
-                                    RelayGroupDiscoveryRow(item, Modifier.animateItem(), accountViewModel, nav)
-                                }
-                            }
-                        },
+        floatingButton = {
+            FabBottomBarPadded(nav) {
+                FloatingActionButton(
+                    onClick = { nav.nav(Route.RelayGroupBrowse) },
+                    shape = CircleShape,
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.Link,
+                        contentDescription = stringRes(R.string.relay_group_browse_title),
                     )
                 }
+            }
+        },
+        accountViewModel = accountViewModel,
+    ) {
+        RefresheableBox(feedContentState, true) {
+            SaveableFeedContentState(feedContentState, scrollStateKey = ScrollStateKeys.RELAY_GROUPS_DISCOVERY_SCREEN) { listState ->
+                RenderFeedContentState(
+                    feedContentState = feedContentState,
+                    accountViewModel = accountViewModel,
+                    listState = listState,
+                    nav = nav,
+                    routeForLastRead = null,
+                    onLoaded = { loaded ->
+                        val items by loaded.feed.collectAsStateWithLifecycle()
+                        LazyColumn(
+                            contentPadding = rememberFeedContentPadding(FeedPadding),
+                            modifier = Modifier.fillMaxWidth(),
+                            state = listState,
+                        ) {
+                            itemsIndexed(
+                                items.list,
+                                key = { _, item -> item.idHex },
+                                contentType = { _, item -> item.event?.kind ?: -1 },
+                            ) { _, item ->
+                                RelayGroupDiscoveryRow(item, Modifier.animateItem(), accountViewModel, nav)
+                            }
+                        }
+                    },
+                )
             }
         }
     }
 }
 
 /**
- * Root top bar for the Relay Groups tab: the drawer opener (or back arrow on a sub-stack), the
- * feed-filter spinner as title, and a browse-a-relay-by-URL action. Mirrors GitRepositoriesTopBar
- * but keeps the browse action, which the shared UserDrawerSearchTopBar doesn't expose.
+ * Root top bar for the Relay Groups tab — the shared drawer/search bar every top-level feed uses,
+ * with the feed-filter spinner as its title (mirrors GitRepositoriesTopBar). The browse-a-relay
+ * action lives on the FAB, not here, so the bar stays consistent with the other screens.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RelayGroupsDiscoveryTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val selectedFilter by accountViewModel.account.settings.defaultRelayGroupsDiscoveryFollowList
-        .collectAsStateWithLifecycle()
-    val options by accountViewModel.feedStates.feedListOptions.relayGroupsDiscoveryRoutes
-        .collectAsStateWithLifecycle()
+    UserDrawerSearchTopBar(accountViewModel, nav) {
+        val selectedFilter by accountViewModel.account.settings.defaultRelayGroupsDiscoveryFollowList
+            .collectAsStateWithLifecycle()
+        val options by accountViewModel.feedStates.feedListOptions.relayGroupsDiscoveryRoutes
+            .collectAsStateWithLifecycle()
 
-    ShorterTopAppBar(
-        title = {
-            FeedFilterSpinner(
-                placeholderCode = selectedFilter,
-                explainer = stringRes(R.string.select_list_to_filter),
-                options = options,
-                onSelect = accountViewModel.account.settings::changeDefaultRelayGroupsDiscoveryFollowList,
-                accountViewModel = accountViewModel,
-            )
-        },
-        navigationIcon = {
-            if (nav.canPop()) {
-                IconButton(onClick = nav::popBack) { ArrowBackIcon() }
-            } else {
-                LoggedInUserPictureDrawer(accountViewModel, nav::openDrawer)
-            }
-        },
-        actions = {
-            IconButton(onClick = { nav.nav(Route.RelayGroupBrowse) }) {
-                Icon(
-                    symbol = MaterialSymbols.Link,
-                    contentDescription = stringRes(R.string.relay_group_browse_title),
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-        },
-    )
+        FeedFilterSpinner(
+            placeholderCode = selectedFilter,
+            explainer = stringRes(R.string.select_list_to_filter),
+            options = options,
+            onSelect = accountViewModel.account.settings::changeDefaultRelayGroupsDiscoveryFollowList,
+            accountViewModel = accountViewModel,
+        )
+    }
 }
 
 @Composable
