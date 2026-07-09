@@ -23,13 +23,22 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -40,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.Ch
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
@@ -141,11 +151,53 @@ private fun ChannelView(
 
         Spacer(modifier = DoubleVertSpacer)
 
-        EditFieldRow(
-            newPostModel,
-            accountViewModel,
-            onSendNewMessage = feedViewModel.feedState::sendToTop,
-            nav,
+        // NIP-29 relays reject writes from non-members, so only show the composer when the
+        // relay-signed roster (39001/39002) lists me as a member/mod/admin. Collect the metadata
+        // flow so the composer appears the moment my join is accepted. Otherwise, explain why.
+        val channelState by channel
+            .flow()
+            .metadata.stateFlow
+            .collectAsStateWithLifecycle()
+        val liveChannel = channelState.channel as? RelayGroupChannel ?: channel
+        val canPost = liveChannel.membershipOf(accountViewModel.userProfile().pubkeyHex).isMember()
+
+        if (canPost) {
+            EditFieldRow(
+                newPostModel,
+                accountViewModel,
+                onSendNewMessage = feedViewModel.feedState::sendToTop,
+                nav,
+            )
+        } else {
+            JoinToPostNotice(liveChannel)
+        }
+    }
+}
+
+/**
+ * Shown in place of the composer when I'm not (yet) a member: a relay group won't accept my kind-9
+ * chat until its roster lists me, so typing would only earn a silent relay rejection. Points me at
+ * the top-bar Join action (open groups) or explains the invite requirement (closed groups).
+ */
+@Composable
+private fun JoinToPostNotice(channel: RelayGroupChannel) {
+    val message =
+        if (channel.isClosed()) {
+            stringRes(R.string.relay_group_invite_only_to_post)
+        } else {
+            stringRes(R.string.relay_group_join_to_post)
+        }
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
         )
     }
 }

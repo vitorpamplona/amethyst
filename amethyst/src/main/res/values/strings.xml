@@ -2007,6 +2007,8 @@
     <string name="relay_group_browse_go">Browse</string>
     <string name="relay_group_browse_your_relays">Relays you\'re on</string>
     <string name="relay_group_browse_popular">Popular relays</string>
+    <string name="relay_group_join_to_post">Join this group to send messages.</string>
+    <string name="relay_group_invite_only_to_post">This group is invite-only — you need an invite to post.</string>
     <plurals name="relay_group_member_count">
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>
