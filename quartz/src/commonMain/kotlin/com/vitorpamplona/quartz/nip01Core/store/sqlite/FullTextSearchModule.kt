@@ -204,9 +204,7 @@ class FullTextSearchModule(
         val kinds = searchableKindsPresent(db)
         if (kinds.isEmpty()) return
 
-        val selectSql =
-            "SELECT row_id, id, pubkey, created_at, kind, tags, content, sig " +
-                "FROM event_headers WHERE kind IN (${kinds.joinToString(",")})"
+        val selectSql = "$SELECT_EVENT_COLUMNS WHERE kind IN (${kinds.joinToString(",")})"
 
         db.prepare(insertFTS).use { write ->
             db.prepare(selectSql).use { read ->
@@ -259,10 +257,7 @@ class FullTextSearchModule(
         val kinds = searchableKindsPresent(db)
         if (kinds.isEmpty()) return FtsReindexProgress(cursor = null, processedThisBatch = 0, done = true)
 
-        val selectSql =
-            "SELECT row_id, id, pubkey, created_at, kind, tags, content, sig " +
-                "FROM event_headers WHERE row_id > ? AND kind IN (${kinds.joinToString(",")}) " +
-                "ORDER BY row_id LIMIT ?"
+        val selectSql = selectSearchablePageSql(kinds)
 
         var last = afterRowId
         var processed = 0
@@ -346,10 +341,7 @@ class FullTextSearchModule(
         var last = watermark
         var processed = 0
         if (kinds.isNotEmpty()) {
-            val selectSql =
-                "SELECT row_id, id, pubkey, created_at, kind, tags, content, sig " +
-                    "FROM event_headers WHERE row_id > ? AND kind IN (${kinds.joinToString(",")}) " +
-                    "ORDER BY row_id LIMIT ?"
+            val selectSql = selectSearchablePageSql(kinds)
             db.prepare(insertFTS).use { write ->
                 db.prepare(selectSql).use { read ->
                     read.bindLong(1, watermark)
@@ -426,5 +418,12 @@ class FullTextSearchModule(
         // inspects the resulting runtime type.
         private const val PROBE_ID = "0"
         private val EMPTY_TAGS = emptyArray<Array<String>>()
+
+        /** Column order matches the positional `read.getText(1)`…`getText(7)` event rebuilds. */
+        private const val SELECT_EVENT_COLUMNS =
+            "SELECT row_id, id, pubkey, created_at, kind, tags, content, sig FROM event_headers"
+
+        /** One `row_id`-cursored page of searchable events; binds: cursor, limit. */
+        private fun selectSearchablePageSql(kinds: List<Int>) = "$SELECT_EVENT_COLUMNS WHERE row_id > ? AND kind IN (${kinds.joinToString(",")}) ORDER BY row_id LIMIT ?"
     }
 }
