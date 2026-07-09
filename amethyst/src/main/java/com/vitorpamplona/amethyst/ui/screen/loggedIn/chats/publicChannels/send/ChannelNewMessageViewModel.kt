@@ -77,6 +77,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
@@ -550,17 +551,38 @@ open class ChannelNewMessageViewModel :
                 // NIP-29 group message: a kind-9 chat scoped to the group with an
                 // `h` tag. The event is published only to the group's host relay
                 // (channel.relays()), where relay29 authorizes and routes it.
-                ChatEvent.build(tagger.message) {
-                    hTag(channel.groupId.id)
+                val replyingToEvent = replyTo.value?.toEventHint<ChatEvent>()
+                if (replyingToEvent != null) {
+                    // A reply quotes its parent via a NIP-18 `q` tag (added by ChatEvent.reply)
+                    // + a `p` notify to its author. The group scope (`h`) alone doesn't link a
+                    // reply to what it answers — without the `q` tag the quote renders in the
+                    // composer but is missing from the signed event.
+                    ChatEvent.reply(tagger.message, replyingToEvent) {
+                        hTag(channel.groupId.id)
+                        pTag(replyingToEvent.toPTag())
 
-                    hashtags(findHashtags(tagger.message))
-                    references(findURLs(tagger.message))
-                    quotes(findNostrUris(tagger.message))
-                    contentWarningReason?.let { contentWarning(it) }
-                    localExpirationDate?.let { expiration(it) }
+                        hashtags(findHashtags(tagger.message))
+                        references(findURLs(tagger.message))
+                        quotes(findNostrUris(tagger.message))
+                        contentWarningReason?.let { contentWarning(it) }
+                        localExpirationDate?.let { expiration(it) }
 
-                    emojis(emojis)
-                    imetas(usedAttachments)
+                        emojis(emojis)
+                        imetas(usedAttachments)
+                    }
+                } else {
+                    ChatEvent.build(tagger.message) {
+                        hTag(channel.groupId.id)
+
+                        hashtags(findHashtags(tagger.message))
+                        references(findURLs(tagger.message))
+                        quotes(findNostrUris(tagger.message))
+                        contentWarningReason?.let { contentWarning(it) }
+                        localExpirationDate?.let { expiration(it) }
+
+                        emojis(emojis)
+                        imetas(usedAttachments)
+                    }
                 }
             }
 
