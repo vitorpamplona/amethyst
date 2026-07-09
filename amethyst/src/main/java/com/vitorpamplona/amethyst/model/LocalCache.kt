@@ -212,6 +212,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
+import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
@@ -3686,6 +3687,13 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is EphemeralChatListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                // NIP-51 "simple groups" list (kind 10009): the user's joined NIP-29 groups +
+                // servers. Replaceable like its sibling lists; RelayGroupListState reads it from the
+                // addressable cache, so it must be stored (it was silently dropped before).
+                is SimpleGroupListEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 

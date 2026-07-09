@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
@@ -69,6 +70,8 @@ val BasicAccountInfoKinds2 =
         TrustProviderListEvent.KIND,
         RelayFeedsListEvent.KIND,
         InterestSetEvent.KIND,
+        // NIP-51 "simple groups" list (kind 10009), matching the sibling NIP-51 lists above.
+        SimpleGroupListEvent.KIND,
     )
 
 fun filterBasicAccountInfoFromKeys(
