@@ -258,6 +258,13 @@ class GrapeRankDataCrawler(
         // is the discovered frontier — no separate `discovered` set to keep in sync.
         val hopOf = hashMapOf(observer to 0)
         val done = hashSetOf<HexKey>()
+
+        // Users we've already run the outbox-discovery sweep for (indexers + the wide
+        // live-relay pass in [ensureRelayLists]). The discovery relay set is static, so
+        // re-asking it for the same never-had-a-10002 user each round it recirculates is
+        // pure waste — the round-8 profile showed this as ~144k slow kind:10002 drains.
+        // Single-writer: only the round loop's [ensureRelayLists] touches it.
+        val relayListDiscoverySwept = hashSetOf<HexKey>()
         val relaysContacted = hashSetOf<NormalizedRelayUrl>()
         val writeRelayFreq = ConcurrentMap<NormalizedRelayUrl, Int>()
         val liveRelays = ConcurrentSet<NormalizedRelayUrl>()
@@ -513,6 +520,26 @@ class GrapeRankDataCrawler(
         }
 
         /**
+         * Mark done any still-pending user whose kind:3 is already in the store — a
+         * previous round's [ensureRelayLists] co-fetch, a late parked delivery, or a
+         * prior run's data — folding it into the graph so Phase B never spends an outbox
+         * drain re-pulling a contact list we already hold. Single-writer: called only
+         * from the round loop at Phase-A time, before the drain workers start. Returns
+         * the count newly fed.
+         */
+        suspend fun harvestFromStore(authors: Collection<HexKey>): Int {
+            var got = 0
+            for (pk in authors) {
+                if (pk in done) continue
+                val contacts = contactsOf(pk) ?: continue
+                done += pk
+                ingest(pk, contacts)
+                got++
+            }
+            return got
+        }
+
+        /**
          * Sharded backbone sweep (see SHARD_RELAYS). Splits the missing authors
          * across the top live relays — one shard per relay, so no relay gets the
          * same list twice — drains all shards concurrently, then rotates whoever's
@@ -602,18 +629,23 @@ class GrapeRankDataCrawler(
             allLiveRelays: Set<NormalizedRelayUrl>,
             bgScope: CoroutineScope,
         ) {
-            val missing = pubkeys.filter { relaysOf(it) == null }
+            // Only sweep users we have never swept: the discovery relay set is static,
+            // so a second sweep of a user still lacking a 10002 can't find one we didn't
+            // already miss. Mark them swept up-front so the wide pass below is gated too.
+            val missing = pubkeys.filter { relaysOf(it) == null && it !in relayListDiscoverySwept }
             if (missing.isEmpty()) return
+            relayListDiscoverySwept.addAll(missing)
 
             suspend fun query(
                 authors: List<HexKey>,
                 relays: Set<NormalizedRelayUrl>,
+                kinds: List<Int>,
             ) {
                 if (relays.isEmpty() || authors.isEmpty()) return
                 val filters =
                     relays.associateWith {
                         authors.chunked(AUTHORS_PER_FILTER).map { chunk ->
-                            Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = chunk)
+                            Filter(kinds = kinds, authors = chunk)
                         }
                     }
                 drainGated(filters, null)
@@ -625,12 +657,20 @@ class GrapeRankDataCrawler(
                 } else {
                     config.relayListDiscoveryRelays
                 }
-            query(missing, discovery)
+            // On the bounded indexer set, co-fetch the contact list in the same REQ: the
+            // outbox lookup already pays the round-trip and an indexer holding a user's
+            // 10002 often holds their kind:3, so we harvest it as a cheap byproduct.
+            query(missing, discovery, listOf(AdvertisedRelayListEvent.KIND, ContactListEvent.KIND))
 
             val stillMissing = missing.filter { relaysOf(it) == null }
             val wide = allLiveRelays - discovery
             if (stillMissing.isNotEmpty() && wide.isNotEmpty()) {
-                bgScope.launch { query(stillMissing, wide) }
+                // The wide net is EVERY live relay (thousands). Ask it for kind:10002 ONLY —
+                // co-fetching kind:3 here would download the same big contact lists from
+                // hundreds of relays and inflate this fire-and-forget bgScope sweep, which
+                // the finishing drain then waits on (measured +300s at hop-3). The outbox
+                // this finds routes the user's kind:3 to their own relays in the next round.
+                bgScope.launch { query(stillMissing, wide, listOf(AdvertisedRelayListEvent.KIND)) }
             }
         }
 
@@ -1306,6 +1346,10 @@ class GrapeRankDataCrawler(
                 // the majority cheaply (early rounds no-op until a backbone is learned).
                 val fedBeforeA = contactListsFed
                 shardedSweep(pending)
+                // Fold any kind:3 already sitting in the store — a prior round's
+                // ensureRelayLists co-fetch, a late parked delivery, or a previous run —
+                // so Phase B doesn't re-drain contact lists we already hold.
+                harvestFromStore(pending)
                 val phaseAMs = roundMark.elapsedNow().inWholeMilliseconds
                 val phaseAFed = contactListsFed - fedBeforeA
 
