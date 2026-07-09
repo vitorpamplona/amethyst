@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.auth
 import androidx.collection.LruCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.concurrent.Volatile
 
 class RelayAuthStatus {
     // Keeps track of auth responses to update the relay with all filters
@@ -31,6 +33,12 @@ class RelayAuthStatus {
 
     // Avoids sending multiple replies for each auth.
     private val uniqueAuthChallengesSent: LruCache<ChallengePair, ChallengePair> = LruCache(10)
+
+    // Latest epoch-second at which a tracked AUTH event received a successful OK.
+    // Read by RelayAuthSnapshot consumers for staleness checks (e.g. proactive
+    // re-AUTH on window focus).
+    @Volatile
+    private var lastAuthSuccessAt: Long? = null
 
     enum class AuthEventReceiptStatus {
         AUTHENTICATING,
@@ -66,6 +74,7 @@ class RelayAuthStatus {
         return if (wasAlreadyAuthenticated != null) {
             if (success) {
                 authResponseWatcher.put(eventId, AuthEventReceiptStatus.AUTHENTICATED)
+                lastAuthSuccessAt = TimeUtils.now()
             } else {
                 authResponseWatcher.put(eventId, AuthEventReceiptStatus.NOT_AUTHENTICATED)
             }
@@ -77,4 +86,29 @@ class RelayAuthStatus {
     }
 
     fun hasFinishedAllAuths() = authResponseWatcher.snapshot().all { it.value != AuthEventReceiptStatus.AUTHENTICATING }
+
+    /**
+     * Build an immutable Compose-stable snapshot of the current per-relay AUTH
+     * state. The phase is derived from the response watcher:
+     *
+     * - any AUTHENTICATING entry → [RelayAuthSnapshot.Phase.AUTHENTICATING]
+     * - else any AUTHENTICATED entry → [RelayAuthSnapshot.Phase.AUTHENTICATED]
+     * - else any NOT_AUTHENTICATED entry → [RelayAuthSnapshot.Phase.AUTH_FAILED]
+     * - else (no tracked challenges) → [RelayAuthSnapshot.Phase.IDLE]
+     *
+     * The watcher LRU caps at 10 entries; a long-running connection that has
+     * already AUTHed will still report AUTHENTICATED even after older entries
+     * roll off, because the LRU keeps the most recent.
+     */
+    fun snapshot(): RelayAuthSnapshot {
+        val entries = authResponseWatcher.snapshot()
+        val phase =
+            when {
+                entries.isEmpty() -> RelayAuthSnapshot.Phase.IDLE
+                entries.values.any { it == AuthEventReceiptStatus.AUTHENTICATING } -> RelayAuthSnapshot.Phase.AUTHENTICATING
+                entries.values.any { it == AuthEventReceiptStatus.AUTHENTICATED } -> RelayAuthSnapshot.Phase.AUTHENTICATED
+                else -> RelayAuthSnapshot.Phase.AUTH_FAILED
+            }
+        return RelayAuthSnapshot(phase, lastAuthSuccessAt)
+    }
 }

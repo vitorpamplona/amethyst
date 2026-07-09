@@ -37,10 +37,28 @@ sealed class SigningOpState {
 
     data object Pending : SigningOpState()
 
+    /**
+     * Signing is in flight AND has a known step count — typically a NIP-17
+     * group send via a remote signer (bunker), where the UI can usefully show
+     * "Encrypting via remote signer ([current] of [total])".
+     *
+     * Treated as Pending for all is-pending checks via [isPending] below;
+     * existing callers that branch on `is Pending` keep working unchanged.
+     * New callers can render the counter when [SigningOpState] is `Progress`.
+     */
+    data class Progress(
+        val current: Int,
+        val total: Int,
+        val label: String? = null,
+    ) : SigningOpState()
+
     data class Error(
         val message: String,
     ) : SigningOpState()
 }
+
+/** True when signing is in flight, regardless of whether step counts are known. */
+fun SigningOpState.isPending(): Boolean = this is SigningOpState.Pending || this is SigningOpState.Progress
 
 /**
  * Global signing status — any [SigningState] instance updates this when signing starts/ends.
@@ -86,7 +104,7 @@ class SigningState {
         private set
 
     suspend fun <T> execute(block: suspend () -> T): T? {
-        if (state is SigningOpState.Pending) return null
+        if (state.isPending()) return null
         state = SigningOpState.Pending
         GlobalSigningStatus.onPending()
         errorMessage = null
@@ -112,6 +130,23 @@ class SigningState {
             setError(e.message ?: "Operation failed")
             null
         }
+    }
+
+    /**
+     * Update the in-flight signing state with a progress counter. Use during
+     * multi-step operations (NIP-17 group send via bunker, batch zaps) to
+     * show the user how far the in-flight op has progressed.
+     *
+     * Only takes effect while [state] is Pending or Progress — no-op
+     * otherwise so callers don't have to gate on Idle/Error themselves.
+     */
+    fun updateProgress(
+        current: Int,
+        total: Int,
+        label: String? = null,
+    ) {
+        if (!state.isPending()) return
+        state = SigningOpState.Progress(current, total, label)
     }
 
     private fun setError(message: String) {

@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip77Negentropy.LiveNegentropyIndex
 
 class SQLiteEventStore(
@@ -554,6 +555,8 @@ class SQLiteEventStore(
     suspend fun count(filter: Filter): Int = pool.useReader { queryBuilder.count(filter, it) }
 
     suspend fun count(filters: List<Filter>): Int = pool.useReader { queryBuilder.count(filters, it) }
+
+    suspend fun authorsMissingOutbox(): List<HexKey> = pool.useReader { queryBuilder.authorsMissingKind(AdvertisedRelayListEvent.KIND, it) }
 
     suspend fun snapshotIdsForNegentropy(
         filters: List<Filter>,

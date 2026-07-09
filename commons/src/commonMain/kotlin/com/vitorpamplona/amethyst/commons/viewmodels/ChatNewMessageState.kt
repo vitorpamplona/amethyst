@@ -25,6 +25,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
@@ -41,6 +43,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Slim shared state for DM message composition.
@@ -56,6 +59,19 @@ class ChatNewMessageState(
     val account: IAccount,
     val cache: ICacheProvider,
     val scope: CoroutineScope,
+    /**
+     * Optional resolver for probing kind:10050 via curated indexer relays
+     * when a peer's DM inbox isn't in the local cache. When provided,
+     * [updateRecipientRelayStatus] falls through to the resolver on a cache
+     * miss so the pre-send UI stops falsely reporting "recipient has no DM
+     * relay list" for accounts whose 10050 sits on an indexer we haven't
+     * subscribed to yet.
+     *
+     * When null (default, e.g. Android's ChatNewMessageViewModel which
+     * hasn't been wired to a resolver yet), behaviour matches the
+     * cache-only strict check.
+     */
+    private val dmInboxResolver: (suspend (HexKey) -> List<NormalizedRelayUrl>?)? = null,
 ) {
     private val _message = MutableStateFlow(TextFieldValue(""))
     val message: StateFlow<TextFieldValue> = _message.asStateFlow()
@@ -86,20 +102,66 @@ class ChatNewMessageState(
     }
 
     /**
-     * Check if all recipients have DM relay lists.
-     * Messages can only be sent via NIP-17, so recipients must have
-     * either a DM inbox relay list (kind 10050) or NIP-65 inbox relays.
+     * Check whether every participant in the current room is reachable via
+     * NIP-17 — i.e. has a published kind:10050 that lists at least one
+     * relay.
+     *
+     * Uses the **strict** check ([com.vitorpamplona.amethyst.commons.model.User.dmInboxRelaysStrict],
+     * kind:10050 only) instead of the lenient [dmInboxRelays] that falls
+     * back to the NIP-65 read marker — the send path also uses strict
+     * resolution (see `DesktopIAccount.resolveDmInboxRelaysStrict`), and
+     * disagreement here caused the pre-send UI to green-light sends that
+     * would then fail at send time.
+     *
+     * Two-phase check:
+     *
+     * 1. Synchronous cache check — every peer's kind:10050 sits in
+     *    [cache]. If all present with at least one relay, unblock
+     *    immediately.
+     * 2. Async resolver probe (only when [dmInboxResolver] is provided) —
+     *    for peers whose 10050 isn't cached, kick off a curated-indexer
+     *    fan-out. If any peer's relays turn up, update the flag to
+     *    unblock the composer without requiring the user to restart the
+     *    conversation view.
+     *
+     * The blocking flag is set optimistically during the probe so the
+     * user still sees the warning until we've confirmed the peer is
+     * genuinely unreachable via NIP-17. This preserves the "don't allow
+     * silent-fail sends" invariant.
      */
     fun updateRecipientRelayStatus() {
         val currentRoom = _room.value
-        if (currentRoom != null) {
-            _recipientsMissingDmRelays.value =
-                currentRoom.users.any { hexKey ->
-                    val user = cache.getOrCreateUser(hexKey)
-                    user?.dmInboxRelays().isNullOrEmpty()
-                }
-        } else {
+        if (currentRoom == null) {
             _recipientsMissingDmRelays.value = false
+            return
+        }
+
+        val missing =
+            currentRoom.users.filter { hexKey ->
+                val user = cache.getOrCreateUser(hexKey)
+                user?.dmInboxRelaysStrict().isNullOrEmpty()
+            }
+        if (missing.isEmpty()) {
+            _recipientsMissingDmRelays.value = false
+            return
+        }
+
+        // Cache miss → block optimistically, then probe indexers for the
+        // missing peers. If any of them turn up a kind:10050, unblock.
+        _recipientsMissingDmRelays.value = true
+        val resolver = dmInboxResolver ?: return
+
+        scope.launch {
+            val stillMissing =
+                missing.any { hexKey ->
+                    val fanOut = resolver(hexKey)
+                    fanOut.isNullOrEmpty()
+                }
+            // The room may have changed while we were probing; only apply
+            // the result if we're still looking at the same conversation.
+            if (_room.value == currentRoom) {
+                _recipientsMissingDmRelays.value = stillMissing
+            }
         }
     }
 

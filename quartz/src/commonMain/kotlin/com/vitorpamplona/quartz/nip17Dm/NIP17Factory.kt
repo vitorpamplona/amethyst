@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip17Dm
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
@@ -33,9 +34,12 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 class NIP17Factory {
     data class Result(
@@ -43,10 +47,34 @@ class NIP17Factory {
         val wraps: List<GiftWrapEvent>,
     )
 
+    /**
+     * Build one NIP-59 gift wrap per recipient.
+     *
+     * The rumor (kind 14) `created_at` is implicitly shared across all wraps
+     * because [event] is signed once by the caller before the per-recipient
+     * loop runs — every seal encodes the same rumor `id`. This anchors
+     * cross-recipient dedupe + reaction/receipt targeting on group sends.
+     *
+     * Per NIP-17, the gift wrap's `p` tag MAY carry the recipient's primary
+     * DM inbox relay as a hint. Pass [recipientRelayHints] to surface those;
+     * the default `{ null }` lambda preserves the historical 2-element tag
+     * shape for every recipient.
+     *
+     * When [signer] is a [NostrSignerRemote] (NIP-46 bunker), seal building
+     * is rate-limited to [BUNKER_PARALLELISM] concurrent operations. Each
+     * seal needs `nip44_encrypt` + `sign` round-trips against the bunker; a
+     * 5-recipient group otherwise launches 10 concurrent in-flight RPCs and
+     * saturates the bunker socket. Local signers (NostrSignerInternal,
+     * NostrSignerSync) run fully parallel — no semaphore overhead.
+     *
+     * The proper fix is the batched `nip44_get_conversation_keys` NIP-46
+     * RPC (separate plan); this is the interim throttle until that lands.
+     */
     private suspend fun createWraps(
         event: Event,
         to: Set<HexKey>,
         signer: NostrSigner,
+        recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
     ): List<GiftWrapEvent> {
         val innerExpDelta =
             event.expiration()?.let {
@@ -57,29 +85,47 @@ class NIP17Factory {
                 }
             }
 
+        val bunkerLimiter = if (signer is NostrSignerRemote) Semaphore(BUNKER_PARALLELISM) else null
+
         return mapNotNullAsync(
             to.toList(),
         ) { next ->
-            GiftWrapEvent.create(
-                event =
-                    SealedRumorEvent.create(
-                        event = event,
-                        encryptTo = next,
-                        expirationDelta = innerExpDelta,
-                        signer = signer,
-                    ),
-                recipientPubKey = next,
-                expirationDelta = innerExpDelta,
-            )
+            val build: suspend () -> GiftWrapEvent = {
+                GiftWrapEvent.create(
+                    event =
+                        SealedRumorEvent.create(
+                            event = event,
+                            encryptTo = next,
+                            expirationDelta = innerExpDelta,
+                            signer = signer,
+                        ),
+                    recipientPubKey = next,
+                    expirationDelta = innerExpDelta,
+                    recipientRelayHint = recipientRelayHints(next),
+                )
+            }
+            bunkerLimiter?.withPermit { build() } ?: build()
         }
+    }
+
+    companion object {
+        /**
+         * Max concurrent in-flight NIP-46 RPCs when building wraps via a
+         * remote signer. Empirically a sweet spot — covers parallelism
+         * speedup for 2–4 recipient sends without saturating typical
+         * bunker apps (nsec.app, Amber, Keychat) that serialize requests
+         * internally past ~10 in-flight.
+         */
+        const val BUNKER_PARALLELISM = 4
     }
 
     suspend fun createMessageNIP17(
         template: EventTemplate<ChatMessageEvent>,
         signer: NostrSigner,
+        recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
     ): Result {
         val senderMessage = signer.sign(template)
-        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer)
+        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer, recipientRelayHints)
         return Result(
             msg = senderMessage,
             wraps = wraps,
@@ -108,9 +154,10 @@ class NIP17Factory {
     suspend fun createEncryptedFileNIP17(
         template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>,
         signer: NostrSigner,
+        recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
     ): Result {
         val senderMessage = signer.sign(template)
-        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer)
+        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer, recipientRelayHints)
 
         return Result(
             msg = senderMessage,
@@ -142,12 +189,13 @@ class NIP17Factory {
         originalNote: EventHintBundle<Event>,
         to: List<HexKey>,
         signer: NostrSigner,
+        recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
     ): Result {
         val senderPublicKey = signer.pubKey
         val template = ReactionEvent.build(content, originalNote)
 
         val senderReaction = signer.sign(template)
-        val wraps = createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer)
+        val wraps = createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer, recipientRelayHints)
         return Result(
             msg = senderReaction,
             wraps = wraps,
@@ -159,12 +207,13 @@ class NIP17Factory {
         originalNote: EventHintBundle<Event>,
         to: List<HexKey>,
         signer: NostrSigner,
+        recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
     ): Result {
         val senderPublicKey = signer.pubKey
         val template = ReactionEvent.build(emojiUrl, originalNote)
 
         val senderReaction = signer.sign(template)
-        val wraps = createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer)
+        val wraps = createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer, recipientRelayHints)
 
         return Result(
             msg = senderReaction,
