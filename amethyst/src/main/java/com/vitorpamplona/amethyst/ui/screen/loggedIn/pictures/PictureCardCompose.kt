@@ -75,6 +75,9 @@ fun PictureCardCompose(
         // Image content
         PictureCardImage(baseNote, event, backgroundColor, accountViewModel)
 
+        // Title and content
+        PictureCardCaption(event)
+
         // Reactions row
         ReactionsRow(
             baseNote = baseNote,
@@ -84,9 +87,6 @@ fun PictureCardCompose(
             accountViewModel = accountViewModel,
             nav = nav,
         )
-
-        // Title and content
-        PictureCardCaption(event)
     }
 }
 
