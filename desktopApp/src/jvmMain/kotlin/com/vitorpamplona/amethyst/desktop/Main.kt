@@ -954,7 +954,11 @@ private fun AppInner(
                         .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
                         .toSet(),
                 localLookup = { pubkey ->
-                    localCache.getUserIfExists(pubkey)?.dmInboxRelays()
+                    // Strict kind:10050 only — the lenient dmInboxRelays() falls
+                    // back to NIP-65 read relays, which this fast-path would
+                    // return before the strict indexer fan-out ran, leaking DM
+                    // metadata to relays the recipient never designated for DMs.
+                    localCache.getUserIfExists(pubkey)?.dmInboxRelaysStrict()
                 },
             )
         }

@@ -269,7 +269,7 @@ class DesktopIAccount(
         } else {
             localCache
                 .getOrCreateUser(recipientKey)
-                .dmInboxRelays()
+                .dmInboxRelaysStrict()
                 ?.toSet()
                 ?.ifEmpty { null }
                 ?: emptySet()
