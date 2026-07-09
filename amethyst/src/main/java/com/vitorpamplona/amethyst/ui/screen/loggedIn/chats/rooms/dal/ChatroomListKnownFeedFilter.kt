@@ -33,16 +33,13 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
+import com.vitorpamplona.quartz.nip29RelayGroups.isGroupChatContent
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
-import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
-import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 class ChatroomListKnownFeedFilter(
     val account: Account,
@@ -111,7 +108,7 @@ class ChatroomListKnownFeedFilter(
                     // up on Messages before its first kind-9 arrives (mirrors the Marmot-group path
                     // above). Content kinds only — never a reaction/deletion as the "last message".
                     channel.notes
-                        .filter { _, it -> account.isAcceptable(it) && it.event != null && it.isRelayGroupChatContent() }
+                        .filter { _, it -> account.isAcceptable(it) && it.event?.isGroupChatContent() == true }
                         .sortedByDefaultFeedOrder()
                         .firstOrNull()
                         ?: channel.placeholderNote()
@@ -289,15 +286,6 @@ class ChatroomListKnownFeedFilter(
         return newRelevantEphemeralChats
     }
 
-    // Only actual group content represents a room in the Messages list. A reaction (kind 7),
-    // deletion, label, etc. carries the group's `h` tag too, so isGroupScoped() alone would let a
-    // reaction to my message become the group's "last message" — a wrong, unrenderable row.
-    private fun Note.isRelayGroupChatContent(): Boolean =
-        when (event) {
-            is ChatEvent, is PollEvent, is ThreadEvent, is CommentEvent -> true
-            else -> false
-        }
-
     /** Latest message per joined NIP-29 group (inline view mode), keyed by group id. */
     private fun filterRelevantRelayGroupMessages(
         newItems: Set<Note>,
@@ -309,7 +297,10 @@ class ChatroomListKnownFeedFilter(
                 .mapTo(HashSet()) { it.groupId }
         val result = mutableMapOf<String, Note>()
         newItems.forEach { newNote ->
-            val gid = newNote.event?.takeIf { it.isGroupScoped() && newNote.isRelayGroupChatContent() }?.groupId()
+            // Only actual group content represents a room. A reaction (kind 7), deletion, label,
+            // etc. carries the group's `h` tag too, so isGroupScoped() alone would let a reaction to
+            // my message become the group's "last message" — a wrong, unrenderable row.
+            val gid = newNote.event?.takeIf { it.isGroupChatContent() }?.groupId()
             if (gid != null && gid in joinedGroupIds && account.isAcceptable(newNote)) {
                 val lastNote = result[gid]
                 if (lastNote == null || (newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {

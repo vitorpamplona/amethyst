@@ -100,6 +100,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
+import com.vitorpamplona.quartz.nip29RelayGroups.isGroupChatContent
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 
@@ -171,12 +172,12 @@ private fun ChatroomEntry(
         val gid = groupScopedEvent.groupId()
         val hostRelay = lastMessage.relays.firstOrNull()
         if (gid != null && hostRelay != null) {
-            RelayGroupRoomCompose(
-                lastMessage,
-                LocalCache.getOrCreateRelayGroupChannel(GroupId(gid, hostRelay)),
-                accountViewModel,
-                nav,
-            )
+            val channel = LocalCache.getOrCreateRelayGroupChannel(GroupId(gid, hostRelay))
+            // Only actual chat content is the room's "last message". A group-scoped reaction/
+            // deletion/label lingering in the list must not render as the row (its content/time
+            // aren't a message) — fall back to the channel placeholder so the group still shows.
+            val rowNote = if (groupScopedEvent.isGroupChatContent()) lastMessage else channel.placeholderNote()
+            RelayGroupRoomCompose(rowNote, channel, accountViewModel, nav)
             return
         }
     }

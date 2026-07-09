@@ -24,7 +24,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 /*
  * NIP-29 group scoping via the `h` tag.
@@ -55,3 +59,16 @@ fun Event.groupId(): String? = tags.hTag()
 
 /** True when this event carries a NIP-29 group (`h`) tag. */
 fun Event.isGroupScoped(): Boolean = groupId() != null
+
+/**
+ * True when this group-scoped event is actual room *content* — a message someone
+ * posted — rather than metadata *about* content (a reaction, deletion, label,
+ * moderation action, …), which carries the same `h` tag but isn't a "message".
+ *
+ * Only content represents a room's latest message in list views: a kind-7 reaction
+ * to my group message is group-scoped too, so without this distinction it would be
+ * picked as the group's "last message" and render as a bogus, unopenable row on the
+ * Messages tab. Content kinds: 9 ([ChatEvent]), 1068 ([PollEvent]), 11
+ * ([ThreadEvent]), 1111 ([CommentEvent]).
+ */
+fun Event.isGroupChatContent(): Boolean = this is ChatEvent || this is PollEvent || this is ThreadEvent || this is CommentEvent
