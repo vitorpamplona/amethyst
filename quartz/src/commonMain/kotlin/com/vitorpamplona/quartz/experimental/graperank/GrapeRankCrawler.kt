@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DrainFailure
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FrameDispatchStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.classifyDrainFailure
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -256,6 +257,7 @@ class GrapeRankCrawler(
         verifyNanos.store(0)
         insertNanos.store(0)
         eventsStored.store(0)
+        if (config.diagnose) FrameDispatchStats.reset()
         return CrawlRun(observer, builder).run()
     }
 
@@ -1595,6 +1597,10 @@ class GrapeRankCrawler(
                         "${throttled.load()} rate-limit responses. " +
                         "High EOSE-wait % → a shorter/adaptive fast window is the lever, not more concurrency.",
                 )
+                // Attribution: is the EOSE-wait the relay (slow to SEND eose) or us (the
+                // eose frame arrived but sat in our IO pipeline)? Low dispatch-lag + high
+                // EOSE-wait ⇒ relay; high dispatch-lag ⇒ our Dispatchers.IO is backed up.
+                log("[graperank] frame dispatch (our-side pipeline lag): ${FrameDispatchStats.snapshot()}")
             }
             return Stats(
                 rounds = rounds,
