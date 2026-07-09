@@ -60,7 +60,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupDirectorySubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -70,7 +70,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 /**
  * Lists every channel a relay hosts (its kind 39000-39003 directory), so the user
  * can browse and open channels on that relay. The relay's directory is streamed by
- * [RelayGroupDirectorySubscription] and consumed into per-group channels; this
+ * [RelayGroupsOnRelaySubscription] and consumed into per-group channels; this
  * screen reads them back for the relay and renders them.
  */
 @Composable
@@ -81,7 +81,7 @@ fun RelayGroupChannelListScreen(
 ) {
     val relay = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) } ?: return
 
-    RelayGroupDirectorySubscription(relay, accountViewModel.dataSources().relayGroupDirectory, accountViewModel)
+    RelayGroupsOnRelaySubscription(relay, accountViewModel.dataSources().relayGroupsOnRelay, accountViewModel)
 
     // Re-read the relay's channels whenever a group-metadata (kind 39000) event lands in
     // the cache — driven by LocalCache.observeEvents rather than a timer, so the list

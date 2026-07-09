@@ -88,7 +88,7 @@ class RelayGroupDiscoveryFeedFilter(
      *
      * These live on their host relays (from kind 10009), not my outbox, so the standard
      * [TopFilter.Mine] relay-set resolution wouldn't reach them. The joined groups' metadata +
-     * rosters are kept in cache by RelayGroupRosterSubscription mounted on the screen.
+     * rosters are kept in cache by RelayGroupMyJoinedGroupsSubscription mounted on the screen.
      */
     private fun isMine(): Boolean = followList() is TopFilter.Mine
 

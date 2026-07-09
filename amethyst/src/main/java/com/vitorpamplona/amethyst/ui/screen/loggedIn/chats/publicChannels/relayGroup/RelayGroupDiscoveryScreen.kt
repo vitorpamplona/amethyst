@@ -75,8 +75,8 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupPreviewSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupRosterSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupMyJoinedGroupsSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -116,7 +116,7 @@ fun RelayGroupDiscoveryScreen(
     RelayGroupsDiscoveryFilterAssemblerSubscription(accountViewModel)
     // Keep the joined groups' metadata + rosters live so the "My Groups" filter can list them
     // (their host relays aren't fetched by the discovery filter set).
-    RelayGroupRosterSubscription(accountViewModel.dataSources().relayGroupRoster, accountViewModel)
+    RelayGroupMyJoinedGroupsSubscription(accountViewModel.dataSources().relayGroupMyJoinedGroups, accountViewModel)
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -242,7 +242,7 @@ private fun RelayGroupDiscoveryRow(
     // Prefetch the group's recent content so opening the card lands on a populated screen. The
     // metadata/rosters are already streaming from the directory subscription, so only ask for
     // content here (contentOnly) instead of re-requesting 39000-39003 per visible row.
-    RelayGroupPreviewSubscription(baseChannel, accountViewModel.dataSources().relayGroupPreview, accountViewModel, contentOnly = true)
+    RelayGroupWarmupSubscription(baseChannel, accountViewModel.dataSources().relayGroupWarmup, accountViewModel, contentOnly = true)
 
     val channelState by baseChannel
         .flow()
@@ -535,7 +535,7 @@ private fun FollowsInGroupRow(
 
 /**
  * Display cap for the loaded-message counter — kept in step with the discovery preview's fetch
- * limit (RELAY_GROUP_PREVIEW_LIMIT), so a chat that returns the full page reads as "50+ messages".
+ * limit (RELAY_GROUP_WARMUP_LIMIT), so a chat that returns the full page reads as "50+ messages".
  */
 private const val DISCOVERY_MESSAGE_CAP = 50
 

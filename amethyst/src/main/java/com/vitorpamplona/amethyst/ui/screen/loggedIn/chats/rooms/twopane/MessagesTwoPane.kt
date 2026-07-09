@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomVie
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupServerList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupViewModeToggle
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupRosterSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupMyJoinedGroupsSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 
@@ -103,7 +103,7 @@ fun MessagesTwoPane(
                     val viewMode by accountViewModel.account.settings.relayGroupViewMode
                         .collectAsStateWithLifecycle()
 
-                    RelayGroupRosterSubscription(accountViewModel.dataSources().relayGroupRoster, accountViewModel)
+                    RelayGroupMyJoinedGroupsSubscription(accountViewModel.dataSources().relayGroupMyJoinedGroups, accountViewModel)
 
                     Column(Modifier.fillMaxSize()) {
                         RelayGroupViewModeToggle(accountViewModel)

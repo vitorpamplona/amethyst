@@ -20,35 +20,46 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
-import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
-import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
 
-/** One threads-screen's request for a single group's kind-11 threads. */
-class RelayGroupThreadsQueryState(
-    val channel: RelayGroupChannel,
+/** One screen's request for the full channel directory of a single relay. */
+class RelayGroupsOnRelayQueryState(
+    val relay: NormalizedRelayUrl,
+    val account: Account,
 )
 
+private val RELAY_GROUP_DIRECTORY_KINDS =
+    listOf(
+        GroupMetadataEvent.KIND,
+        GroupAdminsEvent.KIND,
+        GroupMembersEvent.KIND,
+        SupportedRolesEvent.KIND,
+    )
+
 /**
- * The forum content of a NIP-29 group: kind-11 thread roots plus their kind-1111
- * comment trees, both scoped by the group's `h` tag and pinned to the host relay.
- * Active only while a group's Threads screen is open (threads are secondary to the
- * kind-9 chat, so we don't pay for them until asked). Fetching the comments here
- * too means opening a thread from the list has its replies already cached.
+ * Subscribes to the relay-signed directory (kinds 39000-39003) of a single relay,
+ * so the "browse a relay's channels" screen sees every group the relay hosts. The
+ * relay signs these with its own key; a single-relay, unscoped-by-`d` query pulls
+ * the whole directory. Consumed into per-group [com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel]s
+ * keyed by (relay + group id).
  */
-class RelayGroupThreadsFilterAssembler(
+class RelayGroupsOnRelayFilterAssembler(
     client: INostrClient,
-) : ComposeSubscriptionManager<RelayGroupThreadsQueryState>() {
+) : ComposeSubscriptionManager<RelayGroupsOnRelayQueryState>() {
     val group =
         listOf(
-            RelayGroupThreadsSubAssembler(client, ::allKeys),
+            RelayGroupsOnRelaySubAssembler(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()
@@ -58,27 +69,25 @@ class RelayGroupThreadsFilterAssembler(
     override fun destroy() = group.forEach { it.destroy() }
 }
 
-class RelayGroupThreadsSubAssembler(
+class RelayGroupsOnRelaySubAssembler(
     client: INostrClient,
-    allKeys: () -> Set<RelayGroupThreadsQueryState>,
-) : PerUniqueIdEoseManager<RelayGroupThreadsQueryState, GroupId>(client, allKeys) {
+    allKeys: () -> Set<RelayGroupsOnRelayQueryState>,
+) : PerUniqueIdEoseManager<RelayGroupsOnRelayQueryState, NormalizedRelayUrl>(client, allKeys) {
     override fun updateFilter(
-        key: RelayGroupThreadsQueryState,
+        key: RelayGroupsOnRelayQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> {
-        val groupId = key.channel.groupId
-        return listOf(
+    ): List<RelayBasedFilter> =
+        listOf(
             RelayBasedFilter(
-                relay = groupId.relayUrl,
+                relay = key.relay,
                 filter =
                     Filter(
-                        kinds = listOf(ThreadEvent.KIND, CommentEvent.KIND),
-                        tags = mapOf("h" to listOf(groupId.id)),
-                        since = since?.get(groupId.relayUrl)?.time,
+                        kinds = RELAY_GROUP_DIRECTORY_KINDS,
+                        limit = 500,
+                        since = since?.get(key.relay)?.time,
                     ),
             ),
         )
-    }
 
-    override fun id(key: RelayGroupThreadsQueryState) = key.channel.groupId
+    override fun id(key: RelayGroupsOnRelayQueryState) = key.relay
 }

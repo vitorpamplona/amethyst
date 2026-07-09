@@ -58,7 +58,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBack
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupThreadsSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupThreadFeedSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -69,7 +69,7 @@ import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 /**
  * A group's forum-style threads (kind 11) — the secondary content type kept out of
  * the kind-9 chat feed. Streams the group's threads + their comments via
- * [RelayGroupThreadsSubscription]; tapping a thread opens the generic thread view
+ * [RelayGroupThreadFeedSubscription]; tapping a thread opens the generic thread view
  * ([Route.Note]) with its comment tree. Members can start a new thread.
  */
 @Composable
@@ -93,7 +93,7 @@ private fun RelayGroupThreads(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    RelayGroupThreadsSubscription(channel, accountViewModel.dataSources().relayGroupThreads, accountViewModel)
+    RelayGroupThreadFeedSubscription(channel, accountViewModel.dataSources().relayGroupThreadFeed, accountViewModel)
 
     val threads by channel.threads.collectAsStateWithLifecycle()
 

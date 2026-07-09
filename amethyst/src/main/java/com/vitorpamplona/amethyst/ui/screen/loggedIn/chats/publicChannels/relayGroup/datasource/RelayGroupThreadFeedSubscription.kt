@@ -26,21 +26,16 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
-/**
- * Mount on a group card to warm its recent content ahead of a tap. [contentOnly] drops the
- * metadata/roster filter (39000-39003) — pass true on the discovery feed, where the directory
- * subscription already streams that for the whole relay, so each visible row asks for content only.
- */
+/** Mount on a group's Threads screen to stream its kind-11 threads + 1111 comments. */
 @Composable
-fun RelayGroupPreviewSubscription(
+fun RelayGroupThreadFeedSubscription(
     channel: RelayGroupChannel,
-    dataSource: RelayGroupPreviewFilterAssembler,
+    dataSource: RelayGroupThreadFeedFilterAssembler,
     accountViewModel: AccountViewModel,
-    contentOnly: Boolean = false,
 ) {
     val state =
-        remember(channel.groupId, contentOnly) {
-            RelayGroupPreviewQueryState(channel, contentOnly)
+        remember(channel.groupId) {
+            RelayGroupThreadFeedQueryState(channel)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

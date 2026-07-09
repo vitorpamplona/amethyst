@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 
 /** One screen's request to keep the roster of the user's joined groups fresh. */
-class RelayGroupRosterQueryState(
+class RelayGroupMyJoinedGroupsQueryState(
     val account: Account,
 )
 
@@ -59,12 +59,12 @@ private val RELAY_GROUP_ROSTER_KINDS =
  * One subscription per host relay, scoped by `#d` to just that relay's joined
  * group ids — so we don't pull a relay's whole directory, only what we're in.
  */
-class RelayGroupRosterFilterAssembler(
+class RelayGroupMyJoinedGroupsFilterAssembler(
     client: INostrClient,
-) : ComposeSubscriptionManager<RelayGroupRosterQueryState>() {
+) : ComposeSubscriptionManager<RelayGroupMyJoinedGroupsQueryState>() {
     val group =
         listOf(
-            RelayGroupRosterSubAssembler(client, ::allKeys),
+            RelayGroupMyJoinedGroupsSubAssembler(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()
@@ -74,12 +74,12 @@ class RelayGroupRosterFilterAssembler(
     override fun destroy() = group.forEach { it.destroy() }
 }
 
-class RelayGroupRosterSubAssembler(
+class RelayGroupMyJoinedGroupsSubAssembler(
     client: INostrClient,
-    allKeys: () -> Set<RelayGroupRosterQueryState>,
-) : PerUniqueIdEoseManager<RelayGroupRosterQueryState, Account>(client, allKeys) {
+    allKeys: () -> Set<RelayGroupMyJoinedGroupsQueryState>,
+) : PerUniqueIdEoseManager<RelayGroupMyJoinedGroupsQueryState, Account>(client, allKeys) {
     override fun updateFilter(
-        key: RelayGroupRosterQueryState,
+        key: RelayGroupMyJoinedGroupsQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         val joined = key.account.relayGroupList.liveRelayGroupList.value
@@ -102,5 +102,5 @@ class RelayGroupRosterSubAssembler(
         }
     }
 
-    override fun id(key: RelayGroupRosterQueryState) = key.account
+    override fun id(key: RelayGroupMyJoinedGroupsQueryState) = key.account
 }
