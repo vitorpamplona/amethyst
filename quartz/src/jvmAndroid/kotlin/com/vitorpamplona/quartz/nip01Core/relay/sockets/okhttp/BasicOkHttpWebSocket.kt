@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.trySendBlocking
@@ -36,7 +36,6 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
-import java.util.concurrent.Executors
 import kotlin.time.TimeSource
 import kotlin.time.TimeSource.Monotonic.ValueTimeMark
 import okhttp3.WebSocket as OkHttpWebSocket
@@ -53,21 +52,6 @@ class BasicOkHttpWebSocket(
             CoroutineExceptionHandler { _, throwable ->
                 Log.e("BasicOkHttpWebSocket", "WebsocketListener Caught exception: ${throwable.message}", throwable)
             }
-
-        // Frame decode + dispatch runs on its OWN pool, isolated from Dispatchers.IO.
-        // The shared IO pool also runs the store write path (blocking SQLite inserts);
-        // measured on a GrapeRank crawl, frame-processing coroutines were queueing
-        // behind those inserts, adding a 200ms MEAN and up to 3.5s TAIL of dispatch lag
-        // during event floods — which in turn skews the relay-idle/EOSE timing the
-        // crawler reads. A dedicated daemon pool keeps frame delivery prompt regardless
-        // of what the IO pool is doing. Shared across all connections; sized to the
-        // machine (decode is light + CPU-bound, so a small multiple of cores suffices).
-        private val frameDispatcher =
-            Executors
-                .newFixedThreadPool(
-                    (Runtime.getRuntime().availableProcessors() * 2).coerceIn(4, 32),
-                ) { r -> Thread(r, "ws-frame").apply { isDaemon = true } }
-                .asCoroutineDispatcher()
     }
 
     private var socket: OkHttpWebSocket? = null
@@ -79,7 +63,7 @@ class BasicOkHttpWebSocket(
 
         val listener =
             object : OkHttpWebSocketListener() {
-                val scope = CoroutineScope(frameDispatcher + exceptionHandler)
+                val scope = CoroutineScope(Dispatchers.IO + exceptionHandler)
 
                 // UNLIMITED on purpose — do NOT bound this channel. The app
                 // holds 2000+ relay connections; a bounded buffer under a
