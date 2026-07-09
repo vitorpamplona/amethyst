@@ -102,12 +102,14 @@ class ChatroomListKnownFeedFilter(
             if (account.settings.relayGroupViewMode.value == RelayGroupViewMode.INLINE) {
                 account.relayGroupList.liveRelayGroupList.value.mapNotNull { groupTag ->
                     val relay = RelayUrlNormalizer.normalizeOrNull(groupTag.relayUrl) ?: return@mapNotNull null
-                    LocalCache
-                        .getOrCreateRelayGroupChannel(GroupId(groupTag.groupId, relay))
-                        .notes
+                    val channel = LocalCache.getOrCreateRelayGroupChannel(GroupId(groupTag.groupId, relay))
+                    // Newest loaded message, or a placeholder row so a just-joined group shows up on
+                    // Messages before its first kind-9 arrives (mirrors the Marmot-group path above).
+                    channel.notes
                         .filter { _, it -> account.isAcceptable(it) && it.event != null }
                         .sortedByDefaultFeedOrder()
                         .firstOrNull()
+                        ?: channel.placeholderNote()
                 }
             } else {
                 emptyList()

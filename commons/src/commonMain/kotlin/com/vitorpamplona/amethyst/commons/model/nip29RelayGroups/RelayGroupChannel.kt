@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.model.nip29RelayGroups
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -203,4 +205,24 @@ class RelayGroupChannel(
         groupId.id.contains(prefix, true) ||
             event?.name()?.contains(prefix, true) == true ||
             event?.about()?.contains(prefix, true) == true
+
+    // Synthetic note representing this group in list views (the Messages tab) before any message
+    // has loaded — so a group the user just joined shows up immediately instead of waiting for its
+    // first cached kind-9. Mirrors MarmotGroupChatroom.placeholderNote(): adds this channel as a
+    // gatherer so the list row resolves back to it, and is cached with a stable id so equality-based
+    // feed diffing treats it as the same row across refreshes.
+    private val placeholderLock = KmpLock()
+    private var cachedPlaceholder: Note? = null
+
+    fun placeholderNote(): Note =
+        placeholderLock.withLock {
+            cachedPlaceholder ?: Note(placeholderIdHex(groupId)).apply {
+                addGatherer(this@RelayGroupChannel)
+                cachedPlaceholder = this
+            }
+        }
+
+    companion object {
+        fun placeholderIdHex(groupId: GroupId): HexKey = "relaygroup-empty-${groupId.toKey()}"
+    }
 }

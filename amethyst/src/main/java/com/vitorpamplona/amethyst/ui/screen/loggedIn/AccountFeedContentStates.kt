@@ -167,6 +167,17 @@ class AccountFeedContentStates(
             }
         }
 
+        // Same for the NIP-29 joined-group list (kind 10009): joining/leaving changes the list but
+        // doesn't flow through newEventBundles, so force a rebuild — otherwise a just-joined group
+        // (whose messages haven't loaded yet) wouldn't appear on the Messages tab until a later event.
+        scope.launch(Dispatchers.IO) {
+            account.relayGroupList.liveRelayGroupList
+                .drop(1)
+                .collect {
+                    dmKnown.invalidateData()
+                }
+        }
+
         // Pinning/unpinning a room only changes sort order, not membership, so no
         // chat event flows through LocalCache. Force a rebuild to re-sort. This
         // also fires when pins arrive via the synced AppSpecificData event.
