@@ -202,8 +202,12 @@ private fun WatchAccountForRelayGroupDiscovery(
         .collectAsStateWithLifecycle()
     val perRelay by accountViewModel.account.liveRelayGroupsDiscoveryFollowListsPerRelay
         .collectAsStateWithLifecycle()
+    // The "My Groups" filter reads the kind-10009 joined list, so re-scan when it changes
+    // (join/leave) — otherwise a newly-joined group wouldn't appear until another refresh.
+    val joinedGroups by accountViewModel.account.relayGroupList.liveRelayGroupList
+        .collectAsStateWithLifecycle()
 
-    LaunchedEffect(listName, perRelay) {
+    LaunchedEffect(listName, perRelay, joinedGroups) {
         feedContentState.checkKeysInvalidateDataAndSendToTop()
     }
 }

@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
@@ -65,12 +66,29 @@ class RelayGroupDiscoveryFeedFilter(
     fun followList(): TopFilter = account.settings.defaultRelayGroupsDiscoveryFollowList.value
 
     /**
-     * "My Groups" = the groups I've joined. These live on their host relays (from kind 10009), not
-     * my outbox, so the standard [TopFilter.Mine] relay-set resolution wouldn't reach them — instead
-     * we scan the cache for groups where I'm the relay-key / an admin / a member. The joined groups'
-     * metadata + rosters are kept in cache by RelayGroupRosterSubscription mounted on the screen.
+     * "My Groups" = every group I'm participating in. That's the UNION of:
+     *  - the groups I explicitly joined (my kind-10009 list) — authoritative and immediate, even
+     *    before the relay adds me to its roster or for open groups it doesn't roster; and
+     *  - any group whose relay-signed roster (39001/39002) lists me as an admin/member (e.g. an
+     *    admin added me, or I was rostered on a relay I haven't listed in kind 10009).
+     *
+     * These live on their host relays (from kind 10009), not my outbox, so the standard
+     * [TopFilter.Mine] relay-set resolution wouldn't reach them. The joined groups' metadata +
+     * rosters are kept in cache by RelayGroupRosterSubscription mounted on the screen.
      */
     private fun isMine(): Boolean = followList() is TopFilter.Mine
+
+    /** The (relay + id) of every group in my kind-10009 joined list. */
+    private fun joinedGroupIds(): Set<GroupId> =
+        account.relayGroupList.liveRelayGroupList.value
+            .mapNotNullTo(HashSet()) { tag ->
+                RelayUrlNormalizer.normalizeOrNull(tag.relayUrl)?.let { GroupId(tag.groupId, it) }
+            }
+
+    private fun isMyGroup(
+        channel: RelayGroupChannel,
+        joined: Set<GroupId>,
+    ): Boolean = channel.groupId in joined || channel.membershipOf(account.userProfile().pubkeyHex).isMember()
 
     private fun constraints(): Map<NormalizedRelayUrl, GroupDiscoveryConstraint> = account.liveRelayGroupsDiscoveryFollowListsPerRelay.value.toGroupConstraints()
 
@@ -85,10 +103,16 @@ class RelayGroupDiscoveryFeedFilter(
     }
 
     private fun myGroupNotes(): Set<Note> {
+        val joined = joinedGroupIds()
+        val notes = HashSet<Note>()
+        // Groups I explicitly joined — resolve each to its metadata note (may be null until loaded).
+        joined.forEach { LocalCache.getRelayGroupChannelIfExists(it)?.metadataNote?.let(notes::add) }
+        // Plus any group whose roster lists me as an admin/member.
         val me = account.userProfile().pubkeyHex
-        return LocalCache.relayGroupChannels
+        LocalCache.relayGroupChannels
             .filter { _, channel -> channel.event != null && channel.membershipOf(me).isMember() }
-            .mapNotNullTo(HashSet()) { it.metadataNote }
+            .forEach { it.metadataNote?.let(notes::add) }
+        return notes
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> {
@@ -117,7 +141,7 @@ class RelayGroupDiscoveryFeedFilter(
         byRelay: Map<NormalizedRelayUrl, GroupDiscoveryConstraint>,
     ): Boolean {
         val channel = relayGroupDiscoveryChannelFor(note) ?: return false
-        if (isMine()) return channel.membershipOf(account.userProfile().pubkeyHex).isMember()
+        if (isMine()) return isMyGroup(channel, joinedGroupIds())
         if (byRelay.isEmpty()) return false
         return byRelay[channel.groupId.relayUrl]?.matches(channel) == true
     }
