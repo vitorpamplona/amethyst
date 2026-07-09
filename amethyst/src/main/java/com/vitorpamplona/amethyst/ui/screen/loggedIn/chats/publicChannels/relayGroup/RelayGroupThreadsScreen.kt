@@ -127,7 +127,14 @@ private fun RelayGroupThreads(
         floatingActionButton = {
             if (canPost) {
                 FloatingActionButton(
-                    onClick = { nav.nav(Route.RelayGroupNewThread(channel.groupId.id, channel.groupId.relayUrl.url)) },
+                    onClick = {
+                        nav.nav(
+                            Route.NewShortNote(
+                                groupThreadId = channel.groupId.id,
+                                groupThreadRelayUrl = channel.groupId.relayUrl.url,
+                            ),
+                        )
+                    },
                     shape = CircleShape,
                 ) {
                     Icon(

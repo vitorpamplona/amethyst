@@ -663,11 +663,6 @@ sealed class Route {
         val relayUrl: String,
     ) : Route()
 
-    @Serializable data class RelayGroupNewThread(
-        val id: String,
-        val relayUrl: String,
-    ) : Route()
-
     @Serializable data class RelayGroupCreate(
         val relayUrl: String,
     ) : Route()
@@ -844,6 +839,10 @@ sealed class Route {
         val fork: String? = null,
         val version: String? = null,
         val draft: String? = null,
+        // When set, the composer produces a NIP-29 kind-11 group thread scoped to this group id and
+        // published only to its host relay (see ShortNotePostViewModel.setGroupThread).
+        val groupThreadId: String? = null,
+        val groupThreadRelayUrl: String? = null,
     ) : Route()
 
     @Serializable

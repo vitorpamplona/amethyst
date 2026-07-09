@@ -149,11 +149,14 @@ fun ShortNotePostScreen(
     forkId: HexKey? = null,
     versionId: HexKey? = null,
     draftId: HexKey? = null,
+    groupThreadId: HexKey? = null,
+    groupThreadRelayUrl: String? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
     val postViewModel: ShortNotePostViewModel = viewModel()
     postViewModel.init(accountViewModel)
+    postViewModel.setGroupThread(groupThreadId, groupThreadRelayUrl)
 
     val context = LocalContext.current
     val activity = context.getActivity()
@@ -749,8 +752,9 @@ private fun BottomRowActions(
         )
 
         // Polls publish kinds that can't travel inside a private wrap, so the
-        // two toggles are mutually exclusive.
-        if (!postViewModel.wantsPoll && !postViewModel.wantsZapPoll) {
+        // two toggles are mutually exclusive. Neither a private wrap nor a poll makes sense for a
+        // NIP-29 group thread (it publishes plainly to the host relay), so hide both there.
+        if (!postViewModel.wantsPoll && !postViewModel.wantsZapPoll && postViewModel.groupThreadTarget == null) {
             AddPrivateNoteButton(
                 isActive = postViewModel.wantsPrivateNote,
                 isLocked = postViewModel.privateNoteLocked,
@@ -759,7 +763,10 @@ private fun BottomRowActions(
             }
         }
 
-        if ((postViewModel.canUsePoll || postViewModel.canUseZapPoll) && !postViewModel.wantsPrivateNote) {
+        if ((postViewModel.canUsePoll || postViewModel.canUseZapPoll) &&
+            !postViewModel.wantsPrivateNote &&
+            postViewModel.groupThreadTarget == null
+        ) {
             AddPollButton(postViewModel.wantsPoll || postViewModel.wantsZapPoll) {
                 val isActive = postViewModel.wantsPoll || postViewModel.wantsZapPoll
                 if (isActive) {
@@ -790,8 +797,9 @@ private fun BottomRowActions(
         }
 
         // Private wraps are built and sent immediately; scheduling them would
-        // require wrapping at publish time, so the option is hidden for now.
-        if (!postViewModel.wantsPrivateNote) {
+        // require wrapping at publish time, so the option is hidden for now. Scheduling also
+        // bypasses the host-relay pin, so it's hidden for NIP-29 group threads too.
+        if (!postViewModel.wantsPrivateNote && postViewModel.groupThreadTarget == null) {
             ScheduleAtButton(postViewModel.scheduledForSec != null, onScheduleClicked)
         }
 

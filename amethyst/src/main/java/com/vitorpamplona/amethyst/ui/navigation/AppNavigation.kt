@@ -112,7 +112,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupEditScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupMembersScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupNewThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupThreadsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.share.ShareToDMScreen
@@ -605,15 +604,6 @@ fun BuildNavigation(
             )
         }
 
-        composableFromEndArgs<Route.RelayGroupNewThread> {
-            RelayGroupNewThreadScreen(
-                id = it.id,
-                relayUrl = it.relayUrl,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
-
         composableFromEndArgs<Route.RelayGroupCreate> {
             RelayGroupCreateScreen(
                 relayUrl = it.relayUrl,
@@ -750,6 +740,8 @@ fun BuildNavigation(
                 forkId = it.fork,
                 versionId = it.version,
                 draftId = it.draft,
+                groupThreadId = it.groupThreadId,
+                groupThreadRelayUrl = it.groupThreadRelayUrl,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

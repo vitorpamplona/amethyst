@@ -94,7 +94,10 @@ import com.vitorpamplona.quartz.experimental.zapPolls.minAmount
 import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -117,6 +120,7 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
+import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
@@ -133,6 +137,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
@@ -477,6 +482,28 @@ open class ShortNotePostViewModel :
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
+    }
+
+    /**
+     * When set, this composer produces a NIP-29 kind-11 group thread instead of a kind-1 note:
+     * the title is the first line, the rest is the body, and it publishes ONLY to the group's host
+     * [relays] (relay29 authorizes writes by the `h` tag). Toggles that don't apply to a group thread
+     * (poll, private note, scheduling) are hidden while this is set.
+     */
+    class GroupThreadTarget(
+        val groupId: HexKey,
+        val relays: List<NormalizedRelayUrl>,
+    )
+
+    var groupThreadTarget: GroupThreadTarget? = null
+        private set
+
+    fun setGroupThread(
+        groupId: HexKey?,
+        relayUrl: String?,
+    ) {
+        val relay = relayUrl?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+        groupThreadTarget = if (groupId != null && relay != null) GroupThreadTarget(groupId, listOf(relay)) else null
     }
 
     open fun load(
@@ -920,7 +947,18 @@ open class ShortNotePostViewModel :
         val anonymous = wantsAnonymousPost
         val scheduledFor = scheduledForSec
         val privately = wantsPrivateNote
+        val threadTarget = groupThreadTarget
         cancel()
+
+        if (threadTarget != null) {
+            // NIP-29 group thread: publish only to the group's host relay, never the account's
+            // outbox — bypass the private/scheduled/anonymous paths entirely.
+            accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) { threadTarget.relays }
+            accountViewModel.launchSigner {
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+            }
+            return
+        }
 
         if (privately && template.kind == TextNoteEvent.KIND) {
             // Gift-wrap to the p-tagged users instead of publishing. Private
@@ -1074,7 +1112,30 @@ open class ShortNotePostViewModel :
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
-        return if (wantsPoll) {
+        val threadTarget = groupThreadTarget
+        return if (threadTarget != null) {
+            // NIP-29 kind-11 group thread: title = first line, body = the rest (or the whole line
+            // when single-line). Scoped to the group by `h`; the host relay authorizes the write.
+            val text = tagger.message
+            val firstBreak = text.indexOf('\n')
+            val title = (if (firstBreak >= 0) text.substring(0, firstBreak) else text).trim()
+            val body = (if (firstBreak >= 0) text.substring(firstBreak + 1) else text).trim()
+
+            ThreadEvent.build(body, title) {
+                hTag(threadTarget.groupId)
+
+                hashtags(findHashtags(tagger.message))
+                references(findURLs(tagger.message))
+                quotes(findNostrUris(tagger.message))
+
+                geoHash?.let { geohash(it) }
+                contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
+
+                emojis(emojis)
+                imetas(usedAttachments)
+            }
+        } else if (wantsPoll) {
             val options = pollOptions.map { it.value }
 
             if (options.isEmpty()) return null
