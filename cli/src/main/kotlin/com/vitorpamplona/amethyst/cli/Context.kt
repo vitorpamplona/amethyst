@@ -71,6 +71,7 @@ import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayReachabilityStore
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.SeenIds
 import kotlinx.coroutines.CompletableDeferred
@@ -257,6 +258,21 @@ class Context(
      */
     private val storeDelegate: Lazy<IEventStore> = lazy { StoreFactory.open(dataDir) }
     val store: IEventStore by storeDelegate
+
+    /**
+     * Shared relay-reachability cache (NIP-66 kind:30166 records in [store]), signed by
+     * the machine's dedicated monitor key — derived from the operator master, NOT the
+     * account (see [OperatorKeys.monitorKey]). The crawler and the WoT updater read its
+     * dead set to skip proven-dead relays and write their findings back, so liveness
+     * knowledge is shared across procedures and runs instead of rediscovered each time.
+     * Lazy so a run that never touches relays doesn't materialize the operator master.
+     */
+    val reachability: RelayReachabilityStore by lazy {
+        RelayReachabilityStore(
+            store = store,
+            signer = NostrSignerInternal(dataDir.operatorKeys().monitorKey()),
+        )
+    }
 
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
     val marmot: MarmotManager by lazy { MarmotManager(signer, mlsStore, messageStore, keyPackageStore) }
