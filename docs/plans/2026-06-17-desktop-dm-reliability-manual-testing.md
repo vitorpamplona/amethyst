@@ -1,6 +1,6 @@
 # Desktop DM Reliability — Testing Playbook
 
-**Branch:** `feat/desktop-dm-reliability` at `fcfc43eb44` (21 commits)
+**Branch:** `feat/desktop-dm-reliability` rebased onto `upstream/main` (24 commits; latest `9e707da2b1`)
 **Tester:** _______________________
 **Date:** _______________________
 
@@ -327,6 +327,48 @@ Record:
 - [ ] **T6.2** Send button disabled: **YES / NO**
 - [ ] **T6.3** No `kind":1059` in outgoing traffic during send attempt: **YES / NO / SKIPPED**
 - [ ] **T6 PASS** — T6.1 and T6.2 both YES (T6.3 optional but recommended)
+
+---
+
+## T6b — Strict kind:10050 (NIP-65 read-relay non-leak) — 4 min
+
+**Goal:** verify the review fix — a recipient that DOES publish NIP-65 read
+relays (kind:10002) but has NO `kind:10050` is still treated as unreachable.
+The lenient fast-path bug would have published the wrap to those NIP-65 read
+relays; the fix must NOT.
+
+### T6b.a — Create a recipient with kind:10002 but no kind:10050
+
+**1.** Generate a fresh key and publish ONLY a NIP-65 relay list (no 10050):
+
+```bash
+nak key generate            # copy nsec + npub
+# publish a kind:10002 with a read relay, and NO kind:10050:
+echo '{"kind":10002,"tags":[["r","wss://relay.damus.io","read"]],"content":""}' \
+  | nak event --sec <nsec> wss://relay.damus.io wss://nos.lol
+```
+
+**2.** As User A, open a new chat to that npub so A's LocalCache ingests the
+recipient's kind:10002 (send/hover the profile so the relay list loads).
+
+### T6b.b — Verify send is blocked, not routed to the read relay
+
+**3.** Type a message. Observe the row under the input.
+
+- **Expected:** same "no DM relay list — messages cannot be delivered"
+  warning as T6; send disabled.
+- **Wrong (pre-fix bug):** send is ENABLED and the wrap goes to
+  `wss://relay.damus.io` (the recipient's NIP-65 *read* relay).
+
+**4.** (Optional, definitive) tcpdump as in T6.c while attempting send.
+
+- **Expected:** zero `kind":1059` frames to the recipient's kind:10002 relays.
+
+Record:
+
+- [ ] **T6b.1** Send blocked despite recipient having kind:10002: **YES / NO**
+- [ ] **T6b.2** No wrap sent to NIP-65 read relay (if tcpdump run): **YES / NO / SKIPPED**
+- [ ] **T6b PASS** — T6b.1 YES
 
 ---
 
