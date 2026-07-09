@@ -90,7 +90,7 @@ import kotlin.time.TimeSource
  * is emitted through [log]; a headless caller routes it to stderr, a UI ignores it.
  */
 @OptIn(ExperimentalAtomicApi::class)
-class GrapeRankDataCrawler(
+class GrapeRankCrawler(
     private val client: NostrClient,
     private val store: IEventStore,
     private val limiter: AdaptiveRelayLimiter,
@@ -230,9 +230,13 @@ class GrapeRankDataCrawler(
         /** Verified events handed to the store (duplicates included — the write path dedups). */
         val eventsStored: Long,
         /**
-         * Relays proven unreachable this run (connect-establishment failures / seeded
-         * known-dead), and relays that served ≥1 event. The caller flushes these into
-         * the reachability cache (kind:30166) so the next run and the updater start warm.
+         * Relays this run actually OBSERVED, for the caller to flush into the
+         * reachability cache (kind:30166): [deadRelays] = relays newly proven
+         * unreachable this run (a connect-establishment failure we paid), [liveRelays]
+         * = relays that served ≥1 event. Seeded known-dead relays (skipped, never
+         * dialed) are deliberately EXCLUDED from [deadRelays] — re-writing them would
+         * refresh their TTL without a re-probe and blacklist a recovered relay forever;
+         * their original record must age out so the next run re-probes them.
          */
         val deadRelays: Set<NormalizedRelayUrl>,
         val liveRelays: Set<NormalizedRelayUrl>,
@@ -896,7 +900,7 @@ class GrapeRankDataCrawler(
                 val ok = event.verify()
                 verifyNanos.addAndFetch(vMark.elapsedNow().inWholeNanoseconds)
                 if (!ok) {
-                    Log.w("GrapeRankDataCrawler") { "dropped event ${event.id.take(8)} kind=${event.kind} — bad signature" }
+                    Log.w("GrapeRankCrawler") { "dropped event ${event.id.take(8)} kind=${event.kind} — bad signature" }
                     continue
                 }
                 if (!seenIds.add(event.id)) continue // lost the race to a mirror; it stores it
@@ -1531,7 +1535,9 @@ class GrapeRankDataCrawler(
                 verifyMs = verifyMs,
                 insertMs = insertMs,
                 eventsStored = stored,
-                deadRelays = deadRelays.snapshot(),
+                // Only relays we actually dialed this run — exclude the seeded
+                // known-dead (skipped, not re-probed) so their original TTL stands.
+                deadRelays = deadRelays.snapshot() - config.knownDeadRelays,
                 liveRelays = liveRelays.snapshot(),
             )
         }

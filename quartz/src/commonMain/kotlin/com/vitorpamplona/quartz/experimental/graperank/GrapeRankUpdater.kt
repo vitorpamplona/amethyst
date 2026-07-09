@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
  * (kind:10002), and reports (kind:1984) of every author already known to the
  * local [store].
  *
- * Where [GrapeRankDataCrawler] discovers the graph by walking follows outward from
+ * Where [GrapeRankCrawler] discovers the graph by walking follows outward from
  * an observer, this refreshes what is *already* known: it reads every kind:10002 in
  * the store, inverts them into a `write-relay -> authors` map (the outbox model — an
  * author's events live on the relays they write to), fans those into one filter per

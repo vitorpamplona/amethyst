@@ -47,7 +47,7 @@ import kotlinx.coroutines.coroutineScope
  *    (it fell below the caller's cutoff, or dropped out of the graph) with a NIP-09
  *    kind:5 deletion, batched so the frame stays under the ~64KB event cap.
  *
- * Transport-agnostic like [GrapeRankDataCrawler]: it reads prior cards from an
+ * Transport-agnostic like [GrapeRankCrawler]: it reads prior cards from an
  * [IEventStore] and emits through an injected [publish] function (event + relays →
  * per-relay ack), so the store/relay wiring stays in the application while the
  * reconcile + card-construction logic is reusable (e.g. by the Android app).

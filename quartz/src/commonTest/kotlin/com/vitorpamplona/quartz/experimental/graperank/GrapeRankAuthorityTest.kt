@@ -25,13 +25,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
 /**
- * [GrapeRankDataCrawler.authorityOf] is the key the crawl's timeout-eviction counts
+ * [GrapeRankCrawler.authorityOf] is the key the crawl's timeout-eviction counts
  * on. It must collapse the many per-user path URLs the outbox model mints for one
  * server into a single host, WITHOUT folding a distinct sibling host (e.g. a
  * `filter.` subdomain) into its parent.
  */
 class GrapeRankAuthorityTest {
-    private fun auth(url: String) = GrapeRankDataCrawler.authorityOf(url)
+    private fun auth(url: String) = GrapeRankCrawler.authorityOf(url)
 
     @Test
     fun bareHostIsItsOwnAuthority() {

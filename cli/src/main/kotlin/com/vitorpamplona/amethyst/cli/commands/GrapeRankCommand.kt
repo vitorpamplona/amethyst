@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRank
-import com.vitorpamplona.quartz.experimental.graperank.GrapeRankDataCrawler
+import com.vitorpamplona.quartz.experimental.graperank.GrapeRankCrawler
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankParams
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankPublisher
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankUpdater
@@ -251,7 +251,7 @@ object GrapeRankCommand {
             // Crawl telemetry (online path only): rounds, relays contacted, the
             // per-hop histogram, and the network-bound download time that dominates a
             // from-scratch run. Null on the offline path.
-            var crawlStats: GrapeRankDataCrawler.Stats? = null
+            var crawlStats: GrapeRankCrawler.Stats? = null
 
             if (!offline) {
                 val stats = newCrawler(ctx, args).crawl(observer, builder)
@@ -434,7 +434,7 @@ object GrapeRankCommand {
     private suspend fun newCrawler(
         ctx: Context,
         args: Args,
-    ): GrapeRankDataCrawler {
+    ): GrapeRankCrawler {
         val discoveryRelays =
             ctx.bootstrapRelays() + Constants.eventFinderRelays + DefaultIndexerRelayList + EXTRA_DISCOVERY_RELAYS
         val contentFallback = ctx.bootstrapRelays() + Constants.eventFinderRelays
@@ -446,12 +446,12 @@ object GrapeRankCommand {
         // to skip). The crawl's own final live/dead set is flushed back by the caller.
         val knownDead =
             if (args.bool("no-reachability-cache")) emptySet() else ctx.reachability.snapshot().dead
-        return GrapeRankDataCrawler(
+        return GrapeRankCrawler(
             client = ctx.client,
             store = ctx.store,
             limiter = ctx.relayLimiter,
             config =
-                GrapeRankDataCrawler.Config(
+                GrapeRankCrawler.Config(
                     relayListDiscoveryRelays = discoveryRelays,
                     knownDeadRelays = knownDead,
                     contentFallbackRelays = contentFallback,
@@ -494,7 +494,7 @@ object GrapeRankCommand {
     private suspend fun flushReachability(
         ctx: Context,
         args: Args,
-        stats: GrapeRankDataCrawler.Stats,
+        stats: GrapeRankCrawler.Stats,
     ) {
         if (args.bool("no-reachability-cache")) return
         runCatching {
