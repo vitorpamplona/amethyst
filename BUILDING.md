@@ -261,6 +261,23 @@ sonar.token=sqp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 When it finishes, browse the results at
 <http://localhost:9000/dashboard?id=Amethyst>.
 
+### 4. Optional: include Android Lint results
+
+The scanner auto-imports each Android module's lint report and shows the
+findings as external issues alongside Sonar's own. It only *imports* — it never
+runs lint itself — so without the reports on disk the analysis warns
+`Unable to import Android Lint report file(s)`. Generate them first, then run
+the scan as a **separate** invocation (chaining lint and `sonar` in one Gradle
+call does not guarantee lint finishes first):
+
+```bash
+./gradlew :amethyst:lintPlayDebug :benchmark:lintBenchmark :nappletHost:lintDebug
+./gradlew sonar
+```
+
+The reports persist under each module's `build/reports/`, so re-run lint only
+when you want fresh lint data in the next scan.
+
 Every `sonar.*` entry in `local.properties` is forwarded to the scanner, so any
 [analysis parameter](https://docs.sonarsource.com/sonarqube-server/latest/analyzing-source-code/analysis-parameters/)
 can be set there. `sonar.projectKey` / `sonar.projectName` default to the root
