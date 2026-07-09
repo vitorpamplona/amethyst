@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
-import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.verifyAndInsert
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -38,6 +37,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Two-pass NIP-77 sync of ANY filter set between a relay and a local [IEventStore],
@@ -133,20 +133,40 @@ class NegentropyStoreSync(
         return coroutineScope {
             filtersByRelay.entries
                 .map { (relay, filters) ->
-                    async { gate.withPermit { filters.map { syncGroup(relay, it) } } }
+                    async { gate.withPermit { filters.map { syncGroupSafely(relay, it) } } }
                 }.awaitAll()
                 .flatten()
         }
     }
+
+    /**
+     * [syncGroup] with a best-effort guard so an unexpected failure in one group
+     * (store I/O, a relay throwing outside the NIP-77 path, …) is recorded rather than
+     * cancelling every other relay in a [sync]. Cancellation is propagated, not caught.
+     */
+    private suspend fun syncGroupSafely(
+        relay: NormalizedRelayUrl,
+        filter: Filter,
+    ): GroupResult =
+        try {
+            syncGroup(relay, filter)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log("[store-sync] ${relay.url}: group failed: ${e::class.simpleName}: ${e.message}")
+            GroupResult(relay, filter, 0, 0, 0, 0, 0, 0, pagedFallback = false, error = "${e::class.simpleName}: ${e.message}")
+        }
 
     /** Content pass + deletion settle (+ page fallback) for one relay + one filter. */
     suspend fun syncGroup(
         relay: NormalizedRelayUrl,
         filter: Filter,
     ): GroupResult {
-        val localEvents = store.query<Event>(filter)
-        val localById = localEvents.associateBy { it.id }
-        val localEntries = localEvents.map { IdAndTime(it.createdAt, it.id) }
+        // Only the id+created_at snapshot is needed to reconcile — never the decoded
+        // events (~40 B/entry vs ~1 KB), which matters when a relay hosts a large
+        // matched set. The events the reconcile decides to UP-publish (the small
+        // residual haves) are fetched by id on demand in the uploader below.
+        val localEntries = store.snapshotIdsForNegentropy(listOf(filter))
 
         val downloaded = AtomicInt(0)
         val uploaded = AtomicInt(0)
@@ -171,8 +191,9 @@ class NegentropyStoreSync(
                     val uploader =
                         launch {
                             for (batch in haveBatches) {
-                                for (id in batch) {
-                                    val ev = localById[id] ?: continue
+                                // Fetch just the residual haves from the store (not the
+                                // whole matched set) and publish them up.
+                                for (ev in store.query<Event>(Filter(ids = batch))) {
                                     if (client.publishAndConfirm(ev, setOf(relay), config.publishTimeoutSecs)) uploaded.addAndFetch(1)
                                 }
                             }
@@ -208,6 +229,8 @@ class NegentropyStoreSync(
                         try {
                             downloaded.addAndFetch(pageDownload(relay, filter))
                             null
+                        } catch (pe: CancellationException) {
+                            throw pe
                         } catch (pe: Exception) {
                             "negentropy: ${e.message}; page fallback: ${pe::class.simpleName}: ${pe.message}"
                         }
