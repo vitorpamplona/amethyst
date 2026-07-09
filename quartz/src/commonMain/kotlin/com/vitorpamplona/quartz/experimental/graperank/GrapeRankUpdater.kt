@@ -24,30 +24,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncException
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcile
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySettleDeletions
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropyStoreSync
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
-import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
-import com.vitorpamplona.quartz.nip01Core.store.verifyAndInsert
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
-import kotlin.concurrent.atomics.AtomicInt
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Store-driven, outbox-model refresh of the record kinds a [GrapeRank] score is a
@@ -58,35 +41,23 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * Where [GrapeRankDataCrawler] discovers the graph by walking follows outward from
  * an observer, this refreshes what is *already* known: it reads every kind:10002 in
  * the store, inverts them into a `write-relay -> authors` map (the outbox model — an
- * author's events live on the relays they write to), then runs one NIP-77 negentropy
- * reconcile per write relay scoped to exactly the authors who publish there. So each
- * relay is asked only for the authors it hosts, and each author is reconciled only
- * against their own relays. Run it periodically to keep a scored network current
- * without paying a full from-scratch crawl.
+ * author's events live on the relays they write to), fans those into one filter per
+ * `(write relay, author chunk)`, and hands them to [NegentropyStoreSync] — the generic
+ * two-pass sync engine. So each relay is asked only for the authors it hosts, and each
+ * author is reconciled only against their own relays. Run it periodically to keep a
+ * scored network current without paying a full from-scratch crawl.
  *
- * Each per-relay group is bidirectional by default ([Config.down] / [Config.up]):
- *  - **down** downloads records the relay has and the store lacks (by-id fetch,
- *    verified + inserted into [store]);
- *  - **up** uploads records the store has and the relay lacks.
- *
- * After the content pass each group settles deletions over the reconcile residual
- * ([negentropySettleDeletions], [Config.syncDeletions]). Its **applyDown** direction
- * is the "download the deletion when our upload was rejected" case: an event pushed up
- * that the relay keeps rejecting (it deleted it) surfaces as a residual *have*, so the
- * relay's covering kind:5 is pulled down and applied locally and the store drops the
- * retracted record. The **sendUp** direction publishes the store's covering deletions
- * for records deleted locally that the relay still serves. Cheap: it works off the
- * small residual, not the whole set.
- *
- * If negentropy can't reconcile a relay (no NIP-77 support, an over-cap minimal window,
- * a mid-sync disconnect, …) and [Config.pageFallback] is on, the group falls back to a
- * full paged download ([fetchAllPages]) of the same authors+kinds so those records are
- * still refreshed — only the negentropy-only deletion settle is skipped there.
+ * The engine does the work per `(relay, filter)` group: a bidirectional NIP-77
+ * reconcile against [store] ([Config.down] / [Config.up]), a deletion settle over the
+ * residual ([Config.syncDeletions] — its applyDown direction downloads the relay's
+ * kind:5 when an uploaded record was rejected because the author retracted it), and a
+ * paged-download fallback when a relay can't reconcile ([Config.pageFallback]). This
+ * class only builds the outbox filter set and folds the engine's per-group results back
+ * up per relay.
  *
  * Transport-agnostic within quartz: it takes an [INostrClient] and an [IEventStore].
  * Progress is emitted through [log]; a headless caller routes it to stderr, a UI ignores it.
  */
-@OptIn(ExperimentalAtomicApi::class)
 class GrapeRankUpdater(
     private val client: INostrClient,
     private val store: IEventStore,
@@ -105,7 +76,7 @@ class GrapeRankUpdater(
      * @param downloadWorkers concurrent by-id download fetches per group.
      * @param reconcileConcurrency overlapped `created_at`-window reconciles after an over-cap split.
      * @param maxDeletionRounds hard cap on deletion-settle rounds (converges in 1–2).
-     * @param relayConcurrency write relays reconciled at once.
+     * @param relayConcurrency write relays synced at once.
      * @param authorChunk authors per reconcile filter (a relay with more is split into several).
      * @param minAuthors skip relays hosting fewer than this many of the store's authors.
      * @param idleTimeoutMs idle watchdog for reconciles / fetches / pages.
@@ -126,9 +97,25 @@ class GrapeRankUpdater(
         val minAuthors: Int = 1,
         val idleTimeoutMs: Long = 30_000L,
         val publishTimeoutSecs: Long = 15,
-    )
+    ) {
+        /** Project the shared engine knobs onto a [NegentropyStoreSync.Config]. */
+        internal fun toEngineConfig() =
+            NegentropyStoreSync.Config(
+                down = down,
+                up = up,
+                syncDeletions = syncDeletions,
+                pageFallback = pageFallback,
+                idChunk = idChunk,
+                downloadWorkers = downloadWorkers,
+                reconcileConcurrency = reconcileConcurrency,
+                maxDeletionRounds = maxDeletionRounds,
+                concurrency = relayConcurrency,
+                idleTimeoutMs = idleTimeoutMs,
+                publishTimeoutSecs = publishTimeoutSecs,
+            )
+    }
 
-    /** Per-write-relay outcome of an [update]. */
+    /** Per-write-relay outcome of an [update] (folded from the engine's group results). */
     class RelayResult(
         val relay: NormalizedRelayUrl,
         val authors: Int,
@@ -139,7 +126,7 @@ class GrapeRankUpdater(
         val deletionsSentUp: Int,
         val deletionsAppliedDown: Int,
         val pagedFallback: Boolean,
-        /** null on success; the negentropy (and any page-fallback) failure otherwise. */
+        /** null when every chunk of this relay succeeded; the first failure otherwise. */
         val error: String?,
     )
 
@@ -166,6 +153,69 @@ class GrapeRankUpdater(
      */
     suspend fun writeRelayGroups(): Map<NormalizedRelayUrl, Set<HexKey>> = groupByWriteRelay(loadLatestRelayLists())
 
+    /**
+     * Run the full outbox-model refresh: [writeRelayGroups] then hand every group
+     * hosting at least [Config.minAuthors] authors (largest first, chunked to
+     * [Config.authorChunk]) to [NegentropyStoreSync], folding its per-group results back
+     * up per relay. Best-effort — a relay that fails is recorded in [RelayResult.error]
+     * and never aborts the run.
+     */
+    suspend fun update(): Result {
+        val latest = loadLatestRelayLists()
+        val groups = groupByWriteRelay(latest)
+        val authorsWithOutbox = groups.values.flatMapTo(HashSet()) { it }.size
+
+        // Plan: relays with enough authors, largest first so the heaviest groups start
+        // while engine permits are free.
+        val plan =
+            groups.entries
+                .filter { it.value.size >= config.minAuthors }
+                .sortedByDescending { it.value.size }
+                .map { it.key to it.value }
+
+        // Fan each relay's authors into one filter per authorChunk-sized slice.
+        val authorChunk = config.authorChunk.coerceAtLeast(1)
+        val filtersByRelay =
+            plan.associate { (relay, authors) ->
+                relay to authors.toList().chunked(authorChunk).map { Filter(kinds = config.kinds, authors = it) }
+            }
+
+        val groupResults = NegentropyStoreSync(client, store, config.toEngineConfig(), log).sync(filtersByRelay)
+        val byRelay = groupResults.groupBy { it.relay }
+
+        // Fold each relay's chunk results back into one RelayResult (plan order preserved).
+        val perRelay =
+            plan.map { (relay, authors) ->
+                val chunks = byRelay[relay].orEmpty()
+                RelayResult(
+                    relay = relay,
+                    authors = authors.size,
+                    need = chunks.sumOf { it.need },
+                    have = chunks.sumOf { it.have },
+                    downloaded = chunks.sumOf { it.downloaded },
+                    uploaded = chunks.sumOf { it.uploaded },
+                    deletionsSentUp = chunks.sumOf { it.deletionsSentUp },
+                    deletionsAppliedDown = chunks.sumOf { it.deletionsAppliedDown },
+                    pagedFallback = chunks.any { it.pagedFallback },
+                    error = chunks.firstNotNullOfOrNull { it.error },
+                )
+            }
+
+        return Result(
+            relayListsInStore = latest.size,
+            authorsWithOutbox = authorsWithOutbox,
+            relays = perRelay.size,
+            relaysOk = perRelay.count { it.error == null },
+            relaysFailed = perRelay.count { it.error != null },
+            relaysPagedFallback = perRelay.count { it.pagedFallback },
+            downloaded = perRelay.sumOf { it.downloaded },
+            uploaded = perRelay.sumOf { it.uploaded },
+            deletionsSentUp = perRelay.sumOf { it.deletionsSentUp },
+            deletionsAppliedDown = perRelay.sumOf { it.deletionsAppliedDown },
+            perRelay = perRelay,
+        )
+    }
+
     /** Latest kind:10002 per author from the store (replaceable — newest createdAt wins). */
     private suspend fun loadLatestRelayLists(): Map<HexKey, AdvertisedRelayListEvent> {
         val latest = HashMap<HexKey, AdvertisedRelayListEvent>()
@@ -186,231 +236,6 @@ class GrapeRankUpdater(
         }
         return relayToAuthors
     }
-
-    /**
-     * Run the full outbox-model refresh: [writeRelayGroups] then one per-relay sync
-     * for each group hosting at least [Config.minAuthors] authors, up to
-     * [Config.relayConcurrency] relays at once (largest groups first). Best-effort —
-     * a relay that fails is recorded in its [RelayResult.error] and never aborts the run.
-     */
-    suspend fun update(): Result {
-        val latest = loadLatestRelayLists()
-        val groups = groupByWriteRelay(latest)
-        val authorsWithOutbox = groups.values.flatMapTo(HashSet()) { it }.size
-
-        val plan =
-            groups.entries
-                .filter { it.value.size >= config.minAuthors }
-                .sortedByDescending { it.value.size }
-
-        val perRelay =
-            if (plan.isEmpty()) {
-                emptyList()
-            } else {
-                val gate = Semaphore(config.relayConcurrency.coerceAtLeast(1))
-                coroutineScope {
-                    plan
-                        .map { (relay, authors) ->
-                            async { gate.withPermit { syncRelay(relay, authors) } }
-                        }.awaitAll()
-                }
-            }
-
-        return Result(
-            relayListsInStore = latest.size,
-            authorsWithOutbox = authorsWithOutbox,
-            relays = plan.size,
-            relaysOk = perRelay.count { it.error == null },
-            relaysFailed = perRelay.count { it.error != null },
-            relaysPagedFallback = perRelay.count { it.pagedFallback },
-            downloaded = perRelay.sumOf { it.downloaded },
-            uploaded = perRelay.sumOf { it.uploaded },
-            deletionsSentUp = perRelay.sumOf { it.deletionsSentUp },
-            deletionsAppliedDown = perRelay.sumOf { it.deletionsAppliedDown },
-            perRelay = perRelay,
-        )
-    }
-
-    /** Sync one write relay by folding each [Config.authorChunk]-sized author slice. */
-    private suspend fun syncRelay(
-        relay: NormalizedRelayUrl,
-        authors: Set<HexKey>,
-    ): RelayResult {
-        var downloaded = 0
-        var uploaded = 0
-        var delUp = 0
-        var delDown = 0
-        var need = 0
-        var have = 0
-        var paged = false
-        var error: String? = null
-
-        for (chunk in authors.toList().chunked(config.authorChunk.coerceAtLeast(1))) {
-            val filter = Filter(kinds = config.kinds, authors = chunk)
-            val res = syncGroup(relay, filter)
-            downloaded += res.downloaded
-            uploaded += res.uploaded
-            delUp += res.deletionsSentUp
-            delDown += res.deletionsAppliedDown
-            need += res.need
-            have += res.have
-            if (res.pagedFallback) paged = true
-            if (res.error != null) error = res.error
-        }
-
-        log(
-            "[graperank update] ${relay.url}: ${authors.size} authors, " +
-                "down $downloaded, up $uploaded, del↑ $delUp, del↓ $delDown" +
-                (if (paged) " (paged fallback)" else "") +
-                (if (error != null) " (error: $error)" else ""),
-        )
-        return RelayResult(relay, authors.size, need, have, downloaded, uploaded, delUp, delDown, paged, error)
-    }
-
-    /** One relay + one author chunk. Mirrors the two-pass content+deletion sync. */
-    private suspend fun syncGroup(
-        relay: NormalizedRelayUrl,
-        filter: Filter,
-    ): GroupResult {
-        val localEvents = store.query<Event>(filter)
-        val localById = localEvents.associateBy { it.id }
-        val localEntries = localEvents.map { IdAndTime(it.createdAt, it.id) }
-
-        val downloaded = AtomicInt(0)
-        val uploaded = AtomicInt(0)
-
-        val reconcileResult =
-            try {
-                coroutineScope {
-                    // needIds = relay has, store lacks; haveIds = store has, relay lacks.
-                    val needBatches = Channel<List<HexKey>>(config.downloadWorkers * 2)
-                    val haveBatches = Channel<List<HexKey>>(Channel.UNLIMITED)
-
-                    val downloaders =
-                        List(config.downloadWorkers.coerceAtLeast(1)) {
-                            launch {
-                                for (batch in needBatches) {
-                                    for (event in client.fetchAll(relay, Filter(ids = batch), config.idleTimeoutMs)) {
-                                        if (store.verifyAndInsert(event)) downloaded.addAndFetch(1)
-                                    }
-                                }
-                            }
-                        }
-                    val uploader =
-                        launch {
-                            for (batch in haveBatches) {
-                                for (id in batch) {
-                                    val ev = localById[id] ?: continue
-                                    if (client.publishAndConfirm(ev, setOf(relay), config.publishTimeoutSecs)) uploaded.addAndFetch(1)
-                                }
-                            }
-                        }
-
-                    val result =
-                        try {
-                            client.negentropyReconcile(
-                                relay = relay,
-                                filter = filter,
-                                localEntries = localEntries,
-                                batchSize = config.idChunk,
-                                idleTimeoutMs = config.idleTimeoutMs,
-                                reconcileConcurrency = config.reconcileConcurrency,
-                                onHaveIds = if (config.up) { batch -> haveBatches.send(batch) } else null,
-                                onNeedIds = { batch -> if (config.down) needBatches.send(batch) },
-                            )
-                        } finally {
-                            needBatches.close()
-                            haveBatches.close()
-                        }
-
-                    downloaders.joinAll()
-                    uploader.join()
-                    result
-                }
-            } catch (e: NegentropySyncException) {
-                // Negentropy couldn't reconcile — page the same authors+kinds so the
-                // records still refresh. Deletion settle is negentropy-only, so skipped.
-                var pageError: String? = e.message ?: "negentropy sync failed"
-                if (config.pageFallback && config.down) {
-                    pageError =
-                        try {
-                            downloaded.addAndFetch(pageDownload(relay, filter))
-                            null
-                        } catch (pe: Exception) {
-                            "negentropy: ${e.message}; page fallback: ${pe::class.simpleName}: ${pe.message}"
-                        }
-                }
-                return GroupResult(downloaded.load(), uploaded.load(), 0, 0, 0, 0, pagedFallback = true, error = pageError)
-            }
-
-        val deletions =
-            if (config.syncDeletions) {
-                client.negentropySettleDeletions(
-                    relay = relay,
-                    filter = filter,
-                    store = store,
-                    sendUp = config.down,
-                    applyDown = config.up,
-                    batchSize = config.idChunk,
-                    idleTimeoutMs = config.idleTimeoutMs,
-                    maxRounds = config.maxDeletionRounds,
-                    reconcileConcurrency = config.reconcileConcurrency,
-                )
-            } else {
-                null
-            }
-
-        return GroupResult(
-            downloaded = downloaded.load(),
-            uploaded = uploaded.load(),
-            deletionsSentUp = deletions?.sentUp ?: 0,
-            deletionsAppliedDown = deletions?.appliedDown ?: 0,
-            need = reconcileResult.needCount,
-            have = reconcileResult.haveCount,
-            pagedFallback = false,
-            error = null,
-        )
-    }
-
-    /**
-     * Paged fallback: walk [relay] past its per-REQ cap for [filter], verifying and
-     * inserting each event into [store]. [fetchAllPages]'s `onEvent` can't suspend, so
-     * events funnel through a bounded channel to a single inserter. Returns how many
-     * were newly stored.
-     */
-    private suspend fun pageDownload(
-        relay: NormalizedRelayUrl,
-        filter: Filter,
-    ): Int {
-        val stored = AtomicInt(0)
-        val events = Channel<Event>(Channel.UNLIMITED)
-        coroutineScope {
-            val inserter =
-                launch {
-                    for (event in events) {
-                        if (store.verifyAndInsert(event)) stored.addAndFetch(1)
-                    }
-                }
-            try {
-                client.fetchAllPages(relay, listOf(filter), config.idleTimeoutMs) { event -> events.trySend(event) }
-            } finally {
-                events.close()
-            }
-            inserter.join()
-        }
-        return stored.load()
-    }
-
-    private class GroupResult(
-        val downloaded: Int,
-        val uploaded: Int,
-        val deletionsSentUp: Int,
-        val deletionsAppliedDown: Int,
-        val need: Int,
-        val have: Int,
-        val pagedFallback: Boolean,
-        val error: String?,
-    )
 
     companion object {
         /** The record kinds a GrapeRank score is a function of. */
