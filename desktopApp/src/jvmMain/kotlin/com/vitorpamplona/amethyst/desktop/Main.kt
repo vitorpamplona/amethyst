@@ -71,23 +71,28 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.vitorpamplona.amethyst.commons.defaults.DefaultDmIndexerRelays
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideMaterialSymbols
 import com.vitorpamplona.amethyst.commons.moderation.LocalHashtagSpamSettings
 import com.vitorpamplona.amethyst.commons.moderation.LocalSpamExemptKeys
 import com.vitorpamplona.amethyst.commons.moderation.PreferencesHashtagSpamSettings
+import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalBanner
+import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
+import com.vitorpamplona.amethyst.desktop.auth.DesktopAuthCoordinator
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopAccountRelays
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.model.DesktopRelayCategories
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
+import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
@@ -124,9 +129,12 @@ import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.ImageCompressionSettings
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
 import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -922,6 +930,39 @@ private fun AppInner(
         }
     val nip11Fetcher = remember { Nip11Fetcher() }
 
+    // Dedicated unauthenticated NostrClient for kind:10050 lookups against
+    // curated indexer relays. MUST NOT have a RelayAuthenticator attached —
+    // an authenticated indexer query would extract identity-key signatures
+    // and turn "indexer learns who we want to DM" into "indexer learns user
+    // U wants to DM pubkey X" (security review F-01).
+    val indexerClient =
+        remember(httpClient) {
+            NostrClient(BasicOkHttpWebSocket.Builder(httpClient::getHttpClient)).also { it.connect() }
+        }
+    DisposableEffect(indexerClient) {
+        onDispose { indexerClient.disconnect() }
+    }
+
+    // Resolver consults LocalCache first, then its own LRU, then the indexer
+    // client. Strict kind:10050 only — no NIP-65 read-marker fallback.
+    val dmInboxResolver =
+        remember(indexerClient, localCache) {
+            DmInboxRelayResolver(
+                unauthenticatedClient = indexerClient,
+                indexerRelays =
+                    DefaultDmIndexerRelays.RELAYS
+                        .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                        .toSet(),
+                localLookup = { pubkey ->
+                    // Strict kind:10050 only — the lenient dmInboxRelays() falls
+                    // back to NIP-65 read relays, which this fast-path would
+                    // return before the strict indexer fan-out ran, leaking DM
+                    // metadata to relays the recipient never designated for DMs.
+                    localCache.getUserIfExists(pubkey)?.dmInboxRelaysStrict()
+                },
+            )
+        }
+
     // Start 1Hz metrics snapshot for relay dashboard
     LaunchedEffect(relayManager) {
         relayManager.startMetricsSnapshot(this)
@@ -953,11 +994,20 @@ private fun AppInner(
             ).also { it.startCleanupLoop() }
         }
 
+    // NIP-42 AUTH coordinator — wires relay-auth challenges through the
+    // tier classifier so own DM-inbox relays auto-sign and unknown relays
+    // surface a tier-2 banner approval via authCoordinator.pendingApprovals.
+    val authCoordinator =
+        remember(relayManager, localCache) {
+            DesktopAuthCoordinator(relayManager, localCache, scope)
+        }
+
     // Clear cache and subscriptions on logout or account switch
     var previousAccountPubKey by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(accountState) {
         when (val state = accountState) {
             is AccountState.LoggedOut -> {
+                authCoordinator.onLogout()
                 subscriptionsCoordinator.clear()
                 localCache.accountPubkey = null
                 localCache.clear()
@@ -970,6 +1020,7 @@ private fun AppInner(
                 val currentPubKey = state.pubKeyHex
                 if (previousAccountPubKey != null && previousAccountPubKey != currentPubKey) {
                     // Account switched — clear old data so new feed loads fresh
+                    authCoordinator.onLogout()
                     subscriptionsCoordinator.clear()
                     localCache.accountPubkey = null
                     localCache.clear()
@@ -994,6 +1045,7 @@ private fun AppInner(
                 scope.launch(Dispatchers.IO) {
                     localRelayStore.hydrate(localCache)
                 }
+                authCoordinator.onLogin(state)
                 previousAccountPubKey = currentPubKey
             }
 
@@ -1271,32 +1323,53 @@ private fun AppInner(
                                 LocalNamecoinService provides namecoinService,
                                 LocalSpamExemptKeys provides spamExemptKeys,
                             ) {
-                                MainContent(
-                                    layoutMode = layoutMode,
-                                    deckState = deckState,
-                                    workspaceManager = workspaceManager,
-                                    singlePaneState = singlePaneState,
-                                    pinnedNavBarState = pinnedNavBarState,
-                                    relayManager = relayManager,
-                                    localCache = localCache,
-                                    accountManager = accountManager,
-                                    account = account,
-                                    nwcConnection = nwcConnection,
-                                    subscriptionsCoordinator = subscriptionsCoordinator,
-                                    indexRelaysStore = indexRelaysStore,
-                                    nip11Fetcher = nip11Fetcher,
-                                    appScope = scope,
-                                    torStatus = currentTorStatus,
-                                    onShowComposeDialog = onShowComposeDialog,
-                                    onShowReplyDialog = onShowReplyDialog,
-                                    onShowAppDrawer = onShowAppDrawer,
-                                    onOpenFeedsDrawer = {
-                                        appDrawerInitialTab =
-                                            com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab.FEEDS
-                                        onShowAppDrawer()
-                                    },
-                                    onShowImportFollowListDialog = onShowImportFollowListDialog,
-                                )
+                                val pendingAuthApprovals by authCoordinator.pendingApprovals.collectAsState()
+                                Column(modifier = Modifier.fillMaxSize()) {
+                                    // On macOS the window uses `apple.awt.fullWindowContent`
+                                    // (see [applyNativeWindowChrome]), so the traffic-light
+                                    // buttons sit over the top-left corner of content. Clear
+                                    // that zone so the banner text/icon aren't occluded.
+                                    val bannerModifier =
+                                        if (PlatformInfo.isMacOS) {
+                                            Modifier.padding(start = 80.dp, top = 8.dp, end = 8.dp, bottom = 4.dp)
+                                        } else {
+                                            Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        }
+                                    AuthApprovalBanner(
+                                        pending = pendingAuthApprovals.values.toList(),
+                                        onResolve = { url, scope -> authCoordinator.resolve(url, scope) },
+                                        modifier = bannerModifier,
+                                    )
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        MainContent(
+                                            layoutMode = layoutMode,
+                                            deckState = deckState,
+                                            workspaceManager = workspaceManager,
+                                            singlePaneState = singlePaneState,
+                                            pinnedNavBarState = pinnedNavBarState,
+                                            relayManager = relayManager,
+                                            localCache = localCache,
+                                            accountManager = accountManager,
+                                            account = account,
+                                            nwcConnection = nwcConnection,
+                                            subscriptionsCoordinator = subscriptionsCoordinator,
+                                            indexRelaysStore = indexRelaysStore,
+                                            nip11Fetcher = nip11Fetcher,
+                                            dmInboxResolver = dmInboxResolver,
+                                            appScope = scope,
+                                            torStatus = currentTorStatus,
+                                            onShowComposeDialog = onShowComposeDialog,
+                                            onShowReplyDialog = onShowReplyDialog,
+                                            onShowAppDrawer = onShowAppDrawer,
+                                            onOpenFeedsDrawer = {
+                                                appDrawerInitialTab =
+                                                    com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab.FEEDS
+                                                onShowAppDrawer()
+                                            },
+                                            onShowImportFollowListDialog = onShowImportFollowListDialog,
+                                        )
+                                    }
+                                }
 
                                 // Import Follow List dialog (triggered from File menu /
                                 // Cmd+Shift+I). Rendered inside this CompositionLocalProvider
@@ -1408,6 +1481,7 @@ fun MainContent(
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     indexRelaysStore: com.vitorpamplona.amethyst.commons.relays.index.PreferencesIndexRelays,
     nip11Fetcher: Nip11Fetcher,
+    dmInboxResolver: DmInboxRelayResolver,
     appScope: CoroutineScope,
     torStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus,
     onShowComposeDialog: () -> Unit,
@@ -1434,8 +1508,8 @@ fun MainContent(
         }
 
     val iAccount =
-        remember(account, localCache, relayManager, dmSendTracker, accountRelays) {
-            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays)
+        remember(account, localCache, relayManager, dmSendTracker, accountRelays, dmInboxResolver) {
+            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays, dmInboxResolver)
         }
 
     // When iAccount is replaced (account switch), the previous WoTService's

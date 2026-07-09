@@ -87,6 +87,21 @@ fun SigningStatusBar(
                 }
             }
 
+            is SigningOpState.Progress -> {
+                Snackbar(
+                    shape = RoundedCornerShape(8.dp),
+                    containerColor = MaterialTheme.colorScheme.inverseSurface,
+                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) {
+                    val label = opState.label ?: "Signing"
+                    Text(
+                        text = "$label (${opState.current} of ${opState.total})",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+
             is SigningOpState.Error -> {
                 Snackbar(
                     shape = RoundedCornerShape(8.dp),

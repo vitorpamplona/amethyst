@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Filter builders for DM subscriptions on desktop.
@@ -116,20 +115,18 @@ object FilterDMs {
      * Creates a filter for NIP-59 gift-wrapped events TO the user.
      * Gift wraps (kind 1059) contain encrypted NIP-17 DMs.
      *
-     * The since is adjusted back by 2 days because gift wrap created_at
-     * timestamps are randomized within a 2-day window for privacy.
+     * No `since` is exposed: per NIP-17, seal (kind 13) and gift wrap (kind 1059)
+     * `created_at` are randomized up to 2 days in the past for privacy. Any
+     * `since` window applied here silently drops wraps whose randomized
+     * timestamp predates it — losing real DMs and suppressing the unread badge.
+     * DMs are low-volume, so subscribing without a `since` is safe.
      *
      * @param userPubKeyHex The user's public key (hex)
-     * @param since Optional since timestamp (will be adjusted -2 days)
      */
-    fun giftWrapsToMe(
-        userPubKeyHex: HexKey,
-        since: Long? = null,
-    ): Filter =
+    fun giftWrapsToMe(userPubKeyHex: HexKey): Filter =
         Filter(
             kinds = listOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND),
             tags = mapOf("p" to listOf(userPubKeyHex)),
-            since = since?.minus(TimeUtils.twoDays()),
         )
 }
 
@@ -184,11 +181,13 @@ fun createNip04DmOutboxSubscription(
 /**
  * Creates a subscription config for NIP-59 gift-wrapped DMs TO the user.
  * Subscribes on DM/inbox relays.
+ *
+ * No `since` parameter: see [FilterDMs.giftWrapsToMe] for why NIP-17 wraps
+ * cannot use a `since` window without dropping legitimate messages.
  */
 fun createGiftWrapSubscription(
     relays: Set<NormalizedRelayUrl>,
     userPubKeyHex: HexKey,
-    since: Long? = null,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
     onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
@@ -196,7 +195,7 @@ fun createGiftWrapSubscription(
 
     return SubscriptionConfig(
         subId = generateSubId("giftwrap-${userPubKeyHex.take(8)}"),
-        filters = listOf(FilterDMs.giftWrapsToMe(userPubKeyHex, since)),
+        filters = listOf(FilterDMs.giftWrapsToMe(userPubKeyHex)),
         relays = relays,
         onEvent = onEvent,
         onEose = onEose,
