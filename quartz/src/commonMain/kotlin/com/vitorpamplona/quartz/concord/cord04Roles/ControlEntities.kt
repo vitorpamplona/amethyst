@@ -84,3 +84,24 @@ class GrantEntity(
     val member: String = "",
     @SerialName("role_ids") val roleIds: List<String> = emptyList(),
 )
+
+/**
+ * A Channel's content (CORD-03). The channel id is the edition entity id.
+ * [private] selects derived-key visibility; [voice] flags an audio channel.
+ * A [deleted] channel is terminal — its id is never reused.
+ */
+@Serializable
+class ChannelEntity(
+    val name: String = "",
+    val private: Boolean = false,
+    val voice: Boolean = false,
+    val deleted: Boolean = false,
+)
+
+/** A community's Metadata content (CORD-02): display name, icon, and description. */
+@Serializable
+class MetadataEntity(
+    val name: String = "",
+    val icon: String? = null,
+    val description: String? = null,
+)
