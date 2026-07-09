@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -97,6 +98,9 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.groupId
+import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 
 @Composable
@@ -157,6 +161,24 @@ private fun ChatroomEntry(
     if (relayGroup != null) {
         RelayGroupRoomCompose(lastMessage, relayGroup, accountViewModel, nav)
         return
+    }
+
+    // A NIP-29 group message whose channel gatherer didn't attach (e.g. loaded before its channel
+    // existed, or via a path that skips attach) has no case in the when() below and would blank out.
+    // Resolve the group from its `h` tag + provenance relay and render the group row anyway.
+    val groupScopedEvent = lastMessage.event?.takeIf { it.isGroupScoped() }
+    if (groupScopedEvent != null) {
+        val gid = groupScopedEvent.groupId()
+        val hostRelay = lastMessage.relays.firstOrNull()
+        if (gid != null && hostRelay != null) {
+            RelayGroupRoomCompose(
+                lastMessage,
+                LocalCache.getOrCreateRelayGroupChannel(GroupId(gid, hostRelay)),
+                accountViewModel,
+                nav,
+            )
+            return
+        }
     }
 
     val baseNoteEvent = lastMessage.event
