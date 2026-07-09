@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.relayClient.auth
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Persisted scope for an AUTH approval decision.
@@ -113,19 +115,19 @@ interface AuthApprovalStore {
  */
 class InMemoryAuthApprovalStore : AuthApprovalStore {
     private val scopes = mutableMapOf<NormalizedRelayUrl, AuthApprovalScope>()
-    private val lock = Any()
+    private val lock = Mutex()
 
-    override suspend fun getScope(relayUrl: NormalizedRelayUrl): AuthApprovalScope? = synchronized(lock) { scopes[relayUrl] }
+    override suspend fun getScope(relayUrl: NormalizedRelayUrl): AuthApprovalScope? = lock.withLock { scopes[relayUrl] }
 
     override suspend fun setScope(
         relayUrl: NormalizedRelayUrl,
         scope: AuthApprovalScope,
     ) {
-        synchronized(lock) { scopes[relayUrl] = scope }
+        lock.withLock { scopes[relayUrl] = scope }
     }
 
     override suspend fun clear() {
-        synchronized(lock) { scopes.clear() }
+        lock.withLock { scopes.clear() }
     }
 }
 
