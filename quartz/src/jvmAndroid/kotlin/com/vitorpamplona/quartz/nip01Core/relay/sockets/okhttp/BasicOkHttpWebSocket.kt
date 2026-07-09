@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FrameDispatchStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
@@ -36,8 +35,6 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
-import kotlin.time.TimeSource
-import kotlin.time.TimeSource.Monotonic.ValueTimeMark
 import okhttp3.WebSocket as OkHttpWebSocket
 import okhttp3.WebSocketListener as OkHttpWebSocketListener
 
@@ -74,14 +71,10 @@ class BasicOkHttpWebSocket(
                 // fast as it can send and own the buffering; consumer speed
                 // is handled downstream (CachingEventDecoder,
                 // ParallelEventVerifier).
-                val incomingMessages: Channel<Pair<ValueTimeMark, String>> = Channel(Channel.UNLIMITED)
+                val incomingMessages: Channel<String> = Channel(Channel.UNLIMITED)
                 val job = // Launch a coroutine to process messages from the channel.
                     scope.launch {
-                        for ((arrivedAt, message) in incomingMessages) {
-                            // Lag from raw socket arrival to us pulling it off the channel =
-                            // OUR-side pipeline delay (queue wait + IO reschedule + decoding
-                            // earlier frames), with the relay's send timing excluded.
-                            FrameDispatchStats.record(arrivedAt.elapsedNow().inWholeMilliseconds)
+                        for (message in incomingMessages) {
                             out.onMessage(message)
                         }
                     }
@@ -99,10 +92,8 @@ class BasicOkHttpWebSocket(
                     text: String,
                 ) {
                     // Never blocks (unlimited channel): the OkHttp reader
-                    // thread must stay free to keep draining the socket. Stamp the
-                    // arrival instant here (on the reader thread, before any of our
-                    // queueing) so downstream dispatch lag is measurable.
-                    incomingMessages.trySendBlocking(TimeSource.Monotonic.markNow() to text)
+                    // thread must stay free to keep draining the socket.
+                    incomingMessages.trySendBlocking(text)
                 }
 
                 override fun onClosed(
