@@ -105,11 +105,14 @@ fun ChatroomHeaderCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val isEmptyMarmotPlaceholder =
+    // A joined Marmot or NIP-29 relay group with no messages yet is represented by an event-less
+    // placeholder note carrying its channel as a gatherer. Render it as the group row (via the
+    // gatherer) instead of waiting for an event that never arrives, which would blank the row.
+    val isEmptyGroupPlaceholder =
         baseNote.event == null &&
-            baseNote.inGatherers?.any { it is MarmotGroupChatroom } == true
+            baseNote.inGatherers?.any { it is MarmotGroupChatroom || it is RelayGroupChannel } == true
 
-    if (baseNote.event != null || isEmptyMarmotPlaceholder) {
+    if (baseNote.event != null || isEmptyGroupPlaceholder) {
         ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
     } else {
         val hasEvent by observeNoteHasEvent(baseNote, accountViewModel)
