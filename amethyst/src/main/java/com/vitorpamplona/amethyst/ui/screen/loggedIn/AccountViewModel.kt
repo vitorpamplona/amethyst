@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
+import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
@@ -313,7 +314,13 @@ class AccountViewModel(
 
         // Provides a relay pool. Crawls hit many relays with overlapping
         // filters, so the duplicate-frame decoder pays off most here.
-        val newClient = NostrClient(Amethyst.instance.websocketBuilder, customScope, CachingEventDecoder())
+        // Wrapped so crawls (Event Sync, Cashu discovery) never contact this
+        // account's NIP-51 kind:10006 blocked relays either.
+        val newClient =
+            BlockedRelayFilteringClient(
+                NostrClient(Amethyst.instance.websocketBuilder, customScope, CachingEventDecoder()),
+                blockedRelays = { account.blockedRelayList.flow.value },
+            )
 
         // Authenticates with relays (registers itself with the client).
         RelayAuthenticator(

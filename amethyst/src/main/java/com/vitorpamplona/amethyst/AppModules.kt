@@ -26,6 +26,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
@@ -503,7 +504,23 @@ class AppModules(
     // Provides a relay pool. The caching decoder skips re-parsing EVENT frames
     // that arrive again via another subscription or relay (14-57% of frames in
     // production measurements).
-    val client: INostrClient = NostrClient(websocketBuilder, applicationIOScope, CachingEventDecoder())
+    //
+    // Wrapped in BlockedRelayFilteringClient so the active account's NIP-51
+    // kind:10006 blocked relay list is enforced centrally on every REQ, COUNT
+    // and publish (relay targeting is otherwise distributed across dozens of
+    // feed/loader/finder/broadcast sites, most of which don't subtract it).
+    // The blocked set is read per-call from the logged-in account.
+    val client: INostrClient =
+        BlockedRelayFilteringClient(
+            NostrClient(websocketBuilder, applicationIOScope, CachingEventDecoder()),
+            blockedRelays = {
+                sessionManager
+                    .loggedInAccount()
+                    ?.blockedRelayList
+                    ?.flow
+                    ?.value ?: emptySet()
+            },
+        )
 
     // Self-heals the "Tor Active but every circuit dead" state the lifecycle watchdogs can't
     // see (they only arm while Connecting). Watches Tor-routed relay outcomes and, when enough
