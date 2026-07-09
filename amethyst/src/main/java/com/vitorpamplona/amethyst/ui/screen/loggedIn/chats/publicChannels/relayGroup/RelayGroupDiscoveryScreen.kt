@@ -35,7 +35,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -79,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 /**
@@ -308,11 +308,11 @@ private fun RelayGroupDiscoveryCard(
                         )
                         DiscoveryStatusPill(channel)
                     }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        if (memberCount > 0) {
+                    if (memberCount > 0) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
                             Icon(
                                 symbol = MaterialSymbols.Group,
                                 contentDescription = null,
@@ -324,34 +324,8 @@ private fun RelayGroupDiscoveryCard(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Text(
-                                text = "·",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
                         }
-                        Text(
-                            text = relay.displayUrl(),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
                     }
-                }
-
-                // Star the group's host relay so it (and its other groups) surface under the relay
-                // chip in the filter — the favorite is the kind-10012 relay-feeds list.
-                IconButton(onClick = {
-                    if (isFavoriteRelay) accountViewModel.unfollowRelayFeed(relay) else accountViewModel.followRelayFeed(relay)
-                }) {
-                    Icon(
-                        symbol = if (isFavoriteRelay) MaterialSymbols.Star else MaterialSymbols.StarBorder,
-                        contentDescription = stringRes(R.string.relay_group_favorite_relay),
-                        tint = if (isFavoriteRelay) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp),
-                    )
                 }
 
                 if (!isMember) {
@@ -369,6 +343,18 @@ private fun RelayGroupDiscoveryCard(
                 }
             }
 
+            // The host relay as its own chip, with the star inside it — makes explicit that the
+            // star favorites the RELAY (surfacing all its groups under the relay filter), not the
+            // group. Joining the group is the separate button above.
+            RelayFavoriteChip(
+                relay = relay,
+                isFavorite = isFavoriteRelay,
+                onToggle = {
+                    if (isFavoriteRelay) accountViewModel.unfollowRelayFeed(relay) else accountViewModel.followRelayFeed(relay)
+                },
+                modifier = Modifier.padding(top = 8.dp),
+            )
+
             channel.summary()?.takeIf { it.isNotBlank() }?.let {
                 Text(
                     text = it,
@@ -377,6 +363,65 @@ private fun RelayGroupDiscoveryCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The group's host relay rendered as a tappable chip with the favorite star inside it. Tapping
+ * toggles the relay in the kind-10012 relay-feeds list; a favorited relay (and every group it hosts)
+ * then surfaces under the relay chip in the top-nav filter. Filled/primary when favorited, tonal
+ * outline otherwise — visually distinct from the group's Join button so the two scopes (favorite the
+ * relay vs. join the group) don't read as the same action.
+ */
+@Composable
+private fun RelayFavoriteChip(
+    relay: NormalizedRelayUrl,
+    isFavorite: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier.fillMaxWidth()) {
+        Surface(
+            onClick = onToggle,
+            shape = RoundedCornerShape(8.dp),
+            color =
+                if (isFavorite) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+            modifier = Modifier.weight(1f, fill = false),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            ) {
+                Icon(
+                    symbol = if (isFavorite) MaterialSymbols.Star else MaterialSymbols.StarBorder,
+                    contentDescription = stringRes(R.string.relay_group_favorite_relay),
+                    tint =
+                        if (isFavorite) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    modifier = Modifier.size(16.dp),
+                )
+                Text(
+                    text = relay.displayUrl(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color =
+                        if (isFavorite) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
