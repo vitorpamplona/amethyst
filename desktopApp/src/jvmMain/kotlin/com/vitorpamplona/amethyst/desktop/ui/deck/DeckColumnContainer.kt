@@ -394,7 +394,9 @@ internal fun RootContent(
         }
 
         DeckColumnType.Messages -> {
-            com.vitorpamplona.amethyst.desktop.security.DesktopMessagesLockGate {
+            com.vitorpamplona.amethyst.desktop.security.DesktopMessagesLockGate(
+                onOpenSettings = onNavigateToRelays,
+            ) {
                 DesktopMessagesScreen(
                     account = iAccount,
                     cacheProvider = localCache,
@@ -500,15 +502,19 @@ internal fun RootContent(
         }
 
         DeckColumnType.Wallet -> {
-            com.vitorpamplona.amethyst.desktop.ui.wallet.WalletColumnScreen(
-                account = account,
-                accountManager = accountManager,
-                relayManager = relayManager,
-                localCache = localCache,
-                nwcConnection = nwcConnection,
-                appScope = appScope,
-                onZapFeedback = onZapFeedback,
-            )
+            com.vitorpamplona.amethyst.desktop.security.DesktopWalletLockGate(
+                onOpenSettings = onNavigateToRelays,
+            ) {
+                com.vitorpamplona.amethyst.desktop.ui.wallet.WalletColumnScreen(
+                    account = account,
+                    accountManager = accountManager,
+                    relayManager = relayManager,
+                    localCache = localCache,
+                    nwcConnection = nwcConnection,
+                    appScope = appScope,
+                    onZapFeedback = onZapFeedback,
+                )
+            }
         }
 
         DeckColumnType.Relays -> {

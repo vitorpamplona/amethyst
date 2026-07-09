@@ -31,10 +31,13 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListRepository
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -71,6 +74,7 @@ class DesktopIAccount(
     val dmSendTracker: DmSendTracker,
     private val scope: CoroutineScope,
     private val accountRelays: DesktopAccountRelays? = null,
+    val dmInboxResolver: DmInboxRelayResolver? = null,
 ) : IAccount {
     override val signer: NostrSigner = NostrSignerWithClientTag(accountState.signer, CLIENT_TAG_NAME)
 
@@ -92,6 +96,14 @@ class DesktopIAccount(
                 override fun updateContactListTo(event: ContactListEvent) { /* no persistence yet */ }
             },
         )
+
+    /**
+     * Friends-of-friends trust score. Populated by Main.kt's login flow
+     * from batch kind-3 fetches on the active user's follow set.
+     */
+    val wotService =
+        com.vitorpamplona.amethyst.commons.wot
+            .WoTService(scope)
 
     val nip65RelayList =
         Nip65RelayListState(
@@ -179,7 +191,8 @@ class DesktopIAccount(
     override suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) {
         if (!isWriteable()) return
 
-        val result = NIP17Factory().createMessageNIP17(template, signer)
+        val hints = recipientRelayHints(template.tags)
+        val result = NIP17Factory().createMessageNIP17(template, signer, recipientRelayHints = { hints[it] })
 
         // Optimistic local add — use the inner ChatMessageEvent, not the wraps
         val innerMsg = result.msg as ChatMessageEvent
@@ -189,18 +202,7 @@ class DesktopIAccount(
         val batch =
             result.wraps.map { wrap ->
                 val recipientKey = wrap.recipientPubKey()
-                val targetRelays =
-                    if (recipientKey != null) {
-                        val dmRelays =
-                            localCache
-                                .getOrCreateUser(recipientKey)
-                                .dmInboxRelays()
-                                ?.toSet()
-                        dmRelays?.ifEmpty { null }
-                            ?: relayManager.connectedRelays.value
-                    } else {
-                        relayManager.connectedRelays.value
-                    }
+                val targetRelays = resolveDmInboxRelaysStrict(recipientKey)
                 wrap to targetRelays
             }
 
@@ -210,7 +212,8 @@ class DesktopIAccount(
     override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
         if (!isWriteable()) return
 
-        val result = NIP17Factory().createEncryptedFileNIP17(template, signer)
+        val hints = recipientRelayHints(template.tags)
+        val result = NIP17Factory().createEncryptedFileNIP17(template, signer, recipientRelayHints = { hints[it] })
 
         // Optimistic local add
         val innerEvent = result.msg as ChatMessageEncryptedFileHeaderEvent
@@ -220,18 +223,7 @@ class DesktopIAccount(
         val batch =
             result.wraps.map { wrap ->
                 val recipientKey = wrap.recipientPubKey()
-                val targetRelays =
-                    if (recipientKey != null) {
-                        val dmRelays =
-                            localCache
-                                .getOrCreateUser(recipientKey)
-                                .dmInboxRelays()
-                                ?.toSet()
-                        dmRelays?.ifEmpty { null }
-                            ?: relayManager.connectedRelays.value
-                    } else {
-                        relayManager.connectedRelays.value
-                    }
+                val targetRelays = resolveDmInboxRelaysStrict(recipientKey)
                 wrap to targetRelays
             }
 
@@ -242,22 +234,67 @@ class DesktopIAccount(
         val batch =
             wraps.map { wrap ->
                 val recipientKey = wrap.recipientPubKey()
-                val targetRelays =
-                    if (recipientKey != null) {
-                        val dmRelays =
-                            localCache
-                                .getOrCreateUser(recipientKey)
-                                .dmInboxRelays()
-                                ?.toSet()
-                        dmRelays?.ifEmpty { null }
-                            ?: relayManager.connectedRelays.value
-                    } else {
-                        relayManager.connectedRelays.value
-                    }
+                val targetRelays = resolveDmInboxRelaysStrict(recipientKey)
                 wrap to targetRelays
             }
 
         scope.launch { dmSendTracker.sendBatch(batch) }
+    }
+
+    /**
+     * NIP-17 inbox-relay resolution, strict variant — no fallback to the
+     * user's connected relays.
+     *
+     * Per NIP-17 §Publishing, a gift wrap MUST only land on relays advertised
+     * in the recipient's kind:10050. Falling back to the sender's connected
+     * relays when 10050 is missing publishes the wrap to relays the recipient
+     * does NOT consult — at best the message never arrives, at worst it leaks
+     * the conversation metadata (recipient pubkey + send timestamp) to relays
+     * outside the recipient's chosen inbox.
+     *
+     * Three-layer lookup when a [dmInboxResolver] is injected (default in
+     * Main.kt):
+     *   1. LocalCache hit (fast, no I/O)
+     *   2. Resolver's in-memory LRU cache
+     *   3. Curated indexer fan-out via an unauthenticated NostrClient
+     *
+     * Without a resolver (legacy / tests), falls back to LocalCache-only.
+     *
+     * Empty result means the wrap will not be sent; [DmSendTracker.sendBatch]
+     * surfaces this as a "No relays available" failure to the user.
+     */
+    private suspend fun resolveDmInboxRelaysStrict(recipientKey: HexKey?): Set<NormalizedRelayUrl> = resolveDmInboxRelaysStrictOrdered(recipientKey).toSet()
+
+    /**
+     * Ordered variant of [resolveDmInboxRelaysStrict]. Preserves the relay
+     * order declared in the recipient's kind:10050 so the first element is the
+     * recipient's *primary* DM inbox — used as the NIP-17 gift-wrap `p`-tag
+     * relay hint. The unordered [resolveDmInboxRelaysStrict] derives from this.
+     */
+    private suspend fun resolveDmInboxRelaysStrictOrdered(recipientKey: HexKey?): List<NormalizedRelayUrl> {
+        if (recipientKey == null) return emptyList()
+        val resolver = dmInboxResolver
+        return if (resolver != null) {
+            resolver.resolve(recipientKey)
+        } else {
+            localCache
+                .getOrCreateUser(recipientKey)
+                .dmInboxRelaysStrict()
+                ?.ifEmpty { null }
+                ?: emptyList()
+        }
+    }
+
+    /**
+     * Per-recipient primary DM-inbox relay, keyed by recipient pubkey, for the
+     * NIP-17 gift-wrap `p`-tag hint (`["p", <pubkey>, <primary-relay>]`). Built
+     * from the recipient `p` tags on the outgoing message template. A recipient
+     * with no resolvable kind:10050 maps to `null`, which keeps the historical
+     * 2-element `p` tag for that recipient.
+     */
+    private suspend fun recipientRelayHints(tags: Array<Array<String>>): Map<HexKey, NormalizedRelayUrl?> {
+        val recipients = tags.mapNotNull { if (it.size >= 2 && it[0] == "p") it[1] else null }.toSet()
+        return recipients.associateWith { resolveDmInboxRelaysStrictOrdered(it).firstOrNull() }
     }
 
     private fun addEventToChatroom(

@@ -87,8 +87,10 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        @Suppress("UnstableApiUsage")
-        resourceConfigurations +=
+    }
+
+    androidResources {
+        localeFilters +=
             listOf(
                 "ar",
                 "ar-rSA",

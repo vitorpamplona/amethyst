@@ -38,12 +38,14 @@ import com.vitorpamplona.amethyst.cli.commands.FilterCommand
 import com.vitorpamplona.amethyst.cli.commands.FollowCommand
 import com.vitorpamplona.amethyst.cli.commands.GiftCommands
 import com.vitorpamplona.amethyst.cli.commands.GitCommands
+import com.vitorpamplona.amethyst.cli.commands.GrapeRankCommand
 import com.vitorpamplona.amethyst.cli.commands.GroupCommands
 import com.vitorpamplona.amethyst.cli.commands.InitCommands
 import com.vitorpamplona.amethyst.cli.commands.KeyCommands
 import com.vitorpamplona.amethyst.cli.commands.KeyPackageCommands
 import com.vitorpamplona.amethyst.cli.commands.KindCommand
 import com.vitorpamplona.amethyst.cli.commands.LoginCommand
+import com.vitorpamplona.amethyst.cli.commands.LogoffCommand
 import com.vitorpamplona.amethyst.cli.commands.MarmotResetCommand
 import com.vitorpamplona.amethyst.cli.commands.MessageCommands
 import com.vitorpamplona.amethyst.cli.commands.NamecoinCommand
@@ -61,16 +63,20 @@ import com.vitorpamplona.amethyst.cli.commands.RelayCommands
 import com.vitorpamplona.amethyst.cli.commands.RelayGroupCommands
 import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.ServeCommand
+import com.vitorpamplona.amethyst.cli.commands.StatusCommand
 import com.vitorpamplona.amethyst.cli.commands.StoreCommands
 import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
 import com.vitorpamplona.amethyst.cli.commands.SyncCommand
 import com.vitorpamplona.amethyst.cli.commands.UseCommand
 import com.vitorpamplona.amethyst.cli.commands.VerifyCommand
+import com.vitorpamplona.amethyst.cli.commands.WotCommand
 import com.vitorpamplona.amethyst.cli.commands.ZapCommand
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuCommands
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuMintCommands
 import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.runBlocking
 import kotlin.system.exitProcess
 
@@ -104,6 +110,12 @@ fun main(argv: Array<String>) {
     // braces guard for invocations that bypass the launcher scripts.
     System.setProperty("java.awt.headless", "true")
 
+    // Quiet quartz's internal DEBUG chatter (relay auth, MLS restore, URL
+    // rejection, throttle notices) by default so it doesn't drown a command's
+    // own output; --verbose / -v restores full DEBUG. Set before dispatch so
+    // even startup logging is gated.
+    Log.minLevel = if (argv.any { it == "--verbose" || it == "-v" }) LogLevel.DEBUG else LogLevel.WARN
+
     // Set output mode before dispatch so even argument-parsing errors
     // honour --json.
     if (argv.any { it == "--json" || it == "--json=true" }) {
@@ -129,6 +141,16 @@ class AwaitTimeout(
     message: String,
 ) : RuntimeException(message)
 
+/**
+ * Verbs that create, select, or delete the account/identity on disk. They
+ * write to (or read) the per-account directory directly rather than through
+ * `Context.open`, so they need a concrete account and must resolve strictly —
+ * an accountless run has nowhere to put a new identity. Every other verb
+ * resolves via [DataDir.resolveOptional] and either runs anonymously (reads)
+ * or re-asserts the requirement inside `Context.open` (signing).
+ */
+private val STRICT_ACCOUNT_VERBS = setOf("init", "create", "login", "logoff", "whoami")
+
 private suspend fun dispatch(argv: Array<String>): Int {
     if (argv.isEmpty() || argv[0] == "--help" || argv[0] == "-h") {
         printUsage()
@@ -150,6 +172,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
             GlobalFlag.SECRET_BACKEND -> secretBackendFlag = consumed.value
             GlobalFlag.PASSPHRASE_FILE -> passphraseFileFlag = consumed.value
             GlobalFlag.JSON -> Output.mode = Output.Mode.JSON
+            GlobalFlag.VERBOSE -> Unit // level already applied in main(); just strip it here
             null -> filteredArgs.add(a)
         }
         i += consumed.tokensConsumed
@@ -168,6 +191,14 @@ private suspend fun dispatch(argv: Array<String>): Int {
     // DataDir.resolve. Other commands fall through to the normal path.
     if (head == "use") {
         return UseCommand.run(tail)
+    }
+
+    // `status` is a cross-account, read-only overview of everything on
+    // disk under ~/.amy/. Like `use`, it must work regardless of how many
+    // accounts exist (zero, one, or many), so it dispatches before account
+    // resolution rather than through the single-account DataDir path.
+    if (head == "status") {
+        return StatusCommand.run(tail)
     }
 
     // Stateless local primitives (nak-style army-knife verbs). They operate
@@ -197,13 +228,33 @@ private suspend fun dispatch(argv: Array<String>): Int {
         return CashuMintCommands.dispatch(tail.drop(1).toTypedArray())
     }
 
+    // `offer info NOFFER` / `debit info NDEBIT` decode a CLINK pointer locally —
+    // no network, no account. The rest of `offer`/`debit` operates on the account.
+    if (head == "offer" && tail.firstOrNull() == "info") {
+        return OfferCommands.info(tail.drop(1).toTypedArray())
+    }
+    if (head == "debit" && tail.firstOrNull() == "info") {
+        return DebitCommands.info(tail.drop(1).toTypedArray())
+    }
+
     val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
-    val dataDir = DataDir.resolve(accountFlag = accountFlag, secrets = secrets)
+    // Identity-lifecycle verbs create / select / delete the account itself, so
+    // they need a concrete account and resolve strictly (helpful ambiguity
+    // errors). Everything else resolves optionally: read-only verbs then run
+    // anonymously when there is no account, while signing verbs re-assert the
+    // requirement through `Context.open`.
+    val dataDir =
+        if (head in STRICT_ACCOUNT_VERBS) {
+            DataDir.resolve(accountFlag = accountFlag, secrets = secrets)
+        } else {
+            DataDir.resolveOptional(accountFlag = accountFlag, secrets = secrets)
+        }
 
     return when (head) {
         "init" -> InitCommands.init(dataDir, Args(tail))
         "create" -> CreateCommand.run(dataDir, tail)
         "login" -> LoginCommand.run(dataDir, tail)
+        "logoff" -> LogoffCommand.run(dataDir, tail)
         "whoami" -> InitCommands.whoami(dataDir)
         "relay" -> RelayCommands.dispatch(dataDir, tail)
         "marmot" -> marmotDispatch(dataDir, tail)
@@ -216,6 +267,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "store" -> StoreCommands.dispatch(dataDir, tail)
         "follow" -> FollowCommand.follow(dataDir, tail)
         "unfollow" -> FollowCommand.unfollow(dataDir, tail)
+        "graperank" -> GrapeRankCommand.dispatch(dataDir, tail)
         "search" -> SearchCommand.dispatch(dataDir, tail)
         "zap" -> ZapCommand.dispatch(dataDir, tail)
         "offer" -> OfferCommands.dispatch(dataDir, tail)
@@ -238,6 +290,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "podcast" -> PodcastCommands.dispatch(dataDir, tail)
         "podcast20" -> Podcast20Commands.dispatch(dataDir, tail)
         "bunker" -> BunkerCommand.run(dataDir, tail)
+        "wot" -> WotCommand.dispatch(dataDir, tail)
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -267,11 +320,13 @@ private suspend fun marmotDispatch(
 private enum class GlobalFlag(
     val long: String,
     val takesValue: Boolean = true,
+    val short: String? = null,
 ) {
     ACCOUNT("--account"),
     SECRET_BACKEND("--secret-backend"),
     PASSPHRASE_FILE("--passphrase-file"),
     JSON("--json", takesValue = false),
+    VERBOSE("--verbose", takesValue = false, short = "-v"),
 }
 
 private data class ConsumedFlag(
@@ -290,7 +345,7 @@ private fun extractGlobalFlag(
     idx: Int,
 ): Pair<GlobalFlag?, ConsumedFlag> {
     for (flag in GlobalFlag.values()) {
-        if (token == flag.long) {
+        if (token == flag.long || token == flag.short) {
             return if (flag.takesValue) {
                 flag to ConsumedFlag(argv.getOrNull(idx + 1), 2)
             } else {
@@ -315,20 +370,27 @@ private fun printUsage() {
         |      [--secret-backend auto|keychain|ncryptsec|plaintext]
         |      [--passphrase-file PATH]
         |      [--json]
+        |      [--verbose|-v]
         |      <cmd> [args...]
         |
         |Account selection:
         |  All state lives under ~/.amy/. Per-account directories
         |  ~/.amy/<account>/ hold identity, cursors, MLS state, and
         |  aliases; every observed Nostr event lands in the shared
-        |  ~/.amy/shared/events-store/. ACCOUNT must match
+        |  store under ~/.amy/shared/ (a SQLite `events.db` by default, or
+        |  the `events-store/` tree when AMY_STORE=fs). ACCOUNT must match
         |  [a-zA-Z0-9_-]{1,64} (no spaces, no slashes).
         |
         |  Resolution order:
         |    1. --account X if given.
         |    2. ~/.amy/current marker (set by `amy use X`).
         |    3. Sole subdirectory of ~/.amy/ other than shared/.
-        |    4. Error — disambiguate with --account or `amy use`.
+        |    4. Read-only verbs (fetch, subscribe, count, publish, outbox,
+        |       search, sync, store, profile/git/podcast reads, nsite/napplet
+        |       fetch, decode/encode/… primitives, offer/debit info) run
+        |       ANONYMOUSLY — they query relays and the shared store with no
+        |       account, they just can't sign. Signing verbs error here:
+        |       disambiguate with --account or `amy use`.
         |
         |  Test harnesses isolate by overriding ${'$'}HOME for the amy
         |  subprocess (`HOME=/tmp/run.123 amy --account alice ...`).
@@ -336,6 +398,9 @@ private fun printUsage() {
         |  use NAME                                  pin NAME as the active account
         |  use --clear                                remove the pin
         |  use                                        print current pin + available accounts
+        |  status                                     read-only overview of every account, signer
+        |                                              type, local Marmot/Cashu state, and the shared
+        |                                              event store (no keychain prompt, no network)
         |
         |Output:
         |  Default: human-readable text on stdout.
@@ -382,6 +447,9 @@ private fun printUsage() {
         |  create [--name NAME]            provision a full Amethyst-style account + publish bootstrap events
         |  login KEY [--password X]     import (nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05|bunker://)
         |  whoami                       print current identity
+        |  logoff [--yes] [--keep-events]   log off: delete this account's key, per-account state,
+        |                                and its events in the shared store (--keep-events skips the
+        |                                cache purge). Requires --yes; without it, prints a dry run.
         |
         |Remote signing (NIP-46):
         |  bunker [--relay URL[,URL…]]  run a remote signer for this (local-key) account; prints a
@@ -526,6 +594,42 @@ private fun printUsage() {
         |  unfollow USER [--timeout SECS]             remove USER from your contact list
         |                                              (USER: npub|nprofile|hex|name@domain)
         |
+        |Web of Trust (GrapeRank):
+        |  graperank [OBSERVER]                       compute subjective trust scores (0..1) for every
+        |    [--limit N] [--min-score X]               user reachable in the follow/mute/report graph.
+        |    [--rigor X] [--attenuation X]             Exhaustively crawls each user's kind:10002 outbox
+        |    [--max-rounds N] [--max-hops N]           for their latest kind:3/10000/1984 until every
+        |    [--offline] [--timeout SECS]              discovered user has been checked (no user cap;
+        |    [--diagnose]                              --max-hops bounds follow distance, e.g. 8;
+        |                                              --diagnose dumps per-relay telemetry: outcome
+        |                                              mix, yield, latency, and a LIVE/DEAD + limits
+        |                                              classification table of every relay contacted).
+        |    [--publish] [--min-rank N]                OBSERVER: npub|nprofile|hex|name@domain (default:
+        |    [--publish-limit N] [--publish-relay URL] active account). --offline scores from the local
+        |                                              store only. --publish reconciles NIP-85 kind:30382
+        |                                              cards signed by a per-observer service key: sends
+        |                                              new/changed ranks >= --min-rank (default 2), skips
+        |                                              unchanged, and retracts (kind:5) any card whose
+        |                                              target left the graph or fell below the cutoff.
+        |  graperank update [--down] [--up]           refresh every locally-known author's WoT record kinds
+        |    [--no-sync-deletions] [--timeout SECS]     (0/3/10002/1984) from their own outbox: reads all
+        |    [--relay-concurrency N] [--author-chunk N] kind:10002 in the store, groups authors by write
+        |    [--min-authors N] [--report-limit N]       relay, and runs one NIP-77 negentropy reconcile per
+        |                                              relay scoped to its authors. Bidirectional by default;
+        |                                              the deletion settle downloads the relay's kind:5 when
+        |                                              an uploaded record was rejected (author retracted it).
+        |                                              Falls back to a full paged download when a relay
+        |                                              can't reconcile via negentropy.
+        |  graperank operator [status|relay <url>…    manage the machine's operator keys (~/.amy/operator/,
+        |    |providers]                               independent of accounts): relay sets where cards +
+        |                                              retractions publish; status shows master + relays;
+        |                                              providers lists observer -> service-pubkey.
+        |  graperank register [PROVIDER]              declare a NIP-85 provider in your kind:10040 so
+        |    [--service KIND:TAG] [--relay URL]        clients can discover it (default: self as the
+        |    [--private]                               30382:rank provider at your first outbox relay).
+        |  graperank providers [USER] [--refresh]     list a user's declared NIP-85 trusted providers
+        |    [--timeout SECS]                          (default: active account).
+        |
         |Zaps (NIP-57):
         |  zap user USER SATS               build a profile zap-request, fetch a BOLT11
         |    [--comment X] [--anon|--private]  invoice from the recipient's LN service
@@ -617,11 +721,15 @@ private fun printUsage() {
         |
         |  marmot reset [--yes]                       wipe all local MLS/KeyPackage state (destructive)
         |
-        |Local event store (`<data-dir>/events-store/`):
-        |  store stat                                 event count, kind histogram, disk usage
+        |Local event store (shared, under `<data-dir>/shared/`):
+        |  Backend selected by AMY_STORE: sqlite (default; `shared/events.db`)
+        |  or fs (`AMY_STORE=fs`; the `shared/events-store/` tree). SQLite is
+        |  far more compact at scale — the FS tree spends one file per index
+        |  posting, so large crawls balloon on disk.
+        |  store stat                                 event count + disk usage (kind histogram/mtime on fs)
         |  store sweep-expired                        delete events past their NIP-40 expiration
-        |  store scrub                                rebuild idx/ from canonical events (after edits / crashes)
-        |  store compact                              drop dangling idx entries (canonical gone)
+        |  store scrub                                fs: rebuild idx/ from canonical events; sqlite: no-op
+        |  store compact                              fs: drop dangling idx entries; sqlite: VACUUM
         |  store reindex-fts                          rebuild the NIP-50 search index (after a searchable-kinds change)
         """.trimMargin(),
     )

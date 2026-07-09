@@ -63,7 +63,7 @@ class PreferencesPrivacyLockSettings(
 
     override val lockEnabled: StateFlow<Boolean> = mutableEnabled.asStateFlow()
     override val inactivityTimer: StateFlow<InactivityTimer> = mutableTimer.asStateFlow()
-    override val redactionLevel: StateFlow<DmRedactionLevel> = mutableRedaction.asStateFlow()
+    override val dmRedactionLevel: StateFlow<DmRedactionLevel> = mutableRedaction.asStateFlow()
     override val firstRunCardSeen: StateFlow<Boolean> = mutableFirstRunSeen.asStateFlow()
     override val passwordHashed: StateFlow<String?> = mutablePasswordHashed.asStateFlow()
     override val failedUnlockAttempts: StateFlow<Int> = mutableFailedAttempts.asStateFlow()
@@ -77,7 +77,7 @@ class PreferencesPrivacyLockSettings(
         // "locked UI / leaking notifications" anti-pattern).
         if (enabled && mutableRedaction.value == DmRedactionLevel.Full) {
             val userPickedFull = prefs.getBoolean("redaction_user_set", false)
-            if (!userPickedFull) setRedactionLevel(DmRedactionLevel.Generic)
+            if (!userPickedFull) setDmRedactionLevel(DmRedactionLevel.Generic)
         }
     }
 
@@ -86,7 +86,7 @@ class PreferencesPrivacyLockSettings(
         prefs.putInt(KEY_INACTIVITY_TIMER, timer.ordinal)
     }
 
-    override fun setRedactionLevel(level: DmRedactionLevel) {
+    override fun setDmRedactionLevel(level: DmRedactionLevel) {
         mutableRedaction.value = level
         prefs.putInt(KEY_REDACTION_LEVEL, level.ordinal)
         prefs.putBoolean("redaction_user_set", true)
@@ -99,7 +99,15 @@ class PreferencesPrivacyLockSettings(
 
     override fun setPasswordHashed(saltAndHash: String?) {
         mutablePasswordHashed.value = saltAndHash
-        if (saltAndHash == null) prefs.remove(KEY_PASSWORD_HASHED) else prefs.put(KEY_PASSWORD_HASHED, saltAndHash)
+        if (saltAndHash == null) {
+            prefs.remove(KEY_PASSWORD_HASHED)
+            // A lock without a credential is not a valid state — cascade so the
+            // toggle can't stay on with nothing to verify against. Every gated
+            // scope transitions to Disabled via the shared `lockEnabled` flag.
+            if (mutableEnabled.value) setLockEnabled(false)
+        } else {
+            prefs.put(KEY_PASSWORD_HASHED, saltAndHash)
+        }
     }
 
     override fun setFailedUnlockAttempts(count: Int) {

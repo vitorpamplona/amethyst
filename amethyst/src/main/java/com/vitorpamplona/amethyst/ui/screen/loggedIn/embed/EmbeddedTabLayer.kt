@@ -559,7 +559,6 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                         "Copy" to {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             clipboard.setPrimaryClip(ClipData.newPlainText("selection", pageSel.text))
-                            Unit
                         },
                     ),
                 onMagnify = onMagnify,

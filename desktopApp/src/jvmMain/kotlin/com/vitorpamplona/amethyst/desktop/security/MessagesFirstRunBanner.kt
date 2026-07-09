@@ -47,7 +47,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState
+import com.vitorpamplona.amethyst.commons.privacylock.LockScope
+import com.vitorpamplona.amethyst.commons.privacylock.lockStateFor
 
 /**
  * One-time discovery banner at the top of the Desktop Messages column.
@@ -64,7 +65,7 @@ import com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState
 @Composable
 fun MessagesFirstRunBanner(onSaved: (String) -> Unit = {}) {
     val settings = LocalPrivacyLockSettings.current
-    val lockState = LocalMessagesLockState.current
+    val lockState = lockStateFor(LockScope.Messages)
     val enabled by settings.lockEnabled.collectAsState()
     val seen by settings.firstRunCardSeen.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
@@ -92,11 +93,13 @@ fun MessagesFirstRunBanner(onSaved: (String) -> Unit = {}) {
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Lock the Messages tab?",
+                        text = "Lock Messages and Wallet?",
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Text(
-                        text = "Require a password before Messages shows. Feed and profile stay open.",
+                        text =
+                            "Require your password before the Messages and Wallet columns show. " +
+                                "Feed, profile, and search stay open.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

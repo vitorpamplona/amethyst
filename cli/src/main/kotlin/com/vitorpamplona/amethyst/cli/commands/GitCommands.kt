@@ -113,7 +113,9 @@ object GitCommands {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        Context.open(dataDir).use { ctx ->
+        // Read-only: runs anonymously when there is no account (defaults to
+        // the anonymous key, so pass a USER to list someone's repos).
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val author = args.positionalOrNull(0)?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
             val relays = RawEventSupport.queryTargets(ctx, args)
@@ -143,7 +145,7 @@ object GitCommands {
             return Output.error("bad_args", "not a git repository address (expected kind ${GitRepositoryEvent.KIND}, got ${addr.kind})")
         }
 
-        Context.open(dataDir).use { ctx ->
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val repo = fetchRepo(ctx, addr, args) ?: return Output.error("not_found", "no repository announcement found for $coord")
             Output.emit(repoSummary(repo) + mapOf("event_id" to repo.id, "content" to repo.content))

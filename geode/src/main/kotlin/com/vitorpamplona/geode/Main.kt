@@ -128,9 +128,9 @@ private class StoreContext(
 )
 
 private fun openStore(a: Args): StoreContext {
-    val config = a.opt("--config")?.let { StaticConfig.fromFile(File(it)) } ?: StaticConfig()
+    val config = a.opt(CONFIG_FLAG)?.let { StaticConfig.fromFile(File(it)) } ?: StaticConfig()
     val dbFile = a.opt("--db") ?: config.database.file?.takeUnless { config.database.in_memory }
-    val fullTextSearch = !a.flag("--no-search") && config.options.full_text_search
+    val fullTextSearch = !a.flag(NO_SEARCH_FLAG) && config.options.full_text_search
     val store =
         EventStore(
             dbName = dbFile,
@@ -142,12 +142,12 @@ private fun openStore(a: Args): StoreContext {
 
 private fun runImport(args: Array<String>) {
     val a = parseArgs(args)
-    val config = a.opt("--config")?.let { StaticConfig.fromFile(File(it)) } ?: StaticConfig()
+    val config = a.opt(CONFIG_FLAG)?.let { StaticConfig.fromFile(File(it)) } ?: StaticConfig()
     // Verify by default, matching the relay's stance — `import` won't trust a
     // file's signatures any more than the relay trusts a client's. `--no-verify`
     // is the trusted-input escape hatch (fixture replay, a dump from a relay you
     // already trust).
-    val verify = !a.flag("--no-verify") && config.options.verify_signatures
+    val verify = !a.flag(NO_VERIFY_FLAG) && config.options.verify_signatures
     val ctx = openStore(a)
     try {
         val stats =
@@ -190,7 +190,7 @@ private fun serve(args: Array<String>) {
 
     val config: StaticConfig =
         a
-            .opt("--config")
+            .opt(CONFIG_FLAG)
             ?.let { StaticConfig.fromFile(File(it)) }
             ?: StaticConfig()
     config.validate()
@@ -208,7 +208,7 @@ private fun serve(args: Array<String>) {
     // Verify is on by default; only disable when the operator explicitly
     // opts out (CLI `--no-verify` or `[options].verify_signatures = false`
     // in the config).
-    val verifySigs = !a.flag("--no-verify") && config.options.verify_signatures
+    val verifySigs = !a.flag(NO_VERIFY_FLAG) && config.options.verify_signatures
     // Parallel verify is on whenever signature checking is on; the
     // IngestQueue handles it instead of VerifyPolicy. Operators can
     // force the legacy in-policy path with `--no-parallel-verify` or
@@ -218,7 +218,7 @@ private fun serve(args: Array<String>) {
     // NIP-50 search is on by default; `--no-search` (or
     // `[options].full_text_search = false`) trades it for cheaper ingest —
     // e.g. to match relays that don't implement NIP-50 at all.
-    val fullTextSearch = !a.flag("--no-search") && config.options.full_text_search
+    val fullTextSearch = !a.flag(NO_SEARCH_FLAG) && config.options.full_text_search
 
     // Advertised URL: explicit `info.relay_url` wins, then build from
     // host/port/path. 0.0.0.0 bind → 127.0.0.1 in the URL so NIP-42
@@ -466,13 +466,17 @@ private class Args(
     fun flag(k: String) = k in flags
 }
 
+private const val CONFIG_FLAG = "--config"
+private const val NO_VERIFY_FLAG = "--no-verify"
+private const val NO_SEARCH_FLAG = "--no-search"
+
 /**
  * Boolean flags that never take a value. Listing them explicitly is what lets a
  * trailing positional survive after a flag — `import --no-verify corpus.ndjson`
  * must read `corpus.ndjson` as a file, not as `--no-verify`'s value.
  */
 private val BOOLEAN_FLAGS =
-    setOf("--auth", "--optional-auth", "--no-verify", "--no-parallel-verify", "--no-search")
+    setOf("--auth", "--optional-auth", NO_VERIFY_FLAG, "--no-parallel-verify", NO_SEARCH_FLAG)
 
 private fun parseArgs(args: Array<String>): Args {
     val opts = mutableMapOf<String, String>()

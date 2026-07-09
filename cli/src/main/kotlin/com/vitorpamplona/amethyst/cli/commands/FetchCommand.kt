@@ -94,7 +94,7 @@ object FetchCommand {
         val filter = RawEventSupport.buildFilter(args).copy(limit = effectiveLimit)
         val paginate = args.bool("paginate") || args.bool("all")
 
-        Context.open(dataDir).use { ctx ->
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val relays = RawEventSupport.queryTargets(ctx, args)
             if (relays.isEmpty()) return Output.error("no_relays", "no relays available; pass --relay or run `amy relay add`")
@@ -148,7 +148,7 @@ object FetchCommand {
         timeoutMs: Long,
     ): Int {
         val code = codeArg.removePrefix("nostr:")
-        Context.open(dataDir).use { ctx ->
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
 
             var filter: Filter

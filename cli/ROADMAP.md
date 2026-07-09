@@ -43,6 +43,8 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 |---|---|---|
 | Identity create / import (`nsec`, `ncryptsec`, mnemonic, `npub`, `nprofile`, hex, NIP-05) | ✅ | `LoginCommand` + Quartz NIP-05 / NIP-06 / NIP-49 |
 | Account bootstrap (nine events) | ✅ | `commons/account/AccountBootstrapEvents.kt` |
+| Account logoff (`amy logoff`) — delete key + per-account state + the account's events in the shared store | ✅ | `LogoffCommand`. `--yes`-gated; `--keep-events` skips the shared-cache purge. |
+| Status overview (`amy status`) — every account, current pin, signer type + can-sign, per-account Marmot/Cashu/alias/cursor footprint, shared event-store size | ✅ | `StatusCommand`. Cross-account, read-only, metadata-only (no keychain prompt, no network). Store stats via shared `StoreStats`. |
 | Relay config — every relay-list bucket (nip65 10002 via `outbox`/`inbox`/`nip65` nouns with spec read/write merge, dm 10050, key-package 10051, search 10007, private-outbox 10013, blocked 10006, trusted 10089, proxy 10087, indexer 10086, broadcast 10088, favorite 10012) — noun-first `relay <noun> add/remove/set/clear/list` + fan-out `relay add/remove` + publish | ✅ | `RelayCommands`. Mirrors the Android relay-settings screen. Local relays (device pref) + relay sets (30002) intentionally out of scope. |
 | MLS KeyPackage publish + fetch | ✅ | `commons/marmot/MarmotManager` |
 | Marmot group create / add / rename / promote / demote / remove / leave | ✅ | `commons/marmot/` |
@@ -58,6 +60,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | NIP-51 lists (bookmarks, mute, follow sets) | 🆕 | `amethyst/model/nip51Lists/` |
 | NIP-57 zaps (send + verify) | 🆕 | Needs LN-URL plumbing; `amethyst/service/lnurl/`. |
 | NIP-65 outbox model queries | 🆕 | |
+| NIP-85 GrapeRank web-of-trust (`amy graperank`) | ✅ | `GrapeRankCommand` — outbox-model crawl + scoring engine in `commons/wot/` (`GrapeRank`, `TrustGraph`, `TrustGraphBuilder`); publishes kind:30382 `ContactCardEvent` (diffed against prior ranks), plus `register` / `providers` for the kind:10040 `TrustProviderListEvent` discovery layer. |
 | NIP-72 communities | 🆕 | |
 | NIP-78 app-specific data (settings sync) | 🆕 | |
 | Long-form (NIP-23) publish / read | 🆕 | |

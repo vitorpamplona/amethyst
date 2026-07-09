@@ -33,10 +33,16 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -61,7 +67,31 @@ class RelayAuthenticator(
     // Connection callbacks fire on the per-relay OkHttp dispatcher thread, so
     // this state is mutated concurrently — LargeCache wraps a platform-tuned
     // concurrent map (ConcurrentSkipListMap on jvmAndroid, CacheMap on Apple).
+    //
+    // This stays mutable because RelayAuthStatus carries an LruCache that has
+    // to be addressable from the dispatcher thread. The Compose-observable
+    // view of the same data is published on [authStateFlow] below, sourced
+    // from RelayAuthStatus.snapshot().
     private val authStatus = LargeCache<NormalizedRelayUrl, RelayAuthStatus>()
+
+    private val _authStateFlow = MutableStateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>>(persistentMapOf())
+
+    /**
+     * Per-relay AUTH state as an immutable Compose-stable snapshot map.
+     *
+     * Downstream consumers (UI banner, retry queue, indexer-fan-out gate)
+     * subscribe to this flow instead of polling [authStatus] directly.
+     * Identity changes on every mutation, so [kotlinx.coroutines.flow.distinctUntilChanged]
+     * downstream and Compose `@Immutable` skipping both work correctly.
+     */
+    val authStateFlow: StateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>> = _authStateFlow.asStateFlow()
+
+    private fun publishSnapshot(relayUrl: NormalizedRelayUrl) {
+        val status = authStatus.get(relayUrl)
+        _authStateFlow.update { current ->
+            if (status == null) current.remove(relayUrl) else current.put(relayUrl, status.snapshot())
+        }
+    }
 
     private val clientListener =
         object : RelayConnectionListener {
@@ -78,10 +108,12 @@ class RelayAuthenticator(
 
             override fun onConnecting(relay: IRelayClient) {
                 authStatus.put(relay.url, RelayAuthStatus())
+                publishSnapshot(relay.url)
             }
 
             override fun onDisconnected(relay: IRelayClient) {
                 authStatus.remove(relay.url)
+                publishSnapshot(relay.url)
             }
         }
 
@@ -102,6 +134,7 @@ class RelayAuthenticator(
                     // only send replies to new challenges to avoid infinite loop:
                     if (authStatus.get(relay.url)?.saveAuthSubmission(authEvent) == true) {
                         relay.sendIfConnected(AuthCmd(authEvent))
+                        publishSnapshot(relay.url)
                     }
                 }
             } catch (e: CancellationException) {
@@ -118,8 +151,12 @@ class RelayAuthenticator(
         relay: IRelayClient,
         msg: OkMessage,
     ) {
+        val transitioned = authStatus.get(relay.url)?.checkAuthResults(msg.eventId, msg.success) == true
+        // Publish even on failure transitions so the UI can clear "AUTHENTICATING"
+        // banners and reflect AUTH_FAILED state.
+        publishSnapshot(relay.url)
         // if this is the OK of an auth event, renew all subscriptions and resend all outgoing events.
-        if (authStatus.get(relay.url)?.checkAuthResults(msg.eventId, msg.success) == true) {
+        if (transitioned) {
             client.syncFilters(relay)
         }
     }

@@ -255,9 +255,7 @@ private fun StartCluster(
 
             // On-stage controls live in [StageControlsBar]; audience
             // has nothing to do here (system volume keys are enough).
-            is ConnectionUiState.Connected -> {
-                Unit
-            }
+            is ConnectionUiState.Connected -> {}
         }
     }
 }

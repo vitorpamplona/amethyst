@@ -165,9 +165,7 @@ class Http3FrameReader(
             )
         }
         when (context) {
-            StreamContext.UNCHECKED -> {
-                Unit
-            }
+            StreamContext.UNCHECKED -> {}
 
             StreamContext.CONTROL -> {
                 // §7.2.4: SETTINGS MUST be the first frame on the

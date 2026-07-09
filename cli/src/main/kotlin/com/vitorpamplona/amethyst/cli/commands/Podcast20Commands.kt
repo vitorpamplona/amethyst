@@ -219,7 +219,9 @@ object Podcast20Commands {
     ): Int {
         val args = Args(rest)
         val limit = args.intFlag("limit", 50)
-        Context.open(dataDir).use { ctx ->
+        // Read-only: runs anonymously when there is no account (pass a USER to
+        // list someone else's episodes).
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val author = args.positionalOrNull(0)?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
             val relays = RawEventSupport.queryTargets(ctx, args)

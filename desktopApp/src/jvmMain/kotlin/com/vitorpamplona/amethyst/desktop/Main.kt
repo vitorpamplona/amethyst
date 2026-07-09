@@ -71,22 +71,28 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.vitorpamplona.amethyst.commons.defaults.DefaultDmIndexerRelays
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideMaterialSymbols
 import com.vitorpamplona.amethyst.commons.moderation.LocalHashtagSpamSettings
 import com.vitorpamplona.amethyst.commons.moderation.LocalSpamExemptKeys
 import com.vitorpamplona.amethyst.commons.moderation.PreferencesHashtagSpamSettings
+import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalBanner
+import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
+import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
+import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
+import com.vitorpamplona.amethyst.desktop.auth.DesktopAuthCoordinator
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopAccountRelays
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.model.DesktopRelayCategories
-import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
+import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
@@ -123,10 +129,12 @@ import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.ImageCompressionSettings
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
 import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -699,14 +707,17 @@ fun App(
             com.vitorpamplona.amethyst.commons.privacylock
                 .PreferencesPrivacyLockSettings()
         }
-    val messagesLockState =
+    val privacyLockStates =
         remember(privacyLockSettings) {
-            com.vitorpamplona.amethyst.commons.privacylock
-                .MessagesLockState(privacyLockSettings, appScope)
+            val scopes = com.vitorpamplona.amethyst.commons.privacylock.LockScope.entries
+            scopes.associateWith { scope ->
+                com.vitorpamplona.amethyst.commons.privacylock
+                    .PrivacyLockState(scope, privacyLockSettings, appScope)
+            }
         }
 
     CompositionLocalProvider(
-        com.vitorpamplona.amethyst.commons.privacylock.LocalMessagesLockState provides messagesLockState,
+        com.vitorpamplona.amethyst.commons.privacylock.LocalPrivacyLockState provides privacyLockStates,
         com.vitorpamplona.amethyst.desktop.security.LocalPrivacyLockSettings provides privacyLockSettings,
     ) {
         AppInner(
@@ -841,6 +852,17 @@ private fun AppInner(
     // node so the `amy` CLI binary observes the same toggle.
     val hashtagSpamSettings = remember { PreferencesHashtagSpamSettings() }
 
+    // Index-relay preference — user-configurable set used to fetch profile
+    // metadata (kind 0) and follow lists (kind 3). Persisted in a shared
+    // java.util.prefs node so `amy wot sync` reads from the same source of
+    // truth. Falls back to PreferencesIndexRelays.DEFAULT_INDEX_RELAYS when
+    // the user hasn't configured anything.
+    val indexRelaysStore =
+        remember {
+            com.vitorpamplona.amethyst.commons.relays.index
+                .PreferencesIndexRelays()
+        }
+
     // Local relay store — persists events to SQLite per account
     val localRelayStore =
         remember {
@@ -908,6 +930,39 @@ private fun AppInner(
         }
     val nip11Fetcher = remember { Nip11Fetcher() }
 
+    // Dedicated unauthenticated NostrClient for kind:10050 lookups against
+    // curated indexer relays. MUST NOT have a RelayAuthenticator attached —
+    // an authenticated indexer query would extract identity-key signatures
+    // and turn "indexer learns who we want to DM" into "indexer learns user
+    // U wants to DM pubkey X" (security review F-01).
+    val indexerClient =
+        remember(httpClient) {
+            NostrClient(BasicOkHttpWebSocket.Builder(httpClient::getHttpClient)).also { it.connect() }
+        }
+    DisposableEffect(indexerClient) {
+        onDispose { indexerClient.disconnect() }
+    }
+
+    // Resolver consults LocalCache first, then its own LRU, then the indexer
+    // client. Strict kind:10050 only — no NIP-65 read-marker fallback.
+    val dmInboxResolver =
+        remember(indexerClient, localCache) {
+            DmInboxRelayResolver(
+                unauthenticatedClient = indexerClient,
+                indexerRelays =
+                    DefaultDmIndexerRelays.RELAYS
+                        .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                        .toSet(),
+                localLookup = { pubkey ->
+                    // Strict kind:10050 only — the lenient dmInboxRelays() falls
+                    // back to NIP-65 read relays, which this fast-path would
+                    // return before the strict indexer fan-out ran, leaking DM
+                    // metadata to relays the recipient never designated for DMs.
+                    localCache.getUserIfExists(pubkey)?.dmInboxRelaysStrict()
+                },
+            )
+        }
+
     // Start 1Hz metrics snapshot for relay dashboard
     LaunchedEffect(relayManager) {
         relayManager.startMetricsSnapshot(this)
@@ -925,20 +980,26 @@ private fun AppInner(
         }
     }
 
-    // Subscriptions coordinator — uses default relay URLs for metadata indexing.
-    // Feed subscriptions (inside MainContent) drive actual relay pool connections.
+    // Subscriptions coordinator — uses the user's configured index relays
+    // (or PreferencesIndexRelays.DEFAULT_INDEX_RELAYS as fallback) for
+    // metadata + follow-list REQs. Changes made via the settings UI take
+    // effect on next relaunch — the coordinator snapshots the set here.
     val subscriptionsCoordinator =
-        remember(relayManager, localCache) {
+        remember(relayManager, localCache, indexRelaysStore) {
             DesktopRelaySubscriptionsCoordinator(
                 client = relayManager.client,
                 scope = scope,
-                indexRelays =
-                    DefaultRelays.RELAYS
-                        .mapNotNull {
-                            RelayUrlNormalizer.normalizeOrNull(it)
-                        }.toSet(),
+                indexRelays = indexRelaysStore.effective(),
                 localCache = localCache,
             ).also { it.startCleanupLoop() }
+        }
+
+    // NIP-42 AUTH coordinator — wires relay-auth challenges through the
+    // tier classifier so own DM-inbox relays auto-sign and unknown relays
+    // surface a tier-2 banner approval via authCoordinator.pendingApprovals.
+    val authCoordinator =
+        remember(relayManager, localCache) {
+            DesktopAuthCoordinator(relayManager, localCache, scope)
         }
 
     // Clear cache and subscriptions on logout or account switch
@@ -946,7 +1007,9 @@ private fun AppInner(
     LaunchedEffect(accountState) {
         when (val state = accountState) {
             is AccountState.LoggedOut -> {
+                authCoordinator.onLogout()
                 subscriptionsCoordinator.clear()
+                localCache.accountPubkey = null
                 localCache.clear()
                 localRelayMaintenance.stop()
                 localRelayStore.close()
@@ -957,18 +1020,32 @@ private fun AppInner(
                 val currentPubKey = state.pubKeyHex
                 if (previousAccountPubKey != null && previousAccountPubKey != currentPubKey) {
                     // Account switched — clear old data so new feed loads fresh
+                    authCoordinator.onLogout()
                     subscriptionsCoordinator.clear()
+                    localCache.accountPubkey = null
                     localCache.clear()
                     localRelayMaintenance.stop()
                     localRelayStore.close()
                     subscriptionsCoordinator.start()
                 }
+                // Bind the active-user pubkey BEFORE hydration launches. The
+                // hydration coroutine below reads the local relay store on
+                // Dispatchers.IO and calls consumeContactList; without this
+                // ordering, a cached self kind-3 would be stamped without
+                // updating _followedUsers, and a later relay retry of the
+                // same event would be rejected by the createdAt gate,
+                // leaving the follow list empty and FollowAction.follow
+                // publishing a fresh kind-3 that wipes the real one.
+                // See commons/plans/2026-07-06-fix-wot-outbox-model-and-review-fixes-plan.md
+                // (Fix 1).
+                localCache.accountPubkey = currentPubKey
                 // Open local relay store for the current account and hydrate cache
                 localRelayStore.openForAccount(currentPubKey)
                 localRelayMaintenance.start()
                 scope.launch(Dispatchers.IO) {
                     localRelayStore.hydrate(localCache)
                 }
+                authCoordinator.onLogin(state)
                 previousAccountPubKey = currentPubKey
             }
 
@@ -1246,31 +1323,53 @@ private fun AppInner(
                                 LocalNamecoinService provides namecoinService,
                                 LocalSpamExemptKeys provides spamExemptKeys,
                             ) {
-                                MainContent(
-                                    layoutMode = layoutMode,
-                                    deckState = deckState,
-                                    workspaceManager = workspaceManager,
-                                    singlePaneState = singlePaneState,
-                                    pinnedNavBarState = pinnedNavBarState,
-                                    relayManager = relayManager,
-                                    localCache = localCache,
-                                    accountManager = accountManager,
-                                    account = account,
-                                    nwcConnection = nwcConnection,
-                                    subscriptionsCoordinator = subscriptionsCoordinator,
-                                    nip11Fetcher = nip11Fetcher,
-                                    appScope = scope,
-                                    torStatus = currentTorStatus,
-                                    onShowComposeDialog = onShowComposeDialog,
-                                    onShowReplyDialog = onShowReplyDialog,
-                                    onShowAppDrawer = onShowAppDrawer,
-                                    onOpenFeedsDrawer = {
-                                        appDrawerInitialTab =
-                                            com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab.FEEDS
-                                        onShowAppDrawer()
-                                    },
-                                    onShowImportFollowListDialog = onShowImportFollowListDialog,
-                                )
+                                val pendingAuthApprovals by authCoordinator.pendingApprovals.collectAsState()
+                                Column(modifier = Modifier.fillMaxSize()) {
+                                    // On macOS the window uses `apple.awt.fullWindowContent`
+                                    // (see [applyNativeWindowChrome]), so the traffic-light
+                                    // buttons sit over the top-left corner of content. Clear
+                                    // that zone so the banner text/icon aren't occluded.
+                                    val bannerModifier =
+                                        if (PlatformInfo.isMacOS) {
+                                            Modifier.padding(start = 80.dp, top = 8.dp, end = 8.dp, bottom = 4.dp)
+                                        } else {
+                                            Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        }
+                                    AuthApprovalBanner(
+                                        pending = pendingAuthApprovals.values.toList(),
+                                        onResolve = { url, scope -> authCoordinator.resolve(url, scope) },
+                                        modifier = bannerModifier,
+                                    )
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        MainContent(
+                                            layoutMode = layoutMode,
+                                            deckState = deckState,
+                                            workspaceManager = workspaceManager,
+                                            singlePaneState = singlePaneState,
+                                            pinnedNavBarState = pinnedNavBarState,
+                                            relayManager = relayManager,
+                                            localCache = localCache,
+                                            accountManager = accountManager,
+                                            account = account,
+                                            nwcConnection = nwcConnection,
+                                            subscriptionsCoordinator = subscriptionsCoordinator,
+                                            indexRelaysStore = indexRelaysStore,
+                                            nip11Fetcher = nip11Fetcher,
+                                            dmInboxResolver = dmInboxResolver,
+                                            appScope = scope,
+                                            torStatus = currentTorStatus,
+                                            onShowComposeDialog = onShowComposeDialog,
+                                            onShowReplyDialog = onShowReplyDialog,
+                                            onShowAppDrawer = onShowAppDrawer,
+                                            onOpenFeedsDrawer = {
+                                                appDrawerInitialTab =
+                                                    com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab.FEEDS
+                                                onShowAppDrawer()
+                                            },
+                                            onShowImportFollowListDialog = onShowImportFollowListDialog,
+                                        )
+                                    }
+                                }
 
                                 // Import Follow List dialog (triggered from File menu /
                                 // Cmd+Shift+I). Rendered inside this CompositionLocalProvider
@@ -1380,7 +1479,9 @@ fun MainContent(
     account: AccountState.LoggedIn,
     nwcConnection: Nip47WalletConnect.Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
+    indexRelaysStore: com.vitorpamplona.amethyst.commons.relays.index.PreferencesIndexRelays,
     nip11Fetcher: Nip11Fetcher,
+    dmInboxResolver: DmInboxRelayResolver,
     appScope: CoroutineScope,
     torStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus,
     onShowComposeDialog: () -> Unit,
@@ -1407,9 +1508,17 @@ fun MainContent(
         }
 
     val iAccount =
-        remember(account, localCache, relayManager, dmSendTracker, accountRelays) {
-            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays)
+        remember(account, localCache, relayManager, dmSendTracker, accountRelays, dmInboxResolver) {
+            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays, dmInboxResolver)
         }
+
+    // When iAccount is replaced (account switch), the previous WoTService's
+    // internal writer coroutine + ops Channel would otherwise leak — the
+    // outer `scope` lives for the whole session. Close the previous
+    // instance on dispose so account-switch is a clean teardown.
+    DisposableEffect(iAccount) {
+        onDispose { iAccount.wotService.close() }
+    }
 
     // Follow Packs state — single per-account holder for Discover + sidebar + naddr cards
     val followPacksState =
@@ -1423,13 +1532,14 @@ fun MainContent(
                 )
         }
 
-    // Aggregated relay categories (feed, notifications, search, DM)
+    // Aggregated relay categories (feed, notifications, search, DM, index)
     val relayCategories =
-        remember(iAccount.nip65RelayList, accountRelays, relayManager) {
+        remember(iAccount.nip65RelayList, accountRelays, relayManager, indexRelaysStore) {
             DesktopRelayCategories(
                 nip65State = iAccount.nip65RelayList,
                 accountRelays = accountRelays,
                 connectedRelays = relayManager.connectedRelays,
+                indexRelaysStore = indexRelaysStore,
                 scope = scope,
             )
         }
@@ -1674,6 +1784,71 @@ fun MainContent(
         relayHealthStore.scanNow()
     }
 
+    // Web-of-Trust: pubkey is already bound by the outer LaunchedEffect
+    // that also gates hydration ordering (see the LoggedIn branch above).
+    // This effect re-asserts the binding to cover the (rare) case where
+    // MainContent's `account` diverges from the outer accountState mid-
+    // recomposition; it's idempotent when they already match.
+    LaunchedEffect(localCache, account.pubKeyHex) {
+        localCache.accountPubkey = account.pubKeyHex
+    }
+    val wotReady by iAccount.wotService.isReady.collectAsState()
+    LaunchedEffect(
+        iAccount.wotService,
+        localCache,
+        subscriptionsCoordinator,
+        account.pubKeyHex,
+    ) {
+        // Fan-in of every accepted kind-3 event from the local cache.
+        launch {
+            localCache.contactListEvents.collect { evt ->
+                iAccount.wotService.applyKind3(evt.pubKey, evt.verifiedFollowKeySet())
+            }
+        }
+        // React to changes in the active user's follow set. Under the
+        // outbox model (PR #3483 review directive from Vitor) kind-3
+        // fetch goes to each author's declared write relays instead of a
+        // static index-relay broadcast — the OutboxDispatcher does the
+        // NIP-65 discovery, transposes with RelayListRecommendationProcessor
+        // and issues per-outbox-relay REQs. Falls back to index relays
+        // for authors that never returned a 10002.
+        launch {
+            localCache.followedUsers.collect { follows ->
+                iAccount.wotService.onFollowSetChange(follows, account.pubKeyHex)
+                when {
+                    iAccount.wotService.isDisabled.value -> {
+                        // Guardrail — mega-follow accounts skip WoT
+                        // entirely so we don't dispatch a batch that
+                        // would be discarded anyway.
+                        iAccount.wotService.markReadyOnce()
+                    }
+                    follows.isEmpty() -> {
+                        iAccount.wotService.markReadyOnce()
+                    }
+                    else -> {
+                        launch {
+                            val result = subscriptionsCoordinator.loadKind3ViaOutbox(follows)
+                            Log.d("WotOutbox") {
+                                "fetchKind3Only authors=${result.authorsRequested} " +
+                                    "covered=${result.outboxCoveredAuthors} " +
+                                    "fallback=${result.fallbackAuthors} " +
+                                    "kind10002=${result.kind10002Received} " +
+                                    "kind3=${result.kind3Received}"
+                            }
+                            iAccount.wotService.markReadyOnce()
+                        }
+                    }
+                }
+            }
+        }
+        // Safety net: mark ready after 2s regardless of REQ progress so
+        // avatars stop suppressing badges even if index relays never EOSE.
+        launch {
+            kotlinx.coroutines.delay(2_000)
+            iAccount.wotService.markReadyOnce()
+        }
+    }
+
     CompositionLocalProvider(
         LocalRelayCategories provides relayCategories,
         com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays provides accountRelays,
@@ -1682,6 +1857,8 @@ fun MainContent(
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayHealthStore provides relayHealthStore,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayListMutator provides relayListMutator,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalFollowPacksState provides followPacksState,
+        LocalWoTService provides iAccount.wotService,
+        LocalWoTReady provides wotReady,
     ) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {

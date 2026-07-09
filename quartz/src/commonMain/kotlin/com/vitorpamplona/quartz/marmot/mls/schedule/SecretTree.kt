@@ -389,6 +389,32 @@ class SecretTree(
 
         return currentSecret
     }
+
+    /**
+     * Snapshot every sender's current ratchet position so the enclosing
+     * group state can be persisted (RFC 9420 §9).
+     *
+     * Without this, a restore rebuilds the tree at generation 0 for every
+     * sender, and the LOCAL member then re-emits generation 0 within the
+     * same epoch on its next send — reusing the AEAD key+nonce (a
+     * confidentiality break) and getting rejected by strict receivers
+     * (openmls / MDK / Whitenoise) that forbid generation reuse.
+     *
+     * Only the live ratchet position (secret + generation) per sender is
+     * captured. The replay-detection and skipped-key caches are runtime-only
+     * and deliberately excluded — they are safe to drop across a restart.
+     */
+    fun exportSenderStates(): Map<Int, SenderRatchetState> = senderState.toMap()
+
+    /**
+     * Seed per-sender ratchet positions from an [exportSenderStates]
+     * snapshot. Called by `MlsGroup.restore`. Any sender absent from
+     * [states] simply re-derives from generation 0 on first use, which is
+     * correct for receive-only ratchets.
+     */
+    fun importSenderStates(states: Map<Int, SenderRatchetState>) {
+        senderState.putAll(states)
+    }
 }
 
 data class SenderRatchetState(

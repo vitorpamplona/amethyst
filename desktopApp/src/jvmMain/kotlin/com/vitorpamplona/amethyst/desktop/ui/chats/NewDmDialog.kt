@@ -222,8 +222,13 @@ fun NewDmDialog(
                     val userResults =
                         bech32Results.filterIsInstance<SearchResult.UserResult>()
                     items(userResults) { result ->
+                        // getOrCreateUser (not getUserIfExists): a DM recipient is
+                        // identified purely by pubkey, so a valid npub must be
+                        // selectable even when we have no metadata (kind:0) cached
+                        // for them yet. Otherwise pasting the npub of anyone the
+                        // cache hasn't seen renders a dead, non-clickable row.
                         val user =
-                            cacheProvider.getUserIfExists(result.pubKeyHex)
+                            cacheProvider.getOrCreateUser(result.pubKeyHex)
                         if (user != null) {
                             UserSearchCard(
                                 user = user,
@@ -231,7 +236,8 @@ fun NewDmDialog(
                                 modifier = selectedModifier(isSelected(user)),
                             )
                         } else {
-                            // Minimal card for unloaded users
+                            // Only reached if the key itself can't be resolved
+                            // (malformed) — show a non-selectable hint.
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
                                 color = MaterialTheme.colorScheme.surfaceVariant,

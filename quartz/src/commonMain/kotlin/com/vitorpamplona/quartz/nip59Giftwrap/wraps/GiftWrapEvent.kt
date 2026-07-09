@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -96,11 +97,22 @@ open class GiftWrapEvent(
         const val KIND = 1059
         const val ALT = "Encrypted event"
 
+        /**
+         * Build a NIP-59 gift wrap addressed to `recipientPubKey`.
+         *
+         * Per NIP-17 §Publishing, the `p` tag on the wrap MAY carry the
+         * recipient's primary DM inbox relay as a hint, so other clients
+         * the recipient runs (or relays acting as inbox routers) can locate
+         * the wrap without a separate kind:10050 lookup. Pass it via
+         * [recipientRelayHint] — `null` (the default) preserves the
+         * historical 2-element `["p", pubkey]` shape.
+         */
         fun create(
             event: Event,
             recipientPubKey: HexKey,
             expirationDelta: Long? = null,
             createdAt: Long = TimeUtils.randomWithTwoDays(),
+            recipientRelayHint: NormalizedRelayUrl? = null,
         ): GiftWrapEvent {
             val signer = NostrSignerSync(KeyPair()) // GiftWrap is always a random key
 
@@ -109,11 +121,11 @@ open class GiftWrapEvent(
                     // minimum expiration is two days in the future due to the random created at
                     // this will make sure the even arrives and is not deleted because of the 2 days.
                     arrayOf(
-                        PTag.assemble(recipientPubKey, null),
+                        PTag.assemble(recipientPubKey, recipientRelayHint),
                         ExpirationTag.assemble(createdAt + it + TimeUtils.twoDays()),
                     )
                 } ?: arrayOf(
-                    PTag.assemble(recipientPubKey, null),
+                    PTag.assemble(recipientPubKey, recipientRelayHint),
                 )
 
             return signer.sign(

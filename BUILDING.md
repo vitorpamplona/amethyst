@@ -213,6 +213,85 @@ toolchain drifted — file it before publishing.
 
 ---
 
+## Local SonarQube analysis (opt-in)
+
+The build supports running a [SonarQube](https://www.sonarsource.com/products/sonarqube/)
+analysis against a locally hosted server. It is **off by default**: unless you
+opt in, the scanner plugin is neither downloaded nor applied and the build is
+unaffected.
+
+### 1. Install and start a local SonarQube server
+
+Either run the official Docker image:
+
+```bash
+docker run -d --name sonarqube -p 9000:9000 sonarqube:community
+```
+
+or download the [Community Build zip](https://www.sonarsource.com/products/sonarqube/downloads/),
+unzip it, and start it (requires a JDK 17+ on `PATH`):
+
+```bash
+cd sonarqube-<version>
+bin/macosx-universal-64/sonar.sh console   # pick the folder matching your OS
+```
+
+Once it reports up, open <http://localhost:9000> (first login `admin`/`admin`,
+you'll be asked to change it), create a **local project** named `Amethyst` with
+project key `Amethyst`, and generate a **project analysis token** for it
+(*Project Settings → Analysis Method → With Gradle*, or
+*My Account → Security → Generate token*). The token looks like `sqp_…`.
+
+### 2. Point the build at your server
+
+Add the server and token to `local.properties` (gitignored — the token never
+lands in the repo):
+
+```properties
+sonar.host.url=http://localhost:9000
+sonar.token=sqp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+### 3. Run the analysis
+
+```bash
+./gradlew sonar
+```
+
+When it finishes, browse the results at
+<http://localhost:9000/dashboard?id=Amethyst>.
+
+### 4. Optional: include Android Lint results
+
+The scanner auto-imports each Android module's lint report and shows the
+findings as external issues alongside Sonar's own. It only *imports* — it never
+runs lint itself — so without the reports on disk the analysis warns
+`Unable to import Android Lint report file(s)`. Generate them first, then run
+the scan as a **separate** invocation (chaining lint and `sonar` in one Gradle
+call does not guarantee lint finishes first):
+
+```bash
+./gradlew :amethyst:lintPlayDebug :benchmark:lintBenchmark :nappletHost:lintDebug
+./gradlew sonar
+```
+
+The reports persist under each module's `build/reports/`, so re-run lint only
+when you want fresh lint data in the next scan.
+
+Every `sonar.*` entry in `local.properties` is forwarded to the scanner, so any
+[analysis parameter](https://docs.sonarsource.com/sonarqube-server/latest/analyzing-source-code/analysis-parameters/)
+can be set there. `sonar.projectKey` / `sonar.projectName` default to the root
+project name (`Amethyst`).
+
+Even when opted in, the scanner plugin only loads on invocations that actually
+request the `sonar` task — ordinary builds and IDE syncs are unaffected (which
+is also why `./gradlew tasks` doesn't list it).
+
+Note: the SonarQube Gradle scanner plugin is LGPL-3.0. It is a build-time-only
+tool fetched after explicit opt-in; it is never linked into shipped artifacts.
+
+---
+
 ## Release runbook
 
 The release flow is driven by a tag push. Every cut ships Android + Desktop +

@@ -374,6 +374,8 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy login KEY [--password X]` | Import an existing identity (`nsec`/`ncryptsec`/mnemonic/`npub`/`nprofile`/hex/NIP-05). |
 | `amy whoami` | Print the active account's name + npub. |
 | `amy use NAME` / `--clear` / no-arg | Pin / clear / inspect the active account. |
+| `amy status` | Read-only overview of everything under `~/.amy/`: every account, which one is current, each signer type (local keychain/ncryptsec/plaintext, NIP-46 bunker, or read-only) and whether it can sign, the local Marmot / Cashu / alias / sync-cursor footprint per account, and the shared event store's size. Built for the returning user. No keychain prompt, no network. |
+| `amy logoff [--yes] [--keep-events]` | Log off an account: delete its key + backend secret, the whole `~/.amy/<account>/` directory (run-state, aliases, cashu counters, Marmot state), the `current` pin if it points here, and the account's events (authored + `#p`-addressed) in the shared store. `--keep-events` leaves the shared cache alone. Destructive and irreversible — requires `--yes`; without it, prints a dry run and exits 2. |
 
 ### Social
 
@@ -383,6 +385,41 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy notes feed [--author USER \| --following] [--limit N]` | Read recent kind:1 notes (yours, one user's, or your follow set). |
 | `amy profile show [USER]` | Print kind:0 metadata. USER accepts npub/nprofile/hex/NIP-05; defaults to self. |
 | `amy profile edit --name … --about … --picture URL …` | Patch and re-publish your kind:0. |
+| `amy follow USER` / `amy unfollow USER` | Add/remove USER from your kind:3 contact list (fetches the freshest list first). |
+| `amy graperank [OBSERVER] [--offline] [--publish] [--min-rank N] [--publish-relay URL]` | Compute GrapeRank web-of-trust scores (0..1) over the follow/mute/report graph. Exhaustively crawls each user's kind:10002 outbox for their latest kind:3/10000/1984 until every discovered user is checked (no user cap), dropping reports the author retracted via NIP-09. With `--publish`, reconciles NIP-85 kind:30382 cards signed by a per-observer **service key**: publishes changed/new ranks (cutoff `--min-rank`, default 2), skips unchanged, and **retracts** (kind:5) any card whose target left the graph or fell below the cutoff. |
+| `amy graperank operator [status \| relay <url>… \| providers]` | Manage the machine's operator keys (independent of any account, under `~/.amy/operator/`). `relay` sets where cards + retractions publish; `status` shows the master pubkey and relays; `providers` lists the observer → service-pubkey map. |
+| `amy graperank register [PROVIDER] [--service KIND:TAG] [--relay URL]` | Declare a NIP-85 provider in your kind:10040 so clients can discover it (default: self as the `30382:rank` provider). |
+| `amy graperank providers [USER]` | List a user's declared NIP-85 trusted providers (public + your own private entries). |
+
+#### Publishing GrapeRank scores (NIP-85)
+
+Ranks are published as kind:30382 cards, but **not** under your account key. A
+machine holds one **operator master** seed (`~/.amy/operator/`, stored via the
+same `--secret-backend` as accounts, independent of any account). From it a
+distinct, deterministic **service key** is derived per observer:
+
+```
+serviceKey(observer) = sha256(masterPriv ‖ "graperank-provider:" ‖ observerHex)
+```
+
+Because kind:30382 is addressable (`pubkey + d-tag`), the stable per-observer key
+means re-publishing **replaces** a target's card instead of orphaning it — and
+losing everything but the master seed still re-derives every key. Set up once and
+publish:
+
+```bash
+amy graperank operator relay wss://relay.example.com   # where all cards live
+amy graperank <observer> --publish                     # sign with the observer's service key
+```
+
+Each publish **reconciles** against what the service key already published: new or
+changed ranks (≥ `--min-rank`, default 2) are signed and sent; unchanged ranks are
+skipped (no new event id); and any card whose target dropped out of the graph or
+fell below the cutoff is **retracted** with a kind:5. When the observer is your
+own account (we hold the key), Amy also writes their kind:10040 pointing
+`30382:rank → serviceKey @ operator relay` to their outbox, so clients can find
+the cards. For a third-party observer, `graperank operator providers` prints the
+`observer → service-pubkey` mapping to wire their kind:10040 out-of-band.
 
 ### Direct messages (NIP-17)
 
@@ -574,7 +611,18 @@ matches that:
 
 1. If `~/.amy/current` is set, use it.
 2. Else if exactly one account exists, use it (silent auto-pick).
-3. Else error and list the candidates so you can disambiguate.
+3. Else — for a **read-only** verb, run **anonymously**; for a **signing**
+   verb, error and list the candidates so you can disambiguate.
+
+**No account? Reads still work.** Verbs that only query relays or the shared
+event store — `fetch`, `subscribe`, `count`, `publish` (broadcasts a
+pre-signed event), `outbox`, `search`, `sync`, `store …`, the read halves of
+`profile`/`notes`/`git`/`podcast`/`podcast20`, `nsite`/`napplet` fetch/serve/
+list, `blossom download`/`check`, `offer`/`debit info`, and every stateless
+primitive — run against an empty `~/.amy/` with a throwaway key. They read
+fine; they just can't authenticate. Only verbs that **sign or encrypt with
+your key** (post, edit, follow, dm, marmot, zap, relay-list edits, blossom
+upload/list/delete, cashu, …) require an account — and say so.
 
 `amy use NAME` writes `~/.amy/current`; `amy use --clear` removes it.
 For one-off override, prepend `--account NAME` to any command.
@@ -640,11 +688,12 @@ Inside the amy process there's no test mode — it just sees a fresh
 
 ## Troubleshooting
 
-- **`no account at ~/.amy`** — you haven't created one yet. Run
+- **`no account configured` / `multiple accounts in ~/.amy (alice, bob)`** —
+  only **signing** verbs raise these; reads run anonymously instead (see
+  "No account? Reads still work" above). Create one with
   `amy --account NAME init` (bare keypair) or `amy --account NAME create`
-  (full Amethyst-style bootstrap).
-- **`multiple accounts in ~/.amy (alice, bob)`** — pin one with
-  `amy use NAME` or pass `--account NAME` per command.
+  (full Amethyst-style bootstrap), or pin/select one with `amy use NAME` /
+  `--account NAME`.
 - **`current pins 'X' but ~/.amy/X doesn't exist`** — the active-account
   marker is stale. Rewrite with `amy use OTHER` or `amy use --clear`.
 - **`no_dm_relays`** — recipient hasn't published a kind:10050 inbox.

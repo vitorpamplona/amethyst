@@ -86,6 +86,12 @@ object Output {
         return 1
     }
 
+    /**
+     * Shared `bad_args` failure for any command that takes a relay-URL
+     * argument, so every command names the offending input the same way.
+     */
+    fun invalidRelayUrl(raw: String): Int = error("bad_args", "invalid relay url: $raw")
+
     private fun renderText(value: Any?): String {
         val color = Ansi.forStream(isStderr = false)
         val out = StringBuilder()

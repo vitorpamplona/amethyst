@@ -55,12 +55,16 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.moderation.LocalSpamExemptKeys
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
+import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
+import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.amethyst.desktop.ui.note.SpamCheckedNoteRender
+import com.vitorpamplona.amethyst.desktop.ui.note.WoTBadge
 import com.vitorpamplona.amethyst.desktop.ui.rememberDisplayData
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 
@@ -116,6 +120,7 @@ fun SearchResultsList(
                     UserSearchCard(
                         user = user,
                         onClick = { onNavigateToProfile(user.pubkeyHex) },
+                        badge = wotBadgeFor(user.pubkeyHex),
                     )
                 }
                 if (people.size > 5) {
@@ -126,6 +131,7 @@ fun SearchResultsList(
                             UserSearchCard(
                                 user = user,
                                 onClick = { onNavigateToProfile(user.pubkeyHex) },
+                                badge = wotBadgeFor(user.pubkeyHex),
                             )
                         }
                     }
@@ -283,6 +289,34 @@ fun SearchResultsList(
 
         // Bottom padding
         item(key = "bottom-spacer") { Spacer(Modifier.height(16.dp)) }
+    }
+}
+
+/**
+ * Returns a WoT-badge lambda for the given pubkey, or null when the
+ * badge should be hidden. Same gates as [WoTBadgedAvatar]:
+ *   - WoT service is provided
+ *   - initial batch fetch has finished (or 2 s startup timeout fired)
+ *   - the pubkey is not exempt (self or already followed)
+ *   - the score is > 0
+ * Inlined here (rather than wrapped in a new composable) because it's
+ * only used at the two SearchResultsList person-result call sites.
+ */
+@Composable
+private fun wotBadgeFor(userHex: String): (@Composable androidx.compose.foundation.layout.BoxScope.() -> Unit)? {
+    val service = LocalWoTService.current
+    val ready = LocalWoTReady.current
+    val exempt = LocalSpamExemptKeys.current
+    val score =
+        if (service != null && ready && userHex !in exempt) {
+            service.scores[userHex] ?: 0
+        } else {
+            0
+        }
+    return if (score > 0) {
+        { WoTBadge(count = score, modifier = Modifier.align(Alignment.BottomEnd)) }
+    } else {
+        null
     }
 }
 

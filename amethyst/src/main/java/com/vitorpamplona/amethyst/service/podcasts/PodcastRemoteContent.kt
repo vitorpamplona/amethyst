@@ -50,7 +50,7 @@ object PodcastRemoteContent {
                         .build()
                 okHttpClient.newCall(request).executeAsync().use { response ->
                     if (!response.isSuccessful) return@use null
-                    val body = response.body ?: return@use null
+                    val body = response.body
                     // Reject an oversized declared length outright; cap the read for chunked bodies.
                     if (body.contentLength() > MAX_BYTES) return@use null
                     body.string().take(MAX_BYTES.toInt())

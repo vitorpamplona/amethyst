@@ -83,9 +83,7 @@ class CommandSerializer : StdSerializer<Command>(Command::class.java) {
                 gen.writeString(cmd.subId)
             }
 
-            else -> {
-                null
-            }
+            else -> {}
         }
 
         gen.writeEndArray()

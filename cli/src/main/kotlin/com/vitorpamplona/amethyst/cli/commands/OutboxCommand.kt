@@ -44,7 +44,7 @@ object OutboxCommand {
         val refresh = args.bool("refresh")
         val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 8L) * 1000
 
-        Context.open(dataDir).use { ctx ->
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val pubkey = ctx.requireUserHex(user)
 

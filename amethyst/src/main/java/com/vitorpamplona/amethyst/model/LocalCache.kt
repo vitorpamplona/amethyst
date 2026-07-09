@@ -2664,7 +2664,6 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            null
         }
 
         return liveChatChannels.filter { _, channel ->

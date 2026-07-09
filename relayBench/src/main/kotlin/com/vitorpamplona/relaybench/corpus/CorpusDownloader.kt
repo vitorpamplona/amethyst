@@ -99,7 +99,7 @@ object CorpusDownloader {
                 }
             }
             if (checkpoint.exists()) {
-                runCatching { mapper.readTree(checkpoint.readText()) }.getOrNull()?.fields()?.forEach { (url, until) ->
+                runCatching { mapper.readTree(checkpoint.readText()) }.getOrNull()?.properties()?.forEach { (url, until) ->
                     cursors[url] = until.asLong()
                 }
             }
@@ -137,7 +137,9 @@ object CorpusDownloader {
         val raw = CorpusIO.read(spill).events
         val corpus = CorpusSource.prepare(raw, target, "download:${relayUrls.joinToString(",")}", log)
         CorpusIO.write(cached, corpus)
-        checkpoint.delete()
+        if (!checkpoint.delete() && checkpoint.exists()) {
+            log("  ! could not delete stale checkpoint ${checkpoint.name}")
+        }
         log("  cached prepared corpus to ${cached.path}")
         return corpus
     }
@@ -228,9 +230,9 @@ object CorpusDownloader {
                 added += fresh
                 val oldest = page.minOf { it.createdAt }
                 until =
-                    if (fresh == 0 && until != null && oldest >= until!!) {
+                    if (fresh == 0 && until != null && oldest >= until) {
                         // >PAGE_LIMIT events in this second and we have them all.
-                        until!! - 1
+                        until - 1
                     } else {
                         oldest
                     }

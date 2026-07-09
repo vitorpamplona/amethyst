@@ -1,4 +1,36 @@
+import com.android.build.gradle.tasks.GenerateResValues
 import com.diffplug.gradle.spotless.SpotlessExtensionPredeclare
+import java.util.Properties
+
+// Local SonarQube analysis is opt-in: it activates only when `sonar.host.url`
+// is present in local.properties (gitignored) AND a sonar task was requested,
+// so neither developers who haven't opted in nor ordinary builds/IDE syncs of
+// opted-in developers resolve or apply the scanner plugin. The Kotlin DSL
+// compiles this buildscript {} section in an earlier stage that can't see the
+// file's imports (hence the qualified Properties) or share code with the body,
+// but it can publish values — the gate is computed once here and read below
+// via `by extra`.
+buildscript {
+    val localProperties = File(rootDir, "local.properties")
+    val sonarProperties by extra(
+        java.util.Properties().apply {
+            if (localProperties.exists()) localProperties.inputStream().use { load(it) }
+        },
+    )
+    val sonarEnabled by extra(
+        sonarProperties.getProperty("sonar.host.url") != null &&
+            gradle.startParameter.taskNames.any { it.substringAfterLast(":") in setOf("sonar", "sonarqube") },
+    )
+    if (sonarEnabled) {
+        repositories {
+            gradlePluginPortal()
+        }
+        dependencies {
+            // LGPL-3.0, build-time only — never linked into shipped artifacts.
+            classpath(libs.sonarqube.gradle.plugin)
+        }
+    }
+}
 
 plugins {
     alias(libs.plugins.androidApplication) apply false
@@ -69,6 +101,32 @@ subprojects {
             }.configureEach {
                 dependsOn("spotlessApply")
             }
+        }
+    }
+}
+
+// Second half of the opt-in local SonarQube support gated above in buildscript {}.
+// All sonar.* entries in local.properties are forwarded as system properties, so
+// `./gradlew sonar` behaves exactly like passing them via -Dsonar.xxx=... on the
+// command line. sonar.projectKey/projectName default to the root project name
+// ("Amethyst") and only need overriding in local.properties if desired.
+val sonarEnabled: Boolean by extra
+if (sonarEnabled) {
+    val sonarProperties: Properties by extra
+    apply(plugin = "org.sonarqube")
+
+    sonarProperties
+        .stringPropertyNames()
+        .filter { it.startsWith("sonar.") }
+        .forEach { System.setProperty(it, sonarProperties.getProperty(it)) }
+
+    // The scanner's sonarResolver task reads AGP's generated-res-values provider
+    // but doesn't depend on the task that produces it — wire it up in every
+    // module that has both (today only :amethyst enables resValues, but the
+    // scanner defect is module-agnostic).
+    subprojects {
+        tasks.named { it == "sonarResolver" }.configureEach {
+            dependsOn(tasks.withType<GenerateResValues>())
         }
     }
 }

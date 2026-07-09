@@ -162,6 +162,18 @@ fun RelayConfigTab(
                 },
             )
         }
+
+        Spacer(Modifier.height(16.dp))
+
+        // 6. Index Relays — app-global (not per-account); shared with `amy wot sync`.
+        CollapsibleSection(
+            title = "Index Relays",
+            description = "Where the Web-of-Trust and profile lookups fetch kind 0/3 events",
+        ) {
+            IndexRelaysEditor(
+                categories = LocalRelayCategories.current,
+            )
+        }
     }
 }
 

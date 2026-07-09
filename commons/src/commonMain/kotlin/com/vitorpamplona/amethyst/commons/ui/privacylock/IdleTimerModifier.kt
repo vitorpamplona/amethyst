@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.privacylock
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import com.vitorpamplona.amethyst.commons.privacylock.MessagesLockState
+import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockState
 
 /**
  * Observes pointer events on the Initial pass — does NOT consume them, so
@@ -35,7 +35,7 @@ import com.vitorpamplona.amethyst.commons.privacylock.MessagesLockState
  * since they're not user input — preserves the "walked-away-from-desk"
  * protection per brainstorm resolved Q.
  */
-fun Modifier.resetIdleOnInteraction(state: MessagesLockState): Modifier =
+fun Modifier.resetIdleOnInteraction(state: PrivacyLockState): Modifier =
     this.pointerInput(state) {
         awaitPointerEventScope {
             while (true) {

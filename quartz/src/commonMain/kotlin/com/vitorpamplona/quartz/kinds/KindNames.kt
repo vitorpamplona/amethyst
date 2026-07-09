@@ -327,6 +327,7 @@ data class KindName(
  * platform concern layered on top, never a fork of this data.
  */
 object KindNames {
+    @Suppress("DEPRECATION") // registry intentionally names deprecated kinds (GitReply, TorrentComment) for display
     val names: Map<Int, KindName> =
         mapOf(
             AcceptedBadgeSetEvent.KIND to KindName("Accepted Badge Set", "58"),

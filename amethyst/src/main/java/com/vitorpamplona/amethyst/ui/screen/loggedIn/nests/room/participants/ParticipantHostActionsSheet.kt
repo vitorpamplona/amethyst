@@ -199,9 +199,7 @@ internal fun ParticipantHostActionsSheet(
             )
         }
 
-        null -> {
-            Unit
-        }
+        null -> {}
     }
 }
 

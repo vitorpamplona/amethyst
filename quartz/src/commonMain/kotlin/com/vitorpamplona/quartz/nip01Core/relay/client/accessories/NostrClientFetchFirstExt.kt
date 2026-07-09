@@ -120,7 +120,17 @@ suspend fun INostrClient.fetchFirst(
                         remaining.clear()
                     }
                     doneChannel.onReceive { relay ->
-                        remaining.remove(relay)
+                        // A relay sends its matching events before its EOSE, so an event may
+                        // already be buffered when this completion fires. select() picks a ready
+                        // clause at random, so without this drain we could treat the relay as done
+                        // and exit while its event still sits unread in the channel.
+                        val buffered = eventChannel.tryReceive().getOrNull()
+                        if (buffered != null) {
+                            result = buffered
+                            remaining.clear()
+                        } else {
+                            remaining.remove(relay)
+                        }
                     }
                 }
             }

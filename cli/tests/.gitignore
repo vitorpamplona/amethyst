@@ -4,3 +4,4 @@ dm/state-dm-headless/
 nests/state/
 clink/state-clink-headless/
 relaygroup/state-relaygroup-headless/
+sync/state-sync-deletions/

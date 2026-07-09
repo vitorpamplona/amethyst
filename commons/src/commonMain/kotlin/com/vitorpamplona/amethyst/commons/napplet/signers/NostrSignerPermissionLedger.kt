@@ -185,6 +185,7 @@ class NostrSignerPermissionLedger(
          * Deliberately conservative: when a kind's blast radius is unclear, it is left out so the user
          * is asked rather than surprised.
          */
+        @Suppress("DEPRECATION") // TorrentCommentEvent is deprecated (NIP-22) but still a reasonable sign kind
         val REASONABLE_SIGN_KINDS: Set<Int> =
             setOf(
                 TextNoteEvent.KIND, // 1 — short text notes & replies

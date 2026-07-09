@@ -81,7 +81,7 @@ object NostrConnect {
             }
         }
         if (secret == null) return null
-        return Offer(clientPubkey, relays, secret!!, name)
+        return Offer(clientPubkey, relays, secret, name)
     }
 
     private fun buildOffer(
