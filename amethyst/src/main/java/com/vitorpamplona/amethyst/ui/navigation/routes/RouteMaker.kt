@@ -46,6 +46,8 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.groupId
+import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
@@ -73,7 +75,24 @@ fun routeFor(
         return Route.MarmotGroupChat(marmotGroup.nostrGroupId)
     }
 
+    // NIP-29 relay-group content (kind 9 chat, 11 thread, 1111 comment, polls) should open the
+    // group chat screen — like every other chat NIP — not the generic thread view it would fall
+    // through to. A consumed group message is attached to its RelayGroupChannel (which carries the
+    // host relay), so route via that; fall back to the note's `h` tag + provenance relay otherwise.
+    val relayGroup = note.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }
+    if (relayGroup != null) {
+        return routeFor(relayGroup)
+    }
+
     val noteEvent = note.event ?: return Route.EventRedirect(note.idHex)
+
+    if (noteEvent.isGroupScoped()) {
+        val groupId = noteEvent.groupId()
+        val hostRelay = note.relays.firstOrNull()
+        if (groupId != null && hostRelay != null) {
+            return routeFor(GroupId(groupId, hostRelay))
+        }
+    }
 
     return routeFor(noteEvent, loggedIn)
 }
