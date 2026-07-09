@@ -23,7 +23,9 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -84,6 +86,24 @@ class AuthorsMissingOutboxTest : BaseDBTest() {
             db.insert(signer.sign(DeletionEvent.build(listOf(relayList))))
 
             assertEquals(setOf(signer.pubKey), db.authorsMissingOutbox().toSet())
+        }
+
+    @Test
+    fun giftWrapSenderIsNotCountedAsAuthor() =
+        forEachDB { db ->
+            val noteAuthor = NostrSignerSync()
+            db.insert(noteAuthor.sign(TextNoteEvent.build("hi")))
+
+            // A kind-1059 giftwrap stores an ephemeral one-time key as its
+            // pubkey (the real recipient is only a hash). It has no outbox and
+            // never will — but it must NOT be reported as "missing" one, or the
+            // result set would grow by one junk key per received DM.
+            val ephemeralSender = "aa".repeat(32)
+            db.insert(
+                EventFactory.create("bb".repeat(32), ephemeralSender, 1L, GiftWrapEvent.KIND, emptyArray(), "", "00".repeat(64)),
+            )
+
+            assertEquals(setOf(noteAuthor.pubKey), db.authorsMissingOutbox().toSet())
         }
 
     @Test

@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.coroutines.runBlocking
@@ -47,9 +48,9 @@ import kotlin.test.assertEquals
  *    owners into a set, then stream EVERY event (`query(Filter())`) and keep
  *    the authors not in that set. Correct for any store, but it decodes all
  *    1M events off SQLite into `Event` objects.
- *  - **sqlite** — `EventStore.authorsMissingOutbox()`, a single
- *    `SELECT DISTINCT pubkey ... NOT EXISTS` that never decodes an event and
- *    seeks the outbox check on the `(kind, pubkey, created_at)` index.
+ *  - **sqlite** — `EventStore.authorsMissingOutbox()`, an index-only `EXCEPT`
+ *    over `event_headers` (all authors minus the 10002 owners) that never
+ *    decodes an event, riding the `(kind, pubkey, created_at)` covering index.
  *
  * Corpus: the benchmark first **syncs a real sample from a popular relay**
  * (kind 1 notes + kind 10002 relay lists from [RELAY]) so the pubkey
@@ -91,7 +92,7 @@ class AuthorsMissingOutboxBenchmark {
 
         val missing = LinkedHashSet<HexKey>()
         store.query<Event>(Filter()) { event ->
-            if (event.pubKey !in withOutbox) missing.add(event.pubKey)
+            if (event.kind != GiftWrapEvent.KIND && event.pubKey !in withOutbox) missing.add(event.pubKey)
         }
         return missing.toList()
     }
@@ -235,7 +236,7 @@ class AuthorsMissingOutboxBenchmark {
             println("\n  result: %,d authors missing an outbox (of %,d distinct authors)".format(sqliteResult.size, allAuthors.size))
             println("  ── timings over $runs runs (best-of) ──")
             println("  generic (decode all %,d events)  best=%,9.1f ms  runs=%s".format(total, genericBest, genericMs.joinToString { "%.0f".format(it) }))
-            println("  sqlite  (DISTINCT ... NOT EXISTS) best=%,9.1f ms  runs=%s".format(sqliteBest, sqliteMs.joinToString { "%.1f".format(it) }))
+            println("  sqlite  (index-only EXCEPT)       best=%,9.1f ms  runs=%s".format(sqliteBest, sqliteMs.joinToString { "%.1f".format(it) }))
             println("  → sqlite is %.1f× faster at %,d events".format(genericBest / sqliteBest, total))
         } finally {
             store.close()

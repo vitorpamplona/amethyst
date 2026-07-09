@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 interface IEventStore : AutoCloseable {
@@ -124,8 +125,8 @@ interface IEventStore : AutoCloseable {
     suspend fun count(filters: List<Filter>): Int
 
     /**
-     * Every distinct author with at least one stored event that has NO
-     * NIP-65 relay list (kind 10002 / "outbox") in this store.
+     * Every distinct identity author with at least one stored event that has
+     * NO NIP-65 relay list (kind 10002 / "outbox") in this store.
      *
      * This is a whole-store anti-join — the set of all authors minus the
      * authors who already have an outbox — which the positive-only nostr
@@ -135,11 +136,17 @@ interface IEventStore : AutoCloseable {
      * deleted (NIP-09) or expired (NIP-40) is reported as missing, because
      * no row remains for it. Order is unspecified.
      *
+     * GiftWraps (kind 1059) are NOT counted as authors: their `pubkey` is a
+     * random one-time key, so including them would return an unbounded set of
+     * ephemeral keys that can never own a 10002 — useless to the outbox model
+     * this feeds.
+     *
      * The default implementation walks the store: it collects the authors
      * that DO have an outbox, then streams every event and keeps the
-     * authors not in that set. Correct for any store but O(events). SQLite
-     * overrides it with a single `SELECT DISTINCT … NOT EXISTS` scan that
-     * seeks the outbox lookup on the `(kind, pubkey, …)` index.
+     * authors not in that set. Correct for any store but O(events), and it
+     * decodes every event just to read its pubkey. SQLite overrides it with
+     * an index-only `EXCEPT` over `event_headers` that never materialises an
+     * event (see `QueryBuilder.authorsMissingKind`).
      */
     suspend fun authorsMissingOutbox(): List<HexKey> {
         val withOutbox = HashSet<HexKey>()
@@ -147,7 +154,7 @@ interface IEventStore : AutoCloseable {
 
         val missing = LinkedHashSet<HexKey>()
         query<Event>(Filter()) { event ->
-            if (event.pubKey !in withOutbox) missing.add(event.pubKey)
+            if (event.kind != GiftWrapEvent.KIND && event.pubKey !in withOutbox) missing.add(event.pubKey)
         }
         return missing.toList()
     }
