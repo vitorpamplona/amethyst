@@ -33,10 +33,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,14 +64,19 @@ import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.topbars.LoggedInUserPictureDrawer
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupPreviewSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupRosterSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -106,35 +111,19 @@ fun RelayGroupDiscoveryScreen(
     WatchLifecycleAndUpdateModel(feedContentState)
     WatchAccountForRelayGroupDiscovery(feedContentState, accountViewModel)
     RelayGroupsDiscoveryFilterAssemblerSubscription(accountViewModel)
+    // Keep the joined groups' metadata + rosters live so the "My Groups" filter can list them
+    // (their host relays aren't fetched by the discovery filter set).
+    RelayGroupRosterSubscription(accountViewModel.dataSources().relayGroupRoster, accountViewModel)
 
-    Scaffold(
-        topBar = {
-            val selectedFilter by accountViewModel.account.settings.defaultRelayGroupsDiscoveryFollowList
-                .collectAsStateWithLifecycle()
-            val options by accountViewModel.feedStates.feedListOptions.relayGroupsDiscoveryRoutes
-                .collectAsStateWithLifecycle()
-            TopBarExtensibleWithBackButton(
-                title = {
-                    FeedFilterSpinner(
-                        placeholderCode = selectedFilter,
-                        explainer = stringRes(R.string.select_list_to_filter),
-                        options = options,
-                        onSelect = accountViewModel.account.settings::changeDefaultRelayGroupsDiscoveryFollowList,
-                        accountViewModel = accountViewModel,
-                    )
-                },
-                actions = {
-                    IconButton(onClick = { nav.nav(Route.RelayGroupBrowse) }) {
-                        Icon(
-                            symbol = MaterialSymbols.Link,
-                            contentDescription = stringRes(R.string.relay_group_browse_title),
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
-                },
-                popBack = nav::popBack,
-            )
+    DisappearingScaffold(
+        isInvertedLayout = false,
+        topBar = { RelayGroupsDiscoveryTopBar(accountViewModel, nav) },
+        bottomBar = {
+            AppBottomBar(Route.RelayGroups, nav, accountViewModel) { route ->
+                if (route == Route.RelayGroups) feedContentState.sendToTop() else nav.navBottomBar(route)
+            }
         },
+        accountViewModel = accountViewModel,
     ) { padding ->
         Column(Modifier.padding(padding)) {
             RefresheableBox(feedContentState, true) {
@@ -166,6 +155,51 @@ fun RelayGroupDiscoveryScreen(
             }
         }
     }
+}
+
+/**
+ * Root top bar for the Relay Groups tab: the drawer opener (or back arrow on a sub-stack), the
+ * feed-filter spinner as title, and a browse-a-relay-by-URL action. Mirrors GitRepositoriesTopBar
+ * but keeps the browse action, which the shared UserDrawerSearchTopBar doesn't expose.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RelayGroupsDiscoveryTopBar(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val selectedFilter by accountViewModel.account.settings.defaultRelayGroupsDiscoveryFollowList
+        .collectAsStateWithLifecycle()
+    val options by accountViewModel.feedStates.feedListOptions.relayGroupsDiscoveryRoutes
+        .collectAsStateWithLifecycle()
+
+    ShorterTopAppBar(
+        title = {
+            FeedFilterSpinner(
+                placeholderCode = selectedFilter,
+                explainer = stringRes(R.string.select_list_to_filter),
+                options = options,
+                onSelect = accountViewModel.account.settings::changeDefaultRelayGroupsDiscoveryFollowList,
+                accountViewModel = accountViewModel,
+            )
+        },
+        navigationIcon = {
+            if (nav.canPop()) {
+                IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+            } else {
+                LoggedInUserPictureDrawer(accountViewModel, nav::openDrawer)
+            }
+        },
+        actions = {
+            IconButton(onClick = { nav.nav(Route.RelayGroupBrowse) }) {
+                Icon(
+                    symbol = MaterialSymbols.Link,
+                    contentDescription = stringRes(R.string.relay_group_browse_title),
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+        },
+    )
 }
 
 @Composable

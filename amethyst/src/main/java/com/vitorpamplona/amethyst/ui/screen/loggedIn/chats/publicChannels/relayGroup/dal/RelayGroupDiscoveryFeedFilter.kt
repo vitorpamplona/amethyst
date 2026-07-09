@@ -64,15 +64,31 @@ class RelayGroupDiscoveryFeedFilter(
 
     fun followList(): TopFilter = account.settings.defaultRelayGroupsDiscoveryFollowList.value
 
+    /**
+     * "My Groups" = the groups I've joined. These live on their host relays (from kind 10009), not
+     * my outbox, so the standard [TopFilter.Mine] relay-set resolution wouldn't reach them — instead
+     * we scan the cache for groups where I'm the relay-key / an admin / a member. The joined groups'
+     * metadata + rosters are kept in cache by RelayGroupRosterSubscription mounted on the screen.
+     */
+    private fun isMine(): Boolean = followList() is TopFilter.Mine
+
     private fun constraints(): Map<NormalizedRelayUrl, GroupDiscoveryConstraint> = account.liveRelayGroupsDiscoveryFollowListsPerRelay.value.toGroupConstraints()
 
     override fun feed(): List<Note> {
+        if (isMine()) return sort(myGroupNotes())
         val byRelay = constraints()
         val notes =
             LocalCache.addressables.filterIntoSet(GroupMetadataEvent.KIND) { _, note ->
                 matches(note, byRelay)
             }
         return sort(notes)
+    }
+
+    private fun myGroupNotes(): Set<Note> {
+        val me = account.userProfile().pubkeyHex
+        return LocalCache.relayGroupChannels
+            .filter { _, channel -> channel.event != null && channel.membershipOf(me).isMember() }
+            .mapNotNullTo(HashSet()) { it.metadataNote }
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> {
@@ -100,8 +116,9 @@ class RelayGroupDiscoveryFeedFilter(
         note: Note,
         byRelay: Map<NormalizedRelayUrl, GroupDiscoveryConstraint>,
     ): Boolean {
-        if (byRelay.isEmpty()) return false
         val channel = relayGroupDiscoveryChannelFor(note) ?: return false
+        if (isMine()) return channel.membershipOf(account.userProfile().pubkeyHex).isMember()
+        if (byRelay.isEmpty()) return false
         return byRelay[channel.groupId.relayUrl]?.matches(channel) == true
     }
 

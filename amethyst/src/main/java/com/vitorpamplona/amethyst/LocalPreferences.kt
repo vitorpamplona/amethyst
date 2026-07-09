@@ -962,7 +962,7 @@ object LocalPreferences {
             discovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null), TopFilter.Global),
             polls = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, null), TopFilter.Global),
             pictures = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null), TopFilter.Global),
-            relayGroupsDiscovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_RELAY_GROUPS_DISCOVERY_FOLLOW_LIST, null), TopFilter.Global),
+            relayGroupsDiscovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_RELAY_GROUPS_DISCOVERY_FOLLOW_LIST, null), TopFilter.Mine),
             napplets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NAPPLETS_FOLLOW_LIST, null), TopFilter.Global),
             nsites = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NSITES_FOLLOW_LIST, null), TopFilter.Global),
             workouts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_WORKOUTS_FOLLOW_LIST, null), TopFilter.Global),

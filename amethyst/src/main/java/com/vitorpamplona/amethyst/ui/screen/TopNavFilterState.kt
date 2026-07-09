@@ -337,8 +337,8 @@ class TopNavFilterState(
             emit(
                 listOf(
                     // Relay-group discovery routes to relays by author, hashtag and geohash, plus a
-                    // favorite-relay chip; mirrors the kind3 catalog like the git-repositories feed.
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
+                    // favorite-relay chip; "Mine" is the joined-groups view (the tab's default).
+                    listOf(mineFollow, allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
                     peopleLists,
                     interests,
                     listOf(muteListFollow),
@@ -447,7 +447,7 @@ class TopNavFilterState(
     val relayGroupsDiscoveryRoutes =
         _relayGroupsDiscoveryRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(mineFollow, allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow))
 
     val podcastRoutes =
         _podcastRoutes

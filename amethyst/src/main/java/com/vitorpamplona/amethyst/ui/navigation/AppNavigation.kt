@@ -114,7 +114,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupMembersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupNewThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupThreadsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupsHomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.share.ShareToDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
@@ -377,7 +376,7 @@ fun BuildNavigation(
         composableFromEnd<Route.Products> { ProductsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Shorts> { ShortsScreen(accountViewModel, nav) }
         composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
-        composableFromEnd<Route.RelayGroups> { RelayGroupsHomeScreen(accountViewModel, nav) }
+        composableFromEnd<Route.RelayGroups> { RelayGroupDiscoveryScreen(accountViewModel, nav) }
         composableFromEnd<Route.FollowPacks> { FollowPacksScreen(accountViewModel, nav) }
         composableFromEnd<Route.LiveStreams> { LiveStreamsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
@@ -632,13 +631,6 @@ fun BuildNavigation(
 
         composableFromEndArgs<Route.RelayGroupBrowse> {
             RelayGroupBrowseScreen(
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
-
-        composableFromEndArgs<Route.RelayGroupDiscovery> {
-            RelayGroupDiscoveryScreen(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
