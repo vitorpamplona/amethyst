@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -127,6 +128,7 @@ private fun RelayGroupThreads(
             if (canPost) {
                 FloatingActionButton(
                     onClick = { nav.nav(Route.RelayGroupNewThread(channel.groupId.id, channel.groupId.relayUrl.url)) },
+                    shape = CircleShape,
                 ) {
                     Icon(
                         symbol = MaterialSymbols.Add,

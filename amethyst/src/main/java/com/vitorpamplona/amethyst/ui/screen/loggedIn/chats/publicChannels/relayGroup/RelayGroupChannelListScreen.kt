@@ -113,7 +113,7 @@ fun RelayGroupChannelListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { nav.nav(Route.RelayGroupCreate(relay.url)) }) {
+            FloatingActionButton(onClick = { nav.nav(Route.RelayGroupCreate(relay.url)) }, shape = CircleShape) {
                 Icon(
                     symbol = MaterialSymbols.Add,
                     contentDescription = stringRes(R.string.relay_group_create_title),
