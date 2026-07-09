@@ -47,7 +47,9 @@ data class NProfile(
             val hex = tlv.firstAsHex(TlvTypes.SPECIAL) ?: return null
             val relay = tlv.asStringList(TlvTypes.RELAY) ?: emptyList()
 
-            if (hex.isBlank()) return null
+            // x-only 32-byte pubkey only (64 hex chars). Reject a 33-byte compressed
+            // key or any other malformed length — see NPub.parse for why it matters.
+            if (hex.length != 64) return null
 
             return NProfile(hex, relay.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) })
         }
