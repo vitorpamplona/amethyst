@@ -180,6 +180,16 @@ object ConcordKeyDerivation {
         identity: String,
     ): ByteArray = hkdf32(voiceMediaKey, buildInfo(ConcordLabels.VOICE_SENDER, sha256(identity.encodeToByteArray())))
 
+    // ---- CORD-05 invite bundle key --------------------------------------------
+
+    /**
+     * Derives the invite bundle decryption key from a link's 16-byte unlock
+     * [token] (CORD-05): `hkdf32(token, "concord/invite-key" ‖ 0x00)`. The token
+     * lives only in the URL fragment, so a server that sees the naddr can never
+     * open the bundle.
+     */
+    fun inviteBundleKey(token: ByteArray): ByteArray = hkdf32(token, buildInfo(ConcordLabels.INVITE_KEY))
+
     // ---- CORD-06 rekey locator ------------------------------------------------
 
     /**
