@@ -28,6 +28,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults.cardElevation
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -45,12 +47,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelaySuggestionState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.ShowRelaySuggestionList
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
+import com.vitorpamplona.amethyst.ui.theme.PopupUpEffect
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 /**
@@ -78,6 +85,11 @@ fun RelayGroupBrowseScreen(
     var relayUrl by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
 
+    // Same known-relay autocomplete every other relay field uses: filters the relays the app has
+    // already seen (LocalCache.relayHints) by the substring being typed.
+    val relaySuggestions = remember { RelaySuggestionState() }
+    val suggestionResults by relaySuggestions.results.collectAsStateWithLifecycle(emptyList())
+
     val joined by accountViewModel.account.relayGroupList.liveRelayGroupServers
         .collectAsStateWithLifecycle()
 
@@ -87,6 +99,7 @@ fun RelayGroupBrowseScreen(
             showError = true
             return
         }
+        relaySuggestions.reset()
         nav.nav(Route.RelayGroupServer(normalized.url))
     }
 
@@ -123,6 +136,7 @@ fun RelayGroupBrowseScreen(
                 onValueChange = {
                     relayUrl = it
                     showError = false
+                    relaySuggestions.processInput(it)
                 },
                 singleLine = true,
                 isError = showError,
@@ -138,6 +152,24 @@ fun RelayGroupBrowseScreen(
                 keyboardActions = KeyboardActions(onGo = { open(relayUrl) }),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             )
+
+            // Autocomplete popup: tapping a match opens that relay's group directory directly.
+            if (suggestionResults.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    elevation = cardElevation(5.dp),
+                    shape = PopupUpEffect,
+                ) {
+                    ShowRelaySuggestionList(
+                        relaySuggestions = relaySuggestions,
+                        onSelect = { relay -> open(relay.url) },
+                        modifier = HalfHorzPadding,
+                        nip11CachedRetriever = Amethyst.instance.nip11Cache,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            }
 
             Button(
                 onClick = { open(relayUrl) },
