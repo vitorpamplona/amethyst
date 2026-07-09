@@ -464,9 +464,6 @@ object GrapeRankCommand {
                     insertBatchSize = args.intFlag("insert-batch", 500),
                     drainConcurrency = args.intFlag("drain-concurrency", 24),
                     timeoutEvictStrikes = args.intFlag("timeout-evict", 3),
-                    // Adaptive EOSE cutoff: close a drain that delivered then fell silent
-                    // this many ms, instead of waiting the full fast window. 0 = off.
-                    eoseIdleMs = args.longFlag("eose-idle-ms", 0L),
                     // Cheap TCP reachability pre-probe (--no-probe to disable). No Tor
                     // transport here, so .onion relays are skipped on sight.
                     reachabilityProbe = if (args.bool("no-probe")) null else ::tcpReachable,
