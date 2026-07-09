@@ -1,10 +1,33 @@
 # Desktop DM Reliability — Testing Playbook
 
-**Branch:** `feat/desktop-dm-reliability` rebased onto `upstream/main` (24 commits; latest `9e707da2b1`)
+**Branch:** `feat/desktop-dm-reliability` rebased onto `upstream/main`
 **Tester:** _______________________
 **Date:** _______________________
 
 **Instructions:** Follow this top to bottom. Every step is an action or an observation. Don't skip ahead — later tests assume state from earlier ones. Total ≈ 40 min for full pass.
+
+---
+
+## Session results — 2026-07-09 (live run)
+
+| Test | Result | Notes |
+|------|--------|-------|
+| T1 startup / AUTH wired | ✅ PASS | both `Init, Subscribe` + `AUTH wired` logged; no CME crash |
+| T2 tier-1 self-DM (no banner) | ✅ PASS | published, no `PendingAuthApproval` prompt |
+| T3.a tier-2 banner render | ✅ PASS | `relay.ditto.pub` banner, icon clear of traffic lights, 3 buttons |
+| T3.c `Always` persists | ✅ PASS | `auth/<pubkey>/ wss://relay.ditto.pub/ = ALWAYS` in the plist |
+| T6 no-10050 blocks send | ✅ PASS | "Recipient has no DM relay list", send disabled |
+| T6b kind:10002-only blocks | ✅ PASS | same block; zero publish to the NIP-65 read relay |
+| T8 wrap `p`-tag relay hint | ✅ PASS (after fix) | 3-element `["p", hex, wss://nos.lol/]` on the wrap |
+| T12 kind:1059 sub has no `since` | ✅ PASS | `since` removed from `giftWrapsToMe` signature |
+| T3.b `Once` / T3.d `Never` | ⏭️ not run | logic covered by `AuthApprovalEndToEndTest` |
+| T9 group rumor.id | ⏭️ covered-by-construction | rumor signed once before the per-recipient loop |
+| T10 AUTH-under-load / T11 bunker | ⏭️ not run | no challenging relay / bunker on hand |
+
+**Bugs found & fixed this run:**
+1. `DmInboxRelayResolver` LocalCache fast-path used lenient `dmInboxRelays()` → NIP-65 read-relay leak. Now `dmInboxRelaysStrict()`.
+2. `NewDmDialog` rendered pasted npubs of metadata-less users as non-clickable → couldn't start a DM by npub. Now `getOrCreateUser`.
+3. NIP-17 `p`-tag relay hint was plumbed in quartz but never passed by `DesktopIAccount` → every wrap shipped a 2-element `p` tag. Now wired.
 
 ---
 
@@ -123,10 +146,15 @@ Record:
 
 - **Expected:** banner slides away immediately, no visible change to relay state.
 
-**7.** In a second terminal, check the Preferences file did NOT get written for this relay:
+**7.** In a second terminal, check the Preferences store did NOT get written for this relay.
+
+> **Prefs location (macOS).** This JVM uses the `MacOSXPreferences` backing
+> store, NOT `~/.java/.userPrefs`. Java prefs land in
+> `~/Library/Preferences/com.vitorpamplona.amethyst.plist` under an
+> `auth/<full-pubkey>/` node. Read it with `plutil`:
 
 ```bash
-cat ~/.java/.userPrefs/com/vitorpamplona/amethyst/desktop/auth/<your-full-pubkey>/prefs.xml 2>/dev/null | grep pyramid
+plutil -convert xml1 -o - ~/Library/Preferences/com.vitorpamplona.amethyst.plist | grep -i "pyramid\|ditto"
 ```
 
 - **Expected:** empty output (ONCE is not persisted).
@@ -149,10 +177,10 @@ Record:
 **11.** Check Preferences was written:
 
 ```bash
-cat ~/.java/.userPrefs/com/vitorpamplona/amethyst/desktop/auth/<your-full-pubkey>/prefs.xml | grep pyramid
+plutil -convert xml1 -o - ~/Library/Preferences/com.vitorpamplona.amethyst.plist | grep -i "pyramid\|ditto\|ALWAYS"
 ```
 
-- **Expected:** line containing `wss://pyramid.fiatjaf.com/` and `ALWAYS`.
+- **Expected:** the relay URL (e.g. `wss://relay.ditto.pub/`) followed by `ALWAYS`, under the `auth/<full-pubkey>/` node.
 
 **12.** Close app (Cmd+Q). Relaunch. Log in as A.
 
@@ -176,10 +204,10 @@ Record:
 **16.** Check Preferences:
 
 ```bash
-cat ~/.java/.userPrefs/com/vitorpamplona/amethyst/desktop/auth/<your-full-pubkey>/prefs.xml | grep <relay-domain>
+plutil -convert xml1 -o - ~/Library/Preferences/com.vitorpamplona.amethyst.plist | grep -i "<relay-domain>\|BLOCKED"
 ```
 
-- **Expected:** line with `BLOCKED`.
+- **Expected:** the relay URL followed by `BLOCKED`, under the `auth/<full-pubkey>/` node.
 
 **17.** Restart the app. Log in as A.
 
