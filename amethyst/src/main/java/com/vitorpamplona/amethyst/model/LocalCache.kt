@@ -158,6 +158,17 @@ import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupParticipantsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteEventEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.nip31Alts.AltTag
@@ -3688,6 +3699,56 @@ object LocalCache : ILocalCache, ICacheProvider {
 
                 is GroupAdminsEvent -> {
                     consume(event, relay, wasVerified)
+                }
+
+                // Remaining NIP-29 relay-group kinds. The two relay-signed addressables (39003
+                // roles, 39004 AV participants) are durable group state alongside 39000/39001/39002,
+                // so they're stored replaceably. The 9xxx moderation actions and join/leave requests
+                // are regular one-shot events the relay is authoritative for (it applies them and
+                // republishes the 39000/39001/39002); we store them so they're queryable and don't
+                // fall through to the "Not Supported" warning, but we don't act on them client-side.
+                is SupportedRolesEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is GroupParticipantsEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is PutUserEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is RemoveUserEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is EditMetadataEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is DeleteEventEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is DeleteGroupEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CreateGroupEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CreateInviteEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is JoinRequestEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is LeaveRequestEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
                 }
 
                 is ExternalIdentitiesEvent -> {
