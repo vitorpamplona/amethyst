@@ -199,6 +199,14 @@ class GrapeRankDataCrawler(
          * no socket, no wasted connect attempt.
          */
         val torEnabled: Boolean = false,
+        /**
+         * Relays a prior run (or another monitor) proved unreachable within the
+         * reachability cache's TTL — seeded into [deadRelays] before the crawl starts
+         * so we don't re-pay their connect timeouts. Per-URL (not per-authority): a
+         * TTL'd "skip for now", re-probed once the record ages out, so it never
+         * permanently ignores an author's advertised home. See RelayReachabilityStore.
+         */
+        val knownDeadRelays: Set<NormalizedRelayUrl> = emptySet(),
     )
 
     /** What the crawl fetched — the counters the caller reports and the graph is built from. */
@@ -221,6 +229,13 @@ class GrapeRankDataCrawler(
         val insertMs: Long,
         /** Verified events handed to the store (duplicates included — the write path dedups). */
         val eventsStored: Long,
+        /**
+         * Relays proven unreachable this run (connect-establishment failures / seeded
+         * known-dead), and relays that served ≥1 event. The caller flushes these into
+         * the reachability cache (kind:30166) so the next run and the updater start warm.
+         */
+        val deadRelays: Set<NormalizedRelayUrl>,
+        val liveRelays: Set<NormalizedRelayUrl>,
     )
 
     /**
@@ -277,7 +292,11 @@ class GrapeRankDataCrawler(
         // Concurrent: touched by more than one of producer/consumer/drain-workers.
         val relayHints = ConcurrentMap<HexKey, ConcurrentSet<NormalizedRelayUrl>>()
         val attempts = ConcurrentMap<HexKey, Int>()
-        val deadRelays = ConcurrentSet<NormalizedRelayUrl>()
+
+        // Seeded from the reachability cache (relays proven dead within its TTL) so the
+        // WS path never re-pays their connect timeouts; the crawl still adds/removes
+        // more as it goes and flushes the union back at the end.
+        val deadRelays = ConcurrentSet<NormalizedRelayUrl>().apply { config.knownDeadRelays.forEach { add(it) } }
 
         // Unproductive-TIMEOUT strikes, keyed by relay AUTHORITY (host[:port]), not the
         // full URL. [classifyDrainFailure] treats a READ timeout or a park idle-cut — the
@@ -1512,6 +1531,8 @@ class GrapeRankDataCrawler(
                 verifyMs = verifyMs,
                 insertMs = insertMs,
                 eventsStored = stored,
+                deadRelays = deadRelays.snapshot(),
+                liveRelays = liveRelays.snapshot(),
             )
         }
     }

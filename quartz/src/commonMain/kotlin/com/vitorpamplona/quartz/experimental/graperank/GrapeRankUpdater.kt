@@ -97,6 +97,14 @@ class GrapeRankUpdater(
         val minAuthors: Int = 1,
         val idleTimeoutMs: Long = 30_000L,
         val publishTimeoutSecs: Long = 15,
+        /**
+         * Relays proven unreachable within the reachability cache's TTL (kind:30166).
+         * Skipped from the reconcile plan so we don't burn a connect timeout per dead
+         * relay — the crawl already found them dead, and a dead relay cannot serve its
+         * authors anyway. TTL'd, so a recovered relay is retried once the record ages
+         * out; this never drops a *live* author-advertised relay. See RelayReachabilityStore.
+         */
+        val knownDead: Set<NormalizedRelayUrl> = emptySet(),
     ) {
         /** Project the shared engine knobs onto a [NegentropyStoreSync.Config]. */
         internal fun toEngineConfig() =
@@ -170,6 +178,7 @@ class GrapeRankUpdater(
         val plan =
             groups.entries
                 .filter { it.value.size >= config.minAuthors }
+                .filterNot { it.key in config.knownDead }
                 .sortedByDescending { it.value.size }
                 .map { it.key to it.value }
 

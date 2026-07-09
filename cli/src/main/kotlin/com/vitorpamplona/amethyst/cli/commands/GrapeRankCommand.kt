@@ -257,6 +257,7 @@ object GrapeRankCommand {
                 val stats = newCrawler(ctx, args).crawl(observer, builder)
                 crawlStats = stats
                 contactListsFed = stats.contactListsFed
+                flushReachability(ctx, args, stats)
                 reportRelayFeedback(ctx)
             } else {
                 // Offline: stream contact lists from the local store into the graph.
@@ -440,6 +441,11 @@ object GrapeRankCommand {
         // Aggregator kind:3 recovery for stragglers is on by default; --no-aggregators
         // disables it for A/B comparison.
         val aggregators = if (args.bool("no-aggregators")) emptySet() else CONTENT_AGGREGATOR_RELAYS
+        // Seed the crawl with relays a prior run/monitor proved dead within the cache's
+        // TTL, so the WS path never re-pays their connect timeouts (--no-reachability-cache
+        // to skip). The crawl's own final live/dead set is flushed back by the caller.
+        val knownDead =
+            if (args.bool("no-reachability-cache")) emptySet() else ctx.reachability.snapshot().dead
         return GrapeRankDataCrawler(
             client = ctx.client,
             store = ctx.store,
@@ -447,6 +453,7 @@ object GrapeRankCommand {
             config =
                 GrapeRankDataCrawler.Config(
                     relayListDiscoveryRelays = discoveryRelays,
+                    knownDeadRelays = knownDead,
                     contentFallbackRelays = contentFallback,
                     contentAggregatorRelays = aggregators,
                     maxRounds = args.intFlag("max-rounds", Int.MAX_VALUE),
@@ -479,6 +486,26 @@ object GrapeRankCommand {
     }
 
     /**
+     * Flush the crawl's final live/dead relay verdicts into the shared reachability
+     * cache (NIP-66 kind:30166) so the next crawl and the WoT updater start warm and
+     * skip proven-dead relays. Best-effort and behind `--no-reachability-cache`: a
+     * cache write must never fail the crawl it is summarizing.
+     */
+    private suspend fun flushReachability(
+        ctx: Context,
+        args: Args,
+        stats: GrapeRankDataCrawler.Stats,
+    ) {
+        if (args.bool("no-reachability-cache")) return
+        runCatching {
+            ctx.reachability.record(reachable = stats.liveRelays, dead = stats.deadRelays)
+            System.err.println(
+                "[graperank] reachability cache: recorded ${stats.liveRelays.size} live, ${stats.deadRelays.size} dead",
+            )
+        }.onFailure { System.err.println("[graperank] reachability cache flush failed: ${it.message}") }
+    }
+
+    /**
      * `amy graperank crawl [OBSERVER]` — network-only WoT data crawl (aliased as the
      * former `sync`). Crawls the reachable follow/mute/report graph into the local
      * store (kind 3/10000/1984/10002) and reports what it loaded, WITHOUT scoring.
@@ -497,6 +524,7 @@ object GrapeRankCommand {
             // Persist-only crawl: no in-memory graph (null builder); every event
             // still lands in the store for a later `score`.
             val stats = newCrawler(ctx, args).crawl(observer, null)
+            flushReachability(ctx, args, stats)
             reportRelayFeedback(ctx)
             Output.emit(
                 linkedMapOf<String, Any?>(
@@ -553,6 +581,13 @@ object GrapeRankCommand {
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
 
+            // Skip relays a crawl/monitor proved dead within the cache's TTL — a dead
+            // relay cannot serve its authors, so reconciling it only burns a timeout.
+            // Live author-advertised relays are always synced (--no-reachability-cache
+            // to reconcile every relay regardless).
+            val knownDead =
+                if (args.bool("no-reachability-cache")) emptySet() else ctx.reachability.snapshot().dead
+
             val updater =
                 GrapeRankUpdater(
                     client = ctx.client,
@@ -566,6 +601,7 @@ object GrapeRankCommand {
                             authorChunk = args.intFlag("author-chunk", 500),
                             minAuthors = args.intFlag("min-authors", 1),
                             idleTimeoutMs = args.longFlag("timeout", 30L) * 1000,
+                            knownDead = knownDead,
                         ),
                     log = { System.err.println(it) },
                 )
