@@ -52,6 +52,9 @@ value class ConcordPermissions(
     companion object {
         val NONE = ConcordPermissions(0uL)
 
+        /** Every bit set — the owner's implicit, supreme permission set. */
+        val ALL = ConcordPermissions(ULong.MAX_VALUE)
+
         // Frozen bit positions (CORD-04 §Permission Bits).
         const val MANAGE_ROLES = 0
         const val MANAGE_CHANNELS = 1
