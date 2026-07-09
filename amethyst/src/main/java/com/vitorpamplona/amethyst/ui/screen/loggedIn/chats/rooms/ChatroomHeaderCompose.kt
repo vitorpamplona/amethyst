@@ -337,7 +337,9 @@ private fun RelayGroupRoomCompose(
             val authorName by observeUserName(author, accountViewModel)
             "$authorName: ${noteEvent.content.take(200)}"
         } else {
-            ""
+            // Event-less placeholder row for a just-joined group with no messages yet — say so
+            // explicitly (like Marmot groups) instead of an empty second line.
+            stringRes(R.string.relay_group_no_messages_yet)
         }
 
     ChannelName(

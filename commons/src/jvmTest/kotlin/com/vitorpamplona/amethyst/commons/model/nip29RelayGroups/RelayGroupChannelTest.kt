@@ -80,6 +80,20 @@ class RelayGroupChannelTest {
     }
 
     @Test
+    fun placeholderNoteCarriesChannelGathererAndIsStable() {
+        val c = channel()
+        val note = c.placeholderNote()
+
+        // Stable, group-derived id and — crucially — the channel is registered as a gatherer so the
+        // Messages row renderer (ChatroomHeaderCompose) resolves the event-less note back to the
+        // group instead of blanking it.
+        assertEquals("relaygroup-empty-${c.groupId.toKey()}", note.idHex)
+        assertTrue(note.inGatherers?.any { it === c } == true)
+        // Cached: same instance on repeat so equality-based feed diffing keeps one stable row.
+        assertTrue(c.placeholderNote() === note)
+    }
+
+    @Test
     fun membershipFromRolesAndMembers() {
         val c = channel()
         c.updateAdmins(admins(100, alice to listOf("admin"), bob to listOf("moderator")))
