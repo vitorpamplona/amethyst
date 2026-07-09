@@ -85,13 +85,14 @@ import kotlin.math.roundToInt
  *
  * The crawl and the computation are separable, because the crawl persists every
  * event it fetches to the store and the score is a pure function over it:
- *  - `amy graperank sync [OBSERVER]` — network only: crawl the reachable graph's
- *    kind 3/10000/1984/10002 into the local store. Idempotent and cumulative, so
- *    run it a few times to make sure everything is loaded. Scores nothing.
+ *  - `amy graperank crawl [OBSERVER]` — network only: crawl the reachable graph's
+ *    kind 3/10000/1984/10002 into the local store (aliased as the former `sync`).
+ *    Idempotent and cumulative, so run it a few times to make sure everything is
+ *    loaded. Scores nothing.
  *  - `amy graperank score [OBSERVER]` — local only: build the graph from the store
  *    and score (same as bare `--offline`). Instant and param-tunable; repeat with
  *    different `--rigor`/`--attenuation`/cutoffs without re-crawling.
- *  - bare `amy graperank [OBSERVER]` — the convenience combo: sync then score.
+ *  - bare `amy graperank [OBSERVER]` — the convenience combo: crawl then score.
  *
  * Sub-verbs complete the NIP-85 provider experience — the discovery layer that
  * lets clients find and consume those assertions:
@@ -189,7 +190,9 @@ object GrapeRankCommand {
             "register" -> register(dataDir, tail.drop(1).toTypedArray())
             "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
             "operator" -> operator(dataDir, tail.drop(1).toTypedArray())
-            "sync" -> sync(dataDir, tail.drop(1).toTypedArray())
+            // `sync` is the pre-rename name kept as a back-compat alias; `crawl` is
+            // canonical (disambiguates from negentropy `amy sync` / `graperank update`).
+            "crawl", "sync" -> crawl(dataDir, tail.drop(1).toTypedArray())
             "update" -> update(dataDir, tail.drop(1).toTypedArray())
             "score" -> run(dataDir, tail.drop(1).toTypedArray(), forceOffline = true)
             else -> run(dataDir, tail)
@@ -421,7 +424,7 @@ object GrapeRankCommand {
 
     /**
      * Configure the outbox-model crawler from the crawl flags on [args] plus the
-     * account's relay policy. Shared by the bare command and `graperank sync`.
+     * account's relay policy. Shared by the bare command and `graperank crawl`.
      * Relay policy — where a stranger's kind:10002 is found (index/discovery
      * aggregators + general defaults) and best-effort general relays that might
      * hold content when an outbox is unknown — lives in app code, so the quartz
@@ -476,12 +479,13 @@ object GrapeRankCommand {
     }
 
     /**
-     * `amy graperank sync [OBSERVER]` — network-only WoT data sync. Crawls the
-     * reachable follow/mute/report graph into the local store (kind 3/10000/1984/
-     * 10002) and reports what it loaded, WITHOUT scoring. Idempotent + cumulative:
-     * run it a few times to make sure everything is loaded, then `graperank score`.
+     * `amy graperank crawl [OBSERVER]` — network-only WoT data crawl (aliased as the
+     * former `sync`). Crawls the reachable follow/mute/report graph into the local
+     * store (kind 3/10000/1984/10002) and reports what it loaded, WITHOUT scoring.
+     * Idempotent + cumulative: run it a few times to make sure everything is loaded,
+     * then `graperank score`.
      */
-    private suspend fun sync(
+    private suspend fun crawl(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
@@ -574,7 +578,7 @@ object GrapeRankCommand {
                         "relay_lists_in_store" to result.relayListsInStore,
                         "authors_with_outbox" to result.authorsWithOutbox,
                         "relays" to 0,
-                        "note" to "no kind:10002 write relays in the local store — run `graperank sync` first",
+                        "note" to "no kind:10002 write relays in the local store — run `graperank crawl` first",
                     ),
                 )
                 return 0
