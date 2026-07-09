@@ -191,7 +191,8 @@ class DesktopIAccount(
     override suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) {
         if (!isWriteable()) return
 
-        val result = NIP17Factory().createMessageNIP17(template, signer)
+        val hints = recipientRelayHints(template.tags)
+        val result = NIP17Factory().createMessageNIP17(template, signer, recipientRelayHints = { hints[it] })
 
         // Optimistic local add — use the inner ChatMessageEvent, not the wraps
         val innerMsg = result.msg as ChatMessageEvent
@@ -211,7 +212,8 @@ class DesktopIAccount(
     override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
         if (!isWriteable()) return
 
-        val result = NIP17Factory().createEncryptedFileNIP17(template, signer)
+        val hints = recipientRelayHints(template.tags)
+        val result = NIP17Factory().createEncryptedFileNIP17(template, signer, recipientRelayHints = { hints[it] })
 
         // Optimistic local add
         val innerEvent = result.msg as ChatMessageEncryptedFileHeaderEvent
@@ -261,19 +263,38 @@ class DesktopIAccount(
      * Empty result means the wrap will not be sent; [DmSendTracker.sendBatch]
      * surfaces this as a "No relays available" failure to the user.
      */
-    private suspend fun resolveDmInboxRelaysStrict(recipientKey: HexKey?): Set<NormalizedRelayUrl> {
-        if (recipientKey == null) return emptySet()
+    private suspend fun resolveDmInboxRelaysStrict(recipientKey: HexKey?): Set<NormalizedRelayUrl> = resolveDmInboxRelaysStrictOrdered(recipientKey).toSet()
+
+    /**
+     * Ordered variant of [resolveDmInboxRelaysStrict]. Preserves the relay
+     * order declared in the recipient's kind:10050 so the first element is the
+     * recipient's *primary* DM inbox — used as the NIP-17 gift-wrap `p`-tag
+     * relay hint. The unordered [resolveDmInboxRelaysStrict] derives from this.
+     */
+    private suspend fun resolveDmInboxRelaysStrictOrdered(recipientKey: HexKey?): List<NormalizedRelayUrl> {
+        if (recipientKey == null) return emptyList()
         val resolver = dmInboxResolver
         return if (resolver != null) {
-            resolver.resolve(recipientKey).toSet()
+            resolver.resolve(recipientKey)
         } else {
             localCache
                 .getOrCreateUser(recipientKey)
                 .dmInboxRelaysStrict()
-                ?.toSet()
                 ?.ifEmpty { null }
-                ?: emptySet()
+                ?: emptyList()
         }
+    }
+
+    /**
+     * Per-recipient primary DM-inbox relay, keyed by recipient pubkey, for the
+     * NIP-17 gift-wrap `p`-tag hint (`["p", <pubkey>, <primary-relay>]`). Built
+     * from the recipient `p` tags on the outgoing message template. A recipient
+     * with no resolvable kind:10050 maps to `null`, which keeps the historical
+     * 2-element `p` tag for that recipient.
+     */
+    private suspend fun recipientRelayHints(tags: Array<Array<String>>): Map<HexKey, NormalizedRelayUrl?> {
+        val recipients = tags.mapNotNull { if (it.size >= 2 && it[0] == "p") it[1] else null }.toSet()
+        return recipients.associateWith { resolveDmInboxRelaysStrictOrdered(it).firstOrNull() }
     }
 
     private fun addEventToChatroom(
