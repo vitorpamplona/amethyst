@@ -60,7 +60,20 @@ fun relayGroupDiscoveryChannelFor(note: Note): RelayGroupChannel? {
 class RelayGroupDiscoveryFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
+    /**
+     * The feed identity is the selected list PLUS a fingerprint of what the feed actually filters
+     * on. The list flips synchronously when the spinner changes, but the per-relay set it resolves
+     * to ([liveRelayGroupsDiscoveryFollowListsPerRelay]) lands a frame later (the outbox loader is
+     * async). If the key were the list alone, the first refresh would run against the STALE set
+     * (showing the old filter's groups) and the catch-up emission — same list code — would be
+     * swallowed by [checkKeysInvalidateDataAndSendToTop]'s "key unchanged" guard, freezing the feed
+     * on the previous filter until a manual pull-to-refresh. Folding the resolved discriminator in
+     * (the joined ids for "My Groups", the per-relay constraints otherwise — both content-hashed via
+     * data classes) makes the key move when the resolution lands, so the refresh actually fires.
+     */
+    override fun feedKey(): String =
+        account.userProfile().pubkeyHex + "-" + followList().code + "-" +
+            (if (isMine()) joinedGroupIds().hashCode() else constraints().hashCode())
 
     override fun limit() = 200
 
