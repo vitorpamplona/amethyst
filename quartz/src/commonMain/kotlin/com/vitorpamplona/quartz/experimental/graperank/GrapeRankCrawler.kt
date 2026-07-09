@@ -351,6 +351,24 @@ class GrapeRankCrawler(
         // it finishes (or its park window elapses).
         val parkedInFlight = AtomicLong(0)
 
+        // ── Saturation / latency instrumentation (diagnose only) ─────────────────────
+        // Are we resource-bound or waiting-on-relays? These answer it without a profiler.
+        // activeWorkers: Phase-B drain workers busy right now (vs drainConcurrency) — if
+        //   rarely full, adding workers won't help; the producer/relays are the limit.
+        // throttled: drains that got a relay rate-limit (429/too-many-*) — the EXTERNAL
+        //   ceiling; if it climbs when we push harder, more concurrency backfires.
+        // The latency sums split a drain's wall time into time-to-first-event vs the
+        //   EOSE-wait AFTER the relay's last event (pure waiting on a done-but-slow relay)
+        //   — a large eose-wait fraction is the case for a shorter/adaptive fast window.
+        // burnedFastWindow: drains that blew timeoutMs and had to park.
+        val activeWorkers = AtomicLong(0)
+        val throttled = AtomicLong(0)
+        val firstEventSumMs = AtomicLong(0)
+        val eoseWaitSumMs = AtomicLong(0)
+        val drainWallSumMs = AtomicLong(0)
+        val drainSamples = AtomicLong(0)
+        val burnedFastWindow = AtomicLong(0)
+
         // Background scope owning the parked subscriptions (and Tier-2 relay-list
         // sweeps). Set in [run]; cancelled once the crawl converges.
         var bgScope: CoroutineScope? = null
@@ -1002,9 +1020,17 @@ class GrapeRankCrawler(
                         val pct = (100L * roundDone / progTarget).coerceIn(0, 100)
                         val remaining = (progTarget - roundDone).coerceAtLeast(0)
                         val eta = if (rate > 0) etaFmt(remaining / rate) else "…"
+                        // Saturation tail: workers busy / cap, and rate-limit hits so far — is
+                        // the pool full (raise concurrency) or starved (producer/relays bound)?
+                        val sat =
+                            if (config.diagnose) {
+                                " · ${activeWorkers.load()}/${config.drainConcurrency}w · ${throttled.load()} rl"
+                            } else {
+                                ""
+                            }
                         log(
                             "[graperank] round $progRound · ${human(roundDone.toLong())}/${human(progTarget.toLong())} ($pct%)" +
-                                " · $rate/s · ~$eta · ${human(events)} ev · $parked slow · ${deadRelays.size()} dead",
+                                " · $rate/s · ~$eta · ${human(events)} ev · $parked slow · ${deadRelays.size()} dead$sat",
                         )
                     }
                 }
@@ -1104,6 +1130,12 @@ class GrapeRankCrawler(
                 classifyDrainFailure(reason)?.let { kind -> into[relay] = kind }
             }
 
+            // A relay asking us to slow down — the external concurrency ceiling.
+            fun isRateLimit(reason: String): Boolean {
+                val m = reason.lowercase()
+                return "429" in m || "too many" in m || "rate" in m || "throttl" in m
+            }
+
             fun logSlow(
                 relay: NormalizedRelayUrl,
                 reason: String,
@@ -1132,6 +1164,12 @@ class GrapeRankCrawler(
                                     // this (conflated, so bursts collapse to one) and resets the park
                                     // window, so a relay actively streaming is never cut mid-flight.
                                     val activity = Channel<Unit>(Channel.CONFLATED)
+                                    // Latency breakdown: elapsed-since-[mark] of the first and last
+                                    // event, so the EOSE-wait AFTER the relay's last event (pure
+                                    // waiting on a done-but-slow relay) is separable from fetch time.
+                                    val mark = TimeSource.Monotonic.markNow()
+                                    val firstEvt = AtomicLong(-1)
+                                    val lastEvt = AtomicLong(-1)
                                     val listener =
                                         object : SubscriptionListener {
                                             override fun onEvent(
@@ -1142,6 +1180,9 @@ class GrapeRankCrawler(
                                             ) {
                                                 unitEvents.trySend(relay to event)
                                                 activity.trySend(Unit)
+                                                val e = mark.elapsedNow().inWholeMilliseconds
+                                                firstEvt.compareAndSet(-1, e)
+                                                lastEvt.store(e)
                                             }
 
                                             override fun onEose(
@@ -1168,13 +1209,22 @@ class GrapeRankCrawler(
                                             }
                                         }
                                     client.subscribe(subId, mapOf(subRelay to groupFilters), listener)
-                                    val mark = TimeSource.Monotonic.markNow()
                                     val reason = withTimeoutOrNull(config.timeoutMs) { done.await() }
                                     if (reason != null) {
                                         // Terminal within the fast window — resolve this round.
                                         val elapsedMs = mark.elapsedNow().inWholeMilliseconds
                                         if (reason != "eose") notAnswered.add(subRelay)
                                         classify(reason, subRelay, failures)
+                                        if (isRateLimit(reason)) throttled.addAndFetch(1)
+                                        // Split the wall time: fetch (to first event) vs EOSE-wait
+                                        // (after the last event) — only for drains that got events.
+                                        val firstE = firstEvt.load()
+                                        if (firstE >= 0) {
+                                            firstEventSumMs.addAndFetch(firstE)
+                                            eoseWaitSumMs.addAndFetch((elapsedMs - lastEvt.load()).coerceAtLeast(0))
+                                            drainWallSumMs.addAndFetch(elapsedMs)
+                                            drainSamples.addAndFetch(1)
+                                        }
                                         if (elapsedMs > SLOW_DRAIN_LOG_MS) logSlow(subRelay, reason, elapsedMs, groupFilters)
                                         unitEvents.close()
                                         client.unsubscribe(subId)
@@ -1195,6 +1245,7 @@ class GrapeRankCrawler(
                                         persisted
                                     } else {
                                         // Still streaming — hand off and let the round move on.
+                                        burnedFastWindow.addAndFetch(1)
                                         notAnswered.add(subRelay)
                                         timedOut.add(subRelay)
                                         val scope = bgScope
@@ -1414,11 +1465,16 @@ class GrapeRankCrawler(
                             List(config.drainConcurrency) {
                                 launch {
                                     for ((batch, filters) in routed) {
-                                        val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
-                                        val answered = HashSet<NormalizedRelayUrl>()
-                                        val events = drainGated(filters, dead, answered)
-                                        recordDead(dead)
-                                        drainedOut.send(DrainedBatch(batch, filters, answered, events))
+                                        activeWorkers.addAndFetch(1)
+                                        try {
+                                            val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
+                                            val answered = HashSet<NormalizedRelayUrl>()
+                                            val events = drainGated(filters, dead, answered)
+                                            recordDead(dead)
+                                            drainedOut.send(DrainedBatch(batch, filters, answered, events))
+                                        } finally {
+                                            activeWorkers.addAndFetch(-1)
+                                        }
                                     }
                                 }
                             }
@@ -1525,6 +1581,21 @@ class GrapeRankCrawler(
                 "[graperank] write path: $stored events stored, verify ${verifyMs}ms + insert ${insertMs}ms " +
                     "(summed across all drains, batch=${config.insertBatchSize})",
             )
+            if (config.diagnose) {
+                val n = drainSamples.load().coerceAtLeast(1)
+                val wall = drainWallSumMs.load().coerceAtLeast(1)
+                val meanFirst = firstEventSumMs.load() / n
+                val meanEose = eoseWaitSumMs.load() / n
+                val eosePct = 100 * eoseWaitSumMs.load() / wall
+                log(
+                    "[graperank] latency breakdown (drains with events, n=${drainSamples.load()}): " +
+                        "mean time-to-first-event ${meanFirst}ms, mean EOSE-wait-after-last-event ${meanEose}ms " +
+                        "($eosePct% of drain wall spent waiting for EOSE after the relay's last event); " +
+                        "${burnedFastWindow.load()} drains blew the ${config.timeoutMs}ms fast window and parked; " +
+                        "${throttled.load()} rate-limit responses. " +
+                        "High EOSE-wait % → a shorter/adaptive fast window is the lever, not more concurrency.",
+                )
+            }
             return Stats(
                 rounds = rounds,
                 contactListsFed = contactListsFed,
