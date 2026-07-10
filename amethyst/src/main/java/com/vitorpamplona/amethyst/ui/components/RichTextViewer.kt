@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.ClinkOfferSegment
+import com.vitorpamplona.amethyst.commons.richtext.ConcordInviteLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmailSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmojiSegment
 import com.vitorpamplona.amethyst.commons.richtext.HashIndexEventSegment
@@ -533,6 +534,7 @@ private fun RenderWordWithoutPreview(
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
 
         is RelayGroupLinkSegment -> ClickableRelayGroupLink(word.segmentText, nav)
+        is ConcordInviteLinkSegment -> ClickableConcordInviteLink(word.segmentText, nav)
 
         is BlossomUriSegment -> BlossomUriRendererNoPreview(word.segmentText, accountViewModel)
 

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
+import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.util.isValidUrl
@@ -369,6 +370,12 @@ class RichTextParser {
         }
 
         if (urls.withScheme.contains(word)) {
+            // A Concord invite link is a plain https URL, so it would otherwise render as a bare
+            // link. Cheap substring gates keep the base64/bech32 parse off the hot path for
+            // ordinary URLs; only `…/invite/…#…` shapes are actually decoded.
+            if (word.contains("/invite/") && word.contains('#') && ConcordActions.parseInviteLink(word) != null) {
+                return ConcordInviteLinkSegment(word)
+            }
             parseNowhereLink(word)?.let { return it }
             return LinkSegment(word)
         }
