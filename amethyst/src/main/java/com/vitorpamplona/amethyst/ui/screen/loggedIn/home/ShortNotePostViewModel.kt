@@ -1024,21 +1024,19 @@ open class ShortNotePostViewModel :
                     tags = template.tags,
                     content = template.content,
                 )
-            val (event, relays, extras) = accountViewModel.account.createPostEvent(rescheduledTemplate, extraNotesToBroadcast)
-            Amethyst.instance.scheduledPostStore.add(
-                ScheduledPost(
-                    id =
-                        java.util.UUID
-                            .randomUUID()
-                            .toString(),
-                    accountPubkey = event.pubKey,
-                    signedEventJson = event.toJson(),
-                    relayUrls = relays.map { it.url },
-                    extraEventsJson = extras.map { it.toJson() },
-                    publishAtSec = scheduledFor,
-                    createdAtSec = System.currentTimeMillis() / 1000,
-                ),
-            )
+
+            // Mining commits the future created_at into the hashed id, and the
+            // worker publishes the stored signed JSON verbatim, so the nonce is
+            // still valid at publish time.
+            val enqueued =
+                powDifficulty != null &&
+                    accountViewModel.account.mineTemplateInBackground(rescheduledTemplate, powDifficulty) { mined ->
+                        storeScheduledPost(mined, extraNotesToBroadcast, scheduledFor)
+                    }
+            if (!enqueued) {
+                storeScheduledPost(rescheduledTemplate, extraNotesToBroadcast, scheduledFor)
+            }
+
             accountViewModel.launchSigner {
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
@@ -1088,6 +1086,34 @@ open class ShortNotePostViewModel :
         accountViewModel.launchSigner {
             accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
+    }
+
+    /**
+     * Signs the (possibly mined) re-stamped template and parks it in the
+     * scheduled-post store for the worker to publish at its created_at time.
+     * Runs on the mining queue's scope when PoW is on, so it must not touch
+     * viewModelScope.
+     */
+    private suspend fun storeScheduledPost(
+        template: EventTemplate<out Event>,
+        extraNotesToBroadcast: List<Event>,
+        publishAtSec: Long,
+    ) {
+        val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
+        Amethyst.instance.scheduledPostStore.add(
+            ScheduledPost(
+                id =
+                    java.util.UUID
+                        .randomUUID()
+                        .toString(),
+                accountPubkey = event.pubKey,
+                signedEventJson = event.toJson(),
+                relayUrls = relays.map { it.url },
+                extraEventsJson = extras.map { it.toJson() },
+                publishAtSec = publishAtSec,
+                createdAtSec = System.currentTimeMillis() / 1000,
+            ),
+        )
     }
 
     /**
