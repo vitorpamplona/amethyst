@@ -56,6 +56,37 @@ _Coming soon (separate PR): Scoop (Windows), AUR (Arch Linux)._
 
 </div>
 
+## Verifying the APK signature
+
+If you sideload Amethyst (Obtainium, GitHub Releases, Zap Store), verify that your
+APK is signed by the official release key before installing. All official Amethyst
+APKs — both the `googleplay` and `fdroid` flavors — are signed with the same
+certificate, whose SHA-256 fingerprint is:
+
+```
+C2:D0:AA:86:BC:B6:B6:20:90:56:1A:41:BB:E3:36:E9:8B:78:C2:D0:21:0A:49:8D:C8:85:F2:8E:13:48:CF:17
+```
+
+To check a downloaded APK yourself, run (`apksigner` ships with the Android SDK
+build-tools):
+
+```bash
+apksigner verify --print-certs amethyst-*.apk
+```
+
+and confirm the reported `Signer #1 certificate SHA-256 digest` is
+`c2d0aa86bcb6b62090561a41bbe336e98b78c2d0210a498dc885f28e1348cf17`.
+Without the Android SDK, `keytool -printcert -jarfile amethyst-*.apk` (bundled
+with any JDK) prints the same SHA-256 fingerprint.
+
+With [AppVerifier](https://github.com/soupslurpr/appverifier), paste or share the
+APK and compare against:
+
+```
+com.vitorpamplona.amethyst
+C2:D0:AA:86:BC:B6:B6:20:90:56:1A:41:BB:E3:36:E9:8B:78:C2:D0:21:0A:49:8D:C8:85:F2:8E:13:48:CF:17
+```
+
 ## Supported Features
 
 <img align="right" src="./docs/screenshots/home.png" data-canonical-src="./docs/screenshots/home.png" width="350px">
