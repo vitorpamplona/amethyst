@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.relayAdvertisesNip29
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -104,7 +105,19 @@ class RelayGroupDiscoveryFeedFilter(
         joined: Set<GroupId>,
     ): Boolean = channel.groupId in joined || channel.membershipOf(account.userProfile().pubkeyHex).isMember()
 
-    private fun constraints(): Map<NormalizedRelayUrl, GroupDiscoveryConstraint> = account.liveRelayGroupsDiscoveryFollowListsPerRelay.value.toGroupConstraints()
+    /**
+     * The per-relay constraints, restricted to relays that ADVERTISE NIP-29 in their NIP-11
+     * `supported_nips`. A relay that truly runs NIP-29 rejects user-authored 39xxx, so on such a
+     * relay every 39000 is relay-signed and genuine; general relays (nostr.wine, etc.) instead store
+     * stray user-published 39000s that have no roster and can't be joined. Dropping non-advertising
+     * relays here filters out that noise for both the match test and the REQ-driven feed at one
+     * point. Relays whose NIP-11 hasn't loaded yet resolve to false and are warmed by the screen
+     * ([WatchAccountForRelayGroupDiscovery]), which re-invalidates the feed once support is known.
+     */
+    private fun constraints(): Map<NormalizedRelayUrl, GroupDiscoveryConstraint> =
+        account.liveRelayGroupsDiscoveryFollowListsPerRelay.value
+            .toGroupConstraints()
+            .filterKeys { relayAdvertisesNip29(it) }
 
     override fun feed(): List<Note> {
         if (isMine()) return sort(myGroupNotes())

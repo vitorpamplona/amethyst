@@ -42,7 +42,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -75,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.toGroupConstraints
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupMyJoinedGroupsSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssemblerSubscription
@@ -215,7 +219,29 @@ private fun WatchAccountForRelayGroupDiscovery(
     val joinedGroups by accountViewModel.account.relayGroupList.liveRelayGroupList
         .collectAsStateWithLifecycle()
 
-    LaunchedEffect(listName, perRelay, joinedGroups) {
+    // Discovery only shows groups hosted on relays that actually run NIP-29 (a relay that does
+    // rejects user-authored 39xxx, so its 39000s are all genuine; general relays instead carry stray
+    // fake ones). The feed decides this from each relay's cached NIP-11 `supported_nips`, so warm
+    // the candidate relays here and re-invalidate as support is confirmed — otherwise a relay whose
+    // NIP-11 lands after its 39000s would stay hidden until a manual refresh.
+    val candidateRelays = remember(perRelay) { perRelay.toGroupConstraints().keys }
+    var nip29Relays by remember { mutableStateOf(emptySet<NormalizedRelayUrl>()) }
+    LaunchedEffect(candidateRelays) {
+        val supported = nip29Relays.toMutableSet()
+        candidateRelays.forEach { relay ->
+            Amethyst.instance.nip11Cache.loadRelayInfo(
+                relay = relay,
+                onInfo = { info ->
+                    if (info.supported_nips?.any { it == "29" } == true && supported.add(relay)) {
+                        nip29Relays = supported.toSet()
+                    }
+                },
+                onError = { _, _, _ -> },
+            )
+        }
+    }
+
+    LaunchedEffect(listName, perRelay, joinedGroups, nip29Relays) {
         feedContentState.checkKeysInvalidateDataAndSendToTop()
     }
 }
