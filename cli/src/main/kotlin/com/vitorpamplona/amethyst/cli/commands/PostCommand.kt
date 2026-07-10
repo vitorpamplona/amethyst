@@ -25,21 +25,31 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
+import com.vitorpamplona.quartz.nip13Pow.pow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * `amy post <text> [--relay URL …]` — publish a NIP-10 kind:1 short text note
- * to the user's outbox relays.
+ * `amy post <text> [--relay URL …] [--pow BITS [--pow-timeout SECS]]` —
+ * publish a NIP-10 kind:1 short text note to the user's outbox relays,
+ * optionally mining a NIP-13 proof of work into it first. Mining blocks the
+ * invocation (the CLI process IS the job); `--pow-timeout` aborts with exit
+ * 124 and publishes nothing.
  *
  * Threading is intentionally out of scope here — `amy post` only handles new
  * top-level notes. Replies/quotes need richer event-hint plumbing and will get
  * their own verb when needed.
  */
 object PostCommand {
+    private const val MAX_DIFFICULTY = 64
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Output.error("bad_args", "post <text> [--relay URL …]")
+        if (rest.isEmpty()) return Output.error("bad_args", "post <text> [--relay URL …] [--pow BITS [--pow-timeout SECS]]")
         val text = rest[0]
         if (text.isBlank()) return Output.error("bad_args", "post text must not be blank")
 
@@ -49,6 +59,12 @@ object PostCommand {
                 ?.split(',')
                 ?.map { it.trim() }
                 ?.filter { it.isNotEmpty() } ?: emptyList()
+
+        val powTarget = args.flags["pow"]?.toIntOrNull()
+        if (args.flags.containsKey("pow") && (powTarget == null || powTarget < 1 || powTarget > MAX_DIFFICULTY)) {
+            return Output.error("bad_args", "--pow must be between 1 and $MAX_DIFFICULTY leading zero bits")
+        }
+        val powTimeoutSec = args.flags["pow-timeout"]?.toLongOrNull()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -63,7 +79,33 @@ object PostCommand {
                 return Output.error("no_relays", "no outbox relays configured; pass --relay or run `amy relay add`")
             }
 
-            val signed = ctx.signer.sign(TextNoteEvent.build(text))
+            val template = TextNoteEvent.build(text)
+
+            var powMillis: Long? = null
+            val readyToSign =
+                if (powTarget != null) {
+                    System.err.println("mining $powTarget bits…")
+                    val deadlineNanos = powTimeoutSec?.let { System.nanoTime() + it * 1_000_000_000L }
+                    val startedAt = System.nanoTime()
+                    val mined =
+                        try {
+                            withContext(Dispatchers.Default) {
+                                PoWMiner.run(template, ctx.signer.pubKey, powTarget) {
+                                    deadlineNanos == null || System.nanoTime() < deadlineNanos
+                                }
+                            }
+                        } catch (e: CancellationException) {
+                            Output.error("pow_timeout", "did not reach $powTarget bits within ${powTimeoutSec}s; nothing was published")
+                            return 124
+                        }
+                    powMillis = (System.nanoTime() - startedAt) / 1_000_000
+                    System.err.println("mined in ${powMillis}ms")
+                    mined
+                } else {
+                    template
+                }
+
+            val signed = ctx.signer.sign(readyToSign)
             val ack = ctx.publish(signed, targets)
 
             Output.emit(
@@ -72,6 +114,9 @@ object PostCommand {
                     "kind" to signed.kind,
                     "created_at" to signed.createdAt,
                     "content" to signed.content,
+                    "pow" to if (powTarget != null) signed.pow() else null,
+                    "pow_target" to powTarget,
+                    "pow_millis" to powMillis,
                     "published_to" to ack.filterValues { it }.keys.map { it.url },
                     "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
                 ),
