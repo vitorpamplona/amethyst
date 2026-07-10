@@ -1122,16 +1122,10 @@ open class ShortNotePostViewModel :
 
         val threadTarget = groupThreadTarget
         return if (threadTarget != null) {
-            // NIP-29 kind-11 group thread. The title is the explicit subject field when filled;
-            // otherwise it falls back to the first line (body = the rest). Scoped to the group by
-            // `h`; the host relay authorizes the write.
-            val subject = if (wantsSubject) subjectText.trim() else ""
-            val text = tagger.message
-            val firstBreak = text.indexOf('\n')
-            val title = subject.ifEmpty { (if (firstBreak >= 0) text.substring(0, firstBreak) else text).trim() }
-            val body = if (subject.isNotEmpty()) text.trim() else (if (firstBreak >= 0) text.substring(firstBreak + 1) else text).trim()
-
-            ThreadEvent.build(body, title) {
+            // NIP-29 kind-11 group thread. The title is the required subject field (no first-line
+            // fallback); the body is the full message. Scoped to the group by `h`; the host relay
+            // authorizes the write.
+            ThreadEvent.build(tagger.message.trim(), subjectText.trim()) {
                 hTag(threadTarget.groupId)
 
                 hashtags(findHashtags(tagger.message))
@@ -1576,6 +1570,9 @@ open class ShortNotePostViewModel :
         if (voiceMetadata != null || voiceRecording != null) {
             return !isUploadingVoice && !mediaUploadTracker.isUploading && processingPreset == null
         }
+
+        // A NIP-29 group thread requires a title — it has no first-line fallback.
+        if (groupThreadTarget != null && subjectText.isBlank()) return false
 
         // Regular text/media posts require text
         return message.text.toString().isNotBlank() &&

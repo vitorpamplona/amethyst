@@ -351,7 +351,7 @@ private fun NewPostScreenBody(
                     )
                 }
 
-                if (postViewModel.wantsSubject) {
+                if (postViewModel.wantsSubject || postViewModel.groupThreadTarget != null) {
                     OutlinedTextField(
                         value = postViewModel.subjectText,
                         onValueChange = { postViewModel.subjectText = it },
@@ -809,8 +809,11 @@ private fun BottomRowActions(
             }
         }
 
-        AddSubjectButton(postViewModel.wantsSubject) {
-            postViewModel.toggleSubject()
+        // A group thread's title is required, so the field is always shown for it — no toggle.
+        if (postViewModel.groupThreadTarget == null) {
+            AddSubjectButton(postViewModel.wantsSubject) {
+                postViewModel.toggleSubject()
+            }
         }
 
         MarkAsSensitiveButton(postViewModel.wantsToMarkAsSensitive) {
