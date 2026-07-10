@@ -244,6 +244,13 @@ class DataDir(
     val eventsDbFile: File = File(eventsDir.parentFile ?: root, "events.db")
 
     /**
+     * Persisted DNS cache (SurgeDns snapshot) under `<root>/shared/`, next to the
+     * event store — cross-account like the resolver itself: a relay host resolved
+     * by one account's crawl serves every account's next run.
+     */
+    val dnsCacheFile: File = File(eventsDir.parentFile ?: root, "dns-cache.bin")
+
+    /**
      * Machine-level operator keys for GrapeRank trusted-assertion publishing,
      * rooted at `~/.amy/operator/` (the account root's parent) so a single
      * operator master is shared across accounts. See [OperatorKeys].

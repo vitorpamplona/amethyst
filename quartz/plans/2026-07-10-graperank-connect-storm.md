@@ -67,9 +67,13 @@ filters — only *when* sockets open changes):
    waits once.
 2. **Transport ceilings raised (CLI).** `Dispatcher.maxRequests` 256 → 1024
    (per-host stays 16 — politeness to path-multiplexed hosts is a *server*
-   property), and a `CachingDns` (10-min positive + negative TTL, in-flight
-   dedup per host) replaces `Dns.SYSTEM`. FD budget is detected at startup and
-   sizes both the dispatcher and the default `preconnectCap`.
+   property), and the app's `SurgeDns` (moved to quartz; stale-while-revalidate,
+   single-flight, 10-min negative TTL, persisted under `~/.amy/shared/`)
+   replaces `Dns.SYSTEM`. FD budget is detected at startup and sizes both the
+   dispatcher and the default `preconnectCap`. Caveat: in a proxied environment
+   (HTTP CONNECT), OkHttp sends the hostname to the proxy and never consults
+   the client-side resolver — so the DNS layer only pays off on direct-connect
+   deployments, and none of the A/B numbers below depend on it.
 3. **`amy graperank probe` — the relay census.** Reads the full known relay
    universe (every relay in stored kind:10002s + everything in the
    reachability cache), mass-connects it in waves with a never-matching REQ,

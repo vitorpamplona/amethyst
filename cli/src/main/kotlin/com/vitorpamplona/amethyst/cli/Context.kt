@@ -54,7 +54,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.CachingDns
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDnsStore
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -133,6 +134,18 @@ class Context(
      */
     val anonymous: Boolean = false,
 ) : AutoCloseable {
+    // Shared resolver — the SAME SurgeDns the Android app runs (stale-while-revalidate,
+    // single-flight, jittered 24-48h positive TTL, 10-min negative TTL), persisted under
+    // `<data-dir>/shared/` so repeat crawls start with the whole relay universe pre-resolved:
+    // every previously-seen host serves its cached answer instantly and re-verifies in the
+    // background instead of paying a blocking getaddrinfo per host.
+    private val surgeDns = SurgeDns()
+    private val dnsStore =
+        SurgeDnsStore(dataDir.dnsCacheFile, surgeDns).also {
+            // Best-effort warm start (~25KB read); a corrupt/missing blob just means a cold cache.
+            runCatching { it.load() }
+        }
+
     private val okhttp =
         OkHttpClient
             .Builder()
@@ -159,9 +172,11 @@ class Context(
             // dispatcher thread per lookup, the JVM's own cache lasts ~30s (useless
             // over a 30-minute crawl), a dead domain burns 10-30s of resolver
             // timeouts on EVERY re-dial, and the outbox model mints hundreds of
-            // per-user URLs on one host — each a fresh lookup. The cache (10-min
-            // positive + negative TTL, in-flight dedup per host) collapses all of it.
-            .dns(CachingDns())
+            // per-user URLs on one host — each a fresh lookup. SurgeDns (shared with
+            // the Android app) collapses all of it: single-flight per host,
+            // stale-while-revalidate positives, 10-min negative TTL, persisted
+            // across runs via [dnsStore].
+            .dns(surgeDns)
             .dispatcher(
                 Dispatcher().apply {
                     maxRequests = maxParallelHandshakes
@@ -1022,6 +1037,10 @@ class Context(
     override fun close() {
         // Nothing to persist for an anonymous run (no account dir to write into).
         if (!anonymous) dataDir.saveRunState(state)
+        // Persist the DNS cache (shared dir, account-independent) so the next run's
+        // connection storm starts with every known host pre-resolved. Best-effort:
+        // a failed save must never break the run it is summarizing.
+        runCatching { dnsStore.save() }
         (signer as? NostrSignerRemote)?.let {
             try {
                 it.closeSubscription()

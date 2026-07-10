@@ -66,8 +66,6 @@ import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
 import com.vitorpamplona.amethyst.service.okhttp.OnionLocationCache
-import com.vitorpamplona.amethyst.service.okhttp.SurgeDns
-import com.vitorpamplona.amethyst.service.okhttp.SurgeDnsStore
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
@@ -102,6 +100,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineT
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDnsStore
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
@@ -246,6 +246,23 @@ class AppModules(
     // ~700 sync getaddrinfo calls. Restored entries fall through to the stale-while-revalidate
     // path on first lookup. Stored in cacheDir — pure perf data, OK if the OS evicts it.
     val dnsStore = SurgeDnsStore(File(appContext.safeCacheDir(), SurgeDnsStore.FILE_NAME), surgeDns)
+
+    // Network identity change (same trigger as Tor's onNetworkChange above), but for DNS
+    // the response is deliberately SOFT: most cached answers are still correct on the new
+    // network, so staleAll() keeps serving every one of them and merely re-verifies —
+    // positives revalidate in the background on next use, negatives (e.g. hosts that only
+    // failed because the OLD network / captive portal couldn't resolve them) get re-tried
+    // on first touch instead of waiting out their TTL. Nothing is dropped, nothing blocks.
+    init {
+        applicationIOScope.launch {
+            connManager.status
+                .map { (it as? ConnectivityStatus.Active)?.networkId }
+                .filterNotNull()
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { surgeDns.staleAll() }
+        }
+    }
 
     // Shared cache populated by OnionLocationInterceptor from any HTTP/WebSocket
     // response carrying an Onion-Location header. Consulted by OnionUrlRewriteInterceptor
