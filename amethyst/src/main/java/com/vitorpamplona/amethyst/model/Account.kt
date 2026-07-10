@@ -34,6 +34,9 @@ import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListState
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
@@ -199,6 +202,16 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.hTag
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
@@ -250,6 +263,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
@@ -364,6 +378,9 @@ class Account(
 
     val ephemeralChatListDecryptionCache = EphemeralChatListDecryptionCache(signer)
     val ephemeralChatList = EphemeralChatListState(signer, cache, ephemeralChatListDecryptionCache, scope, settings)
+
+    val relayGroupListDecryptionCache = RelayGroupListDecryptionCache(signer)
+    val relayGroupList = RelayGroupListState(signer, cache, relayGroupListDecryptionCache, scope, settings)
 
     val publicChatListDecryptionCache = PublicChatListDecryptionCache(signer)
     val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
@@ -538,6 +555,9 @@ class Account(
 
     val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPicturesFollowList)
     val livePicturesFollowListsPerRelay = OutboxLoaderState(livePicturesFollowLists, cache, scope).flow
+
+    val liveRelayGroupsDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultRelayGroupsDiscoveryFollowList)
+    val liveRelayGroupsDiscoveryFollowListsPerRelay = OutboxLoaderState(liveRelayGroupsDiscoveryFollowLists, cache, scope).flow
 
     val liveNappletsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNappletsFollowList)
     val liveNappletsFollowListsPerRelay = OutboxLoaderState(liveNappletsFollowLists, cache, scope).flow
@@ -1444,6 +1464,154 @@ class Account(
     suspend fun follow(channel: EphemeralChatChannel) = sendMyPublicAndPrivateOutbox(ephemeralChatList.follow(channel))
 
     suspend fun unfollow(channel: EphemeralChatChannel) = sendMyPublicAndPrivateOutbox(ephemeralChatList.unfollow(channel))
+
+    suspend fun follow(channel: RelayGroupChannel) = sendMyPublicAndPrivateOutbox(relayGroupList.follow(channel))
+
+    suspend fun unfollow(channel: RelayGroupChannel) = sendMyPublicAndPrivateOutbox(relayGroupList.unfollow(channel))
+
+    // ── NIP-29 relay-group actions ───────────────────────────────────────────
+    // All group commands are published ONLY to the group's host relay, where
+    // relay29 authorizes them. The relay is the source of truth; the kind-10009
+    // list is our own cross-device bookkeeping of what we joined.
+
+    /** Send a kind 9021 join request to the group's host relay and remember it. */
+    suspend fun joinRelayGroup(
+        channel: RelayGroupChannel,
+        code: String? = null,
+    ) {
+        val template = JoinRequestEvent.build(channel.groupId.id, inviteCode = code)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+        follow(channel)
+    }
+
+    /** Send a kind 9022 leave request to the host relay and drop it from our list. */
+    suspend fun leaveRelayGroup(channel: RelayGroupChannel) {
+        val template = LeaveRequestEvent.build(channel.groupId.id)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+        unfollow(channel)
+    }
+
+    /**
+     * Create a new group on [relay]: kind 9007 (create-group) then kind 9002
+     * (edit-metadata) with the chosen name/visibility, then remember it. Returns
+     * the new group's id.
+     */
+    suspend fun createRelayGroup(
+        relay: NormalizedRelayUrl,
+        groupId: String,
+        name: String,
+        about: String? = null,
+        picture: String? = null,
+        isPrivate: Boolean = false,
+        isClosed: Boolean = false,
+        isHidden: Boolean = false,
+        isRestricted: Boolean = false,
+        hashtags: List<String> = emptyList(),
+        geohashes: List<String> = emptyList(),
+    ): GroupId {
+        signAndSendPrivatelyOrBroadcast(CreateGroupEvent.build(groupId)) { listOf(relay) }
+
+        val edit =
+            EditMetadataEvent.build(
+                groupId,
+                name = name,
+                about = about,
+                picture = picture,
+                status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
+                hashtags = hashtags,
+                geohashes = geohashes,
+            )
+        signAndSendPrivatelyOrBroadcast(edit) { listOf(relay) }
+
+        val id = GroupId(groupId, relay)
+        follow(LocalCache.getOrCreateRelayGroupChannel(id))
+        return id
+    }
+
+    /**
+     * The set of NIP-29 status flags to emit on a kind-9002 metadata event. Flags are
+     * presence-only — public/open/visible/unrestricted are simply the ABSENCE of their
+     * restrictive counterpart — so only the enabled restrictive flags are added.
+     */
+    private fun relayGroupStatus(
+        isPrivate: Boolean,
+        isClosed: Boolean,
+        isHidden: Boolean,
+        isRestricted: Boolean,
+    ): Set<GroupMetadataEvent.GroupStatus> =
+        buildSet {
+            if (isPrivate) add(GroupMetadataEvent.GroupStatus.PRIVATE)
+            if (isClosed) add(GroupMetadataEvent.GroupStatus.CLOSED)
+            if (isHidden) add(GroupMetadataEvent.GroupStatus.HIDDEN)
+            if (isRestricted) add(GroupMetadataEvent.GroupStatus.RESTRICTED)
+        }
+
+    /** Post a kind 11 thread (forum-style) to the group, scoped by its `h` tag. */
+    suspend fun postRelayGroupThread(
+        channel: RelayGroupChannel,
+        title: String,
+        body: String,
+    ) {
+        val template = ThreadEvent.build(body, title) { hTag(channel.groupId.id) }
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /** Mint a kind 9009 invite code for the group (admin/moderator only). */
+    suspend fun createRelayGroupInvite(
+        channel: RelayGroupChannel,
+        code: String,
+    ) {
+        val template = CreateInviteEvent.build(channel.groupId.id, code)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /** Kick [pubkey] out of the group with a kind 9001 remove-user event (moderator only). */
+    suspend fun removeRelayGroupUser(
+        channel: RelayGroupChannel,
+        pubkey: HexKey,
+    ) {
+        val template = RemoveUserEvent.build(channel.groupId.id, listOf(pubkey))
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /**
+     * Add [pubkey] to the group (or change its roles) with a kind 9000 put-user
+     * event (moderator only). Pass an empty [roles] list for a plain member.
+     */
+    suspend fun putRelayGroupUser(
+        channel: RelayGroupChannel,
+        pubkey: HexKey,
+        roles: List<String>,
+    ) {
+        val template = PutUserEvent.build(channel.groupId.id, listOf(pubkey to roles))
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /** Edit the group's relay-signed metadata with a kind 9002 event (admin only). */
+    suspend fun editRelayGroupMetadata(
+        channel: RelayGroupChannel,
+        name: String?,
+        about: String?,
+        picture: String?,
+        isPrivate: Boolean,
+        isClosed: Boolean,
+        isHidden: Boolean,
+        isRestricted: Boolean,
+        hashtags: List<String> = emptyList(),
+        geohashes: List<String> = emptyList(),
+    ) {
+        val template =
+            EditMetadataEvent.build(
+                channel.groupId.id,
+                name = name,
+                about = about,
+                picture = picture,
+                status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
+                hashtags = hashtags,
+                geohashes = geohashes,
+            )
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
 
     suspend fun follow(community: AddressableNote) = sendMyPublicAndPrivateOutbox(communityList.follow(community))
 

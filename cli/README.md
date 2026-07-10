@@ -449,6 +449,27 @@ the cards. For a third-party observer, `graperank operator providers` prints the
 | `amy marmot message react GID EVENT_ID EMOJI` | Publish a kind:7 reaction. |
 | `amy marmot message delete GID EVENT_ID …` | Publish a kind:5 deletion. |
 
+### Relay groups (NIP-29)
+
+Relay-based groups (à la Armada / relay29). A group lives on one host relay,
+addressed by `(relay, group id)`; every read and write is pinned there. Distinct
+from Marmot/MLS above — these are the NIP-29 groups Amethyst's "Relay Groups"
+screen speaks.
+
+| Command | What it does |
+|---|---|
+| `amy relaygroup list` | Your joined groups, from your kind:10009 list (public + private). |
+| `amy relaygroup browse RELAY` | Every group a relay hosts (its 39000-39003 directory). |
+| `amy relaygroup info RELAY GID` | A group's metadata + admin/member roster. |
+| `amy relaygroup create RELAY --name X [--about A] [--private] [--closed]` | Create a group (publishes 9007 + 9002); prints the new `group_id`. |
+| `amy relaygroup join RELAY GID [--code CODE]` | Request to join (9021) and add it to your kind:10009 list. |
+| `amy relaygroup leave RELAY GID` | Leave (9022) and drop it from your kind:10009 list. |
+| `amy relaygroup message RELAY GID TEXT` | Post a kind:9 chat message into the group. |
+| `amy relaygroup edit RELAY GID [--name X] [--about A] [--private\|--public] [--closed\|--open]` | Edit metadata (9002, admin only). Reads current visibility and changes only the axis you pass, so re-asserting one flag never resets the other. |
+| `amy relaygroup invite RELAY GID --code CODE` | Mint an invite code (9009, moderator). |
+| `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator]` | Add or promote a user (9000, moderator). |
+| `amy relaygroup remove-user RELAY GID PUBKEY` | Kick a user (9001, moderator). |
+
 ### CLINK Offers
 
 | Command | What it does |

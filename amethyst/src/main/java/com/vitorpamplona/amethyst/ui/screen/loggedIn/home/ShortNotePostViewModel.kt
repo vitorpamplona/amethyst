@@ -94,7 +94,10 @@ import com.vitorpamplona.quartz.experimental.zapPolls.minAmount
 import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -113,10 +116,12 @@ import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
 import com.vitorpamplona.quartz.nip10Notes.tags.notify
 import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
+import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
+import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
@@ -133,6 +138,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
@@ -304,6 +310,11 @@ open class ShortNotePostViewModel :
     var wantsForwardZapTo by mutableStateOf(false)
     override var forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     override val forwardZapToEditting = TextFieldState()
+
+    // Optional subject line: a NIP-14 `subject` tag on a kind-1 note, or the `title` of a NIP-29
+    // kind-11 group thread. Toggled from the bottom row; auto-on for group threads.
+    var wantsSubject by mutableStateOf(false)
+    val subject = TextFieldState()
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
@@ -477,6 +488,30 @@ open class ShortNotePostViewModel :
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
+    }
+
+    /**
+     * When set, this composer produces a NIP-29 kind-11 group thread instead of a kind-1 note:
+     * the title is the first line, the rest is the body, and it publishes ONLY to the group's host
+     * [relays] (relay29 authorizes writes by the `h` tag). Toggles that don't apply to a group thread
+     * (poll, private note, scheduling) are hidden while this is set.
+     */
+    class GroupThreadTarget(
+        val groupId: HexKey,
+        val relays: List<NormalizedRelayUrl>,
+    )
+
+    var groupThreadTarget: GroupThreadTarget? = null
+        private set
+
+    fun setGroupThread(
+        groupId: HexKey?,
+        relayUrl: String?,
+    ) {
+        val relay = relayUrl?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+        groupThreadTarget = if (groupId != null && relay != null) GroupThreadTarget(groupId, listOf(relay)) else null
+        // A thread wants a title, so surface the field by default when composing one.
+        if (groupThreadTarget != null) wantsSubject = true
     }
 
     open fun load(
@@ -920,7 +955,18 @@ open class ShortNotePostViewModel :
         val anonymous = wantsAnonymousPost
         val scheduledFor = scheduledForSec
         val privately = wantsPrivateNote
+        val threadTarget = groupThreadTarget
         cancel()
+
+        if (threadTarget != null) {
+            // NIP-29 group thread: publish only to the group's host relay, never the account's
+            // outbox — bypass the private/scheduled/anonymous paths entirely.
+            accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) { threadTarget.relays }
+            accountViewModel.launchSigner {
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+            }
+            return
+        }
 
         if (privately && template.kind == TextNoteEvent.KIND) {
             // Gift-wrap to the p-tagged users instead of publishing. Private
@@ -1073,8 +1119,28 @@ open class ShortNotePostViewModel :
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
+        val subjectValue = subject.text.toString().trim()
 
-        return if (wantsPoll) {
+        val threadTarget = groupThreadTarget
+        return if (threadTarget != null) {
+            // NIP-29 kind-11 group thread. The title is the required subject field (no first-line
+            // fallback); the body is the full message. Scoped to the group by `h`; the host relay
+            // authorizes the write.
+            ThreadEvent.build(tagger.message.trim(), subjectValue) {
+                hTag(threadTarget.groupId)
+
+                hashtags(findHashtags(tagger.message))
+                references(findURLs(tagger.message))
+                quotes(findNostrUris(tagger.message))
+
+                geoHash?.let { geohash(it) }
+                contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
+
+                emojis(emojis)
+                imetas(usedAttachments)
+            }
+        } else if (wantsPoll) {
             val options = pollOptions.map { it.value }
 
             if (options.isEmpty()) return null
@@ -1199,6 +1265,8 @@ open class ShortNotePostViewModel :
                 hashtags(findHashtags(tagger.message))
                 references(findURLs(tagger.message))
                 quotes(findNostrUris(tagger.message))
+
+                if (wantsSubject && subjectValue.isNotBlank()) subject(subjectValue)
 
                 geoHash?.let { geohash(it) }
                 localZapRaiserAmount?.let { zapraiser(it) }
@@ -1373,6 +1441,8 @@ open class ShortNotePostViewModel :
         zapRaiserAmount.value = null
 
         wantsForwardZapTo = false
+        wantsSubject = false
+        subject.clearText()
         wantsToMarkAsSensitive = false
         contentWarningDescription = ""
         wantsToAddGeoHash = false
@@ -1501,6 +1571,9 @@ open class ShortNotePostViewModel :
         if (voiceMetadata != null || voiceRecording != null) {
             return !isUploadingVoice && !mediaUploadTracker.isUploading && processingPreset == null
         }
+
+        // A NIP-29 group thread requires a title — it has no first-line fallback.
+        if (groupThreadTarget != null && subject.text.isBlank()) return false
 
         // Regular text/media posts require text
         return message.text.toString().isNotBlank() &&
@@ -1757,6 +1830,12 @@ open class ShortNotePostViewModel :
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
+        draftTag.newVersion()
+    }
+
+    fun toggleSubject() {
+        wantsSubject = !wantsSubject
+        if (!wantsSubject) subject.clearText()
         draftTag.newVersion()
     }
 

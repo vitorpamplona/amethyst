@@ -164,7 +164,10 @@ class RobohashAssembler {
         isLightTheme: Boolean,
     ): ImageVector {
         val hash =
-            if (Hex.isHex(msg) && msg.length > 10) {
+            // The assembler reads up to hash[10], so the decoded array must hold ≥ 11 bytes
+            // (22 hex chars). A shorter hex string — e.g. a 16-char NIP-29 group id (8 bytes) —
+            // would index out of bounds, so fall back to sha256 (32 bytes) for anything smaller.
+            if (Hex.isHex(msg) && msg.length >= 22) {
                 Hex.decode(msg)
             } else {
                 Log.w("Robohash") { "$msg is not a hex" }

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datas
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
@@ -42,6 +43,7 @@ class ChannelFromUserFilterSubAssembler(
             is EphemeralChatChannel -> filterMyMessagesToEphemeralChat(channel, userHex(key), since)
             is PublicChatChannel -> filterMyMessagesToPublicChat(channel, user(key).pubkeyHex, since)
             is LiveActivitiesChannel -> filterMyMessagesToLiveActivities(channel, userHex(key), since)
+            is RelayGroupChannel -> filterMyMessagesToRelayGroup(channel, userHex(key), since)
             else -> null
         }
 

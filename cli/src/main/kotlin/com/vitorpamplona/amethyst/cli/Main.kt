@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.cli.commands.PodcastCommands
 import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
 import com.vitorpamplona.amethyst.cli.commands.PublishCommand
 import com.vitorpamplona.amethyst.cli.commands.RelayCommands
+import com.vitorpamplona.amethyst.cli.commands.RelayGroupCommands
 import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.ServeCommand
 import com.vitorpamplona.amethyst.cli.commands.StatusCommand
@@ -257,6 +258,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "whoami" -> InitCommands.whoami(dataDir)
         "relay" -> RelayCommands.dispatch(dataDir, tail)
         "marmot" -> marmotDispatch(dataDir, tail)
+        "relaygroup" -> RelayGroupCommands.dispatch(dataDir, tail)
         "dm" -> DmCommands.dispatch(dataDir, tail)
         "profile" -> ProfileCommands.dispatch(dataDir, tail)
         "notes" -> NotesCommands.dispatch(dataDir, tail)
@@ -670,6 +672,23 @@ private fun printUsage() {
         |          [--limit N] [--timeout SECS]       kind:15 file with `type` discriminator)
         |  dm await --peer NPUB --match TEXT          wait for a matching DM
         |           [--timeout SECS]                  (default 30s, exit 124 on timeout)
+        |
+        |Relay groups (NIP-29):
+        |  relaygroup list                            joined groups (from kind:10009)
+        |  relaygroup browse RELAY                    every group a relay hosts
+        |  relaygroup info RELAY GID                  a group's metadata + roster
+        |  relaygroup create RELAY --name NAME        create a group (publishes 9007+9002)
+        |    [--about A] [--private] [--closed]
+        |  relaygroup join RELAY GID [--code CODE]    request to join (kind 9021)
+        |  relaygroup leave RELAY GID                 leave (kind 9022)
+        |  relaygroup message RELAY GID TEXT          post a kind-9 chat to the group
+        |  relaygroup edit RELAY GID [--name N]       edit metadata (kind 9002, admin);
+        |    [--about A] [--private|--public]         reads current visibility and only
+        |    [--closed|--open]                        changes the axis you specify
+        |  relaygroup invite RELAY GID --code CODE    mint an invite code (kind 9009)
+        |  relaygroup put-user RELAY GID PUBKEY       add/promote a user (kind 9000)
+        |    [--role admin|moderator]
+        |  relaygroup remove-user RELAY GID PUBKEY    kick a user (kind 9001)
         |
         |Marmot (MLS group messaging):
         |  marmot key-package publish                 publish a fresh KeyPackage

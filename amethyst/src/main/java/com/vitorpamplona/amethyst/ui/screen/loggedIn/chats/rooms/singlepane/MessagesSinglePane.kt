@@ -21,11 +21,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.singlepane
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
@@ -38,6 +40,8 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AmethystClickableIcon
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.WarmJoinedRelayGroupNip11
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupMyJoinedGroupsSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.MessagesPager
@@ -98,11 +102,22 @@ fun MessagesSinglePane(
         },
         accountViewModel = accountViewModel,
     ) {
+        // Keep joined groups' rosters live while the messages list is on top, so
+        // membership/pending state is accurate inline without opening each chat.
+        RelayGroupMyJoinedGroupsSubscription(accountViewModel.dataSources().relayGroupMyJoinedGroups, accountViewModel)
+
+        // Pre-warm NIP-11 for joined groups' host relays so the relay-signed check is a cache hit
+        // when those groups surface in discovery or any gated surface.
+        WarmJoinedRelayGroupNip11(accountViewModel)
+
+        // The inline-vs-grouped NIP-29 display preference lives in Settings › Messages; joined groups
+        // (or per-relay rows in grouped mode) are woven directly into the feed below.
         MessagesPager(
             pagerState,
             tabs,
             accountViewModel,
             nav,
+            modifier = Modifier.fillMaxSize(),
         )
     }
 }

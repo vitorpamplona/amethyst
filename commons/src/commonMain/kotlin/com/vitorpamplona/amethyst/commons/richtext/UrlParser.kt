@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupInviteLink
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.startsWithAny
@@ -36,6 +37,11 @@ class Urls(
     val bech32s: Set<String> = emptySet(),
     val relayUrls: Set<String> = emptySet(),
     val blossomUris: Set<String> = emptySet(),
+    // NIP-29 group invite links in the `<relay>'<groupId>[?code=<code>]` form (Wisp/0xchat).
+    // The literal, whole-span text so fixMissingSpaces can keep it atomic and wordIdentifier
+    // can match it. See [UrlParser.parseValidUrls] for how these are recovered from the
+    // relay URLs the detector already found.
+    val groupLinks: Set<String> = emptySet(),
 )
 
 val httpScheme = listOf(DualCase("http"))
@@ -82,6 +88,7 @@ class UrlParser {
         val bech32 = mutableSetOf<String>()
         val relays = mutableSetOf<String>()
         val blossom = mutableSetOf<String>()
+        val groupLinks = mutableSetOf<String>()
 
         urls.forEach { url ->
             try {
@@ -94,6 +101,12 @@ class UrlParser {
                             bech32.add(url.originalUrl)
                         } else if (url.originalUrl.startsWithAny(websocketScheme)) {
                             relays.add(url.originalUrl)
+                            // A relay URL glued to `'<groupId>` in the source is a NIP-29 group
+                            // invite link. The detector always ends the host at the apostrophe
+                            // (host names can't contain `'`), so we recover the whole
+                            // `<relay>'<groupId>[?code=<code>]` span here rather than teaching the
+                            // URL grammar about it — see the peek in collectGroupLinks.
+                            collectGroupLinks(content, url.originalUrl, groupLinks)
                         } else if (url.originalUrl.startsWithAny(blossomScheme)) {
                             blossom.add(url.originalUrl)
                         } else {
@@ -123,6 +136,33 @@ class UrlParser {
             bech32s = bech32,
             relayUrls = relays,
             blossomUris = blossom,
+            groupLinks = groupLinks,
         )
+    }
+
+    /**
+     * For every occurrence of [relayUrl] in [content], check whether it is immediately
+     * followed by `'<groupId>[?code=<code>]` and, if so, add the full literal span to
+     * [out]. This runs only for the handful of websocket URLs the detector already found,
+     * so a note with no relay link costs nothing extra.
+     */
+    private fun collectGroupLinks(
+        content: String,
+        relayUrl: String,
+        out: MutableSet<String>,
+    ) {
+        var from = 0
+        while (true) {
+            val idx = content.indexOf(relayUrl, from)
+            if (idx < 0) break
+            val end = idx + relayUrl.length
+            from = end
+            if (end < content.length && content[end] == '\'') {
+                val suffixLen = GroupInviteLink.suffixLength(content, end + 1)
+                if (suffixLen > 0) {
+                    out.add(content.substring(idx, end + 1 + suffixLen))
+                }
+            }
+        }
     }
 }

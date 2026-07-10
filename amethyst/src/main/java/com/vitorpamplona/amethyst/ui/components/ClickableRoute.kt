@@ -77,6 +77,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.toNIP19
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -201,6 +202,21 @@ private fun DisplayAddress(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // A NIP-29 group is addressed by its relay-signed kind-39000 metadata. Route
+    // straight into the group chat rather than the generic addressable-note view.
+    // The relay is only carried in the naddr's relay hint (the group id is unique
+    // only per relay), so we need that hint to open it.
+    val groupRelay = if (nip19.kind == GroupMetadataEvent.KIND) nip19.relay.firstOrNull() else null
+    if (groupRelay != null) {
+        CreateClickableText(
+            clickablePart = "#${nip19.dTag}",
+            suffix = additionalChars,
+            route = Route.RelayGroup(nip19.dTag, groupRelay.url),
+            nav = nav,
+        )
+        return
+    }
+
     var noteBase by remember(nip19) { mutableStateOf(accountViewModel.getNoteIfExists(nip19.aTag())) }
 
     if (noteBase == null) {

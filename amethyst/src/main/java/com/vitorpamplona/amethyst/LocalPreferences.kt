@@ -26,6 +26,7 @@ import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntry
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
@@ -59,6 +60,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
@@ -106,6 +108,7 @@ private object PrefKeys {
     const val DEFAULT_DISCOVERY_FOLLOW_LIST = "defaultDiscoveryFollowList"
     const val DEFAULT_POLLS_FOLLOW_LIST = "defaultPollsFollowList"
     const val DEFAULT_PICTURES_FOLLOW_LIST = "defaultPicturesFollowList"
+    const val DEFAULT_RELAY_GROUPS_DISCOVERY_FOLLOW_LIST = "defaultRelayGroupsDiscoveryFollowList"
     const val DEFAULT_NAPPLETS_FOLLOW_LIST = "defaultNappletsFollowList"
     const val DEFAULT_NSITES_FOLLOW_LIST = "defaultNsitesFollowList"
     const val DEFAULT_WORKOUTS_FOLLOW_LIST = "defaultWorkoutsFollowList"
@@ -150,6 +153,7 @@ private object PrefKeys {
     const val LATEST_HASHTAG_LIST = "latestHashtagList"
     const val LATEST_GEOHASH_LIST = "latestGeohashList"
     const val LATEST_EPHEMERAL_LIST = "latestEphemeralChatList"
+    const val LATEST_RELAY_GROUP_LIST = "latestRelayGroupList"
     const val LATEST_TRUST_PROVIDER_LIST = "latestTrustProviderList"
     const val CALLS_ENABLED = "calls_enabled"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
@@ -157,6 +161,7 @@ private object PrefKeys {
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
     const val ALWAYS_ON_NOTIFICATION_SERVICE = "always_on_notification_service"
     const val DEFAULT_RELAY_AUTH_POLICY = "default_relay_auth_policy"
+    const val RELAY_GROUP_VIEW_MODE = "relay_group_view_mode"
     const val SPLIT_NOTIFICATIONS_ENABLED = "split_notifications_enabled"
     const val SHOW_MESSAGES_IN_NOTIFICATIONS = "show_messages_in_notifications"
 
@@ -426,6 +431,7 @@ object LocalPreferences {
 
                     putString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPollsFollowList.value))
                     putString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPicturesFollowList.value))
+                    putString(PrefKeys.DEFAULT_RELAY_GROUPS_DISCOVERY_FOLLOW_LIST, JsonMapper.toJson(settings.defaultRelayGroupsDiscoveryFollowList.value))
                     putString(PrefKeys.DEFAULT_NAPPLETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNappletsFollowList.value))
                     putString(PrefKeys.DEFAULT_NSITES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNsitesFollowList.value))
                     putString(PrefKeys.DEFAULT_WORKOUTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultWorkoutsFollowList.value))
@@ -498,6 +504,7 @@ object LocalPreferences {
                     putOrRemove(PrefKeys.LATEST_HASHTAG_LIST, settings.backupHashtagList)
                     putOrRemove(PrefKeys.LATEST_GEOHASH_LIST, settings.backupGeohashList)
                     putOrRemove(PrefKeys.LATEST_EPHEMERAL_LIST, settings.backupEphemeralChatList)
+                    putOrRemove(PrefKeys.LATEST_RELAY_GROUP_LIST, settings.backupRelayGroupList)
                     putOrRemove(PrefKeys.LATEST_TRUST_PROVIDER_LIST, settings.backupTrustProviderList)
                     putOrRemove(PrefKeys.LATEST_PAYMENT_TARGETS, settings.backupNipA3PaymentTargets)
                     putOrRemove(PrefKeys.LATEST_CASHU_WALLET, settings.backupCashuWallet)
@@ -509,6 +516,7 @@ object LocalPreferences {
                     putBoolean(PrefKeys.CALLS_ENABLED, settings.callsEnabled.value)
                     putBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, settings.alwaysOnNotificationService.value)
                     putString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, settings.defaultRelayAuthPolicy.value.name)
+                    putString(PrefKeys.RELAY_GROUP_VIEW_MODE, settings.relayGroupViewMode.value.name)
                     putBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, settings.splitNotificationsEnabled.value)
                     putBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, settings.showMessagesInNotifications.value)
                     // Any account that reaches a save has its notification filter in its
@@ -629,6 +637,7 @@ object LocalPreferences {
                         getString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, null)
                             ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
                             ?: RelayAuthPolicy.IF_IN_MY_LIST
+                    val relayGroupViewMode = RelayGroupViewMode.fromName(getString(PrefKeys.RELAY_GROUP_VIEW_MODE, null))
                     val splitNotificationsEnabled = getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)
                     val showMessagesInNotifications = getBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, true)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
@@ -663,6 +672,7 @@ object LocalPreferences {
                     val latestHashtagListStr = getString(PrefKeys.LATEST_HASHTAG_LIST, null)
                     val latestGeohashListStr = getString(PrefKeys.LATEST_GEOHASH_LIST, null)
                     val latestEphemeralListStr = getString(PrefKeys.LATEST_EPHEMERAL_LIST, null)
+                    val latestRelayGroupListStr = getString(PrefKeys.LATEST_RELAY_GROUP_LIST, null)
                     val latestTrustProviderListStr = getString(PrefKeys.LATEST_TRUST_PROVIDER_LIST, null)
                     val latestPaymentTargetsStr = getString(PrefKeys.LATEST_PAYMENT_TARGETS, null)
                     val latestCashuWalletStr = getString(PrefKeys.LATEST_CASHU_WALLET, null)
@@ -722,6 +732,7 @@ object LocalPreferences {
                     val latestHashtagList = async { parseEventOrNull<HashtagListEvent>(latestHashtagListStr) }
                     val latestGeohashList = async { parseEventOrNull<GeohashListEvent>(latestGeohashListStr) }
                     val latestEphemeralList = async { parseEventOrNull<EphemeralChatListEvent>(latestEphemeralListStr) }
+                    val latestRelayGroupList = async { parseEventOrNull<SimpleGroupListEvent>(latestRelayGroupListStr) }
                     val latestTrustProviderList = async { parseEventOrNull<TrustProviderListEvent>(latestTrustProviderListStr) }
                     val latestPaymentTargets = async { parseEventOrNull<PaymentTargetsEvent>(latestPaymentTargetsStr) }
                     val latestCashuWallet =
@@ -773,6 +784,7 @@ object LocalPreferences {
                     val latestHashtagListResolved = latestHashtagList.await()
                     val latestGeohashListResolved = latestGeohashList.await()
                     val latestEphemeralListResolved = latestEphemeralList.await()
+                    val latestRelayGroupListResolved = latestRelayGroupList.await()
                     val latestTrustProviderListResolved = latestTrustProviderList.await()
                     val latestPaymentTargetsResolved = latestPaymentTargets.await()
                     val latestCashuWalletResolved = latestCashuWallet.await()
@@ -796,6 +808,7 @@ object LocalPreferences {
                         defaultDiscoveryFollowList = MutableStateFlow(followListPrefs.discovery),
                         defaultPollsFollowList = MutableStateFlow(followListPrefs.polls),
                         defaultPicturesFollowList = MutableStateFlow(followListPrefs.pictures),
+                        defaultRelayGroupsDiscoveryFollowList = MutableStateFlow(followListPrefs.relayGroupsDiscovery),
                         defaultNappletsFollowList = MutableStateFlow(followListPrefs.napplets),
                         defaultNsitesFollowList = MutableStateFlow(followListPrefs.nsites),
                         defaultWorkoutsFollowList = MutableStateFlow(followListPrefs.workouts),
@@ -833,6 +846,7 @@ object LocalPreferences {
                         hideNIP17WarningDialog = hideNIP17WarningDialog,
                         alwaysOnNotificationService = MutableStateFlow(alwaysOnNotificationService),
                         defaultRelayAuthPolicy = MutableStateFlow(defaultRelayAuthPolicy),
+                        relayGroupViewMode = MutableStateFlow(relayGroupViewMode),
                         splitNotificationsEnabled = MutableStateFlow(splitNotificationsEnabled),
                         showMessagesInNotifications = MutableStateFlow(showMessagesInNotifications),
                         backupUserMetadata = latestUserMetadataResolved,
@@ -852,6 +866,7 @@ object LocalPreferences {
                         backupHashtagList = latestHashtagListResolved,
                         backupGeohashList = latestGeohashListResolved,
                         backupEphemeralChatList = latestEphemeralListResolved,
+                        backupRelayGroupList = latestRelayGroupListResolved,
                         backupTrustProviderList = latestTrustProviderListResolved,
                         lastReadPerRoute = MutableStateFlow(lastReadPerRouteResolved),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
@@ -890,6 +905,7 @@ object LocalPreferences {
         val discovery: TopFilter,
         val polls: TopFilter,
         val pictures: TopFilter,
+        val relayGroupsDiscovery: TopFilter,
         val napplets: TopFilter,
         val nsites: TopFilter,
         val workouts: TopFilter,
@@ -946,6 +962,7 @@ object LocalPreferences {
             discovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null), TopFilter.Global),
             polls = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, null), TopFilter.Global),
             pictures = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null), TopFilter.Global),
+            relayGroupsDiscovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_RELAY_GROUPS_DISCOVERY_FOLLOW_LIST, null), TopFilter.Mine),
             napplets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NAPPLETS_FOLLOW_LIST, null), TopFilter.Global),
             nsites = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NSITES_FOLLOW_LIST, null), TopFilter.Global),
             workouts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_WORKOUTS_FOLLOW_LIST, null), TopFilter.Global),

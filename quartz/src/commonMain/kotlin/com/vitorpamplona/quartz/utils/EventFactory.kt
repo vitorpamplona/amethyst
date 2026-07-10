@@ -99,6 +99,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupParticipantsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
@@ -396,6 +397,7 @@ class EventFactory {
                 GroupAdminsEvent.KIND -> GroupAdminsEvent(id, pubKey, createdAt, tags, content, sig)
                 GroupMembersEvent.KIND -> GroupMembersEvent(id, pubKey, createdAt, tags, content, sig)
                 SupportedRolesEvent.KIND -> SupportedRolesEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupParticipantsEvent.KIND -> GroupParticipantsEvent(id, pubKey, createdAt, tags, content, sig)
                 ChessGameEvent.KIND -> ChessGameEvent(id, pubKey, createdAt, tags, content, sig)
                 CodeSnippetEvent.KIND -> CodeSnippetEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayFeedsListEvent.KIND -> RelayFeedsListEvent(id, pubKey, createdAt, tags, content, sig)

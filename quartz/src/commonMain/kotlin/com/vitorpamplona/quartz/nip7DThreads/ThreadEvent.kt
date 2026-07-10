@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -42,7 +43,12 @@ class ThreadEvent(
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
-    fun title() = tags.title()
+    /**
+     * The thread title. NIP-7D specifies a `title` tag (what we emit), but some
+     * NIP-29 clients (e.g. nostrord) put it in a `subject` tag instead, so fall
+     * back to that when reading so their threads still show a title.
+     */
+    fun title() = tags.title() ?: tags.firstTagValue("subject")
 
     companion object {
         const val KIND = 11

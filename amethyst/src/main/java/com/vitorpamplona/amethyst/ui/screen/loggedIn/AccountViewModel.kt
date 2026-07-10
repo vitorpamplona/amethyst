@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
@@ -143,6 +144,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
@@ -1436,6 +1438,89 @@ class AccountViewModel(
 
     fun unfollow(channel: EphemeralChatChannel) = launchSigner { account.unfollow(channel) }
 
+    fun joinRelayGroup(
+        channel: RelayGroupChannel,
+        code: String? = null,
+    ) = launchSigner { account.joinRelayGroup(channel, code) }
+
+    fun leaveRelayGroup(channel: RelayGroupChannel) = launchSigner { account.leaveRelayGroup(channel) }
+
+    fun createRelayGroup(
+        relay: NormalizedRelayUrl,
+        groupId: String,
+        name: String,
+        about: String?,
+        picture: String?,
+        isPrivate: Boolean,
+        isClosed: Boolean,
+        isHidden: Boolean,
+        isRestricted: Boolean,
+        hashtags: List<String>,
+        geohashes: List<String>,
+    ) = launchSigner {
+        account.createRelayGroup(
+            relay,
+            groupId,
+            name,
+            about,
+            picture,
+            isPrivate,
+            isClosed,
+            isHidden,
+            isRestricted,
+            hashtags,
+            geohashes,
+        )
+    }
+
+    fun createRelayGroupInvite(
+        channel: RelayGroupChannel,
+        code: String,
+    ) = launchSigner { account.createRelayGroupInvite(channel, code) }
+
+    fun postRelayGroupThread(
+        channel: RelayGroupChannel,
+        title: String,
+        body: String,
+    ) = launchSigner { account.postRelayGroupThread(channel, title, body) }
+
+    fun removeRelayGroupUser(
+        channel: RelayGroupChannel,
+        pubkey: HexKey,
+    ) = launchSigner { account.removeRelayGroupUser(channel, pubkey) }
+
+    fun putRelayGroupUser(
+        channel: RelayGroupChannel,
+        pubkey: HexKey,
+        roles: List<String>,
+    ) = launchSigner { account.putRelayGroupUser(channel, pubkey, roles) }
+
+    fun editRelayGroupMetadata(
+        channel: RelayGroupChannel,
+        name: String?,
+        about: String?,
+        picture: String?,
+        isPrivate: Boolean,
+        isClosed: Boolean,
+        isHidden: Boolean,
+        isRestricted: Boolean,
+        hashtags: List<String>,
+        geohashes: List<String>,
+    ) = launchSigner {
+        account.editRelayGroupMetadata(
+            channel,
+            name,
+            about,
+            picture,
+            isPrivate,
+            isClosed,
+            isHidden,
+            isRestricted,
+            hashtags,
+            geohashes,
+        )
+    }
+
     fun follow(users: List<User>) = launchSigner { account.follow(users) }
 
     fun follow(user: User) = launchSigner { account.follow(user) }
@@ -1710,6 +1795,12 @@ class AccountViewModel(
     fun getPublicChatChannelIfExists(hex: HexKey) = LocalCache.getPublicChatChannelIfExists(hex)
 
     fun getEphemeralChatChannelIfExists(key: RoomId) = LocalCache.getEphemeralChatChannelIfExists(key)
+
+    fun checkGetOrCreateRelayGroupChannel(key: GroupId): RelayGroupChannel = LocalCache.getOrCreateRelayGroupChannel(key)
+
+    fun getRelayGroupChannelIfExists(key: GroupId) = LocalCache.getRelayGroupChannelIfExists(key)
+
+    fun getRelayGroupChannelsOnRelay(relay: NormalizedRelayUrl) = LocalCache.getRelayGroupChannelsOnRelay(relay)
 
     fun getLiveActivityChannelIfExists(key: Address) = LocalCache.getLiveActivityChannelIfExists(key)
 

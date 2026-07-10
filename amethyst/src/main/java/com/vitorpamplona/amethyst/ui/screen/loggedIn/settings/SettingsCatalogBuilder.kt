@@ -97,6 +97,7 @@ fun buildSettingsCatalog(
                     symEntry(R.string.notification_settings, MaterialSymbols.Notifications, R.string.notification_settings_search_keywords, Route.NotificationSettings),
                     symEntry(R.string.home_tabs_settings, MaterialSymbols.Home, R.string.home_tabs_search_keywords, Route.HomeTabsSettings),
                     symEntry(R.string.reactions_settings, MaterialSymbols.ThumbUp, R.string.reactions_settings_search_keywords, Route.ReactionsSettings),
+                    symEntry(R.string.messages_settings, MaterialSymbols.Forum, R.string.messages_settings_search_keywords, Route.MessagesSettings),
                     symEntry(R.string.bottom_bar_settings, MaterialSymbols.Dashboard, R.string.bottom_bar_search_keywords, Route.BottomBarSettings),
                     symEntry(R.string.profile_ui_settings, MaterialSymbols.AccountCircle, R.string.profile_ui_search_keywords, Route.ProfileUiSettings),
                     symEntry(R.string.calendar_reminder_settings_title, MaterialSymbols.CalendarMonth, R.string.calendar_reminder_search_keywords, Route.CalendarReminderSettings),

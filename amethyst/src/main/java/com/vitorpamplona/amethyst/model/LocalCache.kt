@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtIdHexComparator
 import com.vitorpamplona.amethyst.commons.model.observables.EventListMatchingFilter
@@ -152,6 +153,22 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.groupId
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupParticipantsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteEventEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.nip31Alts.AltTag
@@ -195,6 +212,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
+import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
@@ -253,6 +271,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
@@ -334,6 +353,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     val publicChatChannels = LargeCache<HexKey, PublicChatChannel>()
     val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
     val ephemeralChannels = LargeCache<RoomId, EphemeralChatChannel>()
+    val relayGroupChannels = LargeCache<GroupId, RelayGroupChannel>()
 
     val paymentTracker = NwcPaymentTracker()
 
@@ -607,6 +627,11 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getEphemeralChatChannelIfExists(key: RoomId): EphemeralChatChannel? = ephemeralChannels.get(key)
 
+    fun getRelayGroupChannelIfExists(key: GroupId): RelayGroupChannel? = relayGroupChannels.get(key)
+
+    /** Every relay group we know of that is hosted on [relay] (its channel directory). */
+    fun getRelayGroupChannelsOnRelay(relay: NormalizedRelayUrl): List<RelayGroupChannel> = relayGroupChannels.filter { key, _ -> key.relayUrl == relay }
+
     fun getLiveActivityChannelIfExists(key: Address): LiveActivitiesChannel? = liveChatChannels.get(key)
 
     fun getNoteIfExists(event: Event): Note? =
@@ -694,6 +719,8 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun getOrCreateLiveChannel(key: Address): LiveActivitiesChannel = liveChatChannels.getOrCreate(key) { LiveActivitiesChannel(key) }
 
     fun getOrCreateEphemeralChannel(key: RoomId): EphemeralChatChannel = ephemeralChannels.getOrCreate(key) { EphemeralChatChannel(key) }
+
+    fun getOrCreateRelayGroupChannel(key: GroupId): RelayGroupChannel = relayGroupChannels.getOrCreate(key) { RelayGroupChannel(key) }
 
     fun checkGetOrCreatePublicChatChannel(key: String): PublicChatChannel? {
         if (isValidHex(key)) {
@@ -1722,6 +1749,118 @@ object LocalCache : ILocalCache, ICacheProvider {
         return new
     }
 
+    /**
+     * NIP-29 relay-signed group metadata (kind 39000). Stored as an addressable
+     * note and used to populate the [RelayGroupChannel]'s name/picture/about/
+     * flags. The group is keyed by (host relay + group id): unlike NIP-C7, a
+     * NIP-29 event does not carry its host relay in a tag — the host is the relay
+     * that served it — so the channel can only be associated when we know the
+     * serving relay (provenance). With no relay we still store the metadata.
+     */
+    fun consume(
+        event: GroupMetadataEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+
+        if (relay != null) {
+            val note = getOrCreateAddressableNote(event.address())
+            val channel = getOrCreateRelayGroupChannel(GroupId(event.groupId(), relay))
+            (note.event as? GroupMetadataEvent)?.let { channel.updateGroupInfo(it, note) }
+        }
+
+        return new
+    }
+
+    /** NIP-29 relay-signed member list (kind 39002) → the group's roster. */
+    fun consume(
+        event: GroupMembersEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (relay != null) {
+            val latest = getOrCreateAddressableNote(event.address()).event as? GroupMembersEvent
+            latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updateMembers(it) }
+        }
+        return new
+    }
+
+    /** NIP-29 relay-signed admin list (kind 39001) → the group's roster. */
+    fun consume(
+        event: GroupAdminsEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (relay != null) {
+            val latest = getOrCreateAddressableNote(event.address()).event as? GroupAdminsEvent
+            latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updateAdmins(it) }
+        }
+        return new
+    }
+
+    /**
+     * Attach a group-scoped content event (a kind-9 chat, kind-1068 poll, …
+     * carrying an `h` tag) to its [RelayGroupChannel]. NIP-29 reuses the generic
+     * content kinds and scopes them with `h`, so the note is consumed normally
+     * and then, when it belongs to a group and we know the serving relay, added
+     * to that group's channel timeline.
+     */
+    private fun attachToRelayGroupIfScoped(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+    ) {
+        val groupId = event.groupId() ?: return
+        val note = getOrCreateNote(event.id)
+        // Only attach a note we've actually loaded — never a placeholder for an
+        // unverified/not-yet-seen event. This is checked here (not via the "was
+        // newly consumed" flag) so the host relay's echo of an event we already
+        // stored from our own send still lands in the channel.
+        if (note.event == null) return
+
+        if (relay != null) {
+            // Normal arrival: the group only exists on its host relay and the
+            // filters are host-pinned, so the serving relay is the group's key.
+            getOrCreateRelayGroupChannel(GroupId(groupId, relay)).addNote(note, relay)
+        } else {
+            // Our own optimistic send has no provenance relay, so we can't build the (groupId,
+            // relay) key. Attach only when a SINGLE open channel has this group id (the room being
+            // composed in). When the id is ambiguous across relays — e.g. the relay-wide "_" group
+            // joined on several relays — skip: attaching to all of them bleeds the message into
+            // rooms it wasn't sent to. The host relay's echo (relay != null) lands it on the right key.
+            relayGroupChannels
+                .filter { key, _ -> key.id == groupId }
+                .singleOrNull()
+                ?.addNote(note, null)
+        }
+    }
+
+    /**
+     * Same routing as [attachToRelayGroupIfScoped] but for kind-11 threads, which
+     * are kept in a separate collection from the chat timeline so the two content
+     * types don't mix in one feed.
+     */
+    private fun attachThreadToRelayGroupIfScoped(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+    ) {
+        val groupId = event.groupId() ?: return
+        val note = getOrCreateNote(event.id)
+        if (note.event == null) return
+
+        if (relay != null) {
+            getOrCreateRelayGroupChannel(GroupId(groupId, relay)).addThread(note)
+        } else {
+            // See attachToRelayGroupIfScoped: only attach when the group id is unambiguous.
+            relayGroupChannels
+                .filter { key, _ -> key.id == groupId }
+                .singleOrNull()
+                ?.addThread(note)
+        }
+    }
+
     fun consume(
         event: LiveActivitiesChatMessageEvent,
         relay: NormalizedRelayUrl?,
@@ -2655,6 +2794,10 @@ object LocalCache : ILocalCache, ICacheProvider {
         publicChatChannels.forEach { _, channel ->
             pruneHiddenMessagesChannel(channel, account)
         }
+
+        relayGroupChannels.forEach { _, channel ->
+            pruneHiddenMessagesChannel(channel, account)
+        }
     }
 
     // 2× the 10-min `PRESENCE_FRESHNESS_WINDOW_SECONDS` used by
@@ -2702,6 +2845,10 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
         publicChatChannels.forEach { _, channel ->
+            pruneOldMessagesChannel(channel)
+        }
+
+        relayGroupChannels.forEach { _, channel ->
             pruneOldMessagesChannel(channel)
         }
 
@@ -3542,6 +3689,75 @@ object LocalCache : ILocalCache, ICacheProvider {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 
+                // NIP-51 "simple groups" list (kind 10009): the user's joined NIP-29 groups +
+                // servers. Replaceable like its sibling lists; RelayGroupListState reads it from the
+                // addressable cache, so it must be stored (it was silently dropped before).
+                is SimpleGroupListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is GroupMetadataEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is GroupMembersEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is GroupAdminsEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                // Remaining NIP-29 relay-group kinds. The two relay-signed addressables (39003
+                // roles, 39004 AV participants) are durable group state alongside 39000/39001/39002,
+                // so they're stored replaceably. The 9xxx moderation actions and join/leave requests
+                // are regular one-shot events the relay is authoritative for (it applies them and
+                // republishes the 39000/39001/39002); we store them so they're queryable and don't
+                // fall through to the "Not Supported" warning, but we don't act on them client-side.
+                is SupportedRolesEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is GroupParticipantsEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is PutUserEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is RemoveUserEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is EditMetadataEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is DeleteEventEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is DeleteGroupEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CreateGroupEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CreateInviteEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is JoinRequestEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is LeaveRequestEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
                 is ExternalIdentitiesEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
@@ -3896,11 +4112,25 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is ChatEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
+                    consumeRegularEvent(event, relay, wasVerified).also {
+                        // Attach on every arrival, not just the newly-consumed one:
+                        // our own send is consumed first with a null relay, so the
+                        // host relay's later echo (new == false) is what carries the
+                        // provenance needed to key the channel. attach is idempotent.
+                        attachToRelayGroupIfScoped(event, relay)
+                    }
                 }
 
                 is PollEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
+                    consumeRegularEvent(event, relay, wasVerified).also {
+                        attachToRelayGroupIfScoped(event, relay)
+                    }
+                }
+
+                is ThreadEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified).also {
+                        attachThreadToRelayGroupIfScoped(event, relay)
+                    }
                 }
 
                 is PollResponseEvent -> {
