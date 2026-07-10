@@ -82,9 +82,14 @@ private fun refreshConcordChannelIndex(account: Account) {
         val communityId = session.entry.id
         val relays = relaysByCommunity[communityId] ?: emptySet()
         for (channelIdHex in state.channels.keys) {
-            LocalCache
-                .getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
-                .updateFrom(state, relays, myPubKey)
+            val channel = LocalCache.getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
+            channel.updateFrom(state, relays, myPubKey)
+            // A member banned since these notes loaded: drop their messages now (the
+            // ingest gate stops future ones). removeNote invalidates the feed, so the
+            // ban is reflected live rather than only on the next feed pass.
+            channel.notes
+                .filter { _, note -> note.event?.pubKey?.let { state.authority.isBanned(it) } == true }
+                .forEach { channel.removeNote(it) }
         }
     }
 }

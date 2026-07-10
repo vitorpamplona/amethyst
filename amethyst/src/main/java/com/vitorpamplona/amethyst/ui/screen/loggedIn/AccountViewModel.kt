@@ -568,6 +568,12 @@ class AccountViewModel(
         reactToOrDelete(note, reaction)
     }
 
+    /** Ban the author of a Concord channel message (no-op unless this account may ban them). */
+    fun banConcordMember(note: Note) {
+        val (communityId, member) = account.concordBanTarget(note) ?: return
+        launchSigner { account.banConcordMember(communityId, member) }
+    }
+
     @Immutable
     data class NoteComposeReportState(
         val isPostHidden: Boolean = false,

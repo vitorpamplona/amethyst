@@ -316,6 +316,9 @@
     <string name="concord_create_action">Create</string>
     <string name="concord_invite_action">Invite people</string>
     <string name="concord_invite_title">Invite link</string>
+    <string name="concord_ban_user">Ban</string>
+    <string name="concord_ban_user_title">Ban from this community?</string>
+    <string name="concord_ban_user_body">This member will be added to the community banlist. Their messages will be hidden and their future posts dropped by every member. You can unban them later.</string>
     <string name="chats_history_proto_nip17">encrypted</string>
     <string name="chats_history_proto_nip04">legacy</string>
     <string name="chats_reply_searching_history">Looking for the original message…</string>

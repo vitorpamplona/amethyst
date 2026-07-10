@@ -131,6 +131,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentF
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -400,7 +401,29 @@ class Account(
      * [concordChannelList] and consulted by the giftwrap decrypt path so a Concord
      * plane wrap routes here instead of being dropped as an undecryptable DM.
      */
-    val concordSessions = ConcordSessionManager(concordChannelList.liveCommunities, signer.pubKey, scope, cache::consumeConcordRumor)
+    val concordSessions = ConcordSessionManager(concordChannelList.liveCommunities, signer.pubKey, scope, ::consumeConcordRumorGated)
+
+    /**
+     * Sink for decrypted Concord rumors: drops a message whose author is banned in
+     * the community's current fold before it ever becomes a Note, then delegates to
+     * the cache. Bans that arrive *after* a message are handled by removing the
+     * author's existing notes on re-fold (see `refreshConcordChannelIndex`); this
+     * gate stops *new* posts from a banned author from appearing at all.
+     */
+    private fun consumeConcordRumorGated(
+        communityId: String,
+        channelIdHex: String,
+        rumor: Event,
+    ) {
+        val authority =
+            concordSessions
+                .sessionFor(communityId)
+                ?.state
+                ?.value
+                ?.authority
+        if (authority?.isBanned(rumor.pubKey) == true) return
+        cache.consumeConcordRumor(communityId, channelIdHex, rumor)
+    }
 
     val publicChatListDecryptionCache = PublicChatListDecryptionCache(signer)
     val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
@@ -1669,6 +1692,29 @@ class Account(
         val wrap = ConcordModeration.grant(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, roleIds, session.controlEditions(), TimeUtils.now())
         publishConcordWrap(session.entry, wrap)
         return true
+    }
+
+    /**
+     * If [note] is a Concord channel message whose author this account is allowed to
+     * ban — the actor is the owner or holds the BAN permission, and the target is
+     * neither the owner nor the actor — returns `(communityId, memberHex)`. Null
+     * otherwise, so the UI shows the Ban action only when it would actually take
+     * effect on fold.
+     */
+    fun concordBanTarget(note: Note): Pair<String, HexKey>? {
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return null
+        val author = note.author?.pubkeyHex ?: note.event?.pubKey ?: return null
+        if (author == signer.pubKey) return null
+        val communityId = channel.channelId.communityId
+        val authority =
+            concordSessions
+                .sessionFor(communityId)
+                ?.state
+                ?.value
+                ?.authority ?: return null
+        if (authority.isOwner(author)) return null
+        val canBan = authority.isOwner(signer.pubKey) || authority.effectivePermissions(signer.pubKey).has(ConcordPermissions.BAN)
+        return if (canBan) communityId to author else null
     }
 
     /** Add [member] to the community banlist. */
@@ -3785,7 +3831,27 @@ class Account(
         return limit > 0 && note.event?.hasMoreHashtagsThan(limit) == true
     }
 
+    /**
+     * True if [note] is a Concord channel message whose author is banned in that
+     * community's current fold. Bans are per-community (not global mutes), so they
+     * are enforced here at read time — the same "filter, don't delete" approach the
+     * rest of the app uses. A ban that arrives after a message is applied on the
+     * next feed pass.
+     */
+    private fun isConcordBanned(note: Note): Boolean {
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return false
+        val author = note.author?.pubkeyHex ?: note.event?.pubKey ?: return false
+        val authority =
+            concordSessions
+                .sessionFor(channel.channelId.communityId)
+                ?.state
+                ?.value
+                ?.authority ?: return false
+        return authority.isBanned(author)
+    }
+
     override fun isAcceptable(note: Note): Boolean {
+        if (isConcordBanned(note)) return false
         val mutedThreads = hiddenUsers.flow.value.mutedThreads
         if (mutedThreads.isNotEmpty() && mutedThreads.contains(resolveThreadRoot(note))) return false
         return note.author?.let { isAcceptable(it) } ?: true &&
