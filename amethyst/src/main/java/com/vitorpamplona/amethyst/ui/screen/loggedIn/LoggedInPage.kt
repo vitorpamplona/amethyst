@@ -45,7 +45,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthPromptHost
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
-import com.vitorpamplona.amethyst.service.relayClient.publishOutcome.RelayPublishFailureToastSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountForegroundFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
@@ -86,9 +85,6 @@ fun LoggedInPage(
 
     // Shows the "log in to this relay?" dialog when a NIP-42 challenge needs the user to decide.
     RelayAuthPromptHost(accountViewModel)
-
-    // Toasts when the relay client gives up delivering one of our events to a relay.
-    RelayPublishFailureToastSubscription(accountViewModel)
 
     // Loads account information + DMs and Notifications from Relays.
     AccountFilterAssemblerSubscription(accountViewModel)

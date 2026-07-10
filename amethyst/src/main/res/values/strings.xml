@@ -863,8 +863,6 @@
     <string name="relay_auth_per_relay_overrides">Per-relay overrides</string>
     <string name="relay_auth_forget">Forget</string>
     <string name="relay_auth_last_used">Last used %1$s ago</string>
-    <string name="relay_send_failed_title">Couldn\'t deliver your event</string>
-    <string name="relay_send_failed_message">The relay %1$s didn\'t accept it after several tries.</string>
     <string name="relay_auth_no_overrides">Nothing here yet — your global policy applies to every relay.</string>
     <string name="relay_auth_decision_allow">Allow</string>
     <string name="relay_auth_decision_deny">Deny</string>
