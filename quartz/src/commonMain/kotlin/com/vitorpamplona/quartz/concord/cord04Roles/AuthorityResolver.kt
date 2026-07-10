@@ -52,6 +52,9 @@ class AuthorityResolver private constructor(
 
     fun isBanned(pubKey: String): Boolean = pubKey.lowercase() in banned
 
+    /** The role ids a member currently holds (empty for the owner and for plain members). */
+    fun rolesOf(pubKey: String): Set<String> = memberRoles[pubKey.lowercase()] ?: emptySet()
+
     /** The member's rank, lower being higher authority; null = no authority. Owner = [OWNER_RANK]. */
     fun rank(pubKey: String): Long? {
         val m = pubKey.lowercase()

@@ -574,6 +574,14 @@ class AccountViewModel(
         launchSigner { account.banConcordMember(communityId, member) }
     }
 
+    /** Toggle the Admin role on the author of a Concord channel message (owner only). */
+    fun toggleConcordAdmin(note: Note) {
+        val (communityId, member, isAdmin) = account.concordAdminTarget(note) ?: return
+        launchSigner {
+            if (isAdmin) account.removeConcordAdmin(communityId, member) else account.makeConcordAdmin(communityId, member)
+        }
+    }
+
     @Immutable
     data class NoteComposeReportState(
         val isPostHidden: Boolean = false,

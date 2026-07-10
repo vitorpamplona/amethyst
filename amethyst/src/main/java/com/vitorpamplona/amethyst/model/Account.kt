@@ -132,6 +132,7 @@ import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
+import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -297,6 +298,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CoroutineScope
@@ -318,6 +320,9 @@ import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thum
 import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
 
 private const val ONCHAIN_BACKEND_NOT_CONFIGURED = "Bitcoin chain backend is not configured"
+
+/** Name of the default Concord community Admin role minted by "Make admin". */
+private const val CONCORD_ADMIN_ROLE = "Admin"
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -1691,6 +1696,85 @@ class Account(
         if (!isWriteable()) return false
         val wrap = ConcordModeration.grant(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, roleIds, session.controlEditions(), TimeUtils.now())
         publishConcordWrap(session.entry, wrap)
+        return true
+    }
+
+    /** The default community Admin role: position 1, holding every management + moderation permission. */
+    private fun concordAdminRole() =
+        RoleEntity(
+            name = CONCORD_ADMIN_ROLE,
+            position = 1,
+            permissions =
+                ConcordPermissions
+                    .of(
+                        ConcordPermissions.MANAGE_ROLES,
+                        ConcordPermissions.MANAGE_CHANNELS,
+                        ConcordPermissions.MANAGE_METADATA,
+                        ConcordPermissions.KICK,
+                        ConcordPermissions.BAN,
+                        ConcordPermissions.MANAGE_MESSAGES,
+                        ConcordPermissions.CREATE_INVITE,
+                    ).toWire(),
+        )
+
+    /**
+     * If [note] is a Concord channel message whose author the OWNER may toggle
+     * "admin" on, returns `(communityId, memberHex, isAlreadyAdmin)`. Only the owner
+     * qualifies — the Admin role sits at position 1 and the resolver requires the
+     * granter to *strictly* outrank it, which only the owner (rank 0) does. Null for
+     * the owner's own note, the owner as target, or a non-owner actor.
+     */
+    fun concordAdminTarget(note: Note): Triple<String, HexKey, Boolean>? {
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return null
+        val author = note.author?.pubkeyHex ?: note.event?.pubKey ?: return null
+        if (author == signer.pubKey) return null
+        val communityId = channel.channelId.communityId
+        val state = concordSessions.sessionFor(communityId)?.state?.value ?: return null
+        if (state.authority.isOwner(author) || !state.authority.isOwner(signer.pubKey)) return null
+        val adminRoleId =
+            state.roles.entries
+                .firstOrNull { it.value.name == CONCORD_ADMIN_ROLE && it.value.position == 1L }
+                ?.key
+        val isAdmin = adminRoleId != null && adminRoleId in state.authority.rolesOf(author)
+        return Triple(communityId, author, isAdmin)
+    }
+
+    /** Promote [member] to the community Admin role, defining that role first if it doesn't exist yet. */
+    suspend fun makeConcordAdmin(
+        communityId: String,
+        member: HexKey,
+    ): Boolean {
+        val session = concordSessions.sessionFor(communityId) ?: return false
+        if (!isWriteable()) return false
+        val cp = session.controlPlaneKey()
+
+        val existing =
+            session.state.value
+                ?.roles
+                ?.entries
+                ?.firstOrNull { it.value.name == CONCORD_ADMIN_ROLE && it.value.position == 1L }
+        val roleIdHex =
+            existing?.key ?: run {
+                val roleId = RandomInstance.bytes(32)
+                val roleWrap = ConcordModeration.defineRole(signer, cp, roleId, concordAdminRole(), session.controlEditions(), TimeUtils.now())
+                publishConcordWrap(session.entry, roleWrap)
+                roleId.toHexKey()
+            }
+
+        val grantWrap = ConcordModeration.grant(signer, cp, communityId.hexToByteArray(), member, listOf(roleIdHex), session.controlEditions(), TimeUtils.now())
+        publishConcordWrap(session.entry, grantWrap)
+        return true
+    }
+
+    /** Revoke all roles from [member] (demote an admin back to a plain member). */
+    suspend fun removeConcordAdmin(
+        communityId: String,
+        member: HexKey,
+    ): Boolean {
+        val session = concordSessions.sessionFor(communityId) ?: return false
+        if (!isWriteable()) return false
+        val grantWrap = ConcordModeration.grant(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, emptyList(), session.controlEditions(), TimeUtils.now())
+        publishConcordWrap(session.entry, grantWrap)
         return true
     }
 

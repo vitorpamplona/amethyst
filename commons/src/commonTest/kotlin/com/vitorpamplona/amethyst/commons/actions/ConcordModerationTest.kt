@@ -70,11 +70,18 @@ class ConcordModerationTest {
 
             val state: ConcordCommunityState = ConcordCommunityState.fold(editions, community.ownerPubKey)
 
-            // The role exists, the admin holds BAN, and the troll is banned.
+            // The role exists, the admin holds BAN + the role id, and the troll is banned.
             assertTrue(state.roles.containsKey(roleIdHex))
             assertTrue(state.authority.effectivePermissions(admin.pubKey).has(ConcordPermissions.BAN))
+            assertTrue(roleIdHex in state.authority.rolesOf(admin.pubKey))
             assertTrue(state.authority.isBanned(troll.pubKey))
             assertFalse(state.authority.isBanned(admin.pubKey))
+
+            // Revoking (an empty grant, as "Remove admin" does) strips the role and its permissions.
+            add(ConcordModeration.grant(owner, cp, communityId, admin.pubKey, emptyList(), editions, createdAt = 7L))
+            val demoted = ConcordCommunityState.fold(editions, community.ownerPubKey)
+            assertFalse(demoted.authority.effectivePermissions(admin.pubKey).has(ConcordPermissions.BAN))
+            assertTrue(demoted.authority.rolesOf(admin.pubKey).isEmpty())
 
             // Unbanning the troll clears the flag (version chains onto the ban).
             add(ConcordModeration.unban(owner, cp, communityId, troll.pubKey, editions, createdAt = 5L))

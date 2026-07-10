@@ -274,8 +274,9 @@ fun CardBody(
     val isOwnNote = accountViewModel.isLoggedUser(note.author)
     val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
 
-    // Concord moderation: only present when this account may actually ban the author.
+    // Concord moderation: only present when this account may actually act.
     val canConcordBan = remember(note) { accountViewModel.account.concordBanTarget(note) != null }
+    val concordAdmin = remember(note) { accountViewModel.account.concordAdminTarget(note) }
     val showConcordBanDialog = remember { mutableStateOf(false) }
 
     if (showConcordBanDialog.value) {
@@ -471,6 +472,19 @@ fun CardBody(
                     stringRes(R.string.quick_action_report),
                 ) {
                     showReportDialog.value = true
+                }
+            }
+
+            if (concordAdmin != null) {
+                VerticalDivider(color = primaryLight)
+
+                val isAdmin = concordAdmin.third
+                NoteQuickActionItem(
+                    MaterialSymbols.Shield,
+                    stringRes(if (isAdmin) R.string.concord_remove_admin else R.string.concord_make_admin),
+                ) {
+                    accountViewModel.toggleConcordAdmin(note)
+                    onDismiss()
                 }
             }
 
