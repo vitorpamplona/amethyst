@@ -1902,12 +1902,7 @@ class AccountViewModel(
         }
     }
 
-    private fun unreadPrivateChatRoute(chat: Note): Pair<String, Long>? {
-        val noteEvent = chat.event ?: return null
-        val room = (noteEvent as? ChatroomKeyable)?.chatroomKey(account.signer.pubKey) ?: return null
-        if (account.isAllHidden(room.users)) return null
-        return privateChatRoute(room) to noteEvent.createdAt
-    }
+    private fun unreadPrivateChatRoute(chat: Note): Pair<String, Long>? = unreadPrivateChatRoute(chat.event, account.signer.pubKey, account::isAllHidden)
 
     private fun markHiddenChatroomsAsRead() {
         account.chatroomList.rooms.forEach { roomKey, chatroom ->
@@ -2591,6 +2586,24 @@ class AccountViewModel(
     val baseNote: Note?,
     val nip19: Nip19Parser.ParseReturn,
 )
+
+/**
+ * Read-marker route + timestamp for the newest message of a private chat room, or null when
+ * the room cannot be unread: no event, not a chat message, every participant hidden, or the
+ * newest message authored by the logged-in user — replying (from this device, or from another
+ * one via the self-addressed gift wrap) counts as having read the conversation (#1286, #1287).
+ */
+internal fun unreadPrivateChatRoute(
+    newestMessage: Event?,
+    loggedInUser: HexKey,
+    isAllHidden: (Set<HexKey>) -> Boolean,
+): Pair<String, Long>? {
+    val noteEvent = newestMessage ?: return null
+    val room = (noteEvent as? ChatroomKeyable)?.chatroomKey(loggedInUser) ?: return null
+    if (isAllHidden(room.users)) return null
+    if (noteEvent.pubKey == loggedInUser) return null
+    return "Room/${room.hashCode()}" to noteEvent.createdAt
+}
 
 var mockedCache: AccountViewModel? = null
 

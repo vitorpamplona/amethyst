@@ -265,7 +265,7 @@ private fun ChannelRoomCompose(
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, R.string.public_chat, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
-        hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
+        hasNewMessages = !accountViewModel.isLoggedUser(lastMessage.author) && (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =
@@ -301,7 +301,7 @@ private fun ChannelRoomCompose(
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(channel.toBestDisplayName(), R.string.ephemeral_relay_chat, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
-        hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
+        hasNewMessages = !accountViewModel.isLoggedUser(lastMessage.author) && (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =
@@ -341,7 +341,7 @@ private fun MarmotGroupRoomCompose(
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, R.string.marmot_group, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = lastContent,
-        hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
+        hasNewMessages = !accountViewModel.isLoggedUser(author) && (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =
@@ -572,8 +572,9 @@ private fun UserRoomCompose(
                 }
             }
 
+            // A message I authored (sent here or from another device) counts as read (#1286, #1287).
             val lastReadTime by accountViewModel.account.loadLastReadFlow("Room/${room.hashCode()}").collectAsStateWithLifecycle()
-            if ((lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime) {
+            if (!accountViewModel.isLoggedUser(lastMessage.author) && (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime) {
                 Spacer(modifier = Height4dpModifier)
                 NewItemsBubble()
             }

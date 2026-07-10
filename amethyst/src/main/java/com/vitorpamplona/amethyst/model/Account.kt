@@ -187,6 +187,7 @@ import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -2521,6 +2522,8 @@ class Account(
 
         cache.justConsumeMyOwnEvent(newEvent)
         client.publish(newEvent, outboxRelays.flow.value + destinationRelays)
+
+        markDmRoomAsRead(newEvent)
     }
 
     override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
@@ -2572,6 +2575,20 @@ class Account(
 
             val relayList = computeRelayListToBroadcast(wrap)
             client.publish(wrap, relayList)
+        }
+
+        markDmRoomAsRead(signedEvents.msg)
+    }
+
+    /**
+     * Sending a message into a DM room means the user has caught up with it: advance the
+     * room's local read marker to the sent message so the unread indicators clear without
+     * requiring the conversation to be reopened (#1286, #1287). No-op for private events
+     * that don't belong to a room (private notes, reactions, deletions).
+     */
+    private fun markDmRoomAsRead(event: Event) {
+        if (event is ChatroomKeyable) {
+            markAsRead("Room/${event.chatroomKey(signer.pubKey).hashCode()}", event.createdAt)
         }
     }
 
