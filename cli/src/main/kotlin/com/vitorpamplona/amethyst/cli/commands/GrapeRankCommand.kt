@@ -492,8 +492,20 @@ object GrapeRankCommand {
                     // shedDeadDiscovery / shardRotations keep their benchmarked-best
                     // Config defaults.
                 ),
-            log = { System.err.println(it) },
+            log = crawlLogger(),
         )
+    }
+
+    /**
+     * Crawl progress logger with a `[t+SSSs]` elapsed prefix, so a saved log
+     * attributes wall time to rounds/phases without external timestamps.
+     */
+    private fun crawlLogger(): (String) -> Unit {
+        val start = System.nanoTime()
+        return { line ->
+            val secs = (System.nanoTime() - start) / 1_000_000_000
+            System.err.println("[t+${secs}s] $line")
+        }
     }
 
     /** Echo any relay NOTICE/CLOSED feedback + adaptive throttling the crawl saw. */
