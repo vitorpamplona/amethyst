@@ -434,6 +434,14 @@ class GrapeRankCrawler(
         // ones that timed out — which unlike a clean EOSE might just be slow).
         val askedEmpty = ConcurrentMap<HexKey, ConcurrentSet<NormalizedRelayUrl>>()
 
+        // Stragglers already asked of the content aggregators, so each fixpoint
+        // iteration of [recoverStragglersFromAggregators] only queries the users
+        // ADDED since the last pass. Without this every iteration re-asked the full
+        // straggler set (~4 min of store scans + aggregator REQs per pass at 470k
+        // stragglers) for zero new answers — the aggregators already EOSE'd on them.
+        // Single-writer: only the terminal recovery pass (round loop context) touches it.
+        val aggregatorAsked = HashSet<HexKey>()
+
         // Contact lists delivered LATE by parked (slow-but-alive) relays. A parked
         // unit persists its events, then pushes any kind:3 it found here; the round
         // loop (the single graph-writer) folds these into hopOf/done/builder between
@@ -765,17 +773,30 @@ class GrapeRankCrawler(
                                     // drains must not share a mutable HashMap.
                                     async {
                                         val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
+                                        val answered = HashSet<NormalizedRelayUrl>()
                                         val filters =
                                             mapOf(relay to shard.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = FETCH_KINDS, authors = it) })
-                                        drainGated(filters, dead) to dead
+                                        val events = drainGated(filters, dead, answered)
+                                        ShardDrain(relay, shard, events, relay in answered, dead)
                                     }
                                 }
                             }.awaitAll()
                     }
-                for ((_, dead) in results) recordDead(dead)
+                for (r in results) recordDead(r.dead)
                 relaysContacted += top
-                val flat = results.flatMap { it.first }
+                val flat = results.flatMap { it.events }
                 for ((relay, _) in flat) liveRelays.add(relay)
+                // A shard relay that cleanly EOSE'd without a user's kind:3 doesn't
+                // have it — record the pair so later passes (outbox routing, communal
+                // sweep) never re-ask it. Serial here, after the concurrent drains.
+                for (r in results) {
+                    if (!r.answered) continue
+                    val returned = HashSet<HexKey>()
+                    for ((_, ev) in r.events) if (ev is ContactListEvent) returned.add(ev.pubKey)
+                    for (pk in r.shard) {
+                        if (pk !in returned) askedEmpty.getOrPut(pk) { ConcurrentSet() }.add(r.relay)
+                    }
+                }
                 got += harvest(flat)
                 missing = missing.filter { it !in done }
                 rotation++
@@ -791,12 +812,24 @@ class GrapeRankCrawler(
                 val live = topLiveRelays(BROADCAST_RELAYS)
                 if (live.isNotEmpty()) {
                     val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
+                    val answered = HashSet<NormalizedRelayUrl>()
                     val filters =
                         live.associateWith { missing.chunked(AUTHORS_PER_FILTER).map { Filter(kinds = FETCH_KINDS, authors = it) } }
-                    val events = drainGated(filters, dead)
+                    val events = drainGated(filters, dead, answered)
                     recordDead(dead)
                     relaysContacted += live
                     for ((relay, _) in events) liveRelays.add(relay)
+                    // Same answered-empty pruning as the rotations, per broadcast relay.
+                    val returnedByRelay = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
+                    for ((relay, ev) in events) {
+                        if (ev is ContactListEvent) returnedByRelay.getOrPut(relay) { HashSet() }.add(ev.pubKey)
+                    }
+                    for (relay in answered) {
+                        val returned = returnedByRelay[relay].orEmpty()
+                        for (pk in missing) {
+                            if (pk !in returned) askedEmpty.getOrPut(pk) { ConcurrentSet() }.add(relay)
+                        }
+                    }
                     got += harvest(events)
                 }
             }
@@ -931,13 +964,23 @@ class GrapeRankCrawler(
         }
 
         /**
-         * Group [pubkeys] by the relays we should query for their events:
-         *  - first try: the user's own kind:10002 write relays (the outbox model);
-         *  - a retry (`attempts[pk] > 0`, its outbox already failed): outbox +
-         *    [backbone] — the known-good relays other people write to;
-         *  - no outbox at all: harvested hints + backbone + the general fallback.
+         * Group [pubkeys] by the user's OWN-SIGNAL relays for a Phase-B batch drain:
+         *  - the user's own kind:10002 write relays (the outbox model), retried as-is
+         *    on later attempts (a timeout there may succeed now; clean-empty answers
+         *    are pruned via [askedEmpty]);
+         *  - no outbox at all: the per-user relay hints harvested from follows.
          *
-         * The content aggregators are deliberately NOT mixed in here: this path's
+         * The SHARED sets — backbone + fallback — are deliberately NOT fanned out
+         * here anymore. They used to ride inside every 256-user batch, so a
+         * retry-heavy round queued thousands of small REQs against the same ~40 hot
+         * relays' 16-permit gates (measured: rounds 8–10 of a hop-8 crawl burned
+         * ~80 minutes for +6.6k lists, nearly all of it hot-relay head-of-line
+         * blocking). Users needing shared coverage (no outbox, or attempt > 0) are
+         * flagged into [communalOut] instead, and [communalSweep] asks the shared
+         * relays ONCE per round in big author-chunked units — the same (relay, user)
+         * pairs, ~8x fewer REQs.
+         *
+         * The content aggregators are deliberately NOT mixed in either: this path's
          * multi-kind [FETCH_KINDS] query loses their kind:3 to their per-REQ result
          * cap (a big indexer fills the response with the abundant kind:10002 and
          * returns no kind:3), so recovering from them is done separately — kind:3-only,
@@ -948,9 +991,8 @@ class GrapeRankCrawler(
          */
         suspend fun routeByOutbox(
             pubkeys: Set<HexKey>,
-            backbone: Set<NormalizedRelayUrl>,
+            communalOut: MutableSet<HexKey>,
         ): Map<NormalizedRelayUrl, List<Filter>> {
-            val fallback = config.contentFallbackRelays
             val perRelay = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
 
             for (pk in pubkeys) {
@@ -958,8 +1000,14 @@ class GrapeRankCrawler(
                 write?.forEach { writeRelayFreq.merge(it, 1) { a, b -> a + b } }
                 val relays =
                     when {
-                        write == null -> relayHints[pk]?.snapshot().orEmpty() + backbone + fallback
-                        (attempts[pk] ?: 0) > 0 -> write + backbone
+                        write == null -> {
+                            communalOut.add(pk)
+                            relayHints[pk]?.snapshot().orEmpty()
+                        }
+                        (attempts[pk] ?: 0) > 0 -> {
+                            communalOut.add(pk)
+                            write
+                        }
                         else -> write
                     }
                 // Skip relays proven dead (routing to them only burns the drain
@@ -978,6 +1026,58 @@ class GrapeRankCrawler(
                     Filter(kinds = FETCH_KINDS, authors = chunk)
                 }
             }
+        }
+
+        /**
+         * Round-wide sweep of the SHARED relay sets (backbone + fallback) for the
+         * users Phase B flagged for communal coverage — see [routeByOutbox] for why
+         * this is not fanned out per batch. Asks each shared relay for its pending
+         * users in [AUTHORS_PER_FILTER] chunks, skipping (user, relay) pairs already
+         * answered empty, records new answered-empty pairs so the next round's pass
+         * shrinks, and folds delivered lists. Returns lists fed.
+         */
+        suspend fun communalSweep(
+            users: Collection<HexKey>,
+            backbone: Set<NormalizedRelayUrl>,
+        ): Int {
+            if (users.isEmpty()) return 0
+            val shared = backbone + config.contentFallbackRelays
+            val perRelay = HashMap<NormalizedRelayUrl, MutableList<HexKey>>()
+            for (pk in users) {
+                if (pk in done) continue
+                val emptied = askedEmpty[pk]
+                for (relay in shared) {
+                    if (isDead(relay)) continue
+                    if (emptied != null && relay in emptied) continue
+                    perRelay.getOrPut(relay) { ArrayList() }.add(pk)
+                }
+            }
+            if (perRelay.isEmpty()) return 0
+            val filters =
+                perRelay.mapValues { (_, authors) ->
+                    authors.chunked(AUTHORS_PER_FILTER).map { chunk -> Filter(kinds = FETCH_KINDS, authors = chunk) }
+                }
+            val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
+            val answered = HashSet<NormalizedRelayUrl>()
+            val events = drainGated(filters, dead, answered)
+            recordDead(dead)
+            relaysContacted += filters.keys
+            for ((relay, _) in events) liveRelays.add(relay)
+
+            // Same answered-empty rule as the Phase-B consumer: a clean EOSE without
+            // a user's kind:3 means this relay lacks it — never re-ask that pair.
+            val returnedByRelay = HashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
+            for ((relay, ev) in events) {
+                if (ev is ContactListEvent) returnedByRelay.getOrPut(relay) { HashSet() }.add(ev.pubKey)
+            }
+            for (relay in answered) {
+                val asked = perRelay[relay] ?: continue
+                val returned = returnedByRelay[relay].orEmpty()
+                for (pk in asked) {
+                    if (pk !in returned) askedEmpty.getOrPut(pk) { ConcurrentSet() }.add(relay)
+                }
+            }
+            return harvest(events)
         }
 
         /**
@@ -1016,13 +1116,17 @@ class GrapeRankCrawler(
             // fold these directly. Batched: the candidate set is EVERY discovered user
             // within the hop budget (hundreds of thousands), so a per-user store point
             // query here would take tens of minutes on its own.
-            val candidates = hopOf.keys.filterTo(ArrayList()) { (hopOf[it] ?: 0) < config.maxHops }
+            // Skip users a previous fixpoint pass already asked the aggregators for:
+            // they EOSE'd on those, so re-asking is pure wall-clock (measured ~4 min
+            // per repeat pass at 470k stragglers). Only newly-added stragglers count.
+            val candidates = hopOf.keys.filterTo(ArrayList()) { (hopOf[it] ?: 0) < config.maxHops && it !in aggregatorAsked }
             val stragglers = HashSet<HexKey>(candidates.size)
             for (chunk in candidates.chunked(AUTHORS_PER_FILTER)) {
                 val have = latestContactsFor(chunk).keys
                 for (pk in chunk) if (pk !in have) stragglers.add(pk)
             }
             if (stragglers.isEmpty()) return
+            aggregatorAsked.addAll(stragglers)
             val before = contactListsFed
             val stageMark = TimeSource.Monotonic.markNow()
             log("[graperank] aggregator recovery: ${stragglers.size} stragglers via ${aggregators.size} aggregators")
@@ -1680,6 +1784,8 @@ class GrapeRankCrawler(
                 // resolve their kind:10002, then fetch from their own write relays,
                 // drained a few at a time and skipping dead relays.
                 if (config.diagnose) batchWalls.reset()
+                var phaseCMs = 0L
+                var phaseCFed = 0
                 val stragglers = pending.filter { it !in done }
                 if (stragglers.isNotEmpty()) {
                     val backbone = topLiveRelays(BACKBONE_SIZE).toSet()
@@ -1694,6 +1800,10 @@ class GrapeRankCrawler(
                     // on the producer (keeps writeRelayFreq serial) and ingest runs
                     // only on the consumer (keeps done/builder/hopOf serial), now
                     // overlapped with draining instead of blocked behind each batch.
+                    // Users needing shared-relay coverage (no outbox, or retrying):
+                    // flagged by routeByOutbox on the producer (serial), swept ONCE
+                    // per round in Phase C instead of fanned into every batch.
+                    val communalUsers = HashSet<HexKey>()
                     val routed = Channel<Pair<List<HexKey>, Map<NormalizedRelayUrl, List<Filter>>>>(config.drainConcurrency * 2)
                     val drainedOut = Channel<DrainedBatch>(Channel.UNLIMITED)
                     coroutineScope {
@@ -1702,7 +1812,7 @@ class GrapeRankCrawler(
                         val producer =
                             launch {
                                 for (batch in stragglers.chunked(USER_BATCH)) {
-                                    val filters = routeByOutbox(batch.toSet(), backbone)
+                                    val filters = routeByOutbox(batch.toSet(), communalUsers)
                                     routed.send(batch to filters)
                                 }
                                 routed.close()
@@ -1774,11 +1884,10 @@ class GrapeRankCrawler(
                                         if (contacts != null) {
                                             done += pk
                                             ingest(pk, contacts)
-                                        } else {
-                                            val tries = (attempts[pk] ?: 0) + 1
-                                            attempts[pk] = tries
-                                            if (tries >= MAX_OUTBOX_ATTEMPTS) done += pk
                                         }
+                                        // Not found on own relays: no attempt burned yet.
+                                        // Accounting runs after Phase C, once the round's
+                                        // FULL coverage (own + shared relays) has run.
                                     }
                                 }
                             }
@@ -1787,6 +1896,22 @@ class GrapeRankCrawler(
                         drainedOut.close()
                         consumer.join()
                     }
+
+                    // Phase C — one round-wide communal sweep of the shared relays
+                    // (backbone + fallback) for the flagged users, then attempt
+                    // accounting: a user only burns an attempt after BOTH its own
+                    // relays (Phase B) and the shared set (here) missed this round.
+                    val phaseCMark = TimeSource.Monotonic.markNow()
+                    val fedBeforeC = contactListsFed
+                    communalSweep(communalUsers, backbone)
+                    for (pk in stragglers) {
+                        if (pk in done) continue
+                        val tries = (attempts[pk] ?: 0) + 1
+                        attempts[pk] = tries
+                        if (tries >= MAX_OUTBOX_ATTEMPTS) done += pk
+                    }
+                    phaseCMs = phaseCMark.elapsedNow().inWholeMilliseconds
+                    phaseCFed = contactListsFed - fedBeforeC
                 }
 
                 val roundMs = roundMark.elapsedNow().inWholeMilliseconds
@@ -1794,7 +1919,9 @@ class GrapeRankCrawler(
                     "[graperank] round $rounds: pending=${pending.size}, " +
                         "gotList=${contactListsFed - fedBefore}, newUsers=${hopOf.size - discoveredBefore}, " +
                         "discovered=${hopOf.size}, done=${done.size}, dead=${deadRelays.size()}, " +
-                        "time=${roundMs}ms (phaseA=${phaseAMs}ms fed=$phaseAFed, phaseB=${roundMs - phaseAMs}ms fed=${contactListsFed - fedBefore - phaseAFed})",
+                        "time=${roundMs}ms (phaseA=${phaseAMs}ms fed=$phaseAFed, " +
+                        "phaseB=${roundMs - phaseAMs - phaseCMs}ms fed=${contactListsFed - fedBefore - phaseAFed - phaseCFed}, " +
+                        "phaseC=${phaseCMs}ms fed=$phaseCFed)",
                 )
                 if (config.diagnose) {
                     // Batch-wall distribution vs the fast window that supposedly bounds
@@ -1980,6 +2107,20 @@ class GrapeRankCrawler(
         val events: List<Pair<NormalizedRelayUrl, Event>>,
         val wallMs: Long = 0,
         val slowest: SlowestUnit? = null,
+    )
+
+    /**
+     * One sharded-sweep drain after completion: the relay asked, the shard of users
+     * it was asked for, the fresh events, and whether the relay cleanly EOSE'd —
+     * enough to attribute "answered but empty" per (user, relay) pair serially
+     * after the concurrent rotation drains join.
+     */
+    private class ShardDrain(
+        val relay: NormalizedRelayUrl,
+        val shard: List<HexKey>,
+        val events: List<Pair<NormalizedRelayUrl, Event>>,
+        val answered: Boolean,
+        val dead: Map<NormalizedRelayUrl, DrainFailure>,
     )
 
     /** The drain unit that took longest to reach its fast outcome within one drainGated call. */
