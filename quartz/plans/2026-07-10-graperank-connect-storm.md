@@ -101,6 +101,22 @@ noise between runs is normal — relays come and go).
 | + `--drain-concurrency 48` on top | **396s** | 18,816 | 167k | **keep → new default** |
 | + per-relay sub cap 16→32 (`AMY_RELAY_SUB_CAP`) | 602s | 18,478 | 164k | **reject** — 27 relays demoted us + 7 rate-limited (vs 5+1 at 16); the Phase-B plateau is relay-side service rate, not client permits |
 
+### Reproducibility + the recovery fixpoint
+
+A cold hop-11 rerun matched hops 1–4 within ~3% but lost the entire hop-6/7
+cluster (394k vs 621k discovered at −7.5% lists): one weak backbone hour at
+round 5 shifted ~30k lists from in-round arrival to the terminal aggregator
+pass, whose discoveries were never crawled. Fixed by iterating rounds +
+recovery to a fixpoint (recovery reveals in-budget pending → resume rounds →
+recover again). Validation, cold hop-8 on the fixpoint build: **796,459
+discovered / 253,213 lists** — the deepest crawl of the series (hop 5–8
+populations 107k/167k/131k/72k vs 67k/110k/127k/2k before); the fixpoint fired
+live (+25 recovered lists → 1 pending → extra round → +0 → converge). Known
+follow-ups: each fixpoint iteration re-asks aggregators for the FULL straggler
+set (~4 min per pass at 470k stragglers — dedupe to newly-added stragglers),
+and the retry rounds' backbone re-fan remains the dominant tail cost (rounds
+8–10 ≈ 80 min for +6.6k lists).
+
 Final validation — **cold hop-5, fresh store, winning stack** (the workload that
 never completed pre-fixes): **85.4 min, 203,903 contact lists, 391,549 users
 discovered, 626,599 events, 5,794 relays**. Per-hop list completeness: 90%
