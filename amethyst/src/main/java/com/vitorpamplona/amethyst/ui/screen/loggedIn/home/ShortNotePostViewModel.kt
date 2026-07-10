@@ -36,6 +36,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
+import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
@@ -988,7 +989,7 @@ open class ShortNotePostViewModel :
             // outbox — bypass the private/scheduled/anonymous paths entirely.
             val enqueued =
                 powDifficulty != null &&
-                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty) { mined ->
+                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty, PoWReplay.ToRelays(threadTarget.relays)) { mined ->
                         accountViewModel.account.signAndSendPrivatelyOrBroadcast(mined) { threadTarget.relays }
                     }
             if (!enqueued) {
@@ -1030,7 +1031,11 @@ open class ShortNotePostViewModel :
             // still valid at publish time.
             val enqueued =
                 powDifficulty != null &&
-                    accountViewModel.account.mineTemplateInBackground(rescheduledTemplate, powDifficulty) { mined ->
+                    accountViewModel.account.mineTemplateInBackground(
+                        rescheduledTemplate,
+                        powDifficulty,
+                        PoWReplay.Schedule(scheduledFor, extraNotesToBroadcast),
+                    ) { mined ->
                         storeScheduledPost(mined, extraNotesToBroadcast, scheduledFor)
                     }
             if (!enqueued) {
@@ -1059,7 +1064,7 @@ open class ShortNotePostViewModel :
         } else {
             val enqueued =
                 powDifficulty != null &&
-                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty) { mined ->
+                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty, PoWReplay.Broadcast(extraNotesToBroadcast)) { mined ->
                         broadcastPublicPost(mined, extraNotesToBroadcast)
                     }
             if (!enqueued) {

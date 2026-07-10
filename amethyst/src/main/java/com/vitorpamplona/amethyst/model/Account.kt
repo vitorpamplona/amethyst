@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
+import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
@@ -293,6 +294,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CoroutineScope
@@ -838,6 +840,11 @@ class Account(
      * [onMined], which should run the exact sign+send path the caller would
      * have used without PoW. Returns false when no queue is wired.
      *
+     * When [replay] is given the job is checkpointed to disk so it survives
+     * process death: on the next login the restorer re-mines the persisted
+     * template and finishes it with the (headless) replay path instead of
+     * [onMined]. Pass null for content that must not touch disk.
+     *
      * The template is normalized to the final tag shape the signer will submit
      * (client tag included) before mining — a tag appended after mining would
      * invalidate the nonce.
@@ -845,10 +852,13 @@ class Account(
     fun <T : Event> mineTemplateInBackground(
         template: EventTemplate<T>,
         difficulty: Int,
+        replay: PoWReplay? = null,
         onMined: suspend (EventTemplate<T>) -> Unit,
     ): Boolean {
         val queue = powQueue() ?: return false
-        queue.enqueue(withFinalSignerTags(template), signer.pubKey, difficulty, onMined)
+        val finalTemplate = withFinalSignerTags(template)
+        val record = replay?.toRecord(RandomInstance.randomChars(16), signer.pubKey, finalTemplate, difficulty)
+        queue.enqueue(finalTemplate, signer.pubKey, difficulty, record, onMined)
         return true
     }
 

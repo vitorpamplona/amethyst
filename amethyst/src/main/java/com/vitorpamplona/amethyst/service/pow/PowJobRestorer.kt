@@ -1,0 +1,125 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.service.pow
+
+import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPost
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStore
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.utils.Log
+import java.util.UUID
+
+/**
+ * Re-enqueues the mining jobs checkpointed by [PowJobStore] when an account
+ * logs in, replacing the lost in-memory continuation with the headless replay
+ * described by each record. Restore is idempotent: the queue dedupes by job
+ * id, so a login flow that emits twice cannot double-mine.
+ */
+class PowJobRestorer(
+    private val queue: PoWPublishQueue,
+    private val store: PowJobStore,
+    private val scheduledPostStore: ScheduledPostStore,
+) {
+    suspend fun restore(account: Account) {
+        val records = store.listFor(account.signer.pubKey)
+        if (records.isEmpty()) return
+
+        Log.d(TAG) { "Restoring ${records.size} pending PoW job(s) for ${account.signer.pubKey.take(8)}…" }
+
+        records.forEach { record ->
+            val template =
+                try {
+                    EventTemplate.fromJson(record.templateJson)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Dropping unreadable PoW job ${record.id}", e)
+                    store.remove(record.id)
+                    return@forEach
+                }
+
+            if (record.difficulty <= 0) {
+                store.remove(record.id)
+                return@forEach
+            }
+
+            queue.enqueue(template, account.signer.pubKey, record.difficulty, persistAs = record) { mined ->
+                replay(account, record, mined)
+            }
+        }
+    }
+
+    private suspend fun replay(
+        account: Account,
+        record: PersistedPoWJob,
+        mined: EventTemplate<Event>,
+    ) {
+        val extras =
+            record.extraEventsJson.mapNotNull {
+                try {
+                    Event.fromJson(it)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Dropping unreadable extra event of PoW job ${record.id}", e)
+                    null
+                }
+            }
+
+        when (record.replayType) {
+            PersistedPoWJob.REPLAY_BROADCAST -> {
+                account.signAndComputeBroadcast(mined, extras)
+            }
+
+            PersistedPoWJob.REPLAY_RELAYS -> {
+                val relays = record.relayUrls.map { NormalizedRelayUrl(it) }
+                account.signAndSendPrivatelyOrBroadcast(mined) { relays }
+            }
+
+            PersistedPoWJob.REPLAY_SCHEDULE -> {
+                val publishAtSec = record.publishAtSec
+                if (publishAtSec == null) {
+                    Log.w(TAG) { "Scheduled PoW job ${record.id} has no publish time; broadcasting instead" }
+                    account.signAndComputeBroadcast(mined, extras)
+                    return
+                }
+                val (event, relays, extraList) = account.createPostEvent(mined, extras)
+                scheduledPostStore.add(
+                    ScheduledPost(
+                        id = UUID.randomUUID().toString(),
+                        accountPubkey = event.pubKey,
+                        signedEventJson = event.toJson(),
+                        relayUrls = relays.map { it.url },
+                        extraEventsJson = extraList.map { it.toJson() },
+                        publishAtSec = publishAtSec,
+                        createdAtSec = System.currentTimeMillis() / 1000,
+                    ),
+                )
+            }
+
+            else -> Log.w(TAG) { "Unknown replay type '${record.replayType}' for PoW job ${record.id}; dropping" }
+        }
+    }
+
+    companion object {
+        private const val TAG = "PowJobRestorer"
+    }
+}

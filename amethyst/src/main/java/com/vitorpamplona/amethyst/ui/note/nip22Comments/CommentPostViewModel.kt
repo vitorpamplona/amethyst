@@ -34,6 +34,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
@@ -576,7 +577,7 @@ open class CommentPostViewModel :
             val relays = groupHostRelays ?: replyingTo?.relays.orEmpty()
             val enqueued =
                 powDifficulty != null &&
-                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty) { mined ->
+                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty, PoWReplay.ToRelays(relays)) { mined ->
                         accountViewModel.account.signAndSendPrivatelyOrBroadcast(mined) { relays }
                     }
             if (!enqueued) {
@@ -585,7 +586,7 @@ open class CommentPostViewModel :
         } else {
             val enqueued =
                 powDifficulty != null &&
-                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty) { mined ->
+                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty, PoWReplay.Broadcast(extraNotesToBroadcast)) { mined ->
                         accountViewModel.account.signAndComputeBroadcast(mined, extraNotesToBroadcast)
                     }
             if (!enqueued) {

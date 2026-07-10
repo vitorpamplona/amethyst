@@ -35,6 +35,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
+import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
@@ -356,7 +357,7 @@ class LongFormPostViewModel :
 
         val enqueued =
             powDifficulty != null &&
-                accountViewModel.account.mineTemplateInBackground(template, powDifficulty) { mined ->
+                accountViewModel.account.mineTemplateInBackground(template, powDifficulty, PoWReplay.Broadcast()) { mined ->
                     broadcastArticle(mined)
                 }
         if (!enqueued) {

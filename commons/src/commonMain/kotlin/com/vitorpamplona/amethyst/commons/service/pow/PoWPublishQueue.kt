@@ -69,13 +69,22 @@ data class PoWJobState(
  * queues up instead of spawning unbounded CPU work. Each job is cancellable
  * while queued or mining.
  *
- * The queue is in-memory only: if the process dies, still-unmined posts are
- * lost (v1 trade-off; every enqueue/finish is logged for post-mortems).
+ * Template jobs enqueued with a [PersistedPoWJob] record are checkpointed to
+ * [persistence] and removed when they finish or are cancelled, so the platform
+ * layer can re-enqueue them after process death. Opaque [enqueueWork] jobs
+ * (reactions, reposts, gift wraps — and anonymous posts, deliberately, so a
+ * throwaway key and its content never touch disk) stay in-memory only.
+ *
+ * [onQueueActive] fires on every enqueue; the Android layer uses it to start
+ * the mining foreground service so backgrounding the app doesn't freeze the
+ * workers mid-nonce.
  */
 class PoWPublishQueue(
     private val scope: CoroutineScope,
     maxConcurrent: Int = 1,
     miningDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val persistence: PoWJobPersistence? = null,
+    private val onQueueActive: () -> Unit = {},
 ) {
     private class MiningJob(
         val id: String,
@@ -108,13 +117,24 @@ class PoWPublishQueue(
      * Mines [template] at [difficulty] and hands the mined template to
      * [onMined] on the queue's scope. [onMined] should run the exact
      * sign+broadcast path the caller would have used without PoW.
+     *
+     * When [persistAs] is given, the job is checkpointed (under the record's
+     * id) until it finishes or is cancelled, so it can be restored after
+     * process death. Re-enqueueing an id already in the queue is a no-op —
+     * that makes restore-on-login idempotent.
      */
     fun <T : Event> enqueue(
         template: EventTemplate<T>,
         pubKey: HexKey,
         difficulty: Int,
+        persistAs: PersistedPoWJob? = null,
         onMined: suspend (EventTemplate<T>) -> Unit,
-    ) = enqueueWork(template.kind, difficulty) { isActive ->
+    ) = addJob(
+        id = persistAs?.id ?: RandomInstance.randomChars(16),
+        kind = template.kind,
+        difficulty = difficulty,
+        persistAs = persistAs,
+    ) { isActive ->
         val mined = PoWMiner.run(template, pubKey, difficulty, isActive)
         // frees the mining worker: signing may wait on an external signer
         // (Amber/bunker) and broadcasting is IO, neither belongs on the pool.
@@ -122,20 +142,40 @@ class PoWPublishQueue(
     }
 
     /**
-     * Enqueues arbitrary mining work — used by flows where the mining happens
-     * inside a larger build step (e.g. gift wraps, where each recipient's
-     * ephemeral-key wrap is mined right before its local signature).
+     * Enqueues arbitrary in-memory mining work — used by flows where the
+     * mining happens inside a larger build step (e.g. gift wraps, where each
+     * recipient's ephemeral-key wrap is mined right before its local
+     * signature) and by anonymous posts, whose throwaway key must not be
+     * written to disk. Lost on process death.
      */
     fun enqueueWork(
         kind: Int,
         difficulty: Int,
         work: suspend (isActive: () -> Boolean) -> Unit,
+    ) = addJob(RandomInstance.randomChars(16), kind, difficulty, persistAs = null, work = work)
+
+    private fun addJob(
+        id: String,
+        kind: Int,
+        difficulty: Int,
+        persistAs: PersistedPoWJob?,
+        work: suspend (isActive: () -> Boolean) -> Unit,
     ) {
-        val job = MiningJob(RandomInstance.randomChars(16), kind, difficulty, work)
+        if (_jobs.value.any { it.id == id }) {
+            Log.d(TAG) { "PoW job $id already queued; skipping duplicate enqueue" }
+            return
+        }
+
+        val job = MiningJob(id, kind, difficulty, work)
+        persistAs?.let { persistence?.save(it) }
         pending.update { it.put(job.id, job) }
         _jobs.update { (it + PoWJobState(job.id, job.kind, job.difficulty, isMining = false)).toImmutableList() }
-        Log.d(TAG) { "Enqueued PoW job ${job.id} kind=${job.kind} difficulty=${job.difficulty} (in-memory queue, lost on process death)" }
+        Log.d(TAG) {
+            val durability = if (persistAs != null) "persisted" else "in-memory only, lost on process death"
+            "Enqueued PoW job ${job.id} kind=${job.kind} difficulty=${job.difficulty} ($durability)"
+        }
         queue.trySend(job)
+        onQueueActive()
     }
 
     /** Cancels a queued or mining job. No-op if the job already finished. */
@@ -144,6 +184,11 @@ class PoWPublishQueue(
         job.cancelled = true
         remove(jobId)
         Log.d(TAG) { "Cancelled PoW job $jobId" }
+    }
+
+    /** Cancels everything still queued or mining. */
+    fun cancelAll() {
+        pending.value.keys.forEach { cancel(it) }
     }
 
     // Jobs the workers haven't finished yet, so cancel() can reach the flag of
@@ -184,6 +229,7 @@ class PoWPublishQueue(
     private fun remove(jobId: String) {
         pending.update { it.remove(jobId) }
         _jobs.update { list -> list.filter { it.id != jobId }.toImmutableList() }
+        persistence?.remove(jobId)
     }
 
     companion object {

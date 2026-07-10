@@ -115,4 +115,84 @@ class PoWPublishQueueTest {
             assertEquals(listOf(0, 1, 2), order)
             scope.cancel()
         }
+
+    private class FakePersistence : PoWJobPersistence {
+        val saved = mutableListOf<String>()
+        val removed = mutableListOf<String>()
+
+        override fun save(job: PersistedPoWJob) {
+            saved.add(job.id)
+        }
+
+        override fun remove(jobId: String) {
+            removed.add(jobId)
+        }
+    }
+
+    private fun recordFor(id: String) =
+        PersistedPoWJob(
+            id = id,
+            accountPubkey = pubKey,
+            kind = TextNoteEvent.KIND,
+            difficulty = 10,
+            templateJson = template.toJson(),
+            replayType = PersistedPoWJob.REPLAY_BROADCAST,
+        )
+
+    @Test
+    fun persistedJobIsSavedThenRemovedOnCompletion() =
+        runTest {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val persistence = FakePersistence()
+            val queue = PoWPublishQueue(scope, maxConcurrent = 1, persistence = persistence)
+            val mined = CompletableDeferred<Unit>()
+
+            queue.enqueue(template, pubKey, difficulty = 10, persistAs = recordFor("job-a")) { mined.complete(Unit) }
+            assertEquals(listOf("job-a"), persistence.saved)
+
+            withContext(Dispatchers.Default) { withTimeout(60_000) { mined.await() } }
+            withContext(Dispatchers.Default) { withTimeout(10_000) { queue.jobs.first { it.isEmpty() } } }
+            assertEquals(listOf("job-a"), persistence.removed)
+            scope.cancel()
+        }
+
+    @Test
+    fun cancellingAPersistedJobRemovesItsCheckpoint() =
+        runTest {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val persistence = FakePersistence()
+            val queue = PoWPublishQueue(scope, maxConcurrent = 1, persistence = persistence)
+
+            val gate = CompletableDeferred<Unit>()
+            queue.enqueueWork(kind = 1, difficulty = 10) { gate.await() }
+            queue.enqueue(template, pubKey, difficulty = 10, persistAs = recordFor("job-b")) {}
+
+            queue.cancel("job-b")
+            assertTrue("job-b" in persistence.removed, "cancel must drop the checkpoint")
+
+            gate.complete(Unit)
+            withContext(Dispatchers.Default) { withTimeout(10_000) { queue.jobs.first { it.isEmpty() } } }
+            scope.cancel()
+        }
+
+    @Test
+    fun duplicateJobIdsAreEnqueuedOnce() =
+        runTest {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val persistence = FakePersistence()
+            val queue = PoWPublishQueue(scope, maxConcurrent = 1, persistence = persistence)
+
+            val gate = CompletableDeferred<Unit>()
+            queue.enqueueWork(kind = 1, difficulty = 10) { gate.await() }
+
+            queue.enqueue(template, pubKey, difficulty = 10, persistAs = recordFor("job-c")) {}
+            queue.enqueue(template, pubKey, difficulty = 10, persistAs = recordFor("job-c")) {}
+
+            assertEquals(2, queue.jobs.value.size, "restore-style re-enqueue of the same id must not duplicate")
+            assertEquals(listOf("job-c"), persistence.saved)
+
+            gate.complete(Unit)
+            withContext(Dispatchers.Default) { withTimeout(60_000) { queue.jobs.first { it.isEmpty() } } }
+            scope.cancel()
+        }
 }
