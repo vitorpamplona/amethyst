@@ -24,7 +24,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginPage
@@ -36,7 +36,7 @@ fun LoginOrSignupScreen(
     accountSessionManager: AccountSessionManager,
     isFirstLogin: Boolean,
 ) {
-    var wantsNewUser by remember {
+    var wantsNewUser by rememberSaveable {
         mutableStateOf(false)
     }
 
