@@ -62,7 +62,9 @@ import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.coroutineContext
 import kotlin.time.TimeSource
@@ -110,6 +112,18 @@ class GrapeRankCrawler(
     private val verifyNanos = AtomicLong(0)
     private val insertNanos = AtomicLong(0)
     private val eventsStored = AtomicLong(0)
+
+    // Store-path attribution the summed [insertNanos] can't give: [insertNanos]
+    // counts every concurrent caller's wall INCLUDING time queued on the store's
+    // single-writer mutex, so at high fan-out it wildly overstates write cost.
+    // Batches that started with no other insert in flight ([insertInFlight] == 1)
+    // approximate the UNCONTENDED write rate; reads get their own count + wall so
+    // a point-query pathology (thousands of tiny queries) is visible at a glance.
+    private val insertInFlight = AtomicLong(0)
+    private val insertSoloNanos = AtomicLong(0)
+    private val insertSoloEvents = AtomicLong(0)
+    private val queryCount = AtomicLong(0)
+    private val queryNanos = AtomicLong(0)
 
     /**
      * Relay policy + crawl bounds. The relay sets come from the caller because the
@@ -284,6 +298,11 @@ class GrapeRankCrawler(
         verifyNanos.store(0)
         insertNanos.store(0)
         eventsStored.store(0)
+        insertInFlight.store(0)
+        insertSoloNanos.store(0)
+        insertSoloEvents.store(0)
+        queryCount.store(0)
+        queryNanos.store(0)
         // Hop off the caller's dispatcher: a CLI calls this from runBlocking's
         // SINGLE-THREADED event loop, and Phase B runs thousands of concurrent
         // drain-unit coroutines (each with a timeout timer, a channel, REQ JSON
@@ -347,6 +366,17 @@ class GrapeRankCrawler(
         // future adaptive controller reads to size filters / cap / strangle per relay.
         val telemetry = RelayTelemetry()
 
+        // Per-round Phase-B batch-wall distribution (diagnose only): reset by the
+        // round loop, recorded by the drain workers, dumped after each round.
+        val batchWalls = BatchWallStats()
+
+        // Phase-B churn the done-counter can't see: users VISITED (every batch member
+        // processed by the consumer, found or not) and batches completed. The ticker
+        // derives rates from these so a retry round over list-less users reads as
+        // "working, zero yield" instead of "stalled".
+        val usersVisited = AtomicLong(0)
+        val batchesDone = AtomicLong(0)
+
         // Concurrent: touched by more than one of producer/consumer/drain-workers.
         val relayHints = ConcurrentMap<HexKey, ConcurrentSet<NormalizedRelayUrl>>()
         val attempts = ConcurrentMap<HexKey, Int>()
@@ -355,6 +385,10 @@ class GrapeRankCrawler(
         // WS path never re-pays their connect timeouts; the crawl still adds/removes
         // more as it goes and flushes the union back at the end.
         val deadRelays = ConcurrentSet<NormalizedRelayUrl>().apply { config.knownDeadRelays.forEach { add(it) } }
+
+        // --diagnose [slow-relay] lines emitted per authority, for the suppression cap
+        // in logSlow (the telemetry table keeps the complete per-relay counts).
+        val slowLogCounts = ConcurrentMap<String, Int>()
 
         // Unproductive-TIMEOUT strikes, keyed by relay AUTHORITY (host[:port]), not the
         // full URL. [classifyDrainFailure] treats a READ timeout or a park idle-cut — the
@@ -859,8 +893,9 @@ class GrapeRankCrawler(
          * touch our reports. The events land in the store for the caller to apply.
          */
         suspend fun fetchReportDeletions(backbone: Set<NormalizedRelayUrl>) {
+            val stageMark = TimeSource.Monotonic.markNow()
             val idsByAuthor = HashMap<HexKey, MutableList<HexKey>>()
-            for (ev in store.query<Event>(Filter(kinds = listOf(ReportEvent.KIND)))) {
+            for (ev in queryTimed(Filter(kinds = listOf(ReportEvent.KIND)))) {
                 if (ev is ReportEvent) idsByAuthor.getOrPut(ev.pubKey) { ArrayList() }.add(ev.id)
             }
             if (idsByAuthor.isEmpty()) return
@@ -889,6 +924,10 @@ class GrapeRankCrawler(
                     }
                 }
             drainGated(filters, null)
+            log(
+                "[graperank] report deletions: ${idsByAuthor.size} reporters via ${perRelayAuthors.size} relays " +
+                    "in ${stageMark.elapsedNow().inWholeMilliseconds}ms",
+            )
         }
 
         /**
@@ -985,6 +1024,7 @@ class GrapeRankCrawler(
             }
             if (stragglers.isEmpty()) return
             val before = contactListsFed
+            val stageMark = TimeSource.Monotonic.markNow()
             log("[graperank] aggregator recovery: ${stragglers.size} stragglers via ${aggregators.size} aggregators")
 
             // Build the query against the full straggler set BEFORE any folding (the
@@ -1030,7 +1070,10 @@ class GrapeRankCrawler(
                 val late = withTimeoutOrNull(config.parkTimeoutMs) { lateHarvest.receive() } ?: break
                 foldAgg(listOf(late))
             }
-            log("[graperank] aggregator recovery: +${contactListsFed - before} contact lists")
+            log(
+                "[graperank] aggregator recovery: +${contactListsFed - before} contact lists " +
+                    "in ${stageMark.elapsedNow().inWholeMilliseconds}ms",
+            )
         }
 
         /**
@@ -1051,9 +1094,21 @@ class GrapeRankCrawler(
 
             suspend fun flush() {
                 if (buffer.isEmpty()) return
+                // Solo = no other insert was in flight when this one started, so its
+                // wall is (approximately) pure write, not writer-mutex queueing.
+                val solo = insertInFlight.addAndFetch(1) == 1L
                 val mark = TimeSource.Monotonic.markNow()
-                store.batchInsert(buffer)
-                insertNanos.addAndFetch(mark.elapsedNow().inWholeNanoseconds)
+                try {
+                    store.batchInsert(buffer)
+                    val ns = mark.elapsedNow().inWholeNanoseconds
+                    insertNanos.addAndFetch(ns)
+                    if (solo) {
+                        insertSoloNanos.addAndFetch(ns)
+                        insertSoloEvents.addAndFetch(buffer.size.toLong())
+                    }
+                } finally {
+                    insertInFlight.addAndFetch(-1)
+                }
                 eventsStored.addAndFetch(buffer.size.toLong())
                 buffer.clear()
             }
@@ -1116,6 +1171,8 @@ class GrapeRankCrawler(
          */
         private suspend fun progressTicker() {
             var lastFed = 0
+            var lastVisited = 0L
+            var lastBatches = 0L
             var lastMark = TimeSource.Monotonic.markNow()
             while (true) {
                 delay(PROGRESS_INTERVAL_MS)
@@ -1125,6 +1182,14 @@ class GrapeRankCrawler(
                 val fed = contactListsFed
                 val rate = (fed - lastFed) * 1000L / dtMs // lists/sec over this interval
                 lastFed = fed
+                // Churn rates the done-counter can't see: a retry round over list-less
+                // users shows 0 lists/s while visiting thousands of users per second.
+                val visited = usersVisited.load()
+                val visitedRate = (visited - lastVisited) * 1000L / dtMs
+                lastVisited = visited
+                val batches = batchesDone.load()
+                val batchRate10 = (batches - lastBatches) * 10_000L / dtMs // batches/s ×10 (one decimal)
+                lastBatches = batches
                 val events = eventsStored.load()
                 val parked = parkedInFlight.load()
                 when {
@@ -1142,7 +1207,8 @@ class GrapeRankCrawler(
                         // the pool full (raise concurrency) or starved (producer/relays bound)?
                         val sat =
                             if (config.diagnose) {
-                                " · ${activeWorkers.load()}/${config.drainConcurrency}w · ${throttled.load()} rl"
+                                " · ${activeWorkers.load()}/${config.drainConcurrency}w · ${throttled.load()} rl" +
+                                    " · ${visitedRate}v/s ${batchRate10 / 10}.${batchRate10 % 10}b/s"
                             } else {
                                 ""
                             }
@@ -1220,6 +1286,12 @@ class GrapeRankCrawler(
              * means everything they delivered up to that instant is already stored.
              */
             background: Boolean = false,
+            /**
+             * Diagnose hook: updated with the unit that took longest to resolve its
+             * FAST outcome (terminal, park handoff, or bare timeout), so a slow batch
+             * can name the relay that held its awaitAll open.
+             */
+            slowestOut: AtomicReference<SlowestUnit?>? = null,
         ): List<Pair<NormalizedRelayUrl, Event>> {
             if (filters.isEmpty()) return emptyList()
 
@@ -1244,12 +1316,11 @@ class GrapeRankCrawler(
                 if (group.isNotEmpty()) units.add(relay to group)
             }
 
-            // Per-relay failure classification (HARD wins over TRANSIENT); which relays
-            // stalled past the fast window; and which did NOT cleanly EOSE (timed out,
-            // parked, closed, or couldn't connect) — a relay absent from that set
-            // answered definitively, so an author it didn't return is one it lacks.
+            // Per-relay failure classification (HARD wins over TRANSIENT), and which
+            // relays did NOT cleanly EOSE (timed out, parked, closed, or couldn't
+            // connect) — a relay absent from that set answered definitively, so an
+            // author it didn't return is one it lacks.
             val failures = ConcurrentMap<NormalizedRelayUrl, DrainFailure>()
-            val timedOut = ConcurrentSet<NormalizedRelayUrl>()
             val notAnswered = ConcurrentSet<NormalizedRelayUrl>()
 
             fun classify(
@@ -1273,11 +1344,18 @@ class GrapeRankCrawler(
                 groupFilters: List<Filter>,
             ) {
                 if (!config.diagnose) return
+                // The tail re-visits the same dead authorities hundreds of times; after
+                // a few examples per host these lines are pure log bloat (a hop-8 log
+                // was ~1MB of them). The per-relay telemetry table keeps the full
+                // counts; here we keep the first few occurrences as samples.
+                val n = slowLogCounts.merge(authorityOf(relay.url), 1) { a, b -> a + b }
+                if (n > SLOW_LOG_MAX_PER_AUTHORITY) return
+                val suffix = if (n == SLOW_LOG_MAX_PER_AUTHORITY) " (further lines for this host suppressed)" else ""
                 val authors = groupFilters.flatMap { it.authors.orEmpty() }
                 val kinds = groupFilters.flatMap { it.kinds.orEmpty() }.distinct()
                 log(
                     "[slow-relay] ${relay.url} $reason in ${elapsedMs}ms | kinds=$kinds authors=${authors.size}: " +
-                        authors.take(30).joinToString(",") + (if (authors.size > 30) ",…" else ""),
+                        authors.take(3).joinToString(",") + (if (authors.size > 3) ",…" else "") + suffix,
                 )
             }
 
@@ -1286,7 +1364,12 @@ class GrapeRankCrawler(
                     units
                         .map { (subRelay, groupFilters) ->
                             async {
+                                // Queue time for this relay's limiter slot (permit + rate
+                                // gate) — spent BEFORE any drain timer starts, so it is
+                                // invisible to every latency metric unless ledgered here.
+                                val permitMark = TimeSource.Monotonic.markNow()
                                 limiter.withPermit(subRelay) {
+                                    telemetry.recordPermitWait(subRelay, permitMark.elapsedNow().inWholeMilliseconds)
                                     val subId = newSubId()
                                     val done = CompletableDeferred<String>()
                                     val unitEvents = Channel<Pair<NormalizedRelayUrl, Event>>(Channel.UNLIMITED)
@@ -1343,6 +1426,7 @@ class GrapeRankCrawler(
                                     if (reason != null) {
                                         // Terminal within the fast window — resolve this round.
                                         val elapsedMs = mark.elapsedNow().inWholeMilliseconds
+                                        bumpSlowest(slowestOut, subRelay, elapsedMs, reason)
                                         if (reason != "eose") notAnswered.add(subRelay)
                                         classify(reason, subRelay, failures)
                                         if (isRateLimit(reason)) throttled.addAndFetch(1)
@@ -1378,8 +1462,8 @@ class GrapeRankCrawler(
                                     } else {
                                         // Still streaming — hand off and let the round move on.
                                         burnedFastWindow.addAndFetch(1)
+                                        bumpSlowest(slowestOut, subRelay, mark.elapsedNow().inWholeMilliseconds, "parked")
                                         notAnswered.add(subRelay)
-                                        timedOut.add(subRelay)
                                         val scope = bgScope
                                         if (scope != null && config.parkTimeoutMs > config.timeoutMs) {
                                             if (!background) parkedInFlight.addAndFetch(1)
@@ -1462,6 +1546,7 @@ class GrapeRankCrawler(
                                             // it exactly like the fast path — the other two branches persist,
                                             // this one must too or those events are lost and re-queried.
                                             val toMs = mark.elapsedNow().inWholeMilliseconds
+                                            bumpSlowest(slowestOut, subRelay, toMs, "timeout")
                                             logSlow(subRelay, "timeout", toMs, groupFilters)
                                             unitEvents.close()
                                             client.unsubscribe(subId)
@@ -1479,9 +1564,6 @@ class GrapeRankCrawler(
                         .flatten()
                 }
 
-            if (config.diagnose && timedOut.size() > 0) {
-                log("[drain] parked ${timedOut.size()} slow relay(s) past ${config.timeoutMs}ms")
-            }
             deadOut?.putAll(failures.snapshot())
             answeredOut?.addAll(filters.keys.filter { it !in notAnswered })
             return fast
@@ -1620,6 +1702,7 @@ class GrapeRankCrawler(
                 // Phase B — whoever the popular relays didn't have (niche outboxes):
                 // resolve their kind:10002, then fetch from their own write relays,
                 // drained a few at a time and skipping dead relays.
+                if (config.diagnose) batchWalls.reset()
                 val stragglers = pending.filter { it !in done }
                 if (stragglers.isNotEmpty()) {
                     val backbone = topLiveRelays(BACKBONE_SIZE).toSet()
@@ -1659,9 +1742,21 @@ class GrapeRankCrawler(
                                         try {
                                             val dead = HashMap<NormalizedRelayUrl, DrainFailure>()
                                             val answered = HashSet<NormalizedRelayUrl>()
-                                            val events = drainGated(filters, dead, answered)
+                                            val slowest = if (config.diagnose) AtomicReference<SlowestUnit?>(null) else null
+                                            val batchMark = TimeSource.Monotonic.markNow()
+                                            val events = drainGated(filters, dead, answered, slowestOut = slowest)
                                             recordDead(dead)
-                                            drainedOut.send(DrainedBatch(batch, filters, answered, events))
+                                            val drained =
+                                                DrainedBatch(
+                                                    batch,
+                                                    filters,
+                                                    answered,
+                                                    events,
+                                                    wallMs = batchMark.elapsedNow().inWholeMilliseconds,
+                                                    slowest = slowest?.load(),
+                                                )
+                                            if (config.diagnose) batchWalls.record(drained)
+                                            drainedOut.send(drained)
                                         } finally {
                                             activeWorkers.addAndFetch(-1)
                                         }
@@ -1689,6 +1784,9 @@ class GrapeRankCrawler(
                                             if (pk !in returned) askedEmpty.getOrPut(pk) { ConcurrentSet() }.add(relay)
                                         }
                                     }
+
+                                    usersVisited.addAndFetch(d.batch.size.toLong())
+                                    batchesDone.addAndFetch(1)
 
                                     // One chunked store query for the whole batch (256
                                     // authors) instead of a point query per user.
@@ -1721,6 +1819,17 @@ class GrapeRankCrawler(
                         "discovered=${hopOf.size}, done=${done.size}, dead=${deadRelays.size()}, " +
                         "time=${roundMs}ms (phaseA=${phaseAMs}ms fed=$phaseAFed, phaseB=${roundMs - phaseAMs}ms fed=${contactListsFed - fedBefore - phaseAFed})",
                 )
+                if (config.diagnose) {
+                    // Batch-wall distribution vs the fast window that supposedly bounds
+                    // it — the direct measure of pre-drain queueing — plus the limiter's
+                    // running demotion counts, so relay push-back is visible per round.
+                    batchWalls.dump(log, config.timeoutMs)
+                    val snap = limiter.snapshot()
+                    log(
+                        "[graperank] limiter: capped=${snap["concurrency_capped_relays"]} " +
+                            "rate_limited=${snap["rate_limited_relays"]}",
+                    )
+                }
             }
 
             // Crawl done — drop the warm pool.
@@ -1778,10 +1887,14 @@ class GrapeRankCrawler(
                     "$rounds rounds in $downloadMs ms; " +
                     "by hop: " + hopHistogram.entries.joinToString(" ") { "${it.key}=${it.value}" },
             )
+            val soloEvents = insertSoloEvents.load()
+            val soloUsPerEvent = if (soloEvents > 0) insertSoloNanos.load() / 1_000 / soloEvents else 0
             log(
-                "[graperank] write path: $stored events stored, verify ${verifyMs}ms + insert ${insertMs}ms " +
-                    "(summed across all drains, batch=${config.insertBatchSize})",
+                "[graperank] write path: $stored events stored, verify ${verifyMs}ms; insert wall ${insertMs}ms " +
+                    "summed across concurrent drains — writer-mutex wait INCLUDED " +
+                    "(uncontended writes: $soloEvents events ≈ ${soloUsPerEvent}µs/event; batch=${config.insertBatchSize})",
             )
+            log("[graperank] store reads: ${queryCount.load()} queries in ${queryNanos.load() / 1_000_000}ms")
             if (config.diagnose) {
                 val n = drainSamples.load().coerceAtLeast(1)
                 val wall = drainWallSumMs.load().coerceAtLeast(1)
@@ -1817,8 +1930,9 @@ class GrapeRankCrawler(
 
     /**
      * One Phase-B batch after draining: the users asked for, the relay->filters map
-     * they were routed through, the relays that cleanly EOSE'd ([answered]), and the
-     * fresh events. Carries enough for the consumer to attribute "answered but
+     * they were routed through, the relays that cleanly EOSE'd ([answered]), the
+     * fresh events, and (diagnose) how long the drain held its worker plus the unit
+     * that resolved last. Carries enough for the consumer to attribute "answered but
      * empty" per user without re-deriving the routing.
      */
     private class DrainedBatch(
@@ -1826,7 +1940,62 @@ class GrapeRankCrawler(
         val filters: Map<NormalizedRelayUrl, List<Filter>>,
         val answered: Set<NormalizedRelayUrl>,
         val events: List<Pair<NormalizedRelayUrl, Event>>,
+        val wallMs: Long = 0,
+        val slowest: SlowestUnit? = null,
     )
+
+    /** The drain unit that took longest to reach its fast outcome within one drainGated call. */
+    class SlowestUnit(
+        val relay: NormalizedRelayUrl,
+        val elapsedMs: Long,
+        val reason: String,
+    )
+
+    /**
+     * Per-round Phase-B batch-wall statistics (diagnose only). A batch's wall is the
+     * awaitAll over its units, so its distribution — against the fast window that
+     * supposedly bounds it — is the direct measure of pre-drain queueing (permits,
+     * rate gates, dispatcher). Reset by the round loop before Phase B; recorded
+     * concurrently by the drain workers; dumped at round end with the slowest
+     * batches' last-resolving units named.
+     */
+    private class BatchWallStats {
+        private val seq = AtomicLong(0)
+
+        // Swapped whole on reset (ConcurrentMap exposes no clear); reset only runs
+        // from the round loop between rounds, when no drain worker is recording.
+        @Volatile private var samples = ConcurrentMap<Long, DrainedBatch>()
+
+        fun reset() {
+            samples = ConcurrentMap()
+        }
+
+        fun record(batch: DrainedBatch) {
+            samples[seq.addAndFetch(1)] = batch
+        }
+
+        fun dump(
+            log: (String) -> Unit,
+            fastWindowMs: Long,
+        ) {
+            val snap = samples.snapshot().values.toList()
+            if (snap.isEmpty()) return
+            val walls = snap.map { it.wallMs }.sorted()
+
+            fun pct(p: Int) = walls[(walls.size - 1) * p / 100]
+            val over = walls.count { it > fastWindowMs }
+            val slowest = snap.sortedByDescending { it.wallMs }.take(3)
+            val detail =
+                slowest.joinToString(" ; ") { b ->
+                    "${b.wallMs}ms ${b.filters.size}relays ${b.batch.size}authors" +
+                        (b.slowest?.let { " last=${it.relay.url} ${it.elapsedMs}ms(${it.reason})" } ?: "")
+                }
+            log(
+                "[batch-walls] n=${walls.size} p50=${pct(50)}ms p90=${pct(90)}ms max=${walls.last()}ms · " +
+                    "$over over the ${fastWindowMs}ms fast window | slowest: $detail",
+            )
+        }
+    }
 
     /**
      * Per-relay outcome + latency + yield accounting, accumulated across the whole
@@ -1880,12 +2049,30 @@ class GrapeRankCrawler(
             val latSumMs = AtomicLong(0)
             val latMaxMs = AtomicLong(0)
 
+            /**
+             * Wall time units spent QUEUED for this relay's limiter slot (concurrency
+             * permit + rate gate) BEFORE their drain timer starts. Invisible in every
+             * latency number above — [latSumMs] starts after the permit is acquired —
+             * yet it is exactly where a hot relay serializes the whole fan-out, so it
+             * gets its own ledger.
+             */
+            val permitWaitMs = AtomicLong(0)
+
             fun bump(outcome: Outcome) = byOutcome.getOrPut(outcome) { AtomicLong(0) }.addAndFetch(1)
 
             fun count(outcome: Outcome): Long = byOutcome[outcome]?.load() ?: 0
         }
 
         val rows = ConcurrentMap<NormalizedRelayUrl, Row>()
+
+        /** Add [waitMs] of pre-drain limiter queueing (permit + rate gate) to [relay]'s row. */
+        fun recordPermitWait(
+            relay: NormalizedRelayUrl,
+            waitMs: Long,
+        ) {
+            if (waitMs <= 0) return
+            rows.getOrPut(relay) { Row() }.permitWaitMs.addAndFetch(waitMs)
+        }
 
         fun record(
             relay: NormalizedRelayUrl,
@@ -1953,7 +2140,19 @@ class GrapeRankCrawler(
                 return "  $url att=$a eose=${r.count(Outcome.FAST_EOSE)}/${r.count(Outcome.SLOW_EOSE)} " +
                     "to=${r.count(Outcome.FAST_TIMEOUT) + r.count(Outcome.PARK_TIMEOUT)} cannot=${r.count(Outcome.CANNOT)} " +
                     "rate=${r.count(Outcome.CLOSED_RATE)} auth=${r.count(Outcome.CLOSED_AUTH)} " +
-                    "ask=$ask got=${r.eventsReturned.load()} yield=$yield% lat=$meanLat/${r.latMaxMs.load()}ms wasted=${wastedMs(r)}ms"
+                    "ask=$ask got=${r.eventsReturned.load()} yield=$yield% lat=$meanLat/${r.latMaxMs.load()}ms " +
+                    "pwait=${r.permitWaitMs.load()}ms wasted=${wastedMs(r)}ms"
+            }
+
+            // Total pre-drain limiter queueing and the single worst offender — the
+            // signal that a hot relay's permit gate is serializing the fan-out.
+            val totalPermitWait = snap.values.sumOf { it.permitWaitMs.load() }
+            if (totalPermitWait > 0) {
+                val worst = snap.entries.maxByOrNull { it.value.permitWaitMs.load() }
+                log(
+                    "[relay-telemetry] permit/rate-gate wait total ${totalPermitWait}ms" +
+                        (worst?.let { " (worst: ${it.key.url} ${it.value.permitWaitMs.load()}ms)" } ?: ""),
+                )
             }
 
             val ordered = snap.entries.sortedByDescending { wastedMs(it.value) }
@@ -1961,6 +2160,15 @@ class GrapeRankCrawler(
             for ((relay, r) in ordered.take(25)) log(line(relay.url, r))
 
             if (full) {
+                val byPermitWait =
+                    snap.entries
+                        .filter { it.value.permitWaitMs.load() > 0 }
+                        .sortedByDescending { it.value.permitWaitMs.load() }
+                        .take(10)
+                if (byPermitWait.isNotEmpty()) {
+                    log("[relay-telemetry] top permit/rate-gate queues:")
+                    for ((relay, r) in byPermitWait) log(line(relay.url, r))
+                }
                 log("[relay-telemetry] FULL per-relay table (${snap.size} relays, worst-first):")
                 for ((relay, r) in ordered) log(line(relay.url, r))
             }
@@ -1990,10 +2198,18 @@ class GrapeRankCrawler(
         }
     }
 
+    /** [IEventStore.query] with crawl-wide count + wall-time accounting. */
+    private suspend fun queryTimed(filter: Filter): List<Event> {
+        val mark = TimeSource.Monotonic.markNow()
+        val result = store.query<Event>(filter)
+        queryNanos.addAndFetch(mark.elapsedNow().inWholeNanoseconds)
+        queryCount.addAndFetch(1)
+        return result
+    }
+
     /** Latest known kind:3 contact list for [pubKey] from the local store, or null. */
     private suspend fun contactsOf(pubKey: HexKey): ContactListEvent? =
-        store
-            .query<Event>(Filter(authors = listOf(pubKey), kinds = listOf(ContactListEvent.KIND), limit = 1))
+        queryTimed(Filter(authors = listOf(pubKey), kinds = listOf(ContactListEvent.KIND), limit = 1))
             .firstOrNull() as? ContactListEvent
 
     /**
@@ -2007,7 +2223,7 @@ class GrapeRankCrawler(
     private suspend fun latestContactsFor(authors: Collection<HexKey>): Map<HexKey, ContactListEvent> {
         if (authors.isEmpty()) return emptyMap()
         val latest = HashMap<HexKey, ContactListEvent>()
-        for (ev in store.query<Event>(Filter(kinds = listOf(ContactListEvent.KIND), authors = authors.toList()))) {
+        for (ev in queryTimed(Filter(kinds = listOf(ContactListEvent.KIND), authors = authors.toList()))) {
             if (ev !is ContactListEvent) continue
             val cur = latest[ev.pubKey]
             if (cur == null || ev.createdAt > cur.createdAt) latest[ev.pubKey] = ev
@@ -2017,8 +2233,7 @@ class GrapeRankCrawler(
 
     /** Latest known kind:10002 advertised relay list for [pubKey] from the store, or null. */
     private suspend fun relaysOf(pubKey: HexKey): AdvertisedRelayListEvent? =
-        store
-            .query<Event>(Filter(authors = listOf(pubKey), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1))
+        queryTimed(Filter(authors = listOf(pubKey), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1))
             .firstOrNull() as? AdvertisedRelayListEvent
 
     companion object {
@@ -2051,6 +2266,9 @@ class GrapeRankCrawler(
         // --diagnose: a REQ that takes longer than this to reach a terminal (EOSE or
         // timeout) is logged with its relay + filter, so slow relays can be replayed.
         private const val SLOW_DRAIN_LOG_MS = 4000L
+
+        // --diagnose: [slow-relay] sample lines kept per authority before suppression.
+        private const val SLOW_LOG_MAX_PER_AUTHORITY = 3
 
         /**
          * Is a drain terminal reason a connect/read TIMEOUT — the class
@@ -2152,6 +2370,21 @@ class GrapeRankCrawler(
 
         /** Total author slots across a unit's filters — what we asked a relay for. */
         private fun authorsIn(filters: List<Filter>): Int = filters.sumOf { it.authors?.size ?: 0 }
+
+        /** CAS-update [out] with this unit if it beats the current slowest. Null out = diagnose off. */
+        private fun bumpSlowest(
+            out: AtomicReference<SlowestUnit?>?,
+            relay: NormalizedRelayUrl,
+            elapsedMs: Long,
+            reason: String,
+        ) {
+            if (out == null) return
+            while (true) {
+                val cur = out.load()
+                if (cur != null && cur.elapsedMs >= elapsedMs) return
+                if (out.compareAndSet(cur, SlowestUnit(relay, elapsedMs, reason))) return
+            }
+        }
 
         /** Count the size-driving entries in a filter: authors, ids, and tag values. */
         private fun filterEntries(f: Filter): Int =
