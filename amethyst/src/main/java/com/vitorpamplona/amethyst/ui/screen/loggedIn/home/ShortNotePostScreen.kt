@@ -916,7 +916,7 @@ private fun AddSubjectButton(
 ) {
     IconButton(onClick = onClick) {
         Icon(
-            symbol = MaterialSymbols.AutoMirrored.Article,
+            symbol = MaterialSymbols.Topic,
             contentDescription = stringRes(R.string.messages_new_message_subject),
             modifier = Modifier.height(22.dp),
             tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
