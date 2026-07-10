@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource.BadgesFil
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource.ProfileBadgesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupMyJoinedGroupsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupThreadFeedFilterAssembler
@@ -128,6 +129,11 @@ class RelaySubscriptionsCoordinator(
     val relayGroupThreadFeed = RelayGroupThreadFeedFilterAssembler(client) // a group's forum-threads tab
     val relayGroupWarmup = RelayGroupWarmupFilterAssembler(client) // prefetching a group before it's opened
     val relayGroupsDiscovery = RelayGroupsDiscoveryFilterAssembler(client) // the cross-relay Discover feed
+
+    // Concord Channels (encrypted communities). One assembler keeps every joined community's
+    // control + channel planes live (kind-1059 by derived stream address).
+    val concordChannels = ConcordChannelFilterAssembler(client)
+
     val chatroom = ChatroomFilterAssembler(client)
     val community = CommunityFilterAssembler(client)
     val gitRepository = RepositoryFilterAssembler(client)
@@ -194,6 +200,7 @@ class RelaySubscriptionsCoordinator(
             relayGroupThreadFeed,
             relayGroupWarmup,
             relayGroupsDiscovery,
+            concordChannels,
             account,
             accountForeground,
             home,

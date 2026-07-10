@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
@@ -158,6 +159,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -168,6 +170,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -1487,6 +1490,33 @@ class Account(
 
     /** Drop a joined Concord community from the private kind-13302 list by its id. */
     suspend fun leaveConcordCommunity(communityId: String) = sendMyPublicAndPrivateOutbox(concordChannelList.unfollow(communityId))
+
+    /**
+     * Post [text] to a Concord channel: derive the channel plane key, build an
+     * encrypted-seal kind-1059 wrap authored by that plane key (not our identity),
+     * fold it locally for an instant echo, and publish it to the community's relays.
+     * The `p` tag is ephemeral, so this never routes through the DM outbox — it goes
+     * straight to the community relay set. Returns false if not writeable or the
+     * community isn't currently joined/folded.
+     */
+    suspend fun sendConcordChannelMessage(
+        communityId: String,
+        channelIdHex: String,
+        text: String,
+    ): Boolean {
+        if (!isWriteable()) return false
+        val session = concordSessions.sessionFor(communityId) ?: return false
+        val entry = session.entry
+
+        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+        val wrap = ConcordActions.buildChannelMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now())
+
+        // Instant local echo, then publish to every relay the community lives on.
+        concordSessions.ingest(wrap)
+        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+        if (relays.isNotEmpty()) client.publish(wrap, relays)
+        return true
+    }
 
     // ── NIP-29 relay-group actions ───────────────────────────────────────────
     // All group commands are published ONLY to the group's host relay, where

@@ -100,6 +100,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordChannelListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.EphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.metadata.NewEphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelScreen
@@ -581,6 +583,23 @@ fun BuildNavigation(
         composableFromEndArgs<Route.RelayGroupServer> {
             RelayGroupChannelListScreen(
                 relayUrl = it.relayUrl,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.Concord> {
+            ConcordChannelScreen(
+                communityId = it.communityId,
+                channelId = it.channelId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.ConcordServer> {
+            ConcordChannelListScreen(
+                communityId = it.communityId,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
