@@ -31,6 +31,46 @@ token-gated. Consequences for the mirror:
 - **Membership = key possession**, verified locally from the folded Control Plane
   + banlist (already implemented), not from relay-signed 39001/39002.
 
+## Per-account persistence & subscription model (Concord is between NIP-17 and NIP-28/29)
+
+Separate **addressing** from **encryption/membership** and Concord's place is clear:
+
+| Concern | NIP-28 | NIP-29 | NIP-17 | **Concord** |
+|---|---|---|---|---|
+| Find messages by | channel id | `(relay, h)` | `#p = me` | **`authors=[derived plane pk]`** |
+| Content | public | public | E2EE to you | **E2EE to a shared key** |
+| Decrypt with | — | — | your key | **per-channel derived conv key** |
+| Membership | open | relay roster | key possession | **key possession** |
+| "My rooms" home | follow list | kind-10009 | chatroom set | **kind-13302 (carries secrets)** |
+
+The decisive point: a Concord wrap's `p` tag is **ephemeral**, so you can never
+find messages with `#p = me` (the NIP-17 model). You subscribe **by author = the
+derived plane pubkey** (NIP-28/29 addressing), a query only a secret-holder can
+form, and decrypt with the shared plane key (NIP-17 E2EE).
+
+**Home base = kind-13302 `ConcordCommunityList`** (built in quartz): NIP-44
+self-encrypted, replaceable, relay-synced. Unlike NIP-17 (only secret is your
+identity key) or NIP-29 (public group tags), **each entry carries the community
+secrets** (`community_root`, salt, epoch, private-channel keys). Same trust model
+as NIP-17's recoverable giftwrapped history: a leaked nsec exposes them, nothing
+worse. `ConcordChannelListState` wraps 13302 exactly like `RelayGroupListState`
+wraps 10009 / `EphemeralChatListState` wraps its list — **same wiring, entries
+hold keys.**
+
+**In-memory projection (LocalCache):** `ConcordChannel` keyed by
+`(communityId, channelId)`, holding the folded Control-Plane state + decrypted
+messages — recomputed from events, never persisted as identity (the NIP-28/29
+half).
+
+**Subscription = per-plane author REQ, fanned out from the joined list** — not a
+single `#p=me` catch-all. `ConcordMyChannelsFilterAssembler` (mirrors NIP-29's
+`RelayGroupMyJoinedGroupsFilterAssembler`) walks `account.concordChannelList`,
+derives each community's control-plane + channel-plane addresses, and issues
+`{kinds:[1059], authors:[planePk]}` per plane across the community's relays.
+
+**Secrets at rest:** relay copy is self-NIP-44-encrypted (13302); the on-device
+mirror can be wrapped with `commons/keystorage`.
+
 ## Layering (same as NIP-29)
 
 - `quartz/…/concord/` — protocol (done)
