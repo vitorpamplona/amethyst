@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.ScreenAuthAccount
@@ -54,6 +55,14 @@ fun RelayAuthSubscription(
             RelayAuthPermissionLedger(
                 store = Amethyst.instance.relayAuthPermissionStore,
                 globalPolicy = { account.settings.defaultRelayAuthPolicy.value },
+                customToggles = {
+                    RelayAuthCustomToggles(
+                        myRelaysAndVenues = account.settings.relayAuthTrustMyRelaysAndVenues.value,
+                        readFollows = account.settings.relayAuthTrustReadFollows.value,
+                        messageFollows = account.settings.relayAuthTrustMessageFollows.value,
+                        messageStrangers = account.settings.relayAuthTrustMessageStrangers.value,
+                    )
+                },
                 isInMyRelayList = { relayUrl ->
                     val normalized = relayUrl.normalizeRelayUrlOrNull() ?: return@RelayAuthPermissionLedger false
                     normalized in account.trustedRelays.flow.value
@@ -72,7 +81,6 @@ fun RelayAuthSubscription(
                         venueId in account.communityList.flowSet.value ||
                         venueOwnerPubkey(venueId)?.let { it in account.allFollows.flow.value.authors } == true
                 },
-                messageDeliveryTrustEnabled = { account.settings.relayAuthTrustMessageDelivery.value },
             )
         }
 

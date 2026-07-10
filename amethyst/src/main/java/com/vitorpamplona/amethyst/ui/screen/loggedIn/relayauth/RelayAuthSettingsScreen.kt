@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -148,17 +149,11 @@ fun RelayAuthSettingsScreen(
                                     R.string.relay_auth_policy_never_desc,
                                     MaterialSymbols.Lock,
                                 )
-                            RelayAuthPolicy.IF_IN_MY_LIST ->
+                            RelayAuthPolicy.CUSTOM ->
                                 Triple(
-                                    R.string.relay_auth_policy_if_in_my_list,
-                                    R.string.relay_auth_policy_if_in_my_list_desc,
-                                    MaterialSymbols.PrivacyTip,
-                                )
-                            RelayAuthPolicy.TRUSTED_FOLLOWS ->
-                                Triple(
-                                    R.string.relay_auth_policy_trusted_follows,
-                                    R.string.relay_auth_policy_trusted_follows_desc,
-                                    MaterialSymbols.Group,
+                                    R.string.relay_auth_policy_custom,
+                                    R.string.relay_auth_policy_custom_desc,
+                                    MaterialSymbols.Tune,
                                 )
                         }
                     PolicyCard(
@@ -171,27 +166,43 @@ fun RelayAuthSettingsScreen(
                 }
             }
 
-            if (globalPolicy == RelayAuthPolicy.TRUSTED_FOLLOWS) {
-                val trustDelivery by account.settings.relayAuthTrustMessageDelivery.collectAsState()
-                Row(
+            if (globalPolicy == RelayAuthPolicy.CUSTOM) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.relay_auth_trust_delivery),
-                            style = MaterialTheme.typography.bodyLarge,
+                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                        val myRelays by account.settings.relayAuthTrustMyRelaysAndVenues.collectAsState()
+                        val readFollows by account.settings.relayAuthTrustReadFollows.collectAsState()
+                        val messageFollows by account.settings.relayAuthTrustMessageFollows.collectAsState()
+                        val messageStrangers by account.settings.relayAuthTrustMessageStrangers.collectAsState()
+
+                        AuthToggleRow(
+                            title = stringResource(R.string.relay_auth_toggle_my_relays),
+                            description = stringResource(R.string.relay_auth_toggle_my_relays_desc),
+                            checked = myRelays,
+                            onCheckedChange = { account.settings.changeRelayAuthTrustMyRelaysAndVenues(it) },
                         )
-                        Text(
-                            text = stringResource(R.string.relay_auth_trust_delivery_desc),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        AuthToggleRow(
+                            title = stringResource(R.string.relay_auth_toggle_read_follows),
+                            description = stringResource(R.string.relay_auth_toggle_read_follows_desc),
+                            checked = readFollows,
+                            onCheckedChange = { account.settings.changeRelayAuthTrustReadFollows(it) },
+                        )
+                        AuthToggleRow(
+                            title = stringResource(R.string.relay_auth_toggle_message_follows),
+                            description = stringResource(R.string.relay_auth_toggle_message_follows_desc),
+                            checked = messageFollows,
+                            onCheckedChange = { account.settings.changeRelayAuthTrustMessageFollows(it) },
+                        )
+                        AuthToggleRow(
+                            title = stringResource(R.string.relay_auth_toggle_message_strangers),
+                            description = stringResource(R.string.relay_auth_toggle_message_strangers_desc),
+                            checked = messageStrangers,
+                            onCheckedChange = { account.settings.changeRelayAuthTrustMessageStrangers(it) },
                         )
                     }
-                    Switch(
-                        checked = trustDelivery,
-                        onCheckedChange = { account.settings.changeRelayAuthTrustMessageDelivery(it) },
-                    )
                 }
             }
 
@@ -265,6 +276,34 @@ fun RelayAuthSettingsScreen(
                 }
             }
         }
+    }
+}
+
+/** A labelled Switch row for one [RelayAuthPolicy.CUSTOM] trust toggle. */
+@Composable
+private fun AuthToggleRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

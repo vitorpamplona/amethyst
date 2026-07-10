@@ -27,22 +27,24 @@ class RelayAuthResolverTest {
     private fun inputs(
         storedOverride: RelayAuthDecision? = null,
         isBlocked: Boolean = false,
-        policy: RelayAuthPolicy = RelayAuthPolicy.TRUSTED_FOLLOWS,
+        policy: RelayAuthPolicy = RelayAuthPolicy.CUSTOM,
+        toggles: RelayAuthCustomToggles = RelayAuthCustomToggles(),
         isInMyRelayList: Boolean = false,
-        servesFollowedCounterparty: Boolean = false,
-        servesWriteCounterparty: Boolean = false,
         servesTrustedVenue: Boolean = false,
-        messageDeliveryTrustEnabled: Boolean = false,
+        servesFollowedReadCounterparty: Boolean = false,
+        servesFollowedWriteCounterparty: Boolean = false,
+        servesStrangerWriteCounterparty: Boolean = false,
         hasAttributablePurpose: Boolean = true,
     ) = RelayAuthInputs(
         storedOverride = storedOverride,
         isBlocked = isBlocked,
         policy = policy,
+        toggles = toggles,
         isInMyRelayList = isInMyRelayList,
-        servesFollowedCounterparty = servesFollowedCounterparty,
-        servesWriteCounterparty = servesWriteCounterparty,
         servesTrustedVenue = servesTrustedVenue,
-        messageDeliveryTrustEnabled = messageDeliveryTrustEnabled,
+        servesFollowedReadCounterparty = servesFollowedReadCounterparty,
+        servesFollowedWriteCounterparty = servesFollowedWriteCounterparty,
+        servesStrangerWriteCounterparty = servesStrangerWriteCounterparty,
         hasAttributablePurpose = hasAttributablePurpose,
     )
 
@@ -70,51 +72,61 @@ class RelayAuthResolverTest {
 
     @Test
     fun neverAndAlwaysAreUnconditional() {
-        assertEquals(RelayAuthVerdict.DENY, resolve(inputs(policy = RelayAuthPolicy.NEVER, servesFollowedCounterparty = true)))
+        assertEquals(RelayAuthVerdict.DENY, resolve(inputs(policy = RelayAuthPolicy.NEVER, isInMyRelayList = true)))
         assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(policy = RelayAuthPolicy.ALWAYS, hasAttributablePurpose = false)))
     }
 
     @Test
-    fun ifInMyListAllowsOnlyMyRelaysElseAsksWhenAttributable() {
-        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(policy = RelayAuthPolicy.IF_IN_MY_LIST, isInMyRelayList = true)))
-        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(policy = RelayAuthPolicy.IF_IN_MY_LIST, isInMyRelayList = false)))
+    fun customMyRelaysAndVenuesToggleGatesOwnRelaysAndVenues() {
+        // On (default): my own relay and any joined venue auto-auth.
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(isInMyRelayList = true)))
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesTrustedVenue = true)))
+        // Off: even my own relay prompts.
+        val off = RelayAuthCustomToggles(myRelaysAndVenues = false)
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(isInMyRelayList = true, toggles = off)))
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(servesTrustedVenue = true, toggles = off)))
     }
 
     @Test
-    fun trustedFollowsAllowsAnyFollowedCounterparty() {
-        // Reading a followed author's outbox OR reaching them (DM/notification) -> auto-auth,
-        // independent of the delivery toggle.
-        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesFollowedCounterparty = true)))
-    }
-
-    @Test
-    fun trustedFollowsAsksToMessageAStrangerUnlessDeliveryToggleOn() {
-        // Sending to someone I don't follow: prompts by default...
-        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(servesWriteCounterparty = true, messageDeliveryTrustEnabled = false)))
-        // ...auto-auths only when the "deliver my messages" toggle is enabled.
-        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesWriteCounterparty = true, messageDeliveryTrustEnabled = true)))
-    }
-
-    @Test
-    fun deliveryToggleDoesNotCoverReadingAStranger() {
-        // The delivery toggle is write-only: reading a non-followed author (no write counterparty)
-        // still prompts even with the toggle on.
+    fun customReadFollowsToggleGatesReadingFollows() {
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesFollowedReadCounterparty = true)))
         assertEquals(
             RelayAuthVerdict.ASK,
-            resolve(inputs(servesWriteCounterparty = false, servesFollowedCounterparty = false, messageDeliveryTrustEnabled = true)),
+            resolve(inputs(servesFollowedReadCounterparty = true, toggles = RelayAuthCustomToggles(readFollows = false))),
         )
     }
 
     @Test
-    fun trustedFollowsAllowsVenueYouJoinedOrFollow() {
-        // A public chat / community / live stream you've joined (or whose owner you follow) —
-        // auto-auth for both reading and posting, regardless of the delivery toggle.
-        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesTrustedVenue = true, messageDeliveryTrustEnabled = false)))
+    fun customMessageFollowsToggleGatesMessagingFollows() {
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesFollowedWriteCounterparty = true)))
+        assertEquals(
+            RelayAuthVerdict.ASK,
+            resolve(inputs(servesFollowedWriteCounterparty = true, toggles = RelayAuthCustomToggles(messageFollows = false))),
+        )
     }
 
     @Test
-    fun trustedFollowsFallsThroughForStranger() {
-        // Not my relay, no followed counterparty -> prompt when we know why, else silent deny.
+    fun customMessageStrangersIsOffByDefault() {
+        // Default off: messaging a stranger prompts...
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(servesStrangerWriteCounterparty = true)))
+        // ...on: auto-auth.
+        assertEquals(
+            RelayAuthVerdict.ALLOW,
+            resolve(inputs(servesStrangerWriteCounterparty = true, toggles = RelayAuthCustomToggles(messageStrangers = true))),
+        )
+    }
+
+    @Test
+    fun customHasNoToggleForReadingStrangers() {
+        // Reading a non-followed author (no matching category) always prompts, even with every
+        // toggle on — there is deliberately no "read strangers" trust category.
+        val allOn = RelayAuthCustomToggles(myRelaysAndVenues = true, readFollows = true, messageFollows = true, messageStrangers = true)
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, hasAttributablePurpose = true)))
+    }
+
+    @Test
+    fun customFallsThroughForUncoveredSituation() {
+        // Nothing matches -> prompt when we know why, else silent deny.
         assertEquals(RelayAuthVerdict.ASK, resolve(inputs(hasAttributablePurpose = true)))
         assertEquals(RelayAuthVerdict.DENY, resolve(inputs(hasAttributablePurpose = false)))
     }

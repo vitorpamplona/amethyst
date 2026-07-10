@@ -176,14 +176,15 @@ private fun RelayAuthPromptDialog(
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringRes(R.string.relay_auth_allow_once)) }
                 // For a DM/notification prompt, offer the broad rule: always log in to deliver my
-                // messages to whoever I'm talking to, so these prompts stop appearing. That trust
-                // only applies under TRUSTED_FOLLOWS, so set both to make the promise hold on any
-                // policy.
+                // messages to whoever I'm talking to, so these prompts stop appearing. Those toggles
+                // only apply under CUSTOM, so switch to it and turn both message toggles on.
                 if (primary?.kind == AuthPurposeKind.SEND_DM || primary?.kind == AuthPurposeKind.NOTIFY_INBOX) {
                     FilledTonalButton(
                         onClick = {
-                            accountViewModel.account.settings.changeDefaultRelayAuthPolicy(RelayAuthPolicy.TRUSTED_FOLLOWS)
-                            accountViewModel.account.settings.changeRelayAuthTrustMessageDelivery(true)
+                            val settings = accountViewModel.account.settings
+                            settings.changeDefaultRelayAuthPolicy(RelayAuthPolicy.CUSTOM)
+                            settings.changeRelayAuthTrustMessageFollows(true)
+                            settings.changeRelayAuthTrustMessageStrangers(true)
                             onChoice(UserAuthChoice.ALLOW_ONCE)
                         },
                         modifier = Modifier.fillMaxWidth(),

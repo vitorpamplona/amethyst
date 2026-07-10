@@ -273,9 +273,13 @@ class AccountSettings(
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
     var callMaxBitrateBps: Int = 1_500_000,
     val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
-    val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.TRUSTED_FOLLOWS),
+    val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.CUSTOM),
     val relayGroupViewMode: MutableStateFlow<RelayGroupViewMode> = MutableStateFlow(RelayGroupViewMode.DEFAULT),
-    val relayAuthTrustMessageDelivery: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    // The per-situation toggles applied under RelayAuthPolicy.CUSTOM.
+    val relayAuthTrustMyRelaysAndVenues: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val relayAuthTrustReadFollows: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val relayAuthTrustMessageFollows: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val relayAuthTrustMessageStrangers: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) : EphemeralChatRepository,
     RelayGroupRepository,
     PublicChatListRepository {
@@ -1526,12 +1530,23 @@ class AccountSettings(
         }
     }
 
-    fun changeRelayAuthTrustMessageDelivery(enabled: Boolean) {
-        if (relayAuthTrustMessageDelivery.value != enabled) {
-            relayAuthTrustMessageDelivery.tryEmit(enabled)
+    private fun changeToggle(
+        flow: MutableStateFlow<Boolean>,
+        enabled: Boolean,
+    ) {
+        if (flow.value != enabled) {
+            flow.tryEmit(enabled)
             saveAccountSettings()
         }
     }
+
+    fun changeRelayAuthTrustMyRelaysAndVenues(enabled: Boolean) = changeToggle(relayAuthTrustMyRelaysAndVenues, enabled)
+
+    fun changeRelayAuthTrustReadFollows(enabled: Boolean) = changeToggle(relayAuthTrustReadFollows, enabled)
+
+    fun changeRelayAuthTrustMessageFollows(enabled: Boolean) = changeToggle(relayAuthTrustMessageFollows, enabled)
+
+    fun changeRelayAuthTrustMessageStrangers(enabled: Boolean) = changeToggle(relayAuthTrustMessageStrangers, enabled)
 }
 
 @Serializable

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthContext
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthInputs
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
@@ -33,44 +34,45 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
  * Decides whether Amethyst should authenticate with a given relay (NIP-42), for one account.
  *
  * Precedence (see [RelayAuthResolver]): blocked-relay list → per-relay override → global
- * [globalPolicy] → prompt-if-attributable-else-deny. The follow-graph half of
- * [RelayAuthPolicy.TRUSTED_FOLLOWS] uses [isFollowed] against the counterparties carried in the
- * [RelayAuthContext].
+ * [globalPolicy] → prompt-if-attributable-else-deny. Under [RelayAuthPolicy.CUSTOM] the
+ * [customToggles] gate each category, using [isFollowed] to split the counterparties carried in the
+ * [RelayAuthContext] into followed vs. stranger.
  */
 class RelayAuthPermissionLedger(
     val store: RelayAuthPermissionStore,
     val globalPolicy: () -> RelayAuthPolicy,
+    val customToggles: () -> RelayAuthCustomToggles = { RelayAuthCustomToggles() },
     val isInMyRelayList: (String) -> Boolean = { false },
     val isBlocked: (String) -> Boolean = { false },
     val isFollowed: (String) -> Boolean = { false },
     val isTrustedVenue: (String) -> Boolean = { false },
-    val messageDeliveryTrustEnabled: () -> Boolean = { false },
 ) {
     /** The authorization verdict for [ctx], taking the challenge's purpose into account. */
     suspend fun decide(ctx: RelayAuthContext): RelayAuthVerdict {
+        fun isWrite(kind: AuthPurposeKind) = kind == AuthPurposeKind.SEND_DM || kind == AuthPurposeKind.NOTIFY_INBOX
         val inputs =
             RelayAuthInputs(
                 storedOverride = store.loadDecision(ctx.relayUrl),
                 isBlocked = isBlocked(ctx.relayUrl),
                 policy = globalPolicy(),
+                toggles = customToggles(),
                 isInMyRelayList = isInMyRelayList(ctx.relayUrl),
-                // A followed user is a counterparty here, whether we're reading them (outbox) or
-                // reaching them (DM / notification inbox).
-                servesFollowedCounterparty =
-                    ctx.purposes.any { p -> p.counterparties.any(isFollowed) },
-                // This relay is an inbox for someone we're messaging (DM or notification), follow
-                // or not — the target of the "deliver my messages" toggle.
-                servesWriteCounterparty =
-                    ctx.purposes.any { p ->
-                        (p.kind == AuthPurposeKind.SEND_DM || p.kind == AuthPurposeKind.NOTIFY_INBOX) &&
-                            p.counterparties.isNotEmpty()
-                    },
                 servesTrustedVenue =
                     ctx.purposes.any { p ->
                         (p.kind == AuthPurposeKind.POST_VENUE || p.kind == AuthPurposeKind.READ_VENUE) &&
                             p.venues.any(isTrustedVenue)
                     },
-                messageDeliveryTrustEnabled = messageDeliveryTrustEnabled(),
+                // Reading a followed author's outbox.
+                servesFollowedReadCounterparty =
+                    ctx.purposes.any { p ->
+                        p.kind == AuthPurposeKind.READ_OUTBOX && p.counterparties.any(isFollowed)
+                    },
+                // Messaging a followed user's inbox (DM / notification).
+                servesFollowedWriteCounterparty =
+                    ctx.purposes.any { p -> isWrite(p.kind) && p.counterparties.any(isFollowed) },
+                // Messaging a non-followed user's inbox.
+                servesStrangerWriteCounterparty =
+                    ctx.purposes.any { p -> isWrite(p.kind) && p.counterparties.any { !isFollowed(it) } },
                 hasAttributablePurpose =
                     ctx.purposes.any {
                         it.kind == AuthPurposeKind.MY_OWN_RELAY ||

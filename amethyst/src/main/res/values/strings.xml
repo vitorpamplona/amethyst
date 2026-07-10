@@ -823,12 +823,16 @@
     <string name="relay_auth_policy_always_desc">Sign auth challenges for every relay that requests it</string>
     <string name="relay_auth_policy_never">Never authenticate</string>
     <string name="relay_auth_policy_never_desc">Ignore auth challenges from all relays</string>
-    <string name="relay_auth_policy_if_in_my_list">My relays only</string>
-    <string name="relay_auth_policy_if_in_my_list_desc">Only authenticate with relays in your relay list</string>
-    <string name="relay_auth_policy_trusted_follows">My relays and people I follow</string>
-    <string name="relay_auth_policy_trusted_follows_desc">Also authenticate with relays that serve people you follow, such as sending a message to a friend. You\'ll be asked about anyone else.</string>
-    <string name="relay_auth_trust_delivery">Also log in to deliver my messages</string>
-    <string name="relay_auth_trust_delivery_desc">On its own, the option above only logs in for people you follow. Turn this on to also log in to send DMs, replies or notifications to anyone you\'re talking to, even if you don\'t follow them.</string>
+    <string name="relay_auth_policy_custom">Custom</string>
+    <string name="relay_auth_policy_custom_desc">Choose exactly which relays to log in to. You\'ll be asked about anything you haven\'t allowed below.</string>
+    <string name="relay_auth_toggle_my_relays">My relays and venues</string>
+    <string name="relay_auth_toggle_my_relays_desc">Log in to your own relays and to public chats, communities and live streams you\'ve joined or favorited.</string>
+    <string name="relay_auth_toggle_read_follows">Read posts from people I follow</string>
+    <string name="relay_auth_toggle_read_follows_desc">Log in to a follow\'s relays to download their posts.</string>
+    <string name="relay_auth_toggle_message_follows">Message people I follow</string>
+    <string name="relay_auth_toggle_message_follows_desc">Log in to a follow\'s relays to send DMs, replies and notifications.</string>
+    <string name="relay_auth_toggle_message_strangers">Message anyone</string>
+    <string name="relay_auth_toggle_message_strangers_desc">Log in to strangers\' relays to send DMs, replies and notifications. Off by default; you\'ll be asked each time instead.</string>
     <string name="relay_auth_prompt_title">Confirm it\'s you to this relay?</string>
     <string name="relay_auth_prompt_message">This relay wants to confirm it\'s really you first. Its operator will see which account you are.</string>
     <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
