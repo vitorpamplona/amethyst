@@ -220,7 +220,11 @@ class Context(
             // on a from-scratch GrapeRank crawl than the old 100 (which drowned
             // damus/nos.lol in 100 concurrent giant REQs) at equal completeness, and
             // is still generous for the single-user fetches other amy commands do.
-            startCap = 16,
+            // AMY_RELAY_SUB_CAP overrides for experiments — the crawl's Phase-B
+            // throughput plateaus on hot-relay permit queues, and the 16-vs-100
+            // benchmark predates the multithreaded-crawl fix, so the sweet spot may
+            // sit higher; relays that complain still get demoted down the ladder.
+            startCap = System.getenv("AMY_RELAY_SUB_CAP")?.toIntOrNull()?.coerceIn(1, 100) ?: 16,
         ).also { client.addConnectionListener(it) }
 
     /**
