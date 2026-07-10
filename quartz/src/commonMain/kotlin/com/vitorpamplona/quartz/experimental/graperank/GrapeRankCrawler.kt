@@ -1016,14 +1016,18 @@ class GrapeRankCrawler(
 
             relaysContacted += aggregators
             // Fast deliveries fold immediately; a slow aggregator parks and its late
-            // kind:3 arrives on [lateHarvest], which we drain until the parked units
-            // finish — so a big aggregator that can't answer within the fast window is
-            // still fully harvested here instead of being abandoned.
+            // kind:3 arrives on [lateHarvest]. Fold that trickle until the channel
+            // stays QUIET for one full park window: our own parked units' idle
+            // discipline guarantees anything still coming lands within it. This
+            // deliberately does NOT wait for parkedInFlight to reach zero — that
+            // inherited the lifetime of every old round-park still draining in the
+            // background (measured 222s of pure waiting at hop-3) while this pass's
+            // own relays were long done.
             foldAgg(drainGated(filters, null))
-            while (parkedInFlight.load() > 0L) {
-                withTimeoutOrNull(PARK_POLL_MS) { lateHarvest.receive() }?.let { foldAgg(listOf(it)) }
+            while (true) {
+                val late = withTimeoutOrNull(config.parkTimeoutMs) { lateHarvest.receive() } ?: break
+                foldAgg(listOf(late))
             }
-            while (true) foldAgg(listOf(lateHarvest.tryReceive().getOrNull() ?: break))
             log("[graperank] aggregator recovery: +${contactListsFed - before} contact lists")
         }
 
@@ -1570,15 +1574,17 @@ class GrapeRankCrawler(
                 // in the graph as follow targets, we just don't fetch their lists.
                 val pending = hopOf.keys.filter { it !in done && (hopOf[it] ?: 0) < config.maxHops }
                 if (pending.isEmpty()) {
-                    // Frontier drained. If no slow relay is still streaming, a final
-                    // fold catches any last-moment delivery and we're done; otherwise
-                    // wait for a parked relay to deliver (completeness) and loop.
+                    // Frontier drained. Parked relays still streaming can no longer
+                    // change this loop's outcome: pending empty means every in-budget
+                    // user is done, and parked filters only ever asked for in-budget
+                    // users, so ingestLate would skip 100% of their late lists. Their
+                    // events still persist incrementally to the store, where the
+                    // aggregator pass re-reads them — blocking here on parkedInFlight
+                    // only serialized that wait (measured 222s at hop-3) in front of
+                    // the final passes. A last fold catches any already-queued
+                    // delivery; if it (unexpectedly) fed someone, loop once more.
                     progConverging = true
-                    if (parkedInFlight.load() == 0L) {
-                        if (foldLateHarvest() == 0) break else continue
-                    }
-                    withTimeoutOrNull(PARK_POLL_MS) { lateHarvest.receive() }?.let { ingestLate(it.first, it.second) }
-                    continue
+                    if (foldLateHarvest() == 0) break else continue
                 }
                 rounds++
                 // Frame this round for the heartbeat ticker: its target is the pending
@@ -1718,18 +1724,26 @@ class GrapeRankCrawler(
             // Crawl done — drop the warm pool.
             client.unsubscribe(WARM_SUB_ID)
 
-            // Patient final pass: recover the stragglers the outbox model couldn't
+            // Patient final passes, run CONCURRENTLY — they are independent (one
+            // folds stragglers' kind:3 into the graph, the other lands kind:5
+            // retractions in the store; graph state stays single-writer inside the
+            // aggregator pass), so serially they cost sum instead of max (report
+            // deletions alone measured 137s at hop-3).
+            //
+            // Aggregator pass: recover the stragglers the outbox model couldn't
             // resolve by asking the content aggregators for their kind:3 ALONE, no
             // longer racing the full fan-out (which cut the aggregators short during
             // the rounds). Runs before [scope] is cancelled so slow aggregators park.
-            recoverStragglersFromAggregators()
-
-            // Reports can be retracted. Ask each reporter's outbox for NIP-09 kind:5
-            // deletions that cite the reports we gathered (#e-filtered to our report
-            // ids). The events land in the store; the caller decides which reports
-            // they actually retract. Run before cancelling [scope] so it can still
-            // park slow relays.
-            fetchReportDeletions(topLiveRelays(BACKBONE_SIZE).toSet())
+            //
+            // Report deletions: reports can be retracted. Ask each reporter's outbox
+            // for NIP-09 kind:5 deletions that cite the reports we gathered
+            // (#e-filtered to our report ids). The events land in the store; the
+            // caller decides which reports they actually retract. Runs before
+            // [scope] is cancelled so it can still park slow relays.
+            coroutineScope {
+                launch { recoverStragglersFromAggregators() }
+                launch { fetchReportDeletions(topLiveRelays(BACKBONE_SIZE).toSet()) }
+            }
 
             // Stop any parked subscriptions + Tier-2 relay-list sweeps still in flight
             // (whatever they fetched already landed in the store).
