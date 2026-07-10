@@ -312,6 +312,15 @@ class GrapeRankCrawler(
         val hopOf = hashMapOf(observer to 0)
         val done = hashSetOf<HexKey>()
 
+        // Users already offered to the sharded backbone sweep. The top-relay set and
+        // a user's answer don't change between adjacent rounds, so re-sweeping the
+        // same straggler set every round only re-pays the rotation barriers
+        // (measured: ~20s of Phase A per straggler round for ~zero yield). New users
+        // (frontier growth) still sweep on their first pending round; the outbox,
+        // broadcast and aggregator paths keep covering the swept-but-missing rest.
+        // Single-writer: only the round loop's [shardedSweep] touches it.
+        val shardSwept = hashSetOf<HexKey>()
+
         // Users we've already run the STATIC-relay outbox-discovery sweep for (the
         // indexer set in [ensureRelayLists]). That relay set never changes, so re-asking
         // it for the same never-had-a-10002 user each round it recirculates is pure waste
@@ -695,7 +704,11 @@ class GrapeRankCrawler(
             val top = topLiveRelays(SHARD_RELAYS)
             if (top.isEmpty()) return 0
             val n = top.size
-            var missing = authors.filter { it !in done }
+            var missing = authors.filter { it !in done && it !in shardSwept }
+            // Only remember the sweep once the backbone is mature (full shard width):
+            // users swept against round 2's two-relay proto-backbone deserve a re-ask
+            // when the real top-10 exists by round 3.
+            if (n >= SHARD_RELAYS) shardSwept.addAll(missing)
             var got = 0
             var rotation = 0
             while (missing.size > SHARD_BROADCAST_THRESHOLD && rotation < config.shardRotations) {
