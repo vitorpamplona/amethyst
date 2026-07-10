@@ -272,6 +272,12 @@ class GiftWrapEventHandler(
         eventNote: Note,
         publicNote: Note,
     ) {
+        // Concord plane wraps are kind-1059 too, but their `p` tag is ephemeral and
+        // the payload opens with a derived plane key, not our identity — so route
+        // them to the Concord read-path first. A recognized wrap is fully handled
+        // there (folded / re-projected) and must not fall through to the DM path.
+        if (account.concordSessions.ingest(event)) return
+
         if (event.recipientPubKey() != account.signer.pubKey) return
 
         val innerGiftId = event.innerEventId

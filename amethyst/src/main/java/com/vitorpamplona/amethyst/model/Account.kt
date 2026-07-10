@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListState
@@ -385,6 +386,14 @@ class Account(
     val relayGroupList = RelayGroupListState(signer, cache, relayGroupListDecryptionCache, scope, settings)
 
     val concordChannelList = ConcordChannelListState(signer, cache, scope, settings)
+
+    /**
+     * The live read-path for joined Concord Channels: one folding session per
+     * community, fed by inbound kind-1059 plane wraps. Kept in step with
+     * [concordChannelList] and consulted by the giftwrap decrypt path so a Concord
+     * plane wrap routes here instead of being dropped as an undecryptable DM.
+     */
+    val concordSessions = ConcordSessionManager(concordChannelList.liveCommunities, signer.pubKey, scope)
 
     val publicChatListDecryptionCache = PublicChatListDecryptionCache(signer)
     val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
