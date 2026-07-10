@@ -78,10 +78,20 @@ object ConcordCommunityList {
         entries: List<ConcordCommunityListEntry>,
         createdAt: Long,
     ): Event {
-        val json = ConcordJson.instance.encodeToString(ListSerializer(ConcordCommunityListEntry.serializer()), entries)
-        val content = signer.nip44Encrypt(json, signer.pubKey)
+        val content = signer.nip44Encrypt(encode(entries), signer.pubKey)
         return signer.sign(createdAt, ConcordKinds.COMMUNITY_LIST, emptyArray(), content)
     }
+
+    /** Serializes [entries] to the plaintext JSON that gets NIP-44 self-encrypted. */
+    fun encode(entries: List<ConcordCommunityListEntry>): String = ConcordJson.instance.encodeToString(ListSerializer(ConcordCommunityListEntry.serializer()), entries)
+
+    /** Parses the decrypted plaintext JSON back into entries, or empty on failure. */
+    fun decode(json: String): List<ConcordCommunityListEntry> =
+        try {
+            ConcordJson.instance.decodeFromString(ListSerializer(ConcordCommunityListEntry.serializer()), json)
+        } catch (_: Exception) {
+            emptyList()
+        }
 
     /** Decrypts and parses a kind-13302 list event with [signer], or empty on failure. */
     suspend fun parse(
@@ -90,8 +100,7 @@ object ConcordCommunityList {
     ): List<ConcordCommunityListEntry> {
         if (event.kind != ConcordKinds.COMMUNITY_LIST) return emptyList()
         return try {
-            val json = signer.nip44Decrypt(event.content, signer.pubKey)
-            ConcordJson.instance.decodeFromString(ListSerializer(ConcordCommunityListEntry.serializer()), json)
+            decode(signer.nip44Decrypt(event.content, signer.pubKey))
         } catch (_: Exception) {
             emptyList()
         }
