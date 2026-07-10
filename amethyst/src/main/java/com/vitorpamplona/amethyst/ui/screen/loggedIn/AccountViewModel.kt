@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -521,6 +522,14 @@ class AccountViewModel(
         note: Note,
         reaction: String,
     ) {
+        // Concord messages are encrypted: a public kind-7 would e-tag the private rumor id onto
+        // public relays. Route the reaction through a channel-plane wrap instead. (Retraction of an
+        // existing Concord reaction is a follow-up; for now this only adds one.)
+        if (note.inGatherers?.any { it is ConcordChannel } == true) {
+            launchSigner { account.reactToConcordMessage(note, reaction) }
+            return
+        }
+
         launchSigner {
             val currentReactions = note.allReactionsOfContentByAuthor(userProfile(), reaction)
             if (currentReactions.isNotEmpty()) {

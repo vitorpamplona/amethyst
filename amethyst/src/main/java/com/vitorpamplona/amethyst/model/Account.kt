@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -1598,19 +1599,57 @@ class Account(
         communityId: String,
         channelIdHex: String,
         text: String,
+        replyTo: Note? = null,
     ): Boolean {
         if (!isWriteable()) return false
         val session = concordSessions.sessionFor(communityId) ?: return false
         val entry = session.entry
+        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+
+        val parent = replyTo?.event
+        val wrap =
+            if (parent != null) {
+                ConcordActions.buildChannelReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now())
+            } else {
+                ConcordActions.buildChannelMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now())
+            }
+        publishConcordWrap(entry, wrap)
+        return true
+    }
+
+    /**
+     * React to a Concord message with [reaction] (e.g. `"+"`, an emoji). Mirrors
+     * [sendConcordChannelMessage]: builds a kind-7 rumor bound to the message's
+     * channel/epoch, wraps it on the plane, and publishes it — so the reaction stays
+     * inside the encrypted channel (never a plaintext public kind-7 that would leak
+     * the message id). [note] must be a Concord channel message (carries a
+     * [ConcordChannel] gatherer).
+     */
+    suspend fun reactToConcordMessage(
+        note: Note,
+        reaction: String,
+    ): Boolean {
+        if (!isWriteable()) return false
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return false
+        val target = note.event ?: return false
+        val communityId = channel.channelId.communityId
+        val channelIdHex = channel.channelId.channelId
+        val entry = concordSessions.sessionFor(communityId)?.entry ?: return false
 
         val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
-        val wrap = ConcordActions.buildChannelMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now())
+        val wrap = ConcordActions.buildChannelReaction(signer, channelKey, channelIdHex, entry.rootEpoch, target, reaction, TimeUtils.now())
+        publishConcordWrap(entry, wrap)
+        return true
+    }
 
-        // Instant local echo, then publish to every relay the community lives on.
+    /** Instant local echo (the session folds it back as a Note) + publish to the community relays. */
+    private fun publishConcordWrap(
+        entry: ConcordCommunityListEntry,
+        wrap: Event,
+    ) {
         concordSessions.ingest(wrap)
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
         if (relays.isNotEmpty()) client.publish(wrap, relays)
-        return true
     }
 
     // ── NIP-29 relay-group actions ───────────────────────────────────────────

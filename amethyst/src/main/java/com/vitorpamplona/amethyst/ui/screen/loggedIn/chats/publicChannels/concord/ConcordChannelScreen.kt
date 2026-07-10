@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -92,6 +94,7 @@ fun ConcordChannelScreen(
 
     val scope = rememberCoroutineScope()
     var draft by remember { mutableStateOf("") }
+    var replyTo by remember { mutableStateOf<Note?>(null) }
 
     Scaffold(
         topBar = {
@@ -119,7 +122,7 @@ fun ConcordChannelScreen(
                     accountViewModel = accountViewModel,
                     nav = nav,
                     routeForLastRead = "Concord/$communityId/$channelId",
-                    onWantsToReply = {},
+                    onWantsToReply = { replyTo = it },
                     onWantsToEditDraft = {},
                 )
             }
@@ -127,12 +130,17 @@ fun ConcordChannelScreen(
             if (channel.canPost()) {
                 ConcordComposer(
                     draft = draft,
+                    replyingTo = replyTo,
+                    accountViewModel = accountViewModel,
                     onDraftChange = { draft = it },
+                    onCancelReply = { replyTo = null },
                     onSend = {
                         val text = draft.trim()
                         if (text.isNotEmpty()) {
+                            val parent = replyTo
                             draft = ""
-                            scope.launch { account.sendConcordChannelMessage(communityId, channelId, text) }
+                            replyTo = null
+                            scope.launch { account.sendConcordChannelMessage(communityId, channelId, text, parent) }
                         }
                     },
                 )
@@ -144,27 +152,50 @@ fun ConcordChannelScreen(
 @Composable
 private fun ConcordComposer(
     draft: String,
+    replyingTo: Note?,
+    accountViewModel: AccountViewModel,
     onDraftChange: (String) -> Unit,
+    onCancelReply: () -> Unit,
     onSend: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        OutlinedTextField(
-            value = draft,
-            onValueChange = onDraftChange,
-            modifier = Modifier.weight(1f),
-            placeholder = { Text(stringRes(com.vitorpamplona.amethyst.R.string.reply_here)) },
-            maxLines = 5,
-        )
-        Box(Modifier.padding(start = 6.dp)) {
-            IconButton(onClick = onSend, enabled = draft.isNotBlank()) {
-                SymbolIcon(
-                    symbol = MaterialSymbols.AutoMirrored.Send,
-                    contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.send),
-                    tint = MaterialTheme.colorScheme.primary,
+    Column(Modifier.fillMaxWidth()) {
+        if (replyingTo != null) {
+            val name by observeUserName(remember(replyingTo) { replyingTo.author ?: LocalCache.getOrCreateUser(replyingTo.event?.pubKey ?: "") }, accountViewModel)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "↰ $name: ${replyingTo.event?.content?.take(80).orEmpty()}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
                 )
+                IconButton(onClick = onCancelReply) {
+                    SymbolIcon(symbol = MaterialSymbols.Close, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.cancel))
+                }
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = onDraftChange,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text(stringRes(com.vitorpamplona.amethyst.R.string.reply_here)) },
+                maxLines = 5,
+            )
+            Box(Modifier.padding(start = 6.dp)) {
+                IconButton(onClick = onSend, enabled = draft.isNotBlank()) {
+                    SymbolIcon(
+                        symbol = MaterialSymbols.AutoMirrored.Send,
+                        contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.send),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         }
     }

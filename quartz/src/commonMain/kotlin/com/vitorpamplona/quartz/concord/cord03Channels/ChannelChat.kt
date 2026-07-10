@@ -67,6 +67,59 @@ object ChannelChat {
             content = text,
         )
 
+    /**
+     * Builds an unsigned kind-9 reply rumor bound to [channelId]/[epoch], quoting
+     * [parentId] (a `q` tag, NIP-C7 style) and crediting its author with a `p` tag.
+     * Reuses [message], so it is a normal channel message that also threads.
+     */
+    fun reply(
+        authorPubKey: HexKey,
+        channelId: HexKey,
+        epoch: Long,
+        text: String,
+        parentId: HexKey,
+        parentAuthor: HexKey,
+        createdAt: Long,
+    ): Event =
+        message(
+            authorPubKey = authorPubKey,
+            channelId = channelId,
+            epoch = epoch,
+            text = text,
+            createdAt = createdAt,
+            extraTags = arrayOf(arrayOf("q", parentId), arrayOf("p", parentAuthor)),
+        )
+
+    /**
+     * Builds an unsigned kind-7 reaction rumor bound to [channelId]/[epoch] against
+     * the target message ([targetId]/[targetAuthor]/[targetKind]). [content] is the
+     * reaction (e.g. `"+"`, `"🤙"`). On the receiving side this decrypts to a normal
+     * kind-7 that wires to its target Note by the `e` tag through the shared cache.
+     */
+    fun reaction(
+        authorPubKey: HexKey,
+        channelId: HexKey,
+        epoch: Long,
+        targetId: HexKey,
+        targetAuthor: HexKey,
+        targetKind: Int,
+        content: String,
+        createdAt: Long,
+    ): Event =
+        RumorAssembler.assembleRumor(
+            pubKey = authorPubKey,
+            createdAt = createdAt,
+            kind = ConcordKinds.REACTION,
+            tags =
+                bindingTags(channelId, epoch) +
+                    arrayOf(
+                        arrayOf("e", targetId),
+                        arrayOf("p", targetAuthor),
+                        arrayOf("k", targetKind.toString()),
+                    ),
+            content = content,
+        )
+
     /** The channel id a Chat Plane [rumor] is bound to, or null if unbound. */
     fun channelOf(rumor: Event): HexKey? = rumor.tags.firstTagValue(TAG_CHANNEL)
 

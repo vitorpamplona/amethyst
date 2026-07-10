@@ -71,6 +71,21 @@ class ConcordCommunitySessionTest {
             assertEquals(1, general9.size)
             assertEquals(community.communityIdHex, general9[0].first)
             assertEquals(owner.pubKey, general9[0].third.pubKey)
+            val message = general9[0].third
+
+            // A reaction to that message decrypts as a kind-7 bound to the channel, e-tagging the target.
+            val reactionWrap = ConcordActions.buildChannelReaction(owner, general, community.generalChannelIdHex, community.rootEpoch, message, "🤙", 3L)
+            assertTrue(session.ingest(reactionWrap))
+            val reaction = captured.map { it.third }.first { it.kind == 7 }
+            assertEquals("🤙", reaction.content)
+            assertEquals(message.id, reaction.tags.first { it[0] == "e" }[1])
+
+            // A reply decrypts as a kind-9 quoting the parent via a `q` tag.
+            val replyWrap = ConcordActions.buildChannelReply(owner, general, community.generalChannelIdHex, community.rootEpoch, message, "gm back", 4L)
+            assertTrue(session.ingest(replyWrap))
+            val reply = captured.map { it.third }.first { it.content == "gm back" }
+            assertEquals(9, reply.kind)
+            assertEquals(message.id, reply.tags.first { it[0] == "q" }[1])
 
             // A stray wrap from a different community is ignored.
             val outsider = ConcordCommunityFactory.create(owner, "Other", createdAt = 1L, relays = listOf("wss://r.example"))

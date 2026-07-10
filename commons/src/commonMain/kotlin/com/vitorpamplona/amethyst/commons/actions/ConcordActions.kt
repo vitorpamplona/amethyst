@@ -129,6 +129,34 @@ object ConcordActions {
         return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
     }
 
+    /** Builds an encrypted-seal reply wrap (kind 9 quoting [parent]) on the [channel] plane. */
+    suspend fun buildChannelReply(
+        authorSigner: NostrSigner,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+        parent: Event,
+        text: String,
+        createdAt: Long,
+    ): Event {
+        val rumor = ChannelChat.reply(authorSigner.pubKey, channelId, epoch, text, parent.id, parent.pubKey, createdAt)
+        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+    }
+
+    /** Builds an encrypted-seal reaction wrap (kind 7 against [target]) on the [channel] plane. */
+    suspend fun buildChannelReaction(
+        authorSigner: NostrSigner,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+        target: Event,
+        reaction: String,
+        createdAt: Long,
+    ): Event {
+        val rumor = ChannelChat.reaction(authorSigner.pubKey, channelId, epoch, target.id, target.pubKey, target.kind, reaction, createdAt)
+        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+    }
+
     /**
      * Opens the channel [wraps], keeps the kind-9 messages correctly bound to
      * [channelId]/[epoch], and returns them oldest-first (createdAt, then id).
