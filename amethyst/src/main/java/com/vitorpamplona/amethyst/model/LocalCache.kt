@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -48,6 +49,7 @@ import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainZapResolver
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -354,6 +356,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
     val ephemeralChannels = LargeCache<RoomId, EphemeralChatChannel>()
     val relayGroupChannels = LargeCache<GroupId, RelayGroupChannel>()
+    val concordChannels = LargeCache<ConcordChannelId, ConcordChannel>()
 
     val paymentTracker = NwcPaymentTracker()
 
@@ -721,6 +724,10 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun getOrCreateEphemeralChannel(key: RoomId): EphemeralChatChannel = ephemeralChannels.getOrCreate(key) { EphemeralChatChannel(key) }
 
     fun getOrCreateRelayGroupChannel(key: GroupId): RelayGroupChannel = relayGroupChannels.getOrCreate(key) { RelayGroupChannel(key) }
+
+    fun getConcordChannelIfExists(key: ConcordChannelId): ConcordChannel? = concordChannels.get(key)
+
+    fun getOrCreateConcordChannel(key: ConcordChannelId): ConcordChannel = concordChannels.getOrCreate(key) { ConcordChannel(key) }
 
     fun checkGetOrCreatePublicChatChannel(key: String): PublicChatChannel? {
         if (isValidHex(key)) {
