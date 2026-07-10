@@ -99,7 +99,8 @@ object ConcordActions {
         createdAt: Long,
         description: String? = null,
         relays: List<String> = emptyList(),
-    ): NewConcordCommunity = ConcordCommunityFactory.create(ownerSigner, name, createdAt, description, relays)
+        icon: String? = null,
+    ): NewConcordCommunity = ConcordCommunityFactory.create(ownerSigner, name, createdAt, description, relays, icon)
 
     /** Opens the control-plane [wraps] into their [ControlEdition]s (drops any that don't open/parse). */
     fun controlEditions(

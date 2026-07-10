@@ -1530,10 +1530,11 @@ class Account(
         name: String,
         description: String? = null,
         relays: List<String> = emptyList(),
+        icon: String? = null,
     ): String? {
         if (!isWriteable()) return null
         val relayUrls = relays.ifEmpty { outboxRelays.flow.value.map { it.url } }
-        val community = ConcordActions.createCommunity(signer, name, TimeUtils.now(), description, relayUrls)
+        val community = ConcordActions.createCommunity(signer, name, TimeUtils.now(), description, relayUrls, icon)
 
         val publishTo = relayUrls.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { outboxRelays.flow.value }
         community.genesisWraps.forEach { client.publish(it, publishTo) }

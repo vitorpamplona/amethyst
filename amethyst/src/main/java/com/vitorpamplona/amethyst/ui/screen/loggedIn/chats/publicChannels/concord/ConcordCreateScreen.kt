@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.conco
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -30,8 +31,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -40,6 +43,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -47,13 +52,16 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
  * Create a new Concord Channel (encrypted community) from Amethyst. Mints the
- * genesis (metadata + #general), publishes it to the given relays (or the
+ * genesis (metadata + #general), publishes it to the chosen relays (or the
  * account's outbox by default), joins it, and opens the new community.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,7 +72,8 @@ fun ConcordCreateScreen(
 ) {
     var name by remember { mutableStateOf("") }
     var about by remember { mutableStateOf("") }
-    var relaysCsv by remember { mutableStateOf("") }
+    var iconUrl by remember { mutableStateOf("") }
+    val relays = remember { mutableListOf<NormalizedRelayUrl>().toMutableStateList() }
     var working by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -103,28 +112,64 @@ fun ConcordCreateScreen(
                 label = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_create_about)) },
             )
             OutlinedTextField(
-                value = relaysCsv,
-                onValueChange = { relaysCsv = it },
+                value = iconUrl,
+                onValueChange = { iconUrl = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_create_relays)) },
-                placeholder = { Text("wss://relay.one, wss://relay.two") },
+                singleLine = true,
+                label = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_create_icon)) },
+                placeholder = { Text("https://…/icon.png") },
             )
+
+            SectionHeader(stringRes(com.vitorpamplona.amethyst.R.string.concord_create_relays))
+            relays.forEach { relay ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(relay.displayUrl(), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    IconButton(onClick = { relays.remove(relay) }) {
+                        SymbolIcon(symbol = MaterialSymbols.Close, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.remove))
+                    }
+                }
+            }
+            RelayUrlEditField(
+                onNewRelay = { if (it !in relays) relays.add(it) },
+                modifier = Modifier.fillMaxWidth(),
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+
             Button(
                 onClick = {
                     if (name.isBlank() || working) return@Button
                     working = true
                     scope.launch {
-                        val relays = relaysCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                        val communityId = accountViewModel.account.createConcordCommunity(name.trim(), about.trim().ifBlank { null }, relays)
+                        val communityId =
+                            accountViewModel.account.createConcordCommunity(
+                                name = name.trim(),
+                                description = about.trim().ifBlank { null },
+                                relays = relays.map { it.url },
+                                icon = iconUrl.trim().ifBlank { null },
+                            )
                         working = false
                         if (communityId != null) nav.newStack(Route.ConcordServer(communityId))
                     }
                 },
                 enabled = name.isNotBlank() && !working,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
                 Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_create_action))
             }
         }
+    }
+}
+
+@Composable
+private fun SectionHeader(text: String) {
+    Surface(color = MaterialTheme.colorScheme.surface) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(top = 8.dp),
+        )
     }
 }
