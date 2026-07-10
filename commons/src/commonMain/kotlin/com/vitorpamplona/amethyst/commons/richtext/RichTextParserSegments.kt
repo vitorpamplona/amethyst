@@ -155,6 +155,15 @@ class RelayUrlSegment(
     segment: String,
 ) : Segment(segment)
 
+/**
+ * A NIP-29 group invite link in the `<relay>'<groupId>[?code=<code>]` form (Wisp/0xchat).
+ * Rendered as a tappable chip that opens the group; [segmentText] is the whole literal.
+ */
+@Immutable
+class RelayGroupLinkSegment(
+    segment: String,
+) : Segment(segment)
+
 @Immutable
 class BlossomUriSegment(
     segment: String,

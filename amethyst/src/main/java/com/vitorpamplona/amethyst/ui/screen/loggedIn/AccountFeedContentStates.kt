@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.dal.ArticlesFeedFi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.dal.BadgesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.CalendarAppointmentsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.CalendarCollectionsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.RelayGroupDiscoveryFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.dal.CommunitiesFeedFilter
@@ -113,6 +114,7 @@ class AccountFeedContentStates(
     val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
     val workoutsFeed = FeedContentState(WorkoutFeedFilter(account), scope, LocalCache)
     val gitRepositoriesFeed = FeedContentState(GitRepositoriesFeedFilter(account), scope, LocalCache)
+    val relayGroupsDiscoveryFeed = FeedContentState(RelayGroupDiscoveryFeedFilter(account), scope, LocalCache)
     val calendarAppointmentsFeed = FeedContentState(CalendarAppointmentsFeedFilter(account), scope, LocalCache)
     val calendarCollectionsFeed = FeedContentState(CalendarCollectionsFeedFilter(account), scope, LocalCache)
     val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache)
@@ -164,6 +166,28 @@ class AccountFeedContentStates(
                 dmKnown.invalidateData()
                 dmNew.invalidateData()
             }
+        }
+
+        // Same for the NIP-29 joined-group list (kind 10009): joining/leaving changes the list but
+        // doesn't flow through newEventBundles, so force a rebuild — otherwise a just-joined group
+        // (whose messages haven't loaded yet) wouldn't appear on the Messages tab until a later event.
+        scope.launch(Dispatchers.IO) {
+            account.relayGroupList.liveRelayGroupList
+                .drop(1)
+                .collect {
+                    dmKnown.invalidateData()
+                }
+        }
+
+        // Flipping the NIP-29 view mode (inline groups vs one row per relay) changes what the
+        // Messages feed emits for joined groups, but no event flows through LocalCache — force a
+        // full rebuild so the list switches shape immediately.
+        scope.launch(Dispatchers.IO) {
+            account.settings.relayGroupViewMode
+                .drop(1)
+                .collect {
+                    dmKnown.invalidateData()
+                }
         }
 
         // Pinning/unpinning a room only changes sort order, not membership, so no
@@ -232,6 +256,7 @@ class AccountFeedContentStates(
         picturesFeed.updateFeedWith(newNotes)
         workoutsFeed.updateFeedWith(newNotes)
         gitRepositoriesFeed.updateFeedWith(newNotes)
+        relayGroupsDiscoveryFeed.updateFeedWith(newNotes)
         productsFeed.updateFeedWith(newNotes)
         shortsFeed.updateFeedWith(newNotes)
         publicChatsFeed.updateFeedWith(newNotes)
@@ -294,6 +319,7 @@ class AccountFeedContentStates(
         picturesFeed.deleteFromFeed(newNotes)
         workoutsFeed.deleteFromFeed(newNotes)
         gitRepositoriesFeed.deleteFromFeed(newNotes)
+        relayGroupsDiscoveryFeed.deleteFromFeed(newNotes)
         productsFeed.deleteFromFeed(newNotes)
         shortsFeed.deleteFromFeed(newNotes)
         publicChatsFeed.deleteFromFeed(newNotes)
@@ -352,6 +378,7 @@ class AccountFeedContentStates(
         picturesFeed.trimToSize(maxItems)
         workoutsFeed.trimToSize(maxItems)
         gitRepositoriesFeed.trimToSize(maxItems)
+        relayGroupsDiscoveryFeed.trimToSize(maxItems)
         calendarAppointmentsFeed.trimToSize(maxItems)
         calendarCollectionsFeed.trimToSize(maxItems)
         productsFeed.trimToSize(maxItems)

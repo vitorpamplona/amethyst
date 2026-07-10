@@ -121,6 +121,25 @@ fun ChannelFabColumn(nav: INav) {
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
+
+                FloatingActionButton(
+                    onClick = {
+                        nav.nav(Route.RelayGroupBrowse)
+                        isOpen = false
+                    },
+                    modifier = Size55Modifier,
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ) {
+                    Text(
+                        text = stringRes(R.string.relay_group_browse_title),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        fontSize = Font12SP,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
             }
         }
 

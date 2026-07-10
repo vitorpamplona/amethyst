@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
@@ -79,6 +80,10 @@ val AccountInfoAndListsFromKeyKinds2 =
         PaymentTargetsEvent.KIND,
         RelayFeedsListEvent.KIND,
         InterestSetEvent.KIND,
+        // NIP-51 "simple groups" list (kind 10009): the user's joined NIP-29 groups + servers.
+        // Loaded up-front so "My Groups" and group memberships resolve immediately at login,
+        // without waiting for the groups screen to mount its own subscription.
+        SimpleGroupListEvent.KIND,
         // NIP-60 Cashu wallet + NIP-61 nutzap info. Replaceables, always
         // useful to have available — wallet event holds the user's P2PK key
         // + mint list, nutzap info tells other clients which mints to lock

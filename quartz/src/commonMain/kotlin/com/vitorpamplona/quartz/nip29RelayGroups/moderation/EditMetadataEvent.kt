@@ -26,6 +26,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -46,6 +50,10 @@ class EditMetadataEvent(
 
     fun about() = tags.firstTagValue("about")
 
+    fun hashtags() = tags.hashtags()
+
+    fun geohashes() = tags.geohashes()
+
     fun previousEvents() = tags.previousEvents()
 
     override fun indexableContent() = listOfNotNull(name(), about()).joinToString("\n")
@@ -59,6 +67,8 @@ class EditMetadataEvent(
             about: String? = null,
             picture: String? = null,
             status: Set<GroupMetadataEvent.GroupStatus> = emptySet(),
+            hashtags: List<String> = emptyList(),
+            geohashes: List<String> = emptyList(),
             previousEvents: List<String> = emptyList(),
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<EditMetadataEvent>.() -> Unit = {},
@@ -68,6 +78,9 @@ class EditMetadataEvent(
             about?.let { add(arrayOf("about", it)) }
             picture?.let { add(arrayOf("picture", it)) }
             status.forEach { add(arrayOf(it.code)) }
+            addAll(HashtagTag.assemble(hashtags))
+            // Mip-map each geohash into every prefix so a coarser followed geohash still matches.
+            geohashes.forEach { addAll(GeoHashTag.assemble(it).toList()) }
             previous(previousEvents)
             initializer()
         }

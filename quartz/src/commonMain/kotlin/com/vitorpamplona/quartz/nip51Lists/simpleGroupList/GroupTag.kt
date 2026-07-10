@@ -33,6 +33,17 @@ class GroupTag(
 
     fun toTagIdOnly() = arrayOf(TAG_NAME, groupId, relayUrl)
 
+    // Identity is the (group id, host relay) pair — the group's real key. The
+    // optional `name` is cosmetic and deliberately excluded, so the same group
+    // stored twice (e.g. once as a public tag, once decrypted from a private
+    // item, or with/without a cached name) collapses in a Set and a StateFlow of
+    // GroupTags stops re-emitting on every identical re-arrival of the list.
+    override fun equals(other: Any?): Boolean =
+        this === other ||
+            (other is GroupTag && groupId == other.groupId && relayUrl == other.relayUrl)
+
+    override fun hashCode(): Int = 31 * groupId.hashCode() + relayUrl.hashCode()
+
     companion object {
         const val TAG_NAME = "group"
 

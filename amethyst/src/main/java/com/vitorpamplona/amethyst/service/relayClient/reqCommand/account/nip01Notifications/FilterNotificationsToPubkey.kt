@@ -57,6 +57,25 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+
+/**
+ * Kinds that notify me about activity on MY messages inside a NIP-29 group — reactions, replies
+ * (chat + NIP-22 comments), poll responses, reposts, zaps and reports. Scoped by `#h` to my joined
+ * groups + `#p` to me. These live on the group's host relay, not my inbox relays.
+ */
+val GroupNotificationKinds =
+    listOf(
+        ReactionEvent.KIND,
+        ChatEvent.KIND,
+        CommentEvent.KIND,
+        PollEvent.KIND,
+        PollResponseEvent.KIND,
+        RepostEvent.KIND,
+        GenericRepostEvent.KIND,
+        LnZapEvent.KIND,
+        ReportEvent.KIND,
+    )
 
 val SummaryKinds =
     listOf(
@@ -161,6 +180,34 @@ fun filterNotificationsToPubkey(
                     kinds = NotificationsPerKeyKinds3,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 10,
+                    since = since,
+                ),
+        ),
+    )
+}
+
+/**
+ * Notifications for activity on my messages inside joined NIP-29 groups, queried on the group's
+ * HOST relay (where the content lives) scoped by `#h` to those groups and `#p` to me. Without this,
+ * a reaction/reply to my group message is only fetched when I open the group, never surfacing in
+ * the notifications feed.
+ */
+fun filterGroupNotificationsToPubkey(
+    relay: NormalizedRelayUrl,
+    pubkey: HexKey?,
+    groupIds: List<String>,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (pubkey.isNullOrEmpty() || groupIds.isEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = GroupNotificationKinds,
+                    tags = mapOf("p" to listOf(pubkey), "h" to groupIds),
+                    limit = 200,
                     since = since,
                 ),
         ),

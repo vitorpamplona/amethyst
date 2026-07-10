@@ -404,6 +404,8 @@ sealed class Route {
 
     @Serializable object ReactionsSettings : Route()
 
+    @Serializable object MessagesSettings : Route()
+
     @Serializable object AudioVisualizerSettings : Route()
 
     @Serializable object BottomBarSettings : Route()
@@ -637,6 +639,43 @@ sealed class Route {
 
     @Serializable object NewEphemeralChat : Route()
 
+    @Serializable data class RelayGroup(
+        val id: String,
+        val relayUrl: String,
+        val draftId: HexKey? = null,
+        val replyTo: HexKey? = null,
+        // NIP-29 invite code from a `wss://relay'id?code=…` link — auto-joins a closed
+        // group when the screen opens. Null for a plain (view-only) group link.
+        val inviteCode: String? = null,
+    ) : Route()
+
+    @Serializable data class RelayGroupServer(
+        val relayUrl: String,
+    ) : Route()
+
+    @Serializable data class RelayGroupMembers(
+        val id: String,
+        val relayUrl: String,
+    ) : Route()
+
+    @Serializable data class RelayGroupThreads(
+        val id: String,
+        val relayUrl: String,
+    ) : Route()
+
+    @Serializable data class RelayGroupCreate(
+        val relayUrl: String,
+    ) : Route()
+
+    @Serializable data class RelayGroupEdit(
+        val id: String,
+        val relayUrl: String,
+    ) : Route()
+
+    @Serializable object RelayGroups : Route()
+
+    @Serializable object RelayGroupBrowse : Route()
+
     @Serializable data class ChannelMetadataEdit(
         val id: String? = null,
     ) : Route()
@@ -800,6 +839,10 @@ sealed class Route {
         val fork: String? = null,
         val version: String? = null,
         val draft: String? = null,
+        // When set, the composer produces a NIP-29 kind-11 group thread scoped to this group id and
+        // published only to its host relay (see ShortNotePostViewModel.setGroupThread).
+        val groupThreadId: String? = null,
+        val groupThreadRelayUrl: String? = null,
     ) : Route()
 
     @Serializable

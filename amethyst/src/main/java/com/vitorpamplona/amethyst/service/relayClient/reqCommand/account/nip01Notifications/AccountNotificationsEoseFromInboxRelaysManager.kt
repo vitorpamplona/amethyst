@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -49,19 +50,38 @@ class AccountNotificationsEoseFromInboxRelaysManager(
     override fun updateFilter(
         key: AccountQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> =
-        key.account.notificationRelays.flow.value.flatMap {
-            filterSummaryNotificationsToPubkey(
-                relay = it,
-                pubkey = user(key).pubkeyHex,
-                since = since?.get(it)?.time ?: TimeUtils.oneWeekAgo(),
-            ) +
-                filterNotificationsToPubkey(
+    ): List<RelayBasedFilter> {
+        val inbox =
+            key.account.notificationRelays.flow.value.flatMap {
+                filterSummaryNotificationsToPubkey(
                     relay = it,
                     pubkey = user(key).pubkeyHex,
-                    since = since?.get(it)?.time ?: key.feedContentStates.notifications.lastNoteCreatedAtIfFilled() ?: TimeUtils.oneWeekAgo(),
-                )
-        }
+                    since = since?.get(it)?.time ?: TimeUtils.oneWeekAgo(),
+                ) +
+                    filterNotificationsToPubkey(
+                        relay = it,
+                        pubkey = user(key).pubkeyHex,
+                        since = since?.get(it)?.time ?: key.feedContentStates.notifications.lastNoteCreatedAtIfFilled() ?: TimeUtils.oneWeekAgo(),
+                    )
+            }
+
+        // NIP-29 group activity (reactions/replies to my messages) lives on the group's host relay,
+        // not my inbox relays — poll each host relay for those, scoped by `#h` to my joined groups.
+        val groups =
+            key.account.relayGroupList.liveRelayGroupList.value
+                .groupBy({ it.relayUrl }, { it.groupId })
+                .flatMap { (relayUrl, groupIds) ->
+                    val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: return@flatMap emptyList()
+                    filterGroupNotificationsToPubkey(
+                        relay = relay,
+                        pubkey = user(key).pubkeyHex,
+                        groupIds = groupIds.distinct(),
+                        since = since?.get(relay)?.time ?: TimeUtils.oneWeekAgo(),
+                    )
+                }
+
+        return inbox + groups
+    }
 
     val userJobMap = mutableMapOf<User, List<Job>>()
 
@@ -73,6 +93,13 @@ class AccountNotificationsEoseFromInboxRelaysManager(
             listOf(
                 key.account.scope.launch(Dispatchers.IO) {
                     key.account.notificationRelays.flow.sample(1000).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+                // Re-subscribe when I join/leave a group so its host relay is added to (or dropped
+                // from) the notification query.
+                key.account.scope.launch(Dispatchers.IO) {
+                    key.account.relayGroupList.liveRelayGroupList.sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },

@@ -87,11 +87,16 @@ class Nip11CachedRetriever(
                 }
 
                 is RetrieveResult.Loading -> {
-                    if (doc.isValid()) {
-                        // just wait.
-                    } else {
-                        retrieve(relay, onInfo, onError)
-                    }
+                    // A `Loading` marker means SOME caller started a fetch — but the coroutine that
+                    // owns it may already be gone (e.g. the composable that launched the warm-up left
+                    // composition and its scope was cancelled mid-fetch), which would leave this marker
+                    // stuck and valid for an hour. The old "just wait" here dropped this caller's
+                    // callback entirely, so a screen that navigated in on top of an aborted load would
+                    // never receive the doc and would render as if the relay had no NIP-11 (no `self`,
+                    // no supported_nips) — hiding relay-signed NIP-29 groups until the marker expired.
+                    // Re-fetch instead: the fetch is cheap, dedups at the HTTP layer, and guarantees
+                    // this caller is notified.
+                    retrieve(relay, onInfo, onError)
                 }
 
                 is RetrieveResult.Error -> {

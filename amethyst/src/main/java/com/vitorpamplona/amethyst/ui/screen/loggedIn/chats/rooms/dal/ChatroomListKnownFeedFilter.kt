@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal
 
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -29,11 +31,17 @@ import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.groupId
+import com.vitorpamplona.quartz.nip29RelayGroups.isGroupChatContent
+import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 
 class ChatroomListKnownFeedFilter(
     val account: Account,
@@ -89,7 +97,38 @@ class ChatroomListKnownFeedFilter(
                 }
             }
 
-        return sort((privateMessages + publicChannels + ephemeralChats + marmotGroups).toSet())
+        // NIP-29 relay groups the user joined (kind 10009). In INLINE view mode each group is its
+        // own row tagged with its host relay; in GROUPED mode all the groups on one relay collapse
+        // to a single relay row positioned by that relay's newest message. Both interleave with the
+        // rest of the Messages list by recency.
+        val relayGroups =
+            when (account.settings.relayGroupViewMode.value) {
+                RelayGroupViewMode.INLINE ->
+                    account.relayGroupList.liveRelayGroupList.value.mapNotNull { groupTag ->
+                        val relay = RelayUrlNormalizer.normalizeOrNull(groupTag.relayUrl) ?: return@mapNotNull null
+                        val channel = LocalCache.getOrCreateRelayGroupChannel(GroupId(groupTag.groupId, relay))
+                        // Newest loaded chat message, or a placeholder row so a just-joined group shows
+                        // up on Messages before its first kind-9 arrives (mirrors the Marmot-group path
+                        // above). Content kinds only — never a reaction/deletion as the "last message".
+                        channel.newestChatNote(account) ?: channel.placeholderNote()
+                    }
+
+                RelayGroupViewMode.GROUPED ->
+                    // One row per host relay (never duplicated), carrying the newest chat across ALL of
+                    // that relay's joined groups so it lands in the newest-message spot among the DMs.
+                    account.relayGroupList.liveRelayGroupList.value
+                        .groupBy { it.relayUrl }
+                        .mapNotNull { (relayUrl, tags) ->
+                            val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: return@mapNotNull null
+                            val newest =
+                                tags
+                                    .mapNotNull { LocalCache.getOrCreateRelayGroupChannel(GroupId(it.groupId, relay)).newestChatNote(account) }
+                                    .maxByOrNull { it.createdAt() ?: 0L }
+                            RelayGroupServerRoomNote(relay, newest)
+                        }
+            }
+
+        return sort((privateMessages + publicChannels + ephemeralChats + marmotGroups + relayGroups).toSet())
     }
 
     override fun updateListWith(
@@ -104,8 +143,13 @@ class ChatroomListKnownFeedFilter(
 
         // Gets the latest message by room from the new items.
         val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
+        val newRelevantRelayGroups = filterRelevantRelayGroupMessages(newItems, account)
 
-        if (newRelevantPrivateMessages.isEmpty() && newRelevantPublicMessages.isEmpty() && newRelevantEphemeralChats.isEmpty()) {
+        if (newRelevantPrivateMessages.isEmpty() &&
+            newRelevantPublicMessages.isEmpty() &&
+            newRelevantEphemeralChats.isEmpty() &&
+            newRelevantRelayGroups.isEmpty()
+        ) {
             return oldList
         }
 
@@ -160,6 +204,21 @@ class ChatroomListKnownFeedFilter(
             }
         }
 
+        newRelevantRelayGroups.forEach { newNotePair ->
+            var hasUpdated = false
+            oldList.forEach { oldNote ->
+                if (newNotePair.key == oldNote.relayGroupRowKey()) {
+                    hasUpdated = true
+                    if ((newNotePair.value.createdAt() ?: 0L) > (oldNote.createdAt() ?: 0L)) {
+                        myNewList = myNewList.replace(oldNote, newNotePair.value)
+                    }
+                }
+            }
+            if (!hasUpdated) {
+                myNewList = myNewList.plus(newNotePair.value)
+            }
+        }
+
         return sort(myNewList.toSet()).take(1000)
     }
 
@@ -170,11 +229,21 @@ class ChatroomListKnownFeedFilter(
 
         // Gets the latest message by room from the new items.
         val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
+        val newRelevantRelayGroups = filterRelevantRelayGroupMessages(newItems, account)
 
-        return if (newRelevantPrivateMessages.isEmpty() && newRelevantPublicMessages.isEmpty() && newRelevantEphemeralChats.isEmpty()) {
+        return if (newRelevantPrivateMessages.isEmpty() &&
+            newRelevantPublicMessages.isEmpty() &&
+            newRelevantEphemeralChats.isEmpty() &&
+            newRelevantRelayGroups.isEmpty()
+        ) {
             emptySet()
         } else {
-            (newRelevantPrivateMessages.values + newRelevantPublicMessages.values + newRelevantEphemeralChats.values).toSet()
+            (
+                newRelevantPrivateMessages.values +
+                    newRelevantPublicMessages.values +
+                    newRelevantEphemeralChats.values +
+                    newRelevantRelayGroups.values
+            ).toSet()
         }
     }
 
@@ -225,6 +294,78 @@ class ChatroomListKnownFeedFilter(
                 }
             }
         return newRelevantEphemeralChats
+    }
+
+    /** The newest actual chat message loaded in this group's channel, or null if none yet. */
+    private fun RelayGroupChannel.newestChatNote(account: Account): Note? =
+        notes
+            .filter { _, it -> account.isAcceptable(it) && it.event?.isGroupChatContent() == true }
+            .sortedByDefaultFeedOrder()
+            .firstOrNull()
+
+    /**
+     * The row a relay-group note belongs to in the feed, so [updateListWith] can find and replace it:
+     * a per-relay [RelayGroupServerRoomNote] (GROUPED), a joined group's chat note keyed by group id
+     * (INLINE), or an empty-group placeholder resolved back to its group id via its channel gatherer.
+     */
+    private fun Note.relayGroupRowKey(): String? =
+        when (this) {
+            is RelayGroupServerRoomNote -> relay.url
+            else ->
+                event?.takeIf { it.isGroupScoped() }?.groupId()
+                    ?: inGatherers?.firstNotNullOfOrNull { (it as? RelayGroupChannel)?.groupId?.id }
+        }
+
+    /**
+     * Latest relay-group rows from the new items, keyed the same way as [relayGroupRowKey]: by group
+     * id in INLINE mode (one row per group) and by host relay url in GROUPED mode (one row per relay).
+     * Only actual group content counts — a reaction (kind 7)/deletion/label carries the group's `h`
+     * tag too, so [Event.isGroupChatContent] gates them out of ever becoming a room's "last message".
+     */
+    private fun filterRelevantRelayGroupMessages(
+        newItems: Set<Note>,
+        account: Account,
+    ): MutableMap<String, Note> {
+        val joined = account.relayGroupList.liveRelayGroupList.value
+        if (joined.isEmpty()) return mutableMapOf()
+
+        return when (account.settings.relayGroupViewMode.value) {
+            RelayGroupViewMode.INLINE -> {
+                val joinedGroupIds = joined.mapTo(HashSet()) { it.groupId }
+                val result = mutableMapOf<String, Note>()
+                newItems.forEach { newNote ->
+                    val gid = newNote.event?.takeIf { it.isGroupChatContent() }?.groupId()
+                    if (gid != null && gid in joinedGroupIds && account.isAcceptable(newNote)) {
+                        val lastNote = result[gid]
+                        if (lastNote == null || (newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
+                            result[gid] = newNote
+                        }
+                    }
+                }
+                result
+            }
+
+            RelayGroupViewMode.GROUPED -> {
+                val groupToRelay = HashMap<String, NormalizedRelayUrl>()
+                joined.forEach { tag ->
+                    RelayUrlNormalizer.normalizeOrNull(tag.relayUrl)?.let { groupToRelay[tag.groupId] = it }
+                }
+                // Newest new message per host relay, collapsed into one per-relay row.
+                val newestPerRelay = HashMap<NormalizedRelayUrl, Note>()
+                newItems.forEach { newNote ->
+                    val gid = newNote.event?.takeIf { it.isGroupChatContent() }?.groupId() ?: return@forEach
+                    val relay = groupToRelay[gid] ?: return@forEach
+                    if (!account.isAcceptable(newNote)) return@forEach
+                    val lastNote = newestPerRelay[relay]
+                    if (lastNote == null || (newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
+                        newestPerRelay[relay] = newNote
+                    }
+                }
+                val result = mutableMapOf<String, Note>()
+                newestPerRelay.forEach { (relay, note) -> result[relay.url] = RelayGroupServerRoomNote(relay, note) }
+                result
+            }
+        }
     }
 
     private fun filterRelevantPrivateMessages(

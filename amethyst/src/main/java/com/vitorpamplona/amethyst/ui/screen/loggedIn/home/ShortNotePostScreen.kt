@@ -43,8 +43,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -61,7 +63,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.IntentCompat
@@ -85,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.components.OutlinedThinPaddingTextField
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -122,6 +127,8 @@ import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
@@ -149,11 +156,14 @@ fun ShortNotePostScreen(
     forkId: HexKey? = null,
     versionId: HexKey? = null,
     draftId: HexKey? = null,
+    groupThreadId: HexKey? = null,
+    groupThreadRelayUrl: String? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
     val postViewModel: ShortNotePostViewModel = viewModel()
     postViewModel.init(accountViewModel)
+    postViewModel.setGroupThread(groupThreadId, groupThreadRelayUrl)
 
     val context = LocalContext.current
     val activity = context.getActivity()
@@ -345,6 +355,44 @@ private fun NewPostScreenBody(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
+                }
+
+                if (postViewModel.wantsSubject || postViewModel.groupThreadTarget != null) {
+                    // Styled like the "To"/"Subject" rows in the new-DM composer: an inline label
+                    // with a borderless field and a hairline divider, rather than a boxed input.
+                    Column(Modifier.fillMaxWidth().padding(vertical = Size10dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
+                            Text(
+                                text =
+                                    stringRes(
+                                        if (postViewModel.groupThreadTarget != null) {
+                                            R.string.relay_group_thread_title_label
+                                        } else {
+                                            R.string.messages_new_message_subject
+                                        },
+                                    ),
+                                fontSize = Font14SP,
+                                fontWeight = FontWeight.W500,
+                            )
+                            ThinPaddingTextField(
+                                state = postViewModel.subject,
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                placeholder = {
+                                    Text(
+                                        text = stringRes(R.string.messages_new_message_subject_caption),
+                                        color = MaterialTheme.colorScheme.placeholderText,
+                                    )
+                                },
+                                colors =
+                                    OutlinedTextFieldDefaults.colors(
+                                        unfocusedBorderColor = Color.Transparent,
+                                        focusedBorderColor = Color.Transparent,
+                                    ),
+                            )
+                        }
+                        HorizontalDivider(thickness = DividerThickness)
+                    }
                 }
 
                 // Only show text input if no voice message is being posted
@@ -749,8 +797,9 @@ private fun BottomRowActions(
         )
 
         // Polls publish kinds that can't travel inside a private wrap, so the
-        // two toggles are mutually exclusive.
-        if (!postViewModel.wantsPoll && !postViewModel.wantsZapPoll) {
+        // two toggles are mutually exclusive. Neither a private wrap nor a poll makes sense for a
+        // NIP-29 group thread (it publishes plainly to the host relay), so hide both there.
+        if (!postViewModel.wantsPoll && !postViewModel.wantsZapPoll && postViewModel.groupThreadTarget == null) {
             AddPrivateNoteButton(
                 isActive = postViewModel.wantsPrivateNote,
                 isLocked = postViewModel.privateNoteLocked,
@@ -759,7 +808,10 @@ private fun BottomRowActions(
             }
         }
 
-        if ((postViewModel.canUsePoll || postViewModel.canUseZapPoll) && !postViewModel.wantsPrivateNote) {
+        if ((postViewModel.canUsePoll || postViewModel.canUseZapPoll) &&
+            !postViewModel.wantsPrivateNote &&
+            postViewModel.groupThreadTarget == null
+        ) {
             AddPollButton(postViewModel.wantsPoll || postViewModel.wantsZapPoll) {
                 val isActive = postViewModel.wantsPoll || postViewModel.wantsZapPoll
                 if (isActive) {
@@ -781,6 +833,13 @@ private fun BottomRowActions(
             }
         }
 
+        // A group thread's title is required, so the field is always shown for it — no toggle.
+        if (postViewModel.groupThreadTarget == null) {
+            AddSubjectButton(postViewModel.wantsSubject) {
+                postViewModel.toggleSubject()
+            }
+        }
+
         MarkAsSensitiveButton(postViewModel.wantsToMarkAsSensitive) {
             postViewModel.toggleMarkAsSensitive()
         }
@@ -790,8 +849,9 @@ private fun BottomRowActions(
         }
 
         // Private wraps are built and sent immediately; scheduling them would
-        // require wrapping at publish time, so the option is hidden for now.
-        if (!postViewModel.wantsPrivateNote) {
+        // require wrapping at publish time, so the option is hidden for now. Scheduling also
+        // bypasses the host-relay pin, so it's hidden for NIP-29 group threads too.
+        if (!postViewModel.wantsPrivateNote && postViewModel.groupThreadTarget == null) {
             ScheduleAtButton(postViewModel.scheduledForSec != null, onScheduleClicked)
         }
 
@@ -843,6 +903,21 @@ private fun AddPrivateNoteButton(
                             else -> R.string.private_note
                         },
                 ),
+            modifier = Modifier.height(22.dp),
+            tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+        )
+    }
+}
+
+@Composable
+private fun AddSubjectButton(
+    isActive: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick) {
+        Icon(
+            symbol = MaterialSymbols.Topic,
+            contentDescription = stringRes(R.string.messages_new_message_subject),
             modifier = Modifier.height(22.dp),
             tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
         )

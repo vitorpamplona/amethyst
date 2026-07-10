@@ -223,7 +223,7 @@ class RichTextParser {
 
         val emojiMap = CustomEmoji.createEmojiMap(tags.lists)
 
-        val allUrls = urlSet.withScheme + urlSet.withoutScheme + urlSet.emails + urlSet.bech32s + urlSet.relayUrls + urlSet.blossomUris
+        val allUrls = urlSet.withScheme + urlSet.withoutScheme + urlSet.emails + urlSet.bech32s + urlSet.relayUrls + urlSet.blossomUris + urlSet.groupLinks
 
         val newContent = fixMissingSpaces(content, allUrls)
 
@@ -376,6 +376,10 @@ class RichTextParser {
         if (urls.emails.contains(word)) return EmailSegment(word)
 
         if (urls.bech32s.contains(word)) return BechSegment(word)
+
+        // Checked before relayUrls: a group link `wss://relay'groupId` embeds a relay URL,
+        // so it must win over the bare relay-URL interpretation.
+        if (urls.groupLinks.contains(word)) return RelayGroupLinkSegment(word)
 
         if (urls.relayUrls.contains(word)) return RelayUrlSegment(word)
 

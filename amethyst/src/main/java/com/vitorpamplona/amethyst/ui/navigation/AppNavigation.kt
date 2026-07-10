@@ -105,6 +105,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemC
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveActivityChannelScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupBrowseScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupChannelListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupChatScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupCreateScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupDiscoveryScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupEditScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupMembersScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupThreadsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.share.ShareToDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
@@ -212,6 +220,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.CallSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ComposeSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.HiddenWordsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.HomeTabsSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.MessagesSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.MutedThreadsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NamecoinSettingsScreen
@@ -367,6 +376,7 @@ fun BuildNavigation(
         composableFromEnd<Route.Products> { ProductsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Shorts> { ShortsScreen(accountViewModel, nav) }
         composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.RelayGroups> { RelayGroupDiscoveryScreen(accountViewModel, nav) }
         composableFromEnd<Route.FollowPacks> { FollowPacksScreen(accountViewModel, nav) }
         composableFromEnd<Route.LiveStreams> { LiveStreamsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
@@ -463,6 +473,7 @@ fun BuildNavigation(
         composableFromEnd<Route.ComposeSettings> { ComposeSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.MessagesSettings> { MessagesSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.AudioVisualizerSettings> { AudioVisualizerSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.BottomBarSettings> { BottomBarSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.HomeTabsSettings> { HomeTabsSettingsScreen(accountViewModel, nav) }
@@ -550,6 +561,68 @@ fun BuildNavigation(
                 relayUrl = it.relayUrl,
                 draftId = it.draftId,
                 replyToId = it.replyTo,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.RelayGroup> {
+            RelayGroupChatScreen(
+                id = it.id,
+                relayUrl = it.relayUrl,
+                draftId = it.draftId,
+                replyToId = it.replyTo,
+                inviteCode = it.inviteCode,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.RelayGroupServer> {
+            RelayGroupChannelListScreen(
+                relayUrl = it.relayUrl,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.RelayGroupMembers> {
+            RelayGroupMembersScreen(
+                id = it.id,
+                relayUrl = it.relayUrl,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.RelayGroupThreads> {
+            RelayGroupThreadsScreen(
+                id = it.id,
+                relayUrl = it.relayUrl,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.RelayGroupCreate> {
+            RelayGroupCreateScreen(
+                relayUrl = it.relayUrl,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.RelayGroupEdit> {
+            RelayGroupEditScreen(
+                id = it.id,
+                relayUrl = it.relayUrl,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.RelayGroupBrowse> {
+            RelayGroupBrowseScreen(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -667,6 +740,8 @@ fun BuildNavigation(
                 forkId = it.fork,
                 versionId = it.version,
                 draftId = it.draft,
+                groupThreadId = it.groupThreadId,
+                groupThreadRelayUrl = it.groupThreadRelayUrl,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

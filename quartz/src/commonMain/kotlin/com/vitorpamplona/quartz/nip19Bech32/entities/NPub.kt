@@ -32,7 +32,11 @@ data class NPub(
 ) : IPubKeyEntity {
     companion object {
         fun parse(bytes: ByteArray): NPub? {
-            if (bytes.isEmpty()) return null
+            // A Nostr pubkey is x-only, exactly 32 bytes. Reject anything else —
+            // notably a 33-byte COMPRESSED secp256k1 key (0x02/0x03 prefix) that some
+            // clients wrongly encode into an npub. Passing its 66-char hex through into
+            // a `p`/`q` tag gets the whole event rejected by strict relays (relay29).
+            if (bytes.size != 32) return null
             return NPub(bytes.toHexKey())
         }
 
