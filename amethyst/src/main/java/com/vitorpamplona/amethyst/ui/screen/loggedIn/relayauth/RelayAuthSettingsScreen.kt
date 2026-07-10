@@ -172,25 +172,25 @@ fun RelayAuthSettingsScreen(
             }
 
             if (globalPolicy == RelayAuthPolicy.TRUSTED_FOLLOWS) {
-                val trustReads by account.settings.relayAuthTrustFollowsForReads.collectAsState()
+                val trustDelivery by account.settings.relayAuthTrustMessageDelivery.collectAsState()
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = stringResource(R.string.relay_auth_trust_reads),
+                            text = stringResource(R.string.relay_auth_trust_delivery),
                             style = MaterialTheme.typography.bodyLarge,
                         )
                         Text(
-                            text = stringResource(R.string.relay_auth_trust_reads_desc),
+                            text = stringResource(R.string.relay_auth_trust_delivery_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Switch(
-                        checked = trustReads,
-                        onCheckedChange = { account.settings.changeRelayAuthTrustFollowsForReads(it) },
+                        checked = trustDelivery,
+                        onCheckedChange = { account.settings.changeRelayAuthTrustMessageDelivery(it) },
                     )
                 }
             }

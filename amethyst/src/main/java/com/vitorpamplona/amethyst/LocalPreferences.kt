@@ -162,7 +162,7 @@ private object PrefKeys {
     const val ALWAYS_ON_NOTIFICATION_SERVICE = "always_on_notification_service"
     const val DEFAULT_RELAY_AUTH_POLICY = "default_relay_auth_policy"
     const val RELAY_GROUP_VIEW_MODE = "relay_group_view_mode"
-    const val RELAY_AUTH_TRUST_FOLLOWS_FOR_READS = "relay_auth_trust_follows_for_reads"
+    const val RELAY_AUTH_TRUST_MESSAGE_DELIVERY = "relay_auth_trust_message_delivery"
     const val SPLIT_NOTIFICATIONS_ENABLED = "split_notifications_enabled"
     const val SHOW_MESSAGES_IN_NOTIFICATIONS = "show_messages_in_notifications"
 
@@ -518,7 +518,7 @@ object LocalPreferences {
                     putBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, settings.alwaysOnNotificationService.value)
                     putString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, settings.defaultRelayAuthPolicy.value.name)
                     putString(PrefKeys.RELAY_GROUP_VIEW_MODE, settings.relayGroupViewMode.value.name)
-                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_FOLLOWS_FOR_READS, settings.relayAuthTrustFollowsForReads.value)
+                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_DELIVERY, settings.relayAuthTrustMessageDelivery.value)
                     putBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, settings.splitNotificationsEnabled.value)
                     putBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, settings.showMessagesInNotifications.value)
                     // Any account that reaches a save has its notification filter in its
@@ -640,7 +640,7 @@ object LocalPreferences {
                             ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
                             ?: RelayAuthPolicy.TRUSTED_FOLLOWS
                     val relayGroupViewMode = RelayGroupViewMode.fromName(getString(PrefKeys.RELAY_GROUP_VIEW_MODE, null))
-                    val relayAuthTrustFollowsForReads = getBoolean(PrefKeys.RELAY_AUTH_TRUST_FOLLOWS_FOR_READS, false)
+                    val relayAuthTrustMessageDelivery = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_DELIVERY, false)
                     val splitNotificationsEnabled = getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)
                     val showMessagesInNotifications = getBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, true)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
@@ -850,7 +850,7 @@ object LocalPreferences {
                         alwaysOnNotificationService = MutableStateFlow(alwaysOnNotificationService),
                         defaultRelayAuthPolicy = MutableStateFlow(defaultRelayAuthPolicy),
                         relayGroupViewMode = MutableStateFlow(relayGroupViewMode),
-                        relayAuthTrustFollowsForReads = MutableStateFlow(relayAuthTrustFollowsForReads),
+                        relayAuthTrustMessageDelivery = MutableStateFlow(relayAuthTrustMessageDelivery),
                         splitNotificationsEnabled = MutableStateFlow(splitNotificationsEnabled),
                         showMessagesInNotifications = MutableStateFlow(showMessagesInNotifications),
                         backupUserMetadata = latestUserMetadataResolved,

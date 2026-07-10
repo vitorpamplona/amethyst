@@ -275,7 +275,7 @@ class AccountSettings(
     val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.TRUSTED_FOLLOWS),
     val relayGroupViewMode: MutableStateFlow<RelayGroupViewMode> = MutableStateFlow(RelayGroupViewMode.DEFAULT),
-    val relayAuthTrustFollowsForReads: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val relayAuthTrustMessageDelivery: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) : EphemeralChatRepository,
     RelayGroupRepository,
     PublicChatListRepository {
@@ -1526,9 +1526,9 @@ class AccountSettings(
         }
     }
 
-    fun changeRelayAuthTrustFollowsForReads(enabled: Boolean) {
-        if (relayAuthTrustFollowsForReads.value != enabled) {
-            relayAuthTrustFollowsForReads.tryEmit(enabled)
+    fun changeRelayAuthTrustMessageDelivery(enabled: Boolean) {
+        if (relayAuthTrustMessageDelivery.value != enabled) {
+            relayAuthTrustMessageDelivery.tryEmit(enabled)
             saveAccountSettings()
         }
     }

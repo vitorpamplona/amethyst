@@ -29,20 +29,20 @@ class RelayAuthResolverTest {
         isBlocked: Boolean = false,
         policy: RelayAuthPolicy = RelayAuthPolicy.TRUSTED_FOLLOWS,
         isInMyRelayList: Boolean = false,
-        servesFollowedWriteCounterparty: Boolean = false,
-        servesFollowedReadCounterparty: Boolean = false,
+        servesFollowedCounterparty: Boolean = false,
+        servesWriteCounterparty: Boolean = false,
         servesTrustedVenue: Boolean = false,
-        readTrustEnabled: Boolean = false,
+        messageDeliveryTrustEnabled: Boolean = false,
         hasAttributablePurpose: Boolean = true,
     ) = RelayAuthInputs(
         storedOverride = storedOverride,
         isBlocked = isBlocked,
         policy = policy,
         isInMyRelayList = isInMyRelayList,
-        servesFollowedWriteCounterparty = servesFollowedWriteCounterparty,
-        servesFollowedReadCounterparty = servesFollowedReadCounterparty,
+        servesFollowedCounterparty = servesFollowedCounterparty,
+        servesWriteCounterparty = servesWriteCounterparty,
         servesTrustedVenue = servesTrustedVenue,
-        readTrustEnabled = readTrustEnabled,
+        messageDeliveryTrustEnabled = messageDeliveryTrustEnabled,
         hasAttributablePurpose = hasAttributablePurpose,
     )
 
@@ -70,7 +70,7 @@ class RelayAuthResolverTest {
 
     @Test
     fun neverAndAlwaysAreUnconditional() {
-        assertEquals(RelayAuthVerdict.DENY, resolve(inputs(policy = RelayAuthPolicy.NEVER, servesFollowedWriteCounterparty = true)))
+        assertEquals(RelayAuthVerdict.DENY, resolve(inputs(policy = RelayAuthPolicy.NEVER, servesFollowedCounterparty = true)))
         assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(policy = RelayAuthPolicy.ALWAYS, hasAttributablePurpose = false)))
     }
 
@@ -81,24 +81,35 @@ class RelayAuthResolverTest {
     }
 
     @Test
-    fun trustedFollowsAllowsWriteToFollowedCounterparty() {
-        // Sending a DM / delivering a notification to someone I follow -> auto-auth.
-        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesFollowedWriteCounterparty = true)))
+    fun trustedFollowsAllowsAnyFollowedCounterparty() {
+        // Reading a followed author's outbox OR reaching them (DM/notification) -> auto-auth,
+        // independent of the delivery toggle.
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesFollowedCounterparty = true)))
     }
 
     @Test
-    fun trustedFollowsDoesNotAutoAllowReadUnlessSubToggleOn() {
-        // Reading a followed author's outbox: prompts by default (decision D, conservative)...
-        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(servesFollowedReadCounterparty = true, readTrustEnabled = false)))
-        // ...auto-auths only when the read sub-toggle is enabled.
-        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesFollowedReadCounterparty = true, readTrustEnabled = true)))
+    fun trustedFollowsAsksToMessageAStrangerUnlessDeliveryToggleOn() {
+        // Sending to someone I don't follow: prompts by default...
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(servesWriteCounterparty = true, messageDeliveryTrustEnabled = false)))
+        // ...auto-auths only when the "deliver my messages" toggle is enabled.
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesWriteCounterparty = true, messageDeliveryTrustEnabled = true)))
+    }
+
+    @Test
+    fun deliveryToggleDoesNotCoverReadingAStranger() {
+        // The delivery toggle is write-only: reading a non-followed author (no write counterparty)
+        // still prompts even with the toggle on.
+        assertEquals(
+            RelayAuthVerdict.ASK,
+            resolve(inputs(servesWriteCounterparty = false, servesFollowedCounterparty = false, messageDeliveryTrustEnabled = true)),
+        )
     }
 
     @Test
     fun trustedFollowsAllowsVenueYouJoinedOrFollow() {
         // A public chat / community / live stream you've joined (or whose owner you follow) —
-        // auto-auth for both reading and posting, regardless of the read sub-toggle.
-        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesTrustedVenue = true, readTrustEnabled = false)))
+        // auto-auth for both reading and posting, regardless of the delivery toggle.
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(servesTrustedVenue = true, messageDeliveryTrustEnabled = false)))
     }
 
     @Test

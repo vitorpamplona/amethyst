@@ -72,7 +72,7 @@ fun RelayAuthSubscription(
                         venueId in account.communityList.flowSet.value ||
                         venueOwnerPubkey(venueId)?.let { it in account.allFollows.flow.value.authors } == true
                 },
-                readTrustEnabled = { account.settings.relayAuthTrustFollowsForReads.value },
+                messageDeliveryTrustEnabled = { account.settings.relayAuthTrustMessageDelivery.value },
             )
         }
 

@@ -175,18 +175,19 @@ private fun RelayAuthPromptDialog(
                     onClick = { onChoice(UserAuthChoice.ALLOW_ONCE) },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringRes(R.string.relay_auth_allow_once)) }
-                // For a "download their posts" prompt, offer the broad rule: trust every relay that
-                // serves people you follow, so these read prompts stop appearing. Read-trust only
-                // applies under TRUSTED_FOLLOWS, so set both to make the promise hold on any policy.
-                if (primary?.kind == AuthPurposeKind.READ_OUTBOX) {
+                // For a DM/notification prompt, offer the broad rule: always log in to deliver my
+                // messages to whoever I'm talking to, so these prompts stop appearing. That trust
+                // only applies under TRUSTED_FOLLOWS, so set both to make the promise hold on any
+                // policy.
+                if (primary?.kind == AuthPurposeKind.SEND_DM || primary?.kind == AuthPurposeKind.NOTIFY_INBOX) {
                     FilledTonalButton(
                         onClick = {
                             accountViewModel.account.settings.changeDefaultRelayAuthPolicy(RelayAuthPolicy.TRUSTED_FOLLOWS)
-                            accountViewModel.account.settings.changeRelayAuthTrustFollowsForReads(true)
+                            accountViewModel.account.settings.changeRelayAuthTrustMessageDelivery(true)
                             onChoice(UserAuthChoice.ALLOW_ONCE)
                         },
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text(stringRes(R.string.relay_auth_always_allow_follows)) }
+                    ) { Text(stringRes(R.string.relay_auth_always_deliver)) }
                 }
                 FilledTonalButton(
                     onClick = { onChoice(UserAuthChoice.ALWAYS_ALLOW) },

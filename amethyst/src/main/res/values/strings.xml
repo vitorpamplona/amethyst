@@ -827,8 +827,8 @@
     <string name="relay_auth_policy_if_in_my_list_desc">Only authenticate with relays in your relay list</string>
     <string name="relay_auth_policy_trusted_follows">My relays and people I follow</string>
     <string name="relay_auth_policy_trusted_follows_desc">Also authenticate with relays that serve people you follow, such as sending a message to a friend. You\'ll be asked about anyone else.</string>
-    <string name="relay_auth_trust_reads">Also log in to read their posts</string>
-    <string name="relay_auth_trust_reads_desc">On its own, the option above only logs in to send messages or notifications to people you follow. Turn this on to also log in when downloading their posts.</string>
+    <string name="relay_auth_trust_delivery">Also log in to deliver my messages</string>
+    <string name="relay_auth_trust_delivery_desc">On its own, the option above only logs in for people you follow. Turn this on to also log in to send DMs, replies or notifications to anyone you\'re talking to, even if you don\'t follow them.</string>
     <string name="relay_auth_prompt_title">Confirm it\'s you to this relay?</string>
     <string name="relay_auth_prompt_message">This relay wants to confirm it\'s really you first. Its operator will see which account you are.</string>
     <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
@@ -853,7 +853,7 @@
     <string name="relay_auth_reason_my_own_relay">Connect to your own relay</string>
     <string name="relay_auth_allow_once">Allow once</string>
     <string name="relay_auth_always_allow">Always allow this relay</string>
-    <string name="relay_auth_always_allow_follows">Always allow my follows\' relays</string>
+    <string name="relay_auth_always_deliver">Always deliver my messages</string>
     <string name="relay_auth_block">Block this relay</string>
     <string name="relay_auth_per_relay_overrides">Per-relay overrides</string>
     <string name="relay_auth_forget">Forget</string>

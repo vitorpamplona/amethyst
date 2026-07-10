@@ -44,7 +44,7 @@ class RelayAuthPermissionLedger(
     val isBlocked: (String) -> Boolean = { false },
     val isFollowed: (String) -> Boolean = { false },
     val isTrustedVenue: (String) -> Boolean = { false },
-    val readTrustEnabled: () -> Boolean = { false },
+    val messageDeliveryTrustEnabled: () -> Boolean = { false },
 ) {
     /** The authorization verdict for [ctx], taking the challenge's purpose into account. */
     suspend fun decide(ctx: RelayAuthContext): RelayAuthVerdict {
@@ -54,21 +54,23 @@ class RelayAuthPermissionLedger(
                 isBlocked = isBlocked(ctx.relayUrl),
                 policy = globalPolicy(),
                 isInMyRelayList = isInMyRelayList(ctx.relayUrl),
-                servesFollowedWriteCounterparty =
+                // A followed user is a counterparty here, whether we're reading them (outbox) or
+                // reaching them (DM / notification inbox).
+                servesFollowedCounterparty =
+                    ctx.purposes.any { p -> p.counterparties.any(isFollowed) },
+                // This relay is an inbox for someone we're messaging (DM or notification), follow
+                // or not — the target of the "deliver my messages" toggle.
+                servesWriteCounterparty =
                     ctx.purposes.any { p ->
                         (p.kind == AuthPurposeKind.SEND_DM || p.kind == AuthPurposeKind.NOTIFY_INBOX) &&
-                            p.counterparties.any(isFollowed)
-                    },
-                servesFollowedReadCounterparty =
-                    ctx.purposes.any { p ->
-                        p.kind == AuthPurposeKind.READ_OUTBOX && p.counterparties.any(isFollowed)
+                            p.counterparties.isNotEmpty()
                     },
                 servesTrustedVenue =
                     ctx.purposes.any { p ->
                         (p.kind == AuthPurposeKind.POST_VENUE || p.kind == AuthPurposeKind.READ_VENUE) &&
                             p.venues.any(isTrustedVenue)
                     },
-                readTrustEnabled = readTrustEnabled(),
+                messageDeliveryTrustEnabled = messageDeliveryTrustEnabled(),
                 hasAttributablePurpose =
                     ctx.purposes.any {
                         it.kind == AuthPurposeKind.MY_OWN_RELAY ||

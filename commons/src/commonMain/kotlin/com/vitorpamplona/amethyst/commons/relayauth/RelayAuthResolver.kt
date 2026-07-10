@@ -29,13 +29,14 @@ package com.vitorpamplona.amethyst.commons.relayauth
  * @param isBlocked the relay is on the user's blocked-relay list (kind 10006).
  * @param policy the global [RelayAuthPolicy].
  * @param isInMyRelayList the relay is in the user's own relay list.
- * @param servesFollowedWriteCounterparty a followed user is a counterparty of a *write* purpose
- *   (send DM / deliver notification) for this relay.
- * @param servesFollowedReadCounterparty a followed user is a counterparty of a *read* purpose
- *   (download their outbox) for this relay.
+ * @param servesFollowedCounterparty a user the person follows is a counterparty for this relay —
+ *   whether they're reading that user (their outbox) or reaching them (DM / notification inbox).
+ * @param servesWriteCounterparty this relay serves the inbox of *someone the user is sending to*
+ *   (a DM or a notification), whether or not that person is followed.
  * @param servesTrustedVenue this relay hosts a venue (public chat, community, or live stream) the
  *   user has joined, or whose owner they follow. Trusts both reading and posting to it.
- * @param readTrustEnabled the "also trust follows' outboxes when reading" sub-toggle.
+ * @param messageDeliveryTrustEnabled the "also log in to deliver my messages to anyone I'm talking
+ *   to" toggle, which extends trust to [servesWriteCounterparty] relays beyond the follow graph.
  * @param hasAttributablePurpose we know *why* this relay wants auth (so a prompt can explain it).
  *   When false, an unresolved challenge is denied silently rather than prompting.
  */
@@ -44,10 +45,10 @@ data class RelayAuthInputs(
     val isBlocked: Boolean,
     val policy: RelayAuthPolicy,
     val isInMyRelayList: Boolean,
-    val servesFollowedWriteCounterparty: Boolean,
-    val servesFollowedReadCounterparty: Boolean,
+    val servesFollowedCounterparty: Boolean,
+    val servesWriteCounterparty: Boolean,
     val servesTrustedVenue: Boolean,
-    val readTrustEnabled: Boolean,
+    val messageDeliveryTrustEnabled: Boolean,
     val hasAttributablePurpose: Boolean,
 )
 
@@ -61,8 +62,9 @@ data class RelayAuthInputs(
  *    - [RelayAuthPolicy.ALWAYS] → ALLOW
  *    - [RelayAuthPolicy.IF_IN_MY_LIST] → ALLOW if in my list, else fall through
  *    - [RelayAuthPolicy.TRUSTED_FOLLOWS] → ALLOW if in my list, a venue the user joined/follows is
- *      served, a followed counterparty is served for a write purpose (DM/notification), or (when
- *      [RelayAuthInputs.readTrustEnabled]) for a read purpose; else fall through
+ *      served, a followed user is a counterparty (reading them or reaching them), or (when
+ *      [RelayAuthInputs.messageDeliveryTrustEnabled]) the relay serves the inbox of anyone the user
+ *      is messaging; else fall through
  * 4. Fall-through → [RelayAuthVerdict.ASK] when the purpose is known, otherwise DENY.
  */
 object RelayAuthResolver {
@@ -84,8 +86,8 @@ object RelayAuthResolver {
             RelayAuthPolicy.TRUSTED_FOLLOWS ->
                 if (inputs.isInMyRelayList ||
                     inputs.servesTrustedVenue ||
-                    inputs.servesFollowedWriteCounterparty ||
-                    (inputs.readTrustEnabled && inputs.servesFollowedReadCounterparty)
+                    inputs.servesFollowedCounterparty ||
+                    (inputs.messageDeliveryTrustEnabled && inputs.servesWriteCounterparty)
                 ) {
                     RelayAuthVerdict.ALLOW
                 } else {
