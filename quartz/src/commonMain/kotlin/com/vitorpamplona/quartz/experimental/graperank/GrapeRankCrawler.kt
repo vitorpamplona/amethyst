@@ -44,6 +44,8 @@ import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -57,6 +59,7 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -278,7 +281,15 @@ class GrapeRankCrawler(
         verifyNanos.store(0)
         insertNanos.store(0)
         eventsStored.store(0)
-        return CrawlRun(observer, builder).run()
+        // Hop off the caller's dispatcher: a CLI calls this from runBlocking's
+        // SINGLE-THREADED event loop, and Phase B runs thousands of concurrent
+        // drain-unit coroutines (each with a timeout timer, a channel, REQ JSON
+        // encoding, signature verifies and store writes). On one thread those
+        // timers fire late and batch walls inflate ~5x — measured 111 users/s
+        // with the lone thread pegged at 100% while 3 cores idled. IO (not
+        // Default): the store's blocking SQLite calls must not starve the
+        // small cores-sized pool.
+        return withContext(Dispatchers.IO) { CrawlRun(observer, builder).run() }
     }
 
     /**
