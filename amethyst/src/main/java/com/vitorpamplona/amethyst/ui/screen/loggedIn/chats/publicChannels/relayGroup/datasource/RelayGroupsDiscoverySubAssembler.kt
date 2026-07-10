@@ -23,11 +23,18 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByAuthors
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.relayGroupChannelsByRelay
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import kotlinx.coroutines.Dispatchers
@@ -46,13 +53,52 @@ class RelayGroupsDiscoverySubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         val feedSettings = key.followsPerRelay()
+        val defaultSince = key.feedStates.relayGroupsDiscoveryFeed.lastNoteCreatedAtIfFilled()
 
-        return makeRelayGroupsDiscoveryFilter(
-            feedSettings,
-            since,
-            key.feedStates.relayGroupsDiscoveryFeed.lastNoteCreatedAtIfFilled(),
-        )
+        val base = makeRelayGroupsDiscoveryFilter(feedSettings, since, defaultSince)
+
+        // The follow-list filter sets resolve their relays via the outbox model (a follow's own
+        // publish relays), but a NIP-29 roster (39001/39002) lives ONLY on the group's host relay.
+        // So a follow who is an admin/member of a group never surfaces unless we also ask that host
+        // relay for `#p:<follows>` rosters. Without this, All-Follows shows nothing until the user
+        // bounces through Global (which pulls the whole directory) — the reported bug.
+        val (follows, alreadyQueried) =
+            when (feedSettings) {
+                is AllFollowsTopNavPerRelayFilterSet ->
+                    feedSettings.set.values.flatMapTo(HashSet<HexKey>()) { it.authors.orEmpty() } to feedSettings.set.keys
+                is AuthorsTopNavPerRelayFilterSet ->
+                    feedSettings.set.values.flatMapTo(HashSet<HexKey>()) { it.authors } to feedSettings.set.keys
+                else -> return base
+            }
+        if (follows.isEmpty()) return base
+
+        // Query the follows as `#p` against every group-host relay we already know about (joined via
+        // kind-10009 + favorited via kind-10012), minus the relays the outbox filter already covers.
+        val hostRelays = key.groupHostRelays() - alreadyQueried
+        if (hostRelays.isEmpty()) return base
+
+        val channelsByRelay = relayGroupChannelsByRelay()
+        val extra =
+            hostRelays.flatMap { relay ->
+                filterRelayGroupsByAuthors(
+                    relay = relay,
+                    authors = follows,
+                    since = since?.get(relay)?.time ?: defaultSince,
+                    cachedChannels = channelsByRelay[relay].orEmpty(),
+                )
+            }
+
+        return base + extra
     }
+
+    /** Relays that host NIP-29 groups the user is connected to: joined (kind-10009) + favorited (kind-10012). */
+    private fun RelayGroupsDiscoveryQueryState.groupHostRelays(): Set<NormalizedRelayUrl> =
+        buildSet {
+            account.relayGroupList.liveRelayGroupServers.value.forEach { server ->
+                RelayUrlNormalizer.normalizeOrNull(server)?.let(::add)
+            }
+            addAll(account.relayFeedsList.flow.value)
+        }
 
     override fun user(key: RelayGroupsDiscoveryQueryState) = key.account.userProfile()
 
@@ -97,6 +143,18 @@ class RelayGroupsDiscoverySubAssembler(
                         if (bundle.any { it.event is GroupAdminsEvent || it.event is GroupMembersEvent }) {
                             invalidateFilters()
                         }
+                    }
+                },
+                // Joining/leaving a group or favoriting a relay changes the host-relay set we probe
+                // for follow rosters above, so re-assemble when either list moves.
+                key.account.scope.launch(Dispatchers.IO) {
+                    key.account.relayGroupList.liveRelayGroupServers.sample(500).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+                key.account.scope.launch(Dispatchers.IO) {
+                    key.account.relayFeedsList.flow.sample(500).collectLatest {
+                        invalidateFilters()
                     }
                 },
             )
