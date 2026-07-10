@@ -858,7 +858,16 @@ class Account(
         val queue = powQueue() ?: return false
         val finalTemplate = withFinalSignerTags(template)
         val record = replay?.toRecord(RandomInstance.randomChars(16), signer.pubKey, finalTemplate, difficulty)
-        queue.enqueue(finalTemplate, signer.pubKey, difficulty, record, onMined)
+        queue.enqueue(
+            template = finalTemplate,
+            pubKey = signer.pubKey,
+            difficulty = difficulty,
+            persistAs = record,
+            // NIP-13 recommends refreshing created_at while mining; scheduled
+            // posts keep their intentional future timestamp.
+            refreshCreatedAtOnStart = replay !is PoWReplay.Schedule,
+            onMined = onMined,
+        )
         return true
     }
 

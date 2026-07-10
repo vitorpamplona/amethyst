@@ -126,12 +126,19 @@ class PoWPublishQueue(
      * id) until it finishes or is cancelled, so it can be restored after
      * process death. Re-enqueueing an id already in the queue is a no-op —
      * that makes restore-on-login idempotent.
+     *
+     * [refreshCreatedAtOnStart] re-stamps the template's created_at to "now"
+     * when a worker picks the job up — NIP-13 recommends updating created_at
+     * while mining, and a job that waited in the queue (or was restored after
+     * a process death) would otherwise publish visibly in the past. Must stay
+     * false for scheduled posts, whose future created_at is intentional.
      */
     fun <T : Event> enqueue(
         template: EventTemplate<T>,
         pubKey: HexKey,
         difficulty: Int,
         persistAs: PersistedPoWJob? = null,
+        refreshCreatedAtOnStart: Boolean = false,
         onMined: suspend (EventTemplate<T>) -> Unit,
     ) = addJob(
         id = persistAs?.id ?: RandomInstance.randomChars(16),
@@ -139,7 +146,13 @@ class PoWPublishQueue(
         difficulty = difficulty,
         persistAs = persistAs,
     ) { isActive ->
-        val mined = PoWMiner.run(template, pubKey, difficulty, isActive)
+        val toMine =
+            if (refreshCreatedAtOnStart) {
+                EventTemplate<T>(TimeUtils.now(), template.kind, template.tags, template.content)
+            } else {
+                template
+            }
+        val mined = PoWMiner.run(toMine, pubKey, difficulty, isActive)
         // frees the mining worker: signing may wait on an external signer
         // (Amber/bunker) and broadcasting is IO, neither belongs on the pool.
         scope.launch { onMined(mined) }

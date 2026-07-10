@@ -63,7 +63,16 @@ class PowJobRestorer(
                 return@forEach
             }
 
-            queue.enqueue(template, account.signer.pubKey, record.difficulty, persistAs = record) { mined ->
+            queue.enqueue(
+                template = template,
+                pubKey = account.signer.pubKey,
+                difficulty = record.difficulty,
+                persistAs = record,
+                // a restored job may be hours old; publish with a fresh
+                // created_at (NIP-13 recommendation) — except scheduled posts,
+                // whose future created_at is the point.
+                refreshCreatedAtOnStart = record.replayType != PersistedPoWJob.REPLAY_SCHEDULE,
+            ) { mined ->
                 replay(account, record, mined)
             }
         }

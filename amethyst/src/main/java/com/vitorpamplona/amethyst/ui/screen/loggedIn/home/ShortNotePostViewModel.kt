@@ -1055,7 +1055,10 @@ open class ShortNotePostViewModel :
             val enqueued =
                 powDifficulty != null &&
                     accountViewModel.account.mineInBackground(template.kind, powDifficulty) { isActive ->
-                        val mined = PoWMiner.run(template, anonSigner.pubKey, powDifficulty, isActive)
+                        // fresh created_at at mining start (NIP-13 recommendation):
+                        // the job may have waited in the queue behind other posts.
+                        val fresh = EventTemplate<Event>(TimeUtils.now(), template.kind, template.tags, template.content)
+                        val mined = PoWMiner.run(fresh, anonSigner.pubKey, powDifficulty, isActive)
                         accountViewModel.account.signAnonymouslyAndBroadcast(mined, extraNotesToBroadcast, anonSigner)
                     }
             if (!enqueued) {

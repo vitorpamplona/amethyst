@@ -176,6 +176,24 @@ class PoWPublishQueueTest {
         }
 
     @Test
+    fun refreshCreatedAtReStampsAtMiningStart() =
+        runTest {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val queue = PoWPublishQueue(scope, maxConcurrent = 1)
+            val mined = CompletableDeferred<EventTemplate<TextNoteEvent>>()
+
+            // template stamped in 2023; refresh must bring it to "now"
+            queue.enqueue(template, pubKey, difficulty = 10, refreshCreatedAtOnStart = true) { mined.complete(it) }
+
+            val result = withContext(Dispatchers.Default) { withTimeout(60_000) { mined.await() } }
+            assertTrue(
+                result.createdAt > template.createdAt,
+                "created_at must be re-stamped at mining start (was ${result.createdAt})",
+            )
+            scope.cancel()
+        }
+
+    @Test
     fun duplicateJobIdsAreEnqueuedOnce() =
         runTest {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
