@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
+import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,7 +50,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -57,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
@@ -162,7 +167,7 @@ fun ConcordChannelListScreen(
     }
 }
 
-/** Shows a freshly minted invite link with a copy-to-clipboard action. */
+/** Shows a freshly minted invite link as a QR code with copy + share actions. */
 @Composable
 private fun InviteLinkDialog(
     link: String,
@@ -170,26 +175,44 @@ private fun InviteLinkDialog(
 ) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_title)) },
         text = {
-            Text(
-                text = link,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                QrCodeDrawer(contents = link, modifier = Modifier.size(220.dp))
+                Text(
+                    text = link,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            }
         },
         confirmButton = {
+            TextButton(onClick = {
+                val send =
+                    Intent().apply {
+                        action = Intent.ACTION_SEND
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, link)
+                    }
+                context.startActivity(Intent.createChooser(send, stringRes(context, com.vitorpamplona.amethyst.R.string.concord_invite_title)))
+                onDismiss()
+            }) {
+                Text(stringRes(com.vitorpamplona.amethyst.R.string.quick_action_share))
+            }
+        },
+        dismissButton = {
             TextButton(onClick = {
                 scope.launch { clipboard.setText(link) }
                 onDismiss()
             }) {
                 Text(stringRes(com.vitorpamplona.amethyst.R.string.copy_to_clipboard))
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(com.vitorpamplona.amethyst.R.string.cancel)) }
         },
     )
 }
