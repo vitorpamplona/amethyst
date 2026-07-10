@@ -45,7 +45,7 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|channels|send|read|invite|join>",
+            "concord <create|list|channels|send|read|invite|join|roles|role|grant|ban|unban>",
             mapOf(
                 "create" to { rest -> create(dataDir, rest) },
                 "list" to { rest -> list(dataDir, rest) },
@@ -54,6 +54,11 @@ object ConcordCommands {
                 "read" to { rest -> ConcordChannelCommands.read(dataDir, rest) },
                 "invite" to { rest -> invite(dataDir, rest) },
                 "join" to { rest -> join(dataDir, rest) },
+                "roles" to { rest -> ConcordModCommands.roles(dataDir, rest) },
+                "role" to { rest -> ConcordModCommands.defineRole(dataDir, rest) },
+                "grant" to { rest -> ConcordModCommands.grant(dataDir, rest) },
+                "ban" to { rest -> ConcordModCommands.ban(dataDir, rest) },
+                "unban" to { rest -> ConcordModCommands.unban(dataDir, rest) },
             ),
         )
 
