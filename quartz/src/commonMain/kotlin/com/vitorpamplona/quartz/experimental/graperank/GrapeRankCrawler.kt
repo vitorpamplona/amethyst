@@ -208,6 +208,27 @@ class GrapeRankCrawler(
          * permanently ignores an author's advertised home. See RelayReachabilityStore.
          */
         val knownDeadRelays: Set<NormalizedRelayUrl> = emptySet(),
+        /**
+         * Relays a prior run (or another monitor) proved REACHABLE within the
+         * reachability cache's TTL. Seeded into the crawl-wide warm pool at start, so
+         * their DNS + TCP + TLS + WS-upgrade cost is paid ONCE, in one parallel
+         * connection storm, before the first round — instead of serially inside each
+         * drain that first routes to them. See [preconnectCap].
+         */
+        val knownLiveRelays: Set<NormalizedRelayUrl> = emptySet(),
+        /**
+         * Cap on the crawl-wide warm pool — the mass pre-connect. The client tears a
+         * relay's socket down ~300ms after its last subscription closes, so without a
+         * warm hold every round re-pays the full connect latency per outbox relay.
+         * The warm pool keeps a do-nothing subscription (never-matching filter, EOSEs
+         * instantly, streams nothing) open to up to this many relays for the whole
+         * crawl: busiest proven relays first, then next-round outbox candidates, then
+         * [knownLiveRelays]. Each warm relay holds one socket (one file descriptor)
+         * and one dormant sub — size against the process FD budget, and keep it above
+         * the transport's concurrent-handshake cap only if FDs allow. `<= 0` falls
+         * back to warming just the busiest [WARM_POOL_SIZE] relays (the old behavior).
+         */
+        val preconnectCap: Int = 2500,
     )
 
     /** What the crawl fetched — the counters the caller reports and the graph is built from. */
@@ -483,6 +504,41 @@ class GrapeRankCrawler(
                 .take(cap)
                 .map { it.key }
                 .toList()
+
+        /**
+         * Refresh the crawl-wide warm pool — the mass pre-connect. Re-subscribing the
+         * same [WARM_SUB_ID] with a new relay set just updates the desired-relay set:
+         * relays already warm stay connected, new ones start their handshake NOW (in
+         * parallel, in the background), so by the time a drain routes to them the
+         * socket is already open. Priority under [Config.preconnectCap]: busiest
+         * proven-live relays, then advertised-but-not-yet-contacted outboxes (exactly
+         * the relays the next rounds will dial), then the prior run's known-live
+         * universe. Dead relays are always excluded so the pool never redials them.
+         */
+        fun refreshWarmPool() {
+            val massCap = config.preconnectCap
+            val cap = if (massCap > 0) massCap else WARM_POOL_SIZE
+            val warm = LinkedHashSet<NormalizedRelayUrl>(cap * 2)
+            warm.addAll(topLiveRelays(cap))
+            if (massCap > 0) {
+                if (warm.size < cap) {
+                    // Advertised write relays not yet proven live — next drains' targets.
+                    val advertised = writeRelayFreq.snapshot().entries.sortedByDescending { it.value }
+                    for ((relay, _) in advertised) {
+                        if (warm.size >= cap) break
+                        if (!isDead(relay)) warm.add(relay)
+                    }
+                }
+                if (warm.size < cap) {
+                    for (relay in config.knownLiveRelays) {
+                        if (warm.size >= cap) break
+                        if (!isDead(relay)) warm.add(relay)
+                    }
+                }
+            }
+            if (warm.isEmpty()) return
+            client.subscribe(WARM_SUB_ID, warm.associateWith { WARM_FILTERS }, null)
+        }
 
         /**
          * Background reachability culler. Cheaply TCP-probes the relays we've learned —
@@ -1425,6 +1481,19 @@ class GrapeRankCrawler(
             // by scope.cancel() at crawl end.
             config.reachabilityProbe?.let { probe -> scope.launch { cullUnreachable(probe) } }
 
+            // Mass pre-connect: start the handshake to every relay a prior run proved
+            // live NOW, in one parallel storm, so the connect wait is paid once —
+            // concurrently, before the first drain — instead of serially inside each
+            // drain that first routes to a relay. The subscribe returns immediately;
+            // sockets ramp in the background while round 1's discovery queries run.
+            if (config.preconnectCap > 0 && config.knownLiveRelays.isNotEmpty()) {
+                log(
+                    "[graperank] pre-connecting up to ${config.preconnectCap} of " +
+                        "${config.knownLiveRelays.size} known-live relays",
+                )
+                refreshWarmPool()
+            }
+
             while (rounds < config.maxRounds) {
                 // Fold in whatever the parked (slow-but-alive) relays have delivered
                 // since the last round — their late contact lists expand the frontier
@@ -1453,12 +1522,11 @@ class GrapeRankCrawler(
                 progBaseDone = done.size
                 progConverging = false
 
-                // Refresh the warm pool to this round's busiest relays and keep that
-                // subscription open — reusing the same subId just updates the
-                // desired-relay set, so these sockets stay up across the round.
-                topLiveRelays(WARM_POOL_SIZE).takeIf { it.isNotEmpty() }?.let { warm ->
-                    client.subscribe(WARM_SUB_ID, warm.associateWith { WARM_FILTERS }, null)
-                }
+                // Refresh the warm pool for this round and keep that subscription open —
+                // reusing the same subId just updates the desired-relay set, so warm
+                // sockets survive across rounds and newly-learned outbox relays start
+                // connecting in the background before Phase B routes to them.
+                refreshWarmPool()
 
                 val discoveredBefore = hopOf.size
                 val fedBefore = contactListsFed
@@ -1961,10 +2029,12 @@ class GrapeRankCrawler(
         // Most-used write relays kept as the known-good backbone for retrying users.
         private const val BACKBONE_SIZE = 30
 
-        // Warm pool: hold a do-nothing subscription open to the busiest relays for
-        // the whole crawl, so the connections we reuse every round survive the
-        // between-round routing gaps. The filter matches an impossible event id, so
-        // the relay EOSEs immediately and streams nothing — it only keeps sockets warm.
+        // Warm pool: hold a do-nothing subscription open to relays for the whole
+        // crawl, so their connections survive the between-round routing gaps. The
+        // filter matches an impossible event id, so the relay EOSEs immediately and
+        // streams nothing — it only keeps sockets warm. With Config.preconnectCap > 0
+        // the pool covers the whole candidate universe (mass pre-connect); this
+        // constant is the busiest-relays fallback size when that is disabled.
         private const val WARM_POOL_SIZE = 20
         private const val WARM_SUB_ID = "graperank-warm"
         private val WARM_FILTERS = listOf(Filter(ids = listOf("0".repeat(64))))

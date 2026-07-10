@@ -609,6 +609,14 @@ private fun printUsage() {
         |                                              new/changed ranks >= --min-rank (default 2), skips
         |                                              unchanged, and retracts (kind:5) any card whose
         |                                              target left the graph or fell below the cutoff.
+        |  graperank crawl [OBSERVER]                 network only: crawl the WoT graph (kind 3/10000/
+        |    [--max-hops N] [--preconnect-cap N]      1984/10002) into the local store without scoring.
+        |    [--no-preconnect]                        Pre-connects every known-live relay in one parallel
+        |                                              storm (seeded from the reachability cache).
+        |  graperank probe [--timeout SECS]           relay census: mass-connect every relay the store
+        |    [--concurrency N]                        knows and record live/dead + measured rtt-open into
+        |                                              the reachability cache (NIP-66 kind:30166), so the
+        |                                              next crawl skips dead relays and waits once.
         |  graperank update [--down] [--up]           refresh every locally-known author's WoT record kinds
         |    [--no-sync-deletions] [--timeout SECS]     (0/3/10002/1984) from their own outbox: reads all
         |    [--relay-concurrency N] [--author-chunk N] kind:10002 in the store, groups authors by write
