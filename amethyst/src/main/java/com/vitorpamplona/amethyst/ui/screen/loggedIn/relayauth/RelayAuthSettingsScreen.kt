@@ -20,27 +20,29 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relayauth
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +55,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -78,6 +83,9 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.PolicyCard
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsDivider
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSwitchTile
 import com.vitorpamplona.amethyst.ui.theme.MediumRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -126,138 +134,148 @@ fun RelayAuthSettingsScreen(
                 (perRelayOverrides.keys + rationales.keys + lastUsed.keys).toSortedSet().toList()
             }
 
-        // LazyColumn so only the visible relay rows compose (each builds a NIP-11 icon and avatars,
-        // which is real per-row work) instead of all of them on first frame.
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+        // LazyColumn so only the visible per-relay rows compose (each builds a NIP-11 icon and
+        // avatars — real per-row work). Blocks 1 & 2 are small and fixed, so they share one item.
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        ) {
             item {
-                SectionHeader(stringResource(R.string.relay_auth_global_policy))
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    RelayAuthPolicy.entries.forEach { policy ->
-                        val (titleRes, descRes, symbol) =
-                            when (policy) {
-                                RelayAuthPolicy.ALWAYS ->
-                                    Triple(
-                                        R.string.relay_auth_policy_always,
-                                        R.string.relay_auth_policy_always_desc,
-                                        MaterialSymbols.LockOpen,
-                                    )
-                                RelayAuthPolicy.NEVER ->
-                                    Triple(
-                                        R.string.relay_auth_policy_never,
-                                        R.string.relay_auth_policy_never_desc,
-                                        MaterialSymbols.Lock,
-                                    )
-                                RelayAuthPolicy.CUSTOM ->
-                                    Triple(
-                                        R.string.relay_auth_policy_custom,
-                                        R.string.relay_auth_policy_custom_desc,
-                                        MaterialSymbols.Tune,
-                                    )
-                            }
-                        PolicyCard(
-                            selected = globalPolicy == policy,
-                            symbol = symbol,
-                            label = stringResource(titleRes),
-                            description = stringResource(descRes),
-                            onClick = { account.settings.changeDefaultRelayAuthPolicy(policy) },
-                        )
+                Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                    // Block 1: when to authenticate (the mode).
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GroupHeader(stringResource(R.string.relay_auth_global_policy))
+                        RelayAuthPolicy.entries.forEach { policy ->
+                            val (titleRes, descRes, symbol) =
+                                when (policy) {
+                                    RelayAuthPolicy.ALWAYS ->
+                                        Triple(R.string.relay_auth_policy_always, R.string.relay_auth_policy_always_desc, MaterialSymbols.LockOpen)
+                                    RelayAuthPolicy.NEVER ->
+                                        Triple(R.string.relay_auth_policy_never, R.string.relay_auth_policy_never_desc, MaterialSymbols.Lock)
+                                    RelayAuthPolicy.CUSTOM ->
+                                        Triple(R.string.relay_auth_policy_custom, R.string.relay_auth_policy_custom_desc, MaterialSymbols.Tune)
+                                }
+                            PolicyCard(
+                                selected = globalPolicy == policy,
+                                symbol = symbol,
+                                label = stringResource(titleRes),
+                                description = stringResource(descRes),
+                                onClick = { account.settings.changeDefaultRelayAuthPolicy(policy) },
+                            )
+                        }
                     }
-                }
-            }
 
-            if (globalPolicy == RelayAuthPolicy.CUSTOM) {
-                item {
-                    val myRelays by account.settings.relayAuthTrustMyRelaysAndVenues.collectAsState()
-                    val readFollows by account.settings.relayAuthTrustReadFollows.collectAsState()
-                    val messageFollows by account.settings.relayAuthTrustMessageFollows.collectAsState()
-                    val messageStrangers by account.settings.relayAuthTrustMessageStrangers.collectAsState()
+                    // Block 2: what to log in to (the custom toggles), as settings switch tiles.
+                    if (globalPolicy == RelayAuthPolicy.CUSTOM) {
+                        val myRelays by account.settings.relayAuthTrustMyRelaysAndVenues.collectAsState()
+                        val readFollows by account.settings.relayAuthTrustReadFollows.collectAsState()
+                        val messageFollows by account.settings.relayAuthTrustMessageFollows.collectAsState()
+                        val messageStrangers by account.settings.relayAuthTrustMessageStrangers.collectAsState()
 
-                    Column {
-                        SectionHeader(stringResource(R.string.relay_auth_custom_section))
-                        AuthToggleRow(
-                            title = stringResource(R.string.relay_auth_toggle_my_relays),
-                            description = stringResource(R.string.relay_auth_toggle_my_relays_desc),
-                            checked = myRelays,
-                            onCheckedChange = { account.settings.changeRelayAuthTrustMyRelaysAndVenues(it) },
-                        )
-                        AuthToggleRow(
-                            title = stringResource(R.string.relay_auth_toggle_read_follows),
-                            description = stringResource(R.string.relay_auth_toggle_read_follows_desc),
-                            checked = readFollows,
-                            onCheckedChange = { account.settings.changeRelayAuthTrustReadFollows(it) },
-                        )
-                        AuthToggleRow(
-                            title = stringResource(R.string.relay_auth_toggle_message_follows),
-                            description = stringResource(R.string.relay_auth_toggle_message_follows_desc),
-                            checked = messageFollows,
-                            onCheckedChange = { account.settings.changeRelayAuthTrustMessageFollows(it) },
-                        )
-                        AuthToggleRow(
-                            title = stringResource(R.string.relay_auth_toggle_message_strangers),
-                            description = stringResource(R.string.relay_auth_toggle_message_strangers_desc),
-                            checked = messageStrangers,
-                            onCheckedChange = { account.settings.changeRelayAuthTrustMessageStrangers(it) },
-                        )
+                        SettingsSection(R.string.relay_auth_custom_section) {
+                            SettingsSwitchTile(
+                                icon = MaterialSymbols.Dns,
+                                title = R.string.relay_auth_toggle_my_relays,
+                                description = R.string.relay_auth_toggle_my_relays_desc,
+                                checked = myRelays,
+                                onCheckedChange = { account.settings.changeRelayAuthTrustMyRelaysAndVenues(it) },
+                            )
+                            SettingsDivider()
+                            SettingsSwitchTile(
+                                icon = MaterialSymbols.Download,
+                                title = R.string.relay_auth_toggle_read_follows,
+                                description = R.string.relay_auth_toggle_read_follows_desc,
+                                checked = readFollows,
+                                onCheckedChange = { account.settings.changeRelayAuthTrustReadFollows(it) },
+                            )
+                            SettingsDivider()
+                            SettingsSwitchTile(
+                                icon = MaterialSymbols.Mail,
+                                title = R.string.relay_auth_toggle_message_follows,
+                                description = R.string.relay_auth_toggle_message_follows_desc,
+                                checked = messageFollows,
+                                onCheckedChange = { account.settings.changeRelayAuthTrustMessageFollows(it) },
+                            )
+                            SettingsDivider()
+                            SettingsSwitchTile(
+                                icon = MaterialSymbols.Public,
+                                title = R.string.relay_auth_toggle_message_strangers,
+                                description = R.string.relay_auth_toggle_message_strangers_desc,
+                                checked = messageStrangers,
+                                onCheckedChange = { account.settings.changeRelayAuthTrustMessageStrangers(it) },
+                            )
+                        }
                     }
-                }
-            }
 
-            item {
-                HorizontalDivider(thickness = 4.dp, modifier = Modifier.padding(vertical = 8.dp))
-                SectionHeader(stringResource(R.string.relay_auth_per_relay_overrides))
+                    // Block 3 header — its rows are the lazy items below.
+                    GroupHeader(stringResource(R.string.relay_auth_per_relay_overrides))
+                }
+                Spacer(Modifier.height(8.dp))
             }
 
             if (relayUrls.isEmpty()) {
                 item {
-                    Text(
-                        text = stringResource(R.string.relay_auth_no_overrides),
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-                    )
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.relay_auth_no_overrides),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
                 }
             } else {
+                // Each row is its own lazy item but shares one rounded-card background: the first/last
+                // clip the top/bottom corners so the contiguous rows read as a single settings card.
                 itemsIndexed(relayUrls, key = { _, url -> url }) { index, url ->
-                    // Divider between rows only — no trailing one after the last row.
-                    if (index > 0) HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
-                    RelayRow(
-                        url = url,
-                        decision = perRelayOverrides[url],
-                        servedUsers =
-                            rationales[url]
-                                ?.values
-                                ?.flatten()
-                                ?.distinct()
-                                .orEmpty(),
-                        lastUsedSecs = lastUsed[url],
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        onToggle = {
-                            scope.launch {
-                                // null (allowed by policy) or ALLOW -> block; DENY -> allow.
-                                val next =
-                                    if (perRelayOverrides[url] == RelayAuthDecision.DENY) {
-                                        RelayAuthDecision.ALLOW
-                                    } else {
-                                        RelayAuthDecision.DENY
-                                    }
-                                ledger.setDecision(url, next)
-                                reloadKey++
-                            }
-                        },
-                        onForget = {
-                            scope.launch {
-                                // Single "forget" clears both the override and the recorded reason,
-                                // so the relay drops off this list entirely.
-                                ledger.clearDecision(url)
-                                store.clearRationale(url)
-                                reloadKey++
-                            }
-                        },
-                    )
+                    Column(
+                        modifier =
+                            Modifier
+                                .clip(sectionCardShape(index, relayUrls.size))
+                                .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                    ) {
+                        if (index > 0) SettingsDivider()
+                        RelayRow(
+                            url = url,
+                            decision = perRelayOverrides[url],
+                            servedUsers =
+                                rationales[url]
+                                    ?.values
+                                    ?.flatten()
+                                    ?.distinct()
+                                    .orEmpty(),
+                            lastUsedSecs = lastUsed[url],
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            onToggle = {
+                                scope.launch {
+                                    // null (allowed by policy) or ALLOW -> block; DENY -> allow.
+                                    val next =
+                                        if (perRelayOverrides[url] == RelayAuthDecision.DENY) {
+                                            RelayAuthDecision.ALLOW
+                                        } else {
+                                            RelayAuthDecision.DENY
+                                        }
+                                    ledger.setDecision(url, next)
+                                    reloadKey++
+                                }
+                            },
+                            onForget = {
+                                scope.launch {
+                                    // Single "forget" clears both the override and the recorded reason,
+                                    // so the relay drops off this list entirely.
+                                    ledger.clearDecision(url)
+                                    store.clearRationale(url)
+                                    reloadKey++
+                                }
+                            },
+                        )
+                    }
                 }
             }
 
@@ -266,46 +284,30 @@ fun RelayAuthSettingsScreen(
     }
 }
 
-/** Small primary-colored section label, matching the other settings screens. */
+/** Primary-colored section label, matching [SettingsSection]'s header used across settings. */
 @Composable
-private fun SectionHeader(title: String) {
+private fun GroupHeader(title: String) {
     Text(
         text = title,
-        fontSize = 12.sp,
+        style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 4.dp),
+        modifier = Modifier.padding(horizontal = 4.dp),
     )
 }
 
-/** A labelled Switch row for one [RelayAuthPolicy.CUSTOM] trust toggle, in the settings house style. */
-@Composable
-private fun AuthToggleRow(
-    title: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            Text(
-                text = description,
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-        Spacer(Modifier.width(16.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+/** Corner shape for one row of a grouped settings card: round the outer corners of the first and
+ *  last rows only, so contiguous rows read as a single rounded card. */
+private fun sectionCardShape(
+    index: Int,
+    count: Int,
+): Shape =
+    when {
+        count <= 1 -> RoundedCornerShape(20.dp)
+        index == 0 -> RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        index == count - 1 -> RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+        else -> RectangleShape
     }
-}
 
 /**
  * One relay's row in the per-relay list: NIP-11 icon + shortened URL (tap the row to open the relay's
