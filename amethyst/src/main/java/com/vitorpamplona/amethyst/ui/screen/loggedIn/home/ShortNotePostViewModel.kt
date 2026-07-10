@@ -116,6 +116,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
 import com.vitorpamplona.quartz.nip10Notes.tags.notify
 import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
+import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -309,6 +310,11 @@ open class ShortNotePostViewModel :
     var wantsForwardZapTo by mutableStateOf(false)
     override var forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     override val forwardZapToEditting = TextFieldState()
+
+    // Optional subject line: a NIP-14 `subject` tag on a kind-1 note, or the `title` of a NIP-29
+    // kind-11 group thread. Toggled from the bottom row; auto-on for group threads.
+    var wantsSubject by mutableStateOf(false)
+    var subjectText by mutableStateOf("")
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
@@ -504,6 +510,8 @@ open class ShortNotePostViewModel :
     ) {
         val relay = relayUrl?.let { RelayUrlNormalizer.normalizeOrNull(it) }
         groupThreadTarget = if (groupId != null && relay != null) GroupThreadTarget(groupId, listOf(relay)) else null
+        // A thread wants a title, so surface the field by default when composing one.
+        if (groupThreadTarget != null) wantsSubject = true
     }
 
     open fun load(
@@ -1114,12 +1122,14 @@ open class ShortNotePostViewModel :
 
         val threadTarget = groupThreadTarget
         return if (threadTarget != null) {
-            // NIP-29 kind-11 group thread: title = first line, body = the rest (or the whole line
-            // when single-line). Scoped to the group by `h`; the host relay authorizes the write.
+            // NIP-29 kind-11 group thread. The title is the explicit subject field when filled;
+            // otherwise it falls back to the first line (body = the rest). Scoped to the group by
+            // `h`; the host relay authorizes the write.
+            val subject = if (wantsSubject) subjectText.trim() else ""
             val text = tagger.message
             val firstBreak = text.indexOf('\n')
-            val title = (if (firstBreak >= 0) text.substring(0, firstBreak) else text).trim()
-            val body = (if (firstBreak >= 0) text.substring(firstBreak + 1) else text).trim()
+            val title = subject.ifEmpty { (if (firstBreak >= 0) text.substring(0, firstBreak) else text).trim() }
+            val body = if (subject.isNotEmpty()) text.trim() else (if (firstBreak >= 0) text.substring(firstBreak + 1) else text).trim()
 
             ThreadEvent.build(body, title) {
                 hTag(threadTarget.groupId)
@@ -1260,6 +1270,8 @@ open class ShortNotePostViewModel :
                 hashtags(findHashtags(tagger.message))
                 references(findURLs(tagger.message))
                 quotes(findNostrUris(tagger.message))
+
+                if (wantsSubject && subjectText.isNotBlank()) subject(subjectText.trim())
 
                 geoHash?.let { geohash(it) }
                 localZapRaiserAmount?.let { zapraiser(it) }
@@ -1434,6 +1446,8 @@ open class ShortNotePostViewModel :
         zapRaiserAmount.value = null
 
         wantsForwardZapTo = false
+        wantsSubject = false
+        subjectText = ""
         wantsToMarkAsSensitive = false
         contentWarningDescription = ""
         wantsToAddGeoHash = false
@@ -1818,6 +1832,12 @@ open class ShortNotePostViewModel :
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
+        draftTag.newVersion()
+    }
+
+    fun toggleSubject() {
+        wantsSubject = !wantsSubject
+        if (!wantsSubject) subjectText = ""
         draftTag.newVersion()
     }
 

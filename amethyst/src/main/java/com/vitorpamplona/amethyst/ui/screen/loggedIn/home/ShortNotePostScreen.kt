@@ -45,6 +45,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -347,6 +348,26 @@ private fun NewPostScreenBody(
                         text = stringRes(R.string.private_note_no_receivers),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.placeholderText,
+                    )
+                }
+
+                if (postViewModel.wantsSubject) {
+                    OutlinedTextField(
+                        value = postViewModel.subjectText,
+                        onValueChange = { postViewModel.subjectText = it },
+                        singleLine = true,
+                        label = {
+                            Text(
+                                stringRes(
+                                    if (postViewModel.groupThreadTarget != null) {
+                                        R.string.relay_group_thread_title_label
+                                    } else {
+                                        R.string.messages_new_message_subject
+                                    },
+                                ),
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = Size10dp),
                     )
                 }
 
@@ -788,6 +809,10 @@ private fun BottomRowActions(
             }
         }
 
+        AddSubjectButton(postViewModel.wantsSubject) {
+            postViewModel.toggleSubject()
+        }
+
         MarkAsSensitiveButton(postViewModel.wantsToMarkAsSensitive) {
             postViewModel.toggleMarkAsSensitive()
         }
@@ -851,6 +876,21 @@ private fun AddPrivateNoteButton(
                             else -> R.string.private_note
                         },
                 ),
+            modifier = Modifier.height(22.dp),
+            tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+        )
+    }
+}
+
+@Composable
+private fun AddSubjectButton(
+    isActive: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick) {
+        Icon(
+            symbol = MaterialSymbols.AutoMirrored.Article,
+            contentDescription = stringRes(R.string.messages_new_message_subject),
             modifier = Modifier.height(22.dp),
             tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
         )
