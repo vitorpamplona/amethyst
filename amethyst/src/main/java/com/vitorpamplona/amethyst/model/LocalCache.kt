@@ -1466,6 +1466,11 @@ object LocalCache : ILocalCache, ICacheProvider {
     ): Boolean {
         val note = getOrCreateNote(event.id)
 
+        if (relay != null) {
+            getOrCreateUser(event.pubKey).addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
         // Already processed this event.
         if (note.event != null) return false
 
@@ -1495,6 +1500,11 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
+
+        if (relay != null) {
+            getOrCreateUser(event.pubKey).addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
 
         // Already processed this event.
         if (note.event != null) return false
@@ -1526,6 +1536,14 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
+
+        // Approval notes are badge-rendered directly in community feeds
+        // (BadgeBox has no repost-style indirection for them), so without
+        // this attribution their relay list stays empty forever.
+        if (relay != null) {
+            getOrCreateUser(event.pubKey).addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
 
         // Already processed this event.
         if (note.event != null) return false
