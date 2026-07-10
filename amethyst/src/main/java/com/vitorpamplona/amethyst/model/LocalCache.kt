@@ -237,6 +237,7 @@ import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -807,7 +808,11 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         if (relay != null) {
             author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
+            // A gift wrap re-delivered by another relay is a duplicate (returns
+            // false below and is never re-processed), so drill into the already
+            // unwrapped chain here — otherwise the relay never reaches the
+            // rumor note that the chat UI actually renders.
+            addRelayToNoteAndInners(note, relay)
         }
 
         // Already processed this event.
@@ -3145,7 +3150,28 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
         }
 
-        note?.addRelay(relay)
+        note?.let { addRelayToNoteAndInners(it, relay) }
+    }
+
+    /**
+     * Adds [relay] to [note] and to every already-unwrapped inner note of its
+     * gift-wrap chain (wrap → seal → rumor). The chat UI renders the inner
+     * rumor, so a relay recorded only on the outer envelope never surfaces as
+     * an icon. Inner notes that don't exist yet are not lost: the unwrap path
+     * copies the envelope's relays down via [copyRelaysFromTo] when it runs.
+     */
+    fun addRelayToNoteAndInners(
+        note: Note,
+        relay: NormalizedRelayUrl,
+    ) {
+        note.addRelay(relay)
+
+        val noteEvent = note.event
+        if (noteEvent is HasInnerEvent) {
+            noteEvent.innerEventId?.let { innerId ->
+                getNoteIfExists(innerId)?.let { addRelayToNoteAndInners(it, relay) }
+            }
+        }
     }
 
     // Observers line up here.

@@ -62,6 +62,8 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.sample
 
@@ -94,11 +96,13 @@ fun RenderAllRelayList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // Cold wrapper: `flow()` must be re-resolved on every collection start.
+    // A memory trim destroys the NoteFlowSet while the lifecycle is stopped;
+    // a stateFlow captured in remember would then be orphaned and never see
+    // another relay update.
     val flow =
         remember(baseNote) {
-            baseNote
-                .flow()
-                .relays.stateFlow
+            flow { emitAll(baseNote.flow().relays.stateFlow) }
                 .sample(500)
                 .map { it.note.relays }
                 .distinctUntilChanged()
@@ -122,11 +126,10 @@ fun RenderClosedRelayList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // Cold wrapper for the same trim-survival reason as RenderAllRelayList.
     val flow =
         remember(baseNote) {
-            baseNote
-                .flow()
-                .relays.stateFlow
+            flow { emitAll(baseNote.flow().relays.stateFlow) }
                 .sample(500)
                 .map { it.note.relays.take(3) }
                 .distinctUntilChanged()

@@ -2521,6 +2521,11 @@ class Account(
 
         cache.justConsumeMyOwnEvent(newEvent)
         client.publish(newEvent, outboxRelays.flow.value + destinationRelays)
+
+        // Index into the chatroom immediately (same rationale as
+        // broadcastPrivately) instead of waiting for the newEventBundles
+        // batcher; the later batched re-delivery is deduped by the chatroom.
+        cache.getNoteIfExists(newEvent.id)?.let { newNotesPreProcessor.consume(it) }
     }
 
     override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
@@ -2573,6 +2578,14 @@ class Account(
             val relayList = computeRelayListToBroadcast(wrap)
             client.publish(wrap, relayList)
         }
+
+        // Unwrap and index the self-copy right away instead of waiting for the
+        // newEventBundles batcher (up to ~1s): the sent message reaches the
+        // chatroom before the first relay OK, so acceptances land directly on
+        // the rumor note the chat renders instead of parking on the wrap. The
+        // batcher re-delivers this note later; the processor's replay path and
+        // the chatroom add are both idempotent.
+        mineNote?.let { newNotesPreProcessor.consume(it) }
     }
 
     // --- Marmot Group Messaging ---

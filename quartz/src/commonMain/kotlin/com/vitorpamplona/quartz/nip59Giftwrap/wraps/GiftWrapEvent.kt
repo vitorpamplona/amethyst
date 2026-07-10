@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.concurrent.Volatile
 
 @Immutable
 open class GiftWrapEvent(
@@ -46,8 +47,11 @@ open class GiftWrapEvent(
     kind: Int = KIND,
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig),
     HasInnerEvent {
+    // `@Volatile`: set by the decrypting coroutine in [unwrapThrowing], read
+    // by relay socket threads walking the wrap → seal → rumor chain.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
+    @Volatile
     override var innerEventId: HexKey? = null
 
     open fun copyNoContent(): GiftWrapEvent {

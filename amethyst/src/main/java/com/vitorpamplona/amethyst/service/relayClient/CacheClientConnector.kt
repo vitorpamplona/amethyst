@@ -21,14 +21,9 @@
 package com.vitorpamplona.amethyst.service.relayClient
 
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayInsertConfirmationCollector
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 class CacheClientConnector(
     val client: INostrClient,
@@ -39,53 +34,16 @@ class CacheClientConnector(
             cache.justConsume(event, relay, false)
         }
 
+    // markAsSeen drills into the gift-wrap chain (wrap → seal → rumor) via
+    // LocalCache.addRelayToNoteAndInners, so an OK acceptance for a wrap also
+    // tags the inner rumor note the chat UI renders.
     val confirmationWatcher =
         RelayInsertConfirmationCollector(client) { eventId, relay ->
             cache.markAsSeen(eventId, relay.url)
-            markAsSeen(eventId, relay.url)
         }
 
     fun destroy() {
         receiver.destroy()
         confirmationWatcher.destroy()
-    }
-
-    private fun markAsSeen(
-        eventId: HexKey,
-        info: NormalizedRelayUrl,
-    ) {
-        val note = LocalCache.getNoteIfExists(eventId)
-        if (note != null) {
-            note.addRelay(info)
-            markAsSeenInner(note, info)
-        }
-    }
-
-    private fun markAsSeenInner(
-        note: Note,
-        info: NormalizedRelayUrl,
-    ) {
-        val noteEvent = note.event
-        if (noteEvent is GiftWrapEvent) {
-            val innerEvent = noteEvent.innerEventId
-            if (innerEvent != null) {
-                val innerNote = cache.getNoteIfExists(innerEvent)
-                if (innerNote != null) {
-                    innerNote.addRelay(info)
-                    markAsSeenInner(innerNote, info)
-                }
-            }
-        }
-
-        if (noteEvent is SealedRumorEvent) {
-            val innerEvent = noteEvent.innerEventId
-            if (innerEvent != null) {
-                val innerNote = cache.getNoteIfExists(innerEvent)
-                if (innerNote != null) {
-                    innerNote.addRelay(info)
-                    markAsSeenInner(innerNote, info)
-                }
-            }
-        }
     }
 }
