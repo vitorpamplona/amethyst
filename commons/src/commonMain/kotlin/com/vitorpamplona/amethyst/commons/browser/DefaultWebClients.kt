@@ -125,7 +125,7 @@ object DefaultWebClients {
             webApp("Nostrocket", "https://nostrocket.org", "Project coordination")
             webApp("Plektos", "https://plektos.app", "Decentralized meetup events", "https://plektos.app/icon-180.png")
             webApp("Zaplytics", "https://zaplytics.app", "Zap analytics for creators")
-            webApp("Brainstorm", "https://brainstorm.world", "Web-of-trust explorer", "https://brainstorm.world/brainstorm.svg")
+            webApp("Brainstorm", "https://brainstorm.world", "Web-of-trust explorer", "https://brainstorm.world/apple-touch-icon.png")
             webApp("MAKIMONO", "https://makimono.lumilumi.app", "Long-form article editor", "https://makimono.lumilumi.app/favicon3.png")
             webApp("Primal Studio", "https://studio.primal.net", "Schedule & publish content")
             webApp("nostr.build", "https://nostr.build", "Media & image uploads", "https://nostr.build/apple-touch-icon.png")
