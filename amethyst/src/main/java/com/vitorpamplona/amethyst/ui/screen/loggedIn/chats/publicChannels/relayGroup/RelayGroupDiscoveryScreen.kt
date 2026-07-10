@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 /**
@@ -218,13 +219,30 @@ private fun WatchAccountForRelayGroupDiscovery(
     // (join/leave) — otherwise a newly-joined group wouldn't appear until another refresh.
     val joinedGroups by accountViewModel.account.relayGroupList.liveRelayGroupList
         .collectAsStateWithLifecycle()
+    val joinedServers by accountViewModel.account.relayGroupList.liveRelayGroupServers
+        .collectAsStateWithLifecycle()
+    val favoriteRelays by accountViewModel.account.relayFeedsList.flow
+        .collectAsStateWithLifecycle()
 
     // Discovery only shows groups whose 39000 is signed by the host relay's own key (NIP-29's
     // authority — the NIP-11 `self` pubkey; general relays instead carry stray user-published 39000s
     // that can't be joined). The feed reads that from each relay's cached NIP-11, so warm every
     // candidate relay (in parallel — WarmNip11) and re-invalidate as each doc lands, otherwise a
     // relay whose NIP-11 resolves after its 39000s would stay hidden until a manual refresh.
-    val candidateRelays = remember(perRelay) { perRelay.toGroupConstraints().keys }
+    //
+    // The follow-list filter sets resolve relays via the outbox model, but a group's 39000 lives on
+    // its HOST relay. In All-Follows the subassembler probes those host relays (joined kind-10009 +
+    // favorited kind-10012) for follow rosters, so warm them here too — otherwise their groups get
+    // fetched but the self-key gate reads an unwarmed (empty, self=null) NIP-11 and hides them until
+    // the user bounces through Global (whose relay set happens to include them).
+    val candidateRelays =
+        remember(perRelay, joinedServers, favoriteRelays) {
+            buildSet {
+                addAll(perRelay.toGroupConstraints().keys)
+                joinedServers.forEach { server -> RelayUrlNormalizer.normalizeOrNull(server)?.let(::add) }
+                addAll(favoriteRelays)
+            }
+        }
     var nip11Version by remember { mutableIntStateOf(0) }
     WarmNip11(candidateRelays) { nip11Version++ }
 
