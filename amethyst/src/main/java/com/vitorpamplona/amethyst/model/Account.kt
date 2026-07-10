@@ -898,7 +898,12 @@ class Account(
         note: Note,
         reaction: String,
     ) {
-        val powDifficulty = powDifficultyFor(ReactionEvent.KIND)
+        // Reactions to NIP-17 groups and unsealed rumors are gift-wrapped: the
+        // inner kind-7 only ever travels as ciphertext, so mining it is pure
+        // waste — those targets skip the queue and sign with the plain signer.
+        val isPrivateTarget = note.event is NIP17Group || note.isPrivateRumor()
+
+        val powDifficulty = if (isPrivateTarget) null else powDifficultyFor(ReactionEvent.KIND)
         if (powDifficulty != null &&
             mineInBackground(ReactionEvent.KIND, powDifficulty) { isActive ->
                 ReactionAction.reactTo(
