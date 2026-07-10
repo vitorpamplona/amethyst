@@ -95,6 +95,16 @@ noise between runs is normal — relays come and go).
 | + sharded-sweep dedup | 675s* | 18,801 | 168k | keep — round wall ↓ (301s vs 336s); total noise |
 | + overlap tail (no convergence park-wait, agg ∥ deletions) | 474s | 18,816 | 167k | **keep** |
 | + `--drain-concurrency 48` on top | **396s** | 18,816 | 167k | **keep → new default** |
+| + per-relay sub cap 16→32 (`AMY_RELAY_SUB_CAP`) | 602s | 18,478 | 164k | **reject** — 27 relays demoted us + 7 rate-limited (vs 5+1 at 16); the Phase-B plateau is relay-side service rate, not client permits |
+
+Final validation — **cold hop-5, fresh store, winning stack** (the workload that
+never completed pre-fixes): **85.4 min, 203,903 contact lists, 391,549 users
+discovered, 626,599 events, 5,794 relays**. Per-hop list completeness: 90%
+(hop 2), 71% (hop 3), 56% (hop 4). Remaining known lever for a future pass:
+attempt>0 retries re-fan every user to the whole backbone inside per-batch
+units, so the two retry rounds cost nearly as much as first passes at a
+fraction of the yield — route retry backbone re-asks as round-wide chunked
+per-relay units instead.
 
 \* total inflated by a slow round-3 network sample + the then-serial tail; the
 change's own effect (straggler-round Phase A 20s → 20ms) is visible directly.
