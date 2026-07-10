@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntr
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
+import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -572,6 +573,25 @@ class AccountSettings(
 
     fun updateAddClientTag(add: Boolean): Boolean =
         if (syncedSettings.security.updateAddClientTag(add)) {
+            saveAccountSettings()
+            true
+        } else {
+            false
+        }
+
+    fun updatePowDifficulty(difficulty: Int): Boolean =
+        if (syncedSettings.proofOfWork.updateDifficulty(difficulty)) {
+            saveAccountSettings()
+            true
+        } else {
+            false
+        }
+
+    fun updatePowCategory(
+        category: PoWCategory,
+        enabled: Boolean,
+    ): Boolean =
+        if (syncedSettings.proofOfWork.updateCategory(category, enabled)) {
             saveAccountSettings()
             true
         } else {

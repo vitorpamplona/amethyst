@@ -351,24 +351,51 @@ class LongFormPostViewModel :
         val template = createTemplate() ?: return
 
         val draftToDelete = draftNote
+        val powDifficulty = accountViewModel.account.powDifficultyFor(template.kind)
         cancel()
 
-        if (accountViewModel.settings.useTrackedBroadcasts()) {
-            val (event, relays, extras) = accountViewModel.account.createPostEvent(template, emptyList())
-            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                accountViewModel.broadcastTracker.trackBroadcast(
-                    event = event,
-                    relays = relays,
-                    client = accountViewModel.account.client,
-                )
-                accountViewModel.account.consumePostEvent(event, relays, extras)
+        val enqueued =
+            powDifficulty != null &&
+                accountViewModel.account.mineTemplateInBackground(template, powDifficulty) { mined ->
+                    broadcastArticle(mined)
+                }
+        if (!enqueued) {
+            if (accountViewModel.settings.useTrackedBroadcasts()) {
+                val (event, relays, extras) = accountViewModel.account.createPostEvent(template, emptyList())
+                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                    accountViewModel.broadcastTracker.trackBroadcast(
+                        event = event,
+                        relays = relays,
+                        client = accountViewModel.account.client,
+                    )
+                    accountViewModel.account.consumePostEvent(event, relays, extras)
+                }
+            } else {
+                accountViewModel.account.signAndComputeBroadcast(template, emptyList())
             }
-        } else {
-            accountViewModel.account.signAndComputeBroadcast(template, emptyList())
         }
 
         accountViewModel.launchSigner {
             accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+        }
+    }
+
+    /**
+     * The post-mining continuation: same tracked/untracked split as the direct
+     * path, but running on the mining queue's scope — the composer's
+     * viewModelScope may already be gone by the time the nonce is found.
+     */
+    private suspend fun broadcastArticle(template: EventTemplate<out Event>) {
+        if (accountViewModel.settings.useTrackedBroadcasts()) {
+            val (event, relays, extras) = accountViewModel.account.createPostEvent(template, emptyList())
+            accountViewModel.broadcastTracker.trackBroadcast(
+                event = event,
+                relays = relays,
+                client = accountViewModel.account.client,
+            )
+            accountViewModel.account.consumePostEvent(event, relays, extras)
+        } else {
+            accountViewModel.account.signAndComputeBroadcast(template, emptyList())
         }
     }
 

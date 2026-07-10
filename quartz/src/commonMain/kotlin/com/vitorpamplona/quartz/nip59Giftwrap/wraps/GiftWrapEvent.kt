@@ -26,9 +26,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
@@ -106,6 +108,11 @@ open class GiftWrapEvent(
          * the wrap without a separate kind:10050 lookup. Pass it via
          * [recipientRelayHint] — `null` (the default) preserves the
          * historical 2-element `["p", pubkey]` shape.
+         *
+         * [powDifficulty] mines a NIP-13 proof of work into the wrap itself
+         * (the ephemeral-key envelope, never the inner seal or rumor) so DM
+         * relays can PoW-filter inbox spam. [powIsActive] is the cooperative
+         * cancellation hook forwarded to the miner.
          */
         fun create(
             event: Event,
@@ -113,6 +120,8 @@ open class GiftWrapEvent(
             expirationDelta: Long? = null,
             createdAt: Long = TimeUtils.randomWithTwoDays(),
             recipientRelayHint: NormalizedRelayUrl? = null,
+            powDifficulty: Int? = null,
+            powIsActive: () -> Boolean = { true },
         ): GiftWrapEvent {
             val signer = NostrSignerSync(KeyPair()) // GiftWrap is always a random key
 
@@ -128,11 +137,26 @@ open class GiftWrapEvent(
                     PTag.assemble(recipientPubKey, recipientRelayHint),
                 )
 
+            val template =
+                EventTemplate<GiftWrapEvent>(
+                    createdAt = createdAt,
+                    kind = KIND,
+                    tags = tags,
+                    content = signer.nip44Encrypt(event.toJson(), recipientPubKey),
+                )
+
+            val readyToSign =
+                if (powDifficulty != null && powDifficulty > 0) {
+                    PoWMiner.run(template, signer.pubKey, powDifficulty, powIsActive)
+                } else {
+                    template
+                }
+
             return signer.sign(
-                createdAt = createdAt,
-                kind = KIND,
-                tags = tags,
-                content = signer.nip44Encrypt(event.toJson(), recipientPubKey),
+                createdAt = readyToSign.createdAt,
+                kind = readyToSign.kind,
+                tags = readyToSign.tags,
+                content = readyToSign.content,
             )
         }
     }

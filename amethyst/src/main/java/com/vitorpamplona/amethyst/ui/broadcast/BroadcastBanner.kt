@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
+import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -77,17 +78,22 @@ import java.util.UUID
 /**
  * Banner showing active broadcast progress.
  * Displayed above bottom navigation when events are being sent to relays.
+ *
+ * [miningJobs] is the NIP-13 pre-send phase: posts waiting for (or in the
+ * middle of) proof-of-work mining, before their per-relay send states exist.
  */
 @Composable
 fun BroadcastBanner(
     broadcasts: ImmutableList<BroadcastEvent>,
+    miningJobs: ImmutableList<PoWJobState> = persistentListOf(),
+    onCancelJob: (String) -> Unit = {},
     onTap: () -> Unit = {},
     onRetryAll: () -> Unit = {},
     onDismiss: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
-        visible = broadcasts.isNotEmpty(),
+        visible = broadcasts.isNotEmpty() || miningJobs.isNotEmpty(),
         enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(200)),
         exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(150)),
         modifier = modifier,
@@ -108,23 +114,105 @@ fun BroadcastBanner(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .animateContentSize(),
             ) {
-                val isAllFinished = broadcasts.all { it.status != BroadcastStatus.IN_PROGRESS }
+                if (miningJobs.isNotEmpty()) {
+                    MiningContent(miningJobs, onCancelJob)
 
-                if (isAllFinished) {
-                    if (broadcasts.size == 1) {
-                        CompletedBroadcastContent(broadcasts.first(), onRetryAll, onDismiss)
-                    } else {
-                        MultipleCompletedBroadcastContent(broadcasts, onRetryAll, onDismiss)
+                    if (broadcasts.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
                     }
-                } else {
-                    if (broadcasts.size == 1) {
-                        SingleBroadcastContent(broadcasts.first())
+                }
+
+                if (broadcasts.isNotEmpty()) {
+                    val isAllFinished = broadcasts.all { it.status != BroadcastStatus.IN_PROGRESS }
+
+                    if (isAllFinished) {
+                        if (broadcasts.size == 1) {
+                            CompletedBroadcastContent(broadcasts.first(), onRetryAll, onDismiss)
+                        } else {
+                            MultipleCompletedBroadcastContent(broadcasts, onRetryAll, onDismiss)
+                        }
                     } else {
-                        MultipleBroadcastsContent(broadcasts)
+                        if (broadcasts.size == 1) {
+                            SingleBroadcastContent(broadcasts.first())
+                        } else {
+                            MultipleBroadcastsContent(broadcasts)
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MiningContent(
+    miningJobs: ImmutableList<PoWJobState>,
+    onCancelJob: (String) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Bolt,
+                contentDescription = stringRes(R.string.pow_mining_title),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+
+            Text(
+                text = stringRes(R.string.pow_mining_progress, miningJobs.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        miningJobs.forEach { job ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Spacer(Modifier.width(26.dp))
+
+                Text(
+                    text =
+                        stringRes(
+                            if (job.isMining) R.string.pow_mining_job else R.string.pow_queued_job,
+                            kindToName(job.kind),
+                            job.difficulty.toString(),
+                        ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+
+                Text(
+                    text = "×",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier =
+                        Modifier
+                            .clickable(onClick = { onCancelJob(job.id) })
+                            .padding(start = 2.dp),
+                )
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        LinearProgressIndicator(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
     }
 }
 
@@ -440,6 +528,16 @@ fun Event.toKindName(): String =
         is VoiceReplyEvent -> stringRes(R.string.voice_reply)
         is BookmarkListEvent -> stringRes(R.string.bookmarks)
         is OldBookmarkListEvent -> stringRes(R.string.bookmarks)
+        else -> stringRes(R.string.post)
+    }
+
+@Composable
+fun kindToName(kind: Int): String =
+    when (kind) {
+        ReactionEvent.KIND -> stringRes(R.string.reaction)
+        RepostEvent.KIND, GenericRepostEvent.KIND -> stringRes(R.string.boost)
+        VoiceEvent.KIND -> stringRes(R.string.voice_post)
+        VoiceReplyEvent.KIND -> stringRes(R.string.voice_reply)
         else -> stringRes(R.string.post)
     }
 

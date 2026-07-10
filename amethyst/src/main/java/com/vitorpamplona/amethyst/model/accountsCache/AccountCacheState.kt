@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.accountsCache
 
 import android.content.ContentResolver
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -61,6 +62,7 @@ class AccountCacheState(
     val cache: LocalCache,
     val client: INostrClient,
     val rootFilesDir: () -> File = { File("") },
+    val powQueue: () -> PoWPublishQueue? = { null },
 ) {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
@@ -244,6 +246,7 @@ class AccountCacheState(
             mlsGroupStateStore = mlsStore,
             marmotMessageStore = marmotMessageStore,
             marmotKeyPackageStore = marmotKeyPackageStore,
+            powQueue = powQueue,
         ).also { newAccount ->
             accounts.update { existingAccounts ->
                 existingAccounts.plus(Pair(signer.pubKey, newAccount))

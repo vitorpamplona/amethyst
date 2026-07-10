@@ -87,6 +87,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -234,6 +235,20 @@ open class CommentPostViewModel :
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
     var wantsAnonymousPost by mutableStateOf(false)
+
+    // NIP-13 per-post override from the composer chip: null = follow account
+    // settings, 0 = don't mine this post, >0 = mine at that difficulty.
+    var powOverride by mutableStateOf<Int?>(null)
+
+    fun effectivePowDifficulty(): Int? {
+        if (!::accountViewModel.isInitialized) return null
+        return accountViewModel.account.powDifficultyFor(CommentEvent.KIND, powOverride)
+    }
+
+    fun defaultPowDifficulty(): Int? {
+        if (!::accountViewModel.isInitialized) return null
+        return accountViewModel.account.powDifficultyFor(CommentEvent.KIND)
+    }
 
     // A single ephemeral signer reused for the whole compose session so that media
     // uploads (Blossom/NIP-96 auth events) and the final anonymous post are all signed
@@ -521,6 +536,7 @@ open class CommentPostViewModel :
 
         val draftToDelete = draftNote
         val anonymous = wantsAnonymousPost
+        val powDifficulty = accountViewModel.account.powDifficultyFor(template.kind, powOverride)
         cancel()
 
         // A reply within a NIP-29 group is group content: pin it to the group's
@@ -541,15 +557,40 @@ open class CommentPostViewModel :
             }
 
         if (anonymous) {
-            accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonymousSigner())
+            // The anonymous key signs without a client tag, so the template is
+            // mined as-is against the throwaway pubkey.
+            val anonSigner = anonymousSigner()
+            val enqueued =
+                powDifficulty != null &&
+                    accountViewModel.account.mineInBackground(template.kind, powDifficulty) { isActive ->
+                        val mined = PoWMiner.run(template, anonSigner.pubKey, powDifficulty, isActive)
+                        accountViewModel.account.signAnonymouslyAndBroadcast(mined, extraNotesToBroadcast, anonSigner)
+                    }
+            if (!enqueued) {
+                accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonSigner)
+            }
         } else if (replyGroupId != null) {
             // Group content: route to the resolved host. If it couldn't be resolved, publish to the
             // parent's relays (possibly empty) rather than broadcasting to the outbox — better to
             // under-deliver a group reply than to leak group participation to unrelated relays.
             val relays = groupHostRelays ?: replyingTo?.relays.orEmpty()
-            accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) { relays }
+            val enqueued =
+                powDifficulty != null &&
+                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty) { mined ->
+                        accountViewModel.account.signAndSendPrivatelyOrBroadcast(mined) { relays }
+                    }
+            if (!enqueued) {
+                accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) { relays }
+            }
         } else {
-            accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+            val enqueued =
+                powDifficulty != null &&
+                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty) { mined ->
+                        accountViewModel.account.signAndComputeBroadcast(mined, extraNotesToBroadcast)
+                    }
+            if (!enqueued) {
+                accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+            }
         }
 
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
@@ -824,6 +865,7 @@ open class CommentPostViewModel :
         wantsSecretEmoji = false
         wantsAnonymousPost = false
         anonymousSignerCache = null
+        powOverride = null
 
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.clearText()

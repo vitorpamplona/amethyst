@@ -75,6 +75,8 @@ class NIP17Factory {
         to: Set<HexKey>,
         signer: NostrSigner,
         recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
+        wrapPowDifficulty: Int? = null,
+        wrapPowIsActive: () -> Boolean = { true },
     ): List<GiftWrapEvent> {
         val innerExpDelta =
             event.expiration()?.let {
@@ -102,6 +104,8 @@ class NIP17Factory {
                     recipientPubKey = next,
                     expirationDelta = innerExpDelta,
                     recipientRelayHint = recipientRelayHints(next),
+                    powDifficulty = wrapPowDifficulty,
+                    powIsActive = wrapPowIsActive,
                 )
             }
             bunkerLimiter?.withPermit { build() } ?: build()
@@ -123,9 +127,11 @@ class NIP17Factory {
         template: EventTemplate<ChatMessageEvent>,
         signer: NostrSigner,
         recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
+        wrapPowDifficulty: Int? = null,
+        wrapPowIsActive: () -> Boolean = { true },
     ): Result {
         val senderMessage = signer.sign(template)
-        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer, recipientRelayHints)
+        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer, recipientRelayHints, wrapPowDifficulty, wrapPowIsActive)
         return Result(
             msg = senderMessage,
             wraps = wraps,
@@ -142,9 +148,18 @@ class NIP17Factory {
     suspend fun createNoteNIP17(
         template: EventTemplate<TextNoteEvent>,
         signer: NostrSigner,
+        wrapPowDifficulty: Int? = null,
+        wrapPowIsActive: () -> Boolean = { true },
     ): Result {
         val senderNote = signer.sign(template)
-        val wraps = createWraps(senderNote, senderNote.taggedUserIds().plus(signer.pubKey).toSet(), signer)
+        val wraps =
+            createWraps(
+                senderNote,
+                senderNote.taggedUserIds().plus(signer.pubKey).toSet(),
+                signer,
+                wrapPowDifficulty = wrapPowDifficulty,
+                wrapPowIsActive = wrapPowIsActive,
+            )
         return Result(
             msg = senderNote,
             wraps = wraps,
@@ -155,9 +170,11 @@ class NIP17Factory {
         template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>,
         signer: NostrSigner,
         recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
+        wrapPowDifficulty: Int? = null,
+        wrapPowIsActive: () -> Boolean = { true },
     ): Result {
         val senderMessage = signer.sign(template)
-        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer, recipientRelayHints)
+        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer, recipientRelayHints, wrapPowDifficulty, wrapPowIsActive)
 
         return Result(
             msg = senderMessage,

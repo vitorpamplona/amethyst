@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.notify.Notifying
+import com.vitorpamplona.amethyst.ui.note.creators.pow.PowOverrideButton
 import com.vitorpamplona.amethyst.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
@@ -505,5 +506,12 @@ private fun BottomRowActions(postViewModel: CommentPostViewModel) {
                 postViewModel.wantsInvoice = !postViewModel.wantsInvoice
             }
         }
+
+        PowOverrideButton(
+            effectiveDifficulty = postViewModel.effectivePowDifficulty(),
+            defaultDifficulty = postViewModel.defaultPowDifficulty(),
+            isOverridden = postViewModel.powOverride != null,
+            onSelect = { postViewModel.powOverride = it },
+        )
     }
 }

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -72,6 +73,11 @@ class AccountSyncedSettings(
         AccountChatPreferences(
             MutableStateFlow(internalSettings.chats.toChatroomKeys()),
         )
+    val proofOfWork =
+        AccountPoWPreferences(
+            MutableStateFlow(internalSettings.proofOfWork.difficulty),
+            MutableStateFlow(PoWCategory.fromIds(internalSettings.proofOfWork.enabledCategories)),
+        )
 
     fun toInternal(): AccountSyncedSettingsInternal =
         AccountSyncedSettingsInternal(
@@ -104,6 +110,14 @@ class AccountSyncedSettings(
             videoPlayer = AccountVideoPlayerPreferencesInternal(videoPlayer.buttonItems.value),
             media = AccountMediaPreferencesInternal(media.audioVisualizer.value.name),
             chats = AccountChatPreferencesInternal(chats.pinnedChatrooms.value.map { it.users.sorted() }),
+            proofOfWork =
+                AccountPoWPreferencesInternal(
+                    proofOfWork.difficulty.value,
+                    // sorted so the serialized form is deterministic
+                    proofOfWork.enabledCategories.value
+                        .map { it.id }
+                        .sorted(),
+                ),
         )
 
     fun updateFrom(syncedSettingsInternal: AccountSyncedSettingsInternal) {
@@ -181,6 +195,15 @@ class AccountSyncedSettings(
         val newPinnedChatrooms = syncedSettingsInternal.chats.toChatroomKeys()
         if (chats.pinnedChatrooms.value != newPinnedChatrooms) {
             chats.pinnedChatrooms.tryEmit(newPinnedChatrooms)
+        }
+
+        if (proofOfWork.difficulty.value != syncedSettingsInternal.proofOfWork.difficulty) {
+            proofOfWork.difficulty.tryEmit(syncedSettingsInternal.proofOfWork.difficulty)
+        }
+
+        val newPoWCategories = PoWCategory.fromIds(syncedSettingsInternal.proofOfWork.enabledCategories)
+        if (proofOfWork.enabledCategories.value != newPoWCategories) {
+            proofOfWork.enabledCategories.tryEmit(newPoWCategories)
         }
     }
 
@@ -284,6 +307,39 @@ class AccountMediaPreferences(
 class AccountChatPreferences(
     val pinnedChatrooms: MutableStateFlow<Set<ChatroomKey>>,
 )
+
+@Stable
+class AccountPoWPreferences(
+    val difficulty: MutableStateFlow<Int> = MutableStateFlow(0),
+    val enabledCategories: MutableStateFlow<Set<PoWCategory>> = MutableStateFlow(PoWCategory.DEFAULT_ENABLED),
+) {
+    fun updateDifficulty(newDifficulty: Int): Boolean =
+        if (difficulty.value != newDifficulty) {
+            difficulty.tryEmit(newDifficulty.coerceIn(0, MAX_POW_DIFFICULTY))
+            true
+        } else {
+            false
+        }
+
+    fun updateCategory(
+        category: PoWCategory,
+        enabled: Boolean,
+    ): Boolean {
+        val current = enabledCategories.value
+        val updated = if (enabled) current + category else current - category
+        return if (updated != current) {
+            enabledCategories.tryEmit(updated)
+            true
+        } else {
+            false
+        }
+    }
+
+    companion object {
+        // above ~40 bits a phone would mine for days; treat it as a config error.
+        const val MAX_POW_DIFFICULTY = 40
+    }
+}
 
 internal fun AccountChatPreferencesInternal.toChatroomKeys(): Set<ChatroomKey> = pinnedRooms.mapTo(mutableSetOf()) { ChatroomKey(it.toSet()) }
 

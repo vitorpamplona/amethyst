@@ -116,6 +116,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
 import com.vitorpamplona.quartz.nip10Notes.tags.notify
 import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
+import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
@@ -380,6 +381,29 @@ open class ShortNotePostViewModel :
     // Scheduled posting: epoch seconds (UTC) when the post should be published.
     // Null = post immediately on Send (existing behavior).
     var scheduledForSec by mutableStateOf<Long?>(null)
+
+    // NIP-13 per-post override from the composer chip: null = follow account
+    // settings, 0 = don't mine this post, >0 = mine at that difficulty.
+    var powOverride by mutableStateOf<Int?>(null)
+
+    // Best guess of the kind createTemplate() will produce, for the PoW chip.
+    private fun anticipatedPowKind(): Int =
+        when {
+            wantsPoll -> PollEvent.KIND
+            wantsZapPoll -> ZapPollEvent.KIND
+            voiceRecording != null -> VoiceEvent.KIND
+            else -> TextNoteEvent.KIND
+        }
+
+    fun effectivePowDifficulty(): Int? {
+        if (!::accountViewModel.isInitialized) return null
+        return accountViewModel.account.powDifficultyFor(anticipatedPowKind(), powOverride)
+    }
+
+    fun defaultPowDifficulty(): Int? {
+        if (!::accountViewModel.isInitialized) return null
+        return accountViewModel.account.powDifficultyFor(anticipatedPowKind())
+    }
 
     // AI Writing Help for testing
     private val useMockAi = false
@@ -956,12 +980,20 @@ open class ShortNotePostViewModel :
         val scheduledFor = scheduledForSec
         val privately = wantsPrivateNote
         val threadTarget = groupThreadTarget
+        val powDifficulty = accountViewModel.account.powDifficultyFor(template.kind, powOverride)
         cancel()
 
         if (threadTarget != null) {
             // NIP-29 group thread: publish only to the group's host relay, never the account's
             // outbox — bypass the private/scheduled/anonymous paths entirely.
-            accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) { threadTarget.relays }
+            val enqueued =
+                powDifficulty != null &&
+                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty) { mined ->
+                        accountViewModel.account.signAndSendPrivatelyOrBroadcast(mined) { threadTarget.relays }
+                    }
+            if (!enqueued) {
+                accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) { threadTarget.relays }
+            }
             accountViewModel.launchSigner {
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
@@ -1014,27 +1046,69 @@ open class ShortNotePostViewModel :
         }
 
         if (anonymous) {
-            accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonymousSigner())
-        } else if (accountViewModel.settings.useTrackedBroadcasts()) {
-            // Tracked broadcasting with progress feedback (non-blocking)
-            val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
-
-            // Launch broadcast in background - don't wait for completion
-            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                accountViewModel.broadcastTracker.trackBroadcast(
-                    event = event,
-                    relays = relays,
-                    client = accountViewModel.account.client,
-                )
-                accountViewModel.account.consumePostEvent(event, relays, extras)
+            // The anonymous key signs without a client tag, so the template is
+            // mined as-is against the throwaway pubkey.
+            val anonSigner = anonymousSigner()
+            val enqueued =
+                powDifficulty != null &&
+                    accountViewModel.account.mineInBackground(template.kind, powDifficulty) { isActive ->
+                        val mined = PoWMiner.run(template, anonSigner.pubKey, powDifficulty, isActive)
+                        accountViewModel.account.signAnonymouslyAndBroadcast(mined, extraNotesToBroadcast, anonSigner)
+                    }
+            if (!enqueued) {
+                accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonSigner)
             }
         } else {
-            // Fire-and-forget (original behavior)
-            accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+            val enqueued =
+                powDifficulty != null &&
+                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty) { mined ->
+                        broadcastPublicPost(mined, extraNotesToBroadcast)
+                    }
+            if (!enqueued) {
+                if (accountViewModel.settings.useTrackedBroadcasts()) {
+                    // Tracked broadcasting with progress feedback (non-blocking)
+                    val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
+
+                    // Launch broadcast in background - don't wait for completion
+                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                        accountViewModel.broadcastTracker.trackBroadcast(
+                            event = event,
+                            relays = relays,
+                            client = accountViewModel.account.client,
+                        )
+                        accountViewModel.account.consumePostEvent(event, relays, extras)
+                    }
+                } else {
+                    // Fire-and-forget (original behavior)
+                    accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+                }
+            }
         }
 
         accountViewModel.launchSigner {
             accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+        }
+    }
+
+    /**
+     * The post-mining continuation: same tracked/untracked split as the direct
+     * path, but running on the mining queue's scope — the composer's
+     * viewModelScope may already be gone by the time the nonce is found.
+     */
+    private suspend fun broadcastPublicPost(
+        template: EventTemplate<out Event>,
+        extraNotesToBroadcast: List<Event>,
+    ) {
+        if (accountViewModel.settings.useTrackedBroadcasts()) {
+            val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
+            accountViewModel.broadcastTracker.trackBroadcast(
+                event = event,
+                relays = relays,
+                client = accountViewModel.account.client,
+            )
+            accountViewModel.account.consumePostEvent(event, relays, extras)
+        } else {
+            accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
         }
     }
 
@@ -1451,6 +1525,7 @@ open class ShortNotePostViewModel :
         wantsAnonymousPost = false
         anonymousSignerCache = null
         scheduledForSec = null
+        powOverride = null
         wantsPrivateNote = false
         privateNoteLocked = false
         wantsToAddNotifyUser = false

@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -596,6 +597,15 @@ class AppModules(
             applicationIOScope,
         )
 
+    // fire-and-forget NIP-13 mining: posts queue here and publish when mined.
+    // Capped worker pool so a burst of sends never spawns unbounded miners.
+    val powPublishQueue by lazy {
+        PoWPublishQueue(
+            scope = applicationIOScope,
+            maxConcurrent = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 2),
+        )
+    }
+
     // keeps all accounts live
     val accountsCache =
         AccountCacheState(
@@ -609,6 +619,7 @@ class AppModules(
             cache = cache,
             client = client,
             rootFilesDir = { appContext.filesDir },
+            powQueue = { powPublishQueue },
         )
 
     val sessionManager =

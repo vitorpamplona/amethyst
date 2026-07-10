@@ -52,6 +52,9 @@ import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
@@ -184,6 +187,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
+import com.vitorpamplona.quartz.nip13Pow.signer.PoWNostrSigner
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
@@ -202,6 +206,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
@@ -227,6 +232,7 @@ import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkLi
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -266,6 +272,7 @@ import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -325,6 +332,7 @@ class Account(
     val mlsGroupStateStore: MlsGroupStateStore? = null,
     val marmotMessageStore: com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore? = null,
     val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
+    val powQueue: () -> PoWPublishQueue? = { null },
 ) : IAccount {
     private var userProfileCache: User? = null
 
@@ -661,6 +669,21 @@ class Account(
         return false
     }
 
+    suspend fun updatePowDifficulty(difficulty: Int) {
+        if (settings.updatePowDifficulty(difficulty)) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    suspend fun updatePowCategory(
+        category: PoWCategory,
+        enabled: Boolean,
+    ) {
+        if (settings.updatePowCategory(category, enabled)) {
+            sendNewAppSpecificData()
+        }
+    }
+
     suspend fun updateFilterSpam(filterSpam: Boolean): Boolean {
         if (settings.updateFilterSpam(filterSpam)) {
             if (!settings.syncedSettings.security.filterSpamFromStrangers.value) {
@@ -762,17 +785,134 @@ class Account(
 
     private suspend fun sendNewAppSpecificData() = sendMyPublicAndPrivateOutbox(appSpecific.saveNewAppSpecificData())
 
+    // ---
+    // NIP-13 proof-of-work publishing
+    // ---
+
+    /**
+     * Difficulty to mine [kind] at per this account's NIP-13 settings, or null
+     * when the kind publishes immediately: master difficulty off, category
+     * disabled, or one of [PoWPolicy]'s hard-excluded kinds (auth, zap
+     * requests, NWC/bunker RPC, drafts, lists…).
+     */
+    fun powDifficultyFor(kind: Int): Int? =
+        PoWPolicy.shouldMine(
+            kind = kind,
+            difficulty = settings.syncedSettings.proofOfWork.difficulty.value,
+            enabledCategories = settings.syncedSettings.proofOfWork.enabledCategories.value,
+        )
+
+    /**
+     * [powDifficultyFor] with a per-post override from the composer chip:
+     * null defers to the account settings, 0 disables mining for this post,
+     * a positive value forces that difficulty (hard-excluded kinds still win).
+     */
+    fun powDifficultyFor(
+        kind: Int,
+        overrideDifficulty: Int?,
+    ): Int? =
+        when {
+            overrideDifficulty == null -> powDifficultyFor(kind)
+            overrideDifficulty <= 0 -> null
+            PoWPolicy.neverMine(kind) -> null
+            else -> overrideDifficulty
+        }
+
+    /**
+     * Enqueues [work] into the fire-and-forget mining queue. Returns false when
+     * no queue is wired (headless/test accounts): callers must then run their
+     * direct, un-mined send path instead.
+     */
+    fun mineInBackground(
+        kind: Int,
+        difficulty: Int,
+        work: suspend (isActive: () -> Boolean) -> Unit,
+    ): Boolean {
+        val queue = powQueue() ?: return false
+        queue.enqueueWork(kind, difficulty, work)
+        return true
+    }
+
+    /**
+     * Enqueues [template] to be mined at [difficulty] and then handed to
+     * [onMined], which should run the exact sign+send path the caller would
+     * have used without PoW. Returns false when no queue is wired.
+     *
+     * The template is normalized to the final tag shape the signer will submit
+     * (client tag included) before mining — a tag appended after mining would
+     * invalidate the nonce.
+     */
+    fun <T : Event> mineTemplateInBackground(
+        template: EventTemplate<T>,
+        difficulty: Int,
+        onMined: suspend (EventTemplate<T>) -> Unit,
+    ): Boolean {
+        val queue = powQueue() ?: return false
+        queue.enqueue(withFinalSignerTags(template), signer.pubKey, difficulty, onMined)
+        return true
+    }
+
+    private fun <T : Event> withFinalSignerTags(template: EventTemplate<T>): EventTemplate<T> {
+        val currentSigner = signer
+        if (currentSigner !is NostrSignerWithClientTag) return template
+
+        val finalTags = currentSigner.prepareTags(template.tags)
+        if (finalTags === template.tags) return template
+
+        return EventTemplate(template.createdAt, template.kind, finalTags, template.content)
+    }
+
+    /**
+     * A signer that mines [kindsToMine] at [difficulty] right before signing.
+     * When the account signer stamps a client tag, the miner is layered inside
+     * it so mining runs over the final tag set.
+     */
+    private fun miningSigner(
+        difficulty: Int,
+        kindsToMine: Set<Int>,
+        isActive: () -> Boolean,
+    ): NostrSigner {
+        val currentSigner = signer
+        return if (currentSigner is NostrSignerWithClientTag) {
+            NostrSignerWithClientTag(
+                inner = PoWNostrSigner(currentSigner.inner, difficulty, kindsToMine, isActive),
+                clientTag = currentSigner.clientTag,
+                disabled = currentSigner.disabled,
+            )
+        } else {
+            PoWNostrSigner(currentSigner, difficulty, kindsToMine, isActive)
+        }
+    }
+
     suspend fun reactTo(
         note: Note,
         reaction: String,
-    ) = ReactionAction.reactTo(
-        note = note,
-        reaction = reaction,
-        by = userProfile(),
-        signer = signer,
-        onPublic = ::sendAutomatic,
-        onPrivate = ::broadcastPrivately,
-    )
+    ) {
+        val powDifficulty = powDifficultyFor(ReactionEvent.KIND)
+        if (powDifficulty != null &&
+            mineInBackground(ReactionEvent.KIND, powDifficulty) { isActive ->
+                ReactionAction.reactTo(
+                    note = note,
+                    reaction = reaction,
+                    by = userProfile(),
+                    signer = miningSigner(powDifficulty, setOf(ReactionEvent.KIND), isActive),
+                    onPublic = ::sendAutomatic,
+                    onPrivate = ::broadcastPrivately,
+                )
+            }
+        ) {
+            return
+        }
+
+        ReactionAction.reactTo(
+            note = note,
+            reaction = reaction,
+            by = userProfile(),
+            signer = signer,
+            onPublic = ::sendAutomatic,
+            onPrivate = ::broadcastPrivately,
+        )
+    }
 
     /**
      * Creates a reaction event without sending it.
@@ -1030,16 +1170,41 @@ class Account(
             // A kind-1984 e-tagging the rumor would leak the private id onto
             // public relays. Report the author instead (p-tag only).
             note.author?.let { report(it, type, content) }
-        } else {
-            sendMyPublicAndPrivateOutbox(ReportAction.report(note, type, content, userProfile(), signer))
+            return
         }
+
+        val powDifficulty = powDifficultyFor(ReportEvent.KIND)
+        if (powDifficulty != null &&
+            mineInBackground(ReportEvent.KIND, powDifficulty) { isActive ->
+                sendMyPublicAndPrivateOutbox(
+                    ReportAction.report(note, type, content, userProfile(), miningSigner(powDifficulty, setOf(ReportEvent.KIND), isActive)),
+                )
+            }
+        ) {
+            return
+        }
+
+        sendMyPublicAndPrivateOutbox(ReportAction.report(note, type, content, userProfile(), signer))
     }
 
     suspend fun report(
         user: User,
         type: ReportType,
         content: String = "",
-    ) = sendMyPublicAndPrivateOutbox(ReportAction.report(user, type, content, userProfile(), signer))
+    ) {
+        val powDifficulty = powDifficultyFor(ReportEvent.KIND)
+        if (powDifficulty != null &&
+            mineInBackground(ReportEvent.KIND, powDifficulty) { isActive ->
+                sendMyPublicAndPrivateOutbox(
+                    ReportAction.report(user, type, content, userProfile(), miningSigner(powDifficulty, setOf(ReportEvent.KIND), isActive)),
+                )
+            }
+        ) {
+            return
+        }
+
+        sendMyPublicAndPrivateOutbox(ReportAction.report(user, type, content, userProfile(), signer))
+    }
 
     suspend fun delete(note: Note) = delete(listOf(note))
 
@@ -1115,7 +1280,23 @@ class Account(
     ) = blossomServers.createBlossomDeleteAuth(hash, alt)
 
     suspend fun boost(note: Note) {
-        RepostAction.repost(note, signer)?.let { event ->
+        val powDifficulty = powDifficultyFor(RepostEvent.KIND)
+        if (powDifficulty != null &&
+            mineInBackground(RepostEvent.KIND, powDifficulty) { isActive ->
+                repostNow(note, miningSigner(powDifficulty, setOf(RepostEvent.KIND, GenericRepostEvent.KIND), isActive))
+            }
+        ) {
+            return
+        }
+
+        repostNow(note, signer)
+    }
+
+    private suspend fun repostNow(
+        note: Note,
+        repostSigner: NostrSigner,
+    ) {
+        RepostAction.repost(note, repostSigner)?.let { event ->
             client.publish(event, computeMyReactionToNote(note, event))
             cache.justConsumeMyOwnEvent(event)
         }
@@ -2526,13 +2707,29 @@ class Account(
     override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
         if (!isWriteable()) return
 
-        val wraps = NIP17Factory().createEncryptedFileNIP17(template, signer)
-        broadcastPrivately(wraps)
+        val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
+        if (powDifficulty != null &&
+            mineInBackground(GiftWrapEvent.KIND, powDifficulty) { isActive ->
+                broadcastPrivately(NIP17Factory().createEncryptedFileNIP17(template, signer, wrapPowDifficulty = powDifficulty, wrapPowIsActive = isActive))
+            }
+        ) {
+            return
+        }
+
+        broadcastPrivately(NIP17Factory().createEncryptedFileNIP17(template, signer))
     }
 
     override suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) {
-        val events = NIP17Factory().createMessageNIP17(template, signer)
-        broadcastPrivately(events)
+        val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
+        if (powDifficulty != null &&
+            mineInBackground(GiftWrapEvent.KIND, powDifficulty) { isActive ->
+                broadcastPrivately(NIP17Factory().createMessageNIP17(template, signer, wrapPowDifficulty = powDifficulty, wrapPowIsActive = isActive))
+            }
+        ) {
+            return
+        }
+
+        broadcastPrivately(NIP17Factory().createMessageNIP17(template, signer))
     }
 
     /**
@@ -2544,6 +2741,16 @@ class Account(
      */
     suspend fun sendPrivateNote(template: EventTemplate<TextNoteEvent>) {
         if (!isWriteable()) return
+
+        val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
+        if (powDifficulty != null &&
+            mineInBackground(GiftWrapEvent.KIND, powDifficulty) { isActive ->
+                broadcastPrivately(NIP17Factory().createNoteNIP17(template, signer, wrapPowDifficulty = powDifficulty, wrapPowIsActive = isActive))
+            }
+        ) {
+            return
+        }
+
         broadcastPrivately(NIP17Factory().createNoteNIP17(template, signer))
     }
 
