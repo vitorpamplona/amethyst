@@ -162,6 +162,10 @@ private object PrefKeys {
     const val ALWAYS_ON_NOTIFICATION_SERVICE = "always_on_notification_service"
     const val DEFAULT_RELAY_AUTH_POLICY = "default_relay_auth_policy"
     const val RELAY_GROUP_VIEW_MODE = "relay_group_view_mode"
+    const val RELAY_AUTH_TRUST_MY_RELAYS = "relay_auth_trust_my_relays_and_venues"
+    const val RELAY_AUTH_TRUST_READ_FOLLOWS = "relay_auth_trust_read_follows"
+    const val RELAY_AUTH_TRUST_MESSAGE_FOLLOWS = "relay_auth_trust_message_follows"
+    const val RELAY_AUTH_TRUST_MESSAGE_STRANGERS = "relay_auth_trust_message_strangers"
     const val SPLIT_NOTIFICATIONS_ENABLED = "split_notifications_enabled"
     const val SHOW_MESSAGES_IN_NOTIFICATIONS = "show_messages_in_notifications"
 
@@ -517,6 +521,10 @@ object LocalPreferences {
                     putBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, settings.alwaysOnNotificationService.value)
                     putString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, settings.defaultRelayAuthPolicy.value.name)
                     putString(PrefKeys.RELAY_GROUP_VIEW_MODE, settings.relayGroupViewMode.value.name)
+                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, settings.relayAuthTrustMyRelaysAndVenues.value)
+                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, settings.relayAuthTrustReadFollows.value)
+                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, settings.relayAuthTrustMessageFollows.value)
+                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_STRANGERS, settings.relayAuthTrustMessageStrangers.value)
                     putBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, settings.splitNotificationsEnabled.value)
                     putBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, settings.showMessagesInNotifications.value)
                     // Any account that reaches a save has its notification filter in its
@@ -636,8 +644,12 @@ object LocalPreferences {
                     val defaultRelayAuthPolicy =
                         getString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, null)
                             ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
-                            ?: RelayAuthPolicy.IF_IN_MY_LIST
+                            ?: RelayAuthPolicy.CUSTOM
                     val relayGroupViewMode = RelayGroupViewMode.fromName(getString(PrefKeys.RELAY_GROUP_VIEW_MODE, null))
+                    val relayAuthTrustMyRelays = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, true)
+                    val relayAuthTrustReadFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, true)
+                    val relayAuthTrustMessageFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, true)
+                    val relayAuthTrustMessageStrangers = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_STRANGERS, false)
                     val splitNotificationsEnabled = getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)
                     val showMessagesInNotifications = getBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, true)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
@@ -847,6 +859,10 @@ object LocalPreferences {
                         alwaysOnNotificationService = MutableStateFlow(alwaysOnNotificationService),
                         defaultRelayAuthPolicy = MutableStateFlow(defaultRelayAuthPolicy),
                         relayGroupViewMode = MutableStateFlow(relayGroupViewMode),
+                        relayAuthTrustMyRelaysAndVenues = MutableStateFlow(relayAuthTrustMyRelays),
+                        relayAuthTrustReadFollows = MutableStateFlow(relayAuthTrustReadFollows),
+                        relayAuthTrustMessageFollows = MutableStateFlow(relayAuthTrustMessageFollows),
+                        relayAuthTrustMessageStrangers = MutableStateFlow(relayAuthTrustMessageStrangers),
                         splitNotificationsEnabled = MutableStateFlow(splitNotificationsEnabled),
                         showMessagesInNotifications = MutableStateFlow(showMessagesInNotifications),
                         backupUserMetadata = latestUserMetadataResolved,

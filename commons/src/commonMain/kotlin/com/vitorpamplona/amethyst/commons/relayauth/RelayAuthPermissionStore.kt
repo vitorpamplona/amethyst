@@ -40,4 +40,27 @@ interface RelayAuthPermissionStore {
 
     /** All per-relay overrides — for the relay auth settings screen. */
     suspend fun allDecisions(): Map<String, RelayAuthDecision>
+
+    /**
+     * Records *why* [relayUrl] was authenticated with, so the settings screen can explain each
+     * relay ("To send DMs to: …", "To download posts from: …"). [additions] maps a purpose to the
+     * counterparty pubkeys seen for it; implementations merge into whatever is already stored.
+     * Default no-op for stores that don't track rationale.
+     */
+    suspend fun recordUse(
+        relayUrl: String,
+        additions: Map<AuthPurposeKind, Set<String>>,
+    ) {}
+
+    /** The accumulated grant rationale for [relayUrl] (purpose → counterparty pubkeys). */
+    suspend fun loadRationale(relayUrl: String): Map<AuthPurposeKind, Set<String>> = emptyMap()
+
+    /** All per-relay rationales — for the relay auth settings screen. */
+    suspend fun allRationales(): Map<String, Map<AuthPurposeKind, Set<String>>> = emptyMap()
+
+    /** Forgets the accumulated grant rationale for [relayUrl] (does not touch the ALLOW/DENY override). */
+    suspend fun clearRationale(relayUrl: String) {}
+
+    /** Epoch-second timestamp of the last time each relay was authenticated with (for display). */
+    suspend fun allLastUsed(): Map<String, Long> = emptyMap()
 }

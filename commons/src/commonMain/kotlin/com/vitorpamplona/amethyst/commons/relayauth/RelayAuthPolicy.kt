@@ -21,18 +21,22 @@
 package com.vitorpamplona.amethyst.commons.relayauth
 
 /**
- * The default policy for authenticating with relays (NIP-42).
+ * The top-level mode for authenticating with relays (NIP-42).
  * Per-relay overrides stored in [RelayAuthPermissionStore] always take precedence.
  */
 enum class RelayAuthPolicy {
-    /** Authenticate with every relay that requests it. Equivalent to current behavior. */
+    /** Authenticate with every relay that requests it. */
     ALWAYS,
 
     /** Never authenticate; do not reveal your identity to relay operators via NIP-42. */
     NEVER,
 
-    /** Authenticate only with relays explicitly listed in the user's relay list. */
-    IF_IN_MY_LIST,
+    /**
+     * Apply the per-situation [RelayAuthCustomToggles]: authenticate only for the categories the
+     * user turned on (own relays/venues, reading or messaging follows, messaging strangers).
+     * Situations no toggle covers fall through to an explicit prompt ([RelayAuthVerdict.ASK]).
+     */
+    CUSTOM,
 }
 
 /** A persisted per-relay override decision. */
