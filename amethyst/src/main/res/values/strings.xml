@@ -1939,6 +1939,7 @@
     <string name="messages_settings">Messages</string>
     <string name="messages_settings_search_keywords" translatable="false">messages, chats, groups, nip-29, relay, inline, dm</string>
     <string name="relay_group_create_title">Create a group</string>
+    <string name="relay_group_relay_no_nip29">This relay doesn\'t advertise support for NIP-29 relay groups. A group created here won\'t work — its name, members and messages won\'t be managed by the relay. Pick a relay that supports relay-based groups.</string>
     <string name="relay_group_create_name">Group name</string>
     <string name="relay_group_create_topic">Topic (optional)</string>
     <string name="relay_group_create_private">Private (members-only read)</string>

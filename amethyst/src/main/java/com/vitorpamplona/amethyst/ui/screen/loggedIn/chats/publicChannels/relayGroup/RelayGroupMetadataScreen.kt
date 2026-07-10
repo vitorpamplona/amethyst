@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -48,6 +49,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -59,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -89,10 +92,23 @@ fun RelayGroupCreateScreen(
     val viewModel: RelayGroupMetadataViewModel = viewModel(key = "RelayGroupCreate:$relayUrl")
     LaunchedEffect(relay) { viewModel.initCreate(accountViewModel, relay) }
 
+    // A group only works if the relay actually runs NIP-29 (otherwise it stores our 9007/9002 as
+    // ordinary events, never emits metadata/roster, and the "group" is a dead hex id). Gate creation
+    // on the relay advertising NIP-29 in its NIP-11 `supported_nips`. Tri-state: null = still checking,
+    // false = confirmed unsupported (or unreachable), true = advertised.
+    val nip29Support by produceState<Boolean?>(initialValue = null, relay) {
+        Amethyst.instance.nip11Cache.loadRelayInfo(
+            relay = relay,
+            onInfo = { info -> value = info.supported_nips?.any { it == "29" } ?: false },
+            onError = { _, _, _ -> value = false },
+        )
+    }
+
     RelayGroupMetadataScaffold(
         viewModel = viewModel,
         accountViewModel = accountViewModel,
         nav = nav,
+        nip29Support = nip29Support,
         onSuccess = { nav.popUpTo(Route.RelayGroup(viewModel.groupId, relay.url), Route.RelayGroupCreate::class) },
     )
 }
@@ -142,6 +158,10 @@ private fun RelayGroupMetadataScaffold(
     accountViewModel: AccountViewModel,
     nav: INav,
     onSuccess: () -> Unit,
+    // Whether the target relay advertises NIP-29. null = still checking, false = confirmed
+    // unsupported (block + warn), true = supported. Only meaningful when creating; editing an
+    // existing group already implies a working relay, so callers pass true.
+    nip29Support: Boolean? = true,
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -169,7 +189,7 @@ private fun RelayGroupMetadataScaffold(
             if (viewModel.isNewGroup) {
                 CreatingTopBar(
                     titleRes = R.string.relay_group_create_title,
-                    isActive = viewModel::canPost,
+                    isActive = { viewModel.canPost && nip29Support == true },
                     onCancel = nav::popBack,
                     onPost = onSubmit,
                 )
@@ -196,6 +216,11 @@ private fun RelayGroupMetadataScaffold(
                     .verticalScroll(scrollState)
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
+                if (nip29Support == false) {
+                    NoNip29Warning()
+                    Spacer(Modifier.height(16.dp))
+                }
+
                 GroupImagePicker(viewModel) { wantsToPickImage = true }
 
                 Spacer(Modifier.height(16.dp))
@@ -203,6 +228,32 @@ private fun RelayGroupMetadataScaffold(
                 GroupMetadataFields(viewModel)
             }
         }
+    }
+}
+
+/** A warning shown when the target relay doesn't advertise NIP-29, blocking creation. */
+@Composable
+private fun NoNip29Warning() {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.errorContainer)
+                .padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Warning,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onErrorContainer,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(
+            text = stringRes(R.string.relay_group_relay_no_nip29),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+        )
     }
 }
 
