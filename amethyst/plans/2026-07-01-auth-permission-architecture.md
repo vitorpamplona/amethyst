@@ -2,7 +2,32 @@
 
 **Date:** 2026-07-01
 **Module:** `amethyst` (+ shared bits in `commons`)
-**Status:** Design / proposal
+**Status:** Implemented — see "As-built" below for where the shipped design diverged from this proposal.
+
+## As-built (final)
+
+The implementation kept this doc's core ideas (purpose derivation, a prompt bus,
+per-relay overrides, grant rationale) but the policy model was reshaped during
+review:
+
+- **Global mode is `RelayAuthPolicy { ALWAYS, NEVER, CUSTOM }`** — the earlier
+  `IF_IN_MY_LIST` / `TRUSTED_FOLLOWS` values were dropped. `CUSTOM` applies a
+  `RelayAuthCustomToggles` set of independent switches: **my relays & venues**,
+  **read posts from follows**, **message follows**, **message strangers**
+  (off by default). New-install default is `CUSTOM` with the first three on.
+- **`AuthPurpose` is a `data class` (kind + counterparties + venues)** over an
+  `AuthPurposeKind` enum (SEND_DM, NOTIFY_INBOX, READ_OUTBOX, POST_VENUE,
+  READ_VENUE, MY_OWN_RELAY, OTHER) — not a sealed interface. Venues (NIP-28
+  public chats, NIP-72 communities, NIP-53 live activities) are first-class.
+- **Settings screen** uses the app's settings design system (`SettingsSection`
+  card + `SettingsSwitchTile`) for the toggles and a grouped, lazily-rendered
+  per-relay list (NIP-11 icon, `displayUrl`, tap → relay info).
+- **Give-up signal**: quartz's outbox surfaces `onEventGaveUp`, toasted by
+  `RelayPublishFailureToast`. `auth-required` NAKs never burn the retry budget
+  (they reset it) so a slow AUTH handshake can't drop the event.
+- **Known limitation**: an event queued to a relay the user then *denies* stays
+  pending in the outbox (auth-required never gives up); evicting it would need a
+  quartz "give up on relay for this event" API — deferred.
 
 ## Context
 

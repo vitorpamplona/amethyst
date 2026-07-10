@@ -74,7 +74,11 @@ class RelayAuthPrompt(
 class RelayAuthPromptBus(
     private val timeoutMs: Long = DEFAULT_TIMEOUT_MS,
 ) {
-    private val mutablePrompts = MutableSharedFlow<RelayAuthPrompt>(extraBufferCapacity = 32)
+    // replay so a challenge raised *before* the UI host subscribes — cold start, an account switch,
+    // any moment no RelayAuthPromptHost is collecting — isn't dropped (which would stall the auth
+    // coroutine the full timeout and then silently DISMISS). The host filters out any already-
+    // resolved prompt it replays, so re-delivering stale ones is harmless.
+    private val mutablePrompts = MutableSharedFlow<RelayAuthPrompt>(replay = 32, extraBufferCapacity = 32)
     val prompts: SharedFlow<RelayAuthPrompt> = mutablePrompts
 
     private val inFlight = mutableMapOf<NormalizedRelayUrl, CompletableDeferred<UserAuthChoice>>()

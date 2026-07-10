@@ -104,6 +104,28 @@ class PoolEventOutboxAuthTest {
         }
 
     @Test
+    fun authRequiredResetsTheTriesBudgetAcrossManyResends() {
+        val outbox = PoolEventOutbox()
+        val ev = event("ff".repeat(32))
+
+        outbox.publish(ev, setOf(relay)) // first try
+
+        // A flapping relay / slow AUTH handshake re-pumps the still-pending event many more times
+        // than the 4-try cap, each NAK'd auth-required. newTry() (the send path) grows `tries` and
+        // is not auth-aware, so unless auth-required resets the retry budget these sends would trip
+        // Tries.isDone() and drop the event (with a spurious give-up) before AUTH ever lands.
+        repeat(8) { i ->
+            assertNull(outbox.onSent(relay, EventCmd(ev)), "must not give up on re-pump $i")
+            outbox.nak(ev, relay, "auth-required: authenticate first")
+        }
+        assertEquals(setOf(relay), outbox.pendingRelaysFor(ev.id))
+
+        // AUTH finally completes -> the event delivers.
+        outbox.ok(ev, relay)
+        assertNull(outbox.pendingRelaysFor(ev.id))
+    }
+
+    @Test
     fun terminalRejectionStillDiscardsImmediately() {
         val outbox = PoolEventOutbox()
         val ev = event("cc".repeat(32))

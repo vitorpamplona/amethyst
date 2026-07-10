@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -67,5 +68,20 @@ class RelayAuthPromptBusTest {
 
             // No one ever responds; the call must not hang, it resolves to DISMISS.
             assertEquals(UserAuthChoice.DISMISS, bus.requestDecision(relay, emptyList()))
+        }
+
+    @Test
+    fun retainsPromptForALateSubscriberSoItIsNotLost() =
+        runTest {
+            val bus = RelayAuthPromptBus()
+
+            // A challenge fires while NO host is collecting (cold start / account switch).
+            val caller = async { bus.requestDecision(relay, emptyList()) }
+            runCurrent() // let the emit happen with no subscriber present
+
+            // A host subscribes late; the replayed prompt must still reach it (not be lost, which
+            // would strand the caller until the timeout and then silently DISMISS).
+            bus.prompts.first().respond(UserAuthChoice.ALLOW_ONCE)
+            assertEquals(UserAuthChoice.ALLOW_ONCE, caller.await())
         }
 }

@@ -74,12 +74,15 @@ class PoolEventOutboxState(
             relaysRemaining = relaysRemaining - url
             failures = failures - url
         } else if (message.isAuthRequired()) {
-            // NIP-42 AUTH challenge in flight — don't count toward the try cap.
-            // RelayAuthenticator signs + relay re-issues OK; syncFilters() then
-            // re-pumps this outbox so the original publish is retried. Leave
-            // relaysRemaining and failures untouched, otherwise a relay that NAKs
-            // every unauthed EVENT would exhaust the retry budget and drop the
-            // event before AUTH lands.
+            // NIP-42 AUTH challenge in flight. The relay responded, so it's up and simply wants
+            // auth first: RelayAuthenticator signs, the relay re-issues OK, and syncFilters()
+            // re-pumps this outbox to retry the publish. Reset the retry budget for this relay
+            // (clear both tries and responses) so the send attempts accumulated across reconnects /
+            // slow AUTH rounds can't exhaust the cap and drop the event before AUTH lands. Note
+            // newTry() (the send path) grows `tries` and is NOT auth-aware, so only clearing
+            // `responses` would still let a re-pumped event give up here. relaysRemaining is left
+            // as-is: the event must stay pending for this relay until AUTH unlocks it.
+            failures = failures - url
         } else {
             val currentTries = failures[url]
             if (currentTries != null) {
