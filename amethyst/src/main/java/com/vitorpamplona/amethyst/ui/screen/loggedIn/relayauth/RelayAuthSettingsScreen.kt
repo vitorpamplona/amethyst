@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relayauth
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -40,7 +42,6 @@ import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -64,13 +65,11 @@ import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.LoadRelayAuthUser
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.relayAuthReasonRes
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
-import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.PolicyCard
@@ -79,7 +78,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private const val MAX_RATIONALE_ROWS = 8
+/** Avatars shown in a relay's facepile before the "+N" overflow badge. */
+private const val FACEPILE_MAX = 3
 
 @Composable
 fun RelayAuthSettingsScreen(
@@ -191,72 +191,61 @@ fun RelayAuthSettingsScreen(
             HorizontalDivider()
             Spacer(Modifier.height(8.dp))
 
-            if (perRelayOverrides.isNotEmpty()) {
-                Text(
-                    text = stringResource(R.string.relay_auth_per_relay_overrides),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Spacer(Modifier.height(4.dp))
-
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(4.dp)) {
-                        perRelayOverrides.entries.sortedBy { it.key }.forEachIndexed { index, (url, decision) ->
-                            if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
-                            PerRelayOverrideRow(
-                                url = url,
-                                decision = decision,
-                                onRemove = {
-                                    scope.launch {
-                                        ledger.clearDecision(url)
-                                        reloadKey++
-                                    }
-                                },
-                                onToggle = {
-                                    scope.launch {
-                                        val next =
-                                            if (decision == RelayAuthDecision.ALLOW) {
-                                                RelayAuthDecision.DENY
-                                            } else {
-                                                RelayAuthDecision.ALLOW
-                                            }
-                                        ledger.setDecision(url, next)
-                                        reloadKey++
-                                    }
-                                },
-                            )
-                        }
-                    }
+            // One list per relay: its allow/deny state, who it serves (a facepile), and when it was
+            // last used. The union of relays we have an override for and relays we've recorded a
+            // reason for — so the "why we're logged in" info and the override control live together.
+            val relayUrls =
+                remember(perRelayOverrides, rationales, lastUsed) {
+                    (perRelayOverrides.keys + rationales.keys + lastUsed.keys).toSortedSet()
                 }
-            } else {
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+
+            Text(
+                text = stringResource(R.string.relay_auth_per_relay_overrides),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(Modifier.height(4.dp))
+
+            if (relayUrls.isEmpty()) {
+                Box(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Text(
                         text = stringResource(R.string.relay_auth_no_overrides),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            }
-
-            if (rationales.isNotEmpty()) {
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.relay_auth_why_authenticated),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Spacer(Modifier.height(4.dp))
-
-                rationales.entries.sortedBy { it.key }.forEach { (url, rationale) ->
-                    RelayRationaleCard(
+            } else {
+                relayUrls.forEach { url ->
+                    RelayCard(
                         url = url,
-                        rationale = rationale,
+                        decision = perRelayOverrides[url],
+                        servedUsers =
+                            rationales[url]
+                                ?.values
+                                ?.flatten()
+                                ?.distinct()
+                                .orEmpty(),
                         lastUsedSecs = lastUsed[url],
                         accountViewModel = accountViewModel,
+                        onToggle = {
+                            scope.launch {
+                                // null (allowed by policy) or ALLOW -> block; DENY -> allow.
+                                val next =
+                                    if (perRelayOverrides[url] == RelayAuthDecision.DENY) {
+                                        RelayAuthDecision.ALLOW
+                                    } else {
+                                        RelayAuthDecision.DENY
+                                    }
+                                ledger.setDecision(url, next)
+                                reloadKey++
+                            }
+                        },
                         onForget = {
                             scope.launch {
+                                // Single "forget" clears both the override and the recorded reason,
+                                // so the relay drops off this list entirely.
                                 ledger.clearDecision(url)
                                 store.clearRationale(url)
                                 reloadKey++
@@ -270,12 +259,19 @@ fun RelayAuthSettingsScreen(
     }
 }
 
+/**
+ * One relay's card in the merged list: URL, an allow/deny chip, a facepile of the people it serves,
+ * and when it was last used. [decision] is null when the relay is allowed by policy rather than an
+ * explicit override; the chip still reads "Allowed" and tapping it records an explicit block.
+ */
 @Composable
-private fun RelayRationaleCard(
+private fun RelayCard(
     url: String,
-    rationale: Map<AuthPurposeKind, Set<HexKey>>,
+    decision: RelayAuthDecision?,
+    servedUsers: List<HexKey>,
     lastUsedSecs: Long?,
     accountViewModel: AccountViewModel,
+    onToggle: () -> Unit,
     onForget: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -285,10 +281,13 @@ private fun RelayRationaleCard(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(start = 12.dp, top = 8.dp, end = 4.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Text(
                     text = url,
                     style = MaterialTheme.typography.titleSmall,
@@ -296,9 +295,13 @@ private fun RelayRationaleCard(
                     overflow = TextOverflow.MiddleEllipsis,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = onForget) {
-                    Text(stringResource(R.string.relay_auth_forget))
+                DecisionChip(decision = decision, onToggle = onToggle)
+                IconButton(onClick = onForget) {
+                    Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.relay_auth_forget))
                 }
+            }
+            if (servedUsers.isNotEmpty()) {
+                UserFacepile(servedUsers, accountViewModel)
             }
             if (lastUsedSecs != null && lastUsedSecs > 0L) {
                 Text(
@@ -307,99 +310,71 @@ private fun RelayRationaleCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            rationale.forEach { (kind, pubkeys) ->
-                Text(
-                    text = stringResource(relayAuthReasonRes(kind)),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                // Bounded, non-lazy list: an outbox relay's rationale can name many people, so cap
-                // the rows shown here (the full set is already bounded in the store too).
-                pubkeys.take(MAX_RATIONALE_ROWS).forEach { pubkey ->
-                    RationaleUserRow(pubkey, accountViewModel)
-                }
-                if (pubkeys.size > MAX_RATIONALE_ROWS) {
-                    Text(
-                        text = stringResource(R.string.relay_auth_and_others),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
         }
     }
 }
 
+/** Allow/deny pill for a relay. Green when allowed (explicitly or by policy), red when blocked. */
 @Composable
-private fun RationaleUserRow(
-    pubkey: HexKey,
-    accountViewModel: AccountViewModel,
-) {
-    LoadRelayAuthUser(pubkey, accountViewModel) { user ->
-        if (user != null) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(start = 8.dp),
-            ) {
-                ClickableUserPicture(user, 28.dp, accountViewModel)
-                UsernameDisplay(user, accountViewModel = accountViewModel)
-            }
-        }
-    }
-}
-
-@Composable
-private fun PerRelayOverrideRow(
-    url: String,
-    decision: RelayAuthDecision,
-    onRemove: () -> Unit,
+private fun DecisionChip(
+    decision: RelayAuthDecision?,
     onToggle: () -> Unit,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Column(Modifier.weight(1f)) {
+    val allowed = decision != RelayAuthDecision.DENY
+    SuggestionChip(
+        onClick = onToggle,
+        label = {
             Text(
-                text = url,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                text = stringResource(if (allowed) R.string.relay_auth_decision_allow else R.string.relay_auth_decision_deny),
+                style = MaterialTheme.typography.labelSmall,
             )
-        }
-        SuggestionChip(
-            onClick = onToggle,
-            label = {
-                Text(
-                    text =
-                        if (decision == RelayAuthDecision.ALLOW) {
-                            stringResource(R.string.relay_auth_decision_allow)
-                        } else {
-                            stringResource(R.string.relay_auth_decision_deny)
-                        },
-                    style = MaterialTheme.typography.labelSmall,
+        },
+        colors =
+            if (allowed) {
+                SuggestionChipDefaults.suggestionChipColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            } else {
+                SuggestionChipDefaults.suggestionChipColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    labelColor = MaterialTheme.colorScheme.onErrorContainer,
                 )
             },
-            colors =
-                if (decision == RelayAuthDecision.ALLOW) {
-                    SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                } else {
-                    SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        labelColor = MaterialTheme.colorScheme.onErrorContainer,
-                    )
-                },
-        )
-        IconButton(onClick = onRemove) {
-            Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.relay_auth_remove_override))
+    )
+}
+
+/** Overlapping avatars for the people a relay serves — [FACEPILE_MAX] pictures then a "+N" badge. */
+@Composable
+private fun UserFacepile(
+    pubkeys: List<HexKey>,
+    accountViewModel: AccountViewModel,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy((-8).dp)) {
+            pubkeys.take(FACEPILE_MAX).forEach { pubkey ->
+                LoadRelayAuthUser(pubkey, accountViewModel) { user ->
+                    if (user != null) {
+                        ClickableUserPicture(
+                            baseUser = user,
+                            size = 28.dp,
+                            accountViewModel = accountViewModel,
+                            modifier = Modifier.border(2.dp, MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                        )
+                    }
+                }
+            }
+        }
+        val extra = pubkeys.size - FACEPILE_MAX
+        if (extra > 0) {
+            Text(
+                text = "+$extra",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

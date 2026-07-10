@@ -827,8 +827,8 @@
     <string name="relay_auth_policy_if_in_my_list_desc">Only authenticate with relays in your relay list</string>
     <string name="relay_auth_policy_trusted_follows">My relays and people I follow</string>
     <string name="relay_auth_policy_trusted_follows_desc">Also authenticate with relays that serve people you follow, such as sending a message to a friend. You\'ll be asked about anyone else.</string>
-    <string name="relay_auth_trust_reads">Also trust when reading their posts</string>
-    <string name="relay_auth_trust_reads_desc">Log in automatically to download posts from people you follow, not just to message or notify them.</string>
+    <string name="relay_auth_trust_reads">Also log in to read their posts</string>
+    <string name="relay_auth_trust_reads_desc">On its own, the option above only logs in to send messages or notifications to people you follow. Turn this on to also log in when downloading their posts.</string>
     <string name="relay_auth_prompt_title">Confirm it\'s you to this relay?</string>
     <string name="relay_auth_prompt_message">This relay wants to confirm it\'s really you first. Its operator will see which account you are.</string>
     <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
@@ -851,21 +851,18 @@
     <string name="relay_auth_reason_read_venue">Open this room</string>
     <string name="relay_auth_reason_other">Use this relay</string>
     <string name="relay_auth_reason_my_own_relay">Connect to your own relay</string>
-    <string name="relay_auth_and_others">…and others</string>
     <string name="relay_auth_allow_once">Allow once</string>
     <string name="relay_auth_always_allow">Always allow this relay</string>
     <string name="relay_auth_always_allow_follows">Always allow my follows\' relays</string>
     <string name="relay_auth_block">Block this relay</string>
-    <string name="relay_auth_per_relay_overrides">Per-relay overrides</string>
-    <string name="relay_auth_why_authenticated">Why you\'re logged in to these relays</string>
+    <string name="relay_auth_per_relay_overrides">Individual relays</string>
     <string name="relay_auth_forget">Forget</string>
     <string name="relay_auth_last_used">Last used %1$s ago</string>
     <string name="relay_send_failed_title">Couldn\'t deliver your event</string>
     <string name="relay_send_failed_message">The relay %1$s didn\'t accept it after several tries.</string>
-    <string name="relay_auth_no_overrides">No per-relay overrides — global policy applies everywhere</string>
+    <string name="relay_auth_no_overrides">Nothing here yet — your global policy applies to every relay.</string>
     <string name="relay_auth_decision_allow">Allow</string>
     <string name="relay_auth_decision_deny">Deny</string>
-    <string name="relay_auth_remove_override">Remove override</string>
 
     <string name="nip82_repository_label">Source: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
