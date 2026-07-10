@@ -818,7 +818,8 @@
     <!-- Relay Authentication (NIP-42) settings -->
     <string name="relay_auth_settings_title">Relay Authentication</string>
     <string name="relay_auth_search_keywords">auth authentication relay sign verify nip-42 identity</string>
-    <string name="relay_auth_global_policy">Global policy</string>
+    <string name="relay_auth_global_policy">When to authenticate</string>
+    <string name="relay_auth_custom_section">What to log in to</string>
     <string name="relay_auth_policy_always">Always authenticate</string>
     <string name="relay_auth_policy_always_desc">Sign auth challenges for every relay that requests it</string>
     <string name="relay_auth_policy_never">Never authenticate</string>

@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relayauth
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,7 +40,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,8 +55,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -123,17 +124,14 @@ fun RelayAuthSettingsScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .verticalScroll(rememberScrollState()),
         ) {
-            Text(
-                text = stringResource(R.string.relay_auth_global_policy),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(Modifier.height(4.dp))
+            SectionHeader(stringResource(R.string.relay_auth_global_policy))
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 RelayAuthPolicy.entries.forEach { policy ->
                     val (titleRes, descRes, symbol) =
                         when (policy) {
@@ -167,50 +165,41 @@ fun RelayAuthSettingsScreen(
             }
 
             if (globalPolicy == RelayAuthPolicy.CUSTOM) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                ) {
-                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                        val myRelays by account.settings.relayAuthTrustMyRelaysAndVenues.collectAsState()
-                        val readFollows by account.settings.relayAuthTrustReadFollows.collectAsState()
-                        val messageFollows by account.settings.relayAuthTrustMessageFollows.collectAsState()
-                        val messageStrangers by account.settings.relayAuthTrustMessageStrangers.collectAsState()
+                val myRelays by account.settings.relayAuthTrustMyRelaysAndVenues.collectAsState()
+                val readFollows by account.settings.relayAuthTrustReadFollows.collectAsState()
+                val messageFollows by account.settings.relayAuthTrustMessageFollows.collectAsState()
+                val messageStrangers by account.settings.relayAuthTrustMessageStrangers.collectAsState()
 
-                        AuthToggleRow(
-                            title = stringResource(R.string.relay_auth_toggle_my_relays),
-                            description = stringResource(R.string.relay_auth_toggle_my_relays_desc),
-                            checked = myRelays,
-                            onCheckedChange = { account.settings.changeRelayAuthTrustMyRelaysAndVenues(it) },
-                        )
-                        AuthToggleRow(
-                            title = stringResource(R.string.relay_auth_toggle_read_follows),
-                            description = stringResource(R.string.relay_auth_toggle_read_follows_desc),
-                            checked = readFollows,
-                            onCheckedChange = { account.settings.changeRelayAuthTrustReadFollows(it) },
-                        )
-                        AuthToggleRow(
-                            title = stringResource(R.string.relay_auth_toggle_message_follows),
-                            description = stringResource(R.string.relay_auth_toggle_message_follows_desc),
-                            checked = messageFollows,
-                            onCheckedChange = { account.settings.changeRelayAuthTrustMessageFollows(it) },
-                        )
-                        AuthToggleRow(
-                            title = stringResource(R.string.relay_auth_toggle_message_strangers),
-                            description = stringResource(R.string.relay_auth_toggle_message_strangers_desc),
-                            checked = messageStrangers,
-                            onCheckedChange = { account.settings.changeRelayAuthTrustMessageStrangers(it) },
-                        )
-                    }
-                }
+                SectionHeader(stringResource(R.string.relay_auth_custom_section))
+                AuthToggleRow(
+                    title = stringResource(R.string.relay_auth_toggle_my_relays),
+                    description = stringResource(R.string.relay_auth_toggle_my_relays_desc),
+                    checked = myRelays,
+                    onCheckedChange = { account.settings.changeRelayAuthTrustMyRelaysAndVenues(it) },
+                )
+                AuthToggleRow(
+                    title = stringResource(R.string.relay_auth_toggle_read_follows),
+                    description = stringResource(R.string.relay_auth_toggle_read_follows_desc),
+                    checked = readFollows,
+                    onCheckedChange = { account.settings.changeRelayAuthTrustReadFollows(it) },
+                )
+                AuthToggleRow(
+                    title = stringResource(R.string.relay_auth_toggle_message_follows),
+                    description = stringResource(R.string.relay_auth_toggle_message_follows_desc),
+                    checked = messageFollows,
+                    onCheckedChange = { account.settings.changeRelayAuthTrustMessageFollows(it) },
+                )
+                AuthToggleRow(
+                    title = stringResource(R.string.relay_auth_toggle_message_strangers),
+                    description = stringResource(R.string.relay_auth_toggle_message_strangers_desc),
+                    checked = messageStrangers,
+                    onCheckedChange = { account.settings.changeRelayAuthTrustMessageStrangers(it) },
+                )
             }
 
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(thickness = 4.dp, modifier = Modifier.padding(vertical = 8.dp))
 
-            // One list per relay: its allow/deny state, who it serves (a facepile), and when it was
+            // One row per relay: its allow/deny state, who it serves (a facepile), and when it was
             // last used. The union of relays we have an override for and relays we've recorded a
             // reason for — so the "why we're logged in" info and the override control live together.
             val relayUrls =
@@ -218,26 +207,18 @@ fun RelayAuthSettingsScreen(
                     (perRelayOverrides.keys + rationales.keys + lastUsed.keys).toSortedSet()
                 }
 
-            Text(
-                text = stringResource(R.string.relay_auth_per_relay_overrides),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(Modifier.height(4.dp))
+            SectionHeader(stringResource(R.string.relay_auth_per_relay_overrides))
 
             if (relayUrls.isEmpty()) {
-                Box(
-                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource(R.string.relay_auth_no_overrides),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(
+                    text = stringResource(R.string.relay_auth_no_overrides),
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+                )
             } else {
                 relayUrls.forEach { url ->
-                    RelayCard(
+                    RelayRow(
                         url = url,
                         decision = perRelayOverrides[url],
                         servedUsers =
@@ -272,14 +253,27 @@ fun RelayAuthSettingsScreen(
                             }
                         },
                     )
-                    Spacer(Modifier.height(8.dp))
                 }
             }
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
 
-/** A labelled Switch row for one [RelayAuthPolicy.CUSTOM] trust toggle. */
+/** Small primary-colored section label, matching the other settings screens. */
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 4.dp),
+    )
+}
+
+/** A labelled Switch row for one [RelayAuthPolicy.CUSTOM] trust toggle, in the settings house style. */
 @Composable
 private fun AuthToggleRow(
     title: String,
@@ -291,30 +285,32 @@ private fun AuthToggleRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge)
+            Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Medium)
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
             )
         }
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(16.dp))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
 /**
- * One relay's card in the merged list: NIP-11 icon + shortened URL (tap the card to open the relay's
- * info screen), when it was last used, an Allow/Deny chip, a Forget button, and a facepile of the
- * people it serves. [decision] is null when the relay is allowed by policy rather than an explicit
- * override; the chip still reads "Allowed" and tapping it records an explicit block.
+ * One relay's row in the per-relay list: NIP-11 icon + shortened URL (tap the row to open the relay's
+ * info screen), when it was last used, a facepile of the people it serves, an Allow/Deny chip, and a
+ * Forget button. [decision] is null when the relay is allowed by policy rather than an explicit
+ * override; the chip still reads "Allowed" and tapping it records an explicit block. Styled to match
+ * the app's other relay lists (icon-led rows separated by dividers).
  */
 @Composable
-private fun RelayCard(
+private fun RelayRow(
     url: String,
     decision: RelayAuthDecision?,
     servedUsers: List<HexKey>,
@@ -327,45 +323,40 @@ private fun RelayCard(
     val context = LocalContext.current
     val relay = remember(url) { url.normalizeRelayUrlOrNull() }
 
-    Surface(
-        onClick = { nav.nav(Route.RelayInfo(url)) },
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(start = 12.dp, top = 10.dp, end = 4.dp, bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+    Column(modifier = Modifier.clickable { nav.nav(Route.RelayInfo(url)) }) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 10.dp, end = 4.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                RelayIcon(relay, url, accountViewModel)
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = relay?.displayUrl() ?: url,
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.MiddleEllipsis,
-                    )
-                    if (lastUsedSecs != null && lastUsedSecs > 0L) {
-                        Text(
-                            text = stringResource(R.string.relay_auth_last_used, timeAgo(lastUsedSecs, context, prefix = "")),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+            RelayIcon(relay, url, accountViewModel)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = relay?.displayUrl() ?: url,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.MiddleEllipsis,
+                )
+                if (servedUsers.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    UserFacepile(servedUsers, accountViewModel)
                 }
-                DecisionChip(decision = decision, onToggle = onToggle)
-                IconButton(onClick = onForget) {
-                    Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.relay_auth_forget))
+                if (lastUsedSecs != null && lastUsedSecs > 0L) {
+                    Text(
+                        text = stringResource(R.string.relay_auth_last_used, timeAgo(lastUsedSecs, context, prefix = "")),
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
                 }
             }
-            if (servedUsers.isNotEmpty()) {
-                UserFacepile(servedUsers, accountViewModel)
+            DecisionChip(decision = decision, onToggle = onToggle)
+            IconButton(onClick = onForget) {
+                Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.relay_auth_forget))
             }
         }
+        HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
     }
 }
 
