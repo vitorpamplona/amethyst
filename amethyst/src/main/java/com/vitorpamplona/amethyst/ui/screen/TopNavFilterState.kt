@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
@@ -332,16 +333,32 @@ class TopNavFilterState(
         combineTransform(
             livePeopleListsFlow,
             liveInterestFlows,
-        ) { peopleLists, interests ->
+            account.relayGroupList.liveRelayGroupServers,
+        ) { peopleLists, interests, joinedServers ->
             checkNotInMainThread()
+            // A relay chip per host relay of every group the user joined (kind-10009), so they can
+            // browse the OTHER groups on those relays without first having to Favorite them. Deduped
+            // against relays that are already chips because they were favorited (kind-10012, already
+            // in `interests`). Only in this catalog — other feeds (git, podcasts, …) don't want them.
+            val alreadyChip = interests.mapNotNullTo(HashSet()) { (it.code as? TopFilter.Relay)?.url }
+            val joinedRelayChips =
+                joinedServers
+                    .asSequence()
+                    .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                    .filter { it.url !in alreadyChip }
+                    .distinctBy { it.url }
+                    .map { FeedDefinition(TopFilter.Relay(it.url), RelayName(it)) }
+                    .sortedBy { it.name.name() }
+                    .toList()
             emit(
                 listOf(
-                    // Relay-group discovery routes to relays by author, hashtag and geohash, plus a
-                    // favorite-relay chip; "Mine" (the joined-groups view) sits last in the base
-                    // group to match the ordering every other feed uses.
+                    // Relay-group discovery routes to relays by author, hashtag and geohash, plus
+                    // favorited + joined-group relay chips; "Mine" (the joined-groups view) sits last
+                    // in the base group to match the ordering every other feed uses.
                     listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow),
                     peopleLists,
                     interests,
+                    joinedRelayChips,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
             )
