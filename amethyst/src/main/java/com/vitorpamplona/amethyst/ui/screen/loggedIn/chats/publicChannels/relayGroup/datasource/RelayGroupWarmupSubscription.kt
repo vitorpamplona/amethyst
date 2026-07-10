@@ -37,10 +37,11 @@ fun RelayGroupWarmupSubscription(
     dataSource: RelayGroupWarmupFilterAssembler,
     accountViewModel: AccountViewModel,
     contentOnly: Boolean = false,
+    contentLimit: Int = RELAY_GROUP_WARMUP_LIMIT,
 ) {
     val state =
-        remember(channel.groupId, contentOnly) {
-            RelayGroupWarmupQueryState(channel, contentOnly)
+        remember(channel.groupId, contentOnly, contentLimit) {
+            RelayGroupWarmupQueryState(channel, contentOnly, contentLimit)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

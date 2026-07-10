@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -67,11 +68,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 
+/** A first screen's worth of recent messages to prefetch per visible group card, ahead of a tap. */
+private const val CHANNEL_LIST_WARMUP_LIMIT = 10
+
 /**
  * Lists every channel a relay hosts (its kind 39000-39003 directory), so the user
  * can browse and open channels on that relay. The relay's directory is streamed by
  * [RelayGroupsOnRelaySubscription] and consumed into per-group channels; this
- * screen reads them back for the relay and renders them.
+ * screen reads them back for the relay and renders them. Each visible card also warms
+ * its group's recent messages so opening a chat lands on cached content.
  */
 @Composable
 fun RelayGroupChannelListScreen(
@@ -155,6 +160,18 @@ private fun RelayGroupChannelRow(
     val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
     val joined = channel.membershipOf(myPubkey).isMember()
     val memberCount = channel.memberCount()
+
+    // Anticipate a tap: while this row is on-screen, prefetch a first screen's worth of recent
+    // messages for its group (content only — the directory subscription already streams metadata),
+    // so opening the chat lands on cached content instead of a blank load. Bounded to visible rows
+    // by the LazyColumn, and released as they scroll off.
+    RelayGroupWarmupSubscription(
+        channel,
+        accountViewModel.dataSources().relayGroupWarmup,
+        accountViewModel,
+        contentOnly = true,
+        contentLimit = CHANNEL_LIST_WARMUP_LIMIT,
+    )
 
     Row(
         modifier =

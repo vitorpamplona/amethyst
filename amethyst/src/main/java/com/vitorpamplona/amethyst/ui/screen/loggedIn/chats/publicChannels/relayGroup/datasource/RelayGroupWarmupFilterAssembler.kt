@@ -40,6 +40,8 @@ class RelayGroupWarmupQueryState(
     val channel: RelayGroupChannel,
     /** When true, prefetch only recent content — the caller's screen already streams metadata. */
     val contentOnly: Boolean = false,
+    /** How many recent content events to prefetch ahead of a tap. */
+    val contentLimit: Int = RELAY_GROUP_WARMUP_LIMIT,
 )
 
 /** Newest content kinds we prefetch so opening the card lands on populated screens. */
@@ -47,11 +49,12 @@ private val RELAY_GROUP_WARMUP_CONTENT_KINDS =
     listOf(ChatEvent.KIND, PollEvent.KIND, ThreadEvent.KIND, CommentEvent.KIND)
 
 /**
- * How many recent events to pull ahead of a tap — enough to fill the first screen AND drive the
- * discovery card's "50+ messages" activity signal (a chat that returns the full page reads as
- * "50+"; fewer shows the exact loaded count).
+ * Default number of recent events to pull ahead of a tap — enough to fill the first screen AND drive
+ * the discovery card's "50+ messages" activity signal (a chat that returns the full page reads as
+ * "50+"; fewer shows the exact loaded count). Callers that only need a first-screen preview (e.g. a
+ * relay's channel list) pass a smaller [RelayGroupWarmupQueryState.contentLimit].
  */
-private const val RELAY_GROUP_WARMUP_LIMIT = 50
+const val RELAY_GROUP_WARMUP_LIMIT = 50
 
 /**
  * Warms a NIP-29 group referenced inline (a group-link card) without opening it:
@@ -92,7 +95,7 @@ class RelayGroupWarmupSubAssembler(
                     Filter(
                         kinds = RELAY_GROUP_WARMUP_CONTENT_KINDS,
                         tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
-                        limit = RELAY_GROUP_WARMUP_LIMIT,
+                        limit = key.contentLimit,
                         since = since?.get(groupId.relayUrl)?.time,
                     ),
             )
