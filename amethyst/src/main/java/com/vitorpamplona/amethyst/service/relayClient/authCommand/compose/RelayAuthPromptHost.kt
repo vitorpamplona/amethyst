@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPrompt
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.UserAuthChoice
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -174,6 +175,19 @@ private fun RelayAuthPromptDialog(
                     onClick = { onChoice(UserAuthChoice.ALLOW_ONCE) },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringRes(R.string.relay_auth_allow_once)) }
+                // For a "download their posts" prompt, offer the broad rule: trust every relay that
+                // serves people you follow, so these read prompts stop appearing. Read-trust only
+                // applies under TRUSTED_FOLLOWS, so set both to make the promise hold on any policy.
+                if (primary?.kind == AuthPurposeKind.READ_OUTBOX) {
+                    FilledTonalButton(
+                        onClick = {
+                            accountViewModel.account.settings.changeDefaultRelayAuthPolicy(RelayAuthPolicy.TRUSTED_FOLLOWS)
+                            accountViewModel.account.settings.changeRelayAuthTrustFollowsForReads(true)
+                            onChoice(UserAuthChoice.ALLOW_ONCE)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringRes(R.string.relay_auth_always_allow_follows)) }
+                }
                 FilledTonalButton(
                     onClick = { onChoice(UserAuthChoice.ALWAYS_ALLOW) },
                     modifier = Modifier.fillMaxWidth(),

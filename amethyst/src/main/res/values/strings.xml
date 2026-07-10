@@ -854,6 +854,7 @@
     <string name="relay_auth_and_others">…and others</string>
     <string name="relay_auth_allow_once">Allow once</string>
     <string name="relay_auth_always_allow">Always allow this relay</string>
+    <string name="relay_auth_always_allow_follows">Always allow relays of people I follow</string>
     <string name="relay_auth_block">Block this relay</string>
     <string name="relay_auth_per_relay_overrides">Per-relay overrides</string>
     <string name="relay_auth_why_authenticated">Why you\'re logged in to these relays</string>
