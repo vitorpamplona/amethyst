@@ -314,7 +314,7 @@ open class ShortNotePostViewModel :
     // Optional subject line: a NIP-14 `subject` tag on a kind-1 note, or the `title` of a NIP-29
     // kind-11 group thread. Toggled from the bottom row; auto-on for group threads.
     var wantsSubject by mutableStateOf(false)
-    var subjectText by mutableStateOf("")
+    val subject = TextFieldState()
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
@@ -1119,13 +1119,14 @@ open class ShortNotePostViewModel :
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
+        val subjectValue = subject.text.toString().trim()
 
         val threadTarget = groupThreadTarget
         return if (threadTarget != null) {
             // NIP-29 kind-11 group thread. The title is the required subject field (no first-line
             // fallback); the body is the full message. Scoped to the group by `h`; the host relay
             // authorizes the write.
-            ThreadEvent.build(tagger.message.trim(), subjectText.trim()) {
+            ThreadEvent.build(tagger.message.trim(), subjectValue) {
                 hTag(threadTarget.groupId)
 
                 hashtags(findHashtags(tagger.message))
@@ -1265,7 +1266,7 @@ open class ShortNotePostViewModel :
                 references(findURLs(tagger.message))
                 quotes(findNostrUris(tagger.message))
 
-                if (wantsSubject && subjectText.isNotBlank()) subject(subjectText.trim())
+                if (wantsSubject && subjectValue.isNotBlank()) subject(subjectValue)
 
                 geoHash?.let { geohash(it) }
                 localZapRaiserAmount?.let { zapraiser(it) }
@@ -1441,7 +1442,7 @@ open class ShortNotePostViewModel :
 
         wantsForwardZapTo = false
         wantsSubject = false
-        subjectText = ""
+        subject.clearText()
         wantsToMarkAsSensitive = false
         contentWarningDescription = ""
         wantsToAddGeoHash = false
@@ -1572,7 +1573,7 @@ open class ShortNotePostViewModel :
         }
 
         // A NIP-29 group thread requires a title — it has no first-line fallback.
-        if (groupThreadTarget != null && subjectText.isBlank()) return false
+        if (groupThreadTarget != null && subject.text.isBlank()) return false
 
         // Regular text/media posts require text
         return message.text.toString().isNotBlank() &&
@@ -1834,7 +1835,7 @@ open class ShortNotePostViewModel :
 
     fun toggleSubject() {
         wantsSubject = !wantsSubject
-        if (!wantsSubject) subjectText = ""
+        if (!wantsSubject) subject.clearText()
         draftTag.newVersion()
     }
 
