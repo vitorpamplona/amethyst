@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListState
@@ -125,6 +126,7 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -381,6 +383,8 @@ class Account(
 
     val relayGroupListDecryptionCache = RelayGroupListDecryptionCache(signer)
     val relayGroupList = RelayGroupListState(signer, cache, relayGroupListDecryptionCache, scope, settings)
+
+    val concordChannelList = ConcordChannelListState(signer, cache, scope, settings)
 
     val publicChatListDecryptionCache = PublicChatListDecryptionCache(signer)
     val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
@@ -1468,6 +1472,12 @@ class Account(
     suspend fun follow(channel: RelayGroupChannel) = sendMyPublicAndPrivateOutbox(relayGroupList.follow(channel))
 
     suspend fun unfollow(channel: RelayGroupChannel) = sendMyPublicAndPrivateOutbox(relayGroupList.unfollow(channel))
+
+    /** Add a joined Concord community (secret-bearing entry) to the private kind-13302 list. */
+    suspend fun joinConcordCommunity(entry: ConcordCommunityListEntry) = sendMyPublicAndPrivateOutbox(concordChannelList.follow(entry))
+
+    /** Drop a joined Concord community from the private kind-13302 list by its id. */
+    suspend fun leaveConcordCommunity(communityId: String) = sendMyPublicAndPrivateOutbox(concordChannelList.unfollow(communityId))
 
     // ── NIP-29 relay-group actions ───────────────────────────────────────────
     // All group commands are published ONLY to the group's host relay, where
