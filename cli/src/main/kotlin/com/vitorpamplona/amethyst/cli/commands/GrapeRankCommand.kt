@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRank
-import com.vitorpamplona.quartz.experimental.graperank.GrapeRankDataCrawler
+import com.vitorpamplona.quartz.experimental.graperank.GrapeRankCrawler
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankParams
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankPublisher
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankUpdater
@@ -53,10 +53,17 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProvider
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceType
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.net.URI
+import java.util.concurrent.Executors
 import kotlin.math.roundToInt
 
 /**
@@ -78,13 +85,14 @@ import kotlin.math.roundToInt
  *
  * The crawl and the computation are separable, because the crawl persists every
  * event it fetches to the store and the score is a pure function over it:
- *  - `amy graperank sync [OBSERVER]` — network only: crawl the reachable graph's
- *    kind 3/10000/1984/10002 into the local store. Idempotent and cumulative, so
- *    run it a few times to make sure everything is loaded. Scores nothing.
+ *  - `amy graperank crawl [OBSERVER]` — network only: crawl the reachable graph's
+ *    kind 3/10000/1984/10002 into the local store (aliased as the former `sync`).
+ *    Idempotent and cumulative, so run it a few times to make sure everything is
+ *    loaded. Scores nothing.
  *  - `amy graperank score [OBSERVER]` — local only: build the graph from the store
  *    and score (same as bare `--offline`). Instant and param-tunable; repeat with
  *    different `--rigor`/`--attenuation`/cutoffs without re-crawling.
- *  - bare `amy graperank [OBSERVER]` — the convenience combo: sync then score.
+ *  - bare `amy graperank [OBSERVER]` — the convenience combo: crawl then score.
  *
  * Sub-verbs complete the NIP-85 provider experience — the discovery layer that
  * lets clients find and consume those assertions:
@@ -105,6 +113,73 @@ object GrapeRankCommand {
             "wss://eden.nostr.land",
         ).mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
 
+    // Network-wide aggregators that scrape and hold kind:3 for users whose own
+    // outbox lacks it. The crawler queries these for a straggler's CONTENT (kind:3),
+    // not just their kind:10002 relay list. Measured on observer 460c25e6, the distinct
+    // missing authors whose kind:3 each holds: kindpag.es 369, yabu 126, oxtr.dev 76,
+    // nos.lol 72, ditto 56, nostr1 29, momostr 11, mostr 3. So beyond the profile
+    // indexers (kindpag/purplepag/coracle/yabu/nostr1) and the ActivityPub bridges
+    // (ditto/momostr/mostr, which host bridged users' lists), two big general relays --
+    // nostr.oxtr.dev and nos.lol -- carry ~150 more that no indexer has.
+    private val CONTENT_AGGREGATOR_RELAYS: Set<NormalizedRelayUrl> =
+        DefaultIndexerRelayList +
+            listOf(
+                "wss://relay.ditto.pub",
+                "wss://relay.momostr.pink",
+                "wss://relay.mostr.pub",
+                "wss://nostr.oxtr.dev",
+                "wss://nos.lol",
+            ).mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
+
+    private const val PROBE_TIMEOUT_MS = 2000
+
+    // The probe does BLOCKING DNS + TCP connect, and dead-domain DNS lookups can hang
+    // far past the connect timeout. On the shared Dispatchers.IO those hanging lookups
+    // starve the crawl's own IO — measured +462s on the finishing drain at hop-3. Run
+    // them on a dedicated, isolated daemon pool instead so the crawl's IO is untouched.
+    private val probeDispatcher =
+        Executors
+            .newFixedThreadPool(128) { r -> Thread(r, "relay-probe").apply { isDaemon = true } }
+            .asCoroutineDispatcher()
+
+    /**
+     * Cheap reachability pre-probe: a raw TCP connect (one round trip) with a tight
+     * timeout. Returns false only when the port won't even accept a socket — a dead
+     * dropper, refusal, or unroutable/onion/LAN host — which the crawler drops into
+     * deadHosts before the WS path pays its 7s connectTimeout. A busy-but-alive relay
+     * accepts the SYN instantly at the kernel level (its slowness is at the app layer),
+     * so it passes here and is left for the real WS attempt. Unparseable host → true,
+     * so an odd URL is never culled on a parse quirk — let the WS decide.
+     */
+    private suspend fun tcpReachable(relay: NormalizedRelayUrl): Boolean =
+        withContext(probeDispatcher) {
+            val hostPort = relayHostPort(relay) ?: return@withContext true
+            try {
+                Socket().use { it.connect(InetSocketAddress(hostPort.first, hostPort.second), PROBE_TIMEOUT_MS) }
+                true
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                false
+            }
+        }
+
+    private fun relayHostPort(relay: NormalizedRelayUrl): Pair<String, Int>? =
+        try {
+            val uri = URI(relay.url)
+            val host = uri.host ?: return null
+            val port =
+                if (uri.port > 0) {
+                    uri.port
+                } else if (relay.url.startsWith("wss://", ignoreCase = true)) {
+                    443
+                } else {
+                    80
+                }
+            host to port
+        } catch (e: Exception) {
+            null
+        }
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -115,7 +190,9 @@ object GrapeRankCommand {
             "register" -> register(dataDir, tail.drop(1).toTypedArray())
             "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
             "operator" -> operator(dataDir, tail.drop(1).toTypedArray())
-            "sync" -> sync(dataDir, tail.drop(1).toTypedArray())
+            // `sync` is the pre-rename name kept as a back-compat alias; `crawl` is
+            // canonical (disambiguates from negentropy `amy sync` / `graperank update`).
+            "crawl", "sync" -> crawl(dataDir, tail.drop(1).toTypedArray())
             "update" -> update(dataDir, tail.drop(1).toTypedArray())
             "score" -> run(dataDir, tail.drop(1).toTypedArray(), forceOffline = true)
             else -> run(dataDir, tail)
@@ -174,12 +251,13 @@ object GrapeRankCommand {
             // Crawl telemetry (online path only): rounds, relays contacted, the
             // per-hop histogram, and the network-bound download time that dominates a
             // from-scratch run. Null on the offline path.
-            var crawlStats: GrapeRankDataCrawler.Stats? = null
+            var crawlStats: GrapeRankCrawler.Stats? = null
 
             if (!offline) {
                 val stats = newCrawler(ctx, args).crawl(observer, builder)
                 crawlStats = stats
                 contactListsFed = stats.contactListsFed
+                flushReachability(ctx, args, stats)
                 reportRelayFeedback(ctx)
             } else {
                 // Offline: stream contact lists from the local store into the graph.
@@ -347,7 +425,7 @@ object GrapeRankCommand {
 
     /**
      * Configure the outbox-model crawler from the crawl flags on [args] plus the
-     * account's relay policy. Shared by the bare command and `graperank sync`.
+     * account's relay policy. Shared by the bare command and `graperank crawl`.
      * Relay policy — where a stranger's kind:10002 is found (index/discovery
      * aggregators + general defaults) and best-effort general relays that might
      * hold content when an outbox is unknown — lives in app code, so the quartz
@@ -356,18 +434,28 @@ object GrapeRankCommand {
     private suspend fun newCrawler(
         ctx: Context,
         args: Args,
-    ): GrapeRankDataCrawler {
+    ): GrapeRankCrawler {
         val discoveryRelays =
             ctx.bootstrapRelays() + Constants.eventFinderRelays + DefaultIndexerRelayList + EXTRA_DISCOVERY_RELAYS
         val contentFallback = ctx.bootstrapRelays() + Constants.eventFinderRelays
-        return GrapeRankDataCrawler(
+        // Aggregator kind:3 recovery for stragglers is on by default; --no-aggregators
+        // disables it for A/B comparison.
+        val aggregators = if (args.bool("no-aggregators")) emptySet() else CONTENT_AGGREGATOR_RELAYS
+        // Seed the crawl with relays a prior run/monitor proved dead within the cache's
+        // TTL, so the WS path never re-pays their connect timeouts (--no-reachability-cache
+        // to skip). The crawl's own final live/dead set is flushed back by the caller.
+        val knownDead =
+            if (args.bool("no-reachability-cache")) emptySet() else ctx.reachability.snapshot().dead
+        return GrapeRankCrawler(
             client = ctx.client,
             store = ctx.store,
             limiter = ctx.relayLimiter,
             config =
-                GrapeRankDataCrawler.Config(
+                GrapeRankCrawler.Config(
                     relayListDiscoveryRelays = discoveryRelays,
+                    knownDeadRelays = knownDead,
                     contentFallbackRelays = contentFallback,
+                    contentAggregatorRelays = aggregators,
                     maxRounds = args.intFlag("max-rounds", Int.MAX_VALUE),
                     maxHops = args.intFlag("max-hops", Int.MAX_VALUE),
                     timeoutMs = args.longFlag("timeout", 10L) * 1000,
@@ -375,6 +463,11 @@ object GrapeRankCommand {
                     diagnose = args.bool("diagnose"),
                     insertBatchSize = args.intFlag("insert-batch", 500),
                     drainConcurrency = args.intFlag("drain-concurrency", 24),
+                    timeoutEvictStrikes = args.intFlag("timeout-evict", 3),
+                    // Cheap TCP reachability pre-probe (--no-probe to disable). No Tor
+                    // transport here, so .onion relays are skipped on sight.
+                    reachabilityProbe = if (args.bool("no-probe")) null else ::tcpReachable,
+                    torEnabled = false,
                     // shedDeadDiscovery / shardRotations keep their benchmarked-best
                     // Config defaults.
                 ),
@@ -393,12 +486,33 @@ object GrapeRankCommand {
     }
 
     /**
-     * `amy graperank sync [OBSERVER]` — network-only WoT data sync. Crawls the
-     * reachable follow/mute/report graph into the local store (kind 3/10000/1984/
-     * 10002) and reports what it loaded, WITHOUT scoring. Idempotent + cumulative:
-     * run it a few times to make sure everything is loaded, then `graperank score`.
+     * Flush the crawl's final live/dead relay verdicts into the shared reachability
+     * cache (NIP-66 kind:30166) so the next crawl and the WoT updater start warm and
+     * skip proven-dead relays. Best-effort and behind `--no-reachability-cache`: a
+     * cache write must never fail the crawl it is summarizing.
      */
-    private suspend fun sync(
+    private suspend fun flushReachability(
+        ctx: Context,
+        args: Args,
+        stats: GrapeRankCrawler.Stats,
+    ) {
+        if (args.bool("no-reachability-cache")) return
+        runCatching {
+            ctx.reachability.record(reachable = stats.liveRelays, dead = stats.deadRelays)
+            System.err.println(
+                "[graperank] reachability cache: recorded ${stats.liveRelays.size} live, ${stats.deadRelays.size} dead",
+            )
+        }.onFailure { System.err.println("[graperank] reachability cache flush failed: ${it.message}") }
+    }
+
+    /**
+     * `amy graperank crawl [OBSERVER]` — network-only WoT data crawl (aliased as the
+     * former `sync`). Crawls the reachable follow/mute/report graph into the local
+     * store (kind 3/10000/1984/10002) and reports what it loaded, WITHOUT scoring.
+     * Idempotent + cumulative: run it a few times to make sure everything is loaded,
+     * then `graperank score`.
+     */
+    private suspend fun crawl(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
@@ -410,6 +524,7 @@ object GrapeRankCommand {
             // Persist-only crawl: no in-memory graph (null builder); every event
             // still lands in the store for a later `score`.
             val stats = newCrawler(ctx, args).crawl(observer, null)
+            flushReachability(ctx, args, stats)
             reportRelayFeedback(ctx)
             Output.emit(
                 linkedMapOf<String, Any?>(
@@ -466,6 +581,13 @@ object GrapeRankCommand {
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
 
+            // Skip relays a crawl/monitor proved dead within the cache's TTL — a dead
+            // relay cannot serve its authors, so reconciling it only burns a timeout.
+            // Live author-advertised relays are always synced (--no-reachability-cache
+            // to reconcile every relay regardless).
+            val knownDead =
+                if (args.bool("no-reachability-cache")) emptySet() else ctx.reachability.snapshot().dead
+
             val updater =
                 GrapeRankUpdater(
                     client = ctx.client,
@@ -479,6 +601,7 @@ object GrapeRankCommand {
                             authorChunk = args.intFlag("author-chunk", 500),
                             minAuthors = args.intFlag("min-authors", 1),
                             idleTimeoutMs = args.longFlag("timeout", 30L) * 1000,
+                            knownDead = knownDead,
                         ),
                     log = { System.err.println(it) },
                 )
@@ -491,7 +614,7 @@ object GrapeRankCommand {
                         "relay_lists_in_store" to result.relayListsInStore,
                         "authors_with_outbox" to result.authorsWithOutbox,
                         "relays" to 0,
-                        "note" to "no kind:10002 write relays in the local store — run `graperank sync` first",
+                        "note" to "no kind:10002 write relays in the local store — run `graperank crawl` first",
                     ),
                 )
                 return 0

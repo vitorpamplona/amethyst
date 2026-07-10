@@ -123,6 +123,24 @@ class OperatorKeys(
         }
     }
 
+    /**
+     * The machine's dedicated NIP-66 relay-monitor identity, derived once from the
+     * operator master (independent of any amy account). Unlike [serviceKey] this is
+     * NOT per-observer — the machine publishes relay-reachability (kind:30166) under a
+     * single, stable monitor pubkey, so a re-probe *replaces* the prior 30166 for a
+     * relay instead of orphaning it. Re-derivable from the one master seed alone.
+     */
+    fun monitorKey(): KeyPair {
+        val master = masterPriv()
+        var counter = 0
+        while (true) {
+            val material = master + "$MONITOR_LABEL$counter".encodeToByteArray()
+            val kp = runCatching { KeyPair(privKey = sha256(material)) }.getOrNull()
+            if (kp?.privKey != null) return kp
+            counter++
+        }
+    }
+
     private fun recordProvider(
         observerHex: HexKey,
         providerPubKey: HexKey,
@@ -152,5 +170,6 @@ class OperatorKeys(
         private const val DIR_NAME = "operator"
         private const val CONFIG_NAME = "operator.json"
         private const val DERIVATION_LABEL = "graperank-provider:"
+        private const val MONITOR_LABEL = "relay-monitor:"
     }
 }

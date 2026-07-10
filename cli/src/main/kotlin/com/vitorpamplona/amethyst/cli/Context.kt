@@ -52,6 +52,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDe
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -59,6 +60,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.verifyAndInsert
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -71,17 +73,21 @@ import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayReachabilityStore
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.SeenIds
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
 /**
@@ -241,6 +247,26 @@ class Context(
                     .OkHttpNip05Fetcher { _ -> okhttp },
         )
 
+    /**
+     * Fetches [relay]'s NIP-11 relay-information document (over the same OkHttp instance), or null if
+     * it serves none / the request fails. Used to read the relay's `self` pubkey — NIP-29's authority
+     * for group metadata — so `relaygroup` reads can verify a 39000 was actually signed by the relay.
+     */
+    suspend fun relayInfo(relay: NormalizedRelayUrl): Nip11RelayInformation? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val request =
+                    Request
+                        .Builder()
+                        .url(relay.toHttp())
+                        .header("Accept", "application/nostr+json")
+                        .build()
+                okhttp.newCall(request).execute().use { resp ->
+                    resp.body?.string()?.let { Nip11RelayInformation.fromJson(it) }
+                }
+            }.getOrNull()
+        }
+
     // Lazy so an anonymous read (no account dir) never materialises the
     // per-account marmot stores — constructing them would `mkdir` group dirs
     // under the shared root. Real accounts build them on first marmot use.
@@ -257,6 +283,21 @@ class Context(
      */
     private val storeDelegate: Lazy<IEventStore> = lazy { StoreFactory.open(dataDir) }
     val store: IEventStore by storeDelegate
+
+    /**
+     * Shared relay-reachability cache (NIP-66 kind:30166 records in [store]), signed by
+     * the machine's dedicated monitor key — derived from the operator master, NOT the
+     * account (see [OperatorKeys.monitorKey]). The crawler and the WoT updater read its
+     * dead set to skip proven-dead relays and write their findings back, so liveness
+     * knowledge is shared across procedures and runs instead of rediscovered each time.
+     * Lazy so a run that never touches relays doesn't materialize the operator master.
+     */
+    val reachability: RelayReachabilityStore by lazy {
+        RelayReachabilityStore(
+            store = store,
+            signer = NostrSignerInternal(dataDir.operatorKeys().monitorKey()),
+        )
+    }
 
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
     val marmot: MarmotManager by lazy { MarmotManager(signer, mlsStore, messageStore, keyPackageStore) }

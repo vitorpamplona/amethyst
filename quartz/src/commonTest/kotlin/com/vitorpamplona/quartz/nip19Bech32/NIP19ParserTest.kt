@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip19Bech32
 
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -459,5 +460,27 @@ class NIP19ParserTest {
             "nsec1lfkarc7439n4l3uahr45ej8mrjc39dd879t0ps355550dj8j9uzs3rnw24",
             withBom.bechToBytes().toNsec(),
         )
+    }
+
+    // A 33-byte COMPRESSED secp256k1 key (0x02 prefix). Nostr pubkeys are x-only 32 bytes; some
+    // clients wrongly encode the compressed form. Parsing must reject it so its 66-char hex never
+    // reaches a `p`/`q` tag (strict relays like relay29 reject the whole event otherwise).
+    private val compressedPubKey = "02977dcfdd3ce61572b652e0eade0fd519108be00a74b00064eb35b746cf6c3402"
+
+    @Test
+    fun rejects_compressed_pubkey_encoded_as_npub() {
+        assertEquals(null, NPub.parse(compressedPubKey.hexToByteArray()))
+        assertEquals(null, Nip19Parser.uriToRoute("nostr:" + NPub.create(compressedPubKey))?.entity)
+    }
+
+    @Test
+    fun rejects_compressed_pubkey_encoded_as_nprofile() {
+        assertEquals(null, Nip19Parser.uriToRoute("nostr:" + NProfile.create(compressedPubKey, emptyList()))?.entity)
+    }
+
+    @Test
+    fun accepts_valid_xonly_pubkey() {
+        val xOnly = "bb3d6543d4a4f45f402b674ecb5cb2155ff12456fcdd2d66d9727660d3037365"
+        assertEquals(xOnly, NPub.parse(xOnly.hexToByteArray())?.hex)
     }
 }

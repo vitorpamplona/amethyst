@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
@@ -76,6 +77,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
@@ -84,6 +86,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip28PublicChat.base.notify
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
@@ -98,6 +101,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip92IMeta.imetas
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
@@ -540,6 +544,45 @@ open class ChannelNewMessageViewModel :
 
                     emojis(emojis)
                     imetas(usedAttachments)
+                }
+            }
+
+            channel is RelayGroupChannel -> {
+                // NIP-29 group message: a kind-9 chat scoped to the group with an
+                // `h` tag. The event is published only to the group's host relay
+                // (channel.relays()), where relay29 authorizes and routes it.
+                val replyingToEvent = replyTo.value?.toEventHint<ChatEvent>()
+                if (replyingToEvent != null) {
+                    // A reply quotes its parent via a NIP-18 `q` tag (added by ChatEvent.reply)
+                    // + a `p` notify to its author. The group scope (`h`) alone doesn't link a
+                    // reply to what it answers — without the `q` tag the quote renders in the
+                    // composer but is missing from the signed event.
+                    ChatEvent.reply(tagger.message, replyingToEvent) {
+                        hTag(channel.groupId.id)
+                        pTag(replyingToEvent.toPTag())
+
+                        hashtags(findHashtags(tagger.message))
+                        references(findURLs(tagger.message))
+                        quotes(findNostrUris(tagger.message))
+                        contentWarningReason?.let { contentWarning(it) }
+                        localExpirationDate?.let { expiration(it) }
+
+                        emojis(emojis)
+                        imetas(usedAttachments)
+                    }
+                } else {
+                    ChatEvent.build(tagger.message) {
+                        hTag(channel.groupId.id)
+
+                        hashtags(findHashtags(tagger.message))
+                        references(findURLs(tagger.message))
+                        quotes(findNostrUris(tagger.message))
+                        contentWarningReason?.let { contentWarning(it) }
+                        localExpirationDate?.let { expiration(it) }
+
+                        emojis(emojis)
+                        imetas(usedAttachments)
+                    }
                 }
             }
 

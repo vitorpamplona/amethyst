@@ -37,6 +37,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource.P
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupMyJoinedGroupsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupThreadFeedFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupWarmupFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelayFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource.CommunityFilterAssembler
@@ -113,6 +118,16 @@ class RelaySubscriptionsCoordinator(
 
     // active depending on the screen.
     val channel = ChannelFilterAssembler(client)
+
+    // NIP-29 relay-group REQ assemblers, each named for WHEN it runs. There is deliberately no
+    // "group chat" assembler: a group's kind-9 chat timeline is served by the shared [channel]
+    // assembler above (same as NIP-28 public chats), so only the group-specific surfaces get their
+    // own here.
+    val relayGroupsOnRelay = RelayGroupsOnRelayFilterAssembler(client) // browsing one relay's channel list
+    val relayGroupMyJoinedGroups = RelayGroupMyJoinedGroupsFilterAssembler(client) // metadata+rosters of groups I've joined
+    val relayGroupThreadFeed = RelayGroupThreadFeedFilterAssembler(client) // a group's forum-threads tab
+    val relayGroupWarmup = RelayGroupWarmupFilterAssembler(client) // prefetching a group before it's opened
+    val relayGroupsDiscovery = RelayGroupsDiscoveryFilterAssembler(client) // the cross-relay Discover feed
     val chatroom = ChatroomFilterAssembler(client)
     val community = CommunityFilterAssembler(client)
     val gitRepository = RepositoryFilterAssembler(client)
@@ -174,6 +189,11 @@ class RelaySubscriptionsCoordinator(
 
     val all =
         listOf(
+            relayGroupsOnRelay,
+            relayGroupMyJoinedGroups,
+            relayGroupThreadFeed,
+            relayGroupWarmup,
+            relayGroupsDiscovery,
             account,
             accountForeground,
             home,

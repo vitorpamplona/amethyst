@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
  * (kind:10002), and reports (kind:1984) of every author already known to the
  * local [store].
  *
- * Where [GrapeRankDataCrawler] discovers the graph by walking follows outward from
+ * Where [GrapeRankCrawler] discovers the graph by walking follows outward from
  * an observer, this refreshes what is *already* known: it reads every kind:10002 in
  * the store, inverts them into a `write-relay -> authors` map (the outbox model — an
  * author's events live on the relays they write to), fans those into one filter per
@@ -97,6 +97,14 @@ class GrapeRankUpdater(
         val minAuthors: Int = 1,
         val idleTimeoutMs: Long = 30_000L,
         val publishTimeoutSecs: Long = 15,
+        /**
+         * Relays proven unreachable within the reachability cache's TTL (kind:30166).
+         * Skipped from the reconcile plan so we don't burn a connect timeout per dead
+         * relay — the crawl already found them dead, and a dead relay cannot serve its
+         * authors anyway. TTL'd, so a recovered relay is retried once the record ages
+         * out; this never drops a *live* author-advertised relay. See RelayReachabilityStore.
+         */
+        val knownDead: Set<NormalizedRelayUrl> = emptySet(),
     ) {
         /** Project the shared engine knobs onto a [NegentropyStoreSync.Config]. */
         internal fun toEngineConfig() =
@@ -170,6 +178,7 @@ class GrapeRankUpdater(
         val plan =
             groups.entries
                 .filter { it.value.size >= config.minAuthors }
+                .filterNot { it.key in config.knownDead }
                 .sortedByDescending { it.value.size }
                 .map { it.key to it.value }
 

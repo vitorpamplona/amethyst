@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
@@ -430,7 +431,13 @@ class NappletHostActivity : ComponentActivity() {
      * Intercepts hardware-key combos the applet bound via `keys.registerAction` and turns them into a
      * `keys.action` push — the applet never sees raw key events, only its own named action. Unmatched
      * keys fall through to the WebView (so the applet's own text inputs still work normally).
+     *
+     * RestrictedApi is a false positive: `Activity.dispatchKeyEvent` is a public framework
+     * hook; lint flags it only because androidx.core's intermediate override carries a
+     * library-group `@RestrictTo`. Unmatched keys still reach `super`, so androidx's
+     * KeyEventDispatcher routing is preserved.
      */
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val actionId = keyActions.actionFor(event)
         if (actionId != null) {
