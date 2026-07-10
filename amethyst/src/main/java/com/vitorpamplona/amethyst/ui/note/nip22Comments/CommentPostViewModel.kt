@@ -576,7 +576,7 @@ open class CommentPostViewModel :
     private suspend fun createTemplate(): EventTemplate<out Event>? {
         val tagger =
             NewMessageTagger(
-                message = message.text.toString(),
+                message = message.text.toString().trim(),
                 dao = accountViewModel,
             )
         tagger.run()
