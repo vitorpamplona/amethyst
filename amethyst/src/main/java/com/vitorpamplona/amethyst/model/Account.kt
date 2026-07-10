@@ -398,7 +398,7 @@ class Account(
      * [concordChannelList] and consulted by the giftwrap decrypt path so a Concord
      * plane wrap routes here instead of being dropped as an undecryptable DM.
      */
-    val concordSessions = ConcordSessionManager(concordChannelList.liveCommunities, signer.pubKey, scope)
+    val concordSessions = ConcordSessionManager(concordChannelList.liveCommunities, signer.pubKey, scope, cache::consumeConcordRumor)
 
     val publicChatListDecryptionCache = PublicChatListDecryptionCache(signer)
     val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)

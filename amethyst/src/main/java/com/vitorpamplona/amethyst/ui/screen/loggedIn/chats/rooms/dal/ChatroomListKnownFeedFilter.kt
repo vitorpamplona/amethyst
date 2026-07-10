@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal
 
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.util.replace
@@ -130,17 +131,20 @@ class ChatroomListKnownFeedFilter(
             }
 
         // Concord Channels the user joined (kind 13302 list → folded Control Plane). Each folded
-        // channel is its own Messages row, carrying its ConcordChannel as a gatherer so the header
-        // renders it and a tap opens the encrypted chat. Messages live in the community session's
-        // decrypted flow (not LocalCache notes), so the row is a placeholder that the chat screen
-        // fills in — mirrors the just-joined Marmot/relay-group placeholder path above.
+        // channel is its own Messages row: its newest decrypted message (a real Note in LocalCache,
+        // attached to the ConcordChannel), or a placeholder for a just-joined channel with no
+        // messages yet. The note carries its ConcordChannel as a gatherer so the header renders it
+        // and a tap opens the encrypted chat — same shape as the Marmot/relay-group paths above.
         val concordChannels =
             account.concordSessions.sessions().flatMap { session ->
                 val state = session.state.value ?: return@flatMap emptyList<Note>()
                 state.channels.keys.map { channelIdHex ->
-                    LocalCache
-                        .getOrCreateConcordChannel(ConcordChannelId(session.entry.id, channelIdHex))
-                        .placeholderNote()
+                    val channel = LocalCache.getOrCreateConcordChannel(ConcordChannelId(session.entry.id, channelIdHex))
+                    channel.notes
+                        .filter { _, it -> account.isAcceptable(it) && it.event != null }
+                        .sortedByDefaultFeedOrder()
+                        .firstOrNull()
+                        ?: channel.placeholderNote()
                 }
             }
 
@@ -160,11 +164,13 @@ class ChatroomListKnownFeedFilter(
         // Gets the latest message by room from the new items.
         val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
         val newRelevantRelayGroups = filterRelevantRelayGroupMessages(newItems, account)
+        val newRelevantConcord = filterRelevantConcordMessages(newItems, account)
 
         if (newRelevantPrivateMessages.isEmpty() &&
             newRelevantPublicMessages.isEmpty() &&
             newRelevantEphemeralChats.isEmpty() &&
-            newRelevantRelayGroups.isEmpty()
+            newRelevantRelayGroups.isEmpty() &&
+            newRelevantConcord.isEmpty()
         ) {
             return oldList
         }
@@ -235,6 +241,21 @@ class ChatroomListKnownFeedFilter(
             }
         }
 
+        newRelevantConcord.forEach { newNotePair ->
+            var hasUpdated = false
+            oldList.forEach { oldNote ->
+                if (newNotePair.key == oldNote.concordRowKey()) {
+                    hasUpdated = true
+                    if ((newNotePair.value.createdAt() ?: 0L) > (oldNote.createdAt() ?: 0L)) {
+                        myNewList = myNewList.replace(oldNote, newNotePair.value)
+                    }
+                }
+            }
+            if (!hasUpdated) {
+                myNewList = myNewList.plus(newNotePair.value)
+            }
+        }
+
         return sort(myNewList.toSet()).take(1000)
     }
 
@@ -246,11 +267,13 @@ class ChatroomListKnownFeedFilter(
         // Gets the latest message by room from the new items.
         val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
         val newRelevantRelayGroups = filterRelevantRelayGroupMessages(newItems, account)
+        val newRelevantConcord = filterRelevantConcordMessages(newItems, account)
 
         return if (newRelevantPrivateMessages.isEmpty() &&
             newRelevantPublicMessages.isEmpty() &&
             newRelevantEphemeralChats.isEmpty() &&
-            newRelevantRelayGroups.isEmpty()
+            newRelevantRelayGroups.isEmpty() &&
+            newRelevantConcord.isEmpty()
         ) {
             emptySet()
         } else {
@@ -258,9 +281,35 @@ class ChatroomListKnownFeedFilter(
                 newRelevantPrivateMessages.values +
                     newRelevantPublicMessages.values +
                     newRelevantEphemeralChats.values +
-                    newRelevantRelayGroups.values
+                    newRelevantRelayGroups.values +
+                    newRelevantConcord.values
             ).toSet()
         }
+    }
+
+    /** The row a Concord note belongs to: its ConcordChannel gatherer's stable key. */
+    private fun Note.concordRowKey(): String? = inGatherers?.firstNotNullOfOrNull { (it as? ConcordChannel)?.channelId?.toKey() }
+
+    /**
+     * Latest Concord message per joined channel from the new items, keyed the same way as
+     * [concordRowKey] (one row per channel). A Concord message note carries its ConcordChannel
+     * as a gatherer (attached on decrypt), and only kind-9/1111 message-like rumors are attached
+     * as rows — reactions/deletes wire to their target note and never become a room's last message.
+     */
+    private fun filterRelevantConcordMessages(
+        newItems: Set<Note>,
+        account: Account,
+    ): MutableMap<String, Note> {
+        val result = mutableMapOf<String, Note>()
+        newItems.forEach { newNote ->
+            val key = newNote.concordRowKey() ?: return@forEach
+            if (newNote.event == null || !account.isAcceptable(newNote)) return@forEach
+            val lastNote = result[key]
+            if (lastNote == null || (newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
+                result[key] = newNote
+            }
+        }
+        return result
     }
 
     private fun filterRelevantPublicMessages(

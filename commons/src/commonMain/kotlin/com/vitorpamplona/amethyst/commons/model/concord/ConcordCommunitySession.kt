@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.model.concord
 
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
-import com.vitorpamplona.amethyst.commons.actions.ConcordChatMessage
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
@@ -34,20 +33,32 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
+ * A validated inner chat rumor emitted by a session: its parent [communityId] and
+ * [channelIdHex], plus the typed [rumor] (kind 9 message, 1111 reply, 7 reaction,
+ * 5 delete, …). The sink lands it in a store keyed by rumor id so the normal
+ * reaction/reply/delete/OTS/zap machinery wires up automatically.
+ */
+typealias ConcordRumorSink = (communityId: HexKey, channelIdHex: HexKey, rumor: Event) -> Unit
+
+/**
  * The live read-model of one joined Concord community, driven by inbound stream
- * wraps. A screen/ViewModel binds to its flows; a subscription feeds it via
- * [ingest].
+ * wraps fed via [ingest].
  *
  * It holds the community's [entry] (with secrets), derives the Control Plane
  * address up front, and — as control wraps arrive — re-folds the Control Plane
  * into [state] (metadata + channels + authority) and re-derives each channel's
- * Chat Plane address so subsequent channel wraps route to per-channel
- * [messagesFlow]s. This is the stateful counterpart to the pure
+ * Chat Plane address so subsequent channel wraps decrypt. **It does not store
+ * messages itself:** each validated chat rumor is handed to [onRumor], whose
+ * platform-side sink lands it in the shared event store (`LocalCache`) as a real
+ * Note attached to the channel — so previews, threading, reactions and zaps reuse
+ * the same machinery every other chat does. Re-emitting is safe because the sink
+ * dedups by rumor id. This is the stateful counterpart to the pure
  * [ConcordActions]/[ConcordPlaneRegistry] helpers.
  */
 class ConcordCommunitySession(
     val entry: ConcordCommunityListEntry,
     val myPubKey: HexKey,
+    private val onRumor: ConcordRumorSink = { _, _, _ -> },
 ) {
     private val root = entry.root.hexToByteArray()
     private val communityIdBytes = entry.id.hexToByteArray()
@@ -69,13 +80,8 @@ class ConcordCommunitySession(
     private val _state = MutableStateFlow<ConcordCommunityState?>(null)
     val state: StateFlow<ConcordCommunityState?> = _state
 
-    private val messageFlows = HashMap<HexKey, MutableStateFlow<List<ConcordChatMessage>>>()
-
     /** The current Chat Plane addresses to subscribe to, one per folded channel. */
     fun channelAddresses(): Set<HexKey> = lock.withLock { channelKeysByAddress.keys.toSet() }
-
-    /** A flow of decrypted, ordered messages for the given channel (created on first use). */
-    fun messagesFlow(channelIdHex: HexKey): StateFlow<List<ConcordChatMessage>> = lock.withLock { messageFlows.getOrPut(channelIdHex) { MutableStateFlow(emptyList()) } }
 
     /** This account's standing, from the current fold. */
     fun membership(): ConcordMembership {
@@ -129,7 +135,10 @@ class ConcordCommunitySession(
     private fun reprojectChannel(channelIdHex: HexKey) {
         val key = lock.withLock { channelKeysByAddress.values.firstOrNull { it.first == channelIdHex }?.second } ?: return
         val wraps = lock.withLock { channelWrapsById[channelIdHex]?.values?.toList() } ?: return
-        val msgs = ConcordActions.channelMessages(wraps, key, channelIdHex, entry.rootEpoch)
-        lock.withLock { messageFlows.getOrPut(channelIdHex) { MutableStateFlow(emptyList()) } }.value = msgs
+        // Decrypt + validate every bound rumor and hand it to the sink. The sink dedups
+        // by rumor id, so re-emitting the whole buffer on each fold is idempotent.
+        ConcordActions.channelRumors(wraps, key, channelIdHex, entry.rootEpoch).forEach { rumor ->
+            onRumor(entry.id, channelIdHex, rumor)
+        }
     }
 }

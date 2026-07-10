@@ -20,25 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -51,27 +44,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
- * The chat screen of one Concord Channel. Messages come from the community
- * session's decrypted, ordered flow (not LocalCache notes); posting derives the
- * channel plane key and publishes an encrypted wrap to the community's relays.
+ * The chat screen of one Concord Channel. Messages are real Notes in [LocalCache]
+ * attached to the channel (landed on decrypt by
+ * [com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager]), so the
+ * feed reuses the shared [RefreshingChatroomFeedView] — reactions, replies, zaps
+ * and OTS render exactly as in every other chat.
  *
- * Mounts [ConcordChannelSubscription] so the channel's plane stays live while the
- * screen is foregrounded (and so a just-opened channel re-subscribes once its
- * Control Plane folds).
+ * Only the send path is Concord-specific: it derives the channel plane key and
+ * publishes an encrypted wrap to the community relays
+ * ([com.vitorpamplona.amethyst.model.Account.sendConcordChannelMessage]).
+ * [ConcordChannelSubscription] keeps the channel's plane live while foregrounded.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,11 +81,14 @@ fun ConcordChannelScreen(
     ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
 
     val account = accountViewModel.account
-    val session = remember(account, communityId) { account.concordSessions.sessionFor(communityId) }
     val channel = remember(account, communityId, channelId) { LocalCache.getOrCreateConcordChannel(ConcordChannelId(communityId, channelId)) }
 
-    val messages by (session?.messagesFlow(channelId) ?: remember { MutableStateFlow(emptyList()) })
-        .collectAsStateWithLifecycle()
+    val feedViewModel: ChannelFeedViewModel =
+        viewModel(
+            key = channel.channelId.toKey() + "ConcordFeedViewModel",
+            factory = ChannelFeedViewModel.Factory(channel, account),
+        )
+    WatchLifecycleAndUpdateModel(feedViewModel)
 
     val scope = rememberCoroutineScope()
     var draft by remember { mutableStateOf("") }
@@ -113,23 +113,15 @@ fun ConcordChannelScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding()) {
-            val listState = rememberLazyListState()
-            LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                state = listState,
-                reverseLayout = true,
-                contentPadding = PaddingValues(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                items(messages.asReversed(), key = { it.id }) { message ->
-                    val mine = message.author == account.signer.pubKey
-                    ConcordMessageBubble(
-                        author = message.author,
-                        content = message.content,
-                        mine = mine,
-                        accountViewModel = accountViewModel,
-                    )
-                }
+            Column(Modifier.weight(1f).fillMaxWidth()) {
+                RefreshingChatroomFeedView(
+                    feedContentState = feedViewModel.feedState,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    routeForLastRead = "Concord/$communityId/$channelId",
+                    onWantsToReply = {},
+                    onWantsToEditDraft = {},
+                )
             }
 
             if (channel.canPost()) {
@@ -144,35 +136,6 @@ fun ConcordChannelScreen(
                         }
                     },
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ConcordMessageBubble(
-    author: String,
-    content: String,
-    mine: Boolean,
-    accountViewModel: AccountViewModel,
-) {
-    val user = remember(author) { LocalCache.getOrCreateUser(author) }
-    val name by observeUserName(user, accountViewModel)
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
-    ) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = if (mine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.padding(horizontal = 4.dp),
-        ) {
-            Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
-                if (!mine) {
-                    Text(name, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                }
-                Text(content, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

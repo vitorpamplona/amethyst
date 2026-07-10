@@ -729,6 +729,31 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getOrCreateConcordChannel(key: ConcordChannelId): ConcordChannel = concordChannels.getOrCreate(key) { ConcordChannel(key) }
 
+    /**
+     * Lands a decrypted Concord chat rumor in the cache as a real Note and, for
+     * message-like kinds, attaches it to its channel so the shared chat feed and
+     * the Messages inbox render it (with previews, threading, OTS, reactions/zaps
+     * reusing the same id-keyed machinery as every other chat). Reactions (kind 7),
+     * deletes (kind 5), etc. are consumed too — they wire to their target Note by
+     * `e`-tag through [justConsume] — but are not themselves added as channel rows.
+     *
+     * Fed by [com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager]
+     * once a wrap decrypts + validates against the folded Control Plane.
+     */
+    fun consumeConcordRumor(
+        communityId: String,
+        channelIdHex: String,
+        rumor: Event,
+    ) {
+        // Attach to the channel BEFORE justConsume sets the event and notifies feeds,
+        // so the note already carries its ConcordChannel gatherer when it flows through
+        // the Messages-list incremental filter (which routes rows by that gatherer).
+        if (rumor is ChatEvent || rumor is CommentEvent) {
+            getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex)).addNote(getOrCreateNote(rumor.id))
+        }
+        justConsume(rumor, null, false)
+    }
+
     fun checkGetOrCreatePublicChatChannel(key: String): PublicChatChannel? {
         if (isValidHex(key)) {
             return getOrCreatePublicChatChannel(key)

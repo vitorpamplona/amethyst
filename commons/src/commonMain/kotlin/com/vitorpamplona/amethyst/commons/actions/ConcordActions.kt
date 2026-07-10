@@ -145,6 +145,24 @@ object ConcordActions {
             .map { ConcordChatMessage(it.id, it.pubKey, it.content, it.createdAt, channelId, epoch) }
             .sortedWith(compareBy({ it.createdAt }, { it.id }))
 
+    /**
+     * Opens the channel [wraps] and returns every validated inner rumor bound to
+     * [channelId]/[epoch] — messages (kind 9), replies (1111), reactions (7),
+     * deletes (5), edits, etc. — as typed [Event]s. The caller lands these in a
+     * store keyed by rumor id so the normal reaction/reply/delete/OTS machinery
+     * wires up automatically. Deduping is left to that store (rumor ids are stable
+     * content hashes), so this may return duplicates across mirrored wraps.
+     */
+    fun channelRumors(
+        wraps: List<Event>,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+    ): List<Event> =
+        wraps
+            .mapNotNull { wrap -> ConcordStreamEnvelope.openOrNull(wrap, channel)?.rumor }
+            .filter { ChannelChat.isBoundTo(it, channelId, epoch) }
+
     // ---- invites --------------------------------------------------------------
 
     /** Builds a [CommunityInvite] from a freshly created (or joined) community's public info. */

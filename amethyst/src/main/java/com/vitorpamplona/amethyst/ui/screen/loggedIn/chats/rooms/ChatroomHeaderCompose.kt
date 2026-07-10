@@ -423,9 +423,16 @@ private fun ConcordRoomCompose(
     val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? ConcordChannel ?: baseChannel
 
-    // Messages live in the community session's decrypted flow, not as LocalCache notes, so the
-    // list row has no last-message event; name the parent community on the second line instead.
-    val lastContent = channel.communityName ?: stringRes(R.string.relay_group_no_messages_yet)
+    val author = lastMessage.author
+    val noteEvent = lastMessage.event
+    val lastContent =
+        if (author != null && noteEvent != null) {
+            val authorName by observeUserName(author, accountViewModel)
+            "$authorName: ${noteEvent.content.take(200)}"
+        } else {
+            // Event-less placeholder row for a just-joined channel with no messages yet.
+            channel.communityName ?: stringRes(R.string.relay_group_no_messages_yet)
+        }
 
     ChannelName(
         channelIdHex = channel.channelId.channelId,

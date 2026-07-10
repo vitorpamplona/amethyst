@@ -49,7 +49,8 @@ class ConcordCommunitySessionTest {
                     name = "Nostrichs",
                 )
 
-            val session = ConcordCommunitySession(entry, owner.pubKey)
+            val captured = mutableListOf<Triple<String, String, com.vitorpamplona.quartz.nip01Core.core.Event>>()
+            val session = ConcordCommunitySession(entry, owner.pubKey) { communityId, channelIdHex, rumor -> captured += Triple(communityId, channelIdHex, rumor) }
             assertEquals(community.controlPlane.publicKeyHex, session.controlPlaneAddress)
 
             // Feed the genesis control wraps → state folds, channels + membership resolve.
@@ -63,13 +64,13 @@ class ConcordCommunitySessionTest {
             val general = ConcordActions.publicChannel(community.communityRoot, community.generalChannelId, community.rootEpoch)
             assertTrue(session.channelAddresses().contains(general.publicKeyHex))
 
-            // A channel message wrap routes to #general's flow.
+            // A channel message wrap decrypts and is emitted to the sink for #general.
             val msgWrap = ConcordActions.buildChannelMessage(owner, general, community.generalChannelIdHex, community.rootEpoch, "gm all", 2L)
             assertTrue(session.ingest(msgWrap))
-            val msgs = session.messagesFlow(community.generalChannelIdHex).value
-            assertEquals(1, msgs.size)
-            assertEquals("gm all", msgs[0].content)
-            assertEquals(owner.pubKey, msgs[0].author)
+            val general9 = captured.filter { it.second == community.generalChannelIdHex && it.third.content == "gm all" }
+            assertEquals(1, general9.size)
+            assertEquals(community.communityIdHex, general9[0].first)
+            assertEquals(owner.pubKey, general9[0].third.pubKey)
 
             // A stray wrap from a different community is ignored.
             val outsider = ConcordCommunityFactory.create(owner, "Other", createdAt = 1L, relays = listOf("wss://r.example"))

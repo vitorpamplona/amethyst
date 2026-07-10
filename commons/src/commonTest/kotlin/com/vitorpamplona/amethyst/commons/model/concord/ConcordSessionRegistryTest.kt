@@ -57,7 +57,8 @@ class ConcordSessionRegistryTest {
             val alpha = ConcordCommunityFactory.create(owner, "Alpha", createdAt = 1L, relays = listOf("wss://r.example"))
             val beta = ConcordCommunityFactory.create(owner, "Beta", createdAt = 1L, relays = listOf("wss://r.example"))
 
-            val registry = ConcordSessionRegistry()
+            val captured = mutableListOf<Triple<String, String, com.vitorpamplona.quartz.nip01Core.core.Event>>()
+            val registry = ConcordSessionRegistry { communityId, channelIdHex, rumor -> captured += Triple(communityId, channelIdHex, rumor) }
 
             // First sync creates a session for each joined community.
             val created = registry.sync(listOf(entryFor(alpha, "Alpha"), entryFor(beta, "Beta")), owner.pubKey)
@@ -78,16 +79,11 @@ class ConcordSessionRegistryTest {
             val general = ConcordActions.publicChannel(alpha.communityRoot, alpha.generalChannelId, alpha.rootEpoch)
             assertTrue(registry.subscribeAddresses().contains(general.publicKeyHex))
 
-            // A channel message routes to Alpha's #general flow, not Beta.
+            // A channel message decrypts and is emitted to the sink for Alpha's #general.
             val msg = ConcordActions.buildChannelMessage(owner, general, alpha.generalChannelIdHex, alpha.rootEpoch, "gm", 2L)
             assertTrue(registry.ingest(msg))
-            assertEquals(
-                1,
-                registry
-                    .sessionFor(alpha.communityIdHex)!!
-                    .messagesFlow(alpha.generalChannelIdHex)
-                    .value.size,
-            )
+            val general9 = captured.filter { it.first == alpha.communityIdHex && it.second == alpha.generalChannelIdHex && it.third.content == "gm" }
+            assertEquals(1, general9.size)
 
             // A re-sync that keeps Alpha but drops Beta preserves Alpha's folded state and removes Beta.
             val createdAgain = registry.sync(listOf(entryFor(alpha, "Alpha")), owner.pubKey)

@@ -57,8 +57,9 @@ class ConcordSessionManager(
     private val communities: StateFlow<List<ConcordCommunityListEntry>>,
     private val myPubKey: HexKey,
     private val scope: CoroutineScope,
+    private val onRumor: ConcordRumorSink = { _, _, _ -> },
 ) {
-    val registry = ConcordSessionRegistry()
+    val registry = ConcordSessionRegistry(onRumor)
 
     private val _revision = MutableStateFlow(0)
 

@@ -44,7 +44,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * channel-plane addresses — exactly the `authors` set a subscription must watch
  * for kind-1059 wraps. Thread-safe: the ingest path and UI share one instance.
  */
-class ConcordSessionRegistry {
+class ConcordSessionRegistry(
+    private val onRumor: ConcordRumorSink = { _, _, _ -> },
+) {
     private val lock = KmpLock()
 
     // communityId -> live folding session. Insertion-ordered for stable iteration.
@@ -68,7 +70,7 @@ class ConcordSessionRegistry {
             val created = mutableSetOf<HexKey>()
             for ((id, entry) in wanted) {
                 if (id !in sessions) {
-                    sessions[id] = ConcordCommunitySession(entry, myPubKey)
+                    sessions[id] = ConcordCommunitySession(entry, myPubKey, onRumor)
                     created += id
                 }
             }
