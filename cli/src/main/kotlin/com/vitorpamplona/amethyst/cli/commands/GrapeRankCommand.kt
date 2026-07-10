@@ -483,7 +483,7 @@ object GrapeRankCommand {
                     parkTimeoutMs = args.longFlag("park-timeout", 40L) * 1000,
                     diagnose = args.bool("diagnose"),
                     insertBatchSize = args.intFlag("insert-batch", 500),
-                    drainConcurrency = args.intFlag("drain-concurrency", 24),
+                    drainConcurrency = args.intFlag("drain-concurrency", 48),
                     timeoutEvictStrikes = args.intFlag("timeout-evict", 3),
                     // Cheap TCP reachability pre-probe (--no-probe to disable). No Tor
                     // transport here, so .onion relays are skipped on sight.

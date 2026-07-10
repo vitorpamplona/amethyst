@@ -80,6 +80,35 @@ filters — only *when* sockets open changes):
    "not working" (skipped entirely) without burning crawl time on the
    distinction.
 
+## Measured A/B results (cold hop-3 crawl, fresh store per leg, same observer)
+
+Sequential single-variable legs on the same 4-core / 4096-FD box. Completeness
+gate: `contact_lists_fed` and `users_discovered` must not drop (±2% network
+noise between runs is normal — relays come and go).
+
+| leg | wall | lists fed | users found | verdict |
+|---|---|---|---|---|
+| baseline (all connect-storm work, 24 workers) | 638s | 18,519 | 165k | reference |
+| + background parks don't gate convergence | 579s | 18,829 | 167k | **keep** |
+| + `--drain-concurrency 48` | 559s | 18,817 | 169k | keep (confirmed below) |
+| + `--timeout 5` (shorter fast window) | 735s | 18,524 | 164k | **reject** — more parks/retries |
+| + sharded-sweep dedup | 675s* | 18,801 | 168k | keep — round wall ↓ (301s vs 336s); total noise |
+| + overlap tail (no convergence park-wait, agg ∥ deletions) | 474s | 18,816 | 167k | **keep** |
+| + `--drain-concurrency 48` on top | **396s** | 18,816 | 167k | **keep → new default** |
+
+\* total inflated by a slow round-3 network sample + the then-serial tail; the
+change's own effect (straggler-round Phase A 20s → 20ms) is visible directly.
+
+Not measurable in these legs but fixed on the way (validated separately):
+- the whole crawl ran on `runBlocking`'s single-threaded event loop — thousands
+  of Phase-B unit coroutines starved one core while three idled, inflating
+  batch walls ~5x (`crawl()` now hops to `Dispatchers.IO`); this also
+  invalidated the old "64 workers is 2x slower" A/B;
+- per-user store point queries (~8ms each on a multi-GB store) in
+  harvestFromStore / sweep / consumer / aggregator paths — now one chunked
+  author query per 300 users (hop-3 replay Phase A: 176s → 36s at identical
+  fed counts).
+
 ## Non-goals
 
 - No change to REQ concurrency per relay (`AdaptiveRelayLimiter`) or the

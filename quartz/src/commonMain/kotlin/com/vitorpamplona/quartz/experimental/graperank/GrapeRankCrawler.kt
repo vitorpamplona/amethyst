@@ -148,10 +148,12 @@ class GrapeRankCrawler(
      *   per-transaction + writer-mutex cost across the batch (coerced to `>= 1`).
      * @param drainConcurrency how many outbox batches drain at once (the worker
      *   pool size). A GLOBAL bound (memory / open sockets); the per-relay
-     *   concurrent-sub cap is enforced separately by [AdaptiveRelayLimiter]. Keep it
-     *   moderate: a higher global fan-out re-floods busy hubs faster than demotion
-     *   catches up (an A/B at 64 ran ~2x slower with more dead relays), so 24 is the
-     *   validated default and raising it is a probe, not a speedup.
+     *   concurrent-sub cap is enforced separately by [AdaptiveRelayLimiter]. An
+     *   early A/B that made 64 look ~2x slower than 24 was an artifact of the crawl
+     *   running on a single-threaded event loop (more coroutines on one starved
+     *   thread); re-run on the multithreaded dispatcher, 48 beat 24 twice at
+     *   identical completeness (hop-3 cold: 579s→559s and 474s→396s), so 48 is the
+     *   validated default.
      * @param timeoutEvictStrikes evict a relay after this many drains that timed out
      *   (connect timeout or park idle-cut) having delivered NOTHING. Unlike
      *   [classifyDrainFailure] — which never marks a timeout dead, since one slow
@@ -170,7 +172,7 @@ class GrapeRankCrawler(
         val parkTimeoutMs: Long = 40_000,
         val diagnose: Boolean = false,
         val insertBatchSize: Int = 500,
-        val drainConcurrency: Int = 24,
+        val drainConcurrency: Int = 48,
         val timeoutEvictStrikes: Int = 3,
         /**
          * Also skip proven-dead relays in the kind:10002 discovery sweep
