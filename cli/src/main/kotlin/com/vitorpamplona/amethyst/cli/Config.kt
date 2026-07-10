@@ -374,12 +374,16 @@ class DataDir(
         /**
          * Account names become directory names AND alias keys, so we
          * keep them to a portable, shell-friendly subset. `shared` is
-         * reserved for the cross-account events-store sibling, and
-         * `current` collides with the active-account marker file.
+         * reserved for the cross-account events-store sibling, `current`
+         * collides with the active-account marker file, and `operator` is the
+         * machine-level operator-keys sibling (see [OperatorKeys]) that ANY
+         * graperank crawl/probe creates — counting it as an account broke
+         * single-account auto-selection with "multiple accounts (operator, …)".
          */
         private val NAME_REGEX = Regex("^[a-zA-Z0-9_-]{1,64}$")
         private const val SHARED_DIR_NAME = "shared"
-        private val RESERVED_NAMES = setOf(SHARED_DIR_NAME, CURRENT_MARKER_NAME)
+        private const val OPERATOR_DIR_NAME = "operator"
+        private val RESERVED_NAMES = setOf(SHARED_DIR_NAME, CURRENT_MARKER_NAME, OPERATOR_DIR_NAME)
 
         fun validateName(name: String): String {
             require(NAME_REGEX.matches(name)) {
