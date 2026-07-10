@@ -20,57 +20,63 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
-import androidx.compose.foundation.layout.Box
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
+import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.send.ConcordNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
+import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
+import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
  * The chat screen of one Concord Channel. Messages are real Notes in [LocalCache]
- * attached to the channel (landed on decrypt by
- * [com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager]), so the
- * feed reuses the shared [RefreshingChatroomFeedView] — reactions, replies, zaps
- * and OTS render exactly as in every other chat.
- *
- * Only the send path is Concord-specific: it derives the channel plane key and
- * publishes an encrypted wrap to the community relays
- * ([com.vitorpamplona.amethyst.model.Account.sendConcordChannelMessage]).
- * [ConcordChannelSubscription] keeps the channel's plane live while foregrounded.
+ * attached to the channel, so the feed reuses the shared [RefreshingChatroomFeedView]
+ * (avatars, reactions, replies, zaps, OTS) and the composer reuses the same
+ * @-mention / inline-mention / reply machinery as the other chats. Only the send
+ * path is Concord-specific: it wraps the message on the channel plane.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,9 +98,9 @@ fun ConcordChannelScreen(
         )
     WatchLifecycleAndUpdateModel(feedViewModel)
 
-    val scope = rememberCoroutineScope()
-    var draft by remember { mutableStateOf("") }
-    var replyTo by remember { mutableStateOf<Note?>(null) }
+    val newMessageModel: ConcordNewMessageViewModel = viewModel(key = channel.channelId.toKey() + "ConcordNewMessageViewModel")
+    newMessageModel.init(accountViewModel)
+    newMessageModel.load(communityId, channelId)
 
     Scaffold(
         topBar = {
@@ -115,34 +121,25 @@ fun ConcordChannelScreen(
             )
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).imePadding()) {
-            Column(Modifier.weight(1f).fillMaxWidth()) {
+        Column(Modifier.fillMaxHeight().padding(padding)) {
+            Column(Modifier.fillMaxHeight().weight(1f, true)) {
                 RefreshingChatroomFeedView(
                     feedContentState = feedViewModel.feedState,
                     accountViewModel = accountViewModel,
                     nav = nav,
                     routeForLastRead = "Concord/$communityId/$channelId",
-                    onWantsToReply = { replyTo = it },
+                    onWantsToReply = { newMessageModel.reply(it) },
                     onWantsToEditDraft = {},
                 )
             }
 
             if (channel.canPost()) {
-                ConcordComposer(
-                    draft = draft,
-                    replyingTo = replyTo,
+                Spacer(modifier = DoubleVertSpacer)
+                ConcordMessageComposer(
+                    newMessageModel = newMessageModel,
                     accountViewModel = accountViewModel,
-                    onDraftChange = { draft = it },
-                    onCancelReply = { replyTo = null },
-                    onSend = {
-                        val text = draft.trim()
-                        if (text.isNotEmpty()) {
-                            val parent = replyTo
-                            draft = ""
-                            replyTo = null
-                            scope.launch { account.sendConcordChannelMessage(communityId, channelId, text, parent) }
-                        }
-                    },
+                    nav = nav,
+                    onMessageSent = { feedViewModel.feedState.sendToTop() },
                 )
             }
         }
@@ -150,53 +147,69 @@ fun ConcordChannelScreen(
 }
 
 @Composable
-private fun ConcordComposer(
-    draft: String,
-    replyingTo: Note?,
+private fun ConcordMessageComposer(
+    newMessageModel: ConcordNewMessageViewModel,
     accountViewModel: AccountViewModel,
-    onDraftChange: (String) -> Unit,
-    onCancelReply: () -> Unit,
-    onSend: () -> Unit,
+    nav: INav,
+    onMessageSent: suspend () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth()) {
-        if (replyingTo != null) {
-            val name by observeUserName(remember(replyingTo) { replyingTo.author ?: LocalCache.getOrCreateUser(replyingTo.event?.pubKey ?: "") }, accountViewModel)
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "↰ $name: ${replyingTo.event?.content?.take(80).orEmpty()}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                )
-                IconButton(onClick = onCancelReply) {
-                    SymbolIcon(symbol = MaterialSymbols.Close, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.cancel))
-                }
-            }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedTextField(
-                value = draft,
-                onValueChange = onDraftChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text(stringRes(com.vitorpamplona.amethyst.R.string.reply_here)) },
-                maxLines = 5,
+    val scope = rememberCoroutineScope()
+    val canPost by remember { derivedStateOf { newMessageModel.canPost() } }
+    val context = LocalContext.current
+
+    DisposableEffect(newMessageModel.channelId) {
+        onDispose { newMessageModel.userSuggestions?.reset() }
+    }
+
+    newMessageModel.replyTo.value?.let {
+        DisplayReplyingToNote(it, accountViewModel, nav) { newMessageModel.clearReply() }
+    }
+
+    Column(modifier = EditFieldModifier) {
+        newMessageModel.userSuggestions?.let {
+            ShowUserSuggestionList(
+                it,
+                newMessageModel::autocompleteWithUser,
+                accountViewModel,
+                SuggestionListDefaultHeightChat,
             )
-            Box(Modifier.padding(start = 6.dp)) {
-                IconButton(onClick = onSend, enabled = draft.isNotBlank()) {
-                    SymbolIcon(
-                        symbol = MaterialSymbols.AutoMirrored.Send,
-                        contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.send),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
         }
+
+        ThinPaddingTextField(
+            state = newMessageModel.message,
+            onTextChanged = { newMessageModel.onMessageChanged() },
+            inputTransformation = MentionPreservingInputTransformation,
+            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+            modifier = Modifier.fillMaxWidth(),
+            shape = EditFieldBorder,
+            placeholder = {
+                Text(
+                    text = stringRes(com.vitorpamplona.amethyst.R.string.reply_here),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            trailingIcon = {
+                ThinSendButton(
+                    isActive = canPost,
+                    modifier = EditFieldTrailingIconModifier,
+                ) {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            newMessageModel.sendPost()
+                            onMessageSent()
+                        } catch (e: Exception) {
+                            launch(Dispatchers.Main) {
+                                Toast.makeText(context, "Failed to send message: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
+            },
+            colors =
+                TextFieldDefaults.colors(
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+        )
     }
 }
