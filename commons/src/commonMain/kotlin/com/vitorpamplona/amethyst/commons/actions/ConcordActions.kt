@@ -81,6 +81,9 @@ object ConcordActions {
     /** Wraps at a plane/channel address: kind-1059 events authored by the stream key. */
     fun planeFilter(planePubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordKinds.WRAP), authors = listOf(planePubKeyHex))
 
+    /** Wraps across several plane addresses on one relay: kind-1059 authored by any of them. */
+    fun planeFilterFor(planePubKeysHex: List<HexKey>): Filter = Filter(kinds = listOf(ConcordKinds.WRAP), authors = planePubKeysHex)
+
     /** The public invite bundle for a link signer. */
     fun bundleFilter(linkSignerPubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordKinds.INVITE_BUNDLE), authors = listOf(linkSignerPubKeyHex))
 
