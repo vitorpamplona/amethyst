@@ -1616,38 +1616,15 @@ class GrapeRankCrawler(
             log("[relay-class-sum] relays=${rows.size} live=$live throttled=$throttled unreachable=$unreachable concurrency_caps=$capsStr")
         }
 
-        suspend fun run(): Stats {
-            val crawlMark = TimeSource.Monotonic.markNow()
-            // Scope owning parked (slow-relay) subscriptions and the fire-and-forget
-            // Tier-2 relay-list sweeps. SupervisorJob so one failure never cancels the
-            // others; cancelled once the crawl converges. Published to [bgScope] so
-            // drainGated can hand slow subs to it.
-            val scope = CoroutineScope(coroutineContext + SupervisorJob())
-            bgScope = scope
-
-            // Heartbeat: keeps a long, silent round feeling alive with live % + ETA.
-            // Runs on [scope], so scope.cancel() at crawl end stops it.
-            scope.launch { progressTicker() }
-
-            // Background reachability culler: cheaply TCP-probes the cold tail of
-            // learned relays and drops the unreachable ones into deadHosts before the
-            // WS path pays the full connectTimeout on them. Runs on [scope], stopped
-            // by scope.cancel() at crawl end.
-            config.reachabilityProbe?.let { probe -> scope.launch { cullUnreachable(probe) } }
-
-            // Mass pre-connect: start the handshake to every relay a prior run proved
-            // live NOW, in one parallel storm, so the connect wait is paid once —
-            // concurrently, before the first drain — instead of serially inside each
-            // drain that first routes to a relay. The subscribe returns immediately;
-            // sockets ramp in the background while round 1's discovery queries run.
-            if (config.preconnectCap > 0 && config.knownLiveRelays.isNotEmpty()) {
-                log(
-                    "[graperank] pre-connecting up to ${config.preconnectCap} of " +
-                        "${config.knownLiveRelays.size} known-live relays",
-                )
-                refreshWarmPool()
-            }
-
+        /**
+         * The round loop: expand the frontier until every in-budget user is done (or
+         * [Config.maxRounds] hits). RE-ENTRANT: the terminal aggregator recovery calls
+         * it again when its folded lists reveal users the previous rounds never saw.
+         */
+        private suspend fun runRounds() {
+            // Background scope for parked handoffs + Tier-2 sweeps; set by [run]
+            // before the first call and alive until the crawl's very end.
+            val scope = checkNotNull(bgScope) { "runRounds requires bgScope" }
             while (rounds < config.maxRounds) {
                 // Fold in whatever the parked (slow-but-alive) relays have delivered
                 // since the last round — their late contact lists expand the frontier
@@ -1831,9 +1808,41 @@ class GrapeRankCrawler(
                     )
                 }
             }
+        }
 
-            // Crawl done — drop the warm pool.
-            client.unsubscribe(WARM_SUB_ID)
+        suspend fun run(): Stats {
+            val crawlMark = TimeSource.Monotonic.markNow()
+            // Scope owning parked (slow-relay) subscriptions and the fire-and-forget
+            // Tier-2 relay-list sweeps. SupervisorJob so one failure never cancels the
+            // others; cancelled once the crawl converges. Published to [bgScope] so
+            // drainGated can hand slow subs to it.
+            val scope = CoroutineScope(coroutineContext + SupervisorJob())
+            bgScope = scope
+
+            // Heartbeat: keeps a long, silent round feeling alive with live % + ETA.
+            // Runs on [scope], so scope.cancel() at crawl end stops it.
+            scope.launch { progressTicker() }
+
+            // Background reachability culler: cheaply TCP-probes the cold tail of
+            // learned relays and drops the unreachable ones into deadHosts before the
+            // WS path pays the full connectTimeout on them. Runs on [scope], stopped
+            // by scope.cancel() at crawl end.
+            config.reachabilityProbe?.let { probe -> scope.launch { cullUnreachable(probe) } }
+
+            // Mass pre-connect: start the handshake to every relay a prior run proved
+            // live NOW, in one parallel storm, so the connect wait is paid once —
+            // concurrently, before the first drain — instead of serially inside each
+            // drain that first routes to a relay. The subscribe returns immediately;
+            // sockets ramp in the background while round 1's discovery queries run.
+            if (config.preconnectCap > 0 && config.knownLiveRelays.isNotEmpty()) {
+                log(
+                    "[graperank] pre-connecting up to ${config.preconnectCap} of " +
+                        "${config.knownLiveRelays.size} known-live relays",
+                )
+                refreshWarmPool()
+            }
+
+            runRounds()
 
             // Patient final passes, run CONCURRENTLY — they are independent (one
             // folds stragglers' kind:3 into the graph, the other lands kind:5
@@ -1855,6 +1864,35 @@ class GrapeRankCrawler(
                 launch { recoverStragglersFromAggregators() }
                 launch { fetchReportDeletions(topLiveRelays(BACKBONE_SIZE).toSet()) }
             }
+
+            // FIXPOINT: recovery discoveries must be CRAWLED, not just counted. A
+            // recovered straggler's list reveals users the rounds never saw; without
+            // re-entering the round loop those users dead-end, making deep-hop
+            // completeness hostage to WHEN a list arrived (in-round = crawlable,
+            // terminal recovery = ignored). Measured: one weak backbone hour at
+            // round 5 shifted ~30k lists to the terminal pass and silently
+            // amputated ~220k hop-6/7 users vs an otherwise-identical run. So:
+            // while recovery keeps revealing in-budget pending users, run more
+            // rounds and recover again — each pass folds each straggler at most
+            // once and the hop budget bounds depth, so this converges (and
+            // maxRounds backstops it). The warm pool is still up, so resumed
+            // rounds start on warm sockets.
+            var extraRounds = false
+            while (rounds < config.maxRounds &&
+                hopOf.keys.any { it !in done && (hopOf[it] ?: 0) < config.maxHops }
+            ) {
+                extraRounds = true
+                log("[graperank] recovery expanded the frontier — resuming rounds")
+                runRounds()
+                recoverStragglersFromAggregators()
+            }
+            // Extra rounds can gather new kind:1984 reports whose deletions the
+            // first pass never saw; top up (store-deduped, so re-asking is cheap).
+            // Skipped entirely on the common no-extra-rounds path.
+            if (extraRounds) fetchReportDeletions(topLiveRelays(BACKBONE_SIZE).toSet())
+
+            // Crawl done — drop the warm pool.
+            client.unsubscribe(WARM_SUB_ID)
 
             // Stop any parked subscriptions + Tier-2 relay-list sweeps still in flight
             // (whatever they fetched already landed in the store).
