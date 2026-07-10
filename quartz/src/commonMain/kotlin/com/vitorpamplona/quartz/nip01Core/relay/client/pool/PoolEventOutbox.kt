@@ -97,6 +97,21 @@ class PoolEventOutbox {
     }
 
     /**
+     * The events still pending delivery to [url]. Unlike [activeOutboxCacheFor] (ids only), this
+     * returns the full events so callers can inspect kind/tags — e.g. to explain *why* a relay is
+     * being authenticated with (a pending gift wrap => sending a DM to its recipient).
+     */
+    fun activeOutboxEventsFor(url: NormalizedRelayUrl): List<Event> {
+        val myEvents = mutableListOf<Event>()
+        eventOutbox.forEach { (_, outboxCache) ->
+            if (url in outboxCache.relaysRemaining) {
+                myEvents.add(outboxCache.event)
+            }
+        }
+        return myEvents
+    }
+
+    /**
      * Returns the relays that have NOT yet acknowledged [eventId] with an OK, or
      * null if the event is not currently tracked (never sent or already fully done).
      * Callers can poll this after publish to detect when relays ack: the set shrinks
@@ -118,16 +133,19 @@ class PoolEventOutbox {
         return eventOutbox[event.id]?.remainingRelays() ?: emptySet()
     }
 
+    /** Records a send attempt. Returns the event if this attempt exhausted its retry budget for
+     *  [url] (i.e. we gave up delivering it there), or null otherwise. */
     fun newTry(
         id: HexKey,
         url: NormalizedRelayUrl,
-    ) {
-        val waiting = eventOutbox[id]
-        waiting?.newTry(url)
-        if (waiting?.isDone() == true) {
+    ): Event? {
+        val waiting = eventOutbox[id] ?: return null
+        val gaveUp = waiting.newTry(url)
+        if (waiting.isDone()) {
             eventOutbox = eventOutbox - waiting.event.id
             updateRelays()
         }
+        return if (gaveUp) waiting.event else null
     }
 
     fun newResponse(
@@ -169,14 +187,11 @@ class PoolEventOutbox {
         }
     }
 
+    /** Returns the event if this send attempt made us give up delivering it to [relay]. */
     fun onSent(
         relay: NormalizedRelayUrl,
         cmd: Command,
-    ) {
-        if (cmd is EventCmd) {
-            newTry(cmd.event.id, relay)
-        }
-    }
+    ): Event? = if (cmd is EventCmd) newTry(cmd.event.id, relay) else null
 
     fun sendToRelayIfChanged(
         event: Event,

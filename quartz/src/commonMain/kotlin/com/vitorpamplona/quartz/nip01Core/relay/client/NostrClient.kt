@@ -303,7 +303,9 @@ class NostrClient(
         if (success) {
             activeRequests.onSent(relay.url, cmd)
             activeCounts.onSent(relay.url, cmd)
-            eventOutbox.onSent(relay.url, cmd)
+            eventOutbox.onSent(relay.url, cmd)?.let { gaveUp ->
+                listeners.forEach { it.onEventGaveUp(relay, gaveUp) }
+            }
         }
         listeners.forEach { it.onSent(relay, cmdStr, cmd, success) }
     }
@@ -368,6 +370,8 @@ class NostrClient(
     override fun activeCounts(url: NormalizedRelayUrl): Map<String, List<Filter>> = activeCounts.activeFiltersFor(url)
 
     override fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey> = eventOutbox.activeOutboxCacheFor(url)
+
+    override fun activeOutboxEvents(url: NormalizedRelayUrl): List<Event> = eventOutbox.activeOutboxEventsFor(url)
 
     override fun pendingPublishRelaysFor(eventId: HexKey): Set<NormalizedRelayUrl>? = eventOutbox.pendingRelaysFor(eventId)
 
