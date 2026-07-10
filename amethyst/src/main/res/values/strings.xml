@@ -3776,6 +3776,7 @@
     <string name="pow_notification_channel_name">Proof of work mining</string>
     <string name="pow_notification_channel_description">Shows posts that are still mining their NIP-13 proof of work so they can finish after you leave the app.</string>
     <string name="pow_notification_cancel_all">Cancel</string>
+    <string name="pow_difficulty_estimate">≈ %1$s per post on this device</string>
     <string name="ai_writing_use_this">Use This</string>
     <string name="ai_writing_dismiss">Dismiss</string>
     <string name="ai_tone_correct">Correct</string>

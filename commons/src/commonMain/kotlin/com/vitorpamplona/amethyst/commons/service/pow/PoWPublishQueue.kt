@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.persistentListOf
@@ -50,6 +51,8 @@ import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Snapshot of one queued/mining publish job, for display in the broadcast banner.
+ * [miningStartedAt] (epoch seconds) is set when a worker picks the job up, so
+ * the UI can show how long the current nonce search has been running.
  */
 @Immutable
 data class PoWJobState(
@@ -57,6 +60,7 @@ data class PoWJobState(
     val kind: Int,
     val difficulty: Int,
     val isMining: Boolean,
+    val miningStartedAt: Long? = null,
 )
 
 /**
@@ -222,7 +226,7 @@ class PoWPublishQueue(
 
     private fun markMining(jobId: String) {
         _jobs.update { list ->
-            list.map { if (it.id == jobId) it.copy(isMining = true) else it }.toImmutableList()
+            list.map { if (it.id == jobId) it.copy(isMining = true, miningStartedAt = TimeUtils.now()) else it }.toImmutableList()
         }
     }
 

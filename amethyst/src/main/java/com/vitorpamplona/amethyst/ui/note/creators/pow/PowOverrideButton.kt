@@ -21,27 +21,39 @@
 package com.vitorpamplona.amethyst.ui.note.creators.pow
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 
 val POW_PRESETS = listOf(16, 20, 24, 28)
 
 /**
- * Composer chip showing the NIP-13 difficulty this post will be mined at.
- * Tapping opens a menu to raise/lower/disable mining for this post only —
- * the account setting is untouched.
+ * Composer options-row button showing the NIP-13 difficulty this post will be
+ * mined at: a bolt with the difficulty as a small badge when mining is on,
+ * a dimmed bolt when off. Tapping opens a menu to raise/lower/disable mining
+ * for this post only — the account setting is untouched.
  *
  * [effectiveDifficulty] is what will actually be used at send time (override
  * or account default); null/0 means the post publishes without PoW.
@@ -57,25 +69,37 @@ fun PowOverrideButton(
     onSelect: (Int?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val isActive = effectiveDifficulty != null && effectiveDifficulty > 0
 
     Box {
-        TextButton(onClick = { expanded = true }) {
-            Text(
-                text =
-                    if (effectiveDifficulty != null && effectiveDifficulty > 0) {
-                        stringRes(R.string.pow_chip_active, effectiveDifficulty)
-                    } else {
-                        stringRes(R.string.pow_chip_off)
-                    },
-                fontSize = Font14SP,
-                fontWeight = FontWeight.Bold,
-                color =
-                    if (isOverridden || (effectiveDifficulty != null && effectiveDifficulty > 0)) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onBackground
-                    },
-            )
+        IconButton(onClick = { expanded = true }) {
+            Box(
+                Modifier
+                    .height(20.dp)
+                    .width(23.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Bolt,
+                    contentDescription = stringRes(R.string.pow_settings_title),
+                    modifier = Modifier.size(18.dp).align(Alignment.BottomStart),
+                    tint =
+                        if (isActive) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        },
+                )
+                if (isActive) {
+                    Text(
+                        text = effectiveDifficulty.toString(),
+                        fontSize = 9.sp,
+                        lineHeight = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.TopEnd),
+                    )
+                }
+            }
         }
 
         DropdownMenu(
@@ -90,6 +114,7 @@ fun PowOverrideButton(
                         } else {
                             stringRes(R.string.pow_option_default_off)
                         },
+                        fontWeight = if (!isOverridden) FontWeight.Bold else null,
                     )
                 },
                 onClick = {
@@ -98,7 +123,12 @@ fun PowOverrideButton(
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringRes(R.string.pow_option_off)) },
+                text = {
+                    Text(
+                        stringRes(R.string.pow_option_off),
+                        fontWeight = if (isOverridden && !isActive) FontWeight.Bold else null,
+                    )
+                },
                 onClick = {
                     onSelect(0)
                     expanded = false
@@ -106,13 +136,39 @@ fun PowOverrideButton(
             )
             POW_PRESETS.forEach { preset ->
                 DropdownMenuItem(
-                    text = { Text(stringRes(R.string.pow_option_bits, preset)) },
+                    text = {
+                        Text(
+                            stringRes(R.string.pow_option_bits, preset),
+                            fontWeight = if (isOverridden && effectiveDifficulty == preset) FontWeight.Bold else null,
+                        )
+                    },
                     onClick = {
                         onSelect(preset)
                         expanded = false
                     },
                 )
             }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PowOverrideButtonPreview() {
+    ThemeComparisonRow {
+        Row {
+            PowOverrideButton(
+                effectiveDifficulty = 24,
+                defaultDifficulty = 20,
+                isOverridden = true,
+                onSelect = {},
+            )
+            PowOverrideButton(
+                effectiveDifficulty = null,
+                defaultDifficulty = null,
+                isOverridden = false,
+                onSelect = {},
+            )
         }
     }
 }

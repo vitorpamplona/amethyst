@@ -20,14 +20,27 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 
 @Composable
 @Preview
@@ -37,13 +50,35 @@ fun DisplayPoWPreview() {
     )
 }
 
+/**
+ * Compact pill showing the proof of work a received note carries: a bolt plus
+ * the difficulty in leading zero bits. Sits inline in note headers, so it
+ * stays at text height.
+ */
 @Composable
 fun DisplayPoW(pow: Int) {
-    Text(
-        "PoW-$pow",
-        color = MaterialTheme.colorScheme.lessImportantLink,
-        fontSize = Font14SP,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.secondaryContainer)
+                .padding(horizontal = 6.dp, vertical = 1.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Bolt,
+            contentDescription = stringRes(R.string.pow_settings_title),
+            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.size(12.dp),
+        )
+        Text(
+            text = pow.toString(),
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            fontSize = 12.sp,
+            lineHeight = 12.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+        )
+    }
 }

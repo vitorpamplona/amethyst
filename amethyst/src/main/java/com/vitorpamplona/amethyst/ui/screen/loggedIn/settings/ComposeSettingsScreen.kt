@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -37,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -45,6 +47,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
+import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.model.AccountPoWPreferences
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
@@ -56,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlin.math.roundToLong
 
 @Composable
 fun ComposeSettingsScreen(
@@ -159,6 +163,8 @@ private fun PowDifficultyTile(accountViewModel: AccountViewModel) {
                 }
             }
         }
+
+        PowTimeEstimate(difficulty)
     }
 
     SettingsSubControlRow(
@@ -174,6 +180,40 @@ private fun PowDifficultyTile(accountViewModel: AccountViewModel) {
         )
     }
 }
+
+/**
+ * "≈ 45 s per post on this device" — turns the abstract bit count into a cost
+ * the user can feel. The hash rate is benchmarked once (~250 ms on a worker
+ * thread) and cached; the figure is a statistical mean, so any single post can
+ * be luckier or unluckier.
+ */
+@Composable
+private fun PowTimeEstimate(difficulty: Int) {
+    if (difficulty <= 0) return
+
+    val estimate by
+        produceState<String?>(initialValue = null, difficulty) {
+            val rate = PoWEstimator.hashesPerSecond()
+            value = formatEstimate(PoWEstimator.estimateSeconds(difficulty, rate))
+        }
+
+    estimate?.let {
+        Text(
+            text = stringRes(R.string.pow_difficulty_estimate, it),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+private fun formatEstimate(seconds: Double): String =
+    when {
+        seconds < 1.0 -> "<1s"
+        seconds < 90.0 -> "${seconds.roundToLong()}s"
+        seconds < 90.0 * 60.0 -> "${(seconds / 60.0).roundToLong()}m"
+        seconds < 48.0 * 3600.0 -> "${(seconds / 3600.0).roundToLong()}h"
+        else -> "${(seconds / 86400.0).roundToLong()}d"
+    }
 
 @Composable
 private fun PowCategoryChecklist(accountViewModel: AccountViewModel) {

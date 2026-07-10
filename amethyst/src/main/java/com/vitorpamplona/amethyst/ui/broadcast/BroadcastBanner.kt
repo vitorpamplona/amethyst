@@ -22,7 +22,11 @@ package com.vitorpamplona.amethyst.ui.broadcast
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -45,7 +49,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -73,6 +81,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.delay
 import java.util.UUID
 
 /**
@@ -149,6 +158,29 @@ private fun MiningContent(
     miningJobs: ImmutableList<PoWJobState>,
     onCancelJob: (String) -> Unit,
 ) {
+    // one shared pulse for the bolt — mining has no measurable progress, so
+    // the animation is what says "the app is working right now".
+    val pulse = rememberInfiniteTransition(label = "miningPulse")
+    val boltAlpha by pulse.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(700),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "boltAlpha",
+    )
+
+    // 1 Hz clock driving the per-job elapsed labels
+    var nowSec by remember { mutableLongStateOf(TimeUtils.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1_000)
+            nowSec = TimeUtils.now()
+        }
+    }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -158,7 +190,7 @@ private fun MiningContent(
             Icon(
                 symbol = MaterialSymbols.Bolt,
                 contentDescription = stringRes(R.string.pow_mining_title),
-                tint = MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = boltAlpha),
                 modifier = Modifier.size(18.dp),
             )
 
@@ -180,13 +212,16 @@ private fun MiningContent(
             ) {
                 Spacer(Modifier.width(26.dp))
 
+                val base =
+                    stringRes(
+                        if (job.isMining) R.string.pow_mining_job else R.string.pow_queued_job,
+                        kindToName(job.kind),
+                        job.difficulty.toString(),
+                    )
+                val elapsed = job.miningStartedAt?.let { formatElapsed((nowSec - it).coerceAtLeast(0)) }
+
                 Text(
-                    text =
-                        stringRes(
-                            if (job.isMining) R.string.pow_mining_job else R.string.pow_queued_job,
-                            kindToName(job.kind),
-                            job.difficulty.toString(),
-                        ),
+                    text = if (elapsed != null) "$base • $elapsed" else base,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -194,15 +229,17 @@ private fun MiningContent(
                     modifier = Modifier.weight(1f),
                 )
 
-                Text(
-                    text = "×",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier =
-                        Modifier
-                            .clickable(onClick = { onCancelJob(job.id) })
-                            .padding(start = 2.dp),
-                )
+                IconButton(
+                    onClick = { onCancelJob(job.id) },
+                    modifier = Modifier.size(22.dp),
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.Close,
+                        contentDescription = stringRes(R.string.pow_notification_cancel_all),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
             }
         }
 
@@ -215,6 +252,13 @@ private fun MiningContent(
         )
     }
 }
+
+private fun formatElapsed(seconds: Long): String =
+    if (seconds < 60) {
+        "${seconds}s"
+    } else {
+        "${seconds / 60}m ${seconds % 60}s"
+    }
 
 @Composable
 private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
