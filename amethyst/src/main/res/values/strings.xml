@@ -305,6 +305,8 @@
     <string name="already_have_an_account">Already have a Nostr account?</string>
     <string name="loading_feed">Loading feed</string>
     <string name="loading_account">Loading account</string>
+    <string name="concord_redeeming_invite">Redeeming invite…</string>
+    <string name="concord_invite_failed">Could not fetch this invite. The link may be expired or its relays unreachable.</string>
     <string name="chats_history_proto_nip17">encrypted</string>
     <string name="chats_history_proto_nip04">legacy</string>
     <string name="chats_reply_searching_history">Looking for the original message…</string>

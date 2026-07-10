@@ -102,6 +102,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordChannelListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordChannelScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordInviteScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.EphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.metadata.NewEphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelScreen
@@ -600,6 +601,14 @@ fun BuildNavigation(
         composableFromEndArgs<Route.ConcordServer> {
             ConcordChannelListScreen(
                 communityId = it.communityId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.ConcordInvite> {
+            ConcordInviteScreen(
+                link = it.link,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

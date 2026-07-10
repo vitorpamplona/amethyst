@@ -160,6 +160,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -167,6 +168,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -1488,8 +1490,101 @@ class Account(
     /** Add a joined Concord community (secret-bearing entry) to the private kind-13302 list. */
     suspend fun joinConcordCommunity(entry: ConcordCommunityListEntry) = sendMyPublicAndPrivateOutbox(concordChannelList.follow(entry))
 
+    /**
+     * Create a new Concord community: mint its genesis (metadata + #general),
+     * publish the owner-signed genesis wraps to [relays] (or our outbox), and add
+     * the secret-bearing entry to the kind-13302 joined list. Returns the new
+     * community id, or null if not writeable.
+     */
+    suspend fun createConcordCommunity(
+        name: String,
+        description: String? = null,
+        relays: List<String> = emptyList(),
+    ): String? {
+        if (!isWriteable()) return null
+        val relayUrls = relays.ifEmpty { outboxRelays.flow.value.map { it.url } }
+        val community = ConcordActions.createCommunity(signer, name, TimeUtils.now(), description, relayUrls)
+
+        val publishTo = relayUrls.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { outboxRelays.flow.value }
+        community.genesisWraps.forEach { client.publish(it, publishTo) }
+
+        joinConcordCommunity(
+            ConcordCommunityListEntry(
+                id = community.communityIdHex,
+                owner = community.ownerPubKey,
+                ownerSalt = community.ownerSalt.toHexKey(),
+                root = community.communityRoot.toHexKey(),
+                rootEpoch = community.rootEpoch,
+                relays = relayUrls,
+                name = name,
+            ),
+        )
+        return community.communityIdHex
+    }
+
+    /**
+     * Mint a shareable invite link for a joined community and publish its
+     * kind-33301 public bundle to the community relays. Returns the `…/invite/…`
+     * URL, or null if the community isn't joined or isn't writeable.
+     */
+    suspend fun mintConcordInvite(
+        communityId: String,
+        base: String = "https://amethyst.social",
+    ): String? {
+        if (!isWriteable()) return null
+        val entry = concordChannelList.liveCommunities.value.firstOrNull { it.id == communityId } ?: return null
+        val invite =
+            ConcordActions.inviteFor(
+                communityIdHex = entry.id,
+                ownerPubKey = entry.owner,
+                ownerSaltHex = entry.ownerSalt,
+                communityRootHex = entry.root,
+                rootEpoch = entry.rootEpoch,
+                name = entry.name,
+                relays = entry.relays,
+            )
+        val minted = ConcordActions.mintInviteLink(base, invite, TimeUtils.now(), entry.relays)
+
+        val publishTo = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { outboxRelays.flow.value }
+        if (publishTo.isNotEmpty()) client.publish(minted.bundleEvent, publishTo)
+        return minted.url
+    }
+
     /** Drop a joined Concord community from the private kind-13302 list by its id. */
     suspend fun leaveConcordCommunity(communityId: String) = sendMyPublicAndPrivateOutbox(concordChannelList.unfollow(communityId))
+
+    /**
+     * Redeem a Concord invite link (`…/invite/<naddr>#<fragment>`): parse it, fetch
+     * the kind-33301 public bundle from the link's relays (+ our outbox), unlock it
+     * with the fragment token, and add the resulting secret-bearing entry to the
+     * kind-13302 joined list. Returns the joined community id, or null if the link
+     * is invalid, unreadable, or no valid bundle is found.
+     */
+    suspend fun joinConcordViaInvite(url: String): String? {
+        if (!isWriteable()) return null
+        val parsed = ConcordActions.parseInviteLink(url) ?: return null
+
+        val relays =
+            (parsed.fragment.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } + outboxRelays.flow.value).toSet()
+        if (relays.isEmpty()) return null
+
+        val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
+        val wraps = client.fetchAll(filters = filters)
+        val bundle = wraps.firstNotNullOfOrNull { ConcordActions.openBundle(it, parsed.fragment.token) } ?: return null
+
+        val entry =
+            ConcordCommunityListEntry(
+                id = bundle.communityId,
+                owner = bundle.owner,
+                ownerSalt = bundle.ownerSalt,
+                root = bundle.communityRoot,
+                rootEpoch = bundle.rootEpoch,
+                relays = bundle.relays,
+                name = bundle.name,
+            )
+        joinConcordCommunity(entry)
+        return bundle.communityId
+    }
 
     /**
      * Post [text] to a Concord channel: derive the channel plane key, build an
