@@ -24,7 +24,9 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
@@ -88,19 +90,26 @@ object RelayGroupReadCommands {
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
+            // NIP-29 requires the 39000 to be signed by the relay's own key; verify against the
+            // relay's NIP-11 `self` so stray user-published 39000s on a general relay are dropped.
+            val relaySigned = relaySignedFilter(ctx.relayInfo(relay))
             val filter = Filter(kinds = listOf(GroupMetadataEvent.KIND), limit = 500)
-            val metas =
+            val allMetas =
                 ctx
                     .drain(mapOf(relay to listOf(filter)), timeoutSecs * 1000)
                     .map { it.second }
                     .filterIsInstance<GroupMetadataEvent>()
                     .distinctBy { it.groupId() }
+            val metas =
+                allMetas
+                    .filter { relaySigned(it.pubKey) }
                     .sortedBy { it.name()?.lowercase() ?: it.groupId() }
 
             Output.emit(
                 mapOf(
                     "relay" to relay.url,
                     "count" to metas.size,
+                    "unverified_dropped" to (allMetas.size - metas.size),
                     "groups" to metas.map(::metaSummary),
                 ),
             )
@@ -127,7 +136,13 @@ object RelayGroupReadCommands {
                     tags = mapOf("d" to listOf(groupId)),
                     limit = 10,
                 )
-            val events = ctx.drain(mapOf(relay to listOf(filter)), timeoutSecs * 1000).map { it.second }
+            val relaySigned = relaySignedFilter(ctx.relayInfo(relay))
+            val events =
+                ctx
+                    .drain(mapOf(relay to listOf(filter)), timeoutSecs * 1000)
+                    .map { it.second }
+                    // Only trust relay-signed metadata/roster (39xxx author == the relay's `self`).
+                    .filter { relaySigned(it.pubKey) }
 
             val meta = events.filterIsInstance<GroupMetadataEvent>().maxByOrNull { it.createdAt }
             val admins = events.filterIsInstance<GroupAdminsEvent>().maxByOrNull { it.createdAt }?.admins() ?: emptyList()
@@ -153,6 +168,21 @@ object RelayGroupReadCommands {
                 ),
             )
             return 0
+        }
+    }
+
+    /**
+     * A predicate for whether a 39xxx author is the host relay's approved key. NIP-29: metadata is
+     * "signed by the relay keypair directly … as stated by the NIP-11 `self` pubkey". When the relay
+     * publishes `self` we enforce it strictly; when it omits `self` we fall back to the weaker
+     * "advertises NIP-29" signal; a relay with neither yields no genuine groups.
+     */
+    private fun relaySignedFilter(info: Nip11RelayInformation?): (HexKey) -> Boolean {
+        val self = info?.self
+        return when {
+            self != null -> { author -> author == self }
+            info?.supported_nips?.any { it == "29" } == true -> { _ -> true }
+            else -> { _ -> false }
         }
     }
 

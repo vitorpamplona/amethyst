@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.model.nip11RelayInfo
 
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 
 /**
  * Whether [relay]'s cached NIP-11 document advertises support for [nip] (as a decimal string, e.g.
@@ -40,3 +42,30 @@ fun relayAdvertisesNip(
 
 /** NIP-29 (relay-based groups): the relay must run it for its groups to be real. */
 fun relayAdvertisesNip29(relay: NormalizedRelayUrl): Boolean = relayAdvertisesNip(relay, "29")
+
+/**
+ * Whether [channel]'s relay-signed metadata is genuinely from its host relay, per NIP-29:
+ * "these are addressable events signed by the relay keypair directly … as stated by the NIP-11
+ * `self` pubkey", and "relays shouldn't accept these events if they're signed by anyone else".
+ *
+ * So the authoritative check is `39000.author == relay.self`. When the relay publishes a `self`
+ * key we enforce that strictly — this rejects a stray user-published 39000 even on a real NIP-29
+ * relay. When the relay does NOT advertise `self` at all (we can't verify cryptographically), we
+ * fall back to the weaker "advertises NIP-29" signal so a compliant relay that merely omits `self`
+ * still works. A relay with neither fails. Reads only the cached NIP-11 doc ([relayInfo]); callers
+ * driving a live surface should warm it first and re-evaluate as it resolves.
+ */
+fun isRelaySignedRelayGroup(
+    channel: RelayGroupChannel,
+    relayInfo: Nip11RelayInformation,
+): Boolean {
+    val self = relayInfo.self
+    return if (self != null) {
+        channel.event?.pubKey == self
+    } else {
+        relayInfo.supported_nips?.any { it == "29" } == true
+    }
+}
+
+/** [isRelaySignedRelayGroup] reading the host relay's cached NIP-11 doc (for non-Compose callers). */
+fun isRelaySignedRelayGroup(channel: RelayGroupChannel): Boolean = isRelaySignedRelayGroup(channel, Amethyst.instance.nip11Cache.getFromCache(channel.groupId.relayUrl))

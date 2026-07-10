@@ -219,30 +219,32 @@ private fun WatchAccountForRelayGroupDiscovery(
     val joinedGroups by accountViewModel.account.relayGroupList.liveRelayGroupList
         .collectAsStateWithLifecycle()
 
-    // Discovery only shows groups hosted on relays that actually run NIP-29 (a relay that does
-    // rejects user-authored 39xxx, so its 39000s are all genuine; general relays instead carry stray
-    // fake ones). The feed decides this from each relay's cached NIP-11 `supported_nips`, so warm
-    // the candidate relays here and re-invalidate as support is confirmed — otherwise a relay whose
-    // NIP-11 lands after its 39000s would stay hidden until a manual refresh.
+    // Discovery only shows groups whose 39000 is signed by the host relay's own key (NIP-29's
+    // authority — the NIP-11 `self` pubkey; general relays instead carry stray user-published 39000s
+    // that can't be joined). The feed reads that from each relay's cached NIP-11, so warm the
+    // candidate relays here and re-invalidate as each doc resolves — otherwise a relay whose NIP-11
+    // lands after its 39000s would stay hidden until a manual refresh.
     val candidateRelays = remember(perRelay) { perRelay.toGroupConstraints().keys }
-    var nip29Relays by remember { mutableStateOf(emptySet<NormalizedRelayUrl>()) }
+    var nip11Loaded by remember { mutableStateOf(emptySet<NormalizedRelayUrl>()) }
     LaunchedEffect(candidateRelays) {
-        val supported = nip29Relays.toMutableSet()
+        val loaded = nip11Loaded.toMutableSet()
         candidateRelays.forEach { relay ->
             Amethyst.instance.nip11Cache.loadRelayInfo(
                 relay = relay,
-                onInfo = { info ->
-                    if (info.supported_nips?.any { it == "29" } == true && supported.add(relay)) {
-                        nip29Relays = supported.toSet()
-                    }
-                },
-                onError = { _, _, _ -> },
+                onInfo = { if (loaded.add(relay)) nip11Loaded = loaded.toSet() },
+                onError = { _, _, _ -> if (loaded.add(relay)) nip11Loaded = loaded.toSet() },
             )
         }
     }
 
-    LaunchedEffect(listName, perRelay, joinedGroups, nip29Relays) {
+    LaunchedEffect(listName, perRelay, joinedGroups) {
         feedContentState.checkKeysInvalidateDataAndSendToTop()
+    }
+
+    // A NIP-11 doc resolving doesn't change the feed key (the self-key test lives in the filter's
+    // match, not the key), so force a re-filter directly when one lands.
+    LaunchedEffect(nip11Loaded) {
+        feedContentState.invalidateData()
     }
 }
 

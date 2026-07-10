@@ -54,6 +54,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -88,11 +90,15 @@ fun RelayGroupChannelListScreen(
 
     RelayGroupsOnRelaySubscription(relay, accountViewModel.dataSources().relayGroupsOnRelay, accountViewModel)
 
+    // Warm the relay's NIP-11 so we can tell its genuine (relay-signed) groups from stray
+    // user-published 39000s that a non-NIP-29 relay may also be storing.
+    val relayInfo by loadRelayInfo(relay)
+
     // Re-read the relay's channels whenever a group-metadata (kind 39000) event lands in
     // the cache — driven by LocalCache.observeEvents rather than a timer, so the list
     // updates as directory events arrive with no polling. The initial value is sorted too
     // so the first frame doesn't reshuffle when the first emission arrives.
-    val channels by produceState(
+    val allChannels by produceState(
         initialValue = accountViewModel.getRelayGroupChannelsOnRelay(relay).sortedBy { it.toBestDisplayName().lowercase() },
         relay,
     ) {
@@ -102,6 +108,10 @@ fun RelayGroupChannelListScreen(
                 value = accountViewModel.getRelayGroupChannelsOnRelay(relay).sortedBy { it.toBestDisplayName().lowercase() }
             }
     }
+
+    // Only the relay's own genuine, relay-signed groups (39000 author == the relay's NIP-11 `self`).
+    // Recomputes as the NIP-11 doc resolves so real groups fill in and fakes stay hidden.
+    val channels = remember(allChannels, relayInfo) { allChannels.filter { isRelaySignedRelayGroup(it, relayInfo) } }
 
     Scaffold(
         topBar = {
