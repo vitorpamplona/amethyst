@@ -46,6 +46,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -776,6 +777,7 @@ class GrapeRankCrawler(
                 authors: List<HexKey>,
                 relays: Set<NormalizedRelayUrl>,
                 kinds: List<Int>,
+                background: Boolean = false,
             ) {
                 if (relays.isEmpty() || authors.isEmpty()) return
                 val filters =
@@ -784,7 +786,7 @@ class GrapeRankCrawler(
                             Filter(kinds = kinds, authors = chunk)
                         }
                     }
-                drainGated(filters, null)
+                drainGated(filters, null, background = background)
             }
 
             val discovery =
@@ -824,8 +826,11 @@ class GrapeRankCrawler(
                     (olderStillMissing.isNotEmpty() && newWide.isNotEmpty())
             if (hasWork) {
                 bgScope.launch {
-                    query(freshStillMissing, wide, listOf(AdvertisedRelayListEvent.KIND))
-                    query(olderStillMissing, newWide, listOf(AdvertisedRelayListEvent.KIND))
+                    // background=true: these sweeps' parked units must never gate
+                    // round convergence — they are cancelled at crawl end instead,
+                    // and incremental persist keeps whatever they delivered.
+                    query(freshStillMissing, wide, listOf(AdvertisedRelayListEvent.KIND), background = true)
+                    query(olderStillMissing, newWide, listOf(AdvertisedRelayListEvent.KIND), background = true)
                 }
             }
         }
@@ -1053,34 +1058,6 @@ class GrapeRankCrawler(
         }
 
         /**
-         * Wait for a subscription's terminal ([done]: EOSE/CLOSED/cannot), resetting
-         * the [idleMs] window every time an event pings [activity]. So the wait ends
-         * with "timeout" only after [idleMs] of actual SILENCE — a relay that keeps
-         * streaming (however long its result set) is never cut mid-flight; only a
-         * genuinely stalled one is. Used for the patient park window.
-         */
-        private suspend fun awaitTerminalOrIdle(
-            done: CompletableDeferred<String>,
-            activity: Channel<Unit>,
-            idleMs: Long,
-        ): String {
-            while (true) {
-                val r =
-                    withTimeoutOrNull(idleMs) {
-                        select {
-                            done.onAwait { it }
-                            activity.onReceive { ACTIVITY }
-                        }
-                    }
-                when (r) {
-                    null -> return "timeout" // idleMs elapsed with no event and no terminal
-                    ACTIVITY -> Unit // an event arrived — reset the idle window and keep waiting
-                    else -> return r // terminal reason
-                }
-            }
-        }
-
-        /**
          * Fold one late-delivered event from a parked relay into the graph. Only the
          * round loop calls this (directly or via [foldLateHarvest]), so graph state
          * stays single-writer. Returns true if it fed a new contact list.
@@ -1165,21 +1142,24 @@ class GrapeRankCrawler(
          * background with `until` cursors ([fetchAllPages], starting at the page's
          * oldest event, inclusive) to drain whatever the cap hid, streaming the extra
          * events to [lateHarvest] just like a parked slow relay. Tracked by
-         * [parkedInFlight] so the round waits for it; gated by [limiter] and dropped if
-         * we have no [bgScope]. The boundary second is re-fetched and its already-seen
-         * events are dropped by [persist]'s crawl-wide dedup, so nothing double-counts.
-         * A no-op unless the page hit the threshold, so only dense units pay for it.
+         * [parkedInFlight] so the round waits for it — unless [background], in which
+         * case (like every background unit) it must never gate convergence; gated by
+         * [limiter] and dropped if we have no [bgScope]. The boundary second is
+         * re-fetched and its already-seen events are dropped by [persist]'s crawl-wide
+         * dedup, so nothing double-counts. A no-op unless the page hit
+         * [FULL_PAGE_THRESHOLD], so only dense units pay for it.
          */
         private fun paginateIfCapped(
             relay: NormalizedRelayUrl,
             groupFilters: List<Filter>,
-            page: List<Pair<NormalizedRelayUrl, Event>>,
+            pageSize: Int,
+            pageOldest: Long,
+            background: Boolean,
         ) {
-            if (page.size < FULL_PAGE_THRESHOLD) return
+            if (pageSize < FULL_PAGE_THRESHOLD) return
             val scope = bgScope ?: return
-            val oldest = page.minOf { it.second.createdAt }
-            val contFilters = groupFilters.map { it.copy(until = oldest) }
-            parkedInFlight.addAndFetch(1)
+            val contFilters = groupFilters.map { it.copy(until = pageOldest) }
+            if (!background) parkedInFlight.addAndFetch(1)
             scope.launch {
                 try {
                     val more = ArrayList<Pair<NormalizedRelayUrl, Event>>()
@@ -1188,7 +1168,7 @@ class GrapeRankCrawler(
                     }
                     for (pair in persist(more)) lateHarvest.trySend(pair)
                 } finally {
-                    parkedInFlight.addAndFetch(-1)
+                    if (!background) parkedInFlight.addAndFetch(-1)
                 }
             }
         }
@@ -1212,6 +1192,15 @@ class GrapeRankCrawler(
             filters: Map<NormalizedRelayUrl, List<Filter>>,
             deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>?,
             answeredOut: MutableSet<NormalizedRelayUrl>? = null,
+            /**
+             * A fire-and-forget completeness sweep (Tier-2 relay-list recovery), not
+             * work a round resolves on. Its parked units do NOT count toward
+             * [parkedInFlight] — a hop-3 crawl measured ~500s (of 594s total!) just
+             * waiting out background parks' idle windows at convergence — and are
+             * simply cancelled at crawl end; incremental persist (see the park loop)
+             * means everything they delivered up to that instant is already stored.
+             */
+            background: Boolean = false,
         ): List<Pair<NormalizedRelayUrl, Event>> {
             if (filters.isEmpty()) return emptyList()
 
@@ -1355,7 +1344,9 @@ class GrapeRankCrawler(
                                         val persisted = persist(drained)
                                         // A full page from a clean EOSE may be the relay's cap, not the
                                         // whole answer — background-paginate the remainder into lateHarvest.
-                                        if (reason == "eose") paginateIfCapped(subRelay, groupFilters, drained)
+                                        if (reason == "eose" && drained.isNotEmpty()) {
+                                            paginateIfCapped(subRelay, groupFilters, drained.size, drained.minOf { it.second.createdAt }, background)
+                                        }
                                         // Alive if it EOSE'd or handed us anything; a connect-timeout that
                                         // gave nothing (classifyDrainFailure leaves it retryable forever)
                                         // earns a strike toward eviction instead.
@@ -1372,13 +1363,46 @@ class GrapeRankCrawler(
                                         timedOut.add(subRelay)
                                         val scope = bgScope
                                         if (scope != null && config.parkTimeoutMs > config.timeoutMs) {
-                                            parkedInFlight.addAndFetch(1)
+                                            if (!background) parkedInFlight.addAndFetch(1)
                                             scope.launch {
+                                                // Incremental drain: persist + hand to lateHarvest whatever
+                                                // has queued so far. Called on every activity ping and again
+                                                // (NonCancellable) on the way out, so a park cancelled at
+                                                // crawl end loses nothing it already received.
+                                                var lateCount = 0
+                                                var lateOldest = Long.MAX_VALUE
+
+                                                suspend fun drainChunk() {
+                                                    val chunk = ArrayList<Pair<NormalizedRelayUrl, Event>>()
+                                                    while (true) chunk.add(unitEvents.tryReceive().getOrNull() ?: break)
+                                                    if (chunk.isEmpty()) return
+                                                    lateCount += chunk.size
+                                                    for ((_, ev) in chunk) if (ev.createdAt < lateOldest) lateOldest = ev.createdAt
+                                                    for (pair in persist(chunk)) lateHarvest.trySend(pair)
+                                                }
                                                 try {
                                                     // Idle timeout, not absolute: only cut after parkTimeoutMs
                                                     // of SILENCE (no event, no terminal), so a relay still
                                                     // streaming a large result set is never chopped mid-flight.
-                                                    val late = awaitTerminalOrIdle(done, activity, config.parkTimeoutMs)
+                                                    var late = "timeout"
+                                                    while (true) {
+                                                        val r =
+                                                            withTimeoutOrNull(config.parkTimeoutMs) {
+                                                                select {
+                                                                    done.onAwait { it }
+                                                                    activity.onReceive { ACTIVITY }
+                                                                }
+                                                            }
+                                                        drainChunk()
+                                                        when {
+                                                            r == null -> break // idle window elapsed in silence
+                                                            r == ACTIVITY -> continue // streamed — reset the window
+                                                            else -> {
+                                                                late = r
+                                                                break
+                                                            }
+                                                        }
+                                                    }
                                                     val lateMs = mark.elapsedNow().inWholeMilliseconds
                                                     logSlow(subRelay, "parked→$late", lateMs, groupFilters)
                                                     // A parked relay that ends in a hard/transient failure (not a
@@ -1386,24 +1410,27 @@ class GrapeRankCrawler(
                                                     val lateDead = ConcurrentMap<NormalizedRelayUrl, DrainFailure>()
                                                     classify(late, subRelay, lateDead)
                                                     recordDead(lateDead.snapshot())
-                                                    unitEvents.close()
-                                                    val lateDrained = buildList { for (e in unitEvents) add(e) }
-                                                    telemetry.record(subRelay, RelayTelemetry.outcomeOf(late, parked = true), lateMs, authorsIn(groupFilters), lateDrained.size)
-                                                    for (pair in persist(lateDrained)) lateHarvest.trySend(pair)
+                                                    telemetry.record(subRelay, RelayTelemetry.outcomeOf(late, parked = true), lateMs, authorsIn(groupFilters), lateCount)
                                                     // A full parked page from a clean EOSE may also be capped —
                                                     // paginate its remainder in the background, same as the fast path.
-                                                    if (late == "eose") paginateIfCapped(subRelay, groupFilters, lateDrained)
+                                                    if (late == "eose" && lateCount > 0) {
+                                                        paginateIfCapped(subRelay, groupFilters, lateCount, lateOldest, background)
+                                                    }
                                                     // Same liveness rule as the fast path: a park that ended
                                                     // in a clean EOSE or delivered anything clears the relay;
                                                     // one that idle-cut ("timeout") with nothing strikes it.
-                                                    if (late == "eose" || lateDrained.isNotEmpty()) {
+                                                    if (late == "eose" || lateCount > 0) {
                                                         clearTimeoutStrikes(subRelay)
                                                     } else if (late == "timeout" || isTimeoutReason(late)) {
                                                         strikeUnproductiveTimeout(subRelay)
                                                     }
                                                 } finally {
-                                                    client.unsubscribe(subId)
-                                                    parkedInFlight.addAndFetch(-1)
+                                                    withContext(NonCancellable) {
+                                                        drainChunk() // keep whatever arrived since the last ping
+                                                        unitEvents.close()
+                                                        client.unsubscribe(subId)
+                                                        if (!background) parkedInFlight.addAndFetch(-1)
+                                                    }
                                                 }
                                             }
                                             // Parked: events are persisted into lateHarvest by the
