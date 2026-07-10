@@ -60,6 +60,10 @@ class ConcordChannel(
     var communityName: String? = null
         private set
 
+    /** The parent community's icon URL, from its folded metadata (null if unset). */
+    var communityIcon: String? = null
+        private set
+
     /** The community's bootstrap relays — a channel plane may be mirrored on all of them. */
     var communityRelays: Set<NormalizedRelayUrl> = emptySet()
         private set
@@ -84,6 +88,7 @@ class ConcordChannel(
             isPrivate = it.private
         }
         communityName = state.metadata?.name
+        communityIcon = state.metadata?.icon
         communityRelays = relays
         membership = ConcordMembership.of(state.authority, myPubKey)
     }

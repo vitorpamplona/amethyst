@@ -436,7 +436,7 @@ private fun ConcordRoomCompose(
 
     ChannelName(
         channelIdHex = channel.channelId.channelId,
-        channelPicture = null,
+        channelPicture = channel.communityIcon,
         channelTitle = { modifier ->
             Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
                 Text(

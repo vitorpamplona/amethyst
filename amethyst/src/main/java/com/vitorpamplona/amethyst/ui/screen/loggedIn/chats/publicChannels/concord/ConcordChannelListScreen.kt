@@ -21,10 +21,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -42,6 +45,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
@@ -116,18 +120,43 @@ fun ConcordChannelListScreen(
                 ?.entries
                 ?.toList()
                 .orEmpty()
-        LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-            items(channels, key = { it.key }) { entry ->
-                val name = entry.value.definition?.name ?: entry.key
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { nav.nav(Route.Concord(communityId, entry.key)) }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                ) {
-                    Text("# $name", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+        if (channels.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Text(
+                    stringRes(com.vitorpamplona.amethyst.R.string.concord_channels_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            LazyColumn(Modifier.fillMaxSize().padding(padding)) {
+                items(channels, key = { it.key }) { entry ->
+                    val def = entry.value.definition
+                    val name = def?.name ?: entry.key
+                    val icon =
+                        when {
+                            def?.voice == true -> MaterialSymbols.Mic
+                            def?.private == true -> MaterialSymbols.Lock
+                            else -> MaterialSymbols.Tag
+                        }
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { nav.nav(Route.Concord(communityId, entry.key)) }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        SymbolIcon(
+                            symbol = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1)
+                    }
+                    HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 }
-                HorizontalDivider()
             }
         }
     }
