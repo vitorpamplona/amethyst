@@ -641,17 +641,13 @@ class GrapeRankCrawler(
          * whole still-missing set. Returns the count newly fed.
          */
         suspend fun harvest(events: List<Pair<NormalizedRelayUrl, Event>>): Int {
-            var got = 0
+            val authors = LinkedHashSet<HexKey>()
             for ((_, ev) in events) {
-                if (ev !is ContactListEvent) continue
-                val pk = ev.pubKey
-                if (pk in done) continue
-                val contacts = contactsOf(pk) ?: continue
-                done += pk
-                ingest(pk, contacts)
-                got++
+                if (ev is ContactListEvent && ev.pubKey !in done) authors.add(ev.pubKey)
             }
-            return got
+            // The store's canonical latest for each delivered author wins over the
+            // delivered copy itself — same rule as before, now one query per chunk.
+            return harvestFromStore(authors)
         }
 
         /**
@@ -659,17 +655,25 @@ class GrapeRankCrawler(
          * previous round's [ensureRelayLists] co-fetch, a late parked delivery, or a
          * prior run's data — folding it into the graph so Phase B never spends an outbox
          * drain re-pulling a contact list we already hold. Single-writer: called only
-         * from the round loop at Phase-A time, before the drain workers start. Returns
-         * the count newly fed.
+         * from the round loop at Phase-A time, before the drain workers start.
+         *
+         * BATCHED: one chunked author query per [AUTHORS_PER_FILTER] users, folding as
+         * each chunk streams so peak memory is one chunk's lists. The obvious
+         * per-user `contactsOf` point query costs ~8ms each on a multi-GB store under
+         * concurrent writers — 100k pending users made that serial scan dominate a
+         * round's Phase A wall (measured minutes), so batching here is structural.
+         * Returns the count newly fed.
          */
         suspend fun harvestFromStore(authors: Collection<HexKey>): Int {
             var got = 0
-            for (pk in authors) {
-                if (pk in done) continue
-                val contacts = contactsOf(pk) ?: continue
-                done += pk
-                ingest(pk, contacts)
-                got++
+            val pending = authors.filterTo(ArrayList()) { it !in done }
+            for (chunk in pending.chunked(AUTHORS_PER_FILTER)) {
+                for ((pk, contacts) in latestContactsFor(chunk)) {
+                    if (pk in done) continue
+                    done += pk
+                    ingest(pk, contacts)
+                    got++
+                }
             }
             return got
         }
@@ -681,12 +685,16 @@ class GrapeRankCrawler(
          * still missing onto a different relay for up to SHARD_ROTATIONS passes.
          * Once the remainder is small it's cheap to broadcast it to every top relay
          * at once. Returns lists fed.
+         *
+         * Precondition: the caller ran [harvestFromStore] over [authors] first, so
+         * `!in done` alone means "no kind:3 in the store" — no per-author store
+         * point-queries here (they cost ~8ms each at crawl scale).
          */
         suspend fun shardedSweep(authors: Collection<HexKey>): Int {
             val top = topLiveRelays(SHARD_RELAYS)
             if (top.isEmpty()) return 0
             val n = top.size
-            var missing = authors.filter { it !in done && contactsOf(it) == null }
+            var missing = authors.filter { it !in done }
             var got = 0
             var rotation = 0
             while (missing.size > SHARD_BROADCAST_THRESHOLD && rotation < config.shardRotations) {
@@ -946,8 +954,15 @@ class GrapeRankCrawler(
             // Stragglers = crawled users we still have no kind:3 for. Most are already
             // in `done` (their outbox attempts were exhausted), which is exactly why
             // [harvest]/[ingestLate] can't be reused — they skip `done` users — so we
-            // fold these directly.
-            val stragglers = hopOf.keys.filterTo(HashSet()) { (hopOf[it] ?: 0) < config.maxHops && contactsOf(it) == null }
+            // fold these directly. Batched: the candidate set is EVERY discovered user
+            // within the hop budget (hundreds of thousands), so a per-user store point
+            // query here would take tens of minutes on its own.
+            val candidates = hopOf.keys.filterTo(ArrayList()) { (hopOf[it] ?: 0) < config.maxHops }
+            val stragglers = HashSet<HexKey>(candidates.size)
+            for (chunk in candidates.chunked(AUTHORS_PER_FILTER)) {
+                val have = latestContactsFor(chunk).keys
+                for (pk in chunk) if (pk !in have) stragglers.add(pk)
+            }
             if (stragglers.isEmpty()) return
             val before = contactListsFed
             log("[graperank] aggregator recovery: ${stragglers.size} stragglers via ${aggregators.size} aggregators")
@@ -1543,15 +1558,14 @@ class GrapeRankCrawler(
                 val fedBefore = contactListsFed
                 val roundMark = TimeSource.Monotonic.markNow()
 
-                // Phase A — bulk-fetch from the busiest relays via the sharded sweep.
-                // Most users' kind:3 lives on the big popular relays, so this clears
-                // the majority cheaply (early rounds no-op until a backbone is learned).
+                // Phase A — fold any kind:3 already sitting in the store FIRST (a prior
+                // round's ensureRelayLists co-fetch, a late parked delivery, or a
+                // previous run), batched by author chunk; then bulk-fetch the genuinely
+                // missing rest from the busiest relays via the sharded sweep (which per
+                // its precondition trusts `done` instead of re-checking the store).
                 val fedBeforeA = contactListsFed
-                shardedSweep(pending)
-                // Fold any kind:3 already sitting in the store — a prior round's
-                // ensureRelayLists co-fetch, a late parked delivery, or a previous run —
-                // so Phase B doesn't re-drain contact lists we already hold.
                 harvestFromStore(pending)
+                shardedSweep(pending)
                 val phaseAMs = roundMark.elapsedNow().inWholeMilliseconds
                 val phaseAFed = contactListsFed - fedBeforeA
 
@@ -1628,9 +1642,12 @@ class GrapeRankCrawler(
                                         }
                                     }
 
+                                    // One chunked store query for the whole batch (256
+                                    // authors) instead of a point query per user.
+                                    val stored = latestContactsFor(d.batch.filter { it !in done })
                                     for (pk in d.batch) {
                                         if (pk in done) continue
-                                        val contacts = contactsOf(pk)
+                                        val contacts = stored[pk]
                                         if (contacts != null) {
                                             done += pk
                                             ingest(pk, contacts)
@@ -1922,6 +1939,25 @@ class GrapeRankCrawler(
         store
             .query<Event>(Filter(authors = listOf(pubKey), kinds = listOf(ContactListEvent.KIND), limit = 1))
             .firstOrNull() as? ContactListEvent
+
+    /**
+     * Latest stored kind:3 per author for a CHUNK of authors, in ONE store query.
+     * The batched sibling of [contactsOf]: a point query costs ~8ms on a multi-GB
+     * store under concurrent writers, so every crawl path that resolves contact
+     * lists for thousands of users at once must go through this instead. Newest
+     * `created_at` per author wins, matching the replaceable-event rule.
+     * Callers chunk to [AUTHORS_PER_FILTER] to keep the SQL parameter list sane.
+     */
+    private suspend fun latestContactsFor(authors: Collection<HexKey>): Map<HexKey, ContactListEvent> {
+        if (authors.isEmpty()) return emptyMap()
+        val latest = HashMap<HexKey, ContactListEvent>()
+        for (ev in store.query<Event>(Filter(kinds = listOf(ContactListEvent.KIND), authors = authors.toList()))) {
+            if (ev !is ContactListEvent) continue
+            val cur = latest[ev.pubKey]
+            if (cur == null || ev.createdAt > cur.createdAt) latest[ev.pubKey] = ev
+        }
+        return latest
+    }
 
     /** Latest known kind:10002 advertised relay list for [pubKey] from the store, or null. */
     private suspend fun relaysOf(pubKey: HexKey): AdvertisedRelayListEvent? =
