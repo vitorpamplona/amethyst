@@ -188,7 +188,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -652,10 +654,10 @@ class AccountViewModel(
 
     fun createMustShowExpandButtonFlows(note: Note): StateFlow<Boolean> =
         noteMustShowExpandButtonFlows.get(note)
-            ?: note
-                .flow()
-                .relays
-                .stateFlow
+            // Cold wrapper: WhileSubscribed drops the upstream when idle and a
+            // memory trim may destroy the NoteFlowSet in between; re-resolving
+            // `flow()` on every restart keeps this cached StateFlow alive.
+            ?: flow { emitAll(note.flow().relays.stateFlow) }
                 .map { it.note.relays.size > 3 }
                 .flowOn(Dispatchers.IO)
                 .stateIn(

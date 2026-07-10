@@ -25,7 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.concurrent.Volatile
 
 /**
  * Marmot Group Event (MIP-03) — kind 445.
@@ -59,7 +61,19 @@ class GroupEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    HasInnerEvent {
+    // Set when the app layer learns the envelope ↔ inner mapping: on decrypt
+    // for inbound events, at build time for outbound ones. Lets relay
+    // attribution (OK acceptances, duplicate deliveries) drill from the
+    // kind-445 envelope down to the inner note the chat UI renders.
+    // `@Volatile`: written by the decrypt coroutine, read by relay socket
+    // threads.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    @Volatile
+    override var innerEventId: HexKey? = null
+
     /**
      * Base64-encoded encrypted content: nonce(12 bytes) || ciphertext.
      * Decrypt with ChaCha20-Poly1305 using the MLS exporter-derived key.

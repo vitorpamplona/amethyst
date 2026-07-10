@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.concurrent.Volatile
 
 @Immutable
 class SealedRumorEvent(
@@ -40,8 +41,11 @@ class SealedRumorEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     HasInnerEvent {
+    // `@Volatile`: set by the decrypting coroutine in [unsealThrowing], read
+    // by relay socket threads walking the wrap → seal → rumor chain.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
+    @Volatile
     override var innerEventId: HexKey? = null
 
     fun copyNoContent(): SealedRumorEvent {

@@ -115,6 +115,10 @@ open class Note(
 
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
+    // `@Volatile`: written by the decrypt/index pipeline (IO coroutines) and
+    // read by the relay socket thread (OK confirmations drilling into the
+    // gift-wrap chain) — a stale read strands a relay on the outer wrap.
+    @Volatile
     var event: Event? = null
     var author: User? = null
     var replyTo: List<Note>? = null
@@ -248,6 +252,9 @@ open class Note(
     var zapPayments = mapOf<Note, Note?>()
         private set
 
+    // `@Volatile`: written under [syncLock] but read lock-free from the relay
+    // socket thread and from [LocalCache.copyRelaysFromTo] on IO coroutines.
+    @Volatile
     var relays = listOf<NormalizedRelayUrl>()
         private set
 
@@ -1321,6 +1328,9 @@ open class Note(
         return false
     }
 
+    // `@Volatile`: created/destroyed under [syncLock] but read lock-free by
+    // every `flowSet?.x?.invalidateData()` call on writer threads.
+    @Volatile
     var flowSet: NoteFlowSet? = null
 
     fun createOrDestroyFlowSync(create: Boolean) =
