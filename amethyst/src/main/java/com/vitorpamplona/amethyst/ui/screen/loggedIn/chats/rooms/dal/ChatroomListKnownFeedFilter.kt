@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -128,7 +129,22 @@ class ChatroomListKnownFeedFilter(
                         }
             }
 
-        return sort((privateMessages + publicChannels + ephemeralChats + marmotGroups + relayGroups).toSet())
+        // Concord Channels the user joined (kind 13302 list → folded Control Plane). Each folded
+        // channel is its own Messages row, carrying its ConcordChannel as a gatherer so the header
+        // renders it and a tap opens the encrypted chat. Messages live in the community session's
+        // decrypted flow (not LocalCache notes), so the row is a placeholder that the chat screen
+        // fills in — mirrors the just-joined Marmot/relay-group placeholder path above.
+        val concordChannels =
+            account.concordSessions.sessions().flatMap { session ->
+                val state = session.state.value ?: return@flatMap emptyList<Note>()
+                state.channels.keys.map { channelIdHex ->
+                    LocalCache
+                        .getOrCreateConcordChannel(ConcordChannelId(session.entry.id, channelIdHex))
+                        .placeholderNote()
+                }
+            }
+
+        return sort((privateMessages + publicChannels + ephemeralChats + marmotGroups + relayGroups + concordChannels).toSet())
     }
 
     override fun updateListWith(

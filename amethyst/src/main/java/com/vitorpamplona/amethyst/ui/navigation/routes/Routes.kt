@@ -676,6 +676,27 @@ sealed class Route {
 
     @Serializable object RelayGroupBrowse : Route()
 
+    // Concord Channels (encrypted communities). Addressed by community id + channel id
+    // (both lowercase hex), never a host relay — a channel plane may be mirrored on all
+    // of the community's relays.
+    @Serializable data class Concord(
+        val communityId: String,
+        val channelId: String,
+        val draftId: HexKey? = null,
+        val replyTo: HexKey? = null,
+    ) : Route()
+
+    @Serializable data class ConcordServer(
+        val communityId: String,
+    ) : Route()
+
+    // Deep-link target for a Concord invite link (naddr#fragment). Opens the join flow.
+    @Serializable data class ConcordInvite(
+        val link: String,
+    ) : Route()
+
+    @Serializable object Concords : Route()
+
     @Serializable data class ChannelMetadataEdit(
         val id: String? = null,
     ) : Route()

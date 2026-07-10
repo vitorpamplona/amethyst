@@ -54,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -118,7 +119,7 @@ fun ChatroomHeaderCompose(
         baseNote is RelayGroupServerRoomNote ||
             (
                 baseNote.event == null &&
-                    baseNote.inGatherers?.any { it is MarmotGroupChatroom || it is RelayGroupChannel } == true
+                    baseNote.inGatherers?.any { it is MarmotGroupChatroom || it is RelayGroupChannel || it is ConcordChannel } == true
             )
 
     if (baseNote.event != null || rendersWithoutEvent) {
@@ -170,6 +171,12 @@ private fun ChatroomEntry(
     val relayGroup = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }
     if (relayGroup != null) {
         RelayGroupRoomCompose(lastMessage, relayGroup, accountViewModel, nav)
+        return
+    }
+
+    val concordChannel = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
+    if (concordChannel != null) {
+        ConcordRoomCompose(lastMessage, concordChannel, accountViewModel, nav)
         return
     }
 
@@ -403,6 +410,56 @@ private fun RelayGroupRoomCompose(
                 .collectAsStateWithLifecycle()
                 .value,
         onClick = { nav.nav(Route.RelayGroup(channel.groupId.id, channel.groupId.relayUrl.url)) },
+    )
+}
+
+@Composable
+private fun ConcordRoomCompose(
+    lastMessage: Note,
+    baseChannel: ConcordChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val channelState by observeChannel(baseChannel, accountViewModel)
+    val channel = channelState?.channel as? ConcordChannel ?: baseChannel
+
+    // Messages live in the community session's decrypted flow, not as LocalCache notes, so the
+    // list row has no last-message event; name the parent community on the second line instead.
+    val lastContent = channel.communityName ?: stringRes(R.string.relay_group_no_messages_yet)
+
+    ChannelName(
+        channelIdHex = channel.channelId.channelId,
+        channelPicture = null,
+        channelTitle = { modifier ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
+                Text(
+                    text = channel.toBestDisplayName(),
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                channel.communityName?.let { communityName ->
+                    Spacer(Modifier.width(6.dp))
+                    // The chip names the parent community and, when tapped, opens that community's
+                    // channel list — the "chip that opens the Concord Channel" entry point.
+                    RelayNameChip(
+                        label = communityName,
+                        onClick = { nav.nav(Route.ConcordServer(channel.channelId.communityId)) },
+                    )
+                }
+            }
+        },
+        channelLastTime = lastMessage.createdAt(),
+        channelLastContent = lastContent,
+        hasNewMessages = false,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
+        onClick = { nav.nav(Route.Concord(channel.channelId.communityId, channel.channelId.channelId)) },
     )
 }
 
