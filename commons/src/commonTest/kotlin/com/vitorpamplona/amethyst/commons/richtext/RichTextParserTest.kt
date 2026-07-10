@@ -4087,9 +4087,53 @@ class RichTextParserTest {
         assertTrue(state.mediaList.isEmpty())
         assertTrue(state.customEmoji.isEmpty())
         assertEquals(
-            "\nHi,\nhow\n\n\n are you doing?\n",
+            "\nHi,\nhow\n\n\n are you doing?",
             state.paragraphs.joinToString("\n") { it.words.joinToString(" ") { it.segmentText } },
         )
+    }
+
+    @Test
+    fun testTrailingWhitespaceIsRemoved() {
+        val state =
+            RichTextParser().parseText("Hi, how are you doing? \n\n  \n", EmptyTagList, null)
+
+        assertEquals(1, state.paragraphs.size)
+        assertEquals(
+            "Hi, how are you doing?",
+            state.paragraphs
+                .firstOrNull()
+                ?.words
+                ?.firstOrNull()
+                ?.segmentText,
+        )
+    }
+
+    @Test
+    fun testTrailingNewLinesAfterImageAreRemoved() {
+        val state =
+            RichTextParser().parseText(
+                "Check this out\nhttps://cdn.nostr.build/image.jpg\n\n\n",
+                EmptyTagList,
+                null,
+            )
+
+        assertEquals(2, state.paragraphs.size)
+        val lastWord =
+            state.paragraphs
+                .last()
+                .words
+                .single()
+        assertEquals(
+            "Image(https://cdn.nostr.build/image.jpg)",
+            "${lastWord::class.simpleName!!.replace("Segment", "")}(${lastWord.segmentText})",
+        )
+    }
+
+    @Test
+    fun testWhitespaceOnlyContentProducesNoParagraphs() {
+        val state = RichTextParser().parseText(" \n \n ", EmptyTagList, null)
+
+        assertTrue(state.paragraphs.isEmpty())
     }
 
     @Test

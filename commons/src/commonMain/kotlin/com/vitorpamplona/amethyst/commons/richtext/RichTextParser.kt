@@ -264,7 +264,13 @@ class RichTextParser {
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
     ): ImmutableList<ParagraphState> {
-        val lines = content.split('\n')
+        // Trailing spaces and newlines would otherwise produce empty trailing
+        // paragraphs, each rendered as a blank line between the last visible
+        // word and the end of the component.
+        val trimmedContent = content.trimEnd()
+        if (trimmedContent.isEmpty()) return persistentListOf()
+
+        val lines = trimmedContent.split('\n')
         val paragraphSegments = ArrayList<ParagraphState>(lines.size)
 
         lines.forEach { paragraph ->
