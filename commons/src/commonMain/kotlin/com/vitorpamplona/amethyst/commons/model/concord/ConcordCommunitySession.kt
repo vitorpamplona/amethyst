@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -82,6 +83,12 @@ class ConcordCommunitySession(
 
     /** The current Chat Plane addresses to subscribe to, one per folded channel. */
     fun channelAddresses(): Set<HexKey> = lock.withLock { channelKeysByAddress.keys.toSet() }
+
+    /** The community's current Control Plane editions — the input a moderation edition chains onto. */
+    fun controlEditions(): List<ControlEdition> = lock.withLock { ConcordActions.controlEditions(controlWraps.values.toList(), controlPlaneKey) }
+
+    /** The Control Plane key, for authoring moderation editions. */
+    fun controlPlaneKey(): GroupKey = controlPlaneKey
 
     /** This account's standing, from the current fold. */
     fun membership(): ConcordMembership {

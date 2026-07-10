@@ -101,18 +101,21 @@ object ConcordActions {
         relays: List<String> = emptyList(),
     ): NewConcordCommunity = ConcordCommunityFactory.create(ownerSigner, name, createdAt, description, relays)
 
+    /** Opens the control-plane [wraps] into their [ControlEdition]s (drops any that don't open/parse). */
+    fun controlEditions(
+        wraps: List<Event>,
+        controlPlane: GroupKey,
+    ): List<ControlEdition> =
+        wraps.mapNotNull { wrap ->
+            ConcordStreamEnvelope.openOrNull(wrap, controlPlane)?.let { ControlEdition.fromRumor(it.rumor) }
+        }
+
     /** Opens the control-plane [wraps] and folds them into the live community state. */
     fun foldCommunity(
         wraps: List<Event>,
         controlPlane: GroupKey,
         ownerPubKey: HexKey,
-    ): ConcordCommunityState {
-        val editions =
-            wraps.mapNotNull { wrap ->
-                ConcordStreamEnvelope.openOrNull(wrap, controlPlane)?.let { ControlEdition.fromRumor(it.rumor) }
-            }
-        return ConcordCommunityState.fold(editions, ownerPubKey)
-    }
+    ): ConcordCommunityState = ConcordCommunityState.fold(controlEditions(wraps, controlPlane), ownerPubKey)
 
     // ---- channel chat ---------------------------------------------------------
 

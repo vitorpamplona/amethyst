@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
@@ -1650,6 +1651,48 @@ class Account(
         concordSessions.ingest(wrap)
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
         if (relays.isNotEmpty()) client.publish(wrap, relays)
+    }
+
+    // ── Concord roles & moderation (CORD-04) ─────────────────────────────────
+    // Each publishes a Control Plane edition; authority is enforced at fold time by
+    // every client's AuthorityResolver, so a call by someone who doesn't outrank the
+    // target is simply dropped on fold. Owner-authored calls always take effect.
+
+    /** Grant [member] exactly [roleIds] (empty list revokes their roles). */
+    suspend fun grantConcordRole(
+        communityId: String,
+        member: HexKey,
+        roleIds: List<String>,
+    ): Boolean {
+        val session = concordSessions.sessionFor(communityId) ?: return false
+        if (!isWriteable()) return false
+        val wrap = ConcordModeration.grant(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, roleIds, session.controlEditions(), TimeUtils.now())
+        publishConcordWrap(session.entry, wrap)
+        return true
+    }
+
+    /** Add [member] to the community banlist. */
+    suspend fun banConcordMember(
+        communityId: String,
+        member: HexKey,
+    ): Boolean {
+        val session = concordSessions.sessionFor(communityId) ?: return false
+        if (!isWriteable()) return false
+        val wrap = ConcordModeration.ban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now())
+        publishConcordWrap(session.entry, wrap)
+        return true
+    }
+
+    /** Remove [member] from the community banlist. */
+    suspend fun unbanConcordMember(
+        communityId: String,
+        member: HexKey,
+    ): Boolean {
+        val session = concordSessions.sessionFor(communityId) ?: return false
+        if (!isWriteable()) return false
+        val wrap = ConcordModeration.unban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now())
+        publishConcordWrap(session.entry, wrap)
+        return true
     }
 
     // ── NIP-29 relay-group actions ───────────────────────────────────────────
