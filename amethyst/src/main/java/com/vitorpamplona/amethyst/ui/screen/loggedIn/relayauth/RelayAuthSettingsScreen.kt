@@ -64,16 +64,24 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.LoadRelayAuthUser
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.PolicyCard
+import com.vitorpamplona.amethyst.ui.theme.MediumRelayIconModifier
+import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -229,6 +237,7 @@ fun RelayAuthSettingsScreen(
                                 .orEmpty(),
                         lastUsedSecs = lastUsed[url],
                         accountViewModel = accountViewModel,
+                        nav = nav,
                         onToggle = {
                             scope.launch {
                                 // null (allowed by policy) or ALLOW -> block; DENY -> allow.
@@ -260,9 +269,10 @@ fun RelayAuthSettingsScreen(
 }
 
 /**
- * One relay's card in the merged list: URL, an allow/deny chip, a facepile of the people it serves,
- * and when it was last used. [decision] is null when the relay is allowed by policy rather than an
- * explicit override; the chip still reads "Allowed" and tapping it records an explicit block.
+ * One relay's card in the merged list: NIP-11 icon + shortened URL (tap the card to open the relay's
+ * info screen), when it was last used, an Allow/Deny chip, a Forget button, and a facepile of the
+ * people it serves. [decision] is null when the relay is allowed by policy rather than an explicit
+ * override; the chip still reads "Allowed" and tapping it records an explicit block.
  */
 @Composable
 private fun RelayCard(
@@ -271,30 +281,43 @@ private fun RelayCard(
     servedUsers: List<HexKey>,
     lastUsedSecs: Long?,
     accountViewModel: AccountViewModel,
+    nav: INav,
     onToggle: () -> Unit,
     onForget: () -> Unit,
 ) {
     val context = LocalContext.current
+    val relay = remember(url) { url.normalizeRelayUrlOrNull() }
+
     Surface(
+        onClick = { nav.nav(Route.RelayInfo(url)) },
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
-            modifier = Modifier.padding(start = 12.dp, top = 8.dp, end = 4.dp, bottom = 12.dp),
+            modifier = Modifier.padding(start = 12.dp, top = 10.dp, end = 4.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text(
-                    text = url,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.MiddleEllipsis,
-                    modifier = Modifier.weight(1f),
-                )
+                RelayIcon(relay, url, accountViewModel)
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = relay?.displayUrl() ?: url,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.MiddleEllipsis,
+                    )
+                    if (lastUsedSecs != null && lastUsedSecs > 0L) {
+                        Text(
+                            text = stringResource(R.string.relay_auth_last_used, timeAgo(lastUsedSecs, context, prefix = "")),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 DecisionChip(decision = decision, onToggle = onToggle)
                 IconButton(onClick = onForget) {
                     Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.relay_auth_forget))
@@ -303,15 +326,27 @@ private fun RelayCard(
             if (servedUsers.isNotEmpty()) {
                 UserFacepile(servedUsers, accountViewModel)
             }
-            if (lastUsedSecs != null && lastUsedSecs > 0L) {
-                Text(
-                    text = stringResource(R.string.relay_auth_last_used, timeAgo(lastUsedSecs, context, prefix = "")),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
+}
+
+/** The relay's NIP-11 icon (robohash fallback), matching the other relay lists in the app. */
+@Composable
+private fun RelayIcon(
+    relay: NormalizedRelayUrl?,
+    url: String,
+    accountViewModel: AccountViewModel,
+) {
+    val info = if (relay != null) loadRelayInfo(relay).value else null
+    RobohashFallbackAsyncImage(
+        robot = info?.id ?: relay?.displayUrl() ?: url,
+        model = info?.icon,
+        contentDescription = stringResource(R.string.relay_info, url),
+        colorFilter = RelayIconFilter,
+        modifier = MediumRelayIconModifier,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+    )
 }
 
 /** Allow/deny pill for a relay. Green when allowed (explicitly or by policy), red when blocked. */

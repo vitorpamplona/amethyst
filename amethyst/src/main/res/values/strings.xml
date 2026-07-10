@@ -855,7 +855,7 @@
     <string name="relay_auth_always_allow">Always allow this relay</string>
     <string name="relay_auth_always_allow_follows">Always allow my follows\' relays</string>
     <string name="relay_auth_block">Block this relay</string>
-    <string name="relay_auth_per_relay_overrides">Individual relays</string>
+    <string name="relay_auth_per_relay_overrides">Per-relay overrides</string>
     <string name="relay_auth_forget">Forget</string>
     <string name="relay_auth_last_used">Last used %1$s ago</string>
     <string name="relay_send_failed_title">Couldn\'t deliver your event</string>
