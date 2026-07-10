@@ -2632,6 +2632,10 @@ class Account(
         Log.d("MarmotDbg") {
             "sendMarmotGroupMessage: built outer kind:${outbound.signedEvent.kind} id=${outbound.signedEvent.id.take(8)}…"
         }
+        // Link the envelope to the inner message we just encrypted so relay
+        // OK acceptances drill down to the note the chat renders (see
+        // LocalCache.addRelayToNoteAndInners).
+        outbound.signedEvent.innerEventId = innerEvent.id
         cache.justConsumeMyOwnEvent(outbound.signedEvent)
         // Sending a message moves the group out of "New Requests" into
         // "Known" — do this eagerly before relay round-trip so the UI
