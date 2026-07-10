@@ -102,6 +102,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordChannelListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordChannelScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCreateScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordHomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordInviteScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.EphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.metadata.NewEphemeralChatScreen
@@ -613,6 +615,10 @@ fun BuildNavigation(
                 nav = nav,
             )
         }
+
+        composableFromEnd<Route.Concords> { ConcordHomeScreen(accountViewModel, nav) }
+
+        composableFromEnd<Route.ConcordCreate> { ConcordCreateScreen(accountViewModel, nav) }
 
         composableFromEndArgs<Route.RelayGroupMembers> {
             RelayGroupMembersScreen(

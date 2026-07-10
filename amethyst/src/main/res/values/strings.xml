@@ -307,6 +307,15 @@
     <string name="loading_account">Loading account</string>
     <string name="concord_redeeming_invite">Redeeming invite…</string>
     <string name="concord_invite_failed">Could not fetch this invite. The link may be expired or its relays unreachable.</string>
+    <string name="concord_home_title">Concord Channels</string>
+    <string name="concord_home_empty">You haven\'t joined any Concord Channels yet. Create one, or open an invite link.</string>
+    <string name="concord_create_title">New Concord Channel</string>
+    <string name="concord_create_name">Name</string>
+    <string name="concord_create_about">About (optional)</string>
+    <string name="concord_create_relays">Relays (comma-separated, optional)</string>
+    <string name="concord_create_action">Create</string>
+    <string name="concord_invite_action">Invite people</string>
+    <string name="concord_invite_title">Invite link</string>
     <string name="chats_history_proto_nip17">encrypted</string>
     <string name="chats_history_proto_nip04">legacy</string>
     <string name="chats_reply_searching_history">Looking for the original message…</string>

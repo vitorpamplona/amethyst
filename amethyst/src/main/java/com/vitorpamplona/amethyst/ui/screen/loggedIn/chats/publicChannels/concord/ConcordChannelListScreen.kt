@@ -27,26 +27,34 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
@@ -68,6 +76,14 @@ fun ConcordChannelListScreen(
     val state by (session?.state ?: remember { kotlinx.coroutines.flow.MutableStateFlow(null) })
         .collectAsStateWithLifecycle()
 
+    val scope = rememberCoroutineScope()
+    var inviteLink by remember { mutableStateOf<String?>(null) }
+    var minting by remember { mutableStateOf(false) }
+
+    inviteLink?.let { link ->
+        InviteLinkDialog(link = link, onDismiss = { inviteLink = null })
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -75,6 +91,20 @@ fun ConcordChannelListScreen(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.back))
+                    }
+                },
+                actions = {
+                    IconButton(
+                        enabled = !minting,
+                        onClick = {
+                            minting = true
+                            scope.launch {
+                                inviteLink = account.mintConcordInvite(communityId)
+                                minting = false
+                            }
+                        },
+                    ) {
+                        SymbolIcon(symbol = MaterialSymbols.PersonAdd, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_action))
                     }
                 },
             )
@@ -101,4 +131,36 @@ fun ConcordChannelListScreen(
             }
         }
     }
+}
+
+/** Shows a freshly minted invite link with a copy-to-clipboard action. */
+@Composable
+private fun InviteLinkDialog(
+    link: String,
+    onDismiss: () -> Unit,
+) {
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_title)) },
+        text = {
+            Text(
+                text = link,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                scope.launch { clipboard.setText(link) }
+                onDismiss()
+            }) {
+                Text(stringRes(com.vitorpamplona.amethyst.R.string.copy_to_clipboard))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringRes(com.vitorpamplona.amethyst.R.string.cancel)) }
+        },
+    )
 }
