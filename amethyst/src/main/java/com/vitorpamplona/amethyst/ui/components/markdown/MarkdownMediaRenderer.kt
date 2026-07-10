@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.components.DisplayFullNote
 import com.vitorpamplona.amethyst.ui.components.DisplayUser
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.fragmentHashtagOrNull
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadedBechLink
@@ -74,7 +75,10 @@ class MarkdownMediaRenderer(
         title: String?,
         uri: String,
     ): Boolean =
-        if (canPreview && uri.startsWith("http")) {
+        if (fragmentHashtagOrNull(uri) != null) {
+            // claims [text](#hashtag) links so renderLinkPreview can retarget them to the hashtag feed
+            true
+        } else if (canPreview && uri.startsWith("http")) {
             title.isNullOrBlank() || title == uri
         } else {
             false
@@ -115,6 +119,12 @@ class MarkdownMediaRenderer(
         uri: String,
         richTextStringBuilder: RichTextString.Builder,
     ) {
+        val fragmentHashtag = fragmentHashtagOrNull(uri)
+        if (fragmentHashtag != null) {
+            renderAsCompleteLink(title ?: uri, "nostr:hashtag?id=$fragmentHashtag", richTextStringBuilder)
+            return
+        }
+
         val content = parser.createMediaContent(uri, imetaByUrl, startOfText, callbackUri)
 
         if (canPreview) {
