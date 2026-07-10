@@ -1101,7 +1101,7 @@ open class ShortNotePostViewModel :
 
         val tagger =
             NewMessageTagger(
-                message.text.toString(),
+                message.text.toString().trim(),
                 pTags,
                 eTags,
                 accountViewModel,
@@ -1126,7 +1126,7 @@ open class ShortNotePostViewModel :
             // NIP-29 kind-11 group thread. The title is the required subject field (no first-line
             // fallback); the body is the full message. Scoped to the group by `h`; the host relay
             // authorizes the write.
-            ThreadEvent.build(tagger.message.trim(), subjectValue) {
+            ThreadEvent.build(tagger.message, subjectValue) {
                 hTag(threadTarget.groupId)
 
                 hashtags(findHashtags(tagger.message))
