@@ -42,7 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,7 +53,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -61,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.WarmNip11
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
@@ -221,29 +221,20 @@ private fun WatchAccountForRelayGroupDiscovery(
 
     // Discovery only shows groups whose 39000 is signed by the host relay's own key (NIP-29's
     // authority — the NIP-11 `self` pubkey; general relays instead carry stray user-published 39000s
-    // that can't be joined). The feed reads that from each relay's cached NIP-11, so warm the
-    // candidate relays here and re-invalidate as each doc resolves — otherwise a relay whose NIP-11
-    // lands after its 39000s would stay hidden until a manual refresh.
+    // that can't be joined). The feed reads that from each relay's cached NIP-11, so warm every
+    // candidate relay (in parallel — WarmNip11) and re-invalidate as each doc lands, otherwise a
+    // relay whose NIP-11 resolves after its 39000s would stay hidden until a manual refresh.
     val candidateRelays = remember(perRelay) { perRelay.toGroupConstraints().keys }
-    var nip11Loaded by remember { mutableStateOf(emptySet<NormalizedRelayUrl>()) }
-    LaunchedEffect(candidateRelays) {
-        val loaded = nip11Loaded.toMutableSet()
-        candidateRelays.forEach { relay ->
-            Amethyst.instance.nip11Cache.loadRelayInfo(
-                relay = relay,
-                onInfo = { if (loaded.add(relay)) nip11Loaded = loaded.toSet() },
-                onError = { _, _, _ -> if (loaded.add(relay)) nip11Loaded = loaded.toSet() },
-            )
-        }
-    }
+    var nip11Version by remember { mutableIntStateOf(0) }
+    WarmNip11(candidateRelays) { nip11Version++ }
 
     LaunchedEffect(listName, perRelay, joinedGroups) {
         feedContentState.checkKeysInvalidateDataAndSendToTop()
     }
 
     // A NIP-11 doc resolving doesn't change the feed key (the self-key test lives in the filter's
-    // match, not the key), so force a re-filter directly when one lands.
-    LaunchedEffect(nip11Loaded) {
+    // match, not the key), so force a re-filter directly as each one lands.
+    LaunchedEffect(nip11Version) {
         feedContentState.invalidateData()
     }
 }
