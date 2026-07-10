@@ -2581,14 +2581,22 @@ class Account(
     }
 
     /**
-     * Sending a message into a DM room means the user has caught up with it: advance the
-     * room's local read marker to the sent message so the unread indicators clear without
-     * requiring the conversation to be reopened (#1286, #1287). No-op for private events
-     * that don't belong to a room (private notes, reactions, deletions).
+     * Sending a message into a DM room means the user has caught up with what the room
+     * showed when they replied: advance the local read marker to the newest known message —
+     * not just the sent one, whose local clock may lag behind a skew-ahead peer's — so the
+     * unread indicators clear without requiring the conversation to be reopened
+     * (#1286, #1287). No-op for private events that don't belong to a room (private notes,
+     * reactions, deletions).
      */
     private fun markDmRoomAsRead(event: Event) {
         if (event is ChatroomKeyable) {
-            markAsRead("Room/${event.chatroomKey(signer.pubKey).hashCode()}", event.createdAt)
+            val room = event.chatroomKey(signer.pubKey)
+            val newestInRoom =
+                chatroomList.rooms
+                    .get(room)
+                    ?.newestMessage
+                    ?.createdAt() ?: 0L
+            markAsRead(privateChatLastReadRoute(room), maxOf(event.createdAt, newestInRoom))
         }
     }
 

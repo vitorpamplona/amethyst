@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn
+package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
@@ -30,14 +30,16 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * The unread predicate behind the Messages tab dot: a room whose newest message was
- * authored by the logged-in user counts as read (#1286, #1287).
+ * The unread predicate behind the Messages tab dot and the room-row bubble: a room whose
+ * newest message was authored by the logged-in user counts as read (#1286, #1287), except
+ * notes-to-self rooms, where the user's own messages are the content still to be seen.
  */
-class UnreadPrivateChatRouteTest {
+class PrivateChatroomReadStateTest {
     private val me: HexKey = "a".repeat(64)
     private val peer: HexKey = "b".repeat(64)
 
-    private val roomWithPeer = "Room/${ChatroomKey(persistentSetOf(peer)).hashCode()}"
+    private val roomWithPeer = ChatroomKey(persistentSetOf(peer))
+    private val selfRoom = ChatroomKey(persistentSetOf(me))
 
     private fun message(
         from: HexKey,
@@ -56,12 +58,19 @@ class UnreadPrivateChatRouteTest {
     fun newestMessageFromPeerReturnsTheRoomRoute() {
         val route = unreadPrivateChatRoute(message(from = peer, to = me, createdAt = 100), me, isAllHidden = { false })
 
-        assertEquals(roomWithPeer to 100L, route)
+        assertEquals(privateChatLastReadRoute(roomWithPeer) to 100L, route)
     }
 
     @Test
     fun newestMessageAuthoredByMeCountsAsRead() {
         assertNull(unreadPrivateChatRoute(message(from = me, to = peer, createdAt = 100), me, isAllHidden = { false }))
+    }
+
+    @Test
+    fun notesToSelfRoomsCanStillBeUnread() {
+        val route = unreadPrivateChatRoute(message(from = me, to = me, createdAt = 100), me, isAllHidden = { false })
+
+        assertEquals(privateChatLastReadRoute(selfRoom) to 100L, route)
     }
 
     @Test
@@ -87,5 +96,20 @@ class UnreadPrivateChatRouteTest {
             )
 
         assertNull(unreadPrivateChatRoute(reaction, me, isAllHidden = { false }))
+    }
+
+    @Test
+    fun myMessageMarksAPeerRoomAsRead() {
+        assertEquals(true, chatMessageMarksRoomAsRead(message(from = me, to = peer, createdAt = 100), roomWithPeer, me))
+    }
+
+    @Test
+    fun aPeerMessageNeverMarksTheRoomAsRead() {
+        assertEquals(false, chatMessageMarksRoomAsRead(message(from = peer, to = me, createdAt = 100), roomWithPeer, me))
+    }
+
+    @Test
+    fun myMessageDoesNotMarkTheSelfRoomAsRead() {
+        assertEquals(false, chatMessageMarksRoomAsRead(message(from = me, to = me, createdAt = 100), selfRoom, me))
     }
 }

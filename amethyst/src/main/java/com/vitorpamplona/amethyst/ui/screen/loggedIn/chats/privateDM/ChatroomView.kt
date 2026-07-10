@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachDetailDialog
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
+import com.vitorpamplona.amethyst.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -268,7 +269,7 @@ fun ChatroomViewUI(
                 feedContentState = feedViewModel.feedState,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                routeForLastRead = "Room/${room.hashCode()}",
+                routeForLastRead = privateChatLastReadRoute(room),
                 avoidDraft = newPostModel.draftTag,
                 onWantsToReply = newPostModel::reply,
                 onWantsToEditDraft = newPostModel::editFromDraft,
