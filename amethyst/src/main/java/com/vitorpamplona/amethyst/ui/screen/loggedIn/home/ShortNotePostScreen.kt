@@ -834,6 +834,13 @@ private fun BottomRowActions(
             }
         }
 
+        PowOverrideButton(
+            effectiveDifficulty = postViewModel.effectivePowDifficulty(),
+            defaultDifficulty = postViewModel.defaultPowDifficulty(),
+            isOverridden = postViewModel.powOverride != null,
+            onSelect = { postViewModel.powOverride = it },
+        )
+
         // A group thread's title is required, so the field is always shown for it — no toggle.
         if (postViewModel.groupThreadTarget == null) {
             AddSubjectButton(postViewModel.wantsSubject) {
@@ -869,13 +876,6 @@ private fun BottomRowActions(
                 postViewModel.wantsInvoice = !postViewModel.wantsInvoice
             }
         }
-
-        PowOverrideButton(
-            effectiveDifficulty = postViewModel.effectivePowDifficulty(),
-            defaultDifficulty = postViewModel.defaultPowDifficulty(),
-            isOverridden = postViewModel.powOverride != null,
-            onSelect = { postViewModel.powOverride = it },
-        )
     }
 }
 

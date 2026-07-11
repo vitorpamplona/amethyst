@@ -144,7 +144,7 @@ private fun PowDifficultyTile(accountViewModel: AccountViewModel) {
         .collectAsStateWithLifecycle()
 
     SettingsBlockTile(
-        icon = MaterialSymbols.Bolt,
+        icon = MaterialSymbols.Manufacturing,
         title = stringRes(R.string.pow_difficulty_title),
         description = stringRes(R.string.pow_difficulty_explainer),
     ) {

@@ -152,6 +152,7 @@ object MaterialSymbols {
     val Lock = MaterialSymbol("\uE899")
     val LockOpen = MaterialSymbol("\uE898")
     val Mail = MaterialSymbol("\uE159")
+    val Manufacturing = MaterialSymbol("\uE726")
     val MenuBook = MaterialSymbol("\uEA19")
     val Mic = MaterialSymbol("\uE31D")
     val MicOff = MaterialSymbol("\uE02B")

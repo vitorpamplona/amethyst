@@ -52,9 +52,10 @@ val POW_PRESETS = listOf(16, 20, 24, 28)
 
 /**
  * Composer options-row button showing the NIP-13 difficulty this post will be
- * mined at: a bolt with the difficulty as a small badge when mining is on,
- * a dimmed bolt when off. Tapping opens a menu to raise/lower/disable mining
- * for this post only — the account setting is untouched.
+ * mined at: a manufacturing gear with the difficulty as a small badge when
+ * mining is on, a dimmed gear when off. Tapping opens a menu to
+ * raise/lower/disable mining for this post only — the account setting is
+ * untouched.
  *
  * [effectiveDifficulty] is what will actually be used at send time (override
  * or account default); null/0 means the post publishes without PoW.
@@ -80,7 +81,7 @@ fun PowOverrideButton(
                     .width(23.dp),
             ) {
                 Icon(
-                    symbol = MaterialSymbols.Bolt,
+                    symbol = MaterialSymbols.Manufacturing,
                     contentDescription = stringRes(R.string.pow_settings_title),
                     modifier = Modifier.size(18.dp).align(Alignment.BottomStart),
                     tint =

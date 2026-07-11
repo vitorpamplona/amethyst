@@ -161,10 +161,10 @@ private fun MiningContent(
     miningJobs: ImmutableList<PoWJobState>,
     onCancelJob: (String) -> Unit,
 ) {
-    // one shared pulse for the bolt — mining has no measurable progress, so
+    // one shared pulse for the gear — mining has no measurable progress, so
     // the animation is what says "the app is working right now".
     val pulse = rememberInfiniteTransition(label = "miningPulse")
-    val boltAlpha by pulse.animateFloat(
+    val gearAlpha by pulse.animateFloat(
         initialValue = 0.35f,
         targetValue = 1f,
         animationSpec =
@@ -172,7 +172,7 @@ private fun MiningContent(
                 animation = tween(700),
                 repeatMode = RepeatMode.Reverse,
             ),
-        label = "boltAlpha",
+        label = "gearAlpha",
     )
 
     // 1 Hz clock driving the per-job elapsed labels; only ticks while some
@@ -194,9 +194,9 @@ private fun MiningContent(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(
-                symbol = MaterialSymbols.Bolt,
+                symbol = MaterialSymbols.Manufacturing,
                 contentDescription = stringRes(R.string.pow_mining_title),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = boltAlpha),
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = gearAlpha),
                 modifier = Modifier.size(18.dp),
             )
 

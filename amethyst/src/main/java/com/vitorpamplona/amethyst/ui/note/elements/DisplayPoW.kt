@@ -67,7 +67,7 @@ fun DisplayPoW(pow: Int) {
                 .padding(horizontal = 6.dp, vertical = 1.dp),
     ) {
         Icon(
-            symbol = MaterialSymbols.Bolt,
+            symbol = MaterialSymbols.Manufacturing,
             contentDescription = stringRes(R.string.pow_settings_title),
             tint = MaterialTheme.colorScheme.onSecondaryContainer,
             modifier = Modifier.size(12.dp),
