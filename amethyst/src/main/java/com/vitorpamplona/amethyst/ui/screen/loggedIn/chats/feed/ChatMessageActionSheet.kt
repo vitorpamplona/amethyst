@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +37,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,29 +55,47 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ChangeReactionIcon
 import com.vitorpamplona.amethyst.ui.note.RenderReaction
-import com.vitorpamplona.amethyst.ui.note.ZapReaction
+import com.vitorpamplona.amethyst.ui.note.ZapAmountChoiceGrid
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
+import com.vitorpamplona.amethyst.ui.note.observeZapRailCapability
+import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.Size27dp
 import com.vitorpamplona.amethyst.ui.theme.Size28Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.launch
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+
+// null amount = open the on-chain dialog with no prefill.
+@Immutable
+private data class OnchainZapRequest(
+    val amountSats: Long?,
+)
 
 /**
- * Long-press surface for a chat message: a quick-reaction row on top, the common
- * chat actions (reply, copy) as rows, and a handoff to the full note options menu
- * (the same 3-dot menu posts get) for everything else.
+ * Long-press surface for a chat message: a quick-reaction row and the unpacked
+ * zap amount presets on top, the common chat actions (reply, copy) as rows, and a
+ * handoff to the full note options menu (the same 3-dot menu posts get) for
+ * everything else.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,6 +108,22 @@ fun ChatMessageActionSheet(
     nav: INav,
 ) {
     var showMoreOptions by remember { mutableStateOf(false) }
+
+    // On-chain zaps need a dialog that outlives the sheet, so the request swaps
+    // the sheet for the dialog (same pattern as "More options" below).
+    var onchainZapRequest by remember { mutableStateOf<OnchainZapRequest?>(null) }
+
+    onchainZapRequest?.let { request ->
+        val zappedEventHint = remember(note) { note.toEventHint<Event>() }
+        OnchainZapSendDialog(
+            accountViewModel = accountViewModel,
+            onDismiss = onDismiss,
+            recipientPubKey = note.author?.pubkeyHex,
+            zappedEvent = zappedEventHint,
+            prefillAmountSats = request.amountSats,
+        )
+        return
+    }
 
     // "More options" swaps this sheet for the full note menu instead of stacking
     // the two surfaces; dismissing the menu closes the whole interaction.
@@ -108,6 +143,14 @@ fun ChatMessageActionSheet(
     ) {
         if (!note.isDraft()) {
             QuickReactionRow(note, onDismiss, accountViewModel, nav)
+
+            QuickZapAmountRow(
+                note = note,
+                onDismiss = onDismiss,
+                onOnchainRequest = { onchainZapRequest = OnchainZapRequest(it) },
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
 
             HorizontalDivider(
                 thickness = DividerThickness,
@@ -181,20 +224,6 @@ private fun QuickReactionRow(
             }
         }
 
-        // The full zap flow (amount choices, custom amounts, progress, wallet
-        // handoff) lives inside ZapReaction; its popups anchor above the icon.
-        Box(modifier = reactionBox, contentAlignment = Alignment.Center) {
-            ZapReaction(
-                baseNote = note,
-                grayTint = MaterialTheme.colorScheme.onBackground,
-                accountViewModel = accountViewModel,
-                iconSize = Size27dp,
-                iconSizeModifier = Size28Modifier,
-                showCounter = false,
-                nav = nav,
-            )
-        }
-
         ClickableBox(
             modifier = reactionBox,
             onClick = {
@@ -204,6 +233,99 @@ private fun QuickReactionRow(
         ) {
             ChangeReactionIcon(Size28Modifier, MaterialTheme.colorScheme.placeholderText)
         }
+    }
+}
+
+/**
+ * The user's zap presets unpacked as rail-aware amount chips (same grid the zap
+ * amount popup shows), firing directly from the sheet. Lightning/cashu zaps
+ * dismiss immediately — errors surface as toasts and the receipt lands on the
+ * bubble's sats chip; on-chain amounts hand off to the dialog hosted by the sheet.
+ */
+@OptIn(ExperimentalUuidApi::class)
+@Composable
+private fun QuickZapAmountRow(
+    note: Note,
+    onDismiss: () -> Unit,
+    onOnchainRequest: (Long?) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val zapAmountChoices by
+        accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
+            .collectAsStateWithLifecycle()
+
+    val amountChoices = remember(zapAmountChoices) { zapAmountChoices.distinct().toImmutableList() }
+    if (amountChoices.isEmpty()) return
+
+    val railCapability =
+        observeZapRailCapability(
+            baseNote = note,
+            accountViewModel = accountViewModel,
+            // Onchain zap events are public and would e-tag the rumor id.
+            onchainSupported = !note.isPrivateRumor(),
+        )
+
+    val context = LocalContext.current
+
+    val onError = { _: String, message: String, user: User? ->
+        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+    }
+
+    val onPayViaIntent = { payables: ImmutableList<ZapPaymentHandler.Payable> ->
+        if (payables.size == 1) {
+            val payable = payables.first()
+            payViaIntent(payable.invoice, context, { }) { error ->
+                accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
+            }
+        } else {
+            val uid = Uuid.random().toString()
+            accountViewModel.tempManualPaymentCache.put(uid, payables)
+            nav.nav(Route.ManualZapSplitPayment(uid))
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        ZapAmountChoiceGrid(
+            amountChoices = amountChoices,
+            railCapability = railCapability,
+            onLightningZap = { amountInSats ->
+                accountViewModel.zap(
+                    note,
+                    amountInSats * 1000,
+                    null,
+                    "",
+                    context,
+                    true,
+                    onError,
+                    { },
+                    onPayViaIntent,
+                )
+                onDismiss()
+            },
+            onNutzap = { amountInSats ->
+                accountViewModel.sendNutzap(
+                    baseNote = note,
+                    amountSats = amountInSats,
+                    message = "",
+                    onError = onError,
+                    onProgress = { },
+                )
+                onDismiss()
+            },
+            onOnchainAmount = onOnchainRequest,
+            onReloadNutzap = { amount ->
+                navigateToReloadMint(accountViewModel, nav, note, amount)
+                onDismiss()
+            },
+            onChangeAmount = {
+                nav.nav(Route.UpdateZapAmount())
+                onDismiss()
+            },
+        )
     }
 }
 
