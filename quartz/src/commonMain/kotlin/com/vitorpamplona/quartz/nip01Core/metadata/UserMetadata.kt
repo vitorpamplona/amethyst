@@ -35,31 +35,58 @@ class Birthday {
     var day: Int? = null
 }
 
+// Every field uses a tolerant serializer: clients in the wild publish
+// structurally wrong values (e.g. "nip05":{}, birthday as a string), and one
+// bad field must not discard the whole profile — see TolerantStringSerializer.
 @Stable
 @Serializable
 class UserMetadata {
+    @Serializable(with = TolerantStringSerializer::class)
     var name: String? = null
 
     @SerialName("display_name")
+    @Serializable(with = TolerantStringSerializer::class)
     var displayName: String? = null
+
+    @Serializable(with = TolerantStringSerializer::class)
     var picture: String? = null
+
+    @Serializable(with = TolerantStringSerializer::class)
     var banner: String? = null
+
+    @Serializable(with = TolerantStringSerializer::class)
     var website: String? = null
+
+    @Serializable(with = TolerantStringSerializer::class)
     var about: String? = null
+
+    @Serializable(with = TolerantBooleanSerializer::class)
     var bot: Boolean? = null
+
+    @Serializable(with = TolerantStringSerializer::class)
     var pronouns: String? = null
 
     @Serializable(with = BirthdayTolerantSerializer::class)
     var birthday: Birthday? = null
+
+    @Serializable(with = TolerantStringSerializer::class)
     var nip05: String? = null
+
+    @Serializable(with = TolerantStringSerializer::class)
     var domain: String? = null
+
+    @Serializable(with = TolerantStringSerializer::class)
     var lud06: String? = null
+
+    @Serializable(with = TolerantStringSerializer::class)
     var lud16: String? = null
 
     /** CLINK Offers pointer (`noffer1…`) the user advertises to receive payments over Nostr. */
     @SerialName("clink_offer")
+    @Serializable(with = TolerantStringSerializer::class)
     var clinkOffer: String? = null
 
+    @Serializable(with = TolerantStringSerializer::class)
     var twitter: String? = null
 
     fun anyName(): String? = displayName ?: name
