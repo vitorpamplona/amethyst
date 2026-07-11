@@ -62,7 +62,9 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.chatMessageMarksRoomAsRead
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderByParentFilterAssemblerSubscription
@@ -144,7 +146,7 @@ fun ChatroomComposeChannelOrUser(
     val baseNoteEvent = baseNote.event
     if (baseNoteEvent is DraftWrapEvent) {
         ObserveDraftEvent(baseNote, accountViewModel) { innerNote ->
-            ChatroomEntry(innerNote, accountViewModel, nav)
+            ChatroomEntry(innerNote, accountViewModel, nav, isDraft = true)
         }
     } else {
         ChatroomEntry(baseNote, accountViewModel, nav)
@@ -156,6 +158,7 @@ private fun ChatroomEntry(
     lastMessage: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
+    isDraft: Boolean = false,
 ) {
     if (lastMessage is RelayGroupServerRoomNote) {
         RelayGroupServerRoomCompose(lastMessage, accountViewModel, nav)
@@ -220,7 +223,7 @@ private fun ChatroomEntry(
 
         is ChatroomKeyable -> {
             val room = baseNoteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex)
-            UserRoomCompose(room, lastMessage, accountViewModel, nav)
+            UserRoomCompose(room, lastMessage, isDraft, accountViewModel, nav)
         }
 
         is EphemeralChatEvent -> {
@@ -585,6 +588,7 @@ private fun ChannelTitleWithLabelInfo(
 private fun UserRoomCompose(
     room: ChatroomKey,
     lastMessage: Note,
+    isDraft: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -636,8 +640,15 @@ private fun UserRoomCompose(
                 }
             }
 
-            val lastReadTime by accountViewModel.account.loadLastReadFlow("Room/${room.hashCode()}").collectAsStateWithLifecycle()
-            if ((lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime) {
+            // A sent message I authored counts as read (#1286, #1287); an unsent draft still needs my attention.
+            val newestEvent = lastMessage.event
+            val countsAsRead =
+                !isDraft &&
+                    newestEvent != null &&
+                    chatMessageMarksRoomAsRead(newestEvent, room, accountViewModel.account.signer.pubKey)
+
+            val lastReadTime by accountViewModel.account.loadLastReadFlow(privateChatLastReadRoute(room)).collectAsStateWithLifecycle()
+            if (!countsAsRead && (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime) {
                 Spacer(modifier = Height4dpModifier)
                 NewItemsBubble()
             }

@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -72,6 +73,9 @@ import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
+import com.vitorpamplona.amethyst.service.pow.PowJobRestorer
+import com.vitorpamplona.amethyst.service.pow.PowJobStore
+import com.vitorpamplona.amethyst.service.pow.PowMiningForegroundService
 import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.TorCircuitHealthTracker
@@ -596,6 +600,27 @@ class AppModules(
             applicationIOScope,
         )
 
+    // fire-and-forget NIP-13 mining: posts queue here and publish when mined.
+    // Capped worker pool so a burst of sends never spawns unbounded miners.
+    // Template jobs checkpoint to disk (restored on login) and every enqueue
+    // raises the shortService shield so backgrounding doesn't freeze a miner.
+    val powJobStore by lazy {
+        PowJobStore(File(appContext.filesDir, PowJobStore.FILE_NAME), applicationIOScope)
+    }
+
+    val powPublishQueue by lazy {
+        PoWPublishQueue(
+            scope = applicationIOScope,
+            maxConcurrent = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 2),
+            persistence = powJobStore,
+            onQueueActive = { PowMiningForegroundService.start(appContext) },
+        )
+    }
+
+    val powJobRestorer by lazy {
+        PowJobRestorer(powPublishQueue, powJobStore, scheduledPostStore)
+    }
+
     // keeps all accounts live
     val accountsCache =
         AccountCacheState(
@@ -609,6 +634,7 @@ class AppModules(
             cache = cache,
             client = client,
             rootFilesDir = { appContext.filesDir },
+            powQueue = { powPublishQueue },
         )
 
     val sessionManager =
@@ -859,6 +885,16 @@ class AppModules(
                 } else {
                     alwaysOnNotificationServiceManager.stop()
                 }
+            }
+        }
+
+        // Resume PoW mining jobs that were checkpointed before a process death,
+        // for EVERY loaded account (the always-on service preloads non-active
+        // accounts, whose pending posts must not stay stranded on disk).
+        // Idempotent (the queue dedupes by job id), so re-emissions are safe.
+        applicationIOScope.launch {
+            accountsCache.accounts.collect { loaded ->
+                loaded.values.forEach { powJobRestorer.restore(it) }
             }
         }
 

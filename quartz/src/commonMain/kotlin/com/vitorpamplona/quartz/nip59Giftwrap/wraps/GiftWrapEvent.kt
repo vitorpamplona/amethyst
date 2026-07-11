@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -35,6 +36,15 @@ import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.concurrent.Volatile
+
+/**
+ * Caller hook to adjust the finished wrap template right before the ephemeral
+ * key signs it — e.g. mining a NIP-13 proof of work into it. Receives the
+ * ephemeral key's pubkey because the NIP-01 id (what a nonce commits to)
+ * includes it, and the key never leaves [GiftWrapEvent.create]. Must return a
+ * template of the same kind; the default is the identity.
+ */
+typealias GiftWrapTemplateConversion = (template: EventTemplate<GiftWrapEvent>, ephemeralPubKey: HexKey) -> EventTemplate<GiftWrapEvent>
 
 @Immutable
 open class GiftWrapEvent(
@@ -110,6 +120,12 @@ open class GiftWrapEvent(
          * the wrap without a separate kind:10050 lookup. Pass it via
          * [recipientRelayHint] — `null` (the default) preserves the
          * historical 2-element `["p", pubkey]` shape.
+         *
+         * [templateConversion] runs on the finished template right before the
+         * ephemeral key signs it. This is how a caller mines a NIP-13 proof
+         * of work into the wrap itself (the ephemeral-key envelope, never the
+         * inner seal or rumor) so DM relays can PoW-filter inbox spam —
+         * without this NIP-59 code knowing anything about mining.
          */
         fun create(
             event: Event,
@@ -117,6 +133,7 @@ open class GiftWrapEvent(
             expirationDelta: Long? = null,
             createdAt: Long = TimeUtils.randomWithTwoDays(),
             recipientRelayHint: NormalizedRelayUrl? = null,
+            templateConversion: GiftWrapTemplateConversion = { template, _ -> template },
         ): GiftWrapEvent {
             val signer = NostrSignerSync(KeyPair()) // GiftWrap is always a random key
 
@@ -132,11 +149,21 @@ open class GiftWrapEvent(
                     PTag.assemble(recipientPubKey, recipientRelayHint),
                 )
 
+            val template =
+                EventTemplate<GiftWrapEvent>(
+                    createdAt = createdAt,
+                    kind = KIND,
+                    tags = tags,
+                    content = signer.nip44Encrypt(event.toJson(), recipientPubKey),
+                )
+
+            val readyToSign = templateConversion(template, signer.pubKey)
+
             return signer.sign(
-                createdAt = createdAt,
-                kind = KIND,
-                tags = tags,
-                content = signer.nip44Encrypt(event.toJson(), recipientPubKey),
+                createdAt = readyToSign.createdAt,
+                kind = readyToSign.kind,
+                tags = readyToSign.tags,
+                content = readyToSign.content,
             )
         }
     }

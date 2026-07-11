@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
+import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.serialization.Serializable
 import java.util.Locale
@@ -157,6 +158,7 @@ class AccountSyncedSettingsInternal(
     val videoPlayer: AccountVideoPlayerPreferencesInternal = AccountVideoPlayerPreferencesInternal(),
     val media: AccountMediaPreferencesInternal = AccountMediaPreferencesInternal(),
     val chats: AccountChatPreferencesInternal = AccountChatPreferencesInternal(),
+    val proofOfWork: AccountPoWPreferencesInternal = AccountPoWPreferencesInternal(),
 )
 
 @Serializable
@@ -204,6 +206,14 @@ class AccountSecurityPreferencesInternal(
 class AccountMediaPreferencesInternal(
     // Stored as VisualizerStyle.name; defaults to CLASSIC (the app's classic audio animation).
     var audioVisualizer: String = "CLASSIC",
+)
+
+@Serializable
+class AccountPoWPreferencesInternal(
+    // NIP-13 target difficulty in leading zero bits; 0 = don't mine anything.
+    val difficulty: Int = 0,
+    // PoWCategory ids the user wants mined when difficulty > 0.
+    val enabledCategories: List<String> = PoWCategory.DEFAULT_ENABLED.map { it.id },
 )
 
 @Serializable

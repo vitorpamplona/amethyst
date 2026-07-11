@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.cli.commands.OfferCommands
 import com.vitorpamplona.amethyst.cli.commands.OutboxCommand
 import com.vitorpamplona.amethyst.cli.commands.Podcast20Commands
 import com.vitorpamplona.amethyst.cli.commands.PodcastCommands
+import com.vitorpamplona.amethyst.cli.commands.PowCommands
 import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
 import com.vitorpamplona.amethyst.cli.commands.PublishCommand
 import com.vitorpamplona.amethyst.cli.commands.RelayCommands
@@ -263,6 +264,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "dm" -> DmCommands.dispatch(dataDir, tail)
         "profile" -> ProfileCommands.dispatch(dataDir, tail)
         "notes" -> NotesCommands.dispatch(dataDir, tail)
+        "pow" -> PowCommands.dispatch(dataDir, tail)
         "nsite" -> NsiteCommands.dispatch(dataDir, tail)
         "napplet" -> NappletCommands.dispatch(dataDir, tail)
         "store" -> StoreCommands.dispatch(dataDir, tail)
@@ -430,6 +432,13 @@ private fun printUsage() {
         |  encode naddr --kind N --pubkey HEX --identifier D [--relay URL[,URL…]]
         |  verify [EVENT-JSON]          check an event's id hash + signature
         |                                (reads stdin when the arg is omitted or `-`)
+        |  pow check EVENT-JSON|-       NIP-13: leading-zero bits, committed target,
+        |                                effective PoW (capped at the commitment)
+        |  pow mine --target N [--pubkey HEX] [--timeout SECS] TEMPLATE-JSON|-
+        |                               mine an UNSIGNED template (delegated PoW:
+        |                                ids don't commit to sigs, so amy can mine
+        |                                for any pubkey); exit 124 on timeout
+        |  pow bench                    hash rate + expected seconds at 16/20/24/28 bits
         |  key generate                 mint a fresh keypair (nsec + npub + hex)
         |  key public NSEC|HEX          derive the public key from a secret key
         |  key encrypt NSEC|HEX --password X    NIP-49 encrypt to ncryptsec1…
@@ -495,6 +504,8 @@ private fun printUsage() {
         |
         |Notes (NIP-10 kind:1):
         |  notes post TEXT [--relay URL]               publish a kind:1 short text note
+        |             [--pow BITS [--pow-timeout SECS]] mine a NIP-13 proof of work first
+        |                                              (exit 124 on timeout, nothing published)
         |                                              (--relay accepts comma-separated extras)
         |  notes feed [--author USER]                  fetch kind:1 notes
         |             [--following]                    (default: own; --author: one user;

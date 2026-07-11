@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -72,6 +74,11 @@ class AccountSyncedSettings(
         AccountChatPreferences(
             MutableStateFlow(internalSettings.chats.toChatroomKeys()),
         )
+    val proofOfWork =
+        AccountPoWPreferences(
+            MutableStateFlow(internalSettings.proofOfWork.difficulty),
+            MutableStateFlow(PoWCategory.fromIds(internalSettings.proofOfWork.enabledCategories)),
+        )
 
     fun toInternal(): AccountSyncedSettingsInternal =
         AccountSyncedSettingsInternal(
@@ -104,6 +111,14 @@ class AccountSyncedSettings(
             videoPlayer = AccountVideoPlayerPreferencesInternal(videoPlayer.buttonItems.value),
             media = AccountMediaPreferencesInternal(media.audioVisualizer.value.name),
             chats = AccountChatPreferencesInternal(chats.pinnedChatrooms.value.map { it.users.sorted() }),
+            proofOfWork =
+                AccountPoWPreferencesInternal(
+                    proofOfWork.difficulty.value,
+                    // sorted so the serialized form is deterministic
+                    proofOfWork.enabledCategories.value
+                        .map { it.id }
+                        .sorted(),
+                ),
         )
 
     fun updateFrom(syncedSettingsInternal: AccountSyncedSettingsInternal) {
@@ -181,6 +196,19 @@ class AccountSyncedSettings(
         val newPinnedChatrooms = syncedSettingsInternal.chats.toChatroomKeys()
         if (chats.pinnedChatrooms.value != newPinnedChatrooms) {
             chats.pinnedChatrooms.tryEmit(newPinnedChatrooms)
+        }
+
+        // clamp like the local setter: a synced NIP-78 event from another
+        // client could carry an out-of-range value that would crash the miner
+        // (>256) or mine forever (41+).
+        val newDifficulty = syncedSettingsInternal.proofOfWork.difficulty.coerceIn(0, PoWPolicy.MAX_DIFFICULTY)
+        if (proofOfWork.difficulty.value != newDifficulty) {
+            proofOfWork.difficulty.tryEmit(newDifficulty)
+        }
+
+        val newPoWCategories = PoWCategory.fromIds(syncedSettingsInternal.proofOfWork.enabledCategories)
+        if (proofOfWork.enabledCategories.value != newPoWCategories) {
+            proofOfWork.enabledCategories.tryEmit(newPoWCategories)
         }
     }
 
@@ -284,6 +312,43 @@ class AccountMediaPreferences(
 class AccountChatPreferences(
     val pinnedChatrooms: MutableStateFlow<Set<ChatroomKey>>,
 )
+
+@Stable
+class AccountPoWPreferences(
+    val difficulty: MutableStateFlow<Int> = MutableStateFlow(0),
+    val enabledCategories: MutableStateFlow<Set<PoWCategory>> = MutableStateFlow(PoWCategory.DEFAULT_ENABLED),
+) {
+    fun updateDifficulty(newDifficulty: Int): Boolean {
+        // compare the coerced value: reporting a change for an out-of-range
+        // input that clamps to the current value would republish identical
+        // settings to relays.
+        val coerced = newDifficulty.coerceIn(0, MAX_POW_DIFFICULTY)
+        return if (difficulty.value != coerced) {
+            difficulty.tryEmit(coerced)
+            true
+        } else {
+            false
+        }
+    }
+
+    fun updateCategory(
+        category: PoWCategory,
+        enabled: Boolean,
+    ): Boolean {
+        val current = enabledCategories.value
+        val updated = if (enabled) current + category else current - category
+        return if (updated != current) {
+            enabledCategories.tryEmit(updated)
+            true
+        } else {
+            false
+        }
+    }
+
+    companion object {
+        const val MAX_POW_DIFFICULTY = PoWPolicy.MAX_DIFFICULTY
+    }
+}
 
 internal fun AccountChatPreferencesInternal.toChatroomKeys(): Set<ChatroomKey> = pinnedRooms.mapTo(mutableSetOf()) { ChatroomKey(it.toSet()) }
 
