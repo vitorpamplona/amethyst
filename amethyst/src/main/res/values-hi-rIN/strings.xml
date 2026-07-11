@@ -663,7 +663,7 @@
     <string name="favorite_app_remove">पसंदीदा से हटाएँ</string>
     <string name="favorite_app_open_window">अपनी विंडो में खोलें</string>
     <string name="favorite_app_access_title">इस क्रमक के लिए क्या अभिगम्य है</string>
-    <string name="favorite_app_access_static">पृथक पर्यावरण में चलता है। आपके लेखा तक कोई विशेष अभिगमन अधिकार नहीं।</string>
+    <string name="favorite_app_access_static">पृथक्कृत पर्यावरण में चलता है। आपके लेखा तक कोई विशेष अभिगमन अधिकार नहीं।</string>
     <string name="favorite_app_access_show">इसके लिए क्या अभिगम्य है</string>
     <string name="favorite_app_network_tor">Tor पर लोड होता है।</string>
     <string name="favorite_app_network_open">खुले वेब पर लोड होता है।</string>
@@ -799,7 +799,7 @@
     <string name="relay_auth_toggle_message_strangers">किसी को भी सन्देश भेजें</string>
     <string name="relay_auth_toggle_message_strangers_desc">अज्ञात लोगों के पुनःप्रसारकों में प्रवेशांकन करें सीधेसन्देश तथा प्रत्युत्तर तथा सूचनाएँ भेजने के लिए। मूलविकल्पतः निष्क्रिय। प्रत्येक बार आप से पूछा जाएगा।</string>
     <string name="relay_auth_prompt_title">क्या इस पुनःप्रसारक को पुष्टि करें कि यह आप हैं।</string>
-    <string name="relay_auth_prompt_message">यह पुनःप्रसारक पहले पुष्टि करना चाहता हैं कि यह वस्तुतः आप हैं। इसके परिचालक देखेगा आपका लेखा कौनसा है।</string>
+    <string name="relay_auth_prompt_message">यह पुनःप्रसारक पहले पुष्टि करना चाहता है कि यह वस्तुतः आप हैं। इसका परिचालक देखेगा आपका लेखा कौनसा है।</string>
     <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
     <string name="relay_auth_title_send_dm">क्या आपका सन्देश %1$s को भेजें।</string>
     <string name="relay_auth_title_notify">क्या %1$s को सूचित करें।</string>
@@ -1795,7 +1795,7 @@
     <string name="relay_group_invite_description">इस अक्षरराशि को बाँटें जिससे लोग इस समूह से जुड सकें।</string>
     <string name="relay_group_invite_generating">आमन्त्रण बनाया जा रहा है…</string>
     <string name="relay_group_invite_copied">आमन्त्रण अक्षरराशि अनुकृत</string>
-    <string name="relay_group_invite_code_label">आमन्त्रण अक्षरराशि (इस केवल आमन्त्रित समूह के लिए):</string>
+    <string name="relay_group_invite_code_label">आमन्त्रण अक्षरराशि (इस आमन्त्रण सीमित समूह के लिए):</string>
     <string name="relay_group_join_title">समूह से जुडें</string>
     <string name="relay_group_join_code_label">आमन्त्रण अक्षरराशि</string>
     <string name="relay_group_join_code_hint">यह समूह आमन्त्रण सीमित है। आपको दी गई अक्षरराशि प्रविष्ट करें।</string>
@@ -3306,7 +3306,7 @@
         <item quantity="other">%1$s सं॰ %2$d अधिक</item>
     </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
-    <string name="ps1_save_title">पीएस१ स्मृति पट्टि अभिलेखन</string>
+    <string name="ps1_save_title">पीएस१ स्मृति पत्रक अभिलेखन</string>
     <string name="ps1_save_block">खण्ड %1$d</string>
     <string name="ps1_save_empty_slot">रिक्त छेद</string>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
@@ -3440,9 +3440,9 @@
     <string name="compose_signature_setting_title">हस्ताक्षर</string>
     <string name="compose_signature_setting_description">सन्देश के अन्त में जोडा जाएगा नए पत्र प्रत्युत्तर उद्धरण अथवा निबन्ध खोलते समय। रिक्त छोड दें अक्षम करने के लिए।</string>
     <string name="compose_signature_setting_hint">आपका हस्ताक्षर</string>
-    <string name="pow_settings_title">श्रम प्रमाण</string>
+    <string name="pow_settings_title">श्रमप्रमाण</string>
     <string name="pow_difficulty_title">कठिनाई</string>
-    <string name="pow_difficulty_explainer">एक निप॰१३ श्रमप्रमाण का खनन करता है आपके पत्रों के लिए प्रकाशन पूर्व जिससे पुनःप्रसारक तथा पढनेवाले उसका तोलन कर सके कचरालेख के प्रति। उच्चतर मूल्यों के लिए घातांकीय अधिक समय लगेगा। पत्र प्रकाशित होंगे अदृश्यतः खनन पश्चात।</string>
+    <string name="pow_difficulty_explainer">एक निप॰१३ श्रमप्रमाण का खनन करता है आपके पत्रों के लिए प्रकाशन पूर्व जिससे पुनःप्रसारक तथा पढनेवाले उसका तोलन कर सके कचरालेख के प्रति। उच्चतर मूल्यों के लिए घातांकीयतः अधिक समय लगेगा। पत्र प्रकाशित होंगे अदृश्यतः खनन पश्चात।</string>
     <string name="pow_difficulty_off">निष्क्रिय</string>
     <string name="pow_custom_difficulty_title">विशिष्ट कठिनाई</string>
     <string name="pow_custom_difficulty_explainer">लक्ष्य का सूक्ष्मानुकूलन अग्रतम शून्य द्व्यंकों में।</string>
@@ -3469,6 +3469,55 @@
     <string name="pow_category_other_public">अन्य सार्वजनिक विषयवस्तु</string>
     <string name="pow_category_other_public_explainer">मतदान वर्तमानस्थितियाँ वर्गीकृतविज्ञापन तथा अन्य सभी सार्वजनिक</string>
     <string name="pow_mining_title">श्रमप्रमाण खनन</string>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">श्रमप्रमाण खनन… (%1$d पत्र पंक्ति में)</item>
+        <item quantity="other">श्रमप्रमाण खनन… (%1$d पत्र पंक्ति में)</item>
+    </plurals>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s। खनन %2$d द्व्यंक पर</item>
+        <item quantity="other">%1$s। खनन %2$d द्व्यंक पर</item>
+    </plurals>
+    <plurals name="pow_queued_job">
+        <item quantity="one">%1$s। %2$d द्व्यंक पर खनन की प्रतीक्षा</item>
+        <item quantity="other">%1$s। %2$d द्व्यंक पर खनन की प्रतीक्षा</item>
+    </plurals>
+    <plurals name="pow_option_default_on">
+        <item quantity="one">मूलविकल्प (%1$d द्व्यंक)</item>
+        <item quantity="other">मूलविकल्प (%1$d द्व्यंक)</item>
+    </plurals>
+    <string name="pow_option_default_off">मूलविकल्प (निष्क्रिय)</string>
+    <string name="pow_option_off">इस पत्र के लिए निष्क्रिय</string>
+    <plurals name="pow_option_bits">
+        <item quantity="one">%1$d द्व्यंक</item>
+        <item quantity="other">%1$d द्व्यंक</item>
+    </plurals>
+    <string name="pow_notification_channel_name">श्रमप्रमाण खनन</string>
+    <string name="pow_notification_channel_description">उन पत्रों को दिखाता है जो अपने निप॰१३ श्रमप्रमाण का खनन कर रहे हैं जिससे कि वे सम्पन्न हो सके आप क्रमक छोडने के पश्चात।</string>
+    <string name="pow_notification_cancel_all">निरस्त</string>
+    <string name="pow_difficulty_estimate">लगभग %1$s प्रति पत्र इस यन्त्र पर</string>
+    <string name="pow_estimate_instant">१ से॰ से न्यून</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d सेकण्ड</item>
+        <item quantity="other">%1$d सेकण्ड</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d मिनुट</item>
+        <item quantity="other">%1$d मिनुट</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d घण्टा</item>
+        <item quantity="other">%1$d घण्टे</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d दिन</item>
+        <item quantity="other">%1$d दिन</item>
+    </plurals>
+    <string name="pow_time_left">लगभग %1$s शेष</string>
+    <string name="pow_time_left_soon">अब किसी भी क्षण</string>
+    <string name="pow_publish_failed">आपका %1$s खनन समाप्त हुआ पर प्रकाशित नहीं हो सका : %2$s</string>
+    <string name="pow_publish_failed_retry">आपका %1$s खनन समाप्त हुआ पर प्रकाशित नहीं हो सका। अगली बार क्रमक आरम्भ होने पर इसका पुनःप्रयास किया जाएगा।</string>
+    <string name="pow_kind_chat_message">चर्चा सन्देश</string>
+    <string name="pow_kind_report">सूचना</string>
     <string name="ai_writing_use_this">इसका प्रयोग करें</string>
     <string name="ai_writing_dismiss">हटाएँ</string>
     <string name="ai_tone_correct">सम्यक</string>
