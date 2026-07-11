@@ -1888,6 +1888,39 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_group_thread_title_label">Tytuł</string>
     <string name="relay_group_thread_body_label">Napisz coś…</string>
     <string name="relay_group_thread_post">Post</string>
+    <string name="relay_group_browse_title">Znajdź grupy</string>
+    <string name="relay_group_browse_description">Przeglądaj grupy hostowane na transmiterze. Wklej adres transmitera lub wybierz jeden z poniższych.</string>
+    <string name="relay_group_browse_relay_label">Adres transmitera</string>
+    <string name="relay_group_browse_go">Wybierz</string>
+    <string name="relay_group_browse_your_relays">Transmitery, których używasz</string>
+    <string name="relay_group_browse_popular">Popularne transmitery</string>
+    <string name="relay_group_no_messages_yet">Brak wiadomości</string>
+    <string name="relay_group_join_to_post">Dołącz do tej grupy, aby wysyłać wiadomości.</string>
+    <string name="relay_group_invite_only_to_post">Ta grupa jest dostępna wyłącznie dla zaproszonych osób — aby móc publikować posty, potrzebujesz zaproszenia.</string>
+    <plurals name="relay_group_member_count">
+        <item quantity="one">%1$d członek</item>
+        <item quantity="few">%1$d członków</item>
+        <item quantity="many">%1$d członków</item>
+        <item quantity="other">%1$d członkowie</item>
+    </plurals>
+    <plurals name="relay_group_message_count">
+        <item quantity="one">%1$d wiadomość</item>
+        <item quantity="few">%1$d wiadomości</item>
+        <item quantity="many">%1$d wiadomości</item>
+        <item quantity="other">%1$d wiadomości</item>
+    </plurals>
+    <plurals name="relay_group_message_count_capped">
+        <item quantity="one">%1$d+ wiadomość</item>
+        <item quantity="few">%1$d+ wiadomości</item>
+        <item quantity="many">%1$d+ wiadomości</item>
+        <item quantity="other">%1$d+ wiadomości</item>
+    </plurals>
+    <plurals name="relay_group_follows_participating">
+        <item quantity="one">%1$d osoba, którą obserwujesz</item>
+        <item quantity="few">%1$d osób, które obserwujesz</item>
+        <item quantity="many">%1$d osób, które obserwujesz</item>
+        <item quantity="other">%1$d osoby, które obserwujesz</item>
+    </plurals>
     <string name="messages_new_message">Prywatna</string>
     <string name="messages_new_message_to">Do</string>
     <string name="messages_new_message_subject">Temat</string>
@@ -3496,6 +3529,101 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="compose_signature_setting_title">Podpis</string>
     <string name="compose_signature_setting_description">Dodawane na końcu wiadomości podczas tworzenia nowego wpisu, odpowiedzi, cytatu lub artykułu. Aby wyłączyć tę funkcję, pozostaw to pole puste.</string>
     <string name="compose_signature_setting_hint">Twój podpis</string>
+    <string name="pow_settings_title">Dowód wykonania</string>
+    <string name="pow_difficulty_title">Stopień trudności</string>
+    <string name="pow_difficulty_explainer">Przed opublikowaniem postów generuje się w nich dowód wykonania pracy zgodny ze standardem NIP-13, dzięki czemu transmitery i czytelnicy mogą je zweryfikować pod kątem spamu. Im wyższa wartość, tym wydobycie trwa wykładniczo dłużej. Po wygenerowaniu posty są publikowane w tle.</string>
+    <string name="pow_difficulty_off">Wył.</string>
+    <string name="pow_custom_difficulty_title">Indywidualny poziom trudności</string>
+    <string name="pow_custom_difficulty_explainer">Dopasuj wartość docelową pod kątem początkowych zerowych bitów.</string>
+    <string name="pow_categories_title">Co wydobywać</string>
+    <string name="pow_categories_explainer">Zdarzenia, w przypadku których czas ma kluczowe znaczenie (autoryzacja transmitera, zlecenia zap, komunikaty dotyczące portfela i sygnatariusza, wersje robocze, listy), nigdy nie są wydobywane.</string>
+    <string name="pow_category_short_notes">Krótkie wpisy &amp; odpowiedzi</string>
+    <string name="pow_category_short_notes_explainer">Główne źródło spamu w sieci</string>
+    <string name="pow_category_comments">Komentarze</string>
+    <string name="pow_category_comments_explainer">Odpowiedzi na artykuły, pliki i inne treści</string>
+    <string name="pow_category_reports">Zgłoszenia</string>
+    <string name="pow_category_reports_explainer">Transmitery oceniają raporty pod kątem ich kosztów</string>
+    <string name="pow_category_long_form">Artykuły &amp; główne wydarzenia</string>
+    <string name="pow_category_long_form_explainer">Artykuły i główne wydarzenia; pojawiają się sporadycznie, a ich koszt jest znikomy</string>
+    <string name="pow_category_voice">Wiadomości głosowe</string>
+    <string name="pow_category_voice_explainer">Publiczne wiadomości głosowe i odpowiedzi</string>
+    <string name="pow_category_reposts">Powtórzenia</string>
+    <string name="pow_category_reposts_explainer">Duża liczba dla aktywnych użytkowników</string>
+    <string name="pow_category_reactions">Reakcje</string>
+    <string name="pow_category_reactions_explainer">Wysoki wolumen; każde polubienie zużywa baterię</string>
+    <string name="pow_category_public_chat">Publiczny &amp; czat na żywo</string>
+    <string name="pow_category_public_chat_explainer">Opóźnienia w wydobyciu zakłócają płynność rozmowy</string>
+    <string name="pow_category_gift_wraps">Zawijanie wiadomości prywatnych</string>
+    <string name="pow_category_gift_wraps_explainer">Pozwólmy, aby transmitery DM filtrowały spam w skrzynce odbiorczej; wydobywana jest tylko zewnętrzna otoczka, nigdy Twoja wiadomość</string>
+    <string name="pow_category_other_public">Inne publiczne treści</string>
+    <string name="pow_category_other_public_explainer">Ankiety, statusy na żywo, ogłoszenia i wszystkie inne treści publiczne</string>
+    <string name="pow_mining_title">Wydobywanie dowodu wykonania pracy</string>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">Wydobycie w systemie proof of work… (%1$d wpis w kolejce)</item>
+        <item quantity="few">Wydobywanie w systemie proof of work… (%1$d wpisów w kolejce)</item>
+        <item quantity="many">Wydobywanie w systemie proof of work… (%1$d wpisów w kolejce)</item>
+        <item quantity="other">Dowód pracy w górnictwie… (%1$d posty w kolejce)</item>
+    </plurals>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s • wydobywanie z szybkością %2$d bitów</item>
+        <item quantity="few">%1$s • wydobywanie z szybkością %2$d bitów</item>
+        <item quantity="many">%1$s • wydobywanie z szybkością %2$d bitów</item>
+        <item quantity="other">%1$s • wydobywanie z szybkością %2$d bitów</item>
+    </plurals>
+    <plurals name="pow_queued_job">
+        <item quantity="one">%1$s • oczekuje na wydobycie przy %2$d bitach</item>
+        <item quantity="few">%1$s • oczekuje na wydobycie przy %2$d bitach</item>
+        <item quantity="many">%1$s • oczekuje na wydobycie przy %2$d bitach</item>
+        <item quantity="other">%1$s • oczekuje na wydobycie przy %2$d bitach</item>
+    </plurals>
+    <plurals name="pow_option_default_on">
+        <item quantity="one">Domyślnie (%1$d bit)</item>
+        <item quantity="few">Domyślnie (%1$d bitów)</item>
+        <item quantity="many">Domyślnie (%1$d bitów)</item>
+        <item quantity="other">Domyślne (%1$d bity)</item>
+    </plurals>
+    <string name="pow_option_default_off">Domyślne (wyłączone)</string>
+    <string name="pow_option_off">Wyłączone dla tego postu</string>
+    <plurals name="pow_option_bits">
+        <item quantity="one">%1$d bit</item>
+        <item quantity="few">%1$d bitów</item>
+        <item quantity="many">%1$d bitów</item>
+        <item quantity="other">%1$d bity</item>
+    </plurals>
+    <string name="pow_notification_channel_name">Wydobywanie dowodów wykonania pracy</string>
+    <string name="pow_notification_channel_description">Wyświetla posty, które wciąż generują dowód pracy zgodnie ze standardem NIP-13, aby proces ten mógł się zakończyć po zamknięciu aplikacji.</string>
+    <string name="pow_notification_cancel_all">Anuluj</string>
+    <string name="pow_difficulty_estimate">◆ %1$s na posta na tym urządzeniu</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d sekundę</item>
+        <item quantity="few">%1$d sekund</item>
+        <item quantity="many">%1$d sekund</item>
+        <item quantity="other">%1$d sekund</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d minutę</item>
+        <item quantity="few">%1$s minut</item>
+        <item quantity="many">%1$d minut</item>
+        <item quantity="other">%1$d minut</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d godzina</item>
+        <item quantity="few">%1$d godzin</item>
+        <item quantity="many">%1$d godzin</item>
+        <item quantity="other">%1$d godzin</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d dzień</item>
+        <item quantity="few">%1$d dni</item>
+        <item quantity="many">%1$d dni</item>
+        <item quantity="other">%1$d dni</item>
+    </plurals>
+    <string name="pow_time_left">◆ %1$s pozostało</string>
+    <string name="pow_time_left_soon">w każdej chwili</string>
+    <string name="pow_publish_failed">Twój %1$s zakończył wydobycie, ale nie mógł zostać opublikowany: %2$s</string>
+    <string name="pow_publish_failed_retry">Twój %1$s zakończył wydobywanie, ale nie udało się go opublikować. Próba zostanie powtórzona przy następnym uruchomieniu aplikacji.</string>
+    <string name="pow_kind_chat_message">Wiadomość Czatu</string>
+    <string name="pow_kind_report">Zgłoś</string>
     <string name="ai_writing_use_this">Użyj tego</string>
     <string name="ai_writing_dismiss">Ignoruj</string>
     <string name="ai_tone_correct">Popraw</string>

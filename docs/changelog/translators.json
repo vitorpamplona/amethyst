@@ -129,6 +129,12 @@
         ]
       },
       {
+        "user": "rajs19420616",
+        "languages": [
+          "Hindi"
+        ]
+      },
+      {
         "user": "summoner001",
         "languages": [
           "Hungarian"
@@ -141,27 +147,21 @@
         ]
       },
       {
-        "user": "rajs19420616",
-        "languages": [
-          "Hindi"
-        ]
-      },
-      {
         "user": "StellarStoic",
         "languages": [
           "Slovenian"
         ]
       },
       {
-        "user": "crowdin.pretended462",
-        "languages": [
-          "German"
-        ]
-      },
-      {
         "user": "anthony-robin",
         "languages": [
           "French"
+        ]
+      },
+      {
+        "user": "crowdin.pretended462",
+        "languages": [
+          "German"
         ]
       },
       {
