@@ -80,7 +80,9 @@ interface RelayConnectionListener {
     fun onEventGaveUp(
         relay: IRelayClient,
         event: Event,
-    ) {}
+    ) {
+        // no-op by default: listeners that don't surface delivery failures ignore it.
+    }
 }
 
 object EmptyConnectionListener : RelayConnectionListener
