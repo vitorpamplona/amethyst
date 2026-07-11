@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.DisplayDraftChat
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
@@ -62,11 +61,10 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChangeChannelMetadataNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChannelAdminSystemMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatRaid
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatZap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderCreateChannelNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderDraftEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncryptedFile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderMarmotEncryptedMedia
@@ -138,6 +136,8 @@ fun ChatroomMessageCompose(
                 RenderChatRaid(baseNote, accountViewModel, nav)
             } else if (event is LiveActivitiesClipEvent) {
                 RenderChatClip(baseNote, accountViewModel, nav)
+            } else if (event is ChannelCreateEvent || event is ChannelMetadataEvent) {
+                RenderChannelAdminSystemMessage(baseNote, accountViewModel, nav)
             } else {
                 NormalChatNote(
                     baseNote,
@@ -227,10 +227,7 @@ fun NormalChatNote(
         shouldHighlight = shouldHighlight,
         onHighlightFinished = onHighlightFinished,
         onClick = {
-            if (note.event is ChannelCreateEvent) {
-                nav.nav(Route.PublicChatChannel(note.idHex))
-                true
-            } else if (innerQuote && onScrollToNote != null) {
+            if (innerQuote && onScrollToNote != null) {
                 onScrollToNote(note)
                 true
             } else {
@@ -516,8 +513,6 @@ fun NoteRow(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         when {
-            note.event is ChannelCreateEvent -> RenderCreateChannelNote(note, bgColor, accountViewModel, nav)
-            note.event is ChannelMetadataEvent -> RenderChangeChannelMetadataNote(note, bgColor, accountViewModel, nav)
             note.event is DraftWrapEvent -> RenderDraftEvent(note, canPreview, innerQuote, onWantsToReply, onWantsToEditDraft, bgColor, accountViewModel, nav)
             note.event is ChatMessageEncryptedFileHeaderEvent -> RenderEncryptedFile(note, bgColor, accountViewModel, nav)
             hasMip04Media(note.event) -> RenderMarmotEncryptedMedia(note, bgColor, accountViewModel, nav)
