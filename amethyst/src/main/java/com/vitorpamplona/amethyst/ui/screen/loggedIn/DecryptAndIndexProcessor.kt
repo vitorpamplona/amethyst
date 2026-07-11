@@ -623,6 +623,18 @@ class GroupEventHandler(
                         }
                     }
 
+                    // Link the envelope to its inner note and copy over the
+                    // relays that delivered/accepted the kind-445 so far, so
+                    // the chat row shows relay icons. Later acceptances drill
+                    // down on their own via LocalCache.addRelayToNoteAndInners
+                    // once innerEventId is set. The outer note is looked up by
+                    // event.id — NOT eventNote/publicNote, which belong to the
+                    // *triggering* event when this runs from retryPendingFor.
+                    event.innerEventId = innerEvent.id
+                    cache.getNoteIfExists(event.id)?.let { outerNote ->
+                        cache.copyRelaysFromTo(outerNote, innerEvent.id)
+                    }
+
                     // Track the message in the Marmot group chatroom
                     account.marmotGroupList.addMessage(result.groupId, innerNote)
 

@@ -27,6 +27,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -153,6 +154,18 @@ fun isNotificationRoute(uri: String) = uri.startsWith("notifications", true) || 
 
 fun isHashtagRoute(uri: String) = uri.startsWith("hashtag?id=") || uri.startsWith("nostr:hashtag?id=")
 
+/**
+ * A markdown link target that is a bare hashtag fragment, e.g. the `#NostrMultiplayerGames` in
+ * `[Games](#NostrMultiplayerGames)`. Returns the tag without the leading `#`, or null when the
+ * uri is anything else (full URLs with anchors don't start with `#`). Reuses the same character
+ * class that linkifies #hashtags in plain text, so validity matches how tags parse everywhere else.
+ */
+fun fragmentHashtagOrNull(uri: String): String? {
+    val match = RichTextParser.hashTagsPattern.matchEntire(uri) ?: return null
+    if (!match.groups[2]?.value.isNullOrEmpty()) return null
+    return match.groups[1]?.value
+}
+
 fun isUrlRoute(uri: String) = uri.startsWith("url?id=") || uri.startsWith("nostr:url?id=")
 
 fun isConnectedAppRoute(uri: String) = uri.startsWith("connectedapp?coordinate=") || uri.startsWith("nostr:connectedapp?coordinate=")
@@ -198,6 +211,9 @@ fun uriToRoute(
     }
     if (isHashtagRoute(uri)) {
         return Route.Hashtag(uri.removePrefix(NOSTR_URI_PREFIX).removePrefix("hashtag?id=").lowercase())
+    }
+    fragmentHashtagOrNull(uri)?.let {
+        return Route.Hashtag(it.lowercase())
     }
     if (isUrlRoute(uri)) {
         return urlRoute(uri)
