@@ -265,6 +265,12 @@ fun NormalChatNote(
             } else {
                 null
             },
+        timeRow =
+            if (!innerQuote && groupPosition.isLastOfGroup) {
+                { ChatTimeAgo(note) }
+            } else {
+                null
+            },
         drawAuthorLine = {
             DrawAuthorInfo(
                 note,

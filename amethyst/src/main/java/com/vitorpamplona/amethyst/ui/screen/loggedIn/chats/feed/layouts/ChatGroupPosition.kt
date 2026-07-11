@@ -56,6 +56,9 @@ enum class ChatGroupPosition {
     val isFirstOfGroup: Boolean
         get() = this == SINGLE || this == TOP
 
+    val isLastOfGroup: Boolean
+        get() = this == SINGLE || this == BOTTOM
+
     val isConnectedAbove: Boolean
         get() = this == MIDDLE || this == BOTTOM
 }

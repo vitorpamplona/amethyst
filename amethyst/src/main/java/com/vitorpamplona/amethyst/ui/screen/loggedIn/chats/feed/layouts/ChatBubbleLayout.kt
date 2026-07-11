@@ -27,6 +27,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -87,6 +88,9 @@ fun ChatBubbleLayout(
     onAuthorClick: () -> Unit,
     actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
     reactionsRow: (@Composable () -> Unit)? = null,
+    // Small always-visible timestamp in the bubble's bottom-end corner; skipped
+    // while the tap-to-expand detail row (which includes the time) is open.
+    timeRow: (@Composable () -> Unit)? = null,
     detailRow: @Composable () -> Unit,
     drawAuthorLine: @Composable () -> Unit,
     inner: @Composable (MutableState<Color>) -> Unit,
@@ -193,6 +197,10 @@ fun ChatBubbleLayout(
 
                     if (showDetails.value) {
                         detailRow()
+                    } else if (timeRow != null) {
+                        Box(modifier = Modifier.align(Alignment.End)) {
+                            timeRow()
+                        }
                     }
                 }
             }
