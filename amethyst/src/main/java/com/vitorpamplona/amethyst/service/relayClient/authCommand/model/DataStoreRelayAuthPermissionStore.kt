@@ -22,12 +22,15 @@ package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.first
 import java.io.File
 import java.security.MessageDigest
@@ -64,9 +67,9 @@ class DataStoreRelayAuthPermissionStore(
     }
 
     override suspend fun clearDecision(relayUrl: String) {
-        store.edit {
-            it.remove(decisionKey(relayUrl))
-            it.remove(urlKey(relayUrl))
+        store.edit { prefs ->
+            prefs.remove(decisionKey(relayUrl))
+            pruneUrlIfEmpty(prefs, relayUrl)
         }
     }
 
@@ -84,13 +87,129 @@ class DataStoreRelayAuthPermissionStore(
         return result
     }
 
+    override suspend fun recordUse(
+        relayUrl: String,
+        additions: Map<AuthPurposeKind, Set<String>>,
+    ) {
+        if (additions.isEmpty()) return
+
+        // Auth is granted again on every reconnect, so avoid a disk write when nothing changed:
+        // only persist if a purpose gained a counterparty we haven't stored, or the last-used
+        // timestamp is stale enough to be worth refreshing.
+        val prefs = store.data.first()
+        val now = TimeUtils.now()
+        val lastUsed = prefs[lastUsedKey(relayUrl)]?.toLongOrNull() ?: 0L
+        val hasNewCounterparty =
+            additions.any { (kind, pubkeys) ->
+                val existing = prefs[rationaleKey(relayUrl, kind)].toPubkeySet()
+                !existing.containsAll(pubkeys) && existing.size < MAX_COUNTERPARTIES_STORED
+            }
+        if (!hasNewCounterparty && now - lastUsed < LAST_USED_REFRESH_SECS) return
+
+        store.edit { edit ->
+            edit[urlKey(relayUrl)] = relayUrl
+            edit[lastUsedKey(relayUrl)] = now.toString()
+            for ((kind, pubkeys) in additions) {
+                if (pubkeys.isEmpty()) continue
+                val key = rationaleKey(relayUrl, kind)
+                val existing = edit[key].toPubkeySet()
+                if (existing.size >= MAX_COUNTERPARTIES_STORED || existing.containsAll(pubkeys)) continue
+                // Cap the stored set: an outbox relay can serve a large slice of the follow list and
+                // we only need a representative sample to explain the grant in settings.
+                edit[key] = (existing + pubkeys).take(MAX_COUNTERPARTIES_STORED).joinToString(SEPARATOR)
+            }
+        }
+    }
+
+    override suspend fun clearRationale(relayUrl: String) {
+        store.edit { prefs ->
+            AuthPurposeKind.entries.forEach { prefs.remove(rationaleKey(relayUrl, it)) }
+            pruneUrlIfEmpty(prefs, relayUrl)
+        }
+    }
+
+    override suspend fun allLastUsed(): Map<String, Long> {
+        val prefs = store.data.first()
+        val result = mutableMapOf<String, Long>()
+        for ((key, value) in prefs.asMap()) {
+            val name = key.name
+            if (!name.startsWith(LAST_USED_PREFIX)) continue
+            val hash = name.removePrefix(LAST_USED_PREFIX)
+            val url = prefs[stringPreferencesKey("$URL_PREFIX$hash")] ?: continue
+            val ts = (value as? String)?.toLongOrNull() ?: continue
+            result[url] = ts
+        }
+        return result
+    }
+
+    /** Removes the shared url + last-used keys once a relay has neither an override nor rationale,
+     *  so a partial clear never orphans the reverse-lookup other queries depend on. */
+    private fun pruneUrlIfEmpty(
+        prefs: MutablePreferences,
+        relayUrl: String,
+    ) {
+        val hasDecision = prefs[decisionKey(relayUrl)] != null
+        val hasRationale = AuthPurposeKind.entries.any { prefs[rationaleKey(relayUrl, it)] != null }
+        if (!hasDecision && !hasRationale) {
+            prefs.remove(urlKey(relayUrl))
+            prefs.remove(lastUsedKey(relayUrl))
+        }
+    }
+
+    override suspend fun loadRationale(relayUrl: String): Map<AuthPurposeKind, Set<String>> {
+        val prefs = store.data.first()
+        return buildMap {
+            for (kind in AuthPurposeKind.entries) {
+                val pubkeys = prefs[rationaleKey(relayUrl, kind)].toPubkeySet()
+                if (pubkeys.isNotEmpty()) put(kind, pubkeys)
+            }
+        }
+    }
+
+    override suspend fun allRationales(): Map<String, Map<AuthPurposeKind, Set<String>>> {
+        val prefs = store.data.first()
+        val result = mutableMapOf<String, MutableMap<AuthPurposeKind, Set<String>>>()
+        for ((key, value) in prefs.asMap()) {
+            val name = key.name
+            if (!name.startsWith(RATIONALE_PREFIX)) continue
+            val rest = name.removePrefix(RATIONALE_PREFIX) // "<hash>:<KIND>"
+            val hash = rest.substringBefore(':')
+            val kind = runCatching { AuthPurposeKind.valueOf(rest.substringAfter(':')) }.getOrNull() ?: continue
+            val url = prefs[stringPreferencesKey("$URL_PREFIX$hash")] ?: continue
+            val pubkeys = (value as? String).toPubkeySet()
+            if (pubkeys.isNotEmpty()) {
+                result.getOrPut(url) { mutableMapOf() }[kind] = pubkeys
+            }
+        }
+        return result
+    }
+
+    private fun String?.toPubkeySet(): Set<String> = this?.split(SEPARATOR)?.filterTo(mutableSetOf()) { it.isNotEmpty() } ?: emptySet()
+
     private fun decisionKey(relayUrl: String) = stringPreferencesKey("$DECISION_PREFIX${hash(relayUrl)}")
 
     private fun urlKey(relayUrl: String) = stringPreferencesKey("$URL_PREFIX${hash(relayUrl)}")
 
+    private fun rationaleKey(
+        relayUrl: String,
+        kind: AuthPurposeKind,
+    ) = stringPreferencesKey("$RATIONALE_PREFIX${hash(relayUrl)}:${kind.name}")
+
+    private fun lastUsedKey(relayUrl: String) = stringPreferencesKey("$LAST_USED_PREFIX${hash(relayUrl)}")
+
     companion object {
         private const val DECISION_PREFIX = "allow:"
         private const val URL_PREFIX = "url:"
+        private const val RATIONALE_PREFIX = "rat:"
+        private const val LAST_USED_PREFIX = "used:"
+        private const val SEPARATOR = ","
+
+        /** Cap on counterparties remembered per relay+purpose, so a large outbox author set can't
+         *  bloat the DataStore file or the settings screen. */
+        private const val MAX_COUNTERPARTIES_STORED = 64
+
+        /** Minimum seconds between last-used refreshes when no new counterparty appears. */
+        private const val LAST_USED_REFRESH_SECS = 300L
 
         private fun hash(relayUrl: String): String {
             val digest = MessageDigest.getInstance("SHA-256").digest(relayUrl.toByteArray())

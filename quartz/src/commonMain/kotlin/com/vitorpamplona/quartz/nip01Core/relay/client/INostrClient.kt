@@ -104,6 +104,9 @@ interface INostrClient : AutoCloseable {
     fun activeCounts(url: NormalizedRelayUrl): Map<String, List<Filter>>
 
     fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey>
+
+    /** The events still pending delivery to [url] (full events, not just ids). */
+    fun activeOutboxEvents(url: NormalizedRelayUrl): List<Event>
 }
 
 class EmptyNostrClient : INostrClient {
@@ -157,6 +160,8 @@ class EmptyNostrClient : INostrClient {
     override fun activeCounts(url: NormalizedRelayUrl): Map<String, List<Filter>> = emptyMap()
 
     override fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey> = emptySet()
+
+    override fun activeOutboxEvents(url: NormalizedRelayUrl): List<Event> = emptyList()
 
     override fun close() {}
 }

@@ -431,6 +431,8 @@ private class CapturingNostrClient : INostrClient {
 
     override fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey> = emptySet()
 
+    override fun activeOutboxEvents(url: NormalizedRelayUrl): List<Event> = emptyList()
+
     override fun close() {}
 }
 
@@ -489,6 +491,8 @@ private class CountingNostrClient(
     override fun activeCounts(url: NormalizedRelayUrl): Map<String, List<Filter>> = emptyMap()
 
     override fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey> = emptySet()
+
+    override fun activeOutboxEvents(url: NormalizedRelayUrl): List<Event> = emptyList()
 
     override fun close() {}
 }

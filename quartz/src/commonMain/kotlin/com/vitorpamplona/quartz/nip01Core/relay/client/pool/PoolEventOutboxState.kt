@@ -48,17 +48,21 @@ class PoolEventOutboxState(
 
     fun remainingRelays() = relaysRemaining
 
-    fun newTry(url: NormalizedRelayUrl) {
+    /** Records a send attempt to [url]. Returns true if the retry budget is now exhausted and the
+     *  relay was dropped (i.e. we gave up delivering this event to [url]). */
+    fun newTry(url: NormalizedRelayUrl): Boolean {
         val currentTries = failures[url]
         if (currentTries != null) {
             currentTries.addTriedTime(TimeUtils.now())
             if (currentTries.isDone()) {
                 relaysRemaining = relaysRemaining - url
                 failures = failures - url
+                return true
             }
         } else {
             failures = failures + (url to Tries(listOf(TimeUtils.now())))
         }
+        return false
     }
 
     fun newResponse(
@@ -70,9 +74,15 @@ class PoolEventOutboxState(
             relaysRemaining = relaysRemaining - url
             failures = failures - url
         } else if (message.isAuthRequired()) {
-            // NIP-42 AUTH challenge in flight — don't count toward the try cap.
-            // RelayAuthenticator signs + relay re-issues OK; syncFilters() then
-            // re-pumps this outbox so the original publish is retried.
+            // NIP-42 AUTH challenge in flight. The relay responded, so it's up and simply wants
+            // auth first: RelayAuthenticator signs, the relay re-issues OK, and syncFilters()
+            // re-pumps this outbox to retry the publish. Reset the retry budget for this relay
+            // (clear both tries and responses) so the send attempts accumulated across reconnects /
+            // slow AUTH rounds can't exhaust the cap and drop the event before AUTH lands. Note
+            // newTry() (the send path) grows `tries` and is NOT auth-aware, so only clearing
+            // `responses` would still let a re-pumped event give up here. relaysRemaining is left
+            // as-is: the event must stay pending for this relay until AUTH unlocks it.
+            failures = failures - url
         } else {
             val currentTries = failures[url]
             if (currentTries != null) {
@@ -95,7 +105,12 @@ class PoolEventOutboxState(
             this.startsWith("deleted:") ||
             this.startsWith("invalid:")
 
-    fun String.isAuthRequired() = this.startsWith("auth-required:")
+    /**
+     * NIP-42 machine-readable prefix a relay uses to tell us an event was held
+     * back pending authentication. The event should be re-sent after AUTH, not
+     * retried-then-discarded like an ordinary failure.
+     */
+    fun String.isAuthRequired() = this.startsWith("auth-required:") || this == "auth-required"
 
     // Tries 3 times
     class Tries(
