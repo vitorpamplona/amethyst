@@ -2828,7 +2828,12 @@ class Account(
             // process death mid-mine cannot lose the file announcement.
             val senderMessage = signer.sign(template)
             val seals = NIP17Factory().createSeals(senderMessage, senderMessage.groupMembers(), signer)
-            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) return
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) {
+                // The wraps publish only after mining, but the user has already
+                // replied — advance the read marker now.
+                markDmRoomAsRead(senderMessage)
+                return
+            }
         }
 
         broadcastPrivately(NIP17Factory().createEncryptedFileNIP17(template, signer))
@@ -2840,7 +2845,12 @@ class Account(
             // See sendNip17EncryptedFile: sign inline, queue only wrap mining.
             val senderMessage = signer.sign(template)
             val seals = NIP17Factory().createSeals(senderMessage, senderMessage.groupMembers(), signer)
-            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) return
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) {
+                // The wraps publish only after mining, but the user has already
+                // replied — advance the read marker now.
+                markDmRoomAsRead(senderMessage)
+                return
+            }
         }
 
         broadcastPrivately(NIP17Factory().createMessageNIP17(template, signer))
@@ -2881,7 +2891,10 @@ class Account(
         }
     }
 
-    suspend fun broadcastPrivately(signedEvents: NIP17Factory.Result) = broadcastPrivately(signedEvents.wraps)
+    suspend fun broadcastPrivately(signedEvents: NIP17Factory.Result) {
+        broadcastPrivately(signedEvents.wraps)
+        markDmRoomAsRead(signedEvents.msg)
+    }
 
     suspend fun broadcastPrivately(wraps: List<GiftWrapEvent>) {
         val mine = wraps.filter { (it.recipientPubKey() == signer.pubKey) }
@@ -2910,8 +2923,6 @@ class Account(
         // batcher re-delivers this note later; the processor's replay path and
         // the chatroom add are both idempotent.
         mineNote?.let { newNotesPreProcessor.consume(it) }
-
-        markDmRoomAsRead(signedEvents.msg)
     }
 
     /**
