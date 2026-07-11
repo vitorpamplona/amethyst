@@ -137,6 +137,10 @@ object GrapeRankCommand {
 
     private const val PROBE_TIMEOUT_MS = 2000
 
+    // args.bool on a mistyped flag silently returns false, so the one flag read from
+    // three different functions goes through a compile-time-checked name.
+    private const val NO_REACHABILITY_CACHE_FLAG = "no-reachability-cache"
+
     // The probe does BLOCKING DNS + TCP connect, and dead-domain DNS lookups can hang
     // far past the connect timeout. On the shared Dispatchers.IO those hanging lookups
     // starve the crawl's own IO — measured +462s on the finishing drain at hop-3. Run
@@ -452,7 +456,7 @@ object GrapeRankCommand {
         // parallel storm at crawl start so the connect wait is paid once, up front.
         // The crawl's own final live/dead set is flushed back by the caller.
         val reachability =
-            if (args.bool("no-reachability-cache")) null else ctx.reachability.snapshot()
+            if (args.bool(NO_REACHABILITY_CACHE_FLAG)) null else ctx.reachability.snapshot()
         val knownDead = reachability?.dead ?: emptySet()
         // Mass pre-connect sizing: every warm socket is one FD, so the default is
         // derived from the process's ulimit (--preconnect-cap to override,
@@ -529,7 +533,7 @@ object GrapeRankCommand {
         args: Args,
         stats: GrapeRankCrawler.Stats,
     ) {
-        if (args.bool("no-reachability-cache")) return
+        if (args.bool(NO_REACHABILITY_CACHE_FLAG)) return
         runCatching {
             ctx.reachability.record(reachable = stats.liveRelays, dead = stats.deadRelays)
             System.err.println(
@@ -699,7 +703,7 @@ object GrapeRankCommand {
             // Live author-advertised relays are always synced (--no-reachability-cache
             // to reconcile every relay regardless).
             val knownDead =
-                if (args.bool("no-reachability-cache")) emptySet() else ctx.reachability.snapshot().dead
+                if (args.bool(NO_REACHABILITY_CACHE_FLAG)) emptySet() else ctx.reachability.snapshot().dead
 
             val updater =
                 GrapeRankUpdater(
