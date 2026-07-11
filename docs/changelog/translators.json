@@ -129,6 +129,18 @@
         ]
       },
       {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
+        ]
+      },
+      {
+        "user": "hypnotichemionus4",
+        "languages": [
+          "Chinese Simplified"
+        ]
+      },
+      {
         "user": "rajs19420616",
         "languages": [
           "Hindi"
@@ -141,12 +153,6 @@
         ]
       },
       {
-        "user": "hypnotichemionus4",
-        "languages": [
-          "Chinese Simplified"
-        ]
-      },
-      {
         "user": "crowdin.pretended462",
         "languages": [
           "German"
@@ -156,12 +162,6 @@
         "user": "anthony-robin",
         "languages": [
           "French"
-        ]
-      },
-      {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
         ]
       },
       {
