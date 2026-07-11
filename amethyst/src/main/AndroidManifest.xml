@@ -193,6 +193,16 @@
                 <data android:host="iris.to" />
             </intent-filter>
 
+            <!-- Concord community invite links: https://amethyst.social/invite/<naddr>#<fragment> -->
+            <intent-filter android:label="Amethyst">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="amethyst.social" />
+                <data android:pathPrefix="/invite/" />
+            </intent-filter>
+
             <intent-filter android:label="zap.stream">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

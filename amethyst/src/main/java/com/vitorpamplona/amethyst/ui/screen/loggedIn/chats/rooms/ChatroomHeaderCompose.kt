@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ConcordServerRoomNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.RelayGroupServerRoomNote
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
@@ -119,6 +120,7 @@ fun ChatroomHeaderCompose(
     // would blank the row.
     val rendersWithoutEvent =
         baseNote is RelayGroupServerRoomNote ||
+            baseNote is ConcordServerRoomNote ||
             (
                 baseNote.event == null &&
                     baseNote.inGatherers?.any { it is MarmotGroupChatroom || it is RelayGroupChannel || it is ConcordChannel } == true
@@ -162,6 +164,11 @@ private fun ChatroomEntry(
 ) {
     if (lastMessage is RelayGroupServerRoomNote) {
         RelayGroupServerRoomCompose(lastMessage, accountViewModel, nav)
+        return
+    }
+
+    if (lastMessage is ConcordServerRoomNote) {
+        ConcordServerRoomCompose(lastMessage, accountViewModel, nav)
         return
     }
 
@@ -508,6 +515,52 @@ private fun RelayGroupServerRoomCompose(
                 .collectAsStateWithLifecycle()
                 .value,
         onClick = { nav.nav(Route.RelayGroupServer(relay.url)) },
+    )
+}
+
+@Composable
+private fun ConcordServerRoomCompose(
+    row: ConcordServerRoomNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    // Community name/icon from the folded Control Plane (bumped via the session revision).
+    val revision by accountViewModel.account.concordSessions.revision
+        .collectAsStateWithLifecycle()
+    val metadata =
+        remember(row.communityId, revision) {
+            accountViewModel.account.concordSessions
+                .sessionFor(row.communityId)
+                ?.state
+                ?.value
+                ?.metadata
+        }
+    val name = metadata?.name?.takeIf { it.isNotBlank() } ?: stringRes(R.string.concord_home_title)
+
+    val author = row.newestMessage?.author
+    val noteEvent = row.newestMessage?.event
+    val lastContent =
+        if (author != null && noteEvent != null) {
+            val authorName by observeUserName(author, accountViewModel)
+            "$authorName: ${noteEvent.content.take(200)}"
+        } else {
+            stringRes(R.string.relay_group_no_messages_yet)
+        }
+
+    ChannelName(
+        channelIdHex = row.communityId,
+        channelPicture = metadata?.icon,
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, R.string.concord_server_label, modifier) },
+        channelLastTime = row.newestMessage?.createdAt(),
+        channelLastContent = lastContent,
+        hasNewMessages = false,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
+        onClick = { nav.nav(Route.ConcordServer(row.communityId)) },
     )
 }
 

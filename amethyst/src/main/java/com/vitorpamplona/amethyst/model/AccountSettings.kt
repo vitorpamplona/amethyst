@@ -310,6 +310,13 @@ class AccountSettings(
         }
     }
 
+    fun updateConcordViewMode(mode: ConcordViewMode) {
+        if (concordViewMode.value != mode) {
+            concordViewMode.tryEmit(mode)
+            saveAccountSettings()
+        }
+    }
+
     // ---
     // Always-on Notification Service
     // ---

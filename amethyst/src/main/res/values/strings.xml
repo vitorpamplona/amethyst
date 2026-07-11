@@ -342,6 +342,13 @@
     <string name="concord_role_banned">Banned</string>
     <string name="concord_invite_card_join">Join community</string>
     <string name="concord_invite_card_subtitle">Concord community invite</string>
+    <string name="concord_invite_naddr_label">Concord invite (open the full invite link to join)</string>
+    <string name="concord_server_label">Concord</string>
+    <string name="concord_view_mode_title">Concord community display</string>
+    <string name="concord_view_inline">Inline</string>
+    <string name="concord_view_grouped">By community</string>
+    <string name="concord_view_inline_desc">Show each channel as its own conversation, mixed in with your chats.</string>
+    <string name="concord_view_grouped_desc">Collapse each community\'s channels into a single row, placed at its newest message.</string>
     <string name="chats_history_proto_nip17">encrypted</string>
     <string name="chats_history_proto_nip04">legacy</string>
     <string name="chats_reply_searching_history">Looking for the original message…</string>

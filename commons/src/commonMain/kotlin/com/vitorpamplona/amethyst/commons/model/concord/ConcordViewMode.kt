@@ -34,5 +34,7 @@ enum class ConcordViewMode {
 
     companion object {
         val DEFAULT = INLINE
+
+        fun fromName(name: String?): ConcordViewMode = entries.firstOrNull { it.name == name } ?: DEFAULT
     }
 }
