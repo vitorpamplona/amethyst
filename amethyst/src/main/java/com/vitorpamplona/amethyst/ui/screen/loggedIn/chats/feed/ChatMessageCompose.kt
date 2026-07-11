@@ -267,7 +267,17 @@ fun NormalChatNote(
             },
         timeRow =
             if (!innerQuote && groupPosition.isLastOfGroup) {
-                { ChatTimeAgo(note) }
+                {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = RowColSpacing,
+                    ) {
+                        ChatTimeAgo(note)
+                        if (isLoggedInUser && !note.isDraft()) {
+                            ChatDeliveryTicks(note, accountViewModel)
+                        }
+                    }
+                }
             } else {
                 null
             },

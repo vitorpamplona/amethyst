@@ -2818,6 +2818,10 @@
     <string name="add_content_warning">Add content warning</string>
     <string name="remove_content_warning">Remove content warning</string>
 
+    <string name="chat_delivery_pending">Waiting for a relay to accept this message</string>
+    <string name="chat_delivery_accepted">Accepted by at least one relay</string>
+    <string name="chat_delivery_delivered_all">Delivered to all recipients\' relays</string>
+
     <string name="add_expiration_date">Add expiration date</string>
     <string name="remove_expiration_date">Remove expiration date</string>
     <string name="expiration_date_label">Expiration Date</string>

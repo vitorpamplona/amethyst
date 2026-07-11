@@ -127,6 +127,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.ChatDeliveryTracker
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
@@ -516,6 +517,10 @@ class Account(
             .MarmotGroupList(signer.pubKey)
 
     val newNotesPreProcessor = EventProcessor(this, cache)
+
+    // Per-message publish acceptance (relay OKs), feeding the delivery ticks on
+    // own chat bubbles.
+    val chatDeliveryTracker = ChatDeliveryTracker(client)
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
@@ -2423,11 +2428,14 @@ class Account(
         val event = signer.sign(template)
         cache.justConsumeMyOwnEvent(event)
         val relays = relayList(event)
-        if (!relays.isNullOrEmpty()) {
-            client.publish(event, relays.toSet())
-        } else {
-            client.publish(event, computeRelayListToBroadcast(event))
-        }
+        val targets =
+            if (!relays.isNullOrEmpty()) {
+                relays.toSet()
+            } else {
+                computeRelayListToBroadcast(event)
+            }
+        chatDeliveryTracker.trackPublic(event.id, targets)
+        client.publish(event, targets)
         return event
     }
 
@@ -2892,6 +2900,19 @@ class Account(
     }
 
     suspend fun broadcastPrivately(signedEvents: NIP17Factory.Result) {
+        // The recipient -> wrap -> target-relays mapping only exists here, before
+        // the wraps are aliased onto a single note; capture it for delivery ticks.
+        signedEvents.wraps.forEach { wrap ->
+            wrap.recipientPubKey()?.let { recipient ->
+                chatDeliveryTracker.trackWrap(
+                    displayedNoteId = signedEvents.msg.id,
+                    recipient = recipient,
+                    wrapId = wrap.id,
+                    targetRelays = computeRelayListToBroadcast(wrap),
+                )
+            }
+        }
+
         broadcastPrivately(signedEvents.wraps)
         markDmRoomAsRead(signedEvents.msg)
     }
