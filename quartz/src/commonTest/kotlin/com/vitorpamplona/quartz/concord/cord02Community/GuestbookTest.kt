@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.concord.cord02Community
 
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import kotlin.test.Test
@@ -35,7 +34,7 @@ class GuestbookTest {
     @Test
     fun joinWithInviteAttributionRoundTrips() {
         val rumor = Guestbook.join(member, createdAt = 1_700_000_000L, subMs = 128, inviteCreator = creator, inviteLabel = "Reddit")
-        assertEquals(ConcordKinds.JOIN_LEAVE, rumor.kind)
+        assertEquals(Guestbook.KIND_JOIN_LEAVE, rumor.kind)
         assertEquals("join", rumor.content)
 
         val entry = Guestbook.parse(rumor)
@@ -55,7 +54,7 @@ class GuestbookTest {
     @Test
     fun kickTargetsAMember() {
         val rumor = Guestbook.kick(actorPubKey = creator, target = target, createdAt = 1L)
-        assertEquals(ConcordKinds.KICK, rumor.kind)
+        assertEquals(Guestbook.KIND_KICK, rumor.kind)
         assertEquals(target, Guestbook.kickTarget(rumor))
     }
 

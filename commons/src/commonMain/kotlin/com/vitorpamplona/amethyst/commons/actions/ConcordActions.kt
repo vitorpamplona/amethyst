@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteBundle
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteLink
 import com.vitorpamplona.quartz.concord.cord05Invites.MintedInviteLink
@@ -35,7 +36,6 @@ import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundle
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -81,16 +81,16 @@ object ConcordActions {
     // ---- relay filters (what to REQ) -----------------------------------------
 
     /** Wraps at a plane/channel address: kind-1059 events authored by the stream key. */
-    fun planeFilter(planePubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordKinds.WRAP), authors = listOf(planePubKeyHex))
+    fun planeFilter(planePubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordStreamEnvelope.KIND_WRAP), authors = listOf(planePubKeyHex))
 
     /** Wraps across several plane addresses on one relay: kind-1059 authored by any of them. */
-    fun planeFilterFor(planePubKeysHex: List<HexKey>): Filter = Filter(kinds = listOf(ConcordKinds.WRAP), authors = planePubKeysHex)
+    fun planeFilterFor(planePubKeysHex: List<HexKey>): Filter = Filter(kinds = listOf(ConcordStreamEnvelope.KIND_WRAP), authors = planePubKeysHex)
 
     /** The public invite bundle for a link signer. */
     fun bundleFilter(linkSignerPubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordInviteBundleEvent.KIND), authors = listOf(linkSignerPubKeyHex))
 
     /** Pending direct invites addressed to the given member (indexed by k=3313). */
-    fun directInvitesFilter(memberPubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordKinds.WRAP), tags = mapOf("p" to listOf(memberPubKeyHex), "k" to listOf(ConcordKinds.DIRECT_INVITE.toString())))
+    fun directInvitesFilter(memberPubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordStreamEnvelope.KIND_WRAP), tags = mapOf("p" to listOf(memberPubKeyHex), "k" to listOf(ConcordDirectInvite.KIND.toString())))
 
     // ---- community lifecycle --------------------------------------------------
 

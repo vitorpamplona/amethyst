@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.concord.cord05Invites
 
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -41,7 +40,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
  * It cannot be revoked — the recipient holds the keys the moment it lands.
  */
 object ConcordDirectInvite {
-    const val KIND: Int = ConcordKinds.DIRECT_INVITE
+    const val KIND: Int = 3313
     const val TAG_P = "p"
     const val TAG_K = "k"
 

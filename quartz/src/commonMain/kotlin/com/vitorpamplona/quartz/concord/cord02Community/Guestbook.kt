@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.concord.cord02Community
 
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
@@ -59,6 +58,10 @@ class GuestbookEntry(
  * [com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope].
  */
 object Guestbook {
+    /** Guestbook rumor kinds (CORD-02): self-signed join/leave and authorized kick. */
+    const val KIND_JOIN_LEAVE = 3306
+    const val KIND_KICK = 3309
+
     const val TAG_MS = "ms"
     const val TAG_INVITE = "invite"
     const val TAG_P = "p"
@@ -92,7 +95,7 @@ object Guestbook {
         if (inviteCreator != null) {
             tags.add(if (inviteLabel != null) arrayOf(TAG_INVITE, inviteCreator, inviteLabel) else arrayOf(TAG_INVITE, inviteCreator))
         }
-        return RumorAssembler.assembleRumor(memberPubKey, createdAt, ConcordKinds.JOIN_LEAVE, tags.toTypedArray(), action.wire)
+        return RumorAssembler.assembleRumor(memberPubKey, createdAt, KIND_JOIN_LEAVE, tags.toTypedArray(), action.wire)
     }
 
     /**
@@ -105,11 +108,11 @@ object Guestbook {
         actorPubKey: HexKey,
         target: HexKey,
         createdAt: Long,
-    ): Event = RumorAssembler.assembleRumor(actorPubKey, createdAt, ConcordKinds.KICK, arrayOf(arrayOf(TAG_P, target)), "")
+    ): Event = RumorAssembler.assembleRumor(actorPubKey, createdAt, KIND_KICK, arrayOf(arrayOf(TAG_P, target)), "")
 
     /** Parses a Guestbook join/leave rumor, or null if it is not one. */
     fun parse(rumor: Event): GuestbookEntry? {
-        if (rumor.kind != ConcordKinds.JOIN_LEAVE) return null
+        if (rumor.kind != KIND_JOIN_LEAVE) return null
         val action = GuestbookAction.of(rumor.content) ?: return null
         val invite = rumor.tags.firstOrNull { it.size >= 2 && it[0] == TAG_INVITE }
         return GuestbookEntry(
@@ -122,5 +125,5 @@ object Guestbook {
     }
 
     /** The kick target's pubkey from a kind-3309 rumor, or null. */
-    fun kickTarget(rumor: Event): HexKey? = if (rumor.kind == ConcordKinds.KICK) rumor.tags.firstTagValue(TAG_P) else null
+    fun kickTarget(rumor: Event): HexKey? = if (rumor.kind == KIND_KICK) rumor.tags.firstTagValue(TAG_P) else null
 }

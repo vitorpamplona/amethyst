@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.concord.cord06Rekey
 
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
@@ -106,7 +105,7 @@ object ConcordRekey {
             emptyList()
         }
 
-    const val KIND: Int = ConcordKinds.REKEY
+    const val KIND: Int = 3303
 
     /**
      * Finds the recipient's rotated key across the [blobs] of one or more chunks,

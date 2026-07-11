@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.concord.cord07Voice
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.ChannelTag
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.EpochTag
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
@@ -51,7 +50,7 @@ class VoicePresenceInfo(
  * [HEARTBEAT_MS] and considered absent after [STALE_MS].
  */
 object VoicePresence {
-    const val KIND = ConcordKinds.VOICE_PRESENCE
+    const val KIND = 23313
     const val CONTENT_JOINED = "joined"
     const val CONTENT_LEFT = "left"
     const val TAG_IDENTITY = "identity"

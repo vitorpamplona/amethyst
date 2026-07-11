@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
+import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -116,7 +116,7 @@ object ConcordSubscriptionPlanner {
                 relay = relay,
                 filter =
                     Filter(
-                        kinds = listOf(ConcordKinds.WRAP),
+                        kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
                         authors = authors.toList(),
                         since = since?.get(relay)?.time,
                     ),
