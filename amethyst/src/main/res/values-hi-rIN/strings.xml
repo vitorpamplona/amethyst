@@ -803,16 +803,19 @@
     <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
     <string name="relay_auth_title_send_dm">क्या आपका सन्देश %1$s को भेजें।</string>
     <string name="relay_auth_title_notify">क्या %1$s को सूचित करें।</string>
+    <string name="relay_auth_title_read">क्या %1$s से परिचय पत्र तथा गतिविधियों का आवहन करें।</string>
     <string name="relay_auth_title_post_venue">क्या %1$s को पत्र भेजें।</string>
     <string name="relay_auth_title_read_venue">क्या %1$s को खोलें।</string>
     <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
     <string name="relay_auth_consequence_send_dm">यदि आप पुष्टि नहीं करते तो %1$s को आपका सन्देश नहीं भेजा जाएगा।</string>
     <string name="relay_auth_consequence_notify">यदि आप नहीं स्वीकारते तो %1$s को इस विषय पर सूचित नहीं किया जाएगा।</string>
+    <string name="relay_auth_consequence_read">यदि नहीं स्वीकारते तो %1$s से परिचय पत्र अथवा गतिविधियाँ आपको यहाँ नहीं दिखेगा।</string>
     <string name="relay_auth_consequence_post_venue">यदि आप स्वीकारते नहीं तो %1$s को आपका सन्देश प्रकाशित नहीं किया जाएगा।</string>
     <string name="relay_auth_consequence_read_venue">यदि आप स्वीकारते नहीं तो आप यहाँ %1$s को नहीं देखेंगे।</string>
     <string name="relay_auth_name_and_others">%1$s तथा अन्य</string>
     <string name="relay_auth_reason_send_dm">आपका निजी सन्देश भेजें इनको :</string>
     <string name="relay_auth_reason_notify_inbox">इनको सूचित करें :</string>
+    <string name="relay_auth_reason_read_outbox">परिचय जानकारी पत्र तथा गतिविधियों का अवरोहण करें यहाँ से :</string>
     <string name="relay_auth_reason_post_venue">इस शाला को पत्र भेजें</string>
     <string name="relay_auth_reason_read_venue">इस शाला को खोलें</string>
     <string name="relay_auth_reason_other">इस पुनःप्रसारक का उपयोग करें</string>
@@ -3445,6 +3448,27 @@
     <string name="pow_custom_difficulty_explainer">लक्ष्य का सूक्ष्मानुकूलन अग्रतम शून्य द्व्यंकों में।</string>
     <string name="pow_categories_title">क्या खनन करना चाहिए</string>
     <string name="pow_categories_explainer">समयसंकट घटनाओं (पुनःप्रसारक प्रमाणीकरण ज्साप अनुरोध धनकोष तथा हस्ताक्षरकर्ता सन्देश पाण्डुलिपियाँ सूचियाँ) के लिए खनन कभी नहीं।</string>
+    <string name="pow_category_short_notes">लघु टीकाएँ तथा प्रत्युत्तर</string>
+    <string name="pow_category_short_notes_explainer">प्राथमिक सार्वजनिक कचरालेख रूप</string>
+    <string name="pow_category_comments">टिप्पणियाँ</string>
+    <string name="pow_category_comments_explainer">निबन्ध अभिलेख तथा अन्य विषयवस्तुओं के लिए प्रत्युत्तर</string>
+    <string name="pow_category_reports">सूचनाएँ</string>
+    <string name="pow_category_reports_explainer">पुनःप्रसारक सूचनाओं का तोलन करते हैं उनके लागत के अनुसार</string>
+    <string name="pow_category_long_form">दीर्घरूप तथा उद्दीप्तव्य</string>
+    <string name="pow_category_long_form_explainer">निबन्ध तथा उद्दीप्तव्य। विरल। लागत नगण्य</string>
+    <string name="pow_category_voice">ध्वनि सन्देश</string>
+    <string name="pow_category_voice_explainer">सार्वजनिक ध्वनि पत्र तथा प्रत्युत्तर</string>
+    <string name="pow_category_reposts">पुनःप्रकाशन</string>
+    <string name="pow_category_reposts_explainer">उच्च मात्रा सक्रिय प्रयोक्ताओं के लिए</string>
+    <string name="pow_category_reactions">प्रतिक्रियाएँ</string>
+    <string name="pow_category_reactions_explainer">उच्चतम मात्रा प्रकार। प्रत्येक इष्टसूचक के लिए खनन का परिणाम विद्युत्कोष का व्यय</string>
+    <string name="pow_category_public_chat">सार्वजनिक तथा सीधा चर्चा</string>
+    <string name="pow_category_public_chat_explainer">खनन विलम्बता से वार्तालाप प्रवाह आहत</string>
+    <string name="pow_category_gift_wraps">निजी सन्देश कोष</string>
+    <string name="pow_category_gift_wraps_explainer">सीधासन्देश पुनःप्रसारकों को आगतपेटिका कचरालेख छालन करने में सक्षम करता है। केवल बाहरी कोष का खनन होता है। आपका सन्देश कभी नहीं</string>
+    <string name="pow_category_other_public">अन्य सार्वजनिक विषयवस्तु</string>
+    <string name="pow_category_other_public_explainer">मतदान वर्तमानस्थितियाँ वर्गीकृतविज्ञापन तथा अन्य सभी सार्वजनिक</string>
+    <string name="pow_mining_title">श्रमप्रमाण खनन</string>
     <string name="ai_writing_use_this">इसका प्रयोग करें</string>
     <string name="ai_writing_dismiss">हटाएँ</string>
     <string name="ai_tone_correct">सम्यक</string>
