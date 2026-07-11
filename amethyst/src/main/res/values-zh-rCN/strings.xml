@@ -778,13 +778,18 @@
     <string name="relay_auth_policy_always_desc">为每个请求身份认证挑战的中继签署它</string>
     <string name="relay_auth_policy_never">从不认证</string>
     <string name="relay_auth_policy_never_desc">忽略所有中继的认证挑战</string>
-    <string name="relay_auth_policy_if_in_my_list">仅我的中继</string>
-    <string name="relay_auth_policy_if_in_my_list_desc">仅通过您的中继列表中的中继进行身份认证</string>
+    <string name="relay_auth_policy_custom_desc">选择登录到哪些中继。会询问你任何下面尚未允许的东西。</string>
+    <string name="relay_auth_toggle_my_relays_desc">登录到您自己的中继和您加入或收藏的公共聊天室、社区和直播。</string>
+    <string name="relay_auth_toggle_message_follows_desc">登录到以下中继之一来发送私信、回复和通知。</string>
+    <string name="relay_auth_toggle_message_strangers_desc">登录陌生人的中继来发送私信、回复和通知。默认情况下关闭；每次都要问您。</string>
+    <string name="relay_auth_prompt_message">这个中继想要首先确认真的是你。它的运营者会看到你是哪个帐户。</string>
+    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
+    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
+    <string name="relay_auth_consequence_send_dm">如果不这么做，您给 %1$s 的消息将不会发送。</string>
     <string name="relay_auth_per_relay_overrides">不同中继设置覆盖</string>
     <string name="relay_auth_no_overrides">没有不同中继设置覆盖 — 所有中继使用全局政策</string>
     <string name="relay_auth_decision_allow">允许</string>
     <string name="relay_auth_decision_deny">拒绝</string>
-    <string name="relay_auth_remove_override">删除覆盖</string>
     <string name="nip82_repository_label">来源： %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">下载</string>
@@ -1721,6 +1726,14 @@
     <string name="messages_create_public_chat">公开</string>
     <string name="messages_create_group">组</string>
     <string name="messages_create_public_private_chat_description">新建公开或私人群组</string>
+    <string name="relay_group_view_inline_desc">将每个群显示为单独对话，与您的聊天混合。</string>
+    <string name="relay_group_view_grouped_desc">将每个中继的群组折叠为单行，放在最新消息上。</string>
+    <string name="relay_group_relay_no_nip29">此继电器不支持NIP-29中继群。 在这里创建的群将无法工作 — — 其名称、成员和消息将不会由中继管理。选择支持基于中继的群的中继。</string>
+    <string name="relay_group_join_code_hint">此群只有受邀才能加入。请输入邀请码。</string>
+    <string name="relay_group_remove_user_confirm">从此群中移除 %1$s ？在重新添加或重新邀请之前这些人将失去访问权限。</string>
+    <string name="relay_group_section_discovery_desc">帮助人们找到这个群。主题和位置会把群置于匹配的发现筛选器下面 (如果托管中继支持)。</string>
+    <string name="relay_group_browse_description">浏览中继托管的群组。粘贴一个中继地址，或在下方选择一个。</string>
+    <string name="relay_group_invite_only_to_post">此群只有受邀才能加入 —— 需要邀请才能发帖。</string>
     <string name="messages_new_message">私人</string>
     <string name="messages_new_message_to">至</string>
     <string name="messages_new_message_subject">主题</string>

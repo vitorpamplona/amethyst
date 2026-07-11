@@ -787,13 +787,12 @@
     <string name="relay_auth_policy_always_desc">Minden olyan átjátszó esetében alá kell írni az azonosítási kihívásokat, amely ezt kéri</string>
     <string name="relay_auth_policy_never">Soha ne végezzen hitelesítést</string>
     <string name="relay_auth_policy_never_desc">Az összes átjátszó hitelesítési kérésének figyelmen kívül hagyása</string>
-    <string name="relay_auth_policy_if_in_my_list">Csak saját átjátszók</string>
-    <string name="relay_auth_policy_if_in_my_list_desc">Csak az átjátszólistában szereplő átjászókkal hitelesítse magát</string>
+    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
+    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
     <string name="relay_auth_per_relay_overrides">Átjátszónkénti felülírások</string>
     <string name="relay_auth_no_overrides">Nincs átjátszónkénti felülírás - a globális szabály mindenhol érvényes</string>
     <string name="relay_auth_decision_allow">Engedélyezés</string>
     <string name="relay_auth_decision_deny">Megtagadás</string>
-    <string name="relay_auth_remove_override">Felülírás eltávolítása</string>
     <string name="nip82_repository_label">Forrás: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Letöltés</string>

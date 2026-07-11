@@ -766,6 +766,8 @@
     <string name="napplet_decision_deny">Refuser</string>
     <string name="napplet_connected_app_forget">Oublier cette application</string>
     <!-- Relay Authentication (NIP-42) settings -->
+    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
+    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
     <string name="relay_auth_decision_allow">Autoriser</string>
     <string name="relay_auth_decision_deny">Refuser</string>
     <string name="nip82_repository_label">Source : %1$s</string>

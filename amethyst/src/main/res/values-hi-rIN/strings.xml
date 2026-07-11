@@ -787,13 +787,12 @@
     <string name="relay_auth_policy_always_desc">प्रमाणीकरण चुनौतियों को हस्ताक्षर प्रत्येक पुनःप्रसारक के लिए जो इसका अनुरोध करता है</string>
     <string name="relay_auth_policy_never">प्रमाणीकरण कभी ना करें</string>
     <string name="relay_auth_policy_never_desc">प्रमाणीकरण चुनौतियों की उपेक्षा सभी पुनःप्रसारकों के प्रति</string>
-    <string name="relay_auth_policy_if_in_my_list">केवल मेरे पुनःप्रसारक</string>
-    <string name="relay_auth_policy_if_in_my_list_desc">केवल उन पुनःप्ररसारकों के साथ प्रमाणीकरण जो आपके पुनःप्रसारक सूची में हैं</string>
+    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
+    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
     <string name="relay_auth_per_relay_overrides">प्रति पुनःप्रसारक आवरक आदेश</string>
     <string name="relay_auth_no_overrides">कोई प्रति पुनःप्रसारक आवरक आदेश नहीं। वैश्विक नीति सर्वत्र लागू</string>
     <string name="relay_auth_decision_allow">अनुमत</string>
     <string name="relay_auth_decision_deny">अस्वीकार</string>
-    <string name="relay_auth_remove_override">आवरक आदेश हटाएँ</string>
     <string name="nip82_repository_label">स्रोत : %1$s</string>
     <string name="nip82_version_label">संस्करण %1$s</string>
     <string name="nip82_download">अवरोहण</string>
