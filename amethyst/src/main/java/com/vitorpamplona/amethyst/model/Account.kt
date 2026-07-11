@@ -1837,6 +1837,7 @@ class Account(
                 rootEpoch = community.rootEpoch,
                 relays = relayUrls,
                 name = name,
+                addedAt = TimeUtils.now() * 1000,
             ),
         )
         return community.communityIdHex
@@ -1901,6 +1902,7 @@ class Account(
                 rootEpoch = bundle.rootEpoch,
                 relays = bundle.relays,
                 name = bundle.name,
+                addedAt = TimeUtils.now() * 1000,
             )
         joinConcordCommunity(entry)
         return bundle.communityId

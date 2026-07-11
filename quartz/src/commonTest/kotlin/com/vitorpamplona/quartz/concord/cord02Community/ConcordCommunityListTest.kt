@@ -70,6 +70,70 @@ class ConcordCommunityListTest {
         }
 
     @Test
+    fun decodesArmadaWireDocument() {
+        // A document as Soapbox Armada writes it (communityList.ts): {entries:[{community_id,
+        // seed, current, added_at}], tombstones:[]} with snake_case JoinMaterial.
+        val json =
+            """
+            {
+              "entries": [
+                {
+                  "community_id": "${"11".repeat(32)}",
+                  "seed": {
+                    "community_id": "${"11".repeat(32)}",
+                    "owner": "${"0f".repeat(32)}",
+                    "owner_salt": "${"aa".repeat(32)}",
+                    "community_root": "${"bb".repeat(32)}",
+                    "root_epoch": 0,
+                    "channels": [],
+                    "relays": ["wss://relay.ditto.pub"],
+                    "name": "Soapbox"
+                  },
+                  "current": {
+                    "community_id": "${"11".repeat(32)}",
+                    "owner": "${"0f".repeat(32)}",
+                    "owner_salt": "${"aa".repeat(32)}",
+                    "community_root": "${"cc".repeat(32)}",
+                    "root_epoch": 2,
+                    "channels": [
+                      { "id": "${"ee".repeat(32)}", "key": "${"dd".repeat(32)}", "epoch": 2, "name": "secret" }
+                    ],
+                    "relays": ["wss://relay.ditto.pub"],
+                    "name": "Soapbox",
+                    "held_roots": [ { "epoch": 1, "key": "${"bb".repeat(32)}" } ]
+                  },
+                  "added_at": 1700000000000
+                }
+              ],
+              "tombstones": []
+            }
+            """.trimIndent()
+
+        val entries = ConcordCommunityList.decode(json)
+        assertEquals(1, entries.size)
+        val e = entries[0]
+        assertEquals("11".repeat(32), e.id)
+        assertEquals("Soapbox", e.name)
+        assertEquals("cc".repeat(32), e.root) // hydrated from `current`, not `seed`
+        assertEquals(2L, e.rootEpoch)
+        assertEquals(1700000000000L, e.addedAt)
+        assertEquals(listOf("wss://relay.ditto.pub"), e.relays)
+        assertEquals(1, e.privateChannels.size)
+        assertEquals("ee".repeat(32), e.privateChannels[0].channelId)
+        assertEquals("secret", e.privateChannels[0].name)
+        assertEquals(1, e.heldRoots.size)
+        assertEquals(1L, e.heldRoots[0].epoch)
+    }
+
+    @Test
+    fun tombstoneAfterAddDropsEntry() {
+        val jm = """{"community_id":"${"11".repeat(32)}","owner":"${"0f".repeat(32)}","owner_salt":"${"aa".repeat(32)}","community_root":"${"bb".repeat(32)}","root_epoch":0,"channels":[],"relays":[],"name":"Gone"}"""
+        val json =
+            """{"entries":[{"community_id":"${"11".repeat(32)}","seed":$jm,"current":$jm,"added_at":100}],"tombstones":[{"community_id":"${"11".repeat(32)}","removed_at":200}]}"""
+        assertTrue(ConcordCommunityList.decode(json).isEmpty()) // removed after add ⇒ not live
+    }
+
+    @Test
     fun mergeKeepsFreshestEpochPerCommunity() {
         val a = listOf(entry("11".repeat(32), "Old", epoch = 1))
         val b = listOf(entry("11".repeat(32), "New", epoch = 3), entry("22".repeat(32), "Other", epoch = 0))
