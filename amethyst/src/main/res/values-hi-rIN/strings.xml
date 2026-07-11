@@ -783,10 +783,18 @@
     <string name="relay_auth_settings_title">पुनःप्रसारक प्रमाणीकरण</string>
     <string name="relay_auth_search_keywords">प्रमाण प्रमाणीकरण पुनःप्रसारक हस्ताक्षरण सत्यापन निप॰४२ परिचय</string>
     <string name="relay_auth_global_policy">वैश्विक नीति</string>
+    <string name="relay_auth_custom_section">किसमें प्रवेशांकन करना है</string>
     <string name="relay_auth_policy_always">सर्वदा प्रमाणीकरण</string>
     <string name="relay_auth_policy_always_desc">प्रमाणीकरण चुनौतियों को हस्ताक्षर प्रत्येक पुनःप्रसारक के लिए जो इसका अनुरोध करता है</string>
     <string name="relay_auth_policy_never">प्रमाणीकरण कभी ना करें</string>
     <string name="relay_auth_policy_never_desc">प्रमाणीकरण चुनौतियों की उपेक्षा सभी पुनःप्रसारकों के प्रति</string>
+    <string name="relay_auth_policy_custom">अनुकूलित</string>
+    <string name="relay_auth_policy_custom_desc">स्पष्ट चयन करें किन पुनःप्रसारकों में प्रवेशांकन करना चाहिए। नीचे जिसको अनुमति नहीं दी गई उन सब के विषय में आप पूछे जाएँगे।</string>
+    <string name="relay_auth_toggle_my_relays">मेरे पुनःप्रसारक तथा आयोजन स्थल</string>
+    <string name="relay_auth_toggle_my_relays_desc">प्रवेशांकन करें आपके अपने पुनःप्रसारक तथा सार्वजनिक चर्चाएँ तथा समुदाय तथा सीधे प्रवाहों को जिनसे आप जुडे हैं अथवा प्रियचिह्नित किए हैं।</string>
+    <string name="relay_auth_toggle_read_follows">मेरे द्वारा अनुचरित लोगों के पत्र पढें</string>
+    <string name="relay_auth_toggle_read_follows_desc">अनुचरित के पुनःप्रसारकों में प्रवेशांकन करें उनके पत्र प्राप्त करने के लिए।</string>
+    <string name="relay_auth_toggle_message_follows">मेरे द्वारा अनुचरित लोगों को सन्देश भेजें</string>
     <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
     <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
     <string name="relay_auth_per_relay_overrides">प्रति पुनःप्रसारक आवरक आदेश</string>
