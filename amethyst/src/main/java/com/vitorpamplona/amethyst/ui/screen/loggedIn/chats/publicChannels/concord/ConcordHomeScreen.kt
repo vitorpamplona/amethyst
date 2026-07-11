@@ -88,8 +88,12 @@ fun ConcordHomeScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { nav.nav(Route.ConcordCreate) }) {
-                SymbolIcon(symbol = MaterialSymbols.Add, contentDescription = stringRes(R.string.concord_create_title))
+            FloatingActionButton(onClick = { nav.nav(Route.ConcordCreate) }, shape = CircleShape) {
+                SymbolIcon(
+                    symbol = MaterialSymbols.Add,
+                    contentDescription = stringRes(R.string.concord_create_title),
+                    modifier = Modifier.size(24.dp),
+                )
             }
         },
     ) { padding ->
