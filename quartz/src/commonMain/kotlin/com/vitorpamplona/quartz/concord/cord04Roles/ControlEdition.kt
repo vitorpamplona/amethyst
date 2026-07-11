@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.quartz.concord.cord04Roles
 
+import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
+import com.vitorpamplona.quartz.concord.cord04Roles.control.eid
+import com.vitorpamplona.quartz.concord.cord04Roles.control.ev
+import com.vitorpamplona.quartz.concord.cord04Roles.control.tags.EpTag
+import com.vitorpamplona.quartz.concord.cord04Roles.control.tags.VacTag
+import com.vitorpamplona.quartz.concord.cord04Roles.control.vsk
 import com.vitorpamplona.quartz.concord.crypto.EditionHash
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValueAsLong
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
 /**
@@ -70,43 +72,30 @@ class ControlEdition(
     val hashHex: String get() = hash.toHexKey()
 
     companion object {
-        const val TAG_VSK = "vsk"
-        const val TAG_EID = "eid"
-        const val TAG_EV = "ev"
-        const val TAG_EP = "ep"
-        const val TAG_VAC = "vac"
-
         /**
          * Parses a decrypted, verified kind-3308 [rumor] (its [author] is the
          * rumor's pubkey) into a [ControlEdition], or returns null if it is not a
          * well-formed control edition (unknown/absent `vsk`, missing `eid`/`ev`,
          * malformed hex, …) so the caller drops it rather than folding garbage.
+         * Reads the typed tags of [ControlEditionEvent].
          */
         fun fromRumor(
             rumor: Event,
             author: String = rumor.pubKey,
         ): ControlEdition? {
-            if (rumor.kind != ConcordKinds.CONTROL) return null
-            val entityKind = rumor.tags.firstTagValue(TAG_VSK)?.let { ControlEntityKind.of(it) } ?: return null
-            val entityId =
-                rumor.tags
-                    .firstTagValue(TAG_EID)
-                    ?.hexToByteArrayOrNull()
-                    ?.takeIf { it.size == 32 } ?: return null
-            val version = rumor.tags.firstTagValueAsLong(TAG_EV) ?: return null
-            if (version < 0) return null
+            if (rumor.kind != ControlEditionEvent.KIND) return null
+            val entityKind = rumor.tags.vsk() ?: return null
+            val entityId = rumor.tags.eid() ?: return null
+            val version = rumor.tags.ev() ?: return null
 
-            val prevValue = rumor.tags.firstTagValue(TAG_EP)
-            val prevHash = if (prevValue.isNullOrBlank()) null else prevValue.hexToByteArrayOrNull()?.takeIf { it.size == 32 } ?: return null
+            // A present-but-malformed `ep` is a corrupt edition (reject); an absent (or blank)
+            // `ep` is the genesis edition (no previous hash).
+            val epTag = rumor.tags.firstOrNull { it.size >= 2 && it[0] == EpTag.TAG_NAME && it[1].isNotBlank() }
+            val prevHash = if (epTag == null) null else EpTag.parse(epTag) ?: return null
 
-            val vacTag = rumor.tags.firstOrNull { it.size >= 4 && it[0] == TAG_VAC }
-            val vac =
-                vacTag?.let {
-                    val gid = it[1].hexToByteArrayOrNull()?.takeIf { b -> b.size == 32 } ?: return null
-                    val gver = it[2].toLongOrNull() ?: return null
-                    val ghash = it[3].hexToByteArrayOrNull()?.takeIf { b -> b.size == 32 } ?: return null
-                    AuthorityCitation(gid, gver, ghash)
-                }
+            // Likewise a present-but-malformed `vac` is rejected; absent means owner-authored.
+            val vacTag = rumor.tags.firstOrNull { it.size >= 4 && it[0] == VacTag.TAG_NAME }
+            val vac = if (vacTag == null) null else VacTag.parse(vacTag) ?: return null
 
             return ControlEdition(
                 entityKind = entityKind,

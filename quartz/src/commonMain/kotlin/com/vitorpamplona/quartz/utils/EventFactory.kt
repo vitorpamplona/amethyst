@@ -23,6 +23,7 @@
 package com.vitorpamplona.quartz.utils
 
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -605,6 +606,7 @@ class EventFactory {
                 RepostEvent.KIND -> RepostEvent(id, pubKey, createdAt, tags, content, sig)
                 RequestToVanishEvent.KIND -> RequestToVanishEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordCommunityListEvent.KIND -> ConcordCommunityListEvent(id, pubKey, createdAt, tags, content, sig)
+                ControlEditionEvent.KIND -> ControlEditionEvent(id, pubKey, createdAt, tags, content, sig)
                 SealedRumorEvent.KIND -> SealedRumorEvent(id, pubKey, createdAt, tags, content, sig)
                 SearchRelayListEvent.KIND -> SearchRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 SimpleGroupListEvent.KIND -> SimpleGroupListEvent(id, pubKey, createdAt, tags, content, sig)

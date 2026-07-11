@@ -20,17 +20,17 @@
  */
 package com.vitorpamplona.quartz.concord.cord04Roles
 
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
+import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 
 /**
  * Builds unsigned kind-3308 Control Plane edition rumors (the inverse of
  * [ControlEdition.fromRumor]). Seal these with a plaintext (20014) seal and wrap
  * them on the community's Control Plane so the author's signature survives
- * re-encryption across epochs.
+ * re-encryption across epochs. Reuses [ControlEditionEvent.build] for the wire
+ * shape (its typed `vsk`/`eid`/`ev`/`ep`/`vac` tags); this only stamps the author.
  */
 object ControlEditionBuilder {
     /**
@@ -47,22 +47,9 @@ object ControlEditionBuilder {
         content: String,
         createdAt: Long,
         authorityCitation: AuthorityCitation? = null,
-    ): Event {
-        val tags = ArrayList<Array<String>>(5)
-        tags.add(arrayOf(ControlEdition.TAG_VSK, entityKind.wire))
-        tags.add(arrayOf(ControlEdition.TAG_EID, entityId.toHexKey()))
-        tags.add(arrayOf(ControlEdition.TAG_EV, version.toString()))
-        if (prevHash != null) tags.add(arrayOf(ControlEdition.TAG_EP, prevHash.toHexKey()))
-        if (authorityCitation != null) {
-            tags.add(
-                arrayOf(
-                    ControlEdition.TAG_VAC,
-                    authorityCitation.grantId.toHexKey(),
-                    authorityCitation.grantVersion.toString(),
-                    authorityCitation.grantHash.toHexKey(),
-                ),
-            )
-        }
-        return RumorAssembler.assembleRumor(authorPubKey, createdAt, ConcordKinds.CONTROL, tags.toTypedArray(), content)
-    }
+    ): Event =
+        RumorAssembler.assembleRumor(
+            authorPubKey,
+            ControlEditionEvent.build(entityKind, entityId, version, content, prevHash, authorityCitation, createdAt),
+        )
 }
