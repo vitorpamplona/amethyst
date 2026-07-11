@@ -584,6 +584,24 @@ class AccountViewModel(
         }
     }
 
+    /** Promote/demote [member] as an Admin of [communityId] (from the Members roster; owner only takes effect). */
+    fun setConcordAdmin(
+        communityId: String,
+        member: HexKey,
+        makeAdmin: Boolean,
+    ) = launchSigner {
+        if (makeAdmin) account.makeConcordAdmin(communityId, member) else account.removeConcordAdmin(communityId, member)
+    }
+
+    /** Ban/unban [member] from [communityId] (from the Members roster). */
+    fun setConcordBan(
+        communityId: String,
+        member: HexKey,
+        ban: Boolean,
+    ) = launchSigner {
+        if (ban) account.banConcordMember(communityId, member) else account.unbanConcordMember(communityId, member)
+    }
+
     @Immutable
     data class NoteComposeReportState(
         val isPostHidden: Boolean = false,

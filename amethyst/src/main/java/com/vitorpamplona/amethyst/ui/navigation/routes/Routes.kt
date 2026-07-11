@@ -690,6 +690,14 @@ sealed class Route {
         val communityId: String,
     ) : Route()
 
+    @Serializable data class ConcordMembers(
+        val communityId: String,
+    ) : Route()
+
+    @Serializable data class ConcordEdit(
+        val communityId: String,
+    ) : Route()
+
     @Serializable object ConcordCreate : Route()
 
     // Deep-link target for a Concord invite link (naddr#fragment). Opens the join flow.

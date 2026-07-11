@@ -55,6 +55,17 @@ class AuthorityResolver private constructor(
     /** The role ids a member currently holds (empty for the owner and for plain members). */
     fun rolesOf(pubKey: String): Set<String> = memberRoles[pubKey.lowercase()] ?: emptySet()
 
+    /**
+     * The set of pubkeys that hold at least one validly-granted role (lowercase
+     * hex). This is the *privileged* roster — admins/moderators and any other
+     * role-holders — and excludes the owner and silent key-holding members, since
+     * plain membership is key possession and leaves no Control-Plane trace.
+     */
+    fun roleHolders(): Set<String> = memberRoles.keys
+
+    /** The healed banlist union (lowercase hex). */
+    fun bannedMembers(): Set<String> = banned
+
     /** The member's rank, lower being higher authority; null = no authority. Owner = [OWNER_RANK]. */
     fun rank(pubKey: String): Long? {
         val m = pubKey.lowercase()

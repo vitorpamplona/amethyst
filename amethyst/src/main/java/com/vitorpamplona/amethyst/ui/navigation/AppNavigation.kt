@@ -103,8 +103,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordChannelListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCreateScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordEditScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordHomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordInviteScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordMembersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.EphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.metadata.NewEphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelScreen
@@ -602,6 +604,22 @@ fun BuildNavigation(
 
         composableFromEndArgs<Route.ConcordServer> {
             ConcordChannelListScreen(
+                communityId = it.communityId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.ConcordMembers> {
+            ConcordMembersScreen(
+                communityId = it.communityId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.ConcordEdit> {
+            ConcordEditScreen(
                 communityId = it.communityId,
                 accountViewModel = accountViewModel,
                 nav = nav,

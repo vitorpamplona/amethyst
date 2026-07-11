@@ -132,7 +132,9 @@ import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
+import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
+import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -1824,6 +1826,42 @@ class Account(
         val wrap = ConcordModeration.unban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now())
         publishConcordWrap(session.entry, wrap)
         return true
+    }
+
+    /**
+     * Replace the community metadata (name / icon / description / relays) with a new
+     * Control-Plane edition. Honored on fold only when this account holds
+     * MANAGE_METADATA (or is the owner); dropped otherwise, like every other edition.
+     */
+    suspend fun editConcordMetadata(
+        communityId: String,
+        name: String,
+        description: String?,
+        icon: String?,
+        relays: List<String>,
+    ): Boolean {
+        val session = concordSessions.sessionFor(communityId) ?: return false
+        if (!isWriteable()) return false
+        val metadata = MetadataEntity(name = name, icon = icon, description = description, relays = relays)
+        val wrap = ConcordModeration.editMetadata(signer, session.controlPlaneKey(), communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now())
+        publishConcordWrap(session.entry, wrap)
+        return true
+    }
+
+    /**
+     * Read-only preview of an invite link: parse it, fetch the kind-33301 bundle from
+     * the link's relays (+ our outbox), and unlock it with the fragment token — WITHOUT
+     * joining. Returns the [CommunityInvite] (name, relays, community coordinates) so a
+     * card can show what the link opens, or null if the link is invalid/unreadable.
+     */
+    suspend fun peekConcordInvite(url: String): CommunityInvite? {
+        val parsed = ConcordActions.parseInviteLink(url) ?: return null
+        val relays =
+            (parsed.fragment.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } + outboxRelays.flow.value).toSet()
+        if (relays.isEmpty()) return null
+        val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
+        val wraps = client.fetchAll(filters = filters)
+        return wraps.firstNotNullOfOrNull { ConcordActions.openBundle(it, parsed.fragment.token) }
     }
 
     // ── NIP-29 relay-group actions ───────────────────────────────────────────

@@ -21,72 +21,94 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
- * Create a new Concord Channel (encrypted community) from Amethyst. Mints the
- * genesis (metadata + #general), publishes it to the chosen relays (or the
- * account's outbox by default), joins it, and opens the new community.
+ * Edit a Concord community's metadata (name / description / icon). Reuses the shared
+ * [ConcordMetadataFields] hero + fields, prefilled from the folded Control Plane, and
+ * saves a new metadata edition via [com.vitorpamplona.amethyst.model.Account.editConcordMetadata]
+ * — honored on fold only when this account holds MANAGE_METADATA (or is the owner).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ConcordCreateScreen(
+fun ConcordEditScreen(
+    communityId: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val account = accountViewModel.account
+    val session = remember(account, communityId) { account.concordSessions.sessionFor(communityId) }
+    val state by (session?.state ?: remember { MutableStateFlow(null) }).collectAsStateWithLifecycle()
+
     val name = remember { mutableStateOf("") }
     val about = remember { mutableStateOf("") }
     val iconUrl = remember { mutableStateOf("") }
-    val relays = remember { mutableListOf<NormalizedRelayUrl>().toMutableStateList() }
+    var prefilled by remember { mutableStateOf(false) }
     var working by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    // Seed the fields once, the first time the folded metadata is available.
+    LaunchedEffect(state?.metadata) {
+        val md = state?.metadata
+        if (!prefilled && md != null) {
+            name.value = md.name
+            about.value = md.description.orEmpty()
+            iconUrl.value = md.icon.orEmpty()
+            prefilled = true
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_create_title), fontWeight = FontWeight.Bold) },
+                title = { Text(stringRes(R.string.concord_edit_title), fontWeight = FontWeight.Bold, maxLines = 1) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.back))
+                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
                     }
                 },
             )
         },
     ) { padding ->
+        if (session == null) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@Scaffold
+        }
         Column(
             modifier =
                 Modifier
@@ -100,27 +122,8 @@ fun ConcordCreateScreen(
                 name = name,
                 about = about,
                 iconUrl = iconUrl,
-                robotSeed = "concord-new",
+                robotSeed = communityId,
                 accountViewModel = accountViewModel,
-            )
-
-            ConcordSectionHeader(
-                title = stringRes(com.vitorpamplona.amethyst.R.string.concord_create_relays),
-                description = stringRes(com.vitorpamplona.amethyst.R.string.concord_create_relays_desc),
-            )
-            relays.forEach { relay ->
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(relay.displayUrl(), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    IconButton(onClick = { relays.remove(relay) }) {
-                        SymbolIcon(symbol = MaterialSymbols.Close, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.remove))
-                    }
-                }
-            }
-            RelayUrlEditField(
-                onNewRelay = { if (it !in relays) relays.add(it) },
-                modifier = Modifier.fillMaxWidth(),
-                accountViewModel = accountViewModel,
-                nav = nav,
             )
 
             Button(
@@ -128,45 +131,23 @@ fun ConcordCreateScreen(
                     if (name.value.isBlank() || working) return@Button
                     working = true
                     scope.launch {
-                        val communityId =
-                            accountViewModel.account.createConcordCommunity(
+                        val ok =
+                            account.editConcordMetadata(
+                                communityId = communityId,
                                 name = name.value.trim(),
                                 description = about.value.trim().ifBlank { null },
-                                relays = relays.map { it.url },
                                 icon = iconUrl.value.trim().ifBlank { null },
+                                relays = state?.metadata?.relays ?: session.entry.relays,
                             )
                         working = false
-                        if (communityId != null) nav.newStack(Route.ConcordServer(communityId))
+                        if (ok) nav.popBack()
                     }
                 },
                 enabled = name.value.isNotBlank() && !working,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
-                Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_create_action))
+                Text(stringRes(R.string.concord_edit_save))
             }
-        }
-    }
-}
-
-/** A section header (title + one-line description) matching the NIP-29 metadata form. */
-@Composable
-fun ConcordSectionHeader(
-    title: String,
-    description: String? = null,
-) {
-    Column(Modifier.fillMaxWidth().padding(top = 4.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.SemiBold,
-        )
-        description?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

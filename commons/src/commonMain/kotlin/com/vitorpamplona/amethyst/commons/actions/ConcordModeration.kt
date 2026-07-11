@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEditionBuilder
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
 import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
+import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
@@ -94,6 +95,26 @@ object ConcordModeration {
         val (version, prev) = versioning(current, ControlEntityKind.ROLE, roleId)
         val content = ConcordJson.instance.encodeToString(RoleEntity.serializer(), role)
         return wrap(actor, controlPlane, ControlEntityKind.ROLE, roleId, version, prev, content, createdAt, citation)
+    }
+
+    /**
+     * Replaces the community metadata (name / icon / description / relays). The
+     * metadata entity id is the community id itself (as in genesis), so this chains
+     * the next version onto the metadata head. Honored at fold only when [actor]
+     * holds MANAGE_METADATA (or is the owner) tracing to the owner via [citation].
+     */
+    suspend fun editMetadata(
+        actor: NostrSigner,
+        controlPlane: GroupKey,
+        communityId: ByteArray,
+        metadata: MetadataEntity,
+        current: List<ControlEdition>,
+        createdAt: Long,
+        citation: AuthorityCitation? = null,
+    ): Event {
+        val (version, prev) = versioning(current, ControlEntityKind.METADATA, communityId)
+        val content = ConcordJson.instance.encodeToString(MetadataEntity.serializer(), metadata)
+        return wrap(actor, controlPlane, ControlEntityKind.METADATA, communityId, version, prev, content, createdAt, citation)
     }
 
     /** Grants [member] exactly [roleIds] (replaces their prior grant). Empty list revokes all roles. */

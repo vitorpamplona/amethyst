@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
@@ -103,6 +104,20 @@ fun ConcordChannelListScreen(
                     }
                 },
                 actions = {
+                    val canEdit =
+                        state?.authority?.let {
+                            it.isOwner(account.signer.pubKey) ||
+                                it.effectivePermissions(account.signer.pubKey).has(ConcordPermissions.MANAGE_METADATA)
+                        } == true
+
+                    IconButton(onClick = { nav.nav(Route.ConcordMembers(communityId)) }) {
+                        SymbolIcon(symbol = MaterialSymbols.Group, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_members_title))
+                    }
+                    if (canEdit) {
+                        IconButton(onClick = { nav.nav(Route.ConcordEdit(communityId)) }) {
+                            SymbolIcon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_edit_title))
+                        }
+                    }
                     IconButton(
                         enabled = !minting,
                         onClick = {
