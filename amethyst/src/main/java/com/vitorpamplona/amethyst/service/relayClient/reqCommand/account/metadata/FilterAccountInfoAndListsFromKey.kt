@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState.Companion.APP_SPECIFIC_DATA_D_TAG
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -84,6 +85,12 @@ val AccountInfoAndListsFromKeyKinds2 =
         // Loaded up-front so "My Groups" and group memberships resolve immediately at login,
         // without waiting for the groups screen to mount its own subscription.
         SimpleGroupListEvent.KIND,
+        // Concord private joined-communities list (kind 13302, CORD-05): the self-encrypted
+        // entries carrying each community's secrets. Loaded up-front for the same reason as
+        // the NIP-29 list above — so communities joined on another device or client (e.g. the
+        // Armada reference client, sharing this key) surface in the Concord hub at login,
+        // instead of only appearing after creating/redeeming an invite in Amethyst itself.
+        ConcordCommunityListEvent.KIND,
         // NIP-60 Cashu wallet + NIP-61 nutzap info. Replaceables, always
         // useful to have available — wallet event holds the user's P2PK key
         // + mint list, nutzap info tells other clients which mints to lock
