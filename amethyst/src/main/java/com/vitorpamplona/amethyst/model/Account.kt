@@ -187,6 +187,7 @@ import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -2526,6 +2527,8 @@ class Account(
         // broadcastPrivately) instead of waiting for the newEventBundles
         // batcher; the later batched re-delivery is deduped by the chatroom.
         cache.getNoteIfExists(newEvent.id)?.let { newNotesPreProcessor.consume(it) }
+
+        markDmRoomAsRead(newEvent)
     }
 
     override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
@@ -2586,6 +2589,28 @@ class Account(
         // batcher re-delivers this note later; the processor's replay path and
         // the chatroom add are both idempotent.
         mineNote?.let { newNotesPreProcessor.consume(it) }
+
+        markDmRoomAsRead(signedEvents.msg)
+    }
+
+    /**
+     * Sending a message into a DM room means the user has caught up with what the room
+     * showed when they replied: advance the local read marker to the newest known message —
+     * not just the sent one, whose local clock may lag behind a skew-ahead peer's — so the
+     * unread indicators clear without requiring the conversation to be reopened
+     * (#1286, #1287). No-op for private events that don't belong to a room (private notes,
+     * reactions, deletions).
+     */
+    private fun markDmRoomAsRead(event: Event) {
+        if (event is ChatroomKeyable) {
+            val room = event.chatroomKey(signer.pubKey)
+            val newestInRoom =
+                chatroomList.rooms
+                    .get(room)
+                    ?.newestMessage
+                    ?.createdAt() ?: 0L
+            markAsRead(privateChatLastReadRoute(room), maxOf(event.createdAt, newestInRoom))
+        }
     }
 
     // --- Marmot Group Messaging ---

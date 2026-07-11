@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.chatMessageMarksRoomAsRead
+import com.vitorpamplona.amethyst.model.privateChatLastReadRoute
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
@@ -96,7 +98,10 @@ class EventProcessor(
             is CallRenegotiateEvent,
             -> callManager?.onSignalingEvent(event)
 
-            is ChatroomKeyable -> chatHandler.add(event, eventNote, publicNote)
+            is ChatroomKeyable -> {
+                chatHandler.add(event, eventNote, publicNote)
+                markOwnChatMessageAsRead(event)
+            }
 
             is DraftWrapEvent -> draftHandler.add(event, eventNote, publicNote)
 
@@ -107,6 +112,23 @@ class EventProcessor(
             is SealedRumorEvent -> sealHandler.add(event, eventNote, publicNote)
 
             is LnZapRequestEvent -> zapRequest.add(event, eventNote, publicNote)
+        }
+    }
+
+    /**
+     * A chat message authored by this account — sent from this device through any code
+     * path, or arriving via the self-addressed gift wrap from another device — means the
+     * user was caught up with the room when they sent it, so advance the room's read
+     * marker here at the single ingestion choke point rather than at each send site
+     * (#1286, #1287). markAsRead is monotonic, so out-of-order history sync cannot move
+     * the marker backwards. Unsent drafts never reach this branch (DraftEventHandler
+     * indexes their rumors directly into the chatroom).
+     */
+    private fun <T> markOwnChatMessageAsRead(event: T) where T : Event, T : ChatroomKeyable {
+        val me = account.signer.pubKey
+        val room = event.chatroomKey(me)
+        if (chatMessageMarksRoomAsRead(event, room, me)) {
+            account.markAsRead(privateChatLastReadRoute(room), event.createdAt)
         }
     }
 

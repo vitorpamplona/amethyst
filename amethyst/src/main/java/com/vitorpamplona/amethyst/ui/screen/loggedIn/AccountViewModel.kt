@@ -68,6 +68,8 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.model.privateChatLastReadRoute
+import com.vitorpamplona.amethyst.model.unreadPrivateChatRoute
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.V4VPaymentHandler
@@ -1886,7 +1888,7 @@ class AccountViewModel(
                     }
 
                     noteEvent is ChatroomKeyable -> {
-                        account.markAsRead("Room/${noteEvent.chatroomKey(account.signer.pubKey).hashCode()}", noteEvent.createdAt)
+                        account.markAsRead(privateChatLastReadRoute(noteEvent.chatroomKey(account.signer.pubKey)), noteEvent.createdAt)
                     }
 
                     noteEvent is DraftWrapEvent -> {
@@ -1894,7 +1896,7 @@ class AccountViewModel(
                         if (innerEvent is IsInPublicChatChannel) {
                             account.markAsRead("Channel/${innerEvent.channelId()}", noteEvent.createdAt)
                         } else if (innerEvent is ChatroomKeyable) {
-                            account.markAsRead("Room/${innerEvent.chatroomKey(account.signer.pubKey).hashCode()}", noteEvent.createdAt)
+                            account.markAsRead(privateChatLastReadRoute(innerEvent.chatroomKey(account.signer.pubKey)), noteEvent.createdAt)
                         }
                     }
                 }
@@ -1904,24 +1906,17 @@ class AccountViewModel(
         }
     }
 
-    private fun unreadPrivateChatRoute(chat: Note): Pair<String, Long>? {
-        val noteEvent = chat.event ?: return null
-        val room = (noteEvent as? ChatroomKeyable)?.chatroomKey(account.signer.pubKey) ?: return null
-        if (account.isAllHidden(room.users)) return null
-        return privateChatRoute(room) to noteEvent.createdAt
-    }
+    private fun unreadPrivateChatRoute(chat: Note): Pair<String, Long>? = unreadPrivateChatRoute(chat.event, account.signer.pubKey, account::isAllHidden)
 
     private fun markHiddenChatroomsAsRead() {
         account.chatroomList.rooms.forEach { roomKey, chatroom ->
             if (account.isAllHidden(roomKey.users)) {
                 chatroom.newestMessage?.createdAt()?.let {
-                    account.markAsRead(privateChatRoute(roomKey), it)
+                    account.markAsRead(privateChatLastReadRoute(roomKey), it)
                 }
             }
         }
     }
-
-    private fun privateChatRoute(room: ChatroomKey) = "Room/${room.hashCode()}"
 
     class Factory(
         val account: Account,
