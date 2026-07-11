@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.pow
@@ -69,11 +70,7 @@ object PostCommand {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val outbox = ctx.outboxRelays()
-            val extraNormalized =
-                extraRelays.mapNotNull {
-                    com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-                        .normalizeOrNull(it)
-                }
+            val extraNormalized = extraRelays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
             val targets = (outbox + extraNormalized).toSet()
             if (targets.isEmpty()) {
                 return Output.error("no_relays", "no outbox relays configured; pass --relay or run `amy relay add`")

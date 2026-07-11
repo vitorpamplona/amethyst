@@ -537,8 +537,14 @@ open class CommentPostViewModel :
 
         val draftToDelete = draftNote
         val anonymous = wantsAnonymousPost
-        val powDifficulty = accountViewModel.account.powDifficultyFor(template.kind, powOverride)
+        // captured before cancel() resets the chip
+        val chosenPow = powOverride
         cancel()
+
+        // Draft deletion lives INSIDE each publish continuation: when the post
+        // is mined first, the draft must survive until the mined event is
+        // actually signed and dispatched — a cancelled or process-killed
+        // mining job would otherwise have destroyed the only copy of the text.
 
         // A reply within a NIP-29 group is group content: pin it to the group's
         // host relay (the relay the thread was seen on) instead of the author's
@@ -559,8 +565,10 @@ open class CommentPostViewModel :
 
         if (anonymous) {
             // The anonymous key signs without a client tag, so the template is
-            // mined as-is against the throwaway pubkey.
+            // mined as-is against the throwaway pubkey — and never checkpointed
+            // to disk, so the key and content can't outlive the process.
             val anonSigner = anonymousSigner()
+            val powDifficulty = accountViewModel.account.powDifficultyFor(template.kind, chosenPow)
             val enqueued =
                 powDifficulty != null &&
                     accountViewModel.account.mineInBackground(template.kind, powDifficulty) { isActive ->
@@ -569,36 +577,26 @@ open class CommentPostViewModel :
                         val fresh = EventTemplate<Event>(TimeUtils.now(), template.kind, template.tags, template.content)
                         val mined = PoWMiner.run(fresh, anonSigner.pubKey, powDifficulty, isActive)
                         accountViewModel.account.signAnonymouslyAndBroadcast(mined, extraNotesToBroadcast, anonSigner)
+                        accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
                     }
             if (!enqueued) {
                 accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonSigner)
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
         } else if (replyGroupId != null) {
             // Group content: route to the resolved host. If it couldn't be resolved, publish to the
             // parent's relays (possibly empty) rather than broadcasting to the outbox — better to
             // under-deliver a group reply than to leak group participation to unrelated relays.
             val relays = groupHostRelays ?: replyingTo?.relays.orEmpty()
-            val enqueued =
-                powDifficulty != null &&
-                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty, PoWReplay.ToRelays(relays)) { mined ->
-                        accountViewModel.account.signAndSendPrivatelyOrBroadcast(mined) { relays }
-                    }
-            if (!enqueued) {
-                accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) { relays }
+            accountViewModel.account.sendMined(template, PoWReplay.ToRelays(relays), chosenPow) { readyTemplate ->
+                accountViewModel.account.signAndSendPrivatelyOrBroadcast(readyTemplate) { relays }
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
         } else {
-            val enqueued =
-                powDifficulty != null &&
-                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty, PoWReplay.Broadcast(extraNotesToBroadcast)) { mined ->
-                        accountViewModel.account.signAndComputeBroadcast(mined, extraNotesToBroadcast)
-                    }
-            if (!enqueued) {
-                accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+            accountViewModel.account.sendMined(template, PoWReplay.Broadcast(extraNotesToBroadcast), chosenPow) { readyTemplate ->
+                accountViewModel.account.signAndComputeBroadcast(readyTemplate, extraNotesToBroadcast)
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
-        }
-
-        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
 

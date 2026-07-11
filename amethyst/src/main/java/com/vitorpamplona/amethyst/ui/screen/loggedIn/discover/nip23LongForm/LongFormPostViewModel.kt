@@ -352,49 +352,37 @@ class LongFormPostViewModel :
         val template = createTemplate() ?: return
 
         val draftToDelete = draftNote
-        val powDifficulty = accountViewModel.account.powDifficultyFor(template.kind)
         cancel()
 
-        val enqueued =
-            powDifficulty != null &&
-                accountViewModel.account.mineTemplateInBackground(template, powDifficulty, PoWReplay.Broadcast()) { mined ->
-                    broadcastArticle(mined)
-                }
-        if (!enqueued) {
-            if (accountViewModel.settings.useTrackedBroadcasts()) {
-                val (event, relays, extras) = accountViewModel.account.createPostEvent(template, emptyList())
-                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                    accountViewModel.broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = accountViewModel.account.client,
-                    )
-                    accountViewModel.account.consumePostEvent(event, relays, extras)
-                }
-            } else {
-                accountViewModel.account.signAndComputeBroadcast(template, emptyList())
-            }
-        }
-
-        accountViewModel.launchSigner {
+        // Draft deletion runs INSIDE the publish continuation: when the
+        // article is mined first, the draft must survive until the mined event
+        // is actually signed and dispatched — a cancelled or process-killed
+        // mining job would otherwise have destroyed the only copy of the text.
+        accountViewModel.account.sendMined(template, PoWReplay.Broadcast()) { readyTemplate ->
+            broadcastArticle(readyTemplate)
             accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
 
     /**
-     * The post-mining continuation: same tracked/untracked split as the direct
-     * path, but running on the mining queue's scope — the composer's
-     * viewModelScope may already be gone by the time the nonce is found.
+     * The publish step shared by the direct and post-mining paths. Tracked
+     * broadcasting is launched fire-and-forget on the account scope — the
+     * composer must not wait for relay acks before navigating away, and a
+     * mined job must not hold its queue entry while acks trickle in. Runs on
+     * the mining queue's scope when PoW is on, so it must not touch
+     * viewModelScope.
      */
     private suspend fun broadcastArticle(template: EventTemplate<out Event>) {
         if (accountViewModel.settings.useTrackedBroadcasts()) {
             val (event, relays, extras) = accountViewModel.account.createPostEvent(template, emptyList())
-            accountViewModel.broadcastTracker.trackBroadcast(
-                event = event,
-                relays = relays,
-                client = accountViewModel.account.client,
-            )
-            accountViewModel.account.consumePostEvent(event, relays, extras)
+            accountViewModel.account.scope.launch {
+                accountViewModel.broadcastTracker.trackBroadcast(
+                    event = event,
+                    relays = relays,
+                    client = accountViewModel.account.client,
+                )
+                accountViewModel.account.consumePostEvent(event, relays, extras)
+            }
         } else {
             accountViewModel.account.signAndComputeBroadcast(template, emptyList())
         }

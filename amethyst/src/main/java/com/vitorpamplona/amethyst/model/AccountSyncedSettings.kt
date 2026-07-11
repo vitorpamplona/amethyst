@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -197,8 +198,12 @@ class AccountSyncedSettings(
             chats.pinnedChatrooms.tryEmit(newPinnedChatrooms)
         }
 
-        if (proofOfWork.difficulty.value != syncedSettingsInternal.proofOfWork.difficulty) {
-            proofOfWork.difficulty.tryEmit(syncedSettingsInternal.proofOfWork.difficulty)
+        // clamp like the local setter: a synced NIP-78 event from another
+        // client could carry an out-of-range value that would crash the miner
+        // (>256) or mine forever (41+).
+        val newDifficulty = syncedSettingsInternal.proofOfWork.difficulty.coerceIn(0, PoWPolicy.MAX_DIFFICULTY)
+        if (proofOfWork.difficulty.value != newDifficulty) {
+            proofOfWork.difficulty.tryEmit(newDifficulty)
         }
 
         val newPoWCategories = PoWCategory.fromIds(syncedSettingsInternal.proofOfWork.enabledCategories)
@@ -313,13 +318,18 @@ class AccountPoWPreferences(
     val difficulty: MutableStateFlow<Int> = MutableStateFlow(0),
     val enabledCategories: MutableStateFlow<Set<PoWCategory>> = MutableStateFlow(PoWCategory.DEFAULT_ENABLED),
 ) {
-    fun updateDifficulty(newDifficulty: Int): Boolean =
-        if (difficulty.value != newDifficulty) {
-            difficulty.tryEmit(newDifficulty.coerceIn(0, MAX_POW_DIFFICULTY))
+    fun updateDifficulty(newDifficulty: Int): Boolean {
+        // compare the coerced value: reporting a change for an out-of-range
+        // input that clamps to the current value would republish identical
+        // settings to relays.
+        val coerced = newDifficulty.coerceIn(0, MAX_POW_DIFFICULTY)
+        return if (difficulty.value != coerced) {
+            difficulty.tryEmit(coerced)
             true
         } else {
             false
         }
+    }
 
     fun updateCategory(
         category: PoWCategory,
@@ -336,8 +346,7 @@ class AccountPoWPreferences(
     }
 
     companion object {
-        // above ~40 bits a phone would mine for days; treat it as a config error.
-        const val MAX_POW_DIFFICULTY = 40
+        const val MAX_POW_DIFFICULTY = PoWPolicy.MAX_DIFFICULTY
     }
 }
 

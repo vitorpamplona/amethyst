@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.utils.Log
 import java.util.UUID
 
@@ -49,6 +50,16 @@ class PowJobRestorer(
         Log.d(TAG) { "Restoring ${records.size} pending PoW job(s) for ${account.signer.pubKey.take(8)}…" }
 
         records.forEach { record ->
+            if (record.difficulty <= 0) {
+                store.remove(record.id)
+                return@forEach
+            }
+
+            if (record.replayType == PersistedPoWJob.REPLAY_WRAPS) {
+                restoreWraps(account, record)
+                return@forEach
+            }
+
             val template =
                 try {
                     EventTemplate.fromJson(record.templateJson)
@@ -57,11 +68,6 @@ class PowJobRestorer(
                     store.remove(record.id)
                     return@forEach
                 }
-
-            if (record.difficulty <= 0) {
-                store.remove(record.id)
-                return@forEach
-            }
 
             queue.enqueue(
                 template = template,
@@ -76,6 +82,46 @@ class PowJobRestorer(
                 replay(account, record, mined)
             }
         }
+    }
+
+    /**
+     * Wrap jobs carry no template — the pre-signed seals live in
+     * [PersistedPoWJob.extraEventsJson], one recipient per seal in
+     * [PersistedPoWJob.recipientPubkeys]. Re-enqueueing goes through the same
+     * [Account.mineWrapsInBackground] path the send used, with the existing
+     * record so the checkpoint id (and restore idempotence) is preserved.
+     */
+    private fun restoreWraps(
+        account: Account,
+        record: PersistedPoWJob,
+    ) {
+        if (record.extraEventsJson.size != record.recipientPubkeys.size) {
+            Log.w(TAG) { "Dropping malformed wrap PoW job ${record.id}: ${record.extraEventsJson.size} seal(s) vs ${record.recipientPubkeys.size} recipient(s)" }
+            store.remove(record.id)
+            return
+        }
+
+        val seals =
+            record.extraEventsJson.zip(record.recipientPubkeys).mapNotNull { (sealJson, recipient) ->
+                try {
+                    NIP17Factory.AddressedSeal(recipient = recipient, seal = Event.fromJson(sealJson))
+                } catch (e: Exception) {
+                    Log.w(TAG, "Dropping unreadable seal of wrap PoW job ${record.id}", e)
+                    null
+                }
+            }
+
+        if (seals.isEmpty()) {
+            store.remove(record.id)
+            return
+        }
+
+        account.mineWrapsInBackground(
+            seals = seals,
+            expirationDelta = record.wrapExpirationDelta,
+            difficulty = record.difficulty,
+            existingRecord = record,
+        )
     }
 
     private suspend fun replay(

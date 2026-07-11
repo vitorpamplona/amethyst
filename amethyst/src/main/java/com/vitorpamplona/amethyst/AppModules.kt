@@ -888,13 +888,13 @@ class AppModules(
             }
         }
 
-        // Resume PoW mining jobs that were checkpointed before a process death.
+        // Resume PoW mining jobs that were checkpointed before a process death,
+        // for EVERY loaded account (the always-on service preloads non-active
+        // accounts, whose pending posts must not stay stranded on disk).
         // Idempotent (the queue dedupes by job id), so re-emissions are safe.
         applicationIOScope.launch {
-            sessionManager.accountContent.collectLatest { state ->
-                if (state is AccountState.LoggedIn) {
-                    powJobRestorer.restore(state.account)
-                }
+            accountsCache.accounts.collect { loaded ->
+                loaded.values.forEach { powJobRestorer.restore(it) }
             }
         }
 

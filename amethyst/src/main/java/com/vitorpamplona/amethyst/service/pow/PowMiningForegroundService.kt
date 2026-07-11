@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.pow
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -35,12 +36,8 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
-import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CoroutineScope
@@ -74,6 +71,33 @@ class PowMiningForegroundService : Service() {
     // service started" — the queue itself only knows what is still pending.
     private var sessionTotal = 0
     private var lastQueueSize = 0
+
+    // Built once per service instance: the intents never change, and
+    // buildNotification runs on every queue update.
+    private val tapIntent: PendingIntent by lazy {
+        PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+    }
+
+    private val cancelIntent: PendingIntent by lazy {
+        PendingIntent.getService(
+            this,
+            1,
+            Intent(this, PowMiningForegroundService::class.java).setAction(ACTION_CANCEL_ALL),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        running = true
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -114,6 +138,7 @@ class PowMiningForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        running = false
         scope.cancel()
         super.onDestroy()
     }
@@ -158,14 +183,14 @@ class PowMiningForegroundService : Service() {
         }
     }
 
-    private fun buildNotification(jobs: ImmutableList<PoWJobState>): android.app.Notification {
+    private fun buildNotification(jobs: ImmutableList<PoWJobState>): Notification {
         val done = (sessionTotal - jobs.size).coerceAtLeast(0)
         val total = (done + jobs.size).coerceAtLeast(1)
 
         val current = jobs.firstOrNull { it.isMining } ?: jobs.firstOrNull()
         val text =
             current?.let {
-                stringRes(this, R.string.pow_mining_job, kindLabel(this, it.kind), it.difficulty.toString())
+                pluralStringRes(this, R.plurals.pow_mining_job, it.difficulty, stringRes(this, powKindLabelRes(it.kind)), it.difficulty)
             } ?: stringRes(this, R.string.pow_mining_title)
 
         val progressStyle: NotificationCompat.ProgressStyle =
@@ -178,30 +203,12 @@ class PowMiningForegroundService : Service() {
                     .setProgress(done)
             }
 
-        val tapIntent =
-            PendingIntent.getActivity(
-                this,
-                0,
-                Intent(this, MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                },
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-
-        val cancelIntent =
-            PendingIntent.getService(
-                this,
-                1,
-                Intent(this, PowMiningForegroundService::class.java).setAction(ACTION_CANCEL_ALL),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.amethyst)
             .setContentTitle(
                 if (jobs.size > 1) {
-                    stringRes(this, R.string.pow_mining_progress, jobs.size.toString())
+                    pluralStringRes(this, R.plurals.pow_mining_progress, jobs.size, jobs.size)
                 } else {
                     stringRes(this, R.string.pow_mining_title)
                 },
@@ -223,6 +230,13 @@ class PowMiningForegroundService : Service() {
         private const val NOTIFICATION_ID = 0x504F57 // "POW"
         private const val ACTION_CANCEL_ALL = "com.vitorpamplona.amethyst.pow.CANCEL_ALL"
 
+        // Best-effort de-dup for start(): the queue calls it on EVERY enqueue,
+        // and each call otherwise round-trips through system_server. A stale
+        // false only costs one redundant startForegroundService (which Android
+        // routes to the existing instance's onStartCommand anyway).
+        @Volatile
+        private var running = false
+
         /**
          * Best-effort start: enqueue happens while the user is interacting
          * with the app, so the foreground-start allowance normally holds. A
@@ -230,6 +244,7 @@ class PowMiningForegroundService : Service() {
          * proceeds unprotected and the service starts on the next enqueue.
          */
         fun start(context: Context) {
+            if (running) return
             try {
                 context.startForegroundService(Intent(context, PowMiningForegroundService::class.java))
             } catch (e: Exception) {
@@ -251,17 +266,5 @@ class PowMiningForegroundService : Service() {
                 },
             )
         }
-
-        private fun kindLabel(
-            context: Context,
-            kind: Int,
-        ): String =
-            when (kind) {
-                ReactionEvent.KIND -> stringRes(context, R.string.reaction)
-                RepostEvent.KIND, GenericRepostEvent.KIND -> stringRes(context, R.string.boost)
-                VoiceEvent.KIND -> stringRes(context, R.string.voice_post)
-                VoiceReplyEvent.KIND -> stringRes(context, R.string.voice_reply)
-                else -> stringRes(context, R.string.post)
-            }
     }
 }

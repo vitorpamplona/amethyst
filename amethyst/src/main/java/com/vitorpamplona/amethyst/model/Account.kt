@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
@@ -831,7 +832,7 @@ class Account(
         work: suspend (isActive: () -> Boolean) -> Unit,
     ): Boolean {
         val queue = powQueue() ?: return false
-        queue.enqueueWork(kind, difficulty, work)
+        queue.enqueueWork(kind, difficulty, owner = signer.pubKey, work = work)
         return true
     }
 
@@ -867,6 +868,68 @@ class Account(
             // posts keep their intentional future timestamp.
             refreshCreatedAtOnStart = replay !is PoWReplay.Schedule,
             onMined = onMined,
+        )
+        return true
+    }
+
+    /**
+     * The one-liner for template send paths: when [template]'s kind should be
+     * mined (per settings and the optional composer [overrideDifficulty]),
+     * enqueue it and run [send] with the mined template once the nonce is
+     * found; otherwise run [send] with [template] right now.
+     */
+    suspend fun <T : Event> sendMined(
+        template: EventTemplate<T>,
+        replay: PoWReplay?,
+        overrideDifficulty: Int? = null,
+        send: suspend (EventTemplate<T>) -> Unit,
+    ) {
+        val difficulty = powDifficultyFor(template.kind, overrideDifficulty)
+        if (difficulty == null || !mineTemplateInBackground(template, difficulty, replay, send)) {
+            send(template)
+        }
+    }
+
+    /**
+     * Queues wrap mining for pre-signed [seals] (see NIP17Factory.createSeals):
+     * each seal gets its ephemeral-key envelope mined at [difficulty] on the
+     * worker pool, then the wraps broadcast. Checkpointed under
+     * [PersistedPoWJob.REPLAY_WRAPS] (the seals are already-signed ciphertext,
+     * safe to persist) unless an [existingRecord] from the restorer is passed.
+     * Returns false when no queue is wired.
+     */
+    fun mineWrapsInBackground(
+        seals: List<NIP17Factory.AddressedSeal>,
+        expirationDelta: Long?,
+        difficulty: Int,
+        existingRecord: PersistedPoWJob? = null,
+    ): Boolean {
+        val queue = powQueue() ?: return false
+        if (seals.isEmpty()) return true
+
+        val record =
+            existingRecord
+                ?: PersistedPoWJob(
+                    id = RandomInstance.randomChars(16),
+                    accountPubkey = signer.pubKey,
+                    kind = GiftWrapEvent.KIND,
+                    difficulty = difficulty,
+                    templateJson = "",
+                    replayType = PersistedPoWJob.REPLAY_WRAPS,
+                    extraEventsJson = seals.map { it.seal.toJson() },
+                    recipientPubkeys = seals.map { it.recipient },
+                    wrapExpirationDelta = expirationDelta,
+                    createdAtSec = TimeUtils.now(),
+                )
+
+        queue.enqueueStaged(
+            kind = GiftWrapEvent.KIND,
+            difficulty = difficulty,
+            persistAs = record,
+            mine = { isActive ->
+                seals.map { NIP17Factory().wrapSeal(it, expirationDelta, powDifficulty = difficulty, powIsActive = isActive) }
+            },
+            publish = { wraps -> broadcastPrivately(wraps) },
         )
         return true
     }
@@ -913,19 +976,28 @@ class Account(
         val isPrivateTarget = note.event is NIP17Group || note.isPrivateRumor()
 
         val powDifficulty = if (isPrivateTarget) null else powDifficultyFor(ReactionEvent.KIND)
-        if (powDifficulty != null &&
-            mineInBackground(ReactionEvent.KIND, powDifficulty) { isActive ->
-                ReactionAction.reactTo(
-                    note = note,
-                    reaction = reaction,
-                    by = userProfile(),
-                    signer = miningSigner(powDifficulty, setOf(ReactionEvent.KIND), isActive),
-                    onPublic = ::sendAutomatic,
-                    onPrivate = ::broadcastPrivately,
-                )
+        if (powDifficulty != null) {
+            val queue = powQueue()
+            if (queue != null) {
+                // toggle semantics while mining: a second tap on the same
+                // reaction un-likes by cancelling the pending job instead of
+                // publishing a duplicate (the mined event doesn't exist yet,
+                // so hasReacted can't dedupe).
+                val dedupeKey = "reaction:${note.idHex}:$reaction"
+                if (queue.cancelByKey(dedupeKey)) return
+
+                queue.enqueueWork(ReactionEvent.KIND, powDifficulty, dedupeKey, owner = signer.pubKey) { isActive ->
+                    ReactionAction.reactTo(
+                        note = note,
+                        reaction = reaction,
+                        by = userProfile(),
+                        signer = miningSigner(powDifficulty, setOf(ReactionEvent.KIND), isActive),
+                        onPublic = ::sendAutomatic,
+                        onPrivate = ::broadcastPrivately,
+                    )
+                }
+                return
             }
-        ) {
-            return
         }
 
         ReactionAction.reactTo(
@@ -2732,12 +2804,15 @@ class Account(
         if (!isWriteable()) return
 
         val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
-        if (powDifficulty != null &&
-            mineInBackground(GiftWrapEvent.KIND, powDifficulty) { isActive ->
-                broadcastPrivately(NIP17Factory().createEncryptedFileNIP17(template, signer, wrapPowDifficulty = powDifficulty, wrapPowIsActive = isActive))
-            }
-        ) {
-            return
+        if (powDifficulty != null) {
+            // Sign the inner event and every seal NOW, in the caller's
+            // interaction context — an external signer (Amber/bunker) cannot
+            // prompt from a background mining worker. Only the local-CPU
+            // ephemeral-key wrap mining goes to the queue, checkpointed so a
+            // process death mid-mine cannot lose the file announcement.
+            val senderMessage = signer.sign(template)
+            val seals = NIP17Factory().createSeals(senderMessage, senderMessage.groupMembers(), signer)
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) return
         }
 
         broadcastPrivately(NIP17Factory().createEncryptedFileNIP17(template, signer))
@@ -2745,12 +2820,11 @@ class Account(
 
     override suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) {
         val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
-        if (powDifficulty != null &&
-            mineInBackground(GiftWrapEvent.KIND, powDifficulty) { isActive ->
-                broadcastPrivately(NIP17Factory().createMessageNIP17(template, signer, wrapPowDifficulty = powDifficulty, wrapPowIsActive = isActive))
-            }
-        ) {
-            return
+        if (powDifficulty != null) {
+            // See sendNip17EncryptedFile: sign inline, queue only wrap mining.
+            val senderMessage = signer.sign(template)
+            val seals = NIP17Factory().createSeals(senderMessage, senderMessage.groupMembers(), signer)
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) return
         }
 
         broadcastPrivately(NIP17Factory().createMessageNIP17(template, signer))
@@ -2762,17 +2836,23 @@ class Account(
      * to the recipient's DM relays. Used for private replies (the parent's
      * author and participants are already p-tagged) and for private posts
      * (the Notify list is the audience). Nothing reaches public relays.
+     *
+     * [powOverrideDifficulty] is the composer chip's per-post override:
+     * null follows the account's gift-wrap setting, 0 disables mining.
      */
-    suspend fun sendPrivateNote(template: EventTemplate<TextNoteEvent>) {
+    suspend fun sendPrivateNote(
+        template: EventTemplate<TextNoteEvent>,
+        powOverrideDifficulty: Int? = null,
+    ) {
         if (!isWriteable()) return
 
-        val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
-        if (powDifficulty != null &&
-            mineInBackground(GiftWrapEvent.KIND, powDifficulty) { isActive ->
-                broadcastPrivately(NIP17Factory().createNoteNIP17(template, signer, wrapPowDifficulty = powDifficulty, wrapPowIsActive = isActive))
-            }
-        ) {
-            return
+        val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND, powOverrideDifficulty)
+        if (powDifficulty != null) {
+            // See sendNip17EncryptedFile: sign inline, queue only wrap mining.
+            val senderNote = signer.sign(template)
+            val recipients = senderNote.taggedUserIds().plus(signer.pubKey).toSet()
+            val seals = NIP17Factory().createSeals(senderNote, recipients, signer)
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) return
         }
 
         broadcastPrivately(NIP17Factory().createNoteNIP17(template, signer))
@@ -2785,8 +2865,10 @@ class Account(
         }
     }
 
-    suspend fun broadcastPrivately(signedEvents: NIP17Factory.Result) {
-        val mine = signedEvents.wraps.filter { (it.recipientPubKey() == signer.pubKey) }
+    suspend fun broadcastPrivately(signedEvents: NIP17Factory.Result) = broadcastPrivately(signedEvents.wraps)
+
+    suspend fun broadcastPrivately(wraps: List<GiftWrapEvent>) {
+        val mine = wraps.filter { (it.recipientPubKey() == signer.pubKey) }
 
         mine.forEach { giftWrap ->
             cache.justConsumeMyOwnEvent(giftWrap)
@@ -2795,7 +2877,7 @@ class Account(
         val id = mine.firstOrNull()?.id
         val mineNote = if (id == null) null else cache.getNoteIfExists(id)
 
-        signedEvents.wraps.forEach { wrap ->
+        wraps.forEach { wrap ->
             // Creates an alias
             if (mineNote != null && wrap.recipientPubKey() != signer.pubKey) {
                 cache.getOrAddAliasNote(wrap.id, mineNote)

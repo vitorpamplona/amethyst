@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
+import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.ui.actions.Dao
@@ -278,6 +279,19 @@ class AccountViewModel(
         // receivers can reach callManager + accountViewModel.
         com.vitorpamplona.amethyst.service.call.CallSessionBridge
             .set(callManager, this)
+
+        // A mined post that fails to sign or broadcast would otherwise die
+        // silently — the composer already returned when it was enqueued.
+        viewModelScope.launch {
+            Amethyst.instance.powPublishQueue.failures.collect { failure ->
+                val kindLabel = stringRes(Amethyst.instance.appContext, powKindLabelRes(failure.kind))
+                if (failure.willRetryOnRestart) {
+                    toastManager.toast(R.string.pow_settings_title, R.string.pow_publish_failed_retry, kindLabel)
+                } else {
+                    toastManager.toast(R.string.pow_settings_title, R.string.pow_publish_failed, kindLabel, failure.message.orEmpty())
+                }
+            }
+        }
     }
 
     /**

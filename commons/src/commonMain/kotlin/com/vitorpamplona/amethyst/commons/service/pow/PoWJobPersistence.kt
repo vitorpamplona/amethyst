@@ -36,17 +36,26 @@ data class PersistedPoWJob(
     val accountPubkey: String,
     val kind: Int,
     val difficulty: Int,
+    /** Unsigned template for the template replay types; empty for [REPLAY_WRAPS]. */
     val templateJson: String,
     val replayType: String,
     val relayUrls: List<String> = emptyList(),
+    /** Extra pre-signed events to broadcast; for [REPLAY_WRAPS], the signed seals. */
     val extraEventsJson: List<String> = emptyList(),
     val publishAtSec: Long? = null,
+    /** [REPLAY_WRAPS]: recipient of each seal in [extraEventsJson], same order. */
+    val recipientPubkeys: List<String> = emptyList(),
+    /** [REPLAY_WRAPS]: expiration delta to stamp on each wrap. */
+    val wrapExpirationDelta: Long? = null,
     val createdAtSec: Long = 0,
 ) {
     companion object {
         const val REPLAY_BROADCAST = "broadcast"
         const val REPLAY_RELAYS = "relays"
         const val REPLAY_SCHEDULE = "schedule"
+
+        /** Mine one gift wrap per pre-signed seal, then broadcast the wraps. */
+        const val REPLAY_WRAPS = "wraps"
     }
 }
 

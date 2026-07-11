@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -110,7 +111,7 @@ fun PowOverrideButton(
                 text = {
                     Text(
                         if (defaultDifficulty != null && defaultDifficulty > 0) {
-                            stringRes(R.string.pow_option_default_on, defaultDifficulty)
+                            pluralStringResource(R.plurals.pow_option_default_on, defaultDifficulty, defaultDifficulty)
                         } else {
                             stringRes(R.string.pow_option_default_off)
                         },
@@ -138,7 +139,7 @@ fun PowOverrideButton(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            stringRes(R.string.pow_option_bits, preset),
+                            pluralStringResource(R.plurals.pow_option_bits, preset, preset),
                             fontWeight = if (isOverridden && effectiveDifficulty == preset) FontWeight.Bold else null,
                         )
                     },

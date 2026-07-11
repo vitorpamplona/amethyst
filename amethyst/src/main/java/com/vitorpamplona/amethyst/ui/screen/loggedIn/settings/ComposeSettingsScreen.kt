@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,6 +56,7 @@ import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.creators.pow.POW_PRESETS
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -191,10 +194,11 @@ private fun PowDifficultyTile(accountViewModel: AccountViewModel) {
 private fun PowTimeEstimate(difficulty: Int) {
     if (difficulty <= 0) return
 
+    val context = LocalContext.current
     val estimate by
         produceState<String?>(initialValue = null, difficulty) {
             val rate = PoWEstimator.hashesPerSecond()
-            value = formatEstimate(PoWEstimator.estimateSeconds(difficulty, rate))
+            value = formatEstimate(context, PoWEstimator.estimateSeconds(difficulty, rate))
         }
 
     estimate?.let {
@@ -206,14 +210,23 @@ private fun PowTimeEstimate(difficulty: Int) {
     }
 }
 
-private fun formatEstimate(seconds: Double): String =
-    when {
-        seconds < 1.0 -> "<1s"
-        seconds < 90.0 -> "${seconds.roundToLong()}s"
-        seconds < 90.0 * 60.0 -> "${(seconds / 60.0).roundToLong()}m"
-        seconds < 48.0 * 3600.0 -> "${(seconds / 3600.0).roundToLong()}h"
-        else -> "${(seconds / 86400.0).roundToLong()}d"
+private fun formatEstimate(
+    context: Context,
+    seconds: Double,
+): String {
+    fun quantity(
+        id: Int,
+        count: Long,
+    ) = pluralStringRes(context, id, count.toInt(), count.toInt())
+
+    return when {
+        seconds < 1.0 -> stringRes(context, R.string.pow_estimate_instant)
+        seconds < 90.0 -> quantity(R.plurals.pow_estimate_seconds, seconds.roundToLong())
+        seconds < 90.0 * 60.0 -> quantity(R.plurals.pow_estimate_minutes, (seconds / 60.0).roundToLong())
+        seconds < 48.0 * 3600.0 -> quantity(R.plurals.pow_estimate_hours, (seconds / 3600.0).roundToLong())
+        else -> quantity(R.plurals.pow_estimate_days, (seconds / 86400.0).roundToLong())
     }
+}
 
 @Composable
 private fun PowCategoryChecklist(accountViewModel: AccountViewModel) {

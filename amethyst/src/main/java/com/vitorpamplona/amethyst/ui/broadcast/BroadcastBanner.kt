@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.broadcast
 
+import android.text.format.DateUtils
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
@@ -57,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -68,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
+import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -172,12 +175,15 @@ private fun MiningContent(
         label = "boltAlpha",
     )
 
-    // 1 Hz clock driving the per-job elapsed labels
+    // 1 Hz clock driving the per-job elapsed labels; only ticks while some
+    // job actually shows an elapsed time (queued-only banners don't need it).
     var nowSec by remember { mutableLongStateOf(TimeUtils.now()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(1_000)
-            nowSec = TimeUtils.now()
+    if (miningJobs.any { it.miningStartedAt != null }) {
+        LaunchedEffect(Unit) {
+            while (true) {
+                nowSec = TimeUtils.now()
+                delay(1_000)
+            }
         }
     }
 
@@ -195,7 +201,7 @@ private fun MiningContent(
             )
 
             Text(
-                text = stringRes(R.string.pow_mining_progress, miningJobs.size),
+                text = pluralStringResource(R.plurals.pow_mining_progress, miningJobs.size, miningJobs.size),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
@@ -213,12 +219,13 @@ private fun MiningContent(
                 Spacer(Modifier.width(26.dp))
 
                 val base =
-                    stringRes(
-                        if (job.isMining) R.string.pow_mining_job else R.string.pow_queued_job,
+                    pluralStringResource(
+                        if (job.isMining) R.plurals.pow_mining_job else R.plurals.pow_queued_job,
+                        job.difficulty,
                         kindToName(job.kind),
-                        job.difficulty.toString(),
+                        job.difficulty,
                     )
-                val elapsed = job.miningStartedAt?.let { formatElapsed((nowSec - it).coerceAtLeast(0)) }
+                val elapsed = job.miningStartedAt?.let { DateUtils.formatElapsedTime((nowSec - it).coerceAtLeast(0)) }
 
                 Text(
                     text = if (elapsed != null) "$base • $elapsed" else base,
@@ -229,16 +236,20 @@ private fun MiningContent(
                     modifier = Modifier.weight(1f),
                 )
 
-                IconButton(
-                    onClick = { onCancelJob(job.id) },
-                    modifier = Modifier.size(22.dp),
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.Close,
-                        contentDescription = stringRes(R.string.pow_notification_cancel_all),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp),
-                    )
+                // once the nonce is found the job is signing/broadcasting —
+                // there is nothing safe to abort anymore.
+                if (job.isCancellable) {
+                    IconButton(
+                        onClick = { onCancelJob(job.id) },
+                        modifier = Modifier.size(22.dp),
+                    ) {
+                        Icon(
+                            symbol = MaterialSymbols.Close,
+                            contentDescription = stringRes(R.string.pow_notification_cancel_all),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
                 }
             }
         }
@@ -252,13 +263,6 @@ private fun MiningContent(
         )
     }
 }
-
-private fun formatElapsed(seconds: Long): String =
-    if (seconds < 60) {
-        "${seconds}s"
-    } else {
-        "${seconds / 60}m ${seconds % 60}s"
-    }
 
 @Composable
 private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
@@ -576,14 +580,7 @@ fun Event.toKindName(): String =
     }
 
 @Composable
-fun kindToName(kind: Int): String =
-    when (kind) {
-        ReactionEvent.KIND -> stringRes(R.string.reaction)
-        RepostEvent.KIND, GenericRepostEvent.KIND -> stringRes(R.string.boost)
-        VoiceEvent.KIND -> stringRes(R.string.voice_post)
-        VoiceReplyEvent.KIND -> stringRes(R.string.voice_reply)
-        else -> stringRes(R.string.post)
-    }
+fun kindToName(kind: Int): String = stringRes(powKindLabelRes(kind))
 
 @Preview
 @Composable

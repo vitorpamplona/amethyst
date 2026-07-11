@@ -139,6 +139,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -175,6 +176,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
@@ -388,8 +390,11 @@ open class ShortNotePostViewModel :
     var powOverride by mutableStateOf<Int?>(null)
 
     // Best guess of the kind createTemplate() will produce, for the PoW chip.
+    // A private note is gift-wrapped, so what gets mined (and what the
+    // settings gate on) is the kind-1059 wrap, not the inner kind-1.
     private fun anticipatedPowKind(): Int =
         when {
+            wantsPrivateNote -> GiftWrapEvent.KIND
             wantsPoll -> PollEvent.KIND
             wantsZapPoll -> ZapPollEvent.KIND
             voiceRecording != null -> VoiceEvent.KIND
@@ -981,21 +986,20 @@ open class ShortNotePostViewModel :
         val scheduledFor = scheduledForSec
         val privately = wantsPrivateNote
         val threadTarget = groupThreadTarget
-        val powDifficulty = accountViewModel.account.powDifficultyFor(template.kind, powOverride)
+        // captured before cancel() resets the chip
+        val chosenPow = powOverride
         cancel()
+
+        // Draft deletion lives INSIDE each publish continuation: when the post
+        // is mined first, the draft must survive until the mined event is
+        // actually signed and dispatched — a cancelled or process-killed
+        // mining job would otherwise have destroyed the only copy of the text.
 
         if (threadTarget != null) {
             // NIP-29 group thread: publish only to the group's host relay, never the account's
             // outbox — bypass the private/scheduled/anonymous paths entirely.
-            val enqueued =
-                powDifficulty != null &&
-                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty, PoWReplay.ToRelays(threadTarget.relays)) { mined ->
-                        accountViewModel.account.signAndSendPrivatelyOrBroadcast(mined) { threadTarget.relays }
-                    }
-            if (!enqueued) {
-                accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) { threadTarget.relays }
-            }
-            accountViewModel.launchSigner {
+            accountViewModel.account.sendMined(template, PoWReplay.ToRelays(threadTarget.relays), chosenPow) { readyTemplate ->
+                accountViewModel.account.signAndSendPrivatelyOrBroadcast(readyTemplate) { threadTarget.relays }
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
             return
@@ -1005,19 +1009,22 @@ open class ShortNotePostViewModel :
             // Gift-wrap to the p-tagged users instead of publishing. Private
             // wins over the anonymous and scheduled modes: a locked private
             // reply must never fall through to a public publish path (the UI
-            // hides those toggles while private mode is on).
+            // hides those toggles while private mode is on). The inner note and
+            // seals are signed inline; only wrap mining is queued — the content
+            // is committed (and checkpointed) by the time this returns.
             @Suppress("UNCHECKED_CAST")
-            accountViewModel.account.sendPrivateNote(template as EventTemplate<TextNoteEvent>)
-            accountViewModel.launchSigner {
-                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
-            }
+            accountViewModel.account.sendPrivateNote(template as EventTemplate<TextNoteEvent>, chosenPow)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             return
         }
 
         if (scheduledFor != null && !anonymous) {
             // Re-stamp the template with created_at = scheduled time so the post,
             // when published later, shows up at its scheduled moment in feeds
-            // rather than as N minutes/hours old (= compose time).
+            // rather than as N minutes/hours old (= compose time). Mining
+            // commits the future created_at into the hashed id, and the worker
+            // publishes the stored signed JSON verbatim, so the nonce is still
+            // valid at publish time.
             val rescheduledTemplate =
                 EventTemplate<Event>(
                     createdAt = scheduledFor,
@@ -1026,23 +1033,12 @@ open class ShortNotePostViewModel :
                     content = template.content,
                 )
 
-            // Mining commits the future created_at into the hashed id, and the
-            // worker publishes the stored signed JSON verbatim, so the nonce is
-            // still valid at publish time.
-            val enqueued =
-                powDifficulty != null &&
-                    accountViewModel.account.mineTemplateInBackground(
-                        rescheduledTemplate,
-                        powDifficulty,
-                        PoWReplay.Schedule(scheduledFor, extraNotesToBroadcast),
-                    ) { mined ->
-                        storeScheduledPost(mined, extraNotesToBroadcast, scheduledFor)
-                    }
-            if (!enqueued) {
-                storeScheduledPost(rescheduledTemplate, extraNotesToBroadcast, scheduledFor)
-            }
-
-            accountViewModel.launchSigner {
+            accountViewModel.account.sendMined(
+                rescheduledTemplate,
+                PoWReplay.Schedule(scheduledFor, extraNotesToBroadcast),
+                chosenPow,
+            ) { readyTemplate ->
+                storeScheduledPost(readyTemplate, extraNotesToBroadcast, scheduledFor)
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
             return
@@ -1050,8 +1046,10 @@ open class ShortNotePostViewModel :
 
         if (anonymous) {
             // The anonymous key signs without a client tag, so the template is
-            // mined as-is against the throwaway pubkey.
+            // mined as-is against the throwaway pubkey — and never checkpointed
+            // to disk, so the key and content can't outlive the process.
             val anonSigner = anonymousSigner()
+            val powDifficulty = accountViewModel.account.powDifficultyFor(template.kind, chosenPow)
             val enqueued =
                 powDifficulty != null &&
                     accountViewModel.account.mineInBackground(template.kind, powDifficulty) { isActive ->
@@ -1060,38 +1058,17 @@ open class ShortNotePostViewModel :
                         val fresh = EventTemplate<Event>(TimeUtils.now(), template.kind, template.tags, template.content)
                         val mined = PoWMiner.run(fresh, anonSigner.pubKey, powDifficulty, isActive)
                         accountViewModel.account.signAnonymouslyAndBroadcast(mined, extraNotesToBroadcast, anonSigner)
+                        accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
                     }
             if (!enqueued) {
                 accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonSigner)
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
-        } else {
-            val enqueued =
-                powDifficulty != null &&
-                    accountViewModel.account.mineTemplateInBackground(template, powDifficulty, PoWReplay.Broadcast(extraNotesToBroadcast)) { mined ->
-                        broadcastPublicPost(mined, extraNotesToBroadcast)
-                    }
-            if (!enqueued) {
-                if (accountViewModel.settings.useTrackedBroadcasts()) {
-                    // Tracked broadcasting with progress feedback (non-blocking)
-                    val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
-
-                    // Launch broadcast in background - don't wait for completion
-                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                        accountViewModel.broadcastTracker.trackBroadcast(
-                            event = event,
-                            relays = relays,
-                            client = accountViewModel.account.client,
-                        )
-                        accountViewModel.account.consumePostEvent(event, relays, extras)
-                    }
-                } else {
-                    // Fire-and-forget (original behavior)
-                    accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-                }
-            }
+            return
         }
 
-        accountViewModel.launchSigner {
+        accountViewModel.account.sendMined(template, PoWReplay.Broadcast(extraNotesToBroadcast), chosenPow) { readyTemplate ->
+            broadcastPublicPost(readyTemplate, extraNotesToBroadcast)
             accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
@@ -1110,10 +1087,7 @@ open class ShortNotePostViewModel :
         val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
         Amethyst.instance.scheduledPostStore.add(
             ScheduledPost(
-                id =
-                    java.util.UUID
-                        .randomUUID()
-                        .toString(),
+                id = UUID.randomUUID().toString(),
                 accountPubkey = event.pubKey,
                 signedEventJson = event.toJson(),
                 relayUrls = relays.map { it.url },
@@ -1125,9 +1099,13 @@ open class ShortNotePostViewModel :
     }
 
     /**
-     * The post-mining continuation: same tracked/untracked split as the direct
-     * path, but running on the mining queue's scope — the composer's
-     * viewModelScope may already be gone by the time the nonce is found.
+     * The publish step shared by the direct and post-mining paths: signs the
+     * template and dispatches the broadcast. Tracked broadcasting is launched
+     * fire-and-forget on the account scope — the composer must not wait for
+     * relay acks before navigating away, and a mined job must not hold its
+     * queue entry while acks trickle in (the event is signed and dispatched;
+     * only progress reporting remains). Runs on the mining queue's scope when
+     * PoW is on, so it must not touch viewModelScope.
      */
     private suspend fun broadcastPublicPost(
         template: EventTemplate<out Event>,
@@ -1135,12 +1113,14 @@ open class ShortNotePostViewModel :
     ) {
         if (accountViewModel.settings.useTrackedBroadcasts()) {
             val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
-            accountViewModel.broadcastTracker.trackBroadcast(
-                event = event,
-                relays = relays,
-                client = accountViewModel.account.client,
-            )
-            accountViewModel.account.consumePostEvent(event, relays, extras)
+            accountViewModel.account.scope.launch {
+                accountViewModel.broadcastTracker.trackBroadcast(
+                    event = event,
+                    relays = relays,
+                    client = accountViewModel.account.client,
+                )
+                accountViewModel.account.consumePostEvent(event, relays, extras)
+            }
         } else {
             accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
         }

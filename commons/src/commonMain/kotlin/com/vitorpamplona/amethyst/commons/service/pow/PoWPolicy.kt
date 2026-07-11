@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.service.pow
 
+import com.vitorpamplona.quartz.nip01Core.core.Kind
+import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
+import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -28,6 +33,7 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -73,7 +79,13 @@ enum class PoWCategory(
  * keystroke debounce.
  */
 object PoWPolicy {
-    private const val DRAFT_WRAP_KIND = 31234 // quartz's DraftWrapEvent (NIP-37)
+    /**
+     * Practical UI ceiling for the difficulty setting: above ~40 bits a phone
+     * would mine for days; treat anything larger (including values arriving
+     * from a synced NIP-78 settings event) as a config error and clamp.
+     */
+    const val MAX_DIFFICULTY = 40
+
     private const val LONG_FORM_DRAFT_KIND = 30024
 
     /** NIP-51 sets and other settings-like addressable kinds. */
@@ -95,26 +107,26 @@ object PoWPolicy {
 
     private val NEVER_EXPLICIT =
         setOf(
-            0, // metadata
-            3, // contact list
+            MetadataEvent.KIND,
+            ContactListEvent.KIND,
             LnZapRequestEvent.KIND, // blocks the invoice fetch
             OtsEvent.KIND, // machine-generated companion events
-            DRAFT_WRAP_KIND, // re-signed on a 1s debounce while typing
+            DraftWrapEvent.KIND, // re-signed on a 1s debounce while typing
         )
 
     /**
      * Kinds that must never be mined regardless of user settings.
      *
-     * The replaceable range (10000..19999) covers relay lists, NIP-51 standard
-     * lists, NWC info and other settings sync; the ephemeral range
-     * (20000..29999) covers relay AUTH (22242), NWC RPC (23194..23196), NIP-46
-     * bunker messages (24133), Blossom auth (24242) and HTTP auth (27235) —
-     * all time-critical request/response events where mining only adds latency.
+     * The replaceable range covers relay lists, NIP-51 standard lists, NWC
+     * info and other settings sync; the ephemeral range covers relay AUTH
+     * (22242), NWC RPC (23194..23196), NIP-46 bunker messages (24133),
+     * Blossom auth (24242) and HTTP auth (27235) — all time-critical
+     * request/response events where mining only adds latency.
      */
-    fun neverMine(kind: Int): Boolean =
+    fun neverMine(kind: Kind): Boolean =
         kind in NEVER_EXPLICIT ||
-            kind in 10000..19999 ||
-            kind in 20000..29999 ||
+            kind.isReplaceable() ||
+            kind.isEphemeral() ||
             kind in NEVER_ADDRESSABLE
 
     fun categoryOf(kind: Int): PoWCategory =
@@ -133,7 +145,10 @@ object PoWPolicy {
 
     /**
      * Returns the difficulty to mine [kind] at, or null when the event should
-     * be published without proof of work.
+     * be published without proof of work. The difficulty is clamped to
+     * [MAX_DIFFICULTY] as defense in depth against out-of-range values synced
+     * from other clients — an unclamped 300 would crash the miner and 41+
+     * would mine effectively forever.
      */
     fun shouldMine(
         kind: Int,
@@ -143,6 +158,6 @@ object PoWPolicy {
         if (difficulty <= 0) return null
         if (neverMine(kind)) return null
         if (categoryOf(kind) !in enabledCategories) return null
-        return difficulty
+        return difficulty.coerceAtMost(MAX_DIFFICULTY)
     }
 }

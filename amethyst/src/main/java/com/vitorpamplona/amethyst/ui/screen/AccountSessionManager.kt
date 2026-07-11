@@ -389,15 +389,26 @@ class AccountSessionManager(
                 localPreferences.deleteAccount(accountInfo)
                 accountsCache.removeAccount(hex)
                 accountsCache.deleteAccountFiles(hex)
-                Amethyst.instance.scheduledPostStore.removeForAccount(hex)
+                purgePendingPosts(hex)
                 loginWithDefaultAccount()
             } else {
                 // delete without switching logins
                 localPreferences.deleteAccount(accountInfo)
                 accountsCache.removeAccount(hex)
                 accountsCache.deleteAccountFiles(hex)
-                Amethyst.instance.scheduledPostStore.removeForAccount(hex)
+                purgePendingPosts(hex)
             }
         }
+    }
+
+    /**
+     * Drops everything a deleted account left in the publish pipelines: parked
+     * scheduled posts, checkpointed PoW mining jobs, and any of its jobs still
+     * queued or mining (a post must not publish after its account is gone).
+     */
+    private suspend fun purgePendingPosts(hex: String) {
+        Amethyst.instance.scheduledPostStore.removeForAccount(hex)
+        Amethyst.instance.powPublishQueue.cancelForOwner(hex)
+        Amethyst.instance.powJobStore.removeForAccount(hex)
     }
 }

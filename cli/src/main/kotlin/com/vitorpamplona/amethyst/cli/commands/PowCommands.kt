@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip13Pow.commitedPoW
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWRankEvaluator
 import com.vitorpamplona.quartz.nip13Pow.pow
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -49,6 +50,9 @@ import kotlin.math.roundToLong
  * pass `--pubkey`, or omit it to mine for the active account.
  */
 object PowCommands {
+    // Deliberately above PoWPolicy.MAX_DIFFICULTY (the app's UI ceiling, 40):
+    // amy is a power tool that may mine on beefy hardware or run deliberate
+    // long jobs. Still bounded well under the miner's hard 256-bit limit.
     private const val MAX_DIFFICULTY = 64
 
     suspend fun dispatch(
@@ -119,14 +123,19 @@ object PowCommands {
                 return Output.error("bad_template", e.message)
             }
 
+        // normalized to lowercase: the pubkey is serialized verbatim into the
+        // id preimage, and NIP-01 ids/keys are lowercase hex — an uppercase
+        // pubkey would mine an id that never matches the signed event.
         val pubKey =
-            args.flags["pubkey"]
-                ?: try {
-                    Context.open(dataDir).use { it.signer.pubKey }
-                } catch (e: Exception) {
-                    return Output.error("bad_args", "no account available; pass --pubkey (${e.message})")
-                }
-        if (pubKey.length != 64 || pubKey.any { it !in "0123456789abcdefABCDEF" }) {
+            (
+                args.flags["pubkey"]
+                    ?: try {
+                        Context.open(dataDir).use { it.signer.pubKey }
+                    } catch (e: Exception) {
+                        return Output.error("bad_args", "no account available; pass --pubkey (${e.message})")
+                    }
+            ).lowercase()
+        if (pubKey.length != 64 || !Hex.isHex(pubKey)) {
             return Output.error("bad_args", "--pubkey must be 64 hex characters")
         }
 

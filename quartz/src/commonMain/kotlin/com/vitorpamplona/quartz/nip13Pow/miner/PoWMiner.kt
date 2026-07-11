@@ -83,6 +83,10 @@ class PoWMiner(
             desiredPoW: Int,
             isActive: () -> Boolean = { true },
         ): EventTemplate<T> {
+            // sha256 ids have 256 bits; anything outside would index past the
+            // hash (or never terminate) deep inside the hot loop.
+            require(desiredPoW in 1..256) { "desiredPoW must be in 1..256, was $desiredPoW" }
+
             var nextSize = STARTING_NONCE_SIZE
 
             do {

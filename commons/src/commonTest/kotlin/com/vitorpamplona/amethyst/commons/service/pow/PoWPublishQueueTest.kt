@@ -28,7 +28,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -211,6 +213,118 @@ class PoWPublishQueueTest {
 
             gate.complete(Unit)
             withContext(Dispatchers.Default) { withTimeout(60_000) { queue.jobs.first { it.isEmpty() } } }
+            scope.cancel()
+        }
+
+    @Test
+    fun failedPublishKeepsCheckpointAndReportsFailure() =
+        runTest {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val persistence = FakePersistence()
+            val queue = PoWPublishQueue(scope, maxConcurrent = 1, persistence = persistence)
+
+            val failure = CompletableDeferred<PoWJobFailure>()
+            scope.launch { queue.failures.collect { failure.complete(it) } }
+            // give the collector a beat to subscribe (failures has no replay)
+            withContext(Dispatchers.Default) { delay(50) }
+
+            queue.enqueueStaged(
+                kind = TextNoteEvent.KIND,
+                difficulty = 10,
+                persistAs = recordFor("job-d"),
+                mine = { "nonce" },
+                publish = { throw IllegalStateException("signer rejected") },
+            )
+
+            val reported = withContext(Dispatchers.Default) { withTimeout(10_000) { failure.await() } }
+            assertEquals(TextNoteEvent.KIND, reported.kind)
+            assertTrue(reported.willRetryOnRestart, "persisted job must be retried by the restorer")
+
+            withContext(Dispatchers.Default) { withTimeout(10_000) { queue.jobs.first { it.isEmpty() } } }
+            assertFalse("job-d" in persistence.removed, "checkpoint must survive a failed publish for restart retry")
+            scope.cancel()
+        }
+
+    @Test
+    fun checkpointSurvivesUntilPublishCompletes() =
+        runTest {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val persistence = FakePersistence()
+            val queue = PoWPublishQueue(scope, maxConcurrent = 1, persistence = persistence)
+
+            val publishing = CompletableDeferred<Unit>()
+            val publishGate = CompletableDeferred<Unit>()
+
+            queue.enqueueStaged(
+                kind = TextNoteEvent.KIND,
+                difficulty = 10,
+                persistAs = recordFor("job-e"),
+                mine = { "nonce" },
+                publish = {
+                    publishing.complete(Unit)
+                    publishGate.await()
+                },
+            )
+
+            withContext(Dispatchers.Default) { withTimeout(10_000) { publishing.await() } }
+            assertFalse("job-e" in persistence.removed, "checkpoint must not be dropped at mining-complete")
+
+            val job = queue.jobs.value.first()
+            assertEquals(PoWJobPhase.PUBLISHING, job.phase)
+            assertFalse(job.isCancellable)
+
+            // cancel is a no-op mid-publish: the event may be half-broadcast
+            queue.cancel(job.id)
+            assertEquals(1, queue.jobs.value.size)
+
+            publishGate.complete(Unit)
+            withContext(Dispatchers.Default) { withTimeout(10_000) { queue.jobs.first { it.isEmpty() } } }
+            assertTrue("job-e" in persistence.removed, "checkpoint drops once publish completes")
+            scope.cancel()
+        }
+
+    @Test
+    fun cancelByKeyTogglesAPendingJob() =
+        runTest {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val queue = PoWPublishQueue(scope, maxConcurrent = 1)
+
+            val gate = CompletableDeferred<Unit>()
+            var reactionRan = false
+            queue.enqueueWork(kind = 1, difficulty = 10) { gate.await() }
+            queue.enqueueWork(kind = 7, difficulty = 10, dedupeKey = "reaction:abc:+") { reactionRan = true }
+
+            // same key while pending → deduped
+            queue.enqueueWork(kind = 7, difficulty = 10, dedupeKey = "reaction:abc:+") { reactionRan = true }
+            assertEquals(2, queue.jobs.value.size)
+
+            assertTrue(queue.cancelByKey("reaction:abc:+"), "first toggle cancels the pending like")
+            assertFalse(queue.cancelByKey("reaction:abc:+"), "nothing left to cancel")
+
+            gate.complete(Unit)
+            withContext(Dispatchers.Default) { withTimeout(10_000) { queue.jobs.first { it.isEmpty() } } }
+            assertFalse(reactionRan, "cancelled reaction must never publish")
+            scope.cancel()
+        }
+
+    @Test
+    fun cancelForOwnerOnlyDropsThatAccountsJobs() =
+        runTest {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val queue = PoWPublishQueue(scope, maxConcurrent = 1)
+
+            val gate = CompletableDeferred<Unit>()
+            var otherRan = false
+            queue.enqueueWork(kind = 1, difficulty = 10) { gate.await() }
+            queue.enqueueWork(kind = 1, difficulty = 10, owner = "account-a") {}
+            queue.enqueueWork(kind = 1, difficulty = 10, owner = "account-b") { otherRan = true }
+
+            queue.cancelForOwner("account-a")
+            assertEquals(2, queue.jobs.value.size, "only account-a's job leaves the queue")
+
+            gate.complete(Unit)
+            withContext(Dispatchers.Default) { withTimeout(10_000) { queue.jobs.first { it.isEmpty() } } }
+            assertTrue(otherRan, "account-b's job still runs")
             scope.cancel()
         }
 }

@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.service.pow
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.milliseconds
@@ -47,10 +49,16 @@ object PoWEstimator {
     private val BENCH_DURATION = 250.milliseconds
 
     private var cachedRate: Double? = null
+    private val benchLock = Mutex()
 
     suspend fun hashesPerSecond(dispatcher: CoroutineDispatcher = Dispatchers.Default): Double =
         cachedRate ?: withContext(dispatcher) {
-            cachedRate ?: benchmark().also { cachedRate = it }
+            // single-flight: concurrent first callers (e.g. the settings screen
+            // recomposing while the composer chip opens) share one ~250 ms
+            // benchmark instead of each burning a core.
+            benchLock.withLock {
+                cachedRate ?: benchmark().also { cachedRate = it }
+            }
         }
 
     fun estimateSeconds(
